@@ -1069,6 +1069,60 @@ def test_zero_grad():
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
 
+@with_seed()
+def test_hook():
+    global hook_call_count
+    hook_call_count = 0
+    global pre_hook_call_count
+    pre_hook_call_count = 0
+
+    def call_hook(block, x, y):
+        global hook_call_count
+        hook_call_count += 1
+
+    def call_pre_hook(block, x):
+        global pre_hook_call_count
+        pre_hook_call_count += 1
+
+    block = nn.Dense(10)
+    block.initialize()
+    handle = block.register_forward_hook(call_hook)
+    pre_handle = block.register_forward_pre_hook(call_pre_hook)
+    block(mx.nd.ones((3, 5)))
+
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 1
+
+    handle.detach()
+    block(mx.nd.ones((3, 5)))
+
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 2
+
+    pre_handle.detach()
+    block(mx.nd.ones((3, 5)))
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 2
+
+
+@with_seed()
+def test_apply():
+    global called_blocks
+    called_blocks = []
+
+    def record_name(block):
+        global called_blocks
+        called_blocks.append(block.name)
+
+    block = nn.HybridSequential(prefix='test_')
+    with block.name_scope():
+        block.add(nn.Dense(10))
+        block.add(nn.Dropout(0.5))
+    block.apply(record_name)
+
+    assert called_blocks == ['test_dense0', 'test_dropout0', 'test']
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

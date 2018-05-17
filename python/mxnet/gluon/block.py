@@ -31,7 +31,7 @@ from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, HookHandle
 
 
 class _BlockScope(object):
@@ -173,6 +173,8 @@ class Block(object):
         self._scope = _BlockScope(self)
         self._children = OrderedDict()
         self._reg_params = {}
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -355,13 +357,67 @@ class Block(object):
                         name, filename, _brief_print_list(self._params.keys())))
             params[name]._load_init(loaded[name], ctx)
 
-
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
         self._children[name] = block
+
+    def register_forward_pre_hook(self, hook):
+        r"""Registers a forward pre-hook on the block.
+
+        The hook function is called immediately before :func:`forward`.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        hook : callable
+            The forward hook function of form `hook(block, input) -> None`.
+
+        Returns
+        -------
+        :class:`mxnet.gluon.utils.HookHandle`
+        """
+        handle = HookHandle()
+        handle.attach(self._forward_pre_hooks, hook)
+        return handle
+
+    def register_forward_hook(self, hook):
+        r"""Registers a forward hook on the block.
+
+        The hook function is called immediately after :func:`forward`.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        hook : callable
+            The forward hook function of form `hook(block, input, output) -> None`.
+
+        Returns
+        -------
+        :class:`mxnet.gluon.utils.HookHandle`
+        """
+        handle = HookHandle()
+        handle.attach(self._forward_hooks, hook)
+        return handle
+
+    def apply(self, fn):
+        r"""Applies ``fn`` recursively to every child block as well as self.
+
+        Parameters
+        ----------
+        fn : callable
+            Function to be applied to each submodule, of form `fn(block)`.
+
+        Returns
+        -------
+        this block
+        """
+        for cld in self._children.values():
+            cld.apply(fn)
+        fn(self)
+        return self
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
@@ -411,7 +467,15 @@ class Block(object):
 
     def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
-        return self.forward(*args)
+        for hook in self._forward_pre_hooks.values():
+            hook(self, args)
+
+        out = self.forward(*args)
+
+        for hook in self._forward_hooks.values():
+            hook(self, args, out)
+
+        return out
 
     def forward(self, *args):
         """Overrides to implement forward computation using :py:class:`NDArray`. Only

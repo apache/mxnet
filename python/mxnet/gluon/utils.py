@@ -24,6 +24,8 @@ __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
 import os
 import hashlib
 import warnings
+import collections
+import weakref
 try:
     import requests
 except ImportError:
@@ -250,3 +252,40 @@ def _brief_print_list(lst, limit=7):
         return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
             _brief_print_list(lst[-limit//2:], limit)
     return ', '.join(["'%s'"%str(i) for i in lst])
+
+
+class HookHandle(object):
+    """A handle that can attach/detach a hook."""
+
+    count = 0
+    def __init__(self):
+        self.hooks_dict_ref = None
+        self.id = HookHandle.count
+        HookHandle.count += 1
+
+    def attach(self, hooks_dict, hook):
+        assert not self.hooks_dict_ref, 'The same handle cannot be attached twice.'
+        hooks_dict[self.id] = hook
+        self.hooks_dict_ref = weakref.ref(hooks_dict)
+
+    def detach(self):
+        hooks_dict = self.hooks_dict_ref()
+        if hooks_dict is not None and self.id in hooks_dict:
+            del hooks_dict[self.id]
+
+    def __getstate__(self):
+        return (self.hooks_dict_ref(), self.id)
+
+    def __setstate__(self, state):
+        if state[0] is None:
+            self.hooks_dict_ref = weakref.ref(collections.OrderedDict())
+        else:
+            self.hooks_dict_ref = weakref.ref(state[0])
+        self.id = state[1]
+        HookHandle.count = max(HookHandle.count, self.id + 1)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        self.detach()
