@@ -418,34 +418,65 @@ std::vector<NDArray> GetTestInputArrays() {
  *    pass them to all operators.
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
- * 4. Reused NDArray (this is created by the MXNet executor). This type of
+ * 4. Reshaped/sliced NDArray
+ * 5. Reused NDArray (this is created by the MXNet executor). This type of
  *    NDArrays can only be used as output arrays.
+ * 6. Reused NDArray converted from an array with a different data type.
+ * 7. Reused reshaped/sliced NDArray.
+ * 8. Reused NDArray with MKLDNN layout.
+ * 9. Reused NDArray with MKLDNN layout of different dimensions.
  */
 std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds) {
   std::vector<NDArray> in_arrs;
+  // Type 1.
   in_arrs.emplace_back(shape, Context());
   InitArray(&in_arrs.back());
 
+  // Type 4.
+  TShape tmp_shape = shape;
+  tmp_shape[0] = shape[0] * 2;
+  NDArray arr0(tmp_shape, Context());
+  InitArray(&arr0);
+  in_arrs.emplace_back(arr0.Slice(0, shape[0]));
+
+  // Type 5.
   // Get a reused version.
   nnvm::TShape s(1);
   s[0] = shape.Size();
-  NDArray arr(s, Context());
-  arr = arr.AsArray(shape, arr.dtype());
-  InitArray(&arr);
-  in_arrs.emplace_back(arr);
+  NDArray arr1(s, Context());
+  arr1 = arr1.AsArray(shape, arr1.dtype());
+  InitArray(&arr1);
+  in_arrs.emplace_back(arr1);
+
+  // Type 6.
+  s[0] = shape.Size() * GetTypeSize(mshadow::kUint8);
+  NDArray arr2(s, Context(), true, mshadow::kUint8);
+  arr2 = arr2.AsArray(shape, arr2.dtype());
+  InitArray(&arr2);
+  in_arrs.emplace_back(arr2);
+
+  // Type 7
+  s[0] = shape.Size() * GetTypeSize(mshadow::kUint8) * 2;
+  NDArray arr3(s, Context(), true, mshadow::kUint8);
+  tmp_shape[0] = shape[0] * 2;
+  arr3 = arr3.AsArray(tmp_shape, arr3.dtype());
+  InitArray(&arr3);
+  in_arrs.emplace_back(arr3.Slice(0, shape[0]));
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
+    // Type 2, 3.
     in_arrs.emplace_back(shape, Context());
     InitMKLDNNArray(&in_arrs.back(), pd, true);
 
+    // Type 8, 9.
     // Get a reused version.
     nnvm::TShape s(1);
     s[0] = shape.Size();
-    arr = NDArray(s, Context());
+    NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
     InitMKLDNNArray(&arr, pd, true);
     in_arrs.emplace_back(arr);
