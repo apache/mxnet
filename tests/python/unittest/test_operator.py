@@ -66,7 +66,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, L, D, mode):
     mod2_wx = ['l%d_i2h_weight' % j for j in range(L)]
     mod2_wh = ['l%d_h2h_weight' % j for j in range(L)]
     mod2_bx = ['l%d_i2h_bias' % j for j in range(L)]
-    mod2_bh = ['l%d_h2h_bias' % j for i in range(L)]
+    mod2_bh = ['l%d_h2h_bias' % j for j in range(L)]
     for j in range(L):
       mod2.get_params()[0][mod2_wx[j]].attach_grad()
       mod2.get_params()[0][mod2_wh[j]].attach_grad()
