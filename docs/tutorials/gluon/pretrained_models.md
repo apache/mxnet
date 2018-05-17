@@ -22,7 +22,7 @@ import json
 ## Loading the model
 
 The [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) provides a collection of off-the-shelf models. You can get the ImageNet pre-trained model by using `pretrained=True`. 
-If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameters: for example `classes=10`.
+If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameter: for example `classes=10`.
 
 We can specify the *context* where we want to run the model: the default behavior is to use a CPU context. There are two reasons for this:
 * First, this will allow you to test the notebook even if your machine is not equipped with a GPU :)
