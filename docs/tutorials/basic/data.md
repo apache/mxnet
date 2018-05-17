@@ -15,12 +15,6 @@ To complete this tutorial, we need:
 ```
 $ pip install opencv-python requests matplotlib jupyter
 ```
-- Set the environment variable `MXNET_HOME` to the root of the MXNet source folder.  
-
-```
-$ git clone https://github.com/dmlc/mxnet ~/mxnet
-$ export MXNET_HOME='~/mxnet'
-```
 
 ## MXNet Data Iterator  
 Data Iterators in *MXNet* are similar to Python iterator objects.
@@ -61,6 +55,11 @@ we can use the [__`NDArrayIter`__](http://mxnet.io/api/python/io/io.html#mxnet.i
 
 ```python
 import numpy as np
+
+# fix the seed
+np.random.seed(42)
+mx.random.seed(42)
+
 data = np.random.rand(100,3)
 label = np.random.randint(0, 10, (100,))
 data_iter = mx.io.NDArrayIter(data=data, label=label, batch_size=30)
@@ -341,7 +340,7 @@ Let's download sample images that we can work with.
 ```python
 fname = mx.test_utils.download(url='http://data.mxnet.io/data/test_images.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall(path='./data')
+tar.extractall(path=os.path.join('.','data'))
 tar.close()
 ```
 
@@ -351,7 +350,7 @@ tar.close()
 **Note:** You will still need ``OpenCV``(not the CV2 Python library) installed to use `mx.image.imdecode`.
 
 ```python
-img = mx.image.imdecode(open('data/test_images/ILSVRC2012_val_00000001.JPEG', 'rb').read())
+img = mx.image.imdecode(open(os.path.join('data','test_images','ILSVRC2012_val_00000001.JPEG'), 'rb').read())
 plt.imshow(img.asnumpy()); plt.show()
 ```
 
@@ -382,7 +381,7 @@ Download and unzip
 ```python
 fname = mx.test_utils.download(url='http://www.vision.caltech.edu/Image_Datasets/Caltech101/101_ObjectCategories.tar.gz', dirname='data', overwrite=False)
 tar = tarfile.open(fname)
-tar.extractall(path='./data')
+tar.extractall(path=os.path.join('.','data'))
 tar.close()
 ```
 
@@ -392,7 +391,13 @@ Now let's convert them into record io format using the `im2rec.py` utility scrip
 First, we need to make a list that contains all the image files and their categories:
 
 ```python
-os.system('python %s/tools/im2rec.py --list --recursive --test-ratio=0.2 data/caltech data/101_ObjectCategories'%os.environ['MXNET_HOME'])
+im2rec_path = mx.test_utils.get_im2rec_path()
+data_path = os.path.join('data','101_ObjectCategories')
+prefix_path = os.path.join('data','caltech')
+
+with open(os.devnull, 'wb') as devnull:
+    subprocess.check_call(['python', im2rec_path, '--list', '--recursive', '--test-ratio=0.2', prefix_path, data_path],
+                          stdout=devnull)
 ```
 
 The resulting list file (./data/caltech_train.lst) is in the format `index\t(one or more label)\tpath`. In this case, there is only one label for each image but you can modify the list to add in more for multi-label training.
@@ -401,7 +406,9 @@ Then we can use this list to create our record io file:
 
 
 ```python
-os.system("python %s/tools/im2rec.py --num-thread=4 --pass-through data/caltech data/101_ObjectCategories"%os.environ['MXNET_HOME'])
+with open(os.devnull, 'wb') as devnull:
+    subprocess.check_call(['python', im2rec_path, '--num-thread=4', '--pass-through', '--test-ratio=0.2', prefix_path, data_path],
+                          stdout=devnull)
 ```
 
 The record io files are now saved at here (./data)
@@ -412,7 +419,7 @@ The record io files are now saved at here (./data)
 
 ```python
 data_iter = mx.io.ImageRecordIter(
-    path_imgrec="./data/caltech.rec", # the target record file
+    path_imgrec=os.path.join('.','data','caltech.rec'),
     data_shape=(3, 227, 227), # output data shape. An 227x227 region will be cropped from the original image.
     batch_size=4, # number of samples per batch
     resize=256 # resize the shorter edge to 256 before cropping
@@ -433,8 +440,8 @@ plt.show()
 
 ```python
 data_iter = mx.image.ImageIter(batch_size=4, data_shape=(3, 227, 227),
-                              path_imgrec="./data/caltech.rec",
-                              path_imgidx="./data/caltech.idx" )
+                              path_imgrec=os.path.join('.','data','caltech.rec'),
+                              path_imgidx=os.path.join('.','data','caltech.idx') )
 data_iter.reset()
 batch = data_iter.next()
 data = batch.data[0]

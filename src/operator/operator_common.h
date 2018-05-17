@@ -471,14 +471,18 @@ inline void ParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
-#define CHECK_RSP_ALL_ROWS_NON_ZERO(rsp, func, param)                              \
-  {                                                                                \
-    CHECK(rsp.storage_shape()[0] == rsp.shape()[0]) << func                        \
-          << " for RowSparse " << param << " is only implemented for "             \
-          << "RowSparse " << param << " with all rows containing non-zeros. "      \
-          << "Expects " << param << ".values.shape[0] (" << rsp.storage_shape()[0] \
-          << ") == " << param << ".shape[0] (" << rsp.shape()[0] << ").";          \
+inline void CheckAllRowsPresent(const NDArray& arr, const std::string& func,
+                                const std::string& param) {
+  if (arr.storage_type() == kRowSparseStorage) {
+    CHECK(arr.storage_shape()[0] == arr.shape()[0]) << func
+          << " for RowSparse " << param << " is only implemented for "
+          << "RowSparse " << param << " with all rows containing non-zeros. "
+          << "Expects " << param << ".data.shape[0] (" << arr.storage_shape()[0]
+          << ") == " << param << ".shape[0] (" << arr.shape()[0] << ").";
+  } else {
+    CHECK(arr.storage_type() == kDefaultStorage);
   }
+}
 
 inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
                                const OpContext &ctx,

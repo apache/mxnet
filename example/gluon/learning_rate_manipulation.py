@@ -32,13 +32,13 @@ Y = 2 * X[:, 0] - 3.4 * X[:, 1] + 4.2 + .01 * np.random.normal(size=10000)
 net = gluon.nn.Sequential()
 # The output dimension is 1.
 net.add(gluon.nn.Dense(1))
-net.collect_params().initialize()
+net.initialize()
 loss = gluon.loss.L2Loss()
 
 # Initialize the learning rate as 0.1.
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         optimizer_params={'learning_rate': 0.1})
-net.collect_params().initialize(mx.init.Xavier(magnitude=2.24),
+net.initialize(mx.init.Xavier(magnitude=2.24),
                                 force_reinit=True)
 train_data = mx.io.NDArrayIter(X, Y, batch_size=10, shuffle=True)
 

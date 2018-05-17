@@ -386,6 +386,8 @@ We summarize the interface for each class in the following sections.
     elemwise_add
     elemwise_sub
     elemwise_mul
+    broadcast_add
+    broadcast_sub
     broadcast_mul
     broadcast_div
     negative
@@ -497,7 +499,7 @@ We summarize the interface for each class in the following sections.
 
     make_loss
     stop_gradient
-    mxnet.ndarray.contrib.SparseEmbedding
+    Embedding
     LinearRegressionOutput
     LogisticRegressionOutput
 ```

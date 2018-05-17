@@ -18,13 +18,7 @@
 package AI::MXNet::LinAlg::NDArray;
 use strict;
 use warnings;
-
-sub AUTOLOAD {
-    my $sub = $AI::MXNet::LinAlg::NDArray::AUTOLOAD;
-    $sub =~ s/.*:://;
-    $sub = "_linalg_$sub";
-    shift;
-    return AI::MXNet::NDArray->$sub(@_);
-}
+use parent 'AI::MXNet::AutoLoad';
+sub config { ('linalg', 'AI::MXNet::NDArray') }
 
 1;

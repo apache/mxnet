@@ -17,9 +17,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 100;
+use Test::More tests => 101;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal);
+use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -264,6 +264,20 @@ sub test_linalg_gemm2
 }
 
 test_linalg_gemm2();
+
+sub test_image_to_tensor
+{
+    my $sym_to_tensor = mx->sym->image->to_tensor(
+        mx->sym->var('A')
+    );
+    my $A = mx->nd->zeros([28, 28, 3]);
+    ok(same(
+        $sym_to_tensor->eval(args => { A => $A })->[0]->aspdl,
+        zeros(28, 28, 3)
+    ));
+}
+
+test_image_to_tensor();
 
 __DATA__
 {

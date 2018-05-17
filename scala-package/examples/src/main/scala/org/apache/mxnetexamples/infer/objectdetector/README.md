@@ -79,7 +79,7 @@ After the previous steps, you should be able to run the code using the following
 From the `scala-package/examples/scripts/inferexample/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../model/resnet50_ssd_model ../image/dog.jpg ../image
+./run_ssd_example.sh ../models/resnet50_ssd_model ../images/dog.jpg ../images
 ```
 
 **Notes**:

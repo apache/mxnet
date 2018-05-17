@@ -323,6 +323,9 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
+    # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
+    cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
+    mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
 }
 
 build_ubuntu_gpu_cmake() {
@@ -349,6 +352,7 @@ sanity_check() {
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
+    nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
 
@@ -375,6 +379,18 @@ unittest_ubuntu_python3_cpu() {
     nosetests-3.4 --verbose tests/python/quantization
 }
 
+unittest_ubuntu_python3_cpu_mkldnn() {
+    set -ex
+    export PYTHONPATH=./python/ 
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --verbose tests/python/unittest
+    nosetests-3.4 --verbose tests/python/quantization
+    nosetests-3.4 --verbose tests/python/mkl
+}
+
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -383,6 +399,28 @@ unittest_ubuntu_python2_gpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/gpu
+}
+
+tutorialtest_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
+}
+
+tutorialtest_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -539,6 +577,17 @@ test_ubuntu_cpu_python3() {
     cd /work/mxnet
     python3 -m "nose" --with-timer --verbose tests/python/unittest
 
+    popd
+}
+
+build_docs() {
+    set -ex
+    pushd .
+    cd /work/mxnet/docs/build_version_doc
+    ./build_all_version.sh $1
+    ./update_all_version.sh $2 $3 $4
+    cd VersionedWeb
+    tar -zcvf ../artifacts.tgz .
     popd
 }
 

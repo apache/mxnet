@@ -432,6 +432,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "for execution. You're seeing this warning message because the operator above is unable "
     "to process the given ndarrays with specified storage types, context and parameter. "
     "Temporary dense ndarrays are generated in order to execute the operator. "
+    "This does not affect the correctness of the programme. "
     "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;

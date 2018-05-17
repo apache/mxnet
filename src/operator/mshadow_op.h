@@ -303,6 +303,8 @@ MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
 /*! \brief used for generate element of minimum */
 MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
 
+MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(gt, a > b ? DType(1) : DType(0));
@@ -314,6 +316,12 @@ MXNET_BINARY_MATH_OP_NC(le, a <= b ? DType(1) : DType(0));
 MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 

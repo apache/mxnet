@@ -135,7 +135,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
 
     def get_graph_metadata(self, graph):
         """
-        Get metadata from a given onnx graph.
+        Get the model metadata from a given onnx graph.
         """
         _params = set()
         for tensor_vals in graph.initializer:
@@ -143,17 +143,13 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
 
         input_data = []
         for graph_input in graph.input:
-            shape = []
             if graph_input.name not in _params:
-                for val in graph_input.type.tensor_type.shape.dim:
-                    shape.append(val.dim_value)
+                shape = [val.dim_value for val in graph_input.type.tensor_type.shape.dim]
                 input_data.append((graph_input.name, tuple(shape)))
 
         output_data = []
         for graph_out in graph.output:
-            shape = []
-            for val in graph_out.type.tensor_type.shape.dim:
-                shape.append(val.dim_value)
+            shape = [val.dim_value for val in graph_out.type.tensor_type.shape.dim]
             output_data.append((graph_out.name, tuple(shape)))
         metadata = {'input_tensor_data' : input_data,
                     'output_tensor_data' : output_data
@@ -196,8 +192,8 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         try:
             from onnx.numpy_helper import to_array
         except ImportError:
-            raise ImportError("Onnx and protobuf need to be installed. Instructions to"
-                              + " install - https://github.com/onnx/onnx#installation")
+            raise ImportError("Onnx and protobuf need to be installed. "
+                              + "Instructions to install - https://github.com/onnx/onnx")
         np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
         return nd.array(np_array)
 

@@ -18,7 +18,6 @@
  */
 #include "mxnet-cpp/MxNetCpp.h"
 
-using namespace std;
 using namespace mxnet::cpp;
 
 int main(int argc, char** argv) {

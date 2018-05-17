@@ -26,12 +26,11 @@ from collections import OrderedDict
 import warnings
 import numpy as np
 
-
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
-from ..context import Context
+from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent
+from .utils import _indent, _brief_print_list
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -82,6 +81,8 @@ class Parameter(object):
         Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+    grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter's gradient.
 
     Attributes
     ----------
@@ -98,7 +99,7 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True):
+                 differentiable=True, grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
@@ -115,6 +116,11 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
+        assert grad_stype in ['default', 'row_sparse', 'csr'], \
+            "grad_stype for Parameter '%s' must be one of 'default', 'row_sparse', or 'csr'," \
+            " but got '%s'" % (name, grad_stype)
+        self._grad_stype = grad_stype
+
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
@@ -194,25 +200,28 @@ class Parameter(object):
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
                     "Failed loading Parameter '%s' from saved params: " \
-                    "shape incompatible expacted %s vs saved %s"%(
+                    "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
             self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expacted %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
         if isinstance(ctx, Context):
             ctx = [ctx]
         if self._data is None:
             if self._deferred_init:
-                assert set(ctx) == set(self._deferred_init[1]), \
+                assert ctx is None or set(ctx) == set(self._deferred_init[1]), \
                     "Failed to load Parameter '%s' on %s because it was " \
                     "previous initialized on %s."%(
                         self.name, str(ctx), str(self.list_ctx()))
+                ctx = self._deferred_init[1]
+            elif ctx is None:
+                ctx = [cpu()]
             self._init_impl(data, ctx)
         else:
-            assert set(ctx) == set(self.list_ctx()), \
+            assert ctx is None or set(ctx) == set(self.list_ctx()), \
                 "Failed to load Parameter '%s' on %s because it was " \
                 "previous initialized on %s."%(
                     self.name, str(ctx), str(self.list_ctx()))
@@ -259,7 +268,9 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = [ndarray.zeros_like(i) for i in self._data]
+        self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+                                    stype=self._grad_stype) for i in self._data]
+
         autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
 
     def _reduce(self):
@@ -364,7 +375,7 @@ class Parameter(object):
         self.shape = data.shape
 
         if self._data is None:
-            assert self._deferred_init is not None, \
+            assert self._deferred_init, \
                 "Parameter '%s' has not been initialized"%self.name
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
@@ -429,7 +440,7 @@ class Parameter(object):
         if self._grad is None:
             return
         for i in self._grad:
-            i[:] = 0
+            ndarray.zeros_like(i, out=i)
 
     def var(self):
         """Returns a symbol representing this parameter."""
@@ -497,13 +508,20 @@ class Constant(Parameter):
             name, grad_req='null', shape=value.shape, dtype=value.dtype,
             init=init_name)
 
+    def __repr__(self):
+        s = 'Constant {name} (shape={shape}, dtype={dtype})'
+        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
 
-def _brief_print_list(lst, limit=7):
-    """Print at most `limit` elements of list."""
-    if len(lst) > limit:
-        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
-            _brief_print_list(lst[-limit//2:], limit)
-    return ', '.join(["'%s'"%str(i) for i in lst])
+    @property
+    def grad_req(self):
+        return 'null'
+
+    @grad_req.setter
+    def grad_req(self, req):
+        if req != 'null':
+            warnings.warn('Constant parameter "{}" does not support '
+                          'grad_req other than "null", and new value "{}" '
+                          'is ignored.'.format(self.name, req))
 
 
 class ParameterDict(object):
@@ -646,7 +664,7 @@ class ParameterDict(object):
             assert isinstance(param, Constant), \
                 "Parameter '{}' already exists but it is not a constant.".format(
                     name)
-            if isinstance(value, nd.NDArray):
+            if isinstance(value, ndarray.NDArray):
                 value = value.asnumpy()
             assert param.shape == value.shape and \
                 (param.value.asnumpy() == value).all(), \
@@ -661,8 +679,9 @@ class ParameterDict(object):
                 assert self._params[k] is v, \
                     "Cannot update self with other because they have different " \
                     "Parameters with the same name '%s'"%k
-            else:
-                self._params[k] = v
+
+        for k, v in other.items():
+            self._params[k] = v
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
@@ -676,6 +695,8 @@ class ParameterDict(object):
             Otherwise, :py:meth:`Parameter.init` takes precedence.
         ctx : Context or list of Context
             Keeps a copy of Parameters on one or many context(s).
+        verbose : bool, default False
+            Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
@@ -734,17 +755,17 @@ class ParameterDict(object):
             weight = param._reduce()
             if not param.name.startswith(strip_prefix):
                 raise ValueError(
-                    "Prefix '%s' is to be striped before saving, but Parameter " \
-                    "'%s' does not start with '%s'. If you are using Block.save_params, " \
-                    "This may be due to your Block shares parameters from other " \
-                    "Blocks or you forgot to use ``with name_scope()`` during init. " \
-                    "Consider switching to Block.collect_params.save and " \
-                    "Block.collect_params.load instead."%(
+                    "Prefix '%s' is to be striped before saving, but Parameter's "
+                    "name '%s' does not start with '%s'. "
+                    "this may be due to your Block shares parameters from other "
+                    "Blocks or you forgot to use 'with name_scope()' when creating "
+                    "child blocks. For more info on naming, please see "
+                    "http://mxnet.incubator.apache.org/tutorials/basic/naming.html"%(
                         strip_prefix, param.name, strip_prefix))
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
 
-    def load(self, filename, ctx, allow_missing=False,
+    def load(self, filename, ctx=None, allow_missing=False,
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 

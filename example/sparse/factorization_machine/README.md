@@ -11,6 +11,6 @@ It takes more than 30 GB to download and extract the dataset.
 
 ## Train the Model
 
-- python train.py --train-data /path/to/criteo.kaggle2014.test.svm --test-data /path/to/criteo.kaggle2014.test.svm
+- python train.py --data-train /path/to/criteo.kaggle2014.test.svm --data-test /path/to/criteo.kaggle2014.test.svm
 
 [Rendle, Steffen. "Factorization machines." In Data Mining (ICDM), 2010 IEEE 10th International Conference on, pp. 995-1000. IEEE, 2010. ](https://www.csie.ntu.edu.tw/~b97053/paper/Rendle2010FM.pdf)
