@@ -393,7 +393,7 @@ def convert_linalg_gemm2(node, **kwargs):
         transA = 0
         transB = 0
 
-    op_name = "transpose" + str(transA) + str(transB)
+    op_name = "transpose" + str(kwargs["idx"])
 
     if alpha == 1.0 and transA == 0 and transB == 0:
         matmul_node = helper.make_node(
@@ -404,14 +404,13 @@ def convert_linalg_gemm2(node, **kwargs):
         )
         return [matmul_node]
     elif transA == 1 and transB == 0:
+        op_name = "transpose" + str(kwargs["idx"])
         transA_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
-            outputs=[op_name],
-            name=op_name
+            outputs=[op_name+"_a"],
+            name=op_name+"_a"
         )
-
-        kwargs["num_nodes_added"][0] += 1
 
         matmul_node = helper.make_node(
             'MatMul',
@@ -425,11 +424,9 @@ def convert_linalg_gemm2(node, **kwargs):
         transB_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
-            outputs=[op_name],
-            name=op_name
+            outputs=[op_name+"_b"],
+            name=op_name+"_b"
         )
-
-        kwargs["num_nodes_added"][0] += 1
 
         matmul_node = helper.make_node(
             'MatMul',
@@ -443,18 +440,16 @@ def convert_linalg_gemm2(node, **kwargs):
         transA_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
-            outputs=[op_name],
-            name=op_name
+            outputs=[op_name+"_a"],
+            name=op_name+"_a"
         )
 
         transB_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
-            outputs=[op_name],
-            name=op_name
+            outputs=[op_name+"_b"],
+            name=op_name+"_b"
         )
-        kwargs["num_nodes_added"][0] += 1
-        kwargs["num_nodes_added"][0] += 1
 
         matmul_node = helper.make_node(
             'MatMul',
@@ -527,9 +522,6 @@ def convert_softmax(node, **kwargs):
     input_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
     input_node = proc_nodes[input_idx]
-
-    for i in kwargs["index_lookup"]:
-        print (i, "\t", proc_nodes[i].name)
 
     name = node["name"]
     axis = int(node.get("attrs", {}).get("axis", -1))
@@ -685,35 +677,59 @@ def convert_mul_scalar(node, **kwargs):
     a_node = proc_nodes[a].name
 
     initializer = kwargs["initializer"]
-    np_arr = np.array(scalar_mul_value)
-    data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
-    dims = np.shape(np_arr)
+    flag = True
+    for i in initializer:
+        if i.name==a_node:
+            new_initializer = scalar_mul_value[0]*numpy_helper.to_array(i)
+            flag = False
+            break
 
-    scalar_op_name = "scalar_op" + str(kwargs["num_nodes_added"][0])
-    tensor_node = helper.make_tensor_value_info(scalar_op_name, data_type, dims)
+    if flag == True:
+        np_arr = np.array(scalar_mul_value)
+        data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
+        dims = np.shape(np_arr)
 
-    initializer.append(
-        helper.make_tensor(
-            name=scalar_op_name,
-            data_type=data_type,
-            dims=dims,
-            vals=scalar_mul_value,
-            raw=False,
+        scalar_op_name = "scalar_op" + str(kwargs["idx"])
+        tensor_node = helper.make_tensor_value_info(scalar_op_name, data_type, dims)
+
+        initializer.append(
+            helper.make_tensor(
+                name=scalar_op_name,
+                data_type=data_type,
+                dims=dims,
+                vals=scalar_mul_value,
+                raw=False,
+            )
         )
-    )
 
-    kwargs["num_nodes_added"][0] += 1
+        mul_node = helper.make_node(
+            "Mul",
+            [a_node, scalar_op_name],
+            [name],
+            name=name,
+            broadcast=1
+        )
 
-    mul_node = helper.make_node(
-        "Mul",
-        [a_node, scalar_op_name],
-        [name],
-        name=name,
-        broadcast=1
-    )
+        return [tensor_node, mul_node]
 
-    return [tensor_node, mul_node]
+    else:
+        data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
+        dims = np.shape(new_initializer)
 
+        new_a_node = a_node + str(kwargs["idx"])
+        tensor_node = helper.make_tensor_value_info(new_a_node, data_type, dims)
+
+        initializer.append(
+            helper.make_tensor(
+                name=new_a_node,
+                data_type=data_type,
+                dims=dims,
+                vals=new_initializer,
+                raw=False,
+            )
+        )
+
+        return [tensor_node]
 
 # Sorting and Searching
 @mx2onnx.register("argmax")

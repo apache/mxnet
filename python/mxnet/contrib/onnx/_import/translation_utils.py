@@ -165,8 +165,9 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj):
         reshape_op_sym = symbol.reshape(inputs[1], shape=reshape_shape)
         op_sym = getattr(symbol, op_name)(inputs[0], reshape_op_sym)
     else:
-       op_sym = op_name
+        op_sym = op_name
     return op_sym
+
 
 def _fix_channels(op_name, attrs, inputs, proto_obj):
     """A workaround for getting 'channels' or 'units' since onnx don't provide

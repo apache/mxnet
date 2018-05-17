@@ -149,7 +149,6 @@ class MxNetToONNXConverter:
         index_lookup = []
 
         graph_input_idx=0
-        num_nodes_added = [0]
         for idx, node in enumerate(mx_graph):
             op = node["op"]
             name = node["name"]
@@ -181,7 +180,7 @@ class MxNetToONNXConverter:
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     index_lookup=index_lookup,
-                    num_nodes_added=num_nodes_added
+                    idx=idx
             )
 
             if isinstance(converted, list):
