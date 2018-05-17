@@ -127,6 +127,7 @@ def test_gru_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H)
     check_rnn_consistency(stack, fused, T, N, I, H)
 
+
 # Currently, fused LSTM operator doesn't support dropout.
 # Will change this test after dropout is supported
 @with_seed()
