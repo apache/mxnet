@@ -55,10 +55,8 @@ def get_test_image():
 
 def perform_inference(sym, arg_params, aux_params, input_img, img_cb, img_cr):
     """Perform inference on image using mxnet"""
-    # To fetch the data names of the input to the model we list the inputs of the symbol graph
-    # and exclude the argument and auxiliary parameters from the list
-    data_names = [graph_input for graph_input in sym.list_inputs()
-                  if graph_input not in arg_params and graph_input not in aux_params]
+    metadata = onnx_mxnet.get_model_metadata('super_resolution.onnx')
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
     # create module
     mod = mx.mod.Module(symbol=sym, data_names=data_names, label_names=None)
     mod.bind(for_training=False, data_shapes=[(data_names[0], input_img.shape)])
