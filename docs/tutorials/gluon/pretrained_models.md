@@ -6,7 +6,7 @@ In this tutorial we will see how to use multiple pre-trained models with Apache 
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
 
-Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same data set and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed and memory footprints can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
+Why would you want to try multiple models? Why not just pick the one with the best accuracy? As we will see later in the tutorial, even though these models have been trained on the same dataset and optimized for maximum accuracy, they do behave slightly differently on specific images. In addition, prediction speed and memory footprints can vary, and that's an important factor for many applications. By trying a few pretrained models, you have an opportunity to find a model that can be a good fit for solving your business problem.
 
 
 ```python
