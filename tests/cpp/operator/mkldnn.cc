@@ -89,12 +89,17 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
 }
 
 // Init arrays with the default layout.
-static void InitArray(NDArray *arr) {
+static void InitArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   size_t size = blob.Size();
-  for (size_t i = 0; i < size; i++)
-    data[i] = i;
+  if (is_rand) {
+    for (size_t i = 0; i < size; i++)
+      data[i] = std::rand();
+  } else {
+    for (size_t i = 0; i < size; i++)
+      data[i] = i;
+  }
 }
 
 // Init arrays with the specified layout.
@@ -431,14 +436,14 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   std::vector<NDArray> in_arrs;
   // Type 1.
   in_arrs.emplace_back(shape, Context());
-  InitArray(&in_arrs.back());
+  InitArray(&in_arrs.back(), true);
 
   // Type 4.
   TShape tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  InitArray(&arr0);
-  in_arrs.emplace_back(arr0.Slice(0, shape[0]));
+  InitArray(&arr0, true);
+  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1));
 
   // Type 5.
   // Get a reused version.
@@ -446,23 +451,23 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   s[0] = shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
-  InitArray(&arr1);
+  InitArray(&arr1, true);
   in_arrs.emplace_back(arr1);
 
   // Type 6.
-  s[0] = shape.Size() * GetTypeSize(mshadow::kUint8);
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
-  arr2 = arr2.AsArray(shape, arr2.dtype());
-  InitArray(&arr2);
+  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
+  InitArray(&arr2, true);
   in_arrs.emplace_back(arr2);
 
   // Type 7
-  s[0] = shape.Size() * GetTypeSize(mshadow::kUint8) * 2;
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
-  arr3 = arr3.AsArray(tmp_shape, arr3.dtype());
-  InitArray(&arr3);
-  in_arrs.emplace_back(arr3.Slice(0, shape[0]));
+  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
+  InitArray(&arr3, true);
+  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1));
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
