@@ -112,13 +112,21 @@ class Barrier(object):
 
 
 class DataParallelModel(object):
-    """Data parallelism
+    """Data Parallelism
 
     Hide the difference of single/multiple GPUs to the user.
-    Inputs and outputs are both list of NDArrays in different contexts.
+    This container parallelizes the application of the given module by
+    splitting the input across the specified devices by chunking in the
+    batch dimension.
     In the forward pass, the module is replicated on each device,
-    and each replica handles a portion of the input. During the backwards
-    pass, gradients from each replica are summed into the original module.
+    and each replica handles a portion of the input. During the backwards pass,
+    gradients from each replica are summed into the original module.
+    Note that the outputs are not gathered, please use compatible
+    :class:`mxnet.gluon.contrib.DataParallelCriterion`.
+
+    The batch size should be larger than the number of GPUs used. It should
+    also be an integer multiple of the number of GPUs so that each chunk is
+    the same size (so that each GPU processes the same number of samples).
 
     Parameters
     ----------
@@ -161,14 +169,25 @@ class DataParallelModel(object):
 
 
 class DataParallelCriterion(object):
-    """Criterion data parallelism
+    """Data Parallelism
+
+    Hide the difference of single/multiple GPUs to the user.
+    The targets are splitted across the specified devices by chunking in
+    the batch dimension.
+    In the forward pass, the module is replicated on each device,
+    and each replica handles a portion of the input. During the backwards pass,
+    gradients from each replica are summed into the original module.
+    Note that the outputs are not gathered, please use compatible
+    :class:`mxnet.gluon.contrib.DataParallelModel`
 
     Parameters
     ----------
     module : object
         Network to be parallelized.
-    ctx : list
+    ctx_list : list
         A list of contexts to use.
+    sync : bool
+        enable synchronization (default: False).
 
 
     Inputs:
