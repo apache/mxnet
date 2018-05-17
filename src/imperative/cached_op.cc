@@ -81,9 +81,7 @@ struct CachedOp::CachedOpState {
 
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
-    const std::vector<std::pair<std::string, std::string> >& flags,
-    const std::vector<std::string> arg_names,
-    const std::unordered_map<std::string, std::vector<NDArray> >& params) {
+    const std::vector<std::pair<std::string, std::string> >& flags) {
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
@@ -130,28 +128,15 @@ CachedOp::CachedOp(
   // Set params
   {
     const auto& idx = fwd_graph_.indexed_graph();
-    std::unordered_map<std::string, size_t> arg_name_to_id;
-    for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
-      const auto& name = idx[idx.input_nodes()[i]].source->attrs.name;
-      auto iter = params.find(name);
-      if (iter == params.end()) {
-        arg_name_to_id[name] = i;
-        continue;
+    if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
+      CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
+               idx.input_nodes().size());
+    } else {
+      std::vector<uint32_t> tmp;
+      for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
+        tmp.push_back(i);
       }
-      fwd_params_idx_.push_back(i);
-      for (const auto& param : iter->second) {
-        params_[param.ctx()].emplace_back(param);
-      }
-    }
-
-    CHECK_EQ(arg_name_to_id.size(), arg_names.size())
-        << "CachedOp expects " << arg_name_to_id.size()
-        << " inputs, given " << arg_names.size();
-
-    for (const auto& name : arg_names) {
-      auto iter = arg_name_to_id.find(name);
-      CHECK(iter != arg_name_to_id.end()) << "Unexpected input name " << name;
-      fwd_args_idx_.push_back(iter->second);
+      config_.data_indices.assign(tmp.begin(), tmp.end());
     }
   }
 
@@ -620,12 +605,18 @@ OpStatePtr CachedOp::StaticForward(
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
 
+  for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
+    auto nid = idx.input_nodes()[config_.param_indices[i]];
+    match = match && state.arrays[idx.entry_id(nid, 0)]->IsSame(
+        *inputs[config_.param_indices[i]]);
+  }
+
   if (!(state.fwd_initialized && state.recording == recording && match)) {
     state.ResetStaticRuntime(false);
 
-    for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
-      auto nid = idx.input_nodes()[fwd_params_idx_[i]];
-      *state.arrays[idx.entry_id(nid, 0)] = params_[default_ctx][i];
+    for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
+      auto nid = idx.input_nodes()[config_.param_indices[i]];
+      *state.arrays[idx.entry_id(nid, 0)] = *inputs[config_.param_indices[i]];
     }
 
     StaticResetState(state_ptr, recording, false);
@@ -633,7 +624,7 @@ OpStatePtr CachedOp::StaticForward(
     state.fwd_initialized = true;
   }
 
-  for (auto i : fwd_args_idx_) {
+  for (auto i : config_.data_indices) {
     auto eid = idx.entry_id(idx.input_nodes()[i], 0);
     state.arrays[eid] = inputs[i];
   }
@@ -724,37 +715,22 @@ OpStatePtr CachedOp::DynamicForward(
 
 void CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
-    const std::vector<NDArray*>& args,
+    const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
   static const auto cached_op = nnvm::Op::Get("_CachedOp");
 
-  CHECK_EQ(args.size(), fwd_args_idx_.size())
-      << "CachedOp requires " << fwd_args_idx_.size()
-      << " inputs but got " << args.size();
+  CHECK_EQ(inputs.size(), num_inputs());
 
-  Context default_ctx = args[0]->ctx();
+  Context default_ctx = inputs[0]->ctx();
 
   const auto& idx = fwd_graph_.indexed_graph();
-  for (size_t i = 0; i < fwd_args_idx_.size(); ++i) {
-    CHECK_EQ(args[i]->ctx(), default_ctx)
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    CHECK_EQ(inputs[i]->ctx(), default_ctx)
         << "CachedOp requires all inputs to live on the same context. But "
-        << idx[idx.input_nodes()[fwd_args_idx_[0]]].source->attrs.name
+        << idx[idx.input_nodes()[0]].source->attrs.name
         << " is on " << default_ctx << " while "
-        << idx[idx.input_nodes()[fwd_args_idx_[i]]].source->attrs.name
-        << " is on " << args[i]->ctx();
-  }
-
-  std::vector<NDArray*> inputs(num_inputs());
-  for (index_t i = 0; i < fwd_args_idx_.size(); ++i) {
-    inputs[fwd_args_idx_[i]] = args[i];
-  }
-  if (fwd_params_idx_.size()) {
-    CHECK(params_.find(default_ctx) != params_.end())
-        << "CachedOp is not initialized on context " << default_ctx;
-
-    for (size_t i = 0; i < fwd_params_idx_.size(); ++i) {
-      inputs[fwd_params_idx_[i]] = &params_[default_ctx][i];
-    }
+        << idx[idx.input_nodes()[i]].source->attrs.name
+        << " is on " << inputs[i]->ctx();
   }
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
@@ -875,19 +851,19 @@ void CachedOp::StaticBackward(
   const auto& idx = g.indexed_graph();
   auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
 
-  for (size_t i = 0; match && i < fwd_params_idx_.size(); ++i) {
-    const auto iter = fwd_input_to_grad_output_.find(fwd_params_idx_[i]);
+  for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
+    const auto iter = fwd_input_to_grad_output_.find(config_.param_indices[i]);
     if (iter == fwd_input_to_grad_output_.end() ||
         reqs[iter->second] == kNullOp) continue;
     auto eid = idx.entry_id(
         idx.outputs()[state.info.grad_output_to_full_output[iter->second]]);
-    if (state.arrays[eid]->IsSame(*outputs[iter->second])) match = false;
+    match = match && state.arrays[eid]->IsSame(*outputs[iter->second]);
   }
 
   if (!(state.bwd_initialized && match)) {
     state.ResetStaticRuntime(true);
 
-    for (auto i : fwd_params_idx_) {
+    for (auto i : config_.param_indices) {
       const auto iter = fwd_input_to_grad_output_.find(i);
       if (iter == fwd_input_to_grad_output_.end() ||
           reqs[iter->second] == kNullOp) continue;
@@ -907,7 +883,7 @@ void CachedOp::StaticBackward(
     state.arrays[eid] = inputs[i];
   }
 
-  for (auto i : fwd_args_idx_) {
+  for (auto i : config_.data_indices) {
     const auto iter = fwd_input_to_grad_output_.find(i);
     if (iter == fwd_input_to_grad_output_.end() ||
         reqs[iter->second] == kNullOp) continue;

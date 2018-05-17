@@ -34,6 +34,8 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t forward_bulk_size;
   uint32_t backward_bulk_size;
   bool use_static_memory;
+  nnvm::Tuple<uint32_t> data_indices;
+  nnvm::Tuple<uint32_t> param_indices;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
     DMLC_DECLARE_FIELD(inline_limit)
     .set_default(2)
@@ -47,6 +49,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(use_static_memory)
     .set_default(false)
     .describe("Whether to allocate memory statically.");
+    DMLC_DECLARE_FIELD(data_indices)
+    .describe("Position of argument variables.");
+    DMLC_DECLARE_FIELD(param_indices)
+    .describe("Position of parameters.");
   }
 };
 
@@ -54,9 +60,7 @@ class CachedOp {
  public:
   CachedOp(
       const nnvm::Symbol& sym,
-      const std::vector<std::pair<std::string, std::string> >& flags,
-      const std::vector<std::string> arg_names,
-      const std::unordered_map<std::string, std::vector<NDArray> >& params);
+      const std::vector<std::pair<std::string, std::string> >& flags);
   ~CachedOp();
   uint32_t num_inputs() {
     return fwd_graph_.indexed_graph().input_nodes().size();
@@ -76,16 +80,19 @@ class CachedOp {
   const std::unordered_set<uint32_t>& mutable_input_nodes() {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
-  std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
-                                        const std::vector<nnvm::NodeEntry>& ograds);
-  void Forward(const std::shared_ptr<CachedOp>& op_ptr,
-               const std::vector<NDArray*>& args,
-               const std::vector<NDArray*>& outputs);
-  void Backward(const bool retain_graph,
-                const OpStatePtr& state,
-                const std::vector<NDArray*>& inputs,
-                const std::vector<OpReqType>& reqs,
-                const std::vector<NDArray*>& outputs);
+  std::vector<nnvm::NodeEntry> Gradient(
+      const nnvm::NodePtr& node,
+      const std::vector<nnvm::NodeEntry>& ograds);
+  void Forward(
+      const std::shared_ptr<CachedOp>& op_ptr,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
+  void Backward(
+      const bool retain_graph,
+      const OpStatePtr& state,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<OpReqType>& reqs,
+      const std::vector<NDArray*>& outputs);
 
  private:
   struct GraphInfo;
@@ -93,37 +100,45 @@ class CachedOp {
   struct CachedOpState;
 
   OpStatePtr GetCachedOpState(const Context& ctx);
-  bool SetForwardGraph(GraphInfo* info,
-         const bool recording,
-         const std::vector<NDArray*>& inputs);
-  bool SetBackwardGraph(GraphInfo* info,
-          const std::vector<OpReqType>& reqs,
-          const std::vector<NDArray*>& inputs,
-          bool detect_inplace_addto = false);
-  OpStatePtr DynamicForward(const Context& default_ctx,
-                    const std::vector<NDArray*>& inputs,
-                    const std::vector<NDArray*>& outputs);
-  void DynamicBackward(const bool retain_graph,
-               const OpStatePtr& op_state,
-               const std::vector<NDArray*>& inputs,
-               const std::vector<OpReqType>& reqs,
-               const std::vector<NDArray*>& outputs);
-  void StaticResetState(const OpStatePtr& state_ptr,
-                        bool recording,
-                        bool keep_fwd);
-  void StaticRunOps(const Context& default_ctx,
-                    const nnvm::Graph& g,
-                    const OpStatePtr& state_ptr,
-                    size_t start_nid,
-                    size_t end_nid);
-  OpStatePtr StaticForward(const Context& default_ctx,
-                           const std::vector<NDArray*>& args,
-                           const std::vector<NDArray*>& outputs);
-  void StaticBackward(const bool retain_graph,
-                      const OpStatePtr& state_ptr,
-                      const std::vector<NDArray*>& inputs,
-                      const std::vector<OpReqType>& reqs,
-                      const std::vector<NDArray*>& outputs);
+  bool SetForwardGraph(
+      GraphInfo* info,
+      const bool recording,
+      const std::vector<NDArray*>& inputs);
+  bool SetBackwardGraph(
+      GraphInfo* info,
+      const std::vector<OpReqType>& reqs,
+      const std::vector<NDArray*>& inputs,
+      bool detect_inplace_addto = false);
+  OpStatePtr DynamicForward(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
+  void DynamicBackward(
+      const bool retain_graph,
+      const OpStatePtr& op_state,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<OpReqType>& reqs,
+      const std::vector<NDArray*>& outputs);
+  void StaticResetState(
+      const OpStatePtr& state_ptr,
+      bool recording,
+      bool keep_fwd);
+  void StaticRunOps(
+      const Context& default_ctx,
+      const nnvm::Graph& g,
+      const OpStatePtr& state_ptr,
+      size_t start_nid,
+      size_t end_nid);
+  OpStatePtr StaticForward(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
+  void StaticBackward(
+      const bool retain_graph,
+      const OpStatePtr& state_ptr,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<OpReqType>& reqs,
+      const std::vector<NDArray*>& outputs);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
@@ -133,11 +148,8 @@ class CachedOp {
   std::vector<nnvm::NodeEntry> ograd_entries_;
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
   std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output_;
-  std::vector<uint32_t> fwd_args_idx_;
-  std::vector<uint32_t> fwd_params_idx_;
   std::vector<bool> save_inputs_, save_outputs_;
   std::vector<OpReqType> bwd_output_reqs_;
-  std::unordered_map<Context, std::vector<NDArray> > params_;
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
