@@ -1,7 +1,7 @@
 
 # Using pre-trained models in MXNet
 
-In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three images classification models from the Apache MXNet [Gluon model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
+In this tutorial we will see how to use multiple pre-trained models with Apache MXNet. First, let's download three image classification models from the Apache MXNet [Gluon model zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html).
 * **DenseNet-121** ([research paper](https://arxiv.org/abs/1608.06993)), improved state of the art on [ImageNet dataset](http://image-net.org/challenges/LSVRC) in 2016.
 * **MobileNet** ([research paper](https://arxiv.org/abs/1704.04861)), MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks, suitable for mobile applications.
 * **ResNet-18** ([research paper](https://arxiv.org/abs/1512.03385v1)), the -152 version is the 2015 winner in multiple categories.
@@ -10,19 +10,20 @@ Why would you want to try multiple models? Why not just pick the one with the be
 
 
 ```python
+import json
+
+import matplotlib.pyplot as plt
 import mxnet as mx
 from mxnet import gluon, nd
 from mxnet.gluon.model_zoo import vision
-import matplotlib.pyplot as plt
 import numpy as np
-import json
 %matplotlib inline
 ```
 
 ## Loading the model
 
 The [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) provides a collection of off-the-shelf models. You can get the ImageNet pre-trained model by using `pretrained=True`. 
-If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameter: for example `classes=10`.
+If you want to train on your own classification problem from scratch, you can get an untrained network with a specific number of classes using the `classes` parameter: for example `net = vision.resnet18_v1(classes=10)`. However note that you cannot use the `pretrained` and `classes` parameter at the same time. If you want to use pre-trained weights as initialization of your network except for the last layer, have a look at the last section of this tutorial.
 
 We can specify the *context* where we want to run the model: the default behavior is to use a CPU context. There are two reasons for this:
 * First, this will allow you to test the notebook even if your machine is not equipped with a GPU :)
@@ -43,7 +44,7 @@ mobileNet = vision.mobilenet0_5(pretrained=True, ctx=ctx)
 resnet18 = vision.resnet18_v1(pretrained=True, ctx=ctx)
 ```
 
-We can look at the description of the MobileNet network for example, which has a relatively simple though deep architecture
+We can look at the description of the MobileNet network for example, which has a relatively simple yet deep architecture
 
 
 ```python
@@ -212,7 +213,7 @@ Here are the transformation steps:
 * Resize the shorter edge of the image 224.
 * Crop, using a size of 224x224 from the center of the image.
 * Shift the mean and standard deviation of our color channels to match the ones of the dataset the network has been trained on.
-* Reshape the array from (Height, Width, 3) to (3, Height, Width).
+* Transpose the array from (Height, Width, 3) to (3, Height, Width).
 * Add a fourth dimension, the batch dimension.
 
 
@@ -225,13 +226,13 @@ def transform(image):
                                       mean=mx.nd.array([0.485, 0.456, 0.406]),
                                       std=mx.nd.array([0.229, 0.224, 0.225])) 
     # the network expect batches of the form (N,3,224,224)
-    flipped_axis = normalized.transpose((2,0,1))  # Flipping from (224, 224, 3) to (3, 224, 224)
-    batchified = flipped_axis.expand_dims(axis=0) # change the shape from (3, 224, 224) to (1, 3, 224, 224)
+    transposed = normalized.transpose((2,0,1))  # Transposing from (224, 224, 3) to (3, 224, 224)
+    batchified = transposed.expand_dims(axis=0) # change the shape from (3, 224, 224) to (1, 3, 224, 224)
     return batchified
 ```
 
 ## Testing the different networks
-We run the image through each pre-trained network. The models output a *NDArray* holding 1,000 activation values, which we convert to probabilities using the `softmax()` function, corresponding to the 1,000 categories it has been trained on. The *NDArray* has only one line since batch size is equal to 1
+We run the image through each pre-trained network. The models output a *NDArray* holding 1,000 activation values, which we convert to probabilities using the `softmax()` function, corresponding to the 1,000 categories it has been trained on. The output prediction NDArray has only one row since batch size is equal to 1
 
 
 ```python
@@ -343,7 +344,7 @@ predict(resnet18, image, categories, 3)
 
 As you can see, pre-trained networks produce slightly different predictions, and have different run-time. In this case, MobileNet is almost **5 times faster** than DenseNet!
 
-## Fine-tuning using pre-trained models
+## Fine-tuning pre-trained models
 
 You can replace the output layer of your pre-trained model to fit the right number of classes for your own image classification task like this, for example for 10 classes:
 
