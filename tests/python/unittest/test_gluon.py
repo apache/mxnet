@@ -79,22 +79,36 @@ def test_parameter_invalid_access():
 
 @with_seed()
 def test_paramdict():
-    params = gluon.ParameterDict('net_')
-    params.get('w0', shape=(10, 10))
-    params.get('w1', shape=(10, 10), stype='row_sparse')
+    params0 = gluon.ParameterDict('net_')
+    params0.get('w0', shape=(10, 10))
+    params0.get('w1', shape=(10, 10), stype='row_sparse')
     all_row_ids = mx.nd.arange(0, 10)
-    assert list(params.keys()) == ['net_w0', 'net_w1']
-    params.initialize(ctx=mx.cpu())
-    prev_w0 = params.get('w0').data(mx.cpu())
-    prev_w1 = params.get('w1').row_sparse_data(all_row_ids)
+    assert list(params0.keys()) == ['net_w0', 'net_w1']
+    params0.initialize(ctx=mx.cpu())
+    prev_w0 = params0.get('w0').data(mx.cpu())
+    prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
 
-    params.save('test.params')
-    params.load('test.params', mx.cpu())
+    params0.save('test.params')
+    params0.load('test.params', mx.cpu())
     # compare the values before and after save/load
-    cur_w0 = params.get('w0').data(mx.cpu())
-    cur_w1 = params.get('w1').row_sparse_data(all_row_ids)
+    cur_w0 = params0.get('w0').data(mx.cpu())
+    cur_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
+    # create a new param dict with dense params, and load from the checkpoint
+    # of sparse & dense params
+    params1 = gluon.ParameterDict('net_')
+    params1.get('w0', shape=(10, 10))
+    params1.get('w1', shape=(10, 10))
+    assertRaises(RuntimeError, params1.load, 'test.params', mx.cpu())
+    params1.load('test.params', mx.cpu(), cast_stype=True)
+    # compare the values before and after save/load
+    cur_w0 = params1.get('w0').data(mx.cpu())
+    cur_w1 = params1.get('w1').data(mx.cpu())
+    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
+    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
 
 @with_seed()
 def test_parameter_row_sparse_data():
@@ -1105,6 +1119,7 @@ def test_save_load():
 
     net.load_params('test.params')
 
+@with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
         def __init__(self):

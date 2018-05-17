@@ -230,13 +230,13 @@ class Parameter(object):
                for result in results:
                    rows = row_id.as_in_context(result.context)
                    ret.append(ndarray.sparse.retain(result, rows))
-            return ret;
+            return ret
 
         # fetch row sparse params from the trainer
         self._trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx):
+    def _load_init(self, data, ctx, cast_stype=False):
         """(Re)initializes by loading from data."""
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
@@ -250,6 +250,14 @@ class Parameter(object):
                 "Failed loading Parameter '%s' from saved params: " \
                 "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
+        if self._stype != data.stype:
+            if not cast_stype:
+                raise RuntimeError("Failed loading Parameter '%s' from saved params: storage " \
+                                   "type incompatible expected %s vs saved %s. Set " \
+                                   "cast_stype=True to cast saved params to the same stype " \
+                                   "as '%s'."%(self.name, self._stype, data.stype, self.name))
+            else:
+                data = data.tostype(self._stype)
         if isinstance(ctx, Context):
             ctx = [ctx]
         if self._data is None:
@@ -322,6 +330,7 @@ class Parameter(object):
             block = self.list_data()
             data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
         else:
+            # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=context.cpu())
             data = self.row_sparse_data(all_row_ids)
         return data
@@ -870,7 +879,7 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix=''):
+             ignore_extra=False, restore_prefix='', cast_stype=False):
         """Load parameters from file.
 
         filename : str
@@ -908,4 +917,4 @@ class ParameterDict(object):
                     "Please make sure source and target networks have the same prefix."%(
                         name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx)
+            self[name]._load_init(arg_dict[name], ctx, cast_stype=cast_stype)
