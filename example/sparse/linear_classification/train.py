@@ -46,7 +46,7 @@ AVAZU = {
 
 def batch_row_ids(data_batch):
     """ Generate row ids based on the current mini-batch """
-    return {'weight': batch.data[0].indices}
+    return {'weight': data_batch.data[0].indices}
 
 def all_row_ids(data_batch):
     """ Generate row ids for all rows """

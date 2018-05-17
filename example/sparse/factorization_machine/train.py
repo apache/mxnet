@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     def batch_row_ids(data_batch):
         """ Generate row ids based on the current mini-batch """
-        idx = batch.data[0].indices
+        idx = data_batch.data[0].indices
         return {'w': idx, 'v': idx}
 
     def all_row_ids(data_batch):
