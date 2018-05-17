@@ -28,7 +28,7 @@ from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed
 import unittest
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, L, D, mode):
+def check_rnn_consistency(cell1, cell2, T, N, I, H):
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -59,75 +59,25 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, L, D, mode):
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
-
-    mod1.get_params()[0]['parameters'].attach_grad()
-    mod1.backward(out_grads=[dy])   
-
-    mod2_wx = ['l%d_i2h_weight' % j for j in range(L)]
-    mod2_wh = ['l%d_h2h_weight' % j for j in range(L)]
-    mod2_bx = ['l%d_i2h_bias' % j for j in range(L)]
-    mod2_bh = ['l%d_h2h_bias' % j for j in range(L)]
-    for j in range(L):
-      mod2.get_params()[0][mod2_wx[j]].attach_grad()
-      mod2.get_params()[0][mod2_wh[j]].attach_grad()
-      mod2.get_params()[0][mod2_bx[j]].attach_grad()
-      mod2.get_params()[0][mod2_bh[j]].attach_grad()
-    
-    if D == 2:
-      mod2_biwx = ['r%d_i2h_weight' % j for j in range(L)]
-      mod2_biwh = ['r%d_h2h_weight' % j for j in range(L)]
-      mod2_bibx = ['r%d_i2h_bias' % j for j in range(L)]
-      mod2_bibh = ['r%d_h2h_bias' % j for j in range(L)]
-      for j in range(L):
-        mod2.get_params()[0][mod2_biwx[j]].attach_grad()
-        mod2.get_params()[0][mod2_biwh[j]].attach_grad()
-        mod2.get_params()[0][mod2_bibx[j]].attach_grad()
-        mod2.get_params()[0][mod2_bibh[j]].attach_grad()
-
+    mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
     assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
-    i = I
-    mod2_params = mx.ndarray.concat(mod2.get_params()[0][mod2_wx[0]].grad.reshape(mode*H*i,), 
-                                    mod2.get_params()[0][mod2_wh[0]].grad.reshape(mode*H*H,), dim=0)
-    if D == 2:
-      mod2_params = mx.ndarray.concat(mod2_params, mod2.get_params()[0][mod2_biwx[0]].grad.reshape(mode*H*i,), 
-                                      mod2.get_params()[0][mod2_biwh[0]].grad.reshape(mode*H*H,), dim=0)
-    
-    i = D * H
-    for j in range(1, L):
-      mod2_params = mx.ndarray.concat(mod2_params, mod2.get_params()[0][mod2_wx[j]].grad.reshape(mode*H*i,), 
-                                      mod2.get_params()[0][mod2_wh[j]].grad.reshape(mode*H*H,), dim=0)
-      if D == 2:
-        mod2_params = mx.ndarray.concat(mod2_params, mod2.get_params()[0][mod2_biwx[j]].grad.reshape(mode*H*i,), 
-                                        mod2.get_params()[0][mod2_biwh[j]].grad.reshape(mode*H*H,), dim=0)
-
-    for j in range(L):
-      mod2_params = mx.ndarray.concat(mod2_params, mod2.get_params()[0][mod2_bx[j]].grad.reshape(mode*H,), 
-                                      mod2.get_params()[0][mod2_bh[j]].grad.reshape(mode*H,), dim=0)
-      if D == 2:
-        mod2_params = mx.ndarray.concat(mod2_params, mod2.get_params()[0][mod2_bibx[j]].grad.reshape(mode*H,), 
-                                        mod2.get_params()[0][mod2_bibh[j]].grad.reshape(mode*H,), dim=0)
-      
-    assert_allclose(mod1.get_params()[0]['parameters'].grad.asnumpy(), mod2_params.asnumpy(), rtol=1e-2, atol=1e-4)
-    
 @with_seed()
 def test_lstm_sym():
-    T, N, I, H, L = 5, 32, 800, 800, 3
-    mode = 4
-    
-    fused = mx.rnn.FusedRNNCell(H, num_layers=L, mode='lstm', get_next_state=True, prefix='')
+    T, N, I, H = 5, 32, 800, 800
+    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
-    check_rnn_consistency(fused, stack, T, N, I, H, L, 1, mode)
+    check_rnn_consistency(fused, stack, T, N, I, H)
+    check_rnn_consistency(stack, fused, T, N, I, H)
 
 @with_seed()
 def test_lstm_bidirectional():
-    T, N, I, H, L = 5, 20, 800, 800, 2
-    mode = 4
-    fused = mx.rnn.FusedRNNCell(H, num_layers=L, mode='lstm',
+    T, N, I, H = 5, 20, 800, 800
+    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
                                 bidirectional=True, get_next_state=True, prefix='')
 
     stack = mx.rnn.SequentialRNNCell()
@@ -140,27 +90,27 @@ def test_lstm_bidirectional():
                 mx.rnn.LSTMCell(H, prefix='r1_'),
                 output_prefix='bi_lstm_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, L, 2, mode)
+    check_rnn_consistency(stack, fused, T, N, I, H)
+    check_rnn_consistency(fused, stack, T, N, I, H)
 
 @with_seed()
 def test_gru_sym():
-    T, N, I, H, L = 5, 32, 800, 800, 3
-    mode = 3
+    T, N, I, H = 5, 32, 800, 800
 
-    fused = mx.rnn.FusedRNNCell(H, num_layers=L, mode='gru', get_next_state=True, prefix='')
+    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, L, 1, mode)
+    check_rnn_consistency(fused, stack, T, N, I, H)
+    check_rnn_consistency(stack, fused, T, N, I, H)
 
 @with_seed()
 def test_gru_bidirectional():
-    T, N, I, H, L = 5, 20, 800, 800, 2
-    mode = 3
+    T, N, I, H = 5, 20, 800, 800
     
-    fused = mx.rnn.FusedRNNCell(H, num_layers=L, mode='gru',
+    fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='gru',
                                 bidirectional=True, get_next_state=True, prefix='')
     
     stack = mx.rnn.SequentialRNNCell()
@@ -174,7 +124,8 @@ def test_gru_bidirectional():
                 mx.rnn.GRUCell(H, prefix='r1_'),
                 output_prefix='bi_gru_1_'))
     
-    check_rnn_consistency(fused, stack, T, N, I, H, L, 2, mode)
+    check_rnn_consistency(fused, stack, T, N, I, H)
+    check_rnn_consistency(stack, fused, T, N, I, H)
 
 # Currently, fused LSTM operator doesn't support dropout.
 # Will change this test after dropout is supported
@@ -6088,6 +6039,18 @@ def test_activation():
         # Finite difference testing
         finite_diff_unary_op(
             name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
+
+
+def test_context_num_gpus():
+    try:
+        # Note: the test is run both on GPU and CPU hosts, so that we can not assert
+        # on a specific number here.
+        assert mx.context.num_gpus() >= 0
+    except mx.MXNetError as e:
+        # Note: On a CPU only host CUDA sometimes is not able to determine the number
+        # of GPUs
+        if str(e).find("CUDA") == -1:
+            raise e
 
 
 if __name__ == '__main__':
