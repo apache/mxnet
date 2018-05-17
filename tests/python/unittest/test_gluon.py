@@ -1118,11 +1118,8 @@ def test_hybrid_static_memory():
     net1(x)
     net2(x)
 
-    net1.save_params('test.params')
-    net2.load_params('test.params')
-
     def test(net, x):
-        with mx.autograd.record(False):
+        with mx.autograd.record():
             y = net(x) + net(x)
             y.backward()
 
