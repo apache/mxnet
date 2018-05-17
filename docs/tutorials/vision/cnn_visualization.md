@@ -89,24 +89,29 @@ class VGG(mx.gluon.HybridBlock):
 We'll use pre-trained weights (trained on ImageNet) from model zoo instead of training the model from scratch.
 
 ```python
+# Number of convolution layers and number of filters for each VGG configuration.
+# Check the VGG [paper](https://arxiv.org/abs/1409.1556) for more details on the different architectures.
 vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
             13: ([2, 2, 2, 2, 2], [64, 128, 256, 512, 512]),
             16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
             19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
 
-def get_vgg(num_layers, pretrained=False, ctx=mx.cpu(),
-            root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models')):
+
+    # Get the number of convolution layers and filters
     layers, filters = vgg_spec[num_layers]
+
+    # Build the VGG network
     net = VGG(layers, filters, **kwargs)
-    if pretrained:
-        from mxnet.gluon.model_zoo.model_store import get_model_file
-        batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
-        net.load_params(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix),
-                                       root=root), ctx=ctx)
+
+    # Load pretrained weights from model zoo
+    from mxnet.gluon.model_zoo.model_store import get_model_file
+    net.load_params(get_model_file('vgg%d' % num_layers, root=root), ctx=ctx)
+
     return net
 
-def vgg16(**kwargs):
-    return get_vgg(16, **kwargs)
+def vgg16():
+    return get_vgg(16)
 ```
 
 ## Preprocessing and other helpers
@@ -128,7 +133,7 @@ def preprocess(data):
     data = mx.nd.transpose(data, (2,0,1))
     return data
 
-network = vgg16(pretrained=True, ctx=mx.cpu())
+network = vgg16(ctx=mx.cpu())
 ```
 
 We define a helper to display multiple images in a row in Jupyter notebook.
