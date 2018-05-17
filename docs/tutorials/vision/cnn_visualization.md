@@ -46,11 +46,11 @@ from mxnet.gluon.nn import MaxPool2D, Flatten, Dense, Dropout, BatchNorm
 from gradcam import Activation, Conv2D
 
 class VGG(mx.gluon.HybridBlock):
-    def __init__(self, layers, filters, classes=1000, batch_norm=False, **kwargs):
+    def __init__(self, layers, filters, classes=1000, **kwargs):
         super(VGG, self).__init__(**kwargs)
         assert len(layers) == len(filters)
         with self.name_scope():
-            self.features = self._make_features(layers, filters, batch_norm)
+            self.features = self._make_features(layers, filters)
             self.features.add(Dense(4096, activation='relu',
                                        weight_initializer='normal',
                                        bias_initializer='zeros'))
@@ -63,7 +63,7 @@ class VGG(mx.gluon.HybridBlock):
                                    weight_initializer='normal',
                                    bias_initializer='zeros')
 
-    def _make_features(self, layers, filters, batch_norm):
+    def _make_features(self, layers, filters):
         featurizer = mx.gluon.nn.HybridSequential(prefix='')
         for i, num in enumerate(layers):
             for _ in range(num):
@@ -72,8 +72,6 @@ class VGG(mx.gluon.HybridBlock):
                                                                    factor_type='out',
                                                                    magnitude=2),
                                          bias_initializer='zeros'))
-                if batch_norm:
-                    featurizer.add(BatchNorm())
                 featurizer.add(Activation('relu'))
             featurizer.add(MaxPool2D(strides=2))
         return featurizer
@@ -96,7 +94,7 @@ vgg_spec = {11: ([1, 1, 2, 2, 2], [64, 128, 256, 512, 512]),
             16: ([2, 2, 3, 3, 3], [64, 128, 256, 512, 512]),
             19: ([2, 2, 4, 4, 4], [64, 128, 256, 512, 512])}
 
-def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models')):
+def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models'), **kwargs):
 
     # Get the number of convolution layers and filters
     layers, filters = vgg_spec[num_layers]
@@ -110,8 +108,8 @@ def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models')
 
     return net
 
-def vgg16():
-    return get_vgg(16)
+def vgg16(**kwargs):
+    return get_vgg(16, **kwargs)
 ```
 
 ## Preprocessing and other helpers
@@ -198,6 +196,7 @@ In our network, feature extractors are added to a HybridSequential block named f
 last_conv_layer_name = network.features[28]._name
 print(last_conv_layer_name)
 ```
+vgg0_conv2d12<!--notebook-skip-line-->
 
 Let's download some images we can use for visualization.
 
