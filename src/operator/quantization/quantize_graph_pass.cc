@@ -99,6 +99,7 @@ Graph QuantizeGraph(Graph &&src) {
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   auto excluded_nodes = src.GetAttr<std::unordered_set<NodePtr>>("excluded_nodes");
+  auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
@@ -129,169 +130,7 @@ Graph QuantizeGraph(Graph &&src) {
              mirror_node->op()->name != "_contrib_quantize")) {
           NodePtr quantize_node = InsertNode("_contrib_quantize",
             e.node->attrs.name + "_quantize", new_node, mirror_entry);
-          quantize_node->attrs.dict["out_type"] = "int8";
-          quantize_node->op()->attr_parser(&(quantize_node->attrs));
-
-          NodePtr min_node = InsertNode("min",
-              e.node->attrs.name + "_min", quantize_node, mirror_entry);
-          min_node->op()->attr_parser(&(min_node->attrs));
-
-          NodePtr max_node = InsertNode("max",
-              e.node->attrs.name + "_max", quantize_node, mirror_entry);
-          max_node->op()->attr_parser(&(max_node->attrs));
-
-          mirror_map[e.node.get()] = std::move(quantize_node);
-        } else {
-          // If the entry e's node needs quantization, or mirror_entry is from a quantize op,
-          // simply add mirror_entry to the input of the new_node.
-          new_node->inputs.emplace_back(mirror_entry);
-        }
-        // the input should be `quantize` or quantized version op now
-      }
-
-      // add min and max into quantized op input assume order of quantized op inputs is:
-      // data1, data2, ..., min1, max1, min2, max2, ...
-      for (const auto& e : node->inputs) {
-        NodePtr mirror_node = mirror_map.at(e.node.get());
-        NodeEntry mirror_entry = NodeEntry{
-          mirror_node, e.index, e.version};
-        // for quantize node
-        uint32_t min_index = 1;
-        uint32_t max_index = 2;
-        if (quantized_op_map.count(e.node->op())) {
-          size_t  num_outputs = e.node->num_outputs();
-          min_index = num_outputs + 2 * e.index;
-          max_index = num_outputs + 2 * e.index + 1;
-        } else {
-          CHECK(mirror_node->op()->name == "_contrib_quantize")
-            << "The input is not quantize or quantized_op";
-        }
-        new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-        new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
-      }
-
-      // If the new_node op registered attr FNeedRequantize, insert requantize node after it.
-      // Here it's assumed that the quantized_op node only produces three outputs:
-      // out_data, min_range, and max_range.
-      if (need_requantize_map.count(new_node->op()) > 0
-          && need_requantize_map[new_node->op()](new_node->attrs)) {
-        NodePtr requantize_node = Node::Create();
-        requantize_node->attrs.op = Op::Get("_contrib_requantize");
-        requantize_node->attrs.name = "requantize_" + node->attrs.name;
-        if (requantize_node->op()->attr_parser != nullptr) {
-          requantize_node->op()->attr_parser(&(requantize_node->attrs));
-        }
-        for (size_t i = 0; i < 3; ++i) {
-          requantize_node->inputs.emplace_back(NodeEntry{new_node, static_cast<uint32_t>(i), 0});
-        }
-        new_node = requantize_node;
-      }
-    } else {
-      // If the currently visited node does not need quantization, copy the current node to become
-      // the new_node. Meanwhile, check whether any inputs of the current node need quantization
-      // (e.g., a quantized_conv2d node), and insert a dequantize op node in the new graph if there
-      // are any. Otherwise, simply add a copy of the current node's entry to the inputs of
-      // the new_node.
-      *new_node = *node;
-      new_node->inputs.clear();
-      for (const auto& e : node->inputs) {
-        NodePtr mirror_node = mirror_map.at(e.node.get());
-        NodeEntry mirror_entry = NodeEntry{
-          mirror_node, e.index, e.version};
-        size_t num_outputs = e.node->num_outputs();
-        uint32_t min_index = num_outputs + 2 * e.index;
-        uint32_t max_index = num_outputs + 2 * e.index + 1;
-
-        // if input node is quantized operator, add dequantize node
-        if (NeedQuantize(e.node, excluded_nodes)) {
-          NodePtr dequantize_node = CreateNode("_contrib_dequantize",
-            e.node->attrs.name + "_dequantize");
-          dequantize_node->inputs.emplace_back(mirror_entry);
-          dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-          dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
-          dequantize_node->op()->attr_parser(&(dequantize_node->attrs));
-
-          new_node->inputs.emplace_back(NodeEntry{dequantize_node, 0, 0});
-          mirror_map[e.node.get()] = std::move(dequantize_node);
-        } else {
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, e.index, e.version});
-        }
-      }
-    }
-    mirror_map[node.get()] = std::move(new_node);
-  });
-
-  std::vector<NodeEntry> outputs;
-  for (const auto& e : src.outputs) {
-    if (quantized_op_map.count(e.node->op())) {
-      NodePtr mirror_node = mirror_map.at(e.node.get());
-      NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-      size_t num_inputs = e.node->num_inputs();
-      uint32_t min_index = num_inputs + 2 * e.index;
-      uint32_t max_index = num_inputs + 2 * e.index + 1;
-
-      NodePtr dequantize_node = CreateNode("_contrib_dequantize",
-          e.node->attrs.name + "_dequantize");
-      dequantize_node->inputs.emplace_back(mirror_entry);
-      dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-      dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
-      dequantize_node->op()->attr_parser(&(dequantize_node->attrs));
-      outputs.emplace_back(NodeEntry{dequantize_node, 0, 0});
-    } else {
-      outputs.emplace_back(NodeEntry{mirror_map.at(e.node.get()), e.index, e.version});
-    }
-  }
-
-  if (!offline_params.empty()) outputs =
-    OfflineParams(std::move(outputs), std::move(offline_params));
-
-  Graph ret;
-  ret.outputs = std::move(outputs);
-  return ret;
-}
-
-#if MXNET_USE_MKLDNN == 1
-// Quantize graph CPU MKLDNN version implementation, the differences with
-// QuantizeGraph() function are:
-// (1) the quantize op's out_type is uint8 per MKLDNN requirement
-// (2) use input node's mirror node (saves the mapped quantized node) output
-//     info to calculate the quantized/dequantized node's input min/max index
-Graph QuantizeGraphCPU(Graph &&src) {
-  static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
-  static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
-  auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
-  auto excluded_nodes = src.GetAttr<std::unordered_set<NodePtr>>("excluded_nodes");
-
-  // mirror_map stores the mapping from the currently visited graph to the newly created quantized
-  // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
-  // node. The existing key's value may be updated with the newly created quantize/dequantize op.
-  std::unordered_map<Node*, NodePtr> mirror_map;
-  DFSVisit(src.outputs, [&](const NodePtr& node) {
-    NodePtr new_node = Node::Create();
-    // If the currently visited node needs quantization, insert a quantize op node before the
-    // current node and replace the current node with the quantized version in the new graph.
-    if (NeedQuantize(node, excluded_nodes)) {
-      auto fquantized_op = quantized_op_map[node->op()];
-      // If the currently visited node's op registered the FQuantizedOp property, new_node is a
-      // quantizated version of a that op, such as quantized_conv2d.
-      new_node = fquantized_op(node->attrs);
-
-      // add data into quantized op input
-      for (const auto& e : node->inputs) {
-        NodePtr mirror_node = mirror_map.at(e.node.get());
-        NodeEntry mirror_entry = NodeEntry{
-          mirror_node, e.index, e.version};
-        // If the NodeEntry e's node does not need quantization, and (the mirror_node is a variable,
-        // or the mirror_node's op is not a quantize op), create quantize op, min op, and max op
-        // taking mirror_entry as input to generate a quantized NDArray. Save the mapping between
-        // e's source node and the newly created quantize op so that the quantize op can be
-        // reused next time when the same entry is visited again.
-        if (!NeedQuantize(e.node, excluded_nodes) &&
-            (mirror_node->op() == nullptr ||
-             mirror_node->op()->name != "_contrib_quantize")) {
-          NodePtr quantize_node = InsertNode("_contrib_quantize",
-            e.node->attrs.name + "_quantize", new_node, mirror_entry);
-          quantize_node->attrs.dict["out_type"] = "uint8";
+          quantize_node->attrs.dict["out_type"] = quantized_dtype;
           quantize_node->op()->attr_parser(&(quantize_node->attrs));
 
           NodePtr min_node = InsertNode("min",
@@ -365,7 +204,6 @@ Graph QuantizeGraphCPU(Graph &&src) {
           size_t num_outputs = mirror_node->num_outputs() - 2;
           uint32_t min_index = num_outputs + 2 * e.index;
           uint32_t max_index = num_outputs + 2 * e.index + 1;
-
           NodePtr dequantize_node = CreateNode("_contrib_dequantize",
             e.node->attrs.name + "_dequantize");
           dequantize_node->inputs.emplace_back(mirror_entry);
@@ -411,7 +249,6 @@ Graph QuantizeGraphCPU(Graph &&src) {
   ret.outputs = std::move(outputs);
   return ret;
 }
-#endif
 
 Graph SetCalibTableToQuantizedGraph(Graph&& g) {
   static const auto& flist_outputs =
@@ -461,13 +298,6 @@ NNVM_REGISTER_PASS(QuantizeGraph)
 .describe("")
 .set_body(QuantizeGraph)
 .set_change_graph(true);
-
-#if MXNET_USE_MKLDNN == 1
-NNVM_REGISTER_PASS(QuantizeGraphCPU)
-.describe("")
-.set_body(QuantizeGraphCPU)
-.set_change_graph(true);
-#endif
 
 NNVM_REGISTER_PASS(SetCalibTableToQuantizedGraph)
 .describe("")
