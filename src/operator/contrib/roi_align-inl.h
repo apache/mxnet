@@ -50,7 +50,7 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
   DMLC_DECLARE_PARAMETER(ROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
-    .describe("fix pooled size: (h, w)");
+    .describe("ROI Align output roi featuremap height and width: (h, w)");
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
     .describe("Ratio of input feature map height (or w) to raw image height (or w). "
     "Equals the reciprocal of total stride in convolutional layers");

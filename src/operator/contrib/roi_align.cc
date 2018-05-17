@@ -156,8 +156,10 @@ void ROIAlignForward(
   int n_rois = nthreads / channels / pooled_width / pooled_height;
   // (n, c, ph, pw) is an element in the pooled output
   // can be parallelized using omp
-  // #pragma omp parallel for num_threads(32)
-  for (int n = 0; n < n_rois; n++) {
+  int n;
+#pragma omp parallel for private(n) \
+num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (n = 0; n < n_rois; n++) {
     int index_n = n * channels * pooled_width * pooled_height;
 
     // roi could have 4 or 5 columns
@@ -173,10 +175,6 @@ void ROIAlignForward(
     T roi_start_h = offset_bottom_rois[1] * spatial_scale;
     T roi_end_w = offset_bottom_rois[2] * spatial_scale;
     T roi_end_h = offset_bottom_rois[3] * spatial_scale;
-    // T roi_start_w = round(offset_bottom_rois[0] * spatial_scale);
-    // T roi_start_h = round(offset_bottom_rois[1] * spatial_scale);
-    // T roi_end_w = round(offset_bottom_rois[2] * spatial_scale);
-    // T roi_end_h = round(offset_bottom_rois[3] * spatial_scale);
 
     // Force malformed ROIs to be 1x1
     T roi_width = std::max(roi_end_w - roi_start_w, (T)1.);
@@ -213,7 +211,10 @@ void ROIAlignForward(
         roi_bin_grid_w,
         &pre_calc);
 
-    for (int c = 0; c < channels; c++) {
+    int c;
+#pragma omp parallel for private(c) \
+num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (c = 0; c < channels; c++) {
       int index_n_c = index_n + c * pooled_width * pooled_height;
       const T* offset_bottom_data =
           bottom_data + (roi_batch_ind * channels + c) * height * width;
@@ -296,13 +297,6 @@ void bilinear_interpolate_gradient(
   T lx = x - *x_low;
   T hy = 1. - ly, hx = 1. - lx;
 
-  // reference in forward
-  // T v1 = bottom_data[*y_low * width + *x_low];
-  // T v2 = bottom_data[*y_low * width + *x_high];
-  // T v3 = bottom_data[*y_high * width + *x_low];
-  // T v4 = bottom_data[*y_high * width + *x_high];
-  // T val = (w1 * v1 + *w2 * v2 + *w3 * v3 + *w4 * v4);
-
   *w1 = hy * hx, *w2 = hy * lx, *w3 = ly * hx, *w4 = ly * lx;
 
   return;
@@ -330,7 +324,10 @@ void ROIAlignBackward(
     int rois_cols) {
   DCHECK(rois_cols == 4 || rois_cols == 5);
 
-  for (int index = 0; index < nthreads; index++) {
+  int index;
+#pragma omp parallel for private(index) \
+num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (index = 0; index < nthreads; index++) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
@@ -349,10 +346,6 @@ void ROIAlignBackward(
     T roi_start_h = offset_bottom_rois[1] * spatial_scale;
     T roi_end_w = offset_bottom_rois[2] * spatial_scale;
     T roi_end_h = offset_bottom_rois[3] * spatial_scale;
-    // T roi_start_w = round(offset_bottom_rois[0] * spatial_scale);
-    // T roi_start_h = round(offset_bottom_rois[1] * spatial_scale);
-    // T roi_end_w = round(offset_bottom_rois[2] * spatial_scale);
-    // T roi_end_h = round(offset_bottom_rois[3] * spatial_scale);
 
     // Force malformed ROIs to be 1x1
     T roi_width = std::max(roi_end_w - roi_start_w, (T)1.);
