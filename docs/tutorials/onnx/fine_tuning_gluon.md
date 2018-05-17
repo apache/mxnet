@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 ### Downloading supporting files
-These are images and a vizualisation script
+These are images and a vizualisation script:
 
 
 ```python
@@ -59,12 +59,12 @@ from utils import *
 
 ## Downloading a model from the ONNX model zoo
 
-We download a pre-trained model, in our case the [vgg16](https://arxiv.org/abs/1409.1556) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file and some sample input/output data.
+We download a pre-trained model, in our case the [GoogleNet](https://arxiv.org/abs/1409.4842) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file.
 
 
 ```python
-base_url = "https://s3.amazonaws.com/download.onnx/models/"
-current_model = "vgg16"
+base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/"
+current_model = "bvlc_googlenet"
 model_folder = "model"
 archive_file = "{}.tar.gz".format(current_model)
 archive_path = os.path.join(model_folder, archive_file)
@@ -230,15 +230,15 @@ sym.get_internals()
 
 
 
-```<Symbol group [gpu_0/data_0, gpu_0/conv1_w_0, gpu_0/conv1_b_0, convolution0, relu0, lrn0, pad0, pooling0, gpu_0/conv2_w_0, gpu_0/conv2_b_0, convolution1, relu1, lrn1, pad1, pooling1, gpu_0/conv3_w_0, gpu_0/conv3_b_0, convolution2, relu2, gpu_0/conv4_w_0, gpu_0/conv4_b_0, convolution3, relu3, gpu_0/conv5_w_0, gpu_0/conv5_b_0, convolution4, relu4, pad2, pooling2, flatten0, gpu_0/fc6_w_0, linalg_gemm20, gpu_0/fc6_b_0, _mulscalar0, broadcast_add0, relu5, flatten1, gpu_0/fc7_w_0, linalg_gemm21, gpu_0/fc7_b_0, _mulscalar1, broadcast_add1, relu6, flatten2, gpu_0/fc8_w_0, linalg_gemm22, gpu_0/fc8_b_0, _mulscalar2, broadcast_add2, softmax0]>```<!--notebook-skip-line-->
+```<Symbol group [data_0, pad0, conv1/7x7_s2_w_0, conv1/7x7_s2_b_0, convolution0, relu0, pad1, pooling0, lrn0, pad2, conv2/3x3_reduce_w_0, conv2/3x3_reduce_b_0, convolution1, relu1, pad3, conv2/3x3_w_0, conv2/3x3_b_0, convolution2, relu2, lrn1, pad4, pooling1, pad5, inception_3a/1x1_w_0, inception_3a/1x1_b_0, convolution3, relu3, pad6, .................................................................................inception_5b/pool_proj_b_0, convolution56, relu56, concat8, pad70, pooling13, dropout0, flatten0, loss3/classifier_w_0, linalg_gemm20, loss3/classifier_b_0, _mulscalar0, broadcast_add0, softmax0]>```<!--notebook-skip-line-->
 
 
 
-We get the network until the output of the `relu6` layer
+We get the network until the output of the `flatten0` layer
 
 
 ```python
-new_sym, new_arg_params, new_aux_params = get_layer_output(sym, arg_params, aux_params, 'relu6')
+new_sym, new_arg_params, new_aux_params = get_layer_output(sym, arg_params, aux_params, 'flatten0')
 ```
 
 ### Fine-tuning in gluon
@@ -258,7 +258,7 @@ We create a symbol block that is going to hold all our pre-trained layers, and a
 
 
 ```python
-pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('gpu_0/data_0'))
+pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('data_0'))
 net_params = pre_trained.collect_params()
 for param in new_arg_params:
     if param in net_params:
@@ -299,7 +299,7 @@ Initialize trainer with common training parameters
 
 
 ```python
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0005
 WDECAY = 0.00001
 MOMENTUM = 0.9
 ```
@@ -349,7 +349,7 @@ print("Untrained network Test Accuracy: {0:.4f}".format(evaluate_accuracy_gluon(
 
 ```python
 val_accuracy = 0
-for epoch in range(20):
+for epoch in range(5):
     for i, (data, label) in enumerate(dataloader_train):
         data = data.astype(np.float32).as_in_context(ctx)
         label = label.as_in_context(ctx)

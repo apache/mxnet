@@ -83,8 +83,9 @@ Select API:&nbsp;
     * [Movie Review Classification using Convolutional Networks](/tutorials/nlp/cnn.html)
     * [Generative Adversarial Networks (GANs)](/tutorials/unsupervised_learning/gan.html)
     * [Recommender Systems using Matrix Factorization](/tutorials/python/matrix_factorization.html)
-    * [Speech Recognition with Connectionist Temporal Classification Loss](https://mxnet.incubator.apache.org/tutorials/speech_recognition/ctc.html)
+    * [Speech Recognition with Connectionist Temporal Classification Loss](/tutorials/speech_recognition/ctc.html)
 * Practitioner Guides
+    * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
 * API Guides
@@ -92,7 +93,7 @@ Select API:&nbsp;
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
-            * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
+            * [NDArray Indexing](/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
                 * [Compressed Sparse Row Storage Format (CSRNDArray)](/tutorials/sparse/csr.html)
