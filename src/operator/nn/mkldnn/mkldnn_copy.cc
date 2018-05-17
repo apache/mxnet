@@ -35,7 +35,13 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                 const NDArray &in_data, const OpReqType &req,
                 const NDArray &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  auto in_mem = in_data.GetMKLDNNData();
+
+  // If the input data is a view of an MKLDNN array, we should create a new
+  // NDArray with reordered data.
+  NDArray data = in_data;
+  if (data.IsMKLDNNData() && data.IsView())
+    data = data.Reorder2Default();
+  auto in_mem = data.GetMKLDNNData();
   if (req == kAddTo) {
     TmpMemMgr::Get()->Init(ctx.requested[0]);
     // We should try and force the output memory has the same format

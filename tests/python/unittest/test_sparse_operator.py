@@ -1044,12 +1044,16 @@ def test_sparse_mathematical_core():
 
             try:
                 from scipy import special as scipy_special
-                import_succeeded = True
+                # On scipy v1.0, psi([0, -1, -2, -3, ...]) = [ inf, inf, inf, inf, ...]
+                # On scipy v1.1, psi([0, -1, -2, -3, ...]) = [-inf, nan, nan, nan, ...]
+                # Map the behavior of v1.1 psi() to that of v1.0 for ints <= 0 for consistency
+                scipy_psi = np.vectorize(lambda x: np.inf if float(x).is_integer() and x <= 0 else
+                                         scipy_special.psi(x))
                 # gamma
                 check_sparse_mathematical_core("gamma", stype,
                                                lambda x: mx.sym.sparse.gamma(x),
                                                lambda x: scipy_special.gamma(x),
-                                               lambda x: scipy_special.gamma(x) * scipy_special.psi(x),
+                                               lambda x: scipy_special.gamma(x) * scipy_psi(x),
                                                output_grad_stype=output_grad_stype,
                                                input_grad_stype=input_grad_stype,
                                                force_overlap=force_overlap,
@@ -1058,17 +1062,14 @@ def test_sparse_mathematical_core():
                 check_sparse_mathematical_core("gammaln", stype,
                                                lambda x: mx.sym.sparse.gammaln(x),
                                                lambda x: scipy_special.gammaln(x),
-                                               lambda x: scipy_special.psi(x),
+                                               lambda x: scipy_psi(x),
                                                output_grad_stype=output_grad_stype,
                                                input_grad_stype=input_grad_stype,
                                                force_overlap=force_overlap,
                                                density=density, ograd_density=ograd_density)
 
-            except:
-                if import_succeeded == False:
-                    print("Could not import scipy. Skipping unit tests for special functions")
-                else:
-                    raise
+            except ImportError:
+                print("Could not import scipy. Skipping unit tests for special functions")
 
     for i in range(1):
         print("pass", i)
