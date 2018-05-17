@@ -20,7 +20,6 @@ from mxnet import gluon
 
 from matplotlib import pyplot as plt
 import numpy as np
-import cv2
 
 gradcam_file = "gradcam.py" 
 base_url = "https://raw.githubusercontent.com/indhub/mxnet/cnnviz/example/cnn_visualization/{}?raw=true"
@@ -132,17 +131,9 @@ def preprocess(data):
 network = vgg16(pretrained=True, ctx=mx.cpu())
 ```
 
-We define some helpers to read image files from disk and display multiple images in a row in Jupyter notebook.
+We define a helper to display multiple images in a row in Jupyter notebook.
 
 ```python
-def read_image_mxnet(path):
-    with open(path, 'rb') as fp:
-        img_bytes = fp.read()
-    return mx.img.imdecode(img_bytes)
-
-def read_image_cv(path):
-    return cv2.resize(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB), image_sz)
-
 def show_images(pred_str, images):
     titles = [pred_str, 'Grad-CAM', 'Guided Grad-CAM', 'Saliency Map']
     num_images = len(images)
@@ -183,14 +174,14 @@ Next, we'll write a method to get an image, preprocess it, predict category and 
 
 ```python
 def visualize(net, img_path, conv_layer_name):
-    image = read_image_mxnet(img_path)
-    image = preprocess(image)
-    image = image.expand_dims(axis=0)
+    orig_img = mx.img.imread(img_path)
+    preprocessed_img = preprocess(orig_img)
+    preprocessed_img = preprocessed_img.expand_dims(axis=0)
     
-    pred_str = get_class_name(run_inference(net, image))
+    pred_str = get_class_name(run_inference(net, preprocessed_img))
     
-    orig_img = read_image_cv(img_path)
-    vizs = gradcam.visualize(net, image, orig_img, conv_layer_name)
+    orig_img = mx.image.imresize(orig_img, image_sz[0], image_sz[1]).asnumpy()
+    vizs = gradcam.visualize(net, preprocessed_img, orig_img, conv_layer_name)
     return (pred_str, (orig_img, *vizs))
 ```
 
