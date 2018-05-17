@@ -39,8 +39,8 @@ class Barrier(object):
         The cross device operation is applying (e.g. AllReduce).
     """
     def __init__(self, counter, operation):
-        self.mutex = threading.Lock()
-        self.all_tasks_done = threading.Condition(self.mutex)
+        self._mutex = threading.Lock()
+        self.all_tasks_done = threading.Condition(self._mutex)
         self.counter = counter
         self.op = operation
         self._clear()
@@ -53,7 +53,7 @@ class Barrier(object):
         Output:
             idx (int), the output index
         """
-        with self.mutex:
+        with self._mutex:
             if self.push_tasks == 0:
                 self._clear()
             self.list.append(x)
@@ -80,7 +80,7 @@ class Barrier(object):
         return self.out[idx]
 
     def _sync_op(self):
-        with self.mutex:
+        with self._mutex:
             if self.reduce_tasks == 1:
                 assert(len(self.list) == self.counter)
                 self.out = self.op(*self.list)
@@ -108,7 +108,7 @@ class Barrier(object):
         return len(self.list)
 
     def __repr__(self):
-        return 'ParallelState'
+        return 'Barrier'
 
 
 class DataParallelModel(object):
@@ -158,7 +158,7 @@ class DataParallelModel(object):
     def __call__(self, *inputs, **kwargs):
         if not self.ctx_list:
             return self.module(*inputs, **kwargs)
-        inputs, kwargs = split_load_kwargs(inputs, kwargs, self.ctx_list)
+        inputs, kwargs = _split_load_kwargs(inputs, kwargs, self.ctx_list)
         assert(len(inputs) == len(self.ctx_list))
         if len(self.ctx_list) == 1:
             return tuple([tuple_map(self.module(*inputs[0], **kwargs[0]))])
@@ -216,7 +216,7 @@ class DataParallelCriterion(object):
         # the inputs should be the outputs of DataParallelModel
         if not self.ctx_list:
             return self.module(inputs, *targets, **kwargs)
-        targets, kwargs = split_load_kwargs(targets, kwargs, self.ctx_list)
+        targets, kwargs = _split_load_kwargs(targets, kwargs, self.ctx_list)
         assert(len(targets) == len(self.ctx_list))
         if len(self.ctx_list) == 1:
             return tuple_map(self.module(*(inputs[0] + targets[0]), **kwargs[0]))
@@ -224,7 +224,7 @@ class DataParallelCriterion(object):
         return criterion_parallel_apply(self.module, inputs, targets, kwargs, self.sync)
 
 
-def split_load_kwargs(inputs, kwargs, ctx_list, batch_axis=0):
+def _split_load_kwargs(inputs, kwargs, ctx_list, batch_axis=0):
     r"""Split with support for kwargs dictionary"""
     def split_map(obj):
         if isinstance(obj, NDArray):
