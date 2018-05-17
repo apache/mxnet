@@ -28,6 +28,10 @@ private[mxnet] object APIDocGenerator{
 
   val FILE_PATH = ""
 
+  def main(args: Array[String]) : Unit = {
+    traitGen()
+  }
+
   def traitGen() : Unit = {
     val traitFunctions = initSymbolModule(true)
     val traitfuncs = traitFunctions.filterNot(_.name.startsWith("_")).map(traitfunction => {

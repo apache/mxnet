@@ -71,6 +71,35 @@
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>my-execution</id>
+            <phase>package</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <arguments>
+            <argument>-Djava.library.path=${project.parent.basedir}/init-native/${platform}/target</argument>
+            <argument>-Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties</argument>
+          </arguments>
+          <mainClass>org.apache.mxnet.APIDocGenerator</mainClass>
+          <environmentVariables>
+            <MXNET_BASEDIR>${project.parent.basedir}/init-native</MXNET_BASEDIR>
+            <MAVEN_OPTS>-Xmx8G</MAVEN_OPTS>
+          </environmentVariables>
+          <!--<commandlineArgs>-->
+            <!-- -Djava.library.path=${project.parent.basedir}/native/${platform}/target \-->
+            <!-- -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties-->
+          <!--</commandlineArgs>-->
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
