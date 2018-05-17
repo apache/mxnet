@@ -903,18 +903,21 @@ def test_pooling_versions():
     test_1d_pooling('sum')
     test_1d_pooling('lp', p_value=1)
     test_1d_pooling('lp', p_value=2)
+    test_1d_pooling('lp', p_value=3)
 
     test_2d_pooling('max')
     test_2d_pooling('avg')
     test_2d_pooling('sum')
     test_2d_pooling('lp', p_value=1)
     test_2d_pooling('lp', p_value=2)
+    test_2d_pooling('lp', p_value=3)
 
     test_3d_pooling('max')
     test_3d_pooling('avg')
     test_3d_pooling('sum')
     test_3d_pooling('lp', p_value=1)
     test_3d_pooling('lp', p_value=2)
+    test_3d_pooling('lp', p_value=3)
 
 
 @with_seed()
@@ -1036,12 +1039,14 @@ def test_global_pooling():
     test_1d_pooling('sum')
     test_1d_pooling('lp', p_value=1)
     test_1d_pooling('lp', p_value=2)
+    test_1d_pooling('lp', p_value=3)
 
     test_2d_pooling('max')
     test_2d_pooling('avg')
     test_2d_pooling('sum')
     test_2d_pooling('lp', p_value=1)
     test_2d_pooling('lp', p_value=2)
+    test_2d_pooling('lp', p_value=3)
 
 
 @with_seed()
