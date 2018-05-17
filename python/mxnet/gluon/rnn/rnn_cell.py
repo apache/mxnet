@@ -441,10 +441,12 @@ class LSTMCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
-    in_transform_activation_type : str
-        Inner transform activation type for LSTM Cell. See nd/symbol Activation
+    activation : str
+        Activation type to use. See nd/symbol Activation
         for supported types.
-
+    recurrent_activation : str
+        Activation type to use for the recurrent step. See nd/symbol Activation
+        for supported types.
 
     Inputs:
         - **data**: input tensor with shape `(batch_size, input_size)`.
@@ -459,7 +461,8 @@ class LSTMCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, in_transform_activation_type='tanh'):
+                 input_size=0, prefix=None, params=None, activation='tanh',
+                 recurrent_activation='sigmoid'):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
@@ -476,7 +479,8 @@ class LSTMCell(HybridRecurrentCell):
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
-        self.in_transform_activation_type = in_transform_activation_type
+        self.activation = activation
+        self.recurrent_activation = recurrent_activation
 
 
     def state_info(self, batch_size=0):
@@ -503,14 +507,14 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
+        in_gate = F.Activation(slice_gates[0], act_type=self.recurrent_activation, name=prefix+'i')
+        forget_gate = F.Activation(slice_gates[1], act_type=self.recurrent_activation, name=prefix+'f')
         in_transform = F.Activation(
-            slice_gates[2], act_type=in_transform_activation_type, name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
+            slice_gates[2], act_type=self.activation, name=prefix+'c')
+        out_gate = F.Activation(slice_gates[3], act_type=self.recurrent_activation, name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                    name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
+        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self.activation),
                                   name=prefix+'out')
 
         return next_h, [next_h, next_c]
