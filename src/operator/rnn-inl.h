@@ -350,7 +350,6 @@ class RNNOp : public Operator{
     using namespace mshadow::expr;
     CHECK(param_.mode == rnn_enum::kLstm || param_.mode == rnn_enum::kGru)
         << "Only lstm and gru mode are supported at the moment.";
-    
     CHECK_EQ(param_.p, 0) << "Dropout is not supported at the moment.";
 
     size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
