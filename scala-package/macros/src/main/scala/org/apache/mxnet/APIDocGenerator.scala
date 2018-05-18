@@ -26,27 +26,27 @@ private[mxnet] object APIDocGenerator{
   case class traitFunction(name : String, desc : String,
                            listOfArgs: List[traitArg], returnType : String)
 
-  val FILE_PATH = ""
 
   def main(args: Array[String]) : Unit = {
-    traitGen()
+    val FILE_PATH = args(0)
+    traitGen(FILE_PATH)
   }
 
-  def traitGen() : Unit = {
+  def traitGen(FILE_PATH : String) : Unit = {
+    // scalastyle:off
     val traitFunctions = initSymbolModule(true)
     val traitfuncs = traitFunctions.filterNot(_.name.startsWith("_")).map(traitfunction => {
       val scalaDoc = ScalaDocGen(traitfunction)
       val traitBody = traitBodyGen(traitfunction)
       s"$scalaDoc\n$traitBody"
     })
-    // scalastyle: off
     val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
-    // scalastyle: on
+    val scalaStyle = "// scalastyle:off"
     val packageDef = "package org.apache.mxnet"
-    val traitDef = "trait SymbolAPIBase"
-    val finalStr = s"$apacheLicence\n$packageDef\n$traitDef {\n${traitfuncs.mkString("\n")}\n}"
+    val absClassDef = "abstract class SymbolAPIBase"
+    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$absClassDef {\n${traitfuncs.mkString("\n")}\n}"
     import java.io._
-    val pw = new PrintWriter(new File(FILE_PATH))
+    val pw = new PrintWriter(new File(FILE_PATH + "SymbolAPIBase.scala"))
     pw.write(finalStr)
     pw.close()
   }

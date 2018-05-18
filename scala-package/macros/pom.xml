@@ -53,6 +53,7 @@
     </dependency>
   </dependencies>
 
+
   <build>
     <plugins>
       <plugin>
@@ -76,7 +77,7 @@
         <version>1.6.0</version>
         <executions>
           <execution>
-            <id>my-execution</id>
+            <id>apidoc-generation</id>
             <phase>package</phase>
             <goals>
               <goal>java</goal>
@@ -84,19 +85,13 @@
           </execution>
         </executions>
         <configuration>
+          <additionalClasspathElements>
+            <additionalClasspathElement>${project.parent.basedir}/init/target/classes</additionalClasspathElement>
+          </additionalClasspathElements>
           <arguments>
-            <argument>-Djava.library.path=${project.parent.basedir}/init-native/${platform}/target</argument>
-            <argument>-Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties</argument>
+            <argument>${project.parent.basedir}/core/src/main/scala/org/apache/mxnet/</argument>
           </arguments>
           <mainClass>org.apache.mxnet.APIDocGenerator</mainClass>
-          <environmentVariables>
-            <MXNET_BASEDIR>${project.parent.basedir}/init-native</MXNET_BASEDIR>
-            <MAVEN_OPTS>-Xmx8G</MAVEN_OPTS>
-          </environmentVariables>
-          <!--<commandlineArgs>-->
-            <!-- -Djava.library.path=${project.parent.basedir}/native/${platform}/target \-->
-            <!-- -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties-->
-          <!--</commandlineArgs>-->
         </configuration>
       </plugin>
       <plugin>
