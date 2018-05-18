@@ -23,17 +23,32 @@
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
+#include <vector>
 
 namespace mxnet {
 namespace op {
 
+/*
+ * Infer the data types of inputs and outputs of an operator that contains a
+ * subgraph.
+ */
 bool InferSubgraphDataType(const nnvm::Symbol &subgraph, std::vector<int> *in_type,
                            std::vector<int> *out_type);
+
+/*
+ * Infer the storage types of inputs and outputs of an operator that contains a
+ * subgraph.
+ */
 bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
                           const int dev_mask,
                           DispatchMode* dispatch_mode,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs);
+
+/*
+ * Infer the storage types of inputs and outputs of the backward computation of
+ * an operator that contains a subgraph.
+ */
 bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
                                   const int dev_mask,
                                   DispatchMode* dispatch_mode,
