@@ -657,7 +657,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     CHECK_EQ(GetDefaultFormat(this_desc), this_desc.data.format);
   }
   // It's possible that the memory and the NDArray don't have the same shape.
-  if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)
+  if (!same_shape(this_desc, from_desc)
       // If the source memory uses the default layout, we can reshape directly.
       && from_def_format == from_desc.data.format) {
     // In this case, we can simply create a new MKLDNN memory for the required
@@ -671,7 +671,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
     stream->RegisterMem(tmp_mem);
     stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
-  } else if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
+  } else if (!same_shape(this_desc, from_desc)) {
     // In this case, the source memory stores data in a customized layout. We
     // need to reorganize the data in memory before we can reshape.
     mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(from_pd, from_def_format);
