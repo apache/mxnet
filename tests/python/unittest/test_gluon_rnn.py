@@ -268,6 +268,8 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
             assert isinstance(out, mx.nd.NDArray)
         out.backward()
 
+    layer(inputs, states) # test is_training = false
+
     if not run_only:
         mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
