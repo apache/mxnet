@@ -94,8 +94,7 @@ Let's build a model and train it. After training we will save and restore this m
 net = build_lenet(gluon.nn.Sequential())
 train_model(net)
 ```
-``` <!--notebook-skip-line-->
-Epoch: 0; Batch 0; Loss 2.288904 <!--notebook-skip-line-->
+<pre>Epoch: 0; Batch 0; Loss 2.288904 <!--notebook-skip-line-->
 Epoch: 0; Batch 50; Loss 0.269372 <!--notebook-skip-line-->
 Epoch: 0; Batch 100; Loss 0.238990 <!--notebook-skip-line-->
 Epoch: 0; Batch 150; Loss 0.320592 <!--notebook-skip-line-->
@@ -114,7 +113,7 @@ Epoch: 0; Batch 750; Loss 0.102611 <!--notebook-skip-line-->
 Epoch: 0; Batch 800; Loss 0.010036 <!--notebook-skip-line-->
 Epoch: 0; Batch 850; Loss 0.051853 <!--notebook-skip-line-->
 Epoch: 0; Batch 900; Loss 0.008402 <!--notebook-skip-line-->
-``` <!--notebook-skip-line-->
+</pre> <!--notebook-skip-line-->
 
 ## Saving model parameters to file
 
@@ -173,10 +172,10 @@ def verify_loaded_model(net):
 
 verify_loaded_model(new_net)
 ```
-![Model inputs](FIXME)
-``` <!--notebook-skip-line-->
+![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_1.png)
+
 Model predictions:  [1. 1. 4. 5. 0. 5. 7. 0. 3. 6.] <!--notebook-skip-line-->
-``` <!--notebook-skip-line-->
+
 ## Saving model architecture and weights to file
 
 [Hybrid](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
@@ -188,8 +187,8 @@ net = build_lenet(gluon.nn.HybridSequential())
 net.hybridize()
 train_model(net)
 ```
-``` <!--notebook-skip-line-->
-Epoch: 0; Batch 0; Loss 2.323284 <!--notebook-skip-line-->
+
+<pre>Epoch: 0; Batch 0; Loss 2.323284 <!--notebook-skip-line-->
 Epoch: 0; Batch 50; Loss 0.444733 <!--notebook-skip-line-->
 Epoch: 0; Batch 100; Loss 0.103407 <!--notebook-skip-line-->
 Epoch: 0; Batch 150; Loss 0.166772 <!--notebook-skip-line-->
@@ -208,7 +207,7 @@ Epoch: 0; Batch 750; Loss 0.039478 <!--notebook-skip-line-->
 Epoch: 0; Batch 800; Loss 0.031342 <!--notebook-skip-line-->
 Epoch: 0; Batch 850; Loss 0.059289 <!--notebook-skip-line-->
 Epoch: 0; Batch 900; Loss 0.037809 <!--notebook-skip-line-->
-``` <!--notebook-skip-line-->
+</pre> <!--notebook-skip-line-->
 
 We now have a trained hybrid network. This can be exported into files using the `export` function. The `export` function will export the model architecture into a `.json` file and model parameters into a `.params` file.
 
@@ -248,8 +247,9 @@ for param in aux_params:
 ```python
 verify_loaded_model(deserialized_net)
 ```
-![Model inputs](FIXME)
-``` <!--notebook-skip-line-->
+
+![Model inputs](https://raw.githubusercontent.com/indhub/web-data/4a9c100aa996df3dff0e7f493029d411c2b526c3/mxnet/tutorials/gluon/save_load_params/mnist_in_2.png)
+
 Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
-``` <!--notebook-skip-line-->
-That's it! We learnt how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files. 
+
+That's all! We learnt how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
