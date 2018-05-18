@@ -1123,6 +1123,29 @@ def test_apply():
     assert called_blocks == ['test_dense0', 'test_dropout0', 'test']
 
 
+@with_seed()
+def test_summary():
+    net = gluon.model_zoo.vision.resnet50_v1()
+    net.initialize()
+    net.summary(mx.nd.ones((32, 3, 224, 224)))
+
+    net2 = nn.Sequential()
+    with net2.name_scope():
+        net2.add(nn.Embedding(10, 20))
+        net2.add(gluon.rnn.LSTM(30))
+        net2.add(nn.Dense(40, flatten=False))
+    net2.initialize()
+    net2.summary(mx.nd.ones((80, 32)))
+
+    net3 = gluon.rnn.LSTM(30)
+    net3.initialize()
+    begin_state = net3.begin_state(32)
+    net3.summary(mx.nd.ones((80, 32, 5)), begin_state)
+
+    net.hybridize()
+    assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

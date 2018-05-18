@@ -78,6 +78,10 @@ class _RNNLayer(Block):
                                     allow_deferred_init=True))
             ni = nh * self._dir
 
+        for param_list in [self.i2h_weight, self.h2h_weight, self.i2h_bias, self.h2h_bias]:
+            for p in param_list:
+                self._reg_params[p.name] = p
+
         self._unfused = self._unfuse()
 
     def __repr__(self):
