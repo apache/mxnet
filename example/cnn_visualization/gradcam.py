@@ -224,7 +224,7 @@ def get_guided_grad_cam(cam, imggrad):
 
 def get_img_heatmap(orig_img, activation_map):
     """Draw a heatmap on top of the original image using intensities from activation_map"""
-    heatmap = cv2.applyColorMap(activation_map, cv2.COLORMAP_HSV)
+    heatmap = cv2.applyColorMap(activation_map, cv2.COLORMAP_COOL)
     heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
     img_heatmap = np.float32(heatmap) + np.float32(orig_img)
     img_heatmap = img_heatmap / np.max(img_heatmap)
