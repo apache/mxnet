@@ -157,8 +157,10 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
                                                           arg_names, params);
   // TODO here we only changed the output arrays in the arguments.
   // Will this be a problem?
-  // TODO we need to avoid shape inference and memory plan whenever the op is
-  // called.
+  // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
+  // called. Currently, CachedOp allocates memory each time Forward is called.
+  // I need to fix this once the PR for static memory allocation in CachedOp is
+  // merged. https://github.com/apache/incubator-mxnet/pull/10817
   op->Forward(nullptr, inputs, outputs);
 
   if (is_recording) {
@@ -410,7 +412,6 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
-  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_shape->size());
   CHECK_EQ(idx.outputs().size(), out_shape->size());
@@ -460,7 +461,6 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
-  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_type->size());
   CHECK_EQ(idx.outputs().size(), out_type->size());
@@ -492,7 +492,6 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   auto g = std::make_shared<nnvm::Graph>();
   g->outputs = attrs.subgraphs[0]->outputs;
-  // TODO(zhengda) We should avoid creating an index graph so many times.
   const auto& idx = g->indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
   CHECK_EQ(idx.outputs().size(), out_attrs->size());
@@ -525,9 +524,69 @@ static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
                                        DispatchMode* dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
-  // TODO I need to set storage type properly.
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, DispatchMode::kFComputeEx);
+  using namespace nnvm;
+  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  CHECK_EQ(out_attrs->size(), (size_t) params.num_args - 1);
+  CHECK_EQ(attrs.subgraphs.size(), 1U);
+  // construct backward graph
+  nnvm::Graph grad_graph;
+  nnvm::Graph fwd_graph;
+  std::vector<Node *> potential_nodes;
+  {
+    fwd_graph.outputs = attrs.subgraphs[0]->outputs;
+    std::vector<nnvm::NodeEntry> ograd_entries;
+    ograd_entries.reserve(fwd_graph.outputs.size());
+    for (size_t i = 0; i < fwd_graph.outputs.size(); ++i) {
+      ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    }
+    nnvm::Symbol subgraph_sym = *attrs.subgraphs[0];
+
+    std::vector<NodeEntry> xs;
+    std::vector<NodePtr> args = subgraph_sym.ListInputs(nnvm::Symbol::kReadOnlyArgs);
+    xs.reserve(args.size());
+    for (const auto& i : args)
+      xs.emplace_back(NodeEntry{i, 0, 0});
+    CHECK_GT(xs.size(), 0)
+        << "There are no inputs in computation graph that require gradients.";
+
+    static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
+    grad_graph = pass::Gradient(
+        fwd_graph, fwd_graph.outputs, xs, ograd_entries,
+        exec::AggregateGradient, nullptr, nullptr,
+        zero_ops, "_copy");
+    potential_nodes.reserve(fwd_graph.outputs.size() + xs.size() + ograd_entries.size());
+    for (auto e : ograd_entries)
+      potential_nodes.push_back(e.node.get());
+    for (auto e : xs)
+      potential_nodes.push_back(e.node.get());
+    for (auto e : fwd_graph.outputs)
+      potential_nodes.push_back(e.node.get());
+  }
+
+  const auto& idx = grad_graph.indexed_graph();
+  auto input_nodes = idx.input_nodes();
+  StorageTypeVector storage_type_inputs(input_nodes.size());
+  for (size_t i = 0; i < input_nodes.size(); i++) {
+    auto node_id = input_nodes[i];
+    const nnvm::IndexedGraph::Node &n = idx[node_id];
+    auto it = std::find(potential_nodes.begin(), potential_nodes.end(), n.source);
+    CHECK(it != potential_nodes.end());
+    size_t idx = it - potential_nodes.begin();
+    CHECK_LT(idx, in_attrs->size());
+    storage_type_inputs[i] = in_attrs->at(idx);
+  }
+  CHECK_EQ(idx.outputs().size(), out_attrs->size());
+  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
+  imperative::CheckAndInferStorageType(&grad_graph, std::move(dev_masks),
+                                       std::move(storage_type_inputs), true);
+
+  const auto& stypes = grad_graph.GetAttr<StorageTypeVector>("storage_type");
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  auto &outputs = idx.outputs();
+  CHECK(outputs.size() == out_attrs->size());
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
+  return true;
 }
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
@@ -538,10 +597,12 @@ static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
   return OpStatePtr::Create<ForeachState>(*attrs.subgraphs[0], params);
 }
 
-void ForeachParamParser(nnvm::NodeAttrs* attrs) {
-  ParamParser<ForeachParam>(attrs);
-  // This is to indicate that the operator has a subgraph.
-  attrs->subgraphs.resize(1);
+static std::vector<nnvm::NodeEntry>
+ForeachGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  ElemwiseGradUseInOut fgrad{"_backward_foreach"};
+  std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
+  entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
+  return entries;
 }
 
 NNVM_REGISTER_OP(_foreach)
@@ -558,13 +619,18 @@ NNVM_REGISTER_OP(_foreach)
 })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"fn", "data1", "data2"};
+  const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
+  std::vector<std::string> names;
+  names.push_back("fn");
+  for (int i = 0; i < params.num_args - 1; i++)
+    names.push_back("data" + std::to_string(i));
+  return names;
 })
 .set_attr<nnvm::FInputGraph>("FInputGraph",
     [](const NodeAttrs& attrs) {
   return std::vector<uint32_t>{0};
 })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_foreach"})
+.set_attr<nnvm::FGradient>("FGradient", ForeachGradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateForeachState)
 .set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
@@ -585,7 +651,7 @@ NNVM_REGISTER_OP(_backward_foreach)
   return params.num_args - 1;
   })
 .set_attr<FInferStorageType>("FInferStorageType", BackwardForeachStorageType)
-.set_attr_parser(ForeachParamParser)
+.set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachGradComputeExCPU);
