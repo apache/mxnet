@@ -147,6 +147,9 @@ def test_gluon_gluon():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
+    
+def test_gluon_pretrained_models():
+    assert _test_tutorial_nb('gluon/pretrained_models')    
 
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
