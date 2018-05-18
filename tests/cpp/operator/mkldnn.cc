@@ -371,7 +371,7 @@ OpAttrs GetCopyOp() {
   return attrs;
 }
 
-OpAttrs GetActOp() {
+OpAttrs GetReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("relu");
   attrs.dispatches.resize(1);
@@ -387,6 +387,7 @@ OpAttrs GetLeakyReluOp() {
   return attrs;
 }
 
+
 OpAttrs GetSumOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("elemwise_add");
@@ -395,6 +396,8 @@ OpAttrs GetSumOp() {
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
+
+using InitFunc = std::function<void (NDArray *arr)>;
 
 /*
  * We want to get a few types of NDArrays for testing:
@@ -417,7 +420,7 @@ OpAttrs GetSumOp() {
  *    reordered to 5 dimensions.
  *
  */
-std::vector<NDArray> GetTestInputArrays() {
+std::vector<NDArray> GetTestInputArrays(InitFunc init_fn) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -425,7 +428,7 @@ std::vector<NDArray> GetTestInputArrays() {
   std::vector<NDArray> in_arrs;
   for (auto shape : shapes) {
     in_arrs.emplace_back(shape, Context());
-    InitArray(&in_arrs.back());
+    init_fn(&in_arrs.back());
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
@@ -585,7 +588,7 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  std::vector<NDArray> in_arrs = GetTestInputArrays(init_fn);
   for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
       std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds);
@@ -676,7 +679,7 @@ TEST(IMPERATIVE, UnaryOp) {
 }
 
 TEST(IMPERATIVE, ActOp) {
-  OpAttrs attrs = GetActOp();
+  OpAttrs attrs = GetReluOp();
     TestOp(attrs, InitNegPosArray, VerifyActResult);
 }
 
