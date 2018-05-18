@@ -51,12 +51,12 @@ from utils import *
 
 ## Downloading a model from the ONNX model zoo
 
-We download a pre-trained model, in our case the [vgg16](https://arxiv.org/abs/1409.1556) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file and some sample input/output data.
+We download a pre-trained model, in our case the [GoogleNet](https://arxiv.org/abs/1409.4842) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file.
 
 
 ```python
-base_url = "https://s3.amazonaws.com/download.onnx/models/" 
-current_model = "vgg16"
+base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/" 
+current_model = "bvlc_googlenet"
 model_folder = "model"
 archive = "{}.tar.gz".format(current_model)
 archive_file = os.path.join(model_folder, archive)
@@ -97,29 +97,37 @@ We get the symbol and parameter objects
 sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
-We pick a context, GPU if available, otherwise CPU
+We pick a context, CPU is fine for inference, switch to mx.gpu() if you want to use your GPU.
 
 
 ```python
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx = mx.cpu()
 ```
 
-We obtain the data names of the inputs to the model, by listing all the inputs to the symbol graph and excluding the argument and auxiliary parameters from that list:
+We obtain the data names of the inputs to the model by using the model metadata API: 
 
 ```python
-data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
+model_metadata = onnx_mxnet.get_model_metadata(onnx_path)
+print(model_metadata)
+```
+
+```
+{'output_tensor_data': [(u'gpu_0/softmax_1', (1L, 1000L))],
+ 'input_tensor_data': [(u'gpu_0/data_0', (1L, 3L, 224L, 224L))]}
+```
+
+```python
+data_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
 print(data_names)
 ```
 
 
-```['gpu_0/data_0']```
-
+```[u'data_0']```<!--notebook-skip-line-->
 
 And load them into a MXNet Gluon symbol block. 
 
 ```python
-net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('gpu_0/data_0'))
+net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
@@ -137,30 +145,6 @@ We can now cache the computational graph through [hybridization](https://mxnet.i
 net.hybridize()
 ```
 
-## Test using sample inputs and outputs
-The model comes with sample input/output we can use to test that whether model is correctly loaded
-
-
-```python
-numpy_path = os.path.join(model_folder, current_model, 'test_data_0.npz')
-sample = np.load(numpy_path, encoding='bytes')
-inputs = sample['inputs']
-outputs = sample['outputs']
-```
-
-
-```python
-print("Input format: {}".format(inputs[0].shape))
-print("Output format: {}".format(outputs[0].shape))
-```
-
-`Input format: (1, 3, 224, 224)` <!--notebook-skip-line-->
-
-
-`Output format: (1, 1000)` <!--notebook-skip-line-->
-    
-
-
 We can visualize the network (requires graphviz installed)
 
 
@@ -169,9 +153,7 @@ mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"fals
 ```
 
 
-
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network.png?raw=true)<!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network2.png?raw=true)<!--notebook-skip-line-->
 
 
 
@@ -186,21 +168,6 @@ def run_batch(net, data):
         results.extend([o for o in outputs.asnumpy()])
     return np.array(results)
 ```
-
-
-```python
-result = run_batch(net, nd.array([inputs[0]], ctx))
-```
-
-
-```python
-print("Loaded model and sample output predict the same class: {}".format(np.argmax(result) == np.argmax(outputs[0])))
-```
-
-Loaded model and sample output predict the same class: True <!--notebook-skip-line-->
-
-
-Good the sample output and our prediction match, now we can run against real data
 
 ## Test using real images
 

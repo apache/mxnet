@@ -61,16 +61,43 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
 
 
 def build_docker(platform: str, docker_binary: str) -> None:
-    """Build a container for the given platform"""
+    """
+    Build a container for the given platform
+    :param platform: Platform
+    :param docker_binary: docker binary to use (docker/nvidia-docker)
+    :return: Id of the top level image
+    """
+
     tag = get_docker_tag(platform)
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
     cmd = [docker_binary, "build",
         "-f", get_dockerfile(platform),
+        "--rm=false",  # Keep intermediary layers to prime the build cache
         "--build-arg", "USER_ID={}".format(os.getuid()),
+        "--cache-from", tag,
         "-t", tag,
         "docker"]
     logging.info("Running command: '%s'", ' '.join(cmd))
     check_call(cmd)
+
+    # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
+    # check_call would have failed
+    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
+    if not image_id:
+        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
+    return image_id
+
+
+def _get_local_image_id(docker_binary, docker_tag):
+    """
+    Get the image id of the local docker layer with the passed tag
+    :param docker_tag: docker tag
+    :return: Image id as string or None if tag does not exist
+    """
+    cmd = [docker_binary, "images", "-q", docker_tag]
+    image_id_b = subprocess.check_output(cmd)
+    image_id = image_id_b.decode('utf-8').strip()
+    return image_id
 
 
 def get_mxnet_root() -> str:
@@ -123,6 +150,7 @@ def container_run(platform: str,
     if not dry_run and ret != 0:
         logging.error("Running of command in container failed (%s): %s", ret, cmd)
         logging.error("You can try to get into the container by using the following command: %s", docker_run_cmd)
+
         raise subprocess.CalledProcessError(ret, cmd)
 
     return docker_run_cmd
@@ -130,7 +158,6 @@ def container_run(platform: str,
 
 def list_platforms() -> str:
     print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
-
 
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
@@ -180,6 +207,14 @@ def main() -> int:
                         help="go in a shell inside the container",
                         action='store_true')
 
+    parser.add_argument("--download-docker-cache",
+                        help="Download the docker cache from our central repository instead of rebuilding locally",
+                        action='store_true')
+
+    parser.add_argument("--docker-cache-bucket",
+                        help="S3 docker cache bucket, e.g. mxnet-ci-docker-cache",
+                        type=str)
+
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
@@ -194,12 +229,16 @@ def main() -> int:
         list_platforms()
     elif args.platform:
         platform = args.platform
+        tag = get_docker_tag(platform)
+        if args.download_docker_cache:
+            import docker_cache
+            logging.info('Docker cache download is enabled')
+            docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
         build_docker(platform, docker_binary)
         if args.build_only:
-            logging.warn("Container was just built. Exiting due to build-only.")
+            logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
-        tag = get_docker_tag(platform)
         if command:
             container_run(platform, docker_binary, shared_memory_size, command)
         elif args.print_docker_run:
@@ -216,6 +255,11 @@ def main() -> int:
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
+            if args.download_docker_cache:
+                import docker_cache
+                tag = get_docker_tag(platform)
+                logging.info('Docker cache download is enabled')
+                docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
             build_docker(platform, docker_binary)
             if args.build_only:
                 continue

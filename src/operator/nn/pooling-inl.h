@@ -21,7 +21,7 @@
  * Copyright (c) 2017 by Contributors
  * \file pooling-inl.h
  * \brief
- * \author Bing Xu, Jun Wu, Da Zheng
+ * \author Bing Xu, Jun Wu, Da Zheng, Hao Jin
 */
 
 #ifndef MXNET_OPERATOR_NN_POOLING_INL_H_
@@ -49,6 +49,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   int pooling_convention;
   bool global_pool;
   bool cudnn_off;
+  dmlc::optional<int> p_value;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
     DMLC_DECLARE_FIELD(kernel).set_default(TShape())  // add default value here
     .enforce_nonzero()
@@ -58,6 +59,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("max", pool_enum::kMaxPooling)
     .add_enum("avg", pool_enum::kAvgPooling)
     .add_enum("sum", pool_enum::kSumPooling)
+    .add_enum("lp", pool_enum::kLpPooling)
     .describe("Pooling type to be applied.");
 
     DMLC_DECLARE_FIELD(global_pool).set_default(false)
@@ -77,6 +79,9 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     DMLC_DECLARE_FIELD(pad).set_default(TShape())
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
+
+    DMLC_DECLARE_FIELD(p_value).set_default(dmlc::optional<int>())
+    .describe("Value of p for Lp pooling, can be 1 or 2, required for Lp Pooling");
   }
 
   bool operator==(const PoolingParam& other) const {
@@ -86,7 +91,8 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->pool_type          == other.pool_type &&
            this->pooling_convention == other.pooling_convention &&
            this->global_pool        == other.global_pool &&
-           this->cudnn_off          == other.cudnn_off;
+           this->cudnn_off          == other.cudnn_off &&
+           this->p_value            == other.p_value;
   }
 };
 
@@ -105,6 +111,7 @@ struct hash<mxnet::op::PoolingParam> {
     ret = dmlc::HashCombine(ret, val.pooling_convention);
     ret = dmlc::HashCombine(ret, val.global_pool);
     ret = dmlc::HashCombine(ret, val.cudnn_off);
+    ret = dmlc::HashCombine(ret, val.p_value);
     return ret;
   }
 };
@@ -144,12 +151,33 @@ class PoolingOp {
       }
       stride = TShape(ishape.ndim() - 2);
     }
-
-    pool(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
-         kernel,
-         padding,
-         stride,
-         param_.pool_type, req, out_data.dptr<DType>());
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                        param_.p_value.value() : 1;
+    switch (p_value) {
+      case 1:
+        pool<DType, 1>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
+          kernel,
+          padding,
+          stride,
+          param_.pool_type, req, out_data.dptr<DType>());
+        break;
+      case 2:
+        pool<DType, 2>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
+          kernel,
+          padding,
+          stride,
+          param_.pool_type, req, out_data.dptr<DType>());
+        break;
+      case 3:
+        pool<DType, 3>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
+          kernel,
+          padding,
+          stride,
+          param_.pool_type, req, out_data.dptr<DType>());
+        break;
+      default:
+        LOG(FATAL) << "p value of " << p_value << " is not supported yet...";
+    }
   }
 
   void Backward(const OpContext& ctx, const TBlob& out_grad,
@@ -171,12 +199,36 @@ class PoolingOp {
       stride = TShape(ishape.ndim() - 2);
     }
 
-    unpool(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
+    const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
+                        param_.p_value.value() : 1;
+    switch (p_value) {
+      case 1:
+        unpool<DType, 1>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
            in_grad.shape_, out_grad.shape_,
            kernel,
            padding,
            stride,
            param_.pool_type, req, in_grad.dptr<DType>());
+        break;
+      case 2:
+        unpool<DType, 2>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
+           in_grad.shape_, out_grad.shape_,
+           kernel,
+           padding,
+           stride,
+           param_.pool_type, req, in_grad.dptr<DType>());
+        break;
+      case 3:
+        unpool<DType, 3>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
+           in_grad.shape_, out_grad.shape_,
+           kernel,
+           padding,
+           stride,
+           param_.pool_type, req, in_grad.dptr<DType>());
+        break;
+      default:
+        LOG(FATAL) << "p value of " << p_value << " is not supported yet...";
+    }
   }
 
  private:
@@ -200,7 +252,8 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type) {
+        || pool_enum::kSumPooling == param.pool_type
+        || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<xpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs[0], req[0], outputs[0]);
@@ -239,7 +292,8 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type) {
+        || pool_enum::kSumPooling == param.pool_type
+        || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<xpu, DType> op;
       op.Init(param);
       op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],

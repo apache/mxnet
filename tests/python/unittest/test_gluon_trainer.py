@@ -151,3 +151,20 @@ def test_trainer_multi_layer_init():
 
     check_init([mx.cpu(1), mx.cpu(2)])
     check_init([mx.cpu(1)])
+
+@with_seed()
+def test_trainer_save_load():
+    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.1
+    trainer.save_states('test_trainer_save_load.states')
+    trainer.load_states('test_trainer_save_load.states')
+    x.lr_mult = 2.0
+    # check if parameter dict is correctly associated with optimizer after load_state
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
