@@ -94,6 +94,27 @@ Let's build a model and train it. After training we will save and restore this m
 net = build_lenet(gluon.nn.Sequential())
 train_model(net)
 ```
+``` <!--notebook-skip-line-->
+Epoch: 0; Batch 0; Loss 2.288904 <!--notebook-skip-line-->
+Epoch: 0; Batch 50; Loss 0.269372 <!--notebook-skip-line-->
+Epoch: 0; Batch 100; Loss 0.238990 <!--notebook-skip-line-->
+Epoch: 0; Batch 150; Loss 0.320592 <!--notebook-skip-line-->
+Epoch: 0; Batch 200; Loss 0.048619 <!--notebook-skip-line-->
+Epoch: 0; Batch 250; Loss 0.121555 <!--notebook-skip-line-->
+Epoch: 0; Batch 300; Loss 0.083645 <!--notebook-skip-line-->
+Epoch: 0; Batch 350; Loss 0.040627 <!--notebook-skip-line-->
+Epoch: 0; Batch 400; Loss 0.195946 <!--notebook-skip-line-->
+Epoch: 0; Batch 450; Loss 0.155514 <!--notebook-skip-line-->
+Epoch: 0; Batch 500; Loss 0.031762 <!--notebook-skip-line-->
+Epoch: 0; Batch 550; Loss 0.056516 <!--notebook-skip-line-->
+Epoch: 0; Batch 600; Loss 0.095174 <!--notebook-skip-line-->
+Epoch: 0; Batch 650; Loss 0.054901 <!--notebook-skip-line-->
+Epoch: 0; Batch 700; Loss 0.030067 <!--notebook-skip-line-->
+Epoch: 0; Batch 750; Loss 0.102611 <!--notebook-skip-line-->
+Epoch: 0; Batch 800; Loss 0.010036 <!--notebook-skip-line-->
+Epoch: 0; Batch 850; Loss 0.051853 <!--notebook-skip-line-->
+Epoch: 0; Batch 900; Loss 0.008402 <!--notebook-skip-line-->
+``` <!--notebook-skip-line-->
 
 ## Saving model parameters to file
 
@@ -152,7 +173,10 @@ def verify_loaded_model(net):
 
 verify_loaded_model(new_net)
 ```
-
+![Model inputs](FIXME)
+``` <!--notebook-skip-line-->
+Model predictions:  [1. 1. 4. 5. 0. 5. 7. 0. 3. 6.] <!--notebook-skip-line-->
+``` <!--notebook-skip-line-->
 ## Saving model architecture and weights to file
 
 [Hybrid](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html) models can be serialized as JSON files using the `export` function. Once serialized, these models can be loaded from other language bindings like C++ or Scala for faster inference or inference in different environments.
@@ -164,6 +188,27 @@ net = build_lenet(gluon.nn.HybridSequential())
 net.hybridize()
 train_model(net)
 ```
+``` <!--notebook-skip-line-->
+Epoch: 0; Batch 0; Loss 2.323284 <!--notebook-skip-line-->
+Epoch: 0; Batch 50; Loss 0.444733 <!--notebook-skip-line-->
+Epoch: 0; Batch 100; Loss 0.103407 <!--notebook-skip-line-->
+Epoch: 0; Batch 150; Loss 0.166772 <!--notebook-skip-line-->
+Epoch: 0; Batch 200; Loss 0.227569 <!--notebook-skip-line-->
+Epoch: 0; Batch 250; Loss 0.069515 <!--notebook-skip-line-->
+Epoch: 0; Batch 300; Loss 0.074086 <!--notebook-skip-line-->
+Epoch: 0; Batch 350; Loss 0.074382 <!--notebook-skip-line-->
+Epoch: 0; Batch 400; Loss 0.026569 <!--notebook-skip-line-->
+Epoch: 0; Batch 450; Loss 0.097248 <!--notebook-skip-line-->
+Epoch: 0; Batch 500; Loss 0.059895 <!--notebook-skip-line-->
+Epoch: 0; Batch 550; Loss 0.053194 <!--notebook-skip-line-->
+Epoch: 0; Batch 600; Loss 0.076294 <!--notebook-skip-line-->
+Epoch: 0; Batch 650; Loss 0.047274 <!--notebook-skip-line-->
+Epoch: 0; Batch 700; Loss 0.007898 <!--notebook-skip-line-->
+Epoch: 0; Batch 750; Loss 0.039478 <!--notebook-skip-line-->
+Epoch: 0; Batch 800; Loss 0.031342 <!--notebook-skip-line-->
+Epoch: 0; Batch 850; Loss 0.059289 <!--notebook-skip-line-->
+Epoch: 0; Batch 900; Loss 0.037809 <!--notebook-skip-line-->
+``` <!--notebook-skip-line-->
 
 We now have a trained hybrid network. This can be exported into files using the `export` function. The `export` function will export the model architecture into a `.json` file and model parameters into a `.params` file.
 
@@ -203,5 +248,8 @@ for param in aux_params:
 ```python
 verify_loaded_model(deserialized_net)
 ```
-
+![Model inputs](FIXME)
+``` <!--notebook-skip-line-->
+Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
+``` <!--notebook-skip-line-->
 That's it! We learnt how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files. 
