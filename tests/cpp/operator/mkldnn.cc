@@ -501,6 +501,24 @@ void VerifyCopyResult(const NDArray &in_arr, const NDArray &arr) {
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
+TEST(MKLDNN_NDArray, CopyFrom) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  for (auto in_arr : in_arrs) {
+    std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds);
+    for (auto out_arr : out_arrs) {
+      if (in_arr.IsMKLDNNData() && in_arr.IsView())
+        in_arr = in_arr.Reorder2Default();
+      const mkldnn::memory *mem = in_arr.GetMKLDNNData();
+      out_arr.CopyFrom(*mem);
+      MKLDNNStream::Get()->Submit();
+      VerifyCopyResult(in_arr, out_arr);
+    }
+  }
+}
+
 void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(1);
   std::vector<NDArray*> outputs(1);
