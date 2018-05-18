@@ -90,9 +90,9 @@ class ForeachState {
   }
 };
 
-void ForeachState::Forward(std::vector<NDArray> cinputs,
+void ForeachState::Forward(const std::vector<NDArray> &cinputs,
                            const std::vector<OpReqType>& req,
-                           std::vector<NDArray> coutputs, bool is_recording) {
+                           const std::vector<NDArray> &coutputs, bool is_recording) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -136,8 +136,6 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
   std::unordered_map<std::string, std::vector<NDArray> > params;
   CachedOpPtr op = std::make_shared<Imperative::CachedOp>(subgraph_sym, kwargs,
                                                           arg_names, params);
-  // TODO here we only changed the output arrays in the arguments.
-  // Will this be a problem?
   // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
   // called. Currently, CachedOp allocates memory each time Forward is called.
   // I need to fix this once the PR for static memory allocation in CachedOp is
@@ -145,7 +143,6 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
   op->Forward(nullptr, inputs, outputs);
 
   if (is_recording) {
-    // TODO does this have right inputs and outputs?
     all_outputs.push_back(coutputs);
     iter_ops.push_back(op);
   }
@@ -186,8 +183,6 @@ void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
     outputs.push_back(&igrads[i]);
   CHECK_EQ(outputs.size(), op->num_inputs());
 
-  // TODO here we only changed the output arrays in the arguments.
-  // Will this be a problem?
   CHECK(!Imperative::AGInfo::IsNone(all_outputs[iter_no][0]));
   const nnvm::NodeEntry &node_entry = all_outputs[iter_no][0].GetAutogradEntry();
   OpStatePtr state = Imperative::AGInfo::Get(node_entry.node).state;
@@ -255,7 +250,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     std::vector<NDArray> *subg_out_prev = subg_outputs[(i + 1) % 2];
     for (int j = 0; j < params.num_out_data; j++)
       (*subg_out_curr)[j] = outputs[j].At(i);
-    // When recording for backward computation, we should make sure 
+    // When recording for backward computation, we should make sure
     // that output arrays are actually different in each iteration.
     if (ctx.need_grad && i < len - 1) {
       for (size_t j = params.num_out_data; j < subg_out_curr->size(); j++)
