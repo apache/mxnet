@@ -24,7 +24,8 @@
 namespace mxnet {
 namespace op {
 
-bool InferSubgraphDataType(nnvm::Symbol &subgraph, std::vector<int> *in_type,
+bool InferSubgraphDataType(const nnvm::Symbol &subgraph,
+                           std::vector<int> *in_type,
                            std::vector<int> *out_type) {
   nnvm::DTypeVector dtype_inputs = *in_type;
   nnvm::Graph g;
@@ -50,7 +51,7 @@ bool InferSubgraphDataType(nnvm::Symbol &subgraph, std::vector<int> *in_type,
   return true;
 }
 
-bool InferSubgraphStorage(nnvm::Symbol &subgraph,
+bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
                           const int dev_mask,
                           DispatchMode* dispatch_mode,
                           std::vector<int> *in_attrs,
@@ -84,7 +85,7 @@ bool InferSubgraphStorage(nnvm::Symbol &subgraph,
   return true;
 }
 
-bool InferSubgraphBackwardStorage(nnvm::Symbol &subgraph,
+bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
                                   const int dev_mask,
                                   DispatchMode* dispatch_mode,
                                   std::vector<int> *in_attrs,
