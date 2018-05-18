@@ -110,7 +110,17 @@ class Trainer(object):
                             for _ in self._contexts]
 
     def _init_kvstore(self):
-        arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
+        arg_arrays = {}
+        contains_sparse = False
+        for param in self._params:
+            arg_arrays[param.name] = param.data(self._contexts[0])
+            if param._grad_stype != 'default':
+                contains_sparse = True
+                # update_on_kvstore is set to False by the user
+                if self._update_on_kvstore is False:
+                    raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
+                                       "gradients and/or sparse weights are present for "
+                                       "Parameter %s." % param.name)
         kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
                                                      arg_arrays)
         update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
@@ -118,8 +128,12 @@ class Trainer(object):
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
-            if 'dist' in kvstore.type:
-                update_on_kvstore = False
+            # kv.pull(row_sparse_grad) is not supported
+            if contains_sparse:
+                update_on_kvstore = True
+            else:
+                if 'dist' in kvstore.type:
+                    update_on_kvstore = False
             if update_on_kvstore:
                 kvstore.set_optimizer(self._optimizer)
             # optimizer preferably needs to be set before init for multiprecision
@@ -303,6 +317,8 @@ class Trainer(object):
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer
+            param_dict = {i: param for i, param in enumerate(self._params)}
+            self._optimizer.param_dict = param_dict
         else:
             with open(fname, 'rb') as f:
                 states = f.read()

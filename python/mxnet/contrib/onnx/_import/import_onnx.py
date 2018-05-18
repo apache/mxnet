@@ -132,6 +132,29 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             out = out[0]
         return out, argDict, auxDict
 
+    def get_graph_metadata(self, graph):
+        """
+        Get the model metadata from a given onnx graph.
+        """
+        _params = set()
+        for tensor_vals in graph.initializer:
+            _params.add(tensor_vals.name)
+
+        input_data = []
+        for graph_input in graph.input:
+            if graph_input.name not in _params:
+                shape = [val.dim_value for val in graph_input.type.tensor_type.shape.dim]
+                input_data.append((graph_input.name, tuple(shape)))
+
+        output_data = []
+        for graph_out in graph.output:
+            shape = [val.dim_value for val in graph_out.type.tensor_type.shape.dim]
+            output_data.append((graph_out.name, tuple(shape)))
+        metadata = {'input_tensor_data' : input_data,
+                    'output_tensor_data' : output_data
+                   }
+        return metadata
+
     def _parse_array(self, tensor_proto):
         """Grab data in TensorProto and convert to numpy array."""
         try:

@@ -26,6 +26,7 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include "gtest/gtest.h"
+#include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
 using namespace mxnet;
@@ -97,12 +98,18 @@ static void InitArray(NDArray *arr) {
 }
 
 // Init arrays with the specified layout.
-static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd) {
+static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
+                            bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   size_t size = blob.Size();
-  for (size_t i = 0; i < size; i++)
-    data[i] = i;
+  if (is_rand) {
+    for (size_t i = 0; i < size; i++)
+      data[i] = std::rand();
+  } else {
+    for (size_t i = 0; i < size; i++)
+      data[i] = i;
+  }
   arr->MKLDNNDataReorderAsync(pd);
   arr->WaitToRead();
 }
@@ -206,7 +213,7 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
 }
 
 struct TestArrayShapes {
-  std::vector<TShape> shapes;
+  std::vector<nnvm::TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
 };
 
@@ -239,7 +246,7 @@ static TestArrayShapes GetTestArrayShapes() {
   {
     // 4D
     TShape s1(4);
-    s1[0] = 1; s1[1] = 96; s1[2] = 54; s1[3] = 54;
+    s1[0] = 10; s1[1] = 96; s1[2] = 54; s1[3] = 54;
     shapes.push_back(s1);
     pds.push_back(GetMemPD(s1, dtype, mkldnn::memory::format::nchw));
 
@@ -330,6 +337,181 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
       }
     }
   }
+}
+
+struct OpAttrs {
+  nnvm::NodeAttrs attrs;
+  std::vector<DispatchMode> dispatches;
+};
+
+OpAttrs GetCopyOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_copy");
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+OpAttrs GetLeakyReluOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("LeakyReLU");
+  attrs.dispatches.resize(1);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  return attrs;
+}
+
+/*
+ * We want to get a few types of NDArrays for testing:
+ * 1. Normal NDArray
+ * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
+ * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
+ *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
+ *    type of NDArrays only exists for weight arrays. I don't think we should
+ *    pass them to all operators.
+ *    In the inference mode, the MKLDNN memory in the weight array will be
+ *    reordered to 5 dimensions.
+ * 4. Reshaped/sliced NDArray
+ * 5. Reshaped/sliced NDArray with MKLDNN layout (reshape/slice from Normal NDArray
+ *    with MKLDNN layout)
+ * 6. Reshaped/sliced NDArray with MKLDNN layout whose MKLDNN memory may have
+ *    different dimensions from the NDArray (result of MKLDNNDataReorderAsync).
+ *    However, this type of NDArrays only exists for weight arrays. I don't think
+ *    we should pass them to all operators.
+ *    In the inference mode, the MKLDNN memory in the weight array will be
+ *    reordered to 5 dimensions.
+ *
+ */
+std::vector<NDArray> GetTestInputArrays() {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<nnvm::TShape> shapes = tas.shapes;
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs;
+  for (auto shape : shapes) {
+    in_arrs.emplace_back(shape, Context());
+    InitArray(&in_arrs.back());
+    for (auto pd : pds) {
+      if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
+        continue;
+
+      in_arrs.emplace_back(shape, Context());
+      InitMKLDNNArray(&in_arrs.back(), pd);
+
+      // Get a sliced version.
+      NDArray arr(shape, Context());
+      InitMKLDNNArray(&arr, pd);
+      arr = arr.Slice(1, arr.shape()[0] - 1);
+      in_arrs.emplace_back(arr);
+    }
+  }
+  return in_arrs;
+}
+
+/*
+ * We want to get a few types of NDArrays for testing:
+ * 1. Normal NDArray
+ * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
+ * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
+ *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
+ *    type of NDArrays only exists for weight arrays. I don't think we should
+ *    pass them to all operators.
+ *    In the inference mode, the MKLDNN memory in the weight array will be
+ *    reordered to 5 dimensions.
+ * 4. Reused NDArray (this is created by the MXNet executor). This type of
+ *    NDArrays can only be used as output arrays.
+ */
+std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
+                                         const std::vector<mkldnn::memory::primitive_desc> &pds) {
+  std::vector<NDArray> in_arrs;
+  in_arrs.emplace_back(shape, Context());
+  InitArray(&in_arrs.back());
+
+  // Get a reused version.
+  nnvm::TShape s(1);
+  s[0] = shape.Size();
+  NDArray arr(s, Context());
+  arr = arr.AsArray(shape, arr.dtype());
+  InitArray(&arr);
+  in_arrs.emplace_back(arr);
+
+  for (auto pd : pds) {
+    if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
+      continue;
+
+    in_arrs.emplace_back(shape, Context());
+    InitMKLDNNArray(&in_arrs.back(), pd, true);
+
+    // Get a reused version.
+    nnvm::TShape s(1);
+    s[0] = shape.Size();
+    arr = NDArray(s, Context());
+    arr = arr.AsArray(shape, arr.dtype());
+    InitMKLDNNArray(&arr, pd, true);
+    in_arrs.emplace_back(arr);
+  }
+  return in_arrs;
+}
+
+using VerifyFunc = std::function<void (const NDArray &in_arr, const NDArray &arr)>;
+
+void VerifyCopyResult(const NDArray &in_arr, const NDArray &arr) {
+  NDArray tmp1 = in_arr.Reorder2Default();
+  NDArray tmp2 = arr.Reorder2Default();
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  TBlob d1 = tmp1.data();
+  TBlob d2 = tmp2.data();
+  EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
+                   tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(1);
+  std::vector<NDArray*> outputs(1);
+  std::vector<OpReqType> req(1);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  for (auto in_arr : in_arrs) {
+    for (auto dispatch : dispatches) {
+      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds);
+      for (auto out_arr : out_arrs) {
+        req[0] = kWriteTo;
+        inputs[0] = &in_arr;
+        outputs[0] = &out_arr;
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        out_arr.WaitToRead();
+        verify_fn(in_arr, out_arr);
+      }
+    }
+  }
+
+  for (auto dispatch : dispatches) {
+    in_arrs = GetTestInputArrays();
+    for (auto arr : in_arrs) {
+      // If the array is a view, we shouldn't write data to it.
+      if (arr.IsView())
+        continue;
+
+      NDArray orig = arr.Copy(arr.ctx());
+      req[0] = kWriteInplace;
+      inputs[0] = &arr;
+      outputs[0] = &arr;
+      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                  dispatch, mxnet::OpStatePtr());
+      arr.WaitToRead();
+      verify_fn(orig, arr);
+    }
+  }
+}
+
+TEST(IMPERATIVE, UnaryOp) {
+  OpAttrs attrs = GetCopyOp();
+  TestUnaryOp(attrs, VerifyCopyResult);
 }
 
 #endif
