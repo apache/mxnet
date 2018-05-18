@@ -48,8 +48,11 @@ def test_sparse_parameter():
     p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     row_id = mx.nd.arange(0, 10, ctx=mx.cpu(1))
-    assert len(p.list_row_sparse_data(row_id)) == 2
     assert len(p.list_grad()) == 2
+    # getting row_sparse data without trainer throws an exception
+    assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
+    trainer = mx.gluon.Trainer([p], 'sgd')
+    assert len(p.list_row_sparse_data(row_id)) == 2
     weight = p.row_sparse_data(row_id)
     assert weight.context == mx.cpu(1)
     assert weight.shape == (10, 10)
@@ -83,60 +86,63 @@ def test_paramdict():
     all_row_ids = mx.nd.arange(0, 10)
     assert list(params0.keys()) == ['net_w0', 'net_w1']
     params0.initialize(ctx=mx.cpu())
+    trainer0 = mx.gluon.Trainer(params0, 'sgd')
     prev_w0 = params0.get('w0').data(mx.cpu())
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
+    params0.save('test_paramdict.params')
+    # Cannot load parameters if they are already initialized on trainer's kvstore
+    assertRaises(RuntimeError, params0.load, 'test_paramdict.params', mx.cpu())
 
-    params0.save('test.params')
-    params0.load('test.params', mx.cpu())
-    # compare the values before and after save/load
-    cur_w0 = params0.get('w0').data(mx.cpu())
-    cur_w1 = params0.get('w1').row_sparse_data(all_row_ids)
-    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
-    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
-
-    # create a new param dict with dense params, and load from the checkpoint
-    # of sparse & dense params
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
-    params1.get('w1', shape=(10, 10))
-    assertRaises(RuntimeError, params1.load, 'test.params', mx.cpu())
-    params1.load('test.params', mx.cpu(), cast_stype=True)
+    params1.get('w1', shape=(10, 10), stype='row_sparse')
+    params1.load('test_paramdict.params', mx.cpu())
+    trainer1 = mx.gluon.Trainer(params1, 'sgd')
+
     # compare the values before and after save/load
     cur_w0 = params1.get('w0').data(mx.cpu())
-    cur_w1 = params1.get('w1').data(mx.cpu())
+    cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
+    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
+    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+    # create a new param dict with dense params, and load from the checkpoint
+    # of sparse & dense params
+    params2 = gluon.ParameterDict('net_')
+    params2.get('w0', shape=(10, 10))
+    params2.get('w1', shape=(10, 10))
+    assertRaises(RuntimeError, params2.load, 'test_paramdict.params', mx.cpu())
+    params2.load('test_paramdict.params', mx.cpu(), cast_stype=True)
+    # compare the values before and after save/load
+    cur_w0 = params2.get('w0').data(mx.cpu())
+    cur_w1 = params2.get('w1').data(mx.cpu())
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
 
 @with_seed()
 def test_parameter_row_sparse_data():
-    def check_parameter_row_sparse_data(with_trainer):
-        ctx0 = mx.cpu(1)
-        ctx1 = mx.cpu(2)
-        dim0 = 4
-        x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
-        x.initialize(init='xavier', ctx=[ctx0, ctx1])
-        if with_trainer:
-            trainer = gluon.Trainer([x], 'sgd')
-        x_param = x._data[0].copy()
-        assert x_param.stype == 'row_sparse'
-        row_id_0 = mx.nd.array([0,1], ctx=ctx0)
-        retained_0 = x.row_sparse_data(row_id_0)
-        retained_target_0 = mx.nd.sparse.retain(x_param, row_id_0.as_in_context(ctx0))
-        mx.test_utils.assert_almost_equal(retained_0.asnumpy(), retained_target_0.asnumpy())
-        assert retained_0.context == ctx0
-        row_id_1 = mx.nd.arange(0, dim0, ctx=ctx1)
-        retained_1 = x.row_sparse_data(row_id_1)
-        retained_target_1 = x_param
-        mx.test_utils.assert_almost_equal(retained_1.asnumpy(), retained_target_1.asnumpy())
-        assert retained_1.context == ctx1
-        row_id_2 = mx.nd.array([0,1,2])
-        retained_2 = x.list_row_sparse_data(row_id_2)
-        retained_target_2 = mx.nd.sparse.retain(x_param, row_id_2.as_in_context(ctx0))
-        mx.test_utils.assert_almost_equal(retained_2[0].asnumpy(), retained_target_2.asnumpy())
+    ctx0 = mx.cpu(1)
+    ctx1 = mx.cpu(2)
+    dim0 = 4
+    x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
+    x.initialize(init='xavier', ctx=[ctx0, ctx1])
+    trainer = gluon.Trainer([x], 'sgd')
+    x_param = x._data[0].copy()
+    assert x_param.stype == 'row_sparse'
+    row_id_0 = mx.nd.array([0,1], ctx=ctx0)
+    retained_0 = x.row_sparse_data(row_id_0)
+    retained_target_0 = mx.nd.sparse.retain(x_param, row_id_0.as_in_context(ctx0))
+    mx.test_utils.assert_almost_equal(retained_0.asnumpy(), retained_target_0.asnumpy())
+    assert retained_0.context == ctx0
+    row_id_1 = mx.nd.arange(0, dim0, ctx=ctx1)
+    retained_1 = x.row_sparse_data(row_id_1)
+    retained_target_1 = x_param
+    mx.test_utils.assert_almost_equal(retained_1.asnumpy(), retained_target_1.asnumpy())
+    assert retained_1.context == ctx1
+    row_id_2 = mx.nd.array([0,1,2])
+    retained_2 = x.list_row_sparse_data(row_id_2)
+    retained_target_2 = mx.nd.sparse.retain(x_param, row_id_2.as_in_context(ctx0))
+    mx.test_utils.assert_almost_equal(retained_2[0].asnumpy(), retained_target_2.asnumpy())
 
-    check_parameter_row_sparse_data(True)
-    check_parameter_row_sparse_data(False)
 
 @with_seed()
 def test_constant():
@@ -1029,12 +1035,12 @@ def test_req():
 @with_seed()
 def test_save_load():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_params('test.params')
+    net.save_params('test_save_load.params')
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_params('test.params')
+    net.load_params('test_save_load.params')
 
 @with_seed()
 def test_symbol_block_save_load():
@@ -1059,10 +1065,10 @@ def test_symbol_block_save_load():
     net1.initialize(mx.init.Normal())
     net1.hybridize()
     net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-    net1.save_params('./test.params')
+    net1.save_params('./test_symbol_block_save_load.params')
 
     net2 = Net()
-    net2.load_params('./test.params', ctx=mx.cpu())
+    net2.load_params('./test_symbol_block_save_load.params', ctx=mx.cpu())
 
 
 @with_seed()

@@ -198,7 +198,6 @@ class Trainer(object):
 
     def _row_sparse_pull(self, parameter, out, row_id):
         # initialize kv and params if not already
-        assert self._kvstore, "Cannot perform row_sparse_pull() when KVStore is not set"
         if not self._kv_initialized:
             self._init_kvstore()
         if self._params_to_init:

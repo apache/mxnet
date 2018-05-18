@@ -212,25 +212,14 @@ class Parameter(object):
 
     def _get_row_sparse(self, arr_list, ctx, row_id):
         """ Get row_sparse data from row_sparse parameters based on row_id. """
-        results = self._check_and_get(arr_list, ctx)
-
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
             raise TypeError("Cannot get 'row_sparse' Parameter %s with row_id = %s. "
                             "NDArray type is expected." % (self.name, row_id))
         if not self._trainer:
-            # the sparse param is not yet associated with any trainer.
-            # and create new buffers to hold the outputs.
-            ret = []
-            if isinstance(results, ndarray.NDArray):
-                rows = row_id.as_in_context(results.context)
-                ret = ndarray.sparse.retain(results, rows)
-            else:
-               # list of NDArrays
-               for result in results:
-                   rows = row_id.as_in_context(result.context)
-                   ret.append(ndarray.sparse.retain(result, rows))
-            return ret
+            raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
+                               "Trainer is created with it."%self.name)
+        results = self._check_and_get(arr_list, ctx)
 
         # fetch row sparse params from the trainer
         self._trainer._row_sparse_pull(self, results, row_id)
@@ -238,6 +227,9 @@ class Parameter(object):
 
     def _load_init(self, data, ctx, cast_stype=False):
         """(Re)initializes by loading from data."""
+        if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
+            raise RuntimeError("Cannot (Re)initialize Parameter '%s' when its Trainer " \
+                               "already initialized the parameter on KVStore."%(self.name))
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
