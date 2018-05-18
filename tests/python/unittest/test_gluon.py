@@ -524,10 +524,10 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
 
-    trainer.save_states('test.states')
+    trainer.save_states('test_trainer.states')
     states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
              else deepcopy(trainer._updaters[0].states)
-    trainer.load_states('test.states')
+    trainer.load_states('test_trainer.states')
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
         assert trainer._optimizer == trainer._kvstore._updater.optimizer
@@ -553,6 +553,22 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
 
+@with_seed()
+def test_trainer_save_load():
+    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.1
+    trainer.save_states('test_trainer_save_load.states')
+    trainer.load_states('test_trainer_save_load.states')
+    x.lr_mult = 2.0
+    # check if parameter dict is correctly associated with optimizer after load_state
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
 @with_seed()
 def test_block_attr_hidden():

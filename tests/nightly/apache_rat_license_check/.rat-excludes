@@ -17,7 +17,6 @@ docker_multiarch/*
 .*\\.m
 .*\\.mk
 .*\\.R
-contrib/*
 Dockerfile*
 .*svg
 .*cfg
