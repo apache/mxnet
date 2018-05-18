@@ -50,8 +50,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     .set_default(false)
     .describe("Whether to allocate memory statically.");
     DMLC_DECLARE_FIELD(data_indices)
+    .set_default(nnvm::Tuple<uint32_t>())
     .describe("Position of argument variables.");
     DMLC_DECLARE_FIELD(param_indices)
+    .set_default(nnvm::Tuple<uint32_t>())
     .describe("Position of parameters.");
   }
 };
