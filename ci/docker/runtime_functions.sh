@@ -323,6 +323,9 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
+    # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
+    cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
+    mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
 }
 
 build_ubuntu_gpu_cmake() {
@@ -574,6 +577,17 @@ test_ubuntu_cpu_python3() {
     cd /work/mxnet
     python3 -m "nose" --with-timer --verbose tests/python/unittest
 
+    popd
+}
+
+build_docs() {
+    set -ex
+    pushd .
+    cd /work/mxnet/docs/build_version_doc
+    ./build_all_version.sh $1
+    ./update_all_version.sh $2 $3 $4
+    cd VersionedWeb
+    tar -zcvf ../artifacts.tgz .
     popd
 }
 

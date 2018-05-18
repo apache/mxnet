@@ -1,202 +1,153 @@
-# Contribute to MXNet
+# Contributing MXNet
 
-MXNet has been developed and is used by a group of active community members.
-Please contribute to improve the project.
-After your patch has been merged, remember to add your name to [CONTRIBUTORS.md](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md).
-
-## Code Contribution
-
-Before you start coding…
-
-… please make sure there is a JIRA issue that corresponds to your contribution. This is a general rule that the MXNet community follows for all code contributions, including bug fixes, improvements, or new features, with an exception for trivial hot fixes. If you would like to fix a bug that you found or if you would like to add a new feature or improvement to MXNet, please follow the [File a bug report or Propose an improvement or a new feature](http://mxnet.io/community/index.html) guidelines to open an issue in [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet) before starting with the implementation.
-
-If the description of a JIRA issue indicates that its resolution will touch sensible parts of the code base, be sufficiently complex, or add significant amounts of new code, the MXNet community might request a design document (most contributions should not require a design document). The purpose of this document is to ensure that the overall approach to address the issue is sensible and agreed upon by the community. JIRA issues that require a design document are tagged with the requires-design-doc label. The label can be attached by any community member who feels that a design document is necessary. A good description helps to decide whether a JIRA issue requires a design document or not. The design document must be added or attached to or link from the JIRA issue and cover the following aspects:
-
-- Overview of the general approach<br/>
-- List of API changes (changed interfaces, new and deprecated configuration parameters, changed behavior, …)<br/>
-- Main components and classes to be touched<br/>
-- Known limitations of the proposed approach<br/>
-
-A design document can be added by anybody, including the reporter of the issue or the person working on it.<br/>
-
-Contributions for JIRA issues that require a design document will not be added to MXNet’s code base before a design document has been accepted by the community with lazy consensus. Please check if a design document is required before starting to code.
+Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on MXNet best practices and processes.
 
 
-### Core Library
+## Getting Started
 
-- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) for C++ code.
-- Use doxygen to document all of the interface code.
-- Use [RAII](http://en.cppreference.com/w/cpp/language/raii) to manage resources, including smart
- pointers like shared_ptr and unique_ptr as well as allocating in constructors and deallocating in
- destructors. Avoid explicit calls to new and delete when possible. Use make_shared and make_unique
-  instead.
-- To reproduce the linter checks, type ```make lint```. (You need to pip install pylint and cpplint
- before)
+The following actions are recommended steps for you to get started with contributing to MXNet.
 
-### Python Package
+| Action | Purpose |
+|---|---|
+| [Create a forum account](#forum) | Asking & answering MXNet usage questions |
+| [Join the dev comm channels](#mxnet-dev-communications) | Discussions about the direction of MXNet |
+| [Follow MXNet on Social Media](#social-media) | Get updates about new features and events |
+| [Create a JIRA account](#jira) | Tracking tasks & prioritizing issues |
+| [Check out the MXNet wiki](#confluence-wiki) | The wiki has detailed contributor information |
+| [Setup MXNet for development](#setup-mxnet-for-development) | Your very own fork for creating pull requests |
+| [Your first contribution](#your-first-contribution) | Complete a first contribution task |
 
-- Always add docstring to the new functions in numpydoc format.
-- To reproduce the linter checks, type ```make lint```.
 
-### R Package
+### FAQ
 
-#### Code Style
-- Most of the C++ code in the R package relies heavily on [Rcpp](https://github.com/RcppCore/Rcpp).
-- We follow the Google C++ Style Guide for C++ code. This allows us to maintain consistency with the rest of the project. It also allows us to check style automatically with a linter.
-- To check the code style, type the following command at the root folder:
-```bash
-make rcpplint
-```
-- If necessary, disable the linter warning on certain lines with ```// NOLINT(*)``` comments.
+* I found a bug. How do I report it?
+    * [Bug submission info](#file-a-bug-report)
+* I have a minor bug fix or docs update I'd like to submit. What do I do?
+    * [Minor fixes process](#minor-fixes)
+* I would like to submit a pull request for a significant update. What is the process?
+    * [Pull request process](#formal-pull-request-process)
+* I want to propose a new feature. What is the process for this?
+    * [New feature process](#new-feature-process)
+* What's coming next with MXNet, and how can I help?
+    * [Roadmap info](#roadmap)
 
-#### Auto-Generated API
-- Many MXNet APIs are exposed dynamically from Rcpp.
-- mxnet_generated.R is the auto-generated API and documents for these functions.
-- Remake the file by typing the following command at root folder:
-```bash
-make rcppexport
-```
-- Use this command only when there is an update to dynamic functions.
 
-#### API Document
-The document is generated using roxygen2. To remake the documents in the root folder, use the following command:
-```bash
-make roxygen.
-```
+## MXNet Dev Communications
 
-#### R Markdown Vignettes
-R Markdown vignettes are located on GitHub in [R-package/vignettes](https://github.com/apache/incubator-mxnet/tree/master/R-package/vignettes).
-These R Markdown files aren't compiled. We host the compiled version on [doc/R-package](https://github.com/apache/incubator-mxnet/tree/master/R-package/).
+### Forum
 
-To add a new R Markdown vignettes:
+If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use the discussion forum:
+* [discuss.mxnet.io](https://discuss.mxnet.io) <i class="fas fa-external-link-alt"></i>
 
-* Add the original R Markdown file to ```R-package/vignettes```
-* Modify ```doc/R-package/Makefile``` to add the Markdown files to be built.
-* Clone the [dmlc/web-data](https://github.com/dmlc/web-data) repo to  the  ```doc``` folder.
-* Type the following command for the ```doc/R-package``` package:
-```bash
-make the-markdown-to-make.md
-```
-* This generates the markdown and the figures and places them into ```doc/web-data/mxnet/knitr```.
-* Modify the ```doc/R-package/index.md``` to point to the generated markdown.
-* Add the generated figure to the ```dmlc/web-data``` repo.
-	* If you have already cloned the repo to doc, use ```git add```.
-* Create a pull request for both the markdown  and ```dmlc/web-data```.
-* You can also build the document locally with the following command: ```doc```
-```bash
-make html
-```
+### Dev Mailing List
 
-### Test Cases
+Please join the contributor mailing list by sending a subscribe email to dev-subscribe@mxnet.apache.org.
+* <a href="mailto:dev-subscribe@mxnet.apache.org">subscribe</a> <i class="far fa-envelope"></i>
+* [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org) <i class="fas fa-external-link-alt"></i>
 
-* All of our tests can be found in the GitHub repo in [this directory](https://github.com/apache/incubator-mxnet/tree/master/tests).
-* We use Python nose for python test cases, and gtest for C++ unit tests.
+### Slack
 
-### Examples
+To join the MXNet slack channel send request to the contributor mailing list.
+ * <a href="mailto:dev@mxnet.apache.org?subject=Requesting%20slack%20access">email</a> <i class="far fa-envelope"></i>
+ * [archive](https://the-asf.slackarchive.io/mxnet) <i class="fas fa-external-link-alt"></i>
 
-* Use cases and examples are on GitHub in [examples](https://github.com/apache/incubator-mxnet/tree/master/example)
-* If you write a blog post or tutorial about or using MXNet, please tell us by creating an issue
-in our github repo. We regularly feature high-quality contributed content from the community.
 
-## Standard for Contributing APIs
+### Social Media
 
-Make sure to add documentation with any code you contribute. Follow these standards:
+Keep connected with the latest MXNet news and updates on [Twitter](https://twitter.com/apachemxnet) and [Reddit](https://reddit.com/r/mxnet). Also, subscribe to the [MXNet YouTube channel](https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A).
 
-### API Documentation
-* Document are created with Sphinx and [recommonmark](http://recommonmark.readthedocs.org/en/latest/).
-* Follow [numpy doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard) and
-some changes we made [MXNet doc standards](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard).
-* If an API is implemented in Python or has a wrapper defined, the documentation and the examples reside
-where the function is defined in `.py` file in [python/mxnet](https://github.com/apache/incubator-mxnet/tree/master/python/mxnet) folder. Same goes for other languages.
-* If the API is dynamically generated from the MXNet backend, the documentation is in the C++ code(.cc
-file) where the operator is registered in describe method of the `NNVM_REGISTER_OP`. The file and line
-number for the function is usually printed with the API documentation on mxnet.io.
-* A clear and concise description of the function and its behavior.
-* List and describe each parameter with the valid input values, whether it is required or optional,
-and the default value if the parameter is optional.
-* Add an example to help the user understand the API better. If the example can be language-neutral
-or is conceptual, add it in the C++ documentation. Make sure your example works
-by running a Python version of the example.
-  * If a concrete and simple language-specific example can further clarify the API and the API arguments, add the
-example in language-specific files.
-* Refer to these examples for guidance:- [Embedding](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding) , [ROIPooling](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.ROIPooling) , [Reshape](http://mxnet.io/api/python/ndarray/ndarray.html#mxnet.ndarray.Reshape).
+<div class="g-ytsubscribe" data-channelid="UCQua2ZAkbr_Shsgfk1LCy6A" data-layout="full" data-count="hidden"></div>
+<br/><br/>
+<a href="https://twitter.com/apachemxnet?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @apachemxnet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<br/><br/>
+<a href="https://reddit.com/r/mxnet"><img src="https://www.redditstatic.com/spreddit5.gif" alt="reddit" border="0"/> r/mxnet</a>
 
-### Testing and Rendering
-* Make sure not to break any coding standards. Run
-```bash
-make lint
-```
-* You can build documents locally to proof them.
 
-## Guidelines to submit a Pull Request
-* Before submitting your contribution, rebase your code on the most recent version of the master:
+## JIRA
 
-```bash
-    git remote add upstream https://github.com/apache/incubator-mxnet
-    git fetch upstream
-    git rebase upstream/master
-```
-* If you have multiple small commits,
-   merge them into meaningful groups (use ```git rebase``` then ```squash```).
-* Send the pull request.
-* Fix problems reported by automatic checks.
-* If you are contributing a new module, consider adding a test case in [tests](https://github.com/apache/incubator-mxnet/tree/master/tests).
+MXNet uses Apache's JIRA to track issues and larger projects. Anyone can review open issues, but in order create issues or view JIRA boards, you must create an account.
 
-### Resolving a Conflict with the Master
+* [Open JIRA Issues](https://issues.apache.org/jira/projects/MXNET/issues)
+* [JIRA boards](https://issues.apache.org/jira/secure/RapidBoard.jspa) <i class="fas fa-lock"></i>
 
-* Rebase to the current master:
 
- ```bash
-    # The first two steps can be skipped after you do it once.
-    git remote add upstream https://github.com/apache/incubator-mxnet
-    git fetch upstream
-    git rebase upstream/master
- ```
+## Confluence Wiki
 
-*  Git might show some conflicts that prevent merging, for example,  ```conflicted.py```.
-  * Manually modify the file to resolve the conflict.
-	* After you resolve the conflict, mark it as resolved by using:
+The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
 
-```bash
-git add conflicted.py.
-```
+* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) <i class="fas fa-external-link-alt"></i>
 
-* Continue rebasing by using this command:
 
- ```bash
-    git rebase --continue
- ```
+## Setup MXNet for Development
 
-* Finally push to your fork. You might need to force the  push:
+The process for setting up MXNet for development depends on several factors, and is constantly being improved and expanded for more development languages. Setup information is on the MXNet Confluence Wiki.
 
- ```bash
-    git push --force
- ```
+* [MXNet Confluence Wiki: Development](https://cwiki.apache.org/confluence/display/MXNET/Development) <i class="fas fa-external-link-alt"></i>
 
-### Combining Multiple Commits
-If you are submitting multiple commits with later commits that are just fixes to previous ones, you can combine commits into meaningful groups before creating a push request.
 
-* Before doing so, configure Git's default editor if you haven't already done that:
+## Your First Contribution
 
-```bash
-git config core.editor the-editor-you-like
-```
-* Assuming that you want to merge last the last three commits, type the following commands:
+**Step 1**: Visit the project on GitHub and review the [calls for contribution](https://github.com/apache/incubator-mxnet/labels/Call%20for%20Contribution). Click the GitHub button:
+<a class="github-button" href="https://github.com/apache/incubator-mxnet/labels/Call%20for%20Contribution" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a>
 
-```bash
-git rebase -i HEAD~3
-```
+**Step 2**: Tackle a smaller issue or improve documentation to get familiar with the process. As part of your pull request, add your name to [CONTRIBUTORS.md](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md).
 
-* In the text editor that appears, set the first commit as ```pick```, and change later ones to ```squash```.
+**Step 3**: Follow the [formal pull request (PR) process](#formal-pull-request-process) to submit your PR for review.
 
-* After you save the file, another text editor will appear and ask you to modify the combined commit message.
+**Important**: keep an eye on your pull request, respond to comments and change requests, and rebase or resubmit your PR if fails the Jenkins continuous integration tests. Ask for help in the [forum or slack channel](#mxnet-dev-communications) if you get stuck.
 
-* Push the changes to your fork by forcing a push:
 
-```bash
-git push --force.
-```
+## File a bug report
 
-### What Is the Consequence of Forcing a Push?
-The previous two tips require forcing a push because we altered the path of the commits.
-It's fine to force a push to your own fork, as long as only your commits are changed.
+Please let us know if you experienced a problem with MXNet. Please provide detailed information about the problem you encountered and, if possible, add a description that helps to reproduce the problem. You have two alternatives for filing a bug report:
+<p><a href="http://issues.apache.org/jira/browse/MXNet"><i class="fas fa-bug"></i> JIRA</a></p>
+<p><a href="https://github.com/apache/incubator-mxnet/issues"><i class="fab fa-github"></i> GitHub</a></p>
+
+
+## Minor Fixes
+
+If you have found an issue and would like to contribute a bug fix or documentation update, follow these guidelines:
+
+* If it is trivial, just create a [pull request](https://github.com/apache/incubator-mxnet/pulls).
+* If it is non-trivial, you should follow the [formal pull request process](#formal-pull-request-process) described in the next section.
+
+
+## Formal Pull Request Process
+
+Any new features of improvements that are non-trivial should follow the complete flow of:
+
+1. [Review the contribution standards](https://cwiki.apache.org/confluence/display/MXNET/Development+Process) for your type of submission.
+1. [Create a JIRA issue](https://issues.apache.org/jira/secure/CreateIssue!default.jspa).
+1. [Create the PR on GitHub](https://github.com/apache/incubator-mxnet/pulls) and add the JIRA issue ID to the PR's title.
+
+Further details on this process can be found on the [Wiki](https://cwiki.apache.org/confluence/display/MXNET/Development).
+
+
+## New Feature Process
+
+Our community is constantly looking for feedback to improve Apache MXNet. If you have an idea how to improve MXNet or have a new feature in mind that would be beneficial for MXNet users, please open an issue in [MXNet’s JIRA](http://issues.apache.org/jira/browse/MXNet). The improvement or new feature should be described in appropriate detail and include the scope and its requirements if possible. Detailed information is important for a few reasons:<br/>
+- It ensures your requirements are met when the improvement or feature is implemented.<br/>
+- It helps to estimate the effort and to design a solution that addresses your needs. <br/>
+- It allows for constructive discussions that might arise around this issue.
+
+Detailed information is also required, if you plan to contribute the improvement or feature you proposed yourself. Please read the [contributions](http://mxnet.io/community/contribute.html) guide in this case as well.
+
+
+## Roadmap
+
+MXNet is evolving fast. To see what's next and what the community is currently working on, check out the Roadmap issues on GitHub and the JIRA Boards:
+
+<a class="github-button" href="https://github.com/apache/incubator-mxnet/labels/Roadmap" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Roadmap</a>
+<br/>
+[JIRA boards](https://issues.apache.org/jira/secure/RapidBoard.jspa) <i class="fas fa-lock"></i>
+
+
+<script defer src="https://use.fontawesome.com/releases/v5.0.12/js/all.js" integrity="sha384-Voup2lBiiyZYkRto2XWqbzxHXwzcm4A5RfdfG6466bu5LqjwwrjXCMBQBLMWh7qR" crossorigin="anonymous"></script>
+<script async defer src="https://buttons.github.io/buttons.js"></script>
+<script src="https://apis.google.com/js/platform.js"></script>
+
+
+## Contributors
+MXNet has been developed by and is used by a group of active community members. Contribute to improving it!
+
+<i class="fab fa-github"></i> [Contributors and Committers](https://github.com/apache/incubator-mxnet/blob/master/CONTRIBUTORS.md)

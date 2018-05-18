@@ -23,8 +23,6 @@
 
 FROM nvidia/cuda:9.1-cudnn7-devel
 
-ARG USER_ID=0
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
@@ -48,6 +46,7 @@ COPY install/ubuntu_nvidia.sh /work/
 RUN /work/ubuntu_nvidia.sh
 
 # Keep this at the end since this command is not cachable
+ARG USER_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

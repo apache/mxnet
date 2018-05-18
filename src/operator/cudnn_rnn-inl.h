@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
-class CuDNNRNNOp : public Operator {
+class CuDNNRNNOp : public Operator{
  public:
   explicit CuDNNRNNOp(RNNParam param) {
     this->param_ = param;
@@ -101,6 +101,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
       Storage::Get()->Free(dropout_states_);
       Storage::Get()->Free(reserve_space_);
+      init_cudnn_ = false;
     }
   }
 

@@ -29,7 +29,7 @@ class Hyperparams(object):
         self._eval_epoch_size = 3000
         self._batch_size = 128
         self._num_epoch = 100
-        self._learning_rate = 0.001
+        self._learning_rate = 0.01
         self._momentum = 0.9
         self._num_label = 4
         # Network hyper parameters

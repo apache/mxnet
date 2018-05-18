@@ -25,6 +25,15 @@
 
 namespace mxnet {
 
+MKLDNNStream *MKLDNNStream::Get() {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local MKLDNNStream stream;
+#else
+  static MX_THREAD_LOCAL MKLDNNStream stream;
+#endif
+  return &stream;
+}
+
 void *AlignMem(void *mem, size_t size, size_t alignment, size_t *space) {
   if (size > *space)
     return nullptr;
@@ -57,8 +66,11 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
     this->curr_mem = static_cast<char *>(mem) + pd.get_size();
     return ret.get();
   } else {
-    LOG(WARNING) << "Allocate " << pd.get_size()
-        << " bytes with malloc directly";
+    // If curr_mem has been initialized and we still reach here. It means
+    // the current allocated memory isn't enough.
+    if (this->curr_mem)
+      LOG(WARNING) << "Allocate " << pd.get_size()
+          << " bytes with malloc directly";
     mkldnn_mem_ptr ret(new mkldnn::memory(pd));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
@@ -121,7 +133,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
         res.second->get_primitive_desc());
-    op::Sum(*res.second, *mem, *sum_res);
+    op::MKLDNNSum(*res.second, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
@@ -211,6 +223,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_hwio:
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
+      case mkldnn_OIhw4i16o4i:
       case mkldnn_OIhw8i16o2i:
       case mkldnn_OIhw8o16i2o:
       case mkldnn_OIhw8o8i:
@@ -231,6 +244,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_goihw:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
+      case mkldnn_gOIhw4i16o4i:
       case mkldnn_gOIhw8i16o2i:
       case mkldnn_gOIhw8o16i2o:
       case mkldnn_gOIhw8o8i:
@@ -294,10 +308,15 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
 
   std::vector<TBlob> out_blobs(outputs.size());
   for (size_t i = 0; i < out_blobs.size(); i++) {
-    if (req[i] == kWriteTo)
-      const_cast<NDArray &>(outputs[i]).InvalidateMKLDNNData();
-    CHECK(outputs[i].IsDefaultData());
-    out_blobs[i] = outputs[i].data();
+    NDArray output = outputs[i];
+    // ensure output does not use mkldnn mem.
+    // for inplace, we already converted & copied input above.
+    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
+      const_cast<NDArray &>(output).InvalidateMKLDNNData();
+    else if (req[i] == kAddTo)
+      output = outputs[i].Reorder2Default();
+    CHECK(output.IsDefaultData());
+    out_blobs[i] = output.data();
   }
   fn(attrs, ctx, in_blobs, req, out_blobs);
 }
@@ -341,7 +360,11 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
       arr2.IsMKLDNNData() ? buf2.data().dptr_: arr2.data().dptr_);
   std::atomic<bool> success(true);
 #pragma omp parallel for
+#ifdef _MSC_VER
+  for (int64_t i = 0; i < arr1.shape().Size(); i++) {
+#else
   for (size_t i = 0; i < arr1.shape().Size(); i++) {
+#endif
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
   }
