@@ -373,7 +373,7 @@ OpAttrs GetCopyOp() {
 
 OpAttrs GetActOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("ReLu");
+  attrs.attrs.op = Op::Get("relu");
   attrs.dispatches.resize(1);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   return attrs;
