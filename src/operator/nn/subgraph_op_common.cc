@@ -42,11 +42,11 @@ bool InferSubgraphDataType(nnvm::Symbol &subgraph, std::vector<int> *in_type,
   CHECK_EQ(input_nids.size(), in_type->size());
   for (size_t i = 0; i < in_type->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
-    (*in_type)[i] = dtypes[eid];
+    TYPE_ASSIGN_CHECK(*in_type, i, dtypes[eid]);
   }
 
   for (size_t i = 0; i < g.outputs.size(); i++)
-    (*out_type)[i] = dtypes[idx.entry_id(g.outputs[i])];
+    TYPE_ASSIGN_CHECK(*out_type, i, dtypes[idx.entry_id(g.outputs[i])]);
   return true;
 }
 
@@ -73,14 +73,14 @@ bool InferSubgraphStorage(nnvm::Symbol &subgraph,
   CHECK_EQ(input_nids.size(), in_attrs->size());
   for (size_t i = 0; i < in_attrs->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
-    (*in_attrs)[i] = stypes[eid];
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, stypes[eid]);
   }
 
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   auto &outputs = idx.outputs();
   CHECK(outputs.size() == out_attrs->size());
   for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, stypes[idx.entry_id(outputs[i])]);
   return true;
 }
 
@@ -142,11 +142,11 @@ bool InferSubgraphBackwardStorage(nnvm::Symbol &subgraph,
                                        std::move(storage_type_inputs), true);
 
   const auto& stypes = grad_graph.GetAttr<StorageTypeVector>("storage_type");
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   auto &outputs = idx.outputs();
   CHECK(outputs.size() == out_attrs->size());
   for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, stypes[idx.entry_id(outputs[i])]);
   return true;
 }
 
