@@ -368,7 +368,7 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **out_arr, int *out_s
   CHECK(input_syms.size() <= max_out_size);
   *out_size = input_syms.size();
   memcpy(out_arr, input_syms.data(), sizeof(*out_arr) * input_syms.size());
-  API_END();
+  API_END_HANDLE_ERROR();
 }
 
 int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out) {
