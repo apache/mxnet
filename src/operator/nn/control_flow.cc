@@ -27,6 +27,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
+#include "./subgraph_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -437,29 +438,8 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_type, std::vector<int> *out_type) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
-  nnvm::DTypeVector dtype_inputs = *in_type;
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  auto g = std::make_shared<nnvm::Graph>();
-  g->outputs = attrs.subgraphs[0]->outputs;
-  const auto& idx = g->indexed_graph();
-  CHECK_EQ(idx.input_nodes().size(), in_type->size());
-  CHECK_EQ(idx.outputs().size(), out_type->size());
-  imperative::CheckAndInferType(g.get(), std::move(dtype_inputs), true);
-
-  const auto &dtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
-
-  // Inferring the data type in the subgraph may infer the data type of the inputs.
-  // We need to copy the inferred input data types back.
-  const auto &input_nids = idx.input_nodes();
-  CHECK_EQ(input_nids.size(), in_type->size());
-  for (size_t i = 0; i < in_type->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    (*in_type)[i] = dtypes[eid];
-  }
-
-  for (size_t i = 0; i < g->outputs.size(); i++)
-    (*out_type)[i] = dtypes[idx.entry_id(g->outputs[i])];
-  return true;
+  return InferSubgraphDataType(*attrs.subgraphs[0], in_type, out_type);
 }
 
 static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
@@ -470,33 +450,8 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  auto g = std::make_shared<nnvm::Graph>();
-  g->outputs = attrs.subgraphs[0]->outputs;
-  const auto& idx = g->indexed_graph();
-  CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
-  CHECK_EQ(idx.outputs().size(), out_attrs->size());
-  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
-  StorageTypeVector storage_type_inputs = *in_attrs;
-  imperative::CheckAndInferStorageType(g.get(), std::move(dev_masks),
-                                       std::move(storage_type_inputs), true);
-
-  const auto& stypes = g->GetAttr<StorageTypeVector>("storage_type");
-
-  // Inferring the storage in the subgraph may infer the storage of the inputs.
-  // We need to copy the inferred input storage back.
-  const auto &input_nids = idx.input_nodes();
-  CHECK_EQ(input_nids.size(), in_attrs->size());
-  for (size_t i = 0; i < in_attrs->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    (*in_attrs)[i] = stypes[eid];
-  }
-
-  *dispatch_mode = DispatchMode::kFComputeEx;
-  auto &outputs = idx.outputs();
-  CHECK(outputs.size() == out_attrs->size());
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
-  return true;
+  return InferSubgraphStorage(*attrs.subgraphs[0], dev_mask,
+                              dispatch_mode, in_attrs, out_attrs);
 }
 
 static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
@@ -504,69 +459,11 @@ static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
                                        DispatchMode* dispatch_mode,
                                        std::vector<int> *in_attrs,
                                        std::vector<int> *out_attrs) {
-  using namespace nnvm;
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_args - 1);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  // construct backward graph
-  nnvm::Graph grad_graph;
-  nnvm::Graph fwd_graph;
-  std::vector<Node *> potential_nodes;
-  {
-    fwd_graph.outputs = attrs.subgraphs[0]->outputs;
-    std::vector<nnvm::NodeEntry> ograd_entries;
-    ograd_entries.reserve(fwd_graph.outputs.size());
-    for (size_t i = 0; i < fwd_graph.outputs.size(); ++i) {
-      ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
-    }
-    nnvm::Symbol subgraph_sym = *attrs.subgraphs[0];
-
-    std::vector<NodeEntry> xs;
-    std::vector<NodePtr> args = subgraph_sym.ListInputs(nnvm::Symbol::kReadOnlyArgs);
-    xs.reserve(args.size());
-    for (const auto& i : args)
-      xs.emplace_back(NodeEntry{i, 0, 0});
-    CHECK_GT(xs.size(), 0)
-        << "There are no inputs in computation graph that require gradients.";
-
-    static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
-    grad_graph = pass::Gradient(
-        fwd_graph, fwd_graph.outputs, xs, ograd_entries,
-        exec::AggregateGradient, nullptr, nullptr,
-        zero_ops, "_copy");
-    potential_nodes.reserve(fwd_graph.outputs.size() + xs.size() + ograd_entries.size());
-    for (auto e : ograd_entries)
-      potential_nodes.push_back(e.node.get());
-    for (auto e : xs)
-      potential_nodes.push_back(e.node.get());
-    for (auto e : fwd_graph.outputs)
-      potential_nodes.push_back(e.node.get());
-  }
-
-  const auto& idx = grad_graph.indexed_graph();
-  auto input_nodes = idx.input_nodes();
-  StorageTypeVector storage_type_inputs(input_nodes.size());
-  for (size_t i = 0; i < input_nodes.size(); i++) {
-    auto node_id = input_nodes[i];
-    const nnvm::IndexedGraph::Node &n = idx[node_id];
-    auto it = std::find(potential_nodes.begin(), potential_nodes.end(), n.source);
-    CHECK(it != potential_nodes.end());
-    size_t idx = it - potential_nodes.begin();
-    CHECK_LT(idx, in_attrs->size());
-    storage_type_inputs[i] = in_attrs->at(idx);
-  }
-  CHECK_EQ(idx.outputs().size(), out_attrs->size());
-  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
-  imperative::CheckAndInferStorageType(&grad_graph, std::move(dev_masks),
-                                       std::move(storage_type_inputs), true);
-
-  const auto& stypes = grad_graph.GetAttr<StorageTypeVector>("storage_type");
-  *dispatch_mode = DispatchMode::kFComputeEx;
-  auto &outputs = idx.outputs();
-  CHECK(outputs.size() == out_attrs->size());
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = stypes[idx.entry_id(outputs[i])];
-  return true;
+  return InferSubgraphBackwardStorage(*attrs.subgraphs[0], dev_mask,
+                                      dispatch_mode, in_attrs, out_attrs);
 }
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
