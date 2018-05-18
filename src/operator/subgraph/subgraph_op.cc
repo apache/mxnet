@@ -72,7 +72,7 @@ bool SubgraphOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx_g.outputs().size(), out_shapes->size());
   // TODO: make sure shape inputs matches the order from in_shapes
   nnvm::ShapeVector shape_inputs = *in_shapes;
-  const bool ret = imperative::CheckAndInferShape(&g, std::move(shape_inputs), true);
+  imperative::CheckAndInferShape(&g, std::move(shape_inputs), true);
   const nnvm::ShapeVector& shapes = g.GetAttr<nnvm::ShapeVector>("shape");
   const std::vector<uint32_t>& input_nids = idx_g.input_nodes();
   // assign to in_shapes
@@ -99,7 +99,7 @@ bool SubgraphOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx_g.outputs().size(), out_types->size());
   // TODO: make sure type inputs matches the order from in_types
   nnvm::DTypeVector type_inputs = *in_types;
-  const bool ret = imperative::CheckAndInferType(&g, std::move(type_inputs), true);
+  imperative::CheckAndInferType(&g, std::move(type_inputs), true);
   const nnvm::DTypeVector& types = g.GetAttr<nnvm::DTypeVector>("dtype");
   const std::vector<uint32_t>& input_nids = idx_g.input_nodes();
   // assign to in_types
@@ -112,7 +112,7 @@ bool SubgraphOpType(const nnvm::NodeAttrs& attrs,
     const auto eid = idx_g.entry_id(g.outputs[i]);
     TYPE_ASSIGN_CHECK(*out_types, i, types[eid]);
   }
-  return ret;
+  return true;
 }
 
 bool SubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
@@ -129,7 +129,7 @@ bool SubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
   exec::DevMaskVector dev_masks(idx_g.num_nodes(), dev_mask);
   // TODO: make sure type inputs matches the order from in_types
   StorageTypeVector stype_inputs = *in_stypes;
-  const bool ret = imperative::CheckAndInferStorageType(&g, std::move(dev_masks),
+  imperative::CheckAndInferStorageType(&g, std::move(dev_masks),
                                                         std::move(stype_inputs), true);
   const StorageTypeVector& stypes = g.GetAttr<StorageTypeVector>("storage_type");
   const std::vector<uint32_t>& input_nids = idx_g.input_nodes();
@@ -139,13 +139,13 @@ bool SubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
     STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, stypes[eid]);
   }
 
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   // assign to out_types
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     const auto eid = idx_g.entry_id(g.outputs[i]);
     STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, stypes[eid]);
   }
-  return ret;
+  return true;
 }
 
 void SubgraphOpForward(const OpStatePtr& state_ptr,
@@ -165,8 +165,8 @@ void SubgraphOpForward(const OpStatePtr& state_ptr,
   }
 }
 
-NNVM_REGISTER_OP(_foreach)
-.describe(R"code(foreach)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_subgraph_op)
+.describe(R"code(_subgraph_op)code" ADD_FILELINE)
 .set_num_inputs(
   [](const NodeAttrs& attrs) {
     const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
