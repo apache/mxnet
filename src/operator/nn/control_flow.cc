@@ -56,26 +56,6 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
 
 DMLC_REGISTER_PARAMETER(ForeachParam);
 
-// The input arguments are ordered in the following order:
-// in, state0, state1, ...
-// We need to reorder them in the same order as the input nodes of the subgraph.
-template<typename T>
-static std::vector<T> ReorderInputs(const std::vector<T> &in, const nnvm::IndexedGraph& idx) {
-  std::vector<T> ret(in.size());
-  CHECK_EQ(idx.input_nodes().size(), in.size());
-  for (size_t i = 0; i < idx.input_nodes().size(); i++) {
-    std::string name = idx[idx.input_nodes()[i]].source->attrs.name;
-    if (name == "in") {
-      ret[i] = in[0];
-    } else {
-      auto idx_str = name.substr(5);
-      int idx = std::stoi(idx_str);
-      ret[i] = in[idx + 1];
-    }
-  }
-  return ret;
-}
-
 class ForeachState {
   // These are output arrays from all iterations.
   // They also contain the Op state for each CachedOp.
