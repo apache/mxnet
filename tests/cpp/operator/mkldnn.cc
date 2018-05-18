@@ -102,6 +102,19 @@ static void InitArray(NDArray *arr, bool is_rand = false) {
   }
 }
 
+// Init arrays with negative and positive values
+static void InitNegPosArray(NDArray *arr) {
+    const TBlob &blob = arr->data();
+    mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
+    size_t size = blob.Size();
+    size_t shift = size >> 1;
+    for (int i = 0; i < size; i++)
+        data[i] = i - shift;
+}
+
+
+
+
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
                             bool is_rand = false) {
@@ -358,6 +371,14 @@ OpAttrs GetCopyOp() {
   return attrs;
 }
 
+OpAttrs GetActOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("ReLu");
+  attrs.dispatches.resize(1);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  return attrs;
+}
+
 OpAttrs GetLeakyReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("LeakyReLU");
@@ -510,6 +531,17 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
+void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
+  NDArray tmp1 = in_arr.Reorder2Default();
+  NDArray tmp2 = arr.Reorder2Default();
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  TBlob d1 = tmp1.data();
+  TBlob d2 = tmp2.data();
+  EXPECT_NE(memcmp(d1.dptr_, d2.dptr_,
+                   tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+
 void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
   NDArray in1 = in_arrs[0]->Reorder2Default();
   NDArray in2 = in_arrs[1]->Reorder2Default();
@@ -640,7 +672,12 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-  TestUnaryOp(attrs, VerifyCopyResult);
+    TestOp(attrs, InitArray, VerifyCopyResult);
+}
+
+TEST(IMPERATIVE, ActOp) {
+  OpAttrs attrs = GetActOp();
+    TestOp(attrs, InitNegPosArray, VerifyActResult);
 }
 
 
