@@ -737,7 +737,7 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
     // When this is a view and a user wants the default layout, we can simply
     // create a new mkldnn memory that points to the right memory.
     std::shared_ptr<mkldnn::memory> mem(new mkldnn::memory(
-            desc, ptr_->shandle.dptr + byte_offset_));
+            desc, static_cast<char *>(ptr_->shandle.dptr) + byte_offset_));
     MKLDNNStream::Get()->RegisterMem(mem);
     return mem.get();
   } else if (IsView()) {
