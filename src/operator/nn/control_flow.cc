@@ -328,7 +328,7 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   std::unordered_set<size_t> in_state_locs(params.in_state_locs.begin(),
                                            params.in_state_locs.end());
   // The inputs contain out gradients, inputs and outputs.
-  size_t len = inputs[0].shape()[iter_dim];
+  int len = inputs[0].shape()[iter_dim];
   size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
@@ -637,7 +637,7 @@ NNVM_REGISTER_OP(_foreach)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
-.add_argument("inputs", "NDArray-or-Symbol[]",
+.add_argument("data", "NDArray-or-Symbol[]",
               "The input arrays that include data arrays and states.")
 .add_arguments(ForeachParam::__FIELDS__());
 

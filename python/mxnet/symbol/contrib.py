@@ -111,14 +111,19 @@ def _get_graph_inputs(subg, name, prefix):
         syms.append(s)
     return syms
 
-def foreach(func, input, init_states, back_prop=False, name="foreach"):
+def foreach(func, data, init_states, back_prop=False, name="foreach"):
     assert isinstance(init_states, list), "init_states should be a list"
     states = []
+
+    # TODO(zhengda) If the input python function references to the symbols outside
+    # the python function, we need to prune the computation graph constructed from
+    # the function. One way of doing it is to mark the nodes in the computation graph
+    # with AttrScope and prune the nodes without the special attribute.
     with AttrScope(subgraph_name=name):
-        if isinstance(input, list):
-            in_eles = [symbol.var(sym.name) for sym in input]
+        if isinstance(data, list):
+            in_eles = [symbol.var(sym.name) for sym in data]
         else:
-            in_eles = symbol.var(input.name)
+            in_eles = symbol.var(data.name)
         for s in init_states:
             states.append(symbol.var(s.name))
 
@@ -132,21 +137,21 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
                 "the number of output states (%d) should be the same as input states (%d)" \
                 % (len(sym_out[1]), len(init_states))
 
-        if (isinstance(sym_out[0], list)):
+        if isinstance(sym_out[0], list):
             flat_out = sym_out[0]
         else:
             flat_out = [sym_out[0]]
         num_out_data = len(flat_out)
         for s in sym_out[1]:
             # There is a problem if the outputs are the same as the inputs
-            # or the first output.
-            # TODO this is a temp fix.
+            # or the first output. By calling identity, we can make sure that
+            # all symbols will refer to different NDArrays.
             flat_out.append(symbol.op.identity(s))
     g = symbol.Group(flat_out)
     input_syms = _get_graph_inputs(g, name, "ro_var")
 
-    if (isinstance(input, list)):
-        num_inputs = len(input)
+    if isinstance(data, list):
+        num_inputs = len(data)
     else:
         num_inputs = 1
 
@@ -161,7 +166,7 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     ordered_ins = []
     states_map = {sym.name:sym for sym in init_states}
     state_names = states_map.keys()
-    data_syms = _as_list(input)
+    data_syms = _as_list(data)
     data_map = {sym.name:sym for sym in data_syms}
     data_names = data_map.keys()
     in_state_locs = []
@@ -169,10 +174,10 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     for in_name in g.list_inputs():
         assert in_name in gin_names, "The input variable %s can't be found in graph inputs: %s" \
                 % (in_name, str(gin_names))
-        if (in_name in state_names):
+        if in_name in state_names:
             ordered_ins.append(states_map[in_name])
             in_state_locs.append(len(ordered_ins) - 1)
-        elif (in_name in data_names):
+        elif in_name in data_names:
             ordered_ins.append(data_map[in_name])
             in_data_locs.append(len(ordered_ins) - 1)
         else:
@@ -183,7 +188,7 @@ def foreach(func, input, init_states, back_prop=False, name="foreach"):
     ret = symbol._internal._foreach(g, *ordered_ins, num_outputs=num_outputs,
                                     num_out_data=num_out_data, in_state_locs=in_state_locs,
                                     in_data_locs=in_data_locs)
-    if (num_outputs - num_states > 1):
+    if num_outputs - num_states > 1:
         outs = []
         for i in range(num_outputs - num_states):
             outs.append(ret[i])
