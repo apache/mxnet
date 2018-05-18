@@ -321,10 +321,7 @@ void ROIAlignBackward(
     int rois_cols) {
   DCHECK(rois_cols == 4 || rois_cols == 5);
 
-  int index;
-#pragma omp parallel for private(index) \
-num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index = 0; index < nthreads; index++) {
+  for (int index = 0; index < nthreads; index++) {
     // (n, c, ph, pw) is an element in the pooled output
     int pw = index % pooled_width;
     int ph = (index / pooled_width) % pooled_height;
