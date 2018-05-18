@@ -156,10 +156,7 @@ void ROIAlignForward(
   int n_rois = nthreads / channels / pooled_width / pooled_height;
   // (n, c, ph, pw) is an element in the pooled output
   // can be parallelized using omp
-  int n;
-#pragma omp parallel for private(n) \
-num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (n = 0; n < n_rois; n++) {
+  for (int n = 0; n < n_rois; n++) {
     int index_n = n * channels * pooled_width * pooled_height;
 
     // roi could have 4 or 5 columns
