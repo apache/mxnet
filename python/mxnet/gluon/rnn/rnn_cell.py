@@ -224,6 +224,7 @@ class RecurrentCell(Block):
             The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of `begin_state()`.
         """
+        # pylint: disable=too-many-locals
         self.reset()
 
         inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
@@ -255,8 +256,7 @@ class RecurrentCell(Block):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
             return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
-        else:
-            return activation(inputs, **kwargs)
+        return activation(inputs, **kwargs)
 
     def forward(self, inputs, states):
         """Unrolls the recurrent cell for one time step.
@@ -458,6 +458,7 @@ class LSTMCell(HybridRecurrentCell):
         - **next_states**: a list of two output recurrent state tensors. Each has
           the same shape as `states`.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
@@ -500,6 +501,7 @@ class LSTMCell(HybridRecurrentCell):
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
+        # pylint: disable=too-many-locals
         prefix = 't%d_'%self._counter
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._hidden_size*4, name=prefix+'i2h')
@@ -508,7 +510,8 @@ class LSTMCell(HybridRecurrentCell):
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
         in_gate = F.Activation(slice_gates[0], act_type=self.recurrent_activation, name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type=self.recurrent_activation, name=prefix+'f')
+        forget_gate = \
+            F.Activation(slice_gates[1], act_type=self.recurrent_activation, name=prefix+'f')
         in_transform = F.Activation(
             slice_gates[2], act_type=self.activation, name=prefix+'c')
         out_gate = F.Activation(slice_gates[3], act_type=self.recurrent_activation, name=prefix+'o')
@@ -685,6 +688,7 @@ class SequentialRNNCell(RecurrentCell):
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
                valid_length=None):
+        # pylint: disable=too-many-locals
         self.reset()
 
         inputs, _, F, batch_size = _format_sequence(length, inputs, layout, None)
@@ -712,6 +716,7 @@ class SequentialRNNCell(RecurrentCell):
         return len(self._children)
 
     def hybrid_forward(self, *args, **kwargs):
+        # pylint: disable=missing-docstring
         raise NotImplementedError
 
 
@@ -765,10 +770,9 @@ class DropoutCell(HybridRecurrentCell):
         inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
             return self.hybrid_forward(F, inputs, begin_state if begin_state else [])
-        else:
-            return super(DropoutCell, self).unroll(
-                length, inputs, begin_state=begin_state, layout=layout,
-                merge_outputs=merge_outputs, valid_length=None)
+        return super(DropoutCell, self).unroll(
+            length, inputs, begin_state=begin_state, layout=layout,
+            merge_outputs=merge_outputs, valid_length=None)
 
 
 class ModifierCell(HybridRecurrentCell):
@@ -866,6 +870,7 @@ class ResidualCell(ModifierCell):
     """
 
     def __init__(self, base_cell):
+        # pylint: disable=useless-super-delegation
         super(ResidualCell, self).__init__(base_cell)
 
     def hybrid_forward(self, F, inputs, states):
@@ -934,6 +939,7 @@ class BidirectionalCell(HybridRecurrentCell):
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
                valid_length=None):
+        # pylint: disable=too-many-locals
         self.reset()
 
         inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
