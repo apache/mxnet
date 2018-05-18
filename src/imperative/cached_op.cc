@@ -294,6 +294,11 @@ bool CachedOp::SetForwardGraph(
   const auto& idx = g.indexed_graph();
 
   StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  CHECK_EQ(stypes.size(), storage.size());
+  for (size_t i = 0; i < stypes.size(); i++) {
+    if (stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
+  }
   for (const auto i : idx.input_nodes()) {
     storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
   }
@@ -301,12 +306,6 @@ bool CachedOp::SetForwardGraph(
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
       storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
     }
-  }
-
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  CHECK_EQ(stypes.size(), storage.size());
-  for (size_t i = 0; i < stypes.size(); i++) {
-    if (stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
   }
 
   auto mem_plan = PlanMemory(
@@ -409,12 +408,12 @@ bool CachedOp::SetBackwardGraph(
   }
 
   StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
-  for (size_t i = 0; i < num_forward_entries; ++i) storage[i] = exec::kExternalStorageID;
-  for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
-  for (const auto i : idx.outputs()) storage[idx.entry_id(i)] = exec::kExternalStorageID;
   for (size_t i = 0; i < stypes.size(); i++) {
     if (stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
   }
+  for (size_t i = 0; i < num_forward_entries; ++i) storage[i] = exec::kExternalStorageID;
+  for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
+  for (const auto i : idx.outputs()) storage[idx.entry_id(i)] = exec::kExternalStorageID;
 
   auto mem_plan = PlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >("backward_ref_count"),
@@ -534,6 +533,7 @@ void CachedOp::StaticRunOps(
     size_t start_nid,
     size_t end_nid) {
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+  static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
 
   bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
   bool is_training = Imperative::Get()->is_training();
@@ -579,6 +579,12 @@ void CachedOp::StaticRunOps(
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
             dispatch_mode, op_execs[i]->state());
+      } else if (is_layer_backward.get(node.source->op(), false)) {
+        nnvm::Node* fwd_node = node.source->control_deps[0].get();
+        auto fwd_node_id = idx.node_id(fwd_node);
+        Imperative::Get()->InvokeOp(
+            default_ctx, node.source->attrs, ndinputs, ndoutputs,
+            req, dispatch_mode, op_execs[fwd_node_id]->state());
       } else {
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
