@@ -391,14 +391,14 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     shape_inputs[loc] = TShape(in_shape->at(loc).begin() + 1, in_shape->at(loc).end());
   }
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  auto g = std::make_shared<nnvm::Graph>();
-  g->outputs = attrs.subgraphs[0]->outputs;
-  const auto& idx = g->indexed_graph();
+  nnvm::Graph g;
+  g.outputs = attrs.subgraphs[0]->outputs;
+  const auto& idx = g.indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_shape->size());
   CHECK_EQ(idx.outputs().size(), out_shape->size());
-  imperative::CheckAndInferShape(g.get(), std::move(shape_inputs), true);
-  const auto& shapes = g->GetAttr<nnvm::ShapeVector>("shape");
+  imperative::CheckAndInferShape(&g, std::move(shape_inputs), true);
 
+  const auto& shapes = g.GetAttr<nnvm::ShapeVector>("shape");
   // Inferring the shape in the subgraph may infer the shape of the inputs.
   // We need to copy the inferred input shapes back.
   const auto &input_nids = idx.input_nodes();
@@ -407,26 +407,26 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     auto eid = idx.entry_id(input_nids[i], 0);
     // If the input shape is none, we should update them.
     if ((*in_shape)[i].ndim() == 0 || (*in_shape)[i].Size() == 0)
-      (*in_shape)[i] = shapes[eid];
+      SHAPE_ASSIGN_CHECK(*in_shape, i, shapes[eid]);
   }
 
   // For the shape of output data.
   for (int i = 0; i < params.num_out_data; i++) {
-    uint32_t eid = idx.entry_id(g->outputs[i]);
+    uint32_t eid = idx.entry_id(g.outputs[i]);
     const auto& g_out_shape = shapes[eid];
-    auto &out = (*out_shape)[i];
-    out = TShape(g_out_shape.ndim() + 1);
+    auto out = TShape(g_out_shape.ndim() + 1);
     out[0] = len;
     for (size_t i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
+    SHAPE_ASSIGN_CHECK(*out_shape, i, out);
   }
 
   // For the remaining shapes.
-  for (size_t i = params.num_out_data; i < g->outputs.size(); i++) {
-    uint32_t eid = idx.entry_id(g->outputs[i]);
-    (*out_shape)[i] = shapes[eid];
+  for (size_t i = params.num_out_data; i < g.outputs.size(); i++) {
+    uint32_t eid = idx.entry_id(g.outputs[i]);
+    SHAPE_ASSIGN_CHECK(*out_shape, i, shapes[eid]);
   }
-  size_t num_states = g->outputs.size() - params.num_out_data;
+  size_t num_states = g.outputs.size() - params.num_out_data;
   for (size_t i = 0; i < num_states; i++) {
     size_t loc = params.in_state_locs[i];
     CHECK((*out_shape)[i + params.num_out_data] == (*in_shape)[loc]);
