@@ -28,8 +28,6 @@ import warnings
 import json
 import unittest
 
-
-
 @with_seed()
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
@@ -586,88 +584,6 @@ def test_flatten():
     assert flatten(x).shape == (3, 6)
     x = mx.nd.zeros((3,))
     assert flatten(x).shape == (3, 1)
-
-@with_seed()
-@raises(RuntimeError)
-def test_multi_trainer():
-    x = gluon.Parameter('x', shape=(10,))
-    x.initialize()
-    trainer0 = gluon.Trainer([x], 'sgd')
-    # multiple trainers for a single Parameter is not allowed
-    trainer1 = gluon.Trainer([x], 'sgd')
-
-@with_seed()
-def test_trainer():
-    def dict_equ(a, b):
-        assert set(a) == set(b)
-        for k in a:
-            assert (a[k].asnumpy() == b[k].asnumpy()).all()
-    x = gluon.Parameter('x', shape=(10,))
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
-
-    x.lr_mult = 0.5
-
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
-
-    trainer.save_states('test_trainer.states')
-    states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
-             else deepcopy(trainer._updaters[0].states)
-    trainer.load_states('test_trainer.states')
-    if trainer._update_on_kvstore:
-        dict_equ(trainer._kvstore._updater.states, states)
-        assert trainer._optimizer == trainer._kvstore._updater.optimizer
-    else:
-        for updater in trainer._updaters:
-            dict_equ(updater.states, states)
-        assert trainer._optimizer == trainer._updaters[0].optimizer
-    assert_raises(AssertionError, trainer.update, 1)
-    assert_raises(AssertionError, trainer.allreduce_grads)
-
-    x = gluon.Parameter('x', shape=(10,))
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
-                             update_on_kvstore=False)
-    with mx.autograd.record():
-        for i, w in enumerate(x.list_data()):
-            y = i*w
-            y.backward()
-    assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.allreduce_grads()
-    assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.update(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
-
-@with_seed()
-def test_trainer_save_load():
-    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.1
-    trainer.save_states('test_trainer_save_load.states')
-    trainer.load_states('test_trainer_save_load.states')
-    x.lr_mult = 2.0
-    # check if parameter dict is correctly associated with optimizer after load_state
-    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
 @with_seed()
 def test_block_attr_hidden():

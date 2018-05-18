@@ -22,7 +22,6 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity']
 
 from .... import nd
 from ...block import HybridBlock
-from ..block import SparseBlock
 from ...nn import Sequential, HybridSequential
 
 class Concurrent(Sequential):

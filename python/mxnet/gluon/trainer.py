@@ -203,7 +203,6 @@ class Trainer(object):
             self._init_kvstore()
         if self._params_to_init:
             self._init_params()
-        # TODO check state
         self._kvstore.row_sparse_pull(self._param2idx[parameter.name], \
                                       out=out, row_ids=row_id)
 
