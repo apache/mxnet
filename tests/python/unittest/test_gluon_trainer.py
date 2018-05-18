@@ -125,26 +125,29 @@ def test_trainer_multi_layer_init():
                                     input_dim=4, output_dim=3, sparse_grad=True)
             return self.dense0(embed)
 
-    net = Net(prefix='net_')
-    ctxes = [mx.cpu(1), mx.cpu(2)]
-    net.initialize(mx.init.One(), ctx=ctxes)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
-    data = mx.nd.array([[0,2], [1,2]])
-    xs = gluon.utils.split_and_load(data, ctxes)
-    ys = []
-    with mx.autograd.record():
-        for x in xs:
-            y = net(x)
-            ys.append(y)
-    for y in ys:
-        y.backward()
-    trainer.step(1)
-    # all parameters should be initialized
-    assert not trainer._params_to_init
-    all_rows = mx.nd.arange(0, 4, ctx=mx.cpu(1))
-    # check the updated weights
-    weight = net.embed_weight.row_sparse_data(all_rows).asnumpy()
-    assert (weight[0] == -1).all()
-    assert (weight[1] == -1).all()
-    assert (weight[2] == -3).all()
-    assert (weight[3] == 1).all()
+    def check_init(ctxes):
+        net = Net(prefix='net_')
+        net.initialize(mx.init.One(), ctx=ctxes)
+        trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
+        data = mx.nd.array([[0,2], [1,2]])
+        xs = gluon.utils.split_and_load(data, ctxes)
+        ys = []
+        with mx.autograd.record():
+            for x in xs:
+                y = net(x)
+                ys.append(y)
+        for y in ys:
+            y.backward()
+        trainer.step(1)
+        # all parameters should be initialized
+        assert not trainer._params_to_init
+        all_rows = mx.nd.arange(0, 4, ctx=mx.cpu(1))
+        # check the updated weights
+        weight = net.embed_weight.row_sparse_data(all_rows).asnumpy()
+        assert (weight[0] == -1).all()
+        assert (weight[1] == -1).all()
+        assert (weight[2] == -3).all()
+        assert (weight[3] == 1).all()
+
+    check_init([mx.cpu(1), mx.cpu(2)])
+    check_init([mx.cpu(1)])
