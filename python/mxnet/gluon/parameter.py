@@ -458,8 +458,6 @@ class Parameter(object):
 
         Parameters
         ----------
-        ctx : Context
-            Desired context.
         row_id: NDArray
             Row ids to retain for the 'row_sparse' parameter.
 
@@ -885,6 +883,9 @@ class ParameterDict(object):
             present in this ParameterDict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
+        cast_stype: bool, default False
+            Whether to cast the storage type of parameters from the file to current
+            Parameter's storage type if stypes mismatch.
         """
         if restore_prefix:
             for name in self.keys():

@@ -443,6 +443,7 @@ class HybridBlock(Block):
 
     Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
     the end-to-end usage.
+
     """
     def __init__(self, prefix=None, params=None):
         # check if any parameter is row_sparse
