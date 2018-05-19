@@ -605,7 +605,7 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   }
 
   for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays();
+    in_arrs = GetTestInputArrays(init_fn);
     for (auto arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
       if (arr.IsView())
