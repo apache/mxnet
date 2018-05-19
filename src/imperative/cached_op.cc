@@ -33,7 +33,6 @@ struct CachedOp::GraphInfo {
   nnvm::Graph full_graph;
   std::vector<OpReqType> bwd_output_reqs;
   std::vector<uint32_t> bwd_input_eid;
-  std::unordered_map<uint32_t, uint32_t> grad_output_to_full_output;
 };
 
 struct CachedOp::DynamicRuntime {
@@ -330,13 +329,11 @@ bool CachedOp::SetBackwardGraph(
 
   if (info->bwd_output_reqs != reqs) {
     info->bwd_output_reqs = reqs;
-    info->grad_output_to_full_output.clear();
     info->bwd_input_eid.clear();
     g = nnvm::Graph();
     g.outputs = fwd_graph_.outputs;
     for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
       if (info->bwd_output_reqs[i] == kNullOp) continue;
-      info->grad_output_to_full_output[i] = g.outputs.size();
       g.outputs.emplace_back(grad_graph_.outputs[i]);
     }
     g.attrs["context"] = std::make_shared<dmlc::any>(
@@ -408,8 +405,9 @@ bool CachedOp::SetBackwardGraph(
   }
 
   StorageVector storage(idx.num_node_entries(), exec::kBadStorageID);
-  for (size_t i = 0; i < stypes.size(); i++) {
-    if (stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
+  const auto& bwd_stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  for (size_t i = 0; i < bwd_stypes.size(); i++) {
+    if (bwd_stypes[i] != kDefaultStorage) storage[i] = exec::kDynamicStorageID;
   }
   for (size_t i = 0; i < num_forward_entries; ++i) storage[i] = exec::kExternalStorageID;
   for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
@@ -490,6 +488,7 @@ void CachedOp::StaticResetState(
     exec::CreateOpExecs(g, &state.execs, i);
   }
   exec::AttachOpResources(g, state.execs, start_nid, end_nid);
+
 
   for (size_t i = start_eid; i < end_eid; ++i) {
     if (addto_entry.size() && addto_entry[i]) {
@@ -611,13 +610,16 @@ OpStatePtr CachedOp::StaticForward(
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
 
+
   for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
     auto nid = idx.input_nodes()[config_.param_indices[i]];
     match = match && state.arrays[idx.entry_id(nid, 0)]->IsSame(
         *inputs[config_.param_indices[i]]);
   }
 
+
   if (!(state.fwd_initialized && state.recording == recording && match)) {
+
     state.ResetStaticRuntime(false);
 
     for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
@@ -859,22 +861,23 @@ void CachedOp::StaticBackward(
 
   for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
     const auto iter = fwd_input_to_grad_output_.find(config_.param_indices[i]);
-    if (iter == fwd_input_to_grad_output_.end() ||
-        reqs[iter->second] == kNullOp) continue;
-    auto eid = idx.entry_id(
-        idx.outputs()[state.info.grad_output_to_full_output[iter->second]]);
+    if (iter == fwd_input_to_grad_output_.end()) continue;
+    auto entry = grad_graph_.outputs[iter->second];
+    if (!idx.exist(entry.node.get())) continue;
+    auto eid = idx.entry_id(entry);
     match = match && state.arrays[eid]->IsSame(*outputs[iter->second]);
   }
+
 
   if (!(state.bwd_initialized && match)) {
     state.ResetStaticRuntime(true);
 
     for (auto i : config_.param_indices) {
       const auto iter = fwd_input_to_grad_output_.find(i);
-      if (iter == fwd_input_to_grad_output_.end() ||
-          reqs[iter->second] == kNullOp) continue;
-      auto eid = idx.entry_id(
-          idx.outputs()[state.info.grad_output_to_full_output[iter->second]]);
+      if (iter == fwd_input_to_grad_output_.end()) continue;
+      auto entry = grad_graph_.outputs[iter->second];
+      if (!idx.exist(entry.node.get())) continue;
+      auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[iter->second];
       *state.arrays[eid] = *outputs[iter->second];
     }
@@ -891,13 +894,14 @@ void CachedOp::StaticBackward(
 
   for (auto i : config_.data_indices) {
     const auto iter = fwd_input_to_grad_output_.find(i);
-    if (iter == fwd_input_to_grad_output_.end() ||
-        reqs[iter->second] == kNullOp) continue;
-    auto eid = idx.entry_id(
-        idx.outputs()[state.info.grad_output_to_full_output[iter->second]]);
+    if (iter == fwd_input_to_grad_output_.end()) continue;
+    auto entry = grad_graph_.outputs[iter->second];
+    if (!idx.exist(entry.node.get())) continue;
+    auto eid = idx.entry_id(entry);
     state.array_reqs[eid] = reqs[iter->second];
     state.arrays[eid] = outputs[iter->second];
   }
+
 
   StaticRunOps(default_ctx, g, state_ptr, num_forward_nodes, idx.num_nodes());
 }
