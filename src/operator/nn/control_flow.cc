@@ -478,7 +478,7 @@ ForeachGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ogra
 }
 
 NNVM_REGISTER_OP(_foreach)
-.describe(R"code(foreach)code" ADD_FILELINE)
+.MXNET_DESCRIBE("Run a for loop over an NDArray with user-defined computation")
 .set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ForeachStorageType)
 .set_num_inputs([](const NodeAttrs& attrs) {
