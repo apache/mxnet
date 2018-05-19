@@ -163,13 +163,13 @@ def foreach(func, data, init_states):
         ele = data[i]
         outs, states = func(ele, states)
         outs = _as_list(outs)
-        if (i == 0):
+        if i == 0:
             # outputs is a list of lists
-            for j in range(len(outs)):
-                outputs.append([outs[j]])
+            for out in outs:
+                outputs.append([out])
         else:
-            for j in range(len(outs)):
-                outputs[j].append(outs[j])
-    for i in range(len(outputs)):
-        outputs[i] = stack(*outputs[i])
+            for j, out in enumerate(outs):
+                outputs[j].append(out)
+    for out in outputs:
+        out = stack(*out)
     return (outputs, states)
