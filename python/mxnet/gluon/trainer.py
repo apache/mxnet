@@ -129,7 +129,6 @@ class Trainer(object):
                       if not param._deferred_init]
             params_to_init = [param for param in self._params_to_init \
                               if param._deferred_init]
-            print('initing ', params)
             for param in params:
                 param_arrays = param._check_and_get(param._data, list)
                 idx = self._param2idx[param.name]
