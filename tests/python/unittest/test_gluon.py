@@ -84,15 +84,18 @@ def test_paramdict():
     params0.get('w0', shape=(10, 10))
     params0.get('w1', shape=(10, 10), stype='row_sparse')
     all_row_ids = mx.nd.arange(0, 10)
+    # check param names
     assert list(params0.keys()) == ['net_w0', 'net_w1']
     params0.initialize(ctx=mx.cpu())
     trainer0 = mx.gluon.Trainer(params0, 'sgd')
     prev_w0 = params0.get('w0').data(mx.cpu())
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
+    # save params
     params0.save('test_paramdict.params')
-    # Cannot load parameters if they are already initialized on trainer's kvstore
+    # cannot load parameters if they are already initialized on trainer's kvstore
     assertRaises(RuntimeError, params0.load, 'test_paramdict.params', mx.cpu())
 
+    # load params
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
     params1.get('w1', shape=(10, 10), stype='row_sparse')
@@ -104,6 +107,7 @@ def test_paramdict():
     cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
     # create a new param dict with dense params, and load from the checkpoint
     # of sparse & dense params
     params2 = gluon.ParameterDict('net_')
@@ -111,6 +115,7 @@ def test_paramdict():
     params2.get('w1', shape=(10, 10))
     assertRaises(RuntimeError, params2.load, 'test_paramdict.params', mx.cpu())
     params2.load('test_paramdict.params', mx.cpu(), cast_stype=True)
+
     # compare the values before and after save/load
     cur_w0 = params2.get('w0').data(mx.cpu())
     cur_w1 = params2.get('w1').data(mx.cpu())

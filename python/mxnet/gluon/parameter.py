@@ -214,8 +214,8 @@ class Parameter(object):
         """ Get row_sparse data from row_sparse parameters based on row_id. """
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
-            raise TypeError("Cannot get 'row_sparse' Parameter %s with row_id = %s. "
-                            "NDArray type is expected." % (self.name, row_id))
+            raise TypeError("Cannot get 'row_sparse' Parameter %s with %s type. "
+                            "NDArray type is expected." % (self.name, type(row_id)))
         if not self._trainer:
             raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
                                "Trainer is created with it."%self.name)

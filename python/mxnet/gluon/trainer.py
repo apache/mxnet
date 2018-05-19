@@ -343,7 +343,8 @@ class Trainer(object):
             self._init_params()
 
         if self._update_on_kvstore:
-            assert not self._params_to_init, "Cannot save trainer states when some parameters are not yet initialized in kvstore."
+            assert not self._params_to_init, "Cannot save trainer states when some " \
+                                             "parameters are not yet initialized in kvstore."
             self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
         else:
             with open(fname, 'wb') as fout:
