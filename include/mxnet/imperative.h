@@ -105,18 +105,18 @@ class Imperative {
                 std::vector<bool>* p_save_inputs = nullptr,
                 std::vector<bool>* p_save_outputs = nullptr);
   /*! \brief */
-  static OpStatePtr Invoke(const Context& default_ctx,
-                           const nnvm::NodeAttrs& attrs,
-                           const std::vector<NDArray*>& inputs,
-                           const std::vector<NDArray*>& outputs);
+  OpStatePtr Invoke(const Context& default_ctx,
+                    const nnvm::NodeAttrs& attrs,
+                    const std::vector<NDArray*>& inputs,
+                    const std::vector<NDArray*>& outputs);
   /*! \brief */
-  static OpStatePtr InvokeOp(const Context& ctx,
-                             const nnvm::NodeAttrs& attrs,
-                             const std::vector<NDArray*>& inputs,
-                             const std::vector<NDArray*>& outputs,
-                             const std::vector<OpReqType>& req,
-                             const DispatchMode dispatch_mode,
-                             OpStatePtr state = OpStatePtr());
+  OpStatePtr InvokeOp(const Context& ctx,
+                      const nnvm::NodeAttrs& attrs,
+                      const std::vector<NDArray*>& inputs,
+                      const std::vector<NDArray*>& outputs,
+                      const std::vector<OpReqType>& req,
+                      const DispatchMode dispatch_mode,
+                      OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
                      const std::vector<mx_uint>& grad_reqs,
