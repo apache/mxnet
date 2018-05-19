@@ -29,8 +29,8 @@ except ImportError:
 import ctypes
 
 from . import symbol
-from ..base import _LIB, c_str, c_array, check_call
-from ..base import SymbolHandle, NDArrayHandle, _as_list
+from ..base import _LIB, c_array, check_call
+from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
 __all__ = ["rand_zipfian"]
@@ -204,11 +204,6 @@ def foreach(func, data, init_states, name="foreach"):
             flat_out.append(symbol.op.identity(s))
     g = symbol.Group(flat_out)
     input_syms = _get_graph_inputs(g)
-
-    if isinstance(data, list):
-        num_inputs = len(data)
-    else:
-        num_inputs = 1
 
     # Here we need to find out how the input symbols are ordered as well as
     # where the loop states are located in the list of inputs.
