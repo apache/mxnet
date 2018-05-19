@@ -99,7 +99,7 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     return sampled_classes, expected_count_true, expected_count_sampled
 # pylint: enable=line-too-long
 
-def foreach(func, data, init_states, name="foreach"):
+def foreach(func, data, init_states):
     """Run a for loop with user-defined computation over NDArrays on dimension 0.
 
     This operator simulates a for loop and func has the computation for an iteration
