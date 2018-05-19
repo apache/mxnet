@@ -19,14 +19,14 @@
 # pylint: disable=wildcard-import, unused-wildcard-import
 """Contrib Symbol API of MXNet."""
 import math
+import ctypes
+
 from .random import uniform
 from .symbol import Symbol
 try:
     from .gen_contrib import *
 except ImportError:
     pass
-
-import ctypes
 
 from . import symbol
 from ..base import _LIB, c_array, check_call
