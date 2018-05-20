@@ -115,8 +115,8 @@ class CuDNNRNNOp : public Operator{
         CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_vec_[i]));
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]));
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
-        init_cudnn_ = false;
       }
+      init_cudnn_ = false;
 
       Storage::Get()->Free(reserve_space_);
       if (param_.p > 0) {
@@ -457,18 +457,16 @@ class CuDNNRNNOp : public Operator{
 
       // Create Dropout descriptors
       if (param_.p > 0) {
-        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_,
-                                             &dropout_byte_));
+        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_byte_));
         dropout_size_ = dropout_byte_ / sizeof(DType);
         dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
       } else {
+        dropout_states_ = {};
         dropout_byte_ = 0;
       }
-      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_,
-                                           s->dnn_handle_,
+      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
                                            param_.p,  // discard probability
-                                           dropout_states_.dptr,
-                                           dropout_byte_,
+                                           dropout_states_.dptr, dropout_byte_,
                                            seed_));
       // RNN descriptors
       #if CUDNN_MAJOR >= 6
