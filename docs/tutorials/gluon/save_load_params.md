@@ -253,3 +253,5 @@ verify_loaded_model(deserialized_net)
 Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
 
 That's all! We learnt how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
