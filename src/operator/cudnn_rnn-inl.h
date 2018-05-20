@@ -456,11 +456,13 @@ class CuDNNRNNOp : public Operator{
                                             strideA));
 
       // Create Dropout descriptors
-      CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_,
-                                           &dropout_byte_));
       if (param_.p > 0) {
+        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_,
+                                             &dropout_byte_));
         dropout_size_ = dropout_byte_ / sizeof(DType);
         dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
+      } else {
+        dropout_byte_ = 0;
       }
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_,
                                            s->dnn_handle_,
