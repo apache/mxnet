@@ -38,10 +38,20 @@ def test_parameter():
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
     assert p.grad(mx.cpu(0)).stype == 'default'
-    assert p.data().stype == 'default'
+    assert p.data(mx.cpu(0)).stype == 'default'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
+
+@with_seed()
+@raises(AssertionError)
+def test_invalid_parameter_stype():
+    p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
+
+@with_seed()
+@raises(AssertionError)
+def test_invalid_parameter_grad_stype():
+    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
 @with_seed()
 def test_sparse_parameter():
@@ -83,7 +93,7 @@ def test_paramdict():
     params0 = gluon.ParameterDict('net_')
     params0.get('w0', shape=(10, 10))
     params0.get('w1', shape=(10, 10), stype='row_sparse')
-    all_row_ids = mx.nd.arange(0, 10)
+    all_row_ids = mx.nd.arange(0, 10, ctx=mx.cpu())
     # check param names
     assert list(params0.keys()) == ['net_w0', 'net_w1']
     params0.initialize(ctx=mx.cpu())

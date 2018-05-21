@@ -452,8 +452,8 @@ class HybridBlock(Block):
                 stype = param._stype
                 if stype != 'default':
                     raise ValueError("Cannot create a HybridBlock with Parameter '%s' " \
-                                     "because its storage type is %s. Please consider " \
-                                     "using a SparseBlock instead."%(param.name, stype))
+                                     "because its storage type is %s. Please use " \
+                                     "a SparseBlock instead."%(param.name, stype))
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
         self._cached_graph = ()
         self._cached_op = None

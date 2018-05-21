@@ -171,7 +171,7 @@ class Parameter(object):
 
     def _set_trainer(self, trainer):
         """ Set the trainer this parameter is associated with. """
-        if self._trainer and self._trainer is not trainer:
+        if self._trainer and trainer and self._trainer is not trainer:
             raise RuntimeError(
                 "Failed to set the trainer for Parameter '%s' to %s because it was set to %s. " \
                 "More than one trainers for a single Parameter is not supported." %(

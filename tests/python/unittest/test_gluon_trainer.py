@@ -30,7 +30,13 @@ from nose.tools import raises, assert_raises
 def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize()
+    # test set trainer
     trainer0 = gluon.Trainer([x], 'sgd')
+    assert(x._trainer is trainer0)
+    # test unset trainer
+    x._set_trainer(None)
+    assert(x._trainer is None)
+    x._set_trainer(trainer0)
     # multiple trainers for a single Parameter is not allowed
     trainer1 = gluon.Trainer([x], 'sgd')
 
