@@ -147,7 +147,7 @@ def foreach(func, data, init_states, name="foreach"):
         Define computation in an iteration.
     data: a symbol or a list of symbols.
         The input data.
-    init_states: a list of symbols.
+    init_states: a symbol or a list of symbols.
         The initial values of the loop states.
     name: string.
         The name of the operator.
@@ -167,8 +167,21 @@ def foreach(func, data, init_states, name="foreach"):
     >>> outs, states = mx.sym.contrib.foreach(step, data, states)
     """
 
-    assert isinstance(init_states, list), "init_states should be a list"
-    states = []
+    def check_data(inputs, in_type, msg):
+        is_NDArray_or_list = True
+        if isinstance(inputs, list):
+            for i in inputs:
+                if not isinstance(i, in_type):
+                    is_NDArray_or_list = False
+                    break
+        else:
+            is_NDArray_or_list = isinstance(inputs, in_type)
+        assert is_NDArray_or_list, msg
+
+    check_data(data, symbol.Symbol, "data should be an NDArray or a list of NDArrays")
+    check_data(init_states, symbol.Symbol,
+            "init_states should be an NDArray or a list of NDArrays")
+    not_state_list = isinstance(init_states, symbol.Symbol)
 
     # TODO(zhengda) If the input python function references to the symbols outside
     # the python function, we need to prune the computation graph constructed from
@@ -179,29 +192,33 @@ def foreach(func, data, init_states, name="foreach"):
             in_eles = [symbol.var(sym.name) for sym in data]
         else:
             in_eles = symbol.var(data.name)
-        for s in init_states:
-            states.append(symbol.var(s.name))
-
-        sym_out = func(in_eles, states)
-        # The function should return a tuple. The first element goes to
-        # the output of the function. The second element is a list.
-        assert isinstance(sym_out, tuple), "func should return a tuple (out, states)"
-        assert isinstance(sym_out[1], list), \
-                "the second element in the returned tuple should be a list"
-        assert len(sym_out[1]) == len(init_states), \
-                "the number of output states (%d) should be the same as input states (%d)" \
-                % (len(sym_out[1]), len(init_states))
-
-        if isinstance(sym_out[0], list):
-            flat_out = sym_out[0]
+        if isinstance(init_states, list):
+            states = [symbol.var(s.name) for s in init_states]
         else:
-            flat_out = [sym_out[0]]
-        num_out_data = len(flat_out)
-        for s in sym_out[1]:
+            states = symbol.var(init_states.name)
+        sym_out, sym_states = func(in_eles, states)
+
+    check_data(sym_out, symbol.Symbol, "the output should be an NDArray or a list of NDArrays")
+    check_data(sym_states, symbol.Symbol,
+            "the output states should be an NDArray or a list of NDArrays")
+    if isinstance(sym_states, list):
+        assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
+                "the number of output states (%d) should be the same as input states (%d)" \
+                % (len(sym_states), len(init_states))
+
+    if isinstance(sym_out, list):
+        flat_out = sym_out
+    else:
+        flat_out = [sym_out]
+    num_out_data = len(flat_out)
+    if isinstance(sym_states, list):
+        for s in sym_states:
             # There is a problem if the outputs are the same as the inputs
             # or the first output. By calling identity, we can make sure that
             # all symbols will refer to different NDArrays.
             flat_out.append(symbol.op.identity(s))
+    else:
+        flat_out.append(symbol.op.identity(sym_states))
     g = symbol.Group(flat_out)
     input_syms = _get_graph_inputs(g)
 
@@ -247,5 +264,10 @@ def foreach(func, data, init_states, name="foreach"):
     states = []
     for i in range(num_states):
         states.append(ret[num_outputs - num_states + i])
+
+    if not_state_list:
+        # If there is only one input state, there should be only one output state.
+        assert len(states) == 1
+        states = states[0]
 
     return (outs, states)
