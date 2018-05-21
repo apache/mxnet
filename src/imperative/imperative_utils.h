@@ -373,6 +373,7 @@ inline void PushFCompute(const FCompute& fn,
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = Imperative::Get()->is_training();
+  bool need_grad = Imperative::Get()->is_recording();
   ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
   CHECK(exec_type == ExecType::kSync);
   std::vector<NDArray> inputs, outputs;
@@ -393,7 +394,6 @@ inline void PushFCompute(const FCompute& fn,
                              &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
                              &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
       // setup context
-      bool need_grad = Imperative::Get()->is_recording();
       OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
       bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
       // pre-fcompute fallback, cast to default storage type
@@ -421,11 +421,11 @@ inline void PushFComputeEx(const FComputeEx& fn,
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = Imperative::Get()->is_training();
+  bool need_grad = Imperative::Get()->is_recording();
   ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
   const auto& run = [=](RunContext rctx) {
-      bool need_grad = Imperative::Get()->is_recording();
       OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
 #if MXNET_USE_MKLDNN == 1
       InvalidateOutputs(outputs, req);
@@ -461,6 +461,7 @@ inline void PushOperator(const OpStatePtr& state,
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
   bool is_train = Imperative::Get()->is_training();
+  bool need_grad = Imperative::Get()->is_recording();
   ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
@@ -472,7 +473,6 @@ inline void PushOperator(const OpStatePtr& state,
   if (fcompute_ex != nullptr && dispatch_mode == DispatchMode::kFComputeEx) {
     const auto& run = [=](RunContext rctx,
                           engine::CallbackOnComplete on_complete) {
-      bool need_grad = Imperative::Get()->is_recording();
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 #if MXNET_USE_MKLDNN == 1
       InvalidateOutputs(outputs, req);
@@ -506,7 +506,6 @@ inline void PushOperator(const OpStatePtr& state,
         << "for stateful operator " << op->name;
 
     const auto& run = [=](RunContext rctx, engine::CallbackOnComplete on_complete) {
-        bool need_grad = Imperative::Get()->is_recording();
         OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 
         std::vector<TBlob> input_blobs, output_blobs;

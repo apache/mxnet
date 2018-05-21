@@ -703,7 +703,7 @@ class NDArray {
   NDArray MKLDNNDataReshape(const TShape &shape) const;
 #endif
 
-  const nnvm::NodeEntry &GetAutogradEntry() const {
+  const nnvm::NodeEntry &entry() const {
     return entry_;
   }
 
