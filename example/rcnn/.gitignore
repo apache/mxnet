@@ -80,3 +80,4 @@ target/
 *.params
 *.json
 .vscode/
+rcnn/pycocotools/_mask.c
