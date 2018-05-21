@@ -17,12 +17,15 @@
 
 package org.apache.mxnet.module
 
-import java.io.{FileInputStream, BufferedInputStream, BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedInputStream, BufferedOutputStream, FileInputStream, FileOutputStream}
+
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 import org.apache.mxnet.module.DataParallelExecutorGroup.Builder
 import org.apache.mxnet.optimizer.SGD
 import org.slf4j.LoggerFactory
+
+import scala.annotation.varargs
 
 /**
  * Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -641,5 +644,43 @@ object Module {
       mod.preloadOptStates = Some("%s-%04d.states".format(prefix, epoch))
     }
     mod
+  }
+
+  class Builder (private val modelDef: Symbol) {
+    private var dataNames: IndexedSeq[String] = IndexedSeq("data")
+    private var labelNames: IndexedSeq[String] = IndexedSeq("softmax_label")
+    private var contexts: Array[Context] = Array(Context.cpu())
+    private var workLoadList: IndexedSeq[Float] = _
+    private var fixedParamNames: Set[String] = _
+
+    @varargs def setContext(ctx: Context*): Builder = {
+      contexts = ctx.toArray
+      this
+    }
+
+    @varargs def setDataNames(name: String*): Builder = {
+      dataNames = name.toVector
+      this
+    }
+
+    @varargs def setLabelNames(name: String*): Builder = {
+      labelNames = name.toVector
+      this
+    }
+
+    @varargs def setWorkLoadList(workload: Float*): Builder = {
+      workLoadList = workload.toVector
+      this
+    }
+
+    @varargs def setFixedParamNames(name: String*): Builder = {
+      fixedParamNames = name.toSet
+      this
+    }
+
+    def build(): Module = {
+      new Module(modelDef, dataNames, labelNames, contexts,
+                 Option(workLoadList), Option(fixedParamNames))
+    }
   }
 }

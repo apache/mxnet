@@ -23,6 +23,8 @@ import org.apache.mxnet.optimizer.SGD
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+
+import scala.annotation.varargs
 import scala.collection.mutable.ArrayBuffer
 
 object BaseModule {
@@ -468,6 +470,10 @@ abstract class BaseModule {
    */
   def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit
 
+  def forward(dataBatch: DataBatch, isTrain: Boolean): Unit = {
+    forward(dataBatch, Option(isTrain))
+  }
+
   /**
    * Backward computation.
    * @param outGrads Gradient on the outputs to be propagated back.
@@ -548,6 +554,30 @@ abstract class BaseModule {
            forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
            forceRebind: Boolean = false, sharedModule: Option[BaseModule] = None,
            gradReq: String = "write"): Unit
+
+
+  protected var labelShapesPartial: IndexedSeq[DataDesc] = _
+  protected var sharedModulePartial: BaseModule = _
+  protected var gradReqPartial: String = "write"
+  @varargs def bindPartial(labelShape: DataDesc*): BaseModule = {
+    labelShapesPartial = labelShape.toIndexedSeq
+    this
+  }
+  def bindPartial(sharedModule: BaseModule): BaseModule = {
+    sharedModulePartial = sharedModule
+    this
+  }
+  def bindPartial(gradReq: String): BaseModule = {
+    gradReqPartial = gradReq
+    this
+  }
+
+  @varargs def bind(forTraining: Boolean, inputsNeedGrad: Boolean,
+                    forceRebind: Boolean, dataShape: DataDesc*): Unit = {
+    bind(dataShape.toVector, Option(labelShapesPartial),
+      forTraining, inputsNeedGrad, forceRebind,
+      Option(sharedModulePartial), gradReqPartial)
+  }
 
   // Install and initialize optimizers.
   def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),

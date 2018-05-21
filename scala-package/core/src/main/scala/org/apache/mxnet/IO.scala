@@ -19,9 +19,10 @@ package org.apache.mxnet
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.io.{MXDataPack, MXDataIter}
+import org.apache.mxnet.io.{MXDataIter, MXDataPack}
 import org.slf4j.LoggerFactory
 
+import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
@@ -140,6 +141,7 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // (must match the order of input data/label)
                 private val providedData: ListMap[String, Shape] = null,
                 private val providedLabel: ListMap[String, Shape] = null) {
+
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -158,6 +160,58 @@ class DataBatch(val data: IndexedSeq[NDArray],
 
   // The name and shape of label
   def provideLabel: ListMap[String, Shape] = providedLabel
+}
+
+object DataBatch {
+  class Builder() {
+    private var data: IndexedSeq[NDArray] = null
+    private var label: IndexedSeq[NDArray] = null
+    private var index: IndexedSeq[Long] = null
+    private var pad: Int = 0
+    private var bucketKey: AnyRef = null
+    private var providedData: ListMap[String, Shape] = ListMap.empty
+    private var providedLabel: ListMap[String, Shape] = ListMap.empty
+
+    @varargs def setData(data: NDArray*): Builder = {
+      this.data = data.toIndexedSeq
+      this
+    }
+
+    @varargs def setLabel(label: NDArray*): Builder = {
+      this.label = label.toIndexedSeq
+      this
+    }
+
+    @varargs def setIndex(index: Long*): Builder = {
+      this.index = index.toIndexedSeq
+      this
+    }
+
+    def setPad(pad: Int): Builder = {
+      this.pad = pad
+      this
+    }
+
+    def setBucketKey(bucketKey: AnyRef): Builder = {
+      this.bucketKey = bucketKey
+      this
+    }
+
+    def provideData(name: String, shape: Shape): Builder = {
+      providedData = providedData.updated(name, shape)
+      this
+    }
+
+    def provideLabel(name: String, shape: Shape): Builder = {
+      providedLabel = providedLabel.updated(name, shape)
+      this
+    }
+
+    def build(): DataBatch = {
+      new DataBatch(data, label, index, pad,
+        bucketKey, providedData, providedLabel)
+    }
+  }
 }
 
 /**

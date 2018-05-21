@@ -52,18 +52,6 @@ private[mxnet] object NDArrayMacro {
       else ndarrayFunctions.filter(!_._1.startsWith("_contrib_"))
     }
 
-    val AST_NDARRAY_TYPE = Select(Select(Select(
-      Ident(TermName("org")), TermName("apache")), TermName("mxnet")), TypeName("NDArray"))
-    val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
-      List(Ident(TypeName("String")), Ident(TypeName("Any"))))
-    val AST_TYPE_ANY_VARARG = AppliedTypeTree(
-      Select(
-        Select(Ident(termNames.ROOTPKG), TermName("scala")),
-        TypeName("<repeated>")
-      ),
-      List(Ident(TypeName("Any")))
-    )
-
     val functionDefs = newNDArrayFunctions flatMap { case (funcName, funcProp) =>
       val functionScope = {
         if (isContrib) Modifiers()
@@ -75,45 +63,15 @@ private[mxnet] object NDArrayMacro {
         if (isContrib) funcName.substring(funcName.indexOf("_contrib_") + "_contrib_".length())
         else funcName
       }
-
+      val termName = TermName(funcName)
       // It will generate definition something like,
       Seq(
+        // scalastyle:off
         // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-        DefDef(functionScope, TermName(newName), List(),
-          List(
-            List(
-              ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
-                AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
-            ),
-            List(
-              ValDef(Modifiers(), TermName("args"), AST_TYPE_ANY_VARARG, EmptyTree)
-            )
-          ), TypeTree(),
-          Apply(
-            Ident(TermName("genericNDArrayFunctionInvoke")),
-            List(
-              Literal(Constant(funcName)),
-              Ident(TermName("args")),
-              Ident(TermName("kwargs"))
-            )
-          )
-        ),
+        q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}",
         // def transpose(args: Any*)
-        DefDef(functionScope, TermName(newName), List(),
-          List(
-            List(
-              ValDef(Modifiers(), TermName("args"), AST_TYPE_ANY_VARARG, EmptyTree)
-            )
-          ), TypeTree(),
-          Apply(
-            Ident(TermName("genericNDArrayFunctionInvoke")),
-            List(
-              Literal(Constant(funcName)),
-              Ident(TermName("args")),
-              Literal(Constant(null))
-            )
-          )
-        )
+        q"@scala.annotation.varargs def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}"
+        // scalastyle:on
       )
     }
 

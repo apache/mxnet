@@ -48,6 +48,7 @@ object NDArray {
     }
   }
 
+  //  private[mxnet] def genericNDArrayFunctionInvoke(
   /**
    * Used by NDArrayMacro.
    * Invoke this function by passing in parameters.
@@ -57,7 +58,7 @@ object NDArray {
    * @param kwargs Key-value arguments of input scalars
    * @return The result NDArrays of result of computation.
    */
-  private[mxnet] def genericNDArrayFunctionInvoke(
+  def genericNDArrayFunctionInvoke(
     funcName: String, args: Seq[Any], kwargs: Map[String, Any] = null): NDArrayFuncReturn = {
     val function = functions(funcName)
     val ndArgs = ArrayBuffer.empty[NDArray]
