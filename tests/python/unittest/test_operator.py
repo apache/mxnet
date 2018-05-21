@@ -5959,13 +5959,12 @@ def test_foreach():
     def verify_foreach(step, in_syms, state_syms, free_syms,
             in_arrs, init_states, frees, out_grads, is_train=True):
         step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
-        step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees)
-        out = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
-        out1 = _as_list(out[0])
-        for i in range(len(out1)):
-            out1[i] = out1[i] * 2
-        out1.extend(out[1])
-        out = mx.sym.Group(out1)
+        res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
+        out = _as_list(res)
+        for i in range(len(out)):
+            out[i] = out[i] * 2
+        out.extend(states)
+        out = mx.sym.Group(out)
         arr_grads = []
         arg_dict = {}
         arg_grad_dict = {}
@@ -5994,8 +5993,7 @@ def test_foreach():
             name = name[1:]
             gin_order.append(int(name))
 
-        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict,
-                )
+        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict)
         e.forward(is_train=is_train)
         if (is_train):
             # backward
@@ -6013,29 +6011,21 @@ def test_foreach():
             arr.attach_grad()
         for arr in frees:
             arr.attach_grad()
+        step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees)
         with mx.autograd.record():
             states = [mx.nd.expand_dims(s, 0) for s in init_states]
-            if isinstance(in_arrs, list):
-                num_iters = in_arrs[0].shape[0]
-            else:
-                num_iters = in_arrs.shape[0]
+            res, states = mx.nd.contrib.foreach(step_imp, in_arrs, init_states)
 
-            for i in range(num_iters):
-                if isinstance(in_arrs, list):
-                    data = [mx.nd.expand_dims(arr[i], 0) for arr in in_arrs]
-                else:
-                    data = mx.nd.expand_dims(in_arrs[i], 0)
-                tmp_res = step_imp(data, states)
-                tmp_res1 = _as_list(tmp_res[0])
-                for i in range(len(tmp_res1)):
-                    res[i].append(tmp_res1[i])
-                states = tmp_res[1]
-            res2 = []
-            for l in res:
-                res2.append(mx.nd.concat(*l, dim=0) * 2)
-            tmp_res2 = res2[:]
-            tmp_res2.extend(tmp_res[1])
-            res = mx.nd.concat(*tmp_res2, dim=0)
+            res2 = _as_list(res)
+            for i in range(len(res2)):
+                res2[i] = res2[i] * 2
+            if isinstance(states, list):
+                states = [mx.nd.expand_dims(s, 0) for s in states]
+                res2.extend(states)
+            else:
+                states = mx.nd.expand_dims(states, 0)
+                res2.append(states)
+            res = mx.nd.concat(*res2, dim=0)
 
         tmp_grads = out_grads[0][:]
         tmp_grads1 = [mx.nd.expand_dims(grad, 0) for grad in out_grads[1]]
