@@ -39,6 +39,7 @@
 #include "./mshadow_op.h"
 #include "./random/sampler.h"
 #include "./random/sample_op.h"
+#include "./tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
@@ -114,13 +115,21 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, DType>(s);
-        if (weight.shape_.Size() == 1) {
-          Assign(out, req[leakyrelu::kOut],
-                 F<mshadow_op::xelu>(data, mshadow::expr::broadcast_scalar(weight, out.shape_)));
-        } else {
-          Assign(out, req[leakyrelu::kOut],
-                 F<mshadow_op::xelu>(data, mshadow::expr::broadcast<1>(weight, out.shape_)));
-        }
+        TShape new_lshape, new_rshape, new_oshape;
+        int ndim = op::BinaryBroadcastShapeCompact(in_data[leakyrelu::kData].shape_,
+                                                   in_data[leakyrelu::kGamma].shape_,
+                                                   out_data[leakyrelu::kOut].shape_,
+                                                   &new_lshape, &new_rshape, &new_oshape);
+        BROADCAST_NDIM_SWITCH(ndim, NDim, {
+          mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+          mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+          mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType,
+                                                             op::mshadow_op::xelu>, xpu>::
+          template LaunchEx(s, new_oshape.Size(), req[leakyrelu::kOut], lstride, rstride, oshape,
+          in_data[leakyrelu::kData].dptr<DType>(), in_data[leakyrelu::kGamma].dptr<DType>(),
+          out_data[leakyrelu::kOut].dptr<DType>());
+        });
         break;
       }
       case leakyrelu::kRReLU: {
