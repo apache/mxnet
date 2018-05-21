@@ -22,7 +22,7 @@ import math
 from ..context import current_context
 from ..random import uniform
 from ..base import _as_list
-from .op import stack
+from . import ndarray
 try:
     from .gen_contrib import *
 except ImportError:
@@ -111,10 +111,10 @@ def foreach(func, data, init_states):
 
     out, states = func(data1, states)
 
-    data1 can be either a symbol or a list of symbols. If data is a symbol,
-    data1 is a symbol. Otherwise, data1 is a list of symbols and has the same
-    size as data. states is a list of symbols and have the same size as init_states.
-    Similarly, out can be either a symbol or a list of symbols, which are concatenated
+    data1 can be either an NDArray or a list of NDArrays. If data is an NDArray,
+    data1 is an NDArray. Otherwise, data1 is a list of NDArrays and has the same
+    size as data. states is a list of NDArrays and have the same size as init_states.
+    Similarly, out can be either an NDArray or a list of NDArrays, which are concatenated
     as the first output of foreach; states from the last execution of func
     are the second output of foreach.
 
@@ -134,18 +134,18 @@ def foreach(func, data, init_states):
     ----------
     func : a Python function.
         Define computation in an iteration.
-    data: a symbol or a list of symbols.
+    data: an NDArray or a list of NDArrays.
         The input data.
-    init_states: a list of symbols.
+    init_states: an NDArray or a list of NDArrays.
         The initial values of the loop states.
     name: string.
         The name of the operator.
 
     Returns
     -------
-    outputs: a Symbol or a list of Symbols.
+    outputs: an NDArray or a list of NDArrays.
         The output data concatenated from the output of all iterations.
-    states: a list of Symbols.
+    states: a list of NDArrays.
         The loop states in the last iteration.
 
     Examples
@@ -156,12 +156,32 @@ def foreach(func, data, init_states):
     >>> outs, states = mx.nd.contrib.foreach(step, data, states)
     """
 
-    assert isinstance(init_states, list), "init_states should be a list"
+    def check_input(inputs, in_type, msg):
+        is_NDArray_or_list = True
+        if isinstance(inputs, list):
+            for i in inputs:
+                if not isinstance(i, in_type):
+                    is_NDArray_or_list = False
+                    break
+        else:
+            is_NDArray_or_list = isinstance(inputs, in_type)
+        assert is_NDArray_or_list, msg
+
+    check_input(data, ndarray.NDArray, "data should be an NDArray or a list of NDArrays")
+    check_input(init_states, ndarray.NDArray,
+            "init_states should be an NDArray or a list of NDArrays")
+
+    not_data_list = isinstance(data, ndarray.NDArray)
+    not_state_list = isinstance(init_states, ndarray.NDArray)
+    num_iters = data.shape[0] if not_data_list else data[0].shape[0]
     states = init_states
     outputs = []
-    for i in range(data.shape[0]):
-        ele = data[i]
-        outs, states = func(ele, states)
+    for i in range(num_iters):
+        if not_data_list:
+            eles = data[i]
+        else:
+            eles = [d[i] for d in data]
+        outs, states = func(eles, states)
         outs = _as_list(outs)
         if i == 0:
             # outputs is a list of lists
@@ -170,6 +190,9 @@ def foreach(func, data, init_states):
         else:
             for j, out in enumerate(outs):
                 outputs[j].append(out)
-    for out in outputs:
-        out = stack(*out)
+    for j, out in enumerate(outputs):
+        outputs[j] = ndarray.op.stack(*out)
+
+    if not_data_list:
+        outputs = outputs[0]
     return (outputs, states)
