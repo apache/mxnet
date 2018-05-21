@@ -99,23 +99,23 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     return sampled_classes, expected_count_true, expected_count_sampled
 # pylint: enable=line-too-long
 
-def foreach(func, data, init_states):
+def foreach(body, data, init_states):
     """Run a for loop with user-defined computation over NDArrays on dimension 0.
 
-    This operator simulates a for loop and func has the computation for an iteration
-    of the for loop. It runs the computation in func on each slice from the input
+    This operator simulates a for loop and body has the computation for an iteration
+    of the for loop. It runs the computation in body on each slice from the input
     NDArrays.
 
-    func takes two arguments as input and outputs a tuple of two elements,
+    body takes two arguments as input and outputs a tuple of two elements,
     as illustrated below:
 
-    out, states = func(data1, states)
+    out, states = body(data1, states)
 
     data1 can be either an NDArray or a list of NDArrays. If data is an NDArray,
     data1 is an NDArray. Otherwise, data1 is a list of NDArrays and has the same
     size as data. states is a list of NDArrays and have the same size as init_states.
     Similarly, out can be either an NDArray or a list of NDArrays, which are concatenated
-    as the first output of foreach; states from the last execution of func
+    as the first output of foreach; states from the last execution of body
     are the second output of foreach.
 
     The computation done by this operator is equivalent to the pseudo code below
@@ -125,14 +125,14 @@ def foreach(func, data, init_states):
     outs = []
     for i in data.shape[0]:
         s = data[i]
-        out, states = func(s, states)
+        out, states = body(s, states)
         outs.append(out)
     outs = stack(*outs)
 
 
     Parameters
     ----------
-    func : a Python function.
+    body : a Python function.
         Define computation in an iteration.
     data: an NDArray or a list of NDArrays.
         The input data.
@@ -181,15 +181,10 @@ def foreach(func, data, init_states):
             eles = data[i]
         else:
             eles = [d[i] for d in data]
-        outs, states = func(eles, states)
+        outs, states = body(eles, states)
         outs = _as_list(outs)
-        if i == 0:
-            # outputs is a list of lists
-            for out in outs:
-                outputs.append([out])
-        else:
-            for j, out in enumerate(outs):
-                outputs[j].append(out)
+        outputs.append(outs)
+    outputs = zip(*outputs)
     for j, out in enumerate(outputs):
         outputs[j] = ndarray.op.stack(*out)
 

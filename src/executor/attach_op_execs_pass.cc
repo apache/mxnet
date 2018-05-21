@@ -138,7 +138,8 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
     return state_.get_var();
   }
 
-  explicit StatefulComputeExecutor(const NodeAttrs& attrs, const OpStatePtr& state,
+  explicit StatefulComputeExecutor(const NodeAttrs& attrs,
+                                   const OpStatePtr& state,
                                    const FStatefulCompute& fcompute,
                                    ExecType exec_type,
                                    const std::vector<uint32_t> &mutate_idx)

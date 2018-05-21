@@ -110,23 +110,23 @@ def _get_graph_inputs(subg):
         syms.append(s)
     return syms
 
-def foreach(func, data, init_states, name="foreach"):
+def foreach(body, data, init_states, name="foreach"):
     """Run a for loop with user-defined computation over NDArrays on dimension 0.
 
-    This operator simulates a for loop and func has the computation for an iteration
-    of the for loop. It runs the computation in func on each slice from the input
+    This operator simulates a for loop and body has the computation for an iteration
+    of the for loop. It runs the computation in body on each slice from the input
     NDArrays.
 
-    func takes two arguments as input and outputs a tuple of two elements,
+    body takes two arguments as input and outputs a tuple of two elements,
     as illustrated below:
 
-    out, states = func(data1, states)
+    out, states = body(data1, states)
 
     data1 can be either a symbol or a list of symbols. If data is a symbol,
     data1 is a symbol. Otherwise, data1 is a list of symbols and has the same
     size as data. states is a list of symbols and have the same size as init_states.
     Similarly, out can be either a symbol or a list of symbols, which are concatenated
-    as the first output of foreach; states from the last execution of func
+    as the first output of foreach; states from the last execution of body
     are the second output of foreach.
 
     The computation done by this operator is equivalent to the pseudo code below
@@ -136,14 +136,14 @@ def foreach(func, data, init_states, name="foreach"):
     outs = []
     for i in data.shape[0]:
         s = data[i]
-        out, states = func(s, states)
+        out, states = body(s, states)
         outs.append(out)
     outs = stack(*outs)
 
 
     Parameters
     ----------
-    func : a Python function.
+    body : a Python function.
         Define computation in an iteration.
     data: a symbol or a list of symbols.
         The input data.
@@ -196,7 +196,7 @@ def foreach(func, data, init_states, name="foreach"):
             states = [symbol.var(s.name) for s in init_states]
         else:
             states = symbol.var(init_states.name)
-        sym_out, sym_states = func(in_eles, states)
+        sym_out, sym_states = body(in_eles, states)
 
     check_data(sym_out, symbol.Symbol, "the output should be an NDArray or a list of NDArrays")
     check_data(sym_states, symbol.Symbol,
