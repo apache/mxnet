@@ -90,9 +90,9 @@ class ForeachState {
   }
 };
 
-void ForeachState::Forward(const std::vector<NDArray> &cinputs,
+void ForeachState::Forward(std::vector<NDArray> cinputs,
                            const std::vector<OpReqType>& req,
-                           const std::vector<NDArray> &coutputs, bool is_recording) {
+                           std::vector<NDArray> coutputs, bool is_recording) {
   using namespace nnvm;
   using namespace imperative;
 
