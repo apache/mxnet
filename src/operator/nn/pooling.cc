@@ -35,7 +35,7 @@
 namespace mxnet {
 namespace op {
 
-static void PoolingParamParser(nnvm::NodeAttrs *attrs) {
+void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   using namespace mshadow;
   PoolingParam param;
   param.Init(attrs->dict);
