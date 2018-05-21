@@ -111,7 +111,7 @@ def _get_graph_inputs(subg):
     return syms
 
 def foreach(body, data, init_states, name="foreach"):
-    """Run a for loop with user-defined computation over NDArrays on dimension 0.
+    """Run a for loop with user-defined computation over Symbols on dimension 0.
 
     This operator simulates a for loop and body has the computation for an iteration
     of the for loop. It runs the computation in body on each slice from the input
