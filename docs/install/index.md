@@ -2,25 +2,19 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
-<script type="text/javascript" src='../_static/js/options.js'></script>
+  <div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Version
+    <span class="caret"></span></button>
+    <ul class="dropdown-menu opt-group">
+      <li class="opt"><a href="#">v1.2.0</a></li>
+      <li class="opt"><a href="#">v1.1.0</a></li>
+      <li class="opt"><a href="#">v1.0.0</a></li>
+      <li class="opt"><a href="#">v0.12.1</a></li>
+      <li class="opt"><a href="#">v0.11.0</a></li>
+    </ul>
+  </div>
 
-<!-- Versions -->
-<div class="linux macos windows cloud devices">
-<div class="python scala r julia perl">
-<div class="cpu gpu">
-<div class="pip virtualenv docker build-from-source">
-<div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">v1.2.0</button>
-  <button type="button" class="btn btn-default opt">v1.1.0</button>
-  <button type="button" class="btn btn-default opt">v1.0.0</button>
-  <button type="button" class="btn btn-default opt">v0.12.1</button>
-  <button type="button" class="btn btn-default opt">v0.11.0</button>
-  <button type="button" class="btn btn-default opt">master</button>
-</div>
-</div>
-</div>
-</div>
-</div>
+<script type="text/javascript" src='../_static/js/options.js'></script>
 
 <!-- START - OS Menu -->
 
