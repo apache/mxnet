@@ -78,8 +78,10 @@ class ForeachState {
 
   void Forward(std::vector<NDArray> cinputs,
                const std::vector<OpReqType>& req,
-               std::vector<NDArray> coutputs, bool is_recording);
-  void Backward(int iter_no, std::vector<NDArray> ograds,
+               std::vector<NDArray> coutputs,
+               bool is_recording);
+  void Backward(int iter_no,
+                std::vector<NDArray> ograds,
                 const std::vector<OpReqType> &req,
                 std::vector<NDArray> igrads);
   void Cleanup() {
@@ -92,7 +94,8 @@ class ForeachState {
 
 void ForeachState::Forward(std::vector<NDArray> cinputs,
                            const std::vector<OpReqType>& req,
-                           std::vector<NDArray> coutputs, bool is_recording) {
+                           std::vector<NDArray> coutputs,
+                           bool is_recording) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -150,7 +153,8 @@ void ForeachState::Forward(std::vector<NDArray> cinputs,
   Imperative::Get()->set_is_recording(orig_is_record);
 }
 
-void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
+void ForeachState::Backward(int iter_no,
+                            std::vector<NDArray> ograds,
                             const std::vector<OpReqType> &req,
                             std::vector<NDArray> igrads) {
   using namespace nnvm;
@@ -184,7 +188,7 @@ void ForeachState::Backward(int iter_no, std::vector<NDArray> ograds,
   CHECK_EQ(outputs.size(), op->num_inputs());
 
   CHECK(!Imperative::AGInfo::IsNone(all_outputs[iter_no][0]));
-  const nnvm::NodeEntry &node_entry = all_outputs[iter_no][0].GetAutogradEntry();
+  const nnvm::NodeEntry &node_entry = all_outputs[iter_no][0].entry();
   OpStatePtr state = Imperative::AGInfo::Get(node_entry.node).state;
   op->Backward(false, state, inputs, req, outputs);
 }
