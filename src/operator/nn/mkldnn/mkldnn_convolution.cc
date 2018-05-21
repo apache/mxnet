@@ -202,8 +202,8 @@ void MKLDNNConvForward::SetNewMem(const mkldnn::memory &data,
   } else if (this->fwd_ == nullptr) {
     this->fwd_ = std::shared_ptr<mkldnn::convolution_forward>(
         new mkldnn::convolution_forward(fwd_pd, mkldnn::primitive::at(*this->data_),
-                                    mkldnn::primitive::at(*this->weight_),
-                                    *this->out_));
+                                        mkldnn::primitive::at(*this->weight_),
+                                        *this->out_));
   }
 }
 
