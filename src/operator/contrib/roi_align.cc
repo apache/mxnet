@@ -502,8 +502,6 @@ DMLC_REGISTER_PARAMETER(ROIAlignParam);
 
 NNVM_REGISTER_OP(_contrib_ROIAlign)
 .describe(R"code(
-ROI Align Layer
-
 This operator takes a 4D feature map as an input array and region proposals as `rois`,
 then align the feature map over sub-regions of input and produces a fixed-sized output array.
 This operator is typically used in Faster R-CNN & Mask R-CNN networks.
@@ -563,7 +561,13 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
   return true;
 })
 .set_attr<FCompute>("FCompute<cpu>", ROIAlignForwardCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ROIAlignGrad{"_backward_ROIAlign"})
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads;
+    heads.push_back(ograds[roialign::kOut]);
+    heads.push_back(n->inputs[roialign::kBox]);
+    return MakeGradNode("_backward_ROIAlign", n, heads, n->attrs.dict);
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input data to the pooling operator, a 4D Feature maps")
 .add_argument("rois", "NDArray-or-Symbol", "Bounding box coordinates, a 2D array")
 .add_arguments(ROIAlignParam::__FIELDS__());

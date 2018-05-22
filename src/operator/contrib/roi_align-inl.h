@@ -50,22 +50,10 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
   DMLC_DECLARE_PARAMETER(ROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
-    .describe("ROI Align output roi featuremap height and width: (h, w)");
+    .describe("ROI Align output roi feature map height and width: (h, w)");
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
     .describe("Ratio of input feature map height (or w) to raw image height (or w). "
     "Equals the reciprocal of total stride in convolutional layers");
-  }
-};
-
-
-struct ROIAlignGrad {
-  const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
-                                          const std::vector<nnvm::NodeEntry>& ograds) const {
-    std::vector<nnvm::NodeEntry> heads;
-    heads.push_back(ograds[roialign::kOut]);
-    heads.push_back(n->inputs[roialign::kBox]);
-    return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
 
