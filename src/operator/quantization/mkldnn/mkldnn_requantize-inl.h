@@ -19,7 +19,7 @@
 
 /* \file mkldnn_requantize-inl.h
  * \brief
- * \author Jin Huang
+ * \author Jin Huang, Xinyu Chen
  */
 
 #ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_REQUANTIZE_INL_H_
