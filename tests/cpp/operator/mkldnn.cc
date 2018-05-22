@@ -27,6 +27,7 @@
 
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
+#include <cmath>
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
 using namespace mxnet;
@@ -371,7 +372,7 @@ OpAttrs GetCopyOp() {
 OpAttrs GetReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Activation");
-  attrs.attrs.dict = {"act_type", "relu"};
+  attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.dispatches.resize(1);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   return attrs;
@@ -535,11 +536,14 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
 void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
   NDArray tmp1 = in_arr.Reorder2Default();
   NDArray tmp2 = arr.Reorder2Default();
-  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
-  TBlob d1 = tmp1.data();
-  TBlob d2 = tmp2.data();
-  EXPECT_NE(memcmp(d1.dptr_, d2.dptr_,
-                   tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+  TBlob blob1 = tmp1.data();
+  TBlob blob2 = tmp2.data();
+  mshadow::default_real_t *d1 = blob1.dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *d2 = blob2.dptr<mshadow::default_real_t>();
+  EXPECT_EQ(tmp1.shape().Size(), tmp1.shape().Size());
+  for (size_t i = 0; i < tmp1.shape().Size(); i++) {
+    EXPECT_EQ(d1[i], std::abs(d2[i]));
+  }
 }
 
 
