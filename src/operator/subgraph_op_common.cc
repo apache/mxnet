@@ -18,8 +18,8 @@
  */
 
 #include "./subgraph_op_common.h"
-#include "../operator_common.h"
-#include "../../imperative/imperative_utils.h"
+#include "./operator_common.h"
+#include "../imperative/imperative_utils.h"
 
 namespace mxnet {
 namespace op {
