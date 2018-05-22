@@ -366,6 +366,15 @@ OpAttrs GetLeakyReluOp() {
   return attrs;
 }
 
+OpAttrs GetSumOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("elemwise_add");
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -489,16 +498,30 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-using VerifyFunc = std::function<void (const NDArray &in_arr, const NDArray &arr)>;
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const NDArray &arr)>;
 
-void VerifyCopyResult(const NDArray &in_arr, const NDArray &arr) {
-  NDArray tmp1 = in_arr.Reorder2Default();
+void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = arr.Reorder2Default();
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+  NDArray in1 = in_arrs[0]->Reorder2Default();
+  NDArray in2 = in_arrs[1]->Reorder2Default();
+  NDArray out = arr.Reorder2Default();
+  EXPECT_EQ(in1.shape().Size(), in2.shape().Size());
+  EXPECT_EQ(in1.shape().Size(), out.shape().Size());
+
+  mshadow::default_real_t *d1 = in1.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *d2 = in2.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *o = out.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < in1.shape().Size(); i++)
+    EXPECT_EQ(d1[i] + d2[i], o[i]);
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -539,7 +562,7 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         out_arr.WaitToRead();
-        verify_fn(in_arr, out_arr);
+        verify_fn(inputs, out_arr);
       }
     }
   }
@@ -558,14 +581,72 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
+      inputs[0] = &orig;
+      verify_fn(inputs, arr);
+    }
+  }
+}
+
+void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(2);
+  std::vector<NDArray*> outputs(1);
+  std::vector<OpReqType> req(1);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  for (auto in_arr1 : in_arrs) {
+    for (auto in_arr2 : in_arrs) {
+      if (in_arr1.shape() != in_arr2.shape())
+        continue;
+
+      for (auto dispatch : dispatches) {
+        std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr1.shape(), pds);
+        for (auto out_arr : out_arrs) {
+          req[0] = kWriteTo;
+          inputs[0] = &in_arr1;
+          inputs[1] = &in_arr2;
+          outputs[0] = &out_arr;
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          out_arr.WaitToRead();
+          verify_fn(inputs, out_arr);
+        }
+      }
+    }
+  }
+
+#if 0
+  for (auto dispatch : dispatches) {
+    in_arrs = GetTestInputArrays();
+    for (auto arr : in_arrs) {
+      // If the array is a view, we shouldn't write data to it.
+      if (arr.IsView())
+        continue;
+
+      NDArray orig = arr.Copy(arr.ctx());
+      req[0] = kWriteInplace;
+      inputs[0] = &arr;
+      outputs[0] = &arr;
+      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                  dispatch, mxnet::OpStatePtr());
+      arr.WaitToRead();
       verify_fn(orig, arr);
     }
   }
+#endif
 }
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
   TestUnaryOp(attrs, VerifyCopyResult);
+}
+
+TEST(IMPERATIVE, BinaryOp) {
+  OpAttrs attrs = GetSumOp();
+  TestBinaryOp(attrs, VerifySumResult);
 }
 
 #endif
