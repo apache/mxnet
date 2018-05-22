@@ -47,7 +47,7 @@ static void ConcatComputeExGPU(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(Concat)
 .set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
-.set_attr<FCompute>("FComputeEx<gpu>", ConcatComputeExGPU);
+.set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
 
 NNVM_REGISTER_OP(_backward_Concat)
 .set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
