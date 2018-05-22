@@ -22,9 +22,9 @@ import org.apache.mxnet.init.Base._
 import scala.collection.mutable.ListBuffer
 
 private[mxnet] object APIDocGenerator{
-  case class traitArg(argName : String, argType : String, argDesc : String, isOptional : Boolean)
-  case class traitFunction(name : String, desc : String,
-                           listOfArgs: List[traitArg], returnType : String)
+  case class absClassArg(argName : String, argType : String, argDesc : String, isOptional : Boolean)
+  case class absClassFunction(name : String, desc : String,
+                           listOfArgs: List[absClassArg], returnType : String)
 
 
   def main(args: Array[String]) : Unit = {
@@ -35,18 +35,18 @@ private[mxnet] object APIDocGenerator{
 
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
     // scalastyle:off
-    val traitFunctions = initSymbolModule(isSymbol)
-    val traitfuncs = traitFunctions.filterNot(_.name.startsWith("_")).map(traitfunction => {
-      val scalaDoc = ScalaDocGen(traitfunction)
-      val traitBody = defBodyGen(traitfunction, isSymbol)
-      s"$scalaDoc\n$traitBody"
+    val absClassFunctions = initSymbolModule(isSymbol)
+    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
+      val scalaDoc = ScalaDocGen(absClassFunction)
+      val defBody = defBodyGen(absClassFunction, isSymbol)
+      s"$scalaDoc\n$defBody"
     })
     val packageName = if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase"
     val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
     val scalaStyle = "// scalastyle:off"
     val packageDef = "package org.apache.mxnet"
     val absClassDef = s"abstract class $packageName"
-    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$absClassDef {\n${traitfuncs.mkString("\n")}\n}"
+    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
     import java.io._
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
@@ -54,42 +54,42 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Generate ScalaDoc type
-  def ScalaDocGen(traitFunc : traitFunction) : String = {
+  def ScalaDocGen(traitFunc : absClassFunction) : String = {
     val desc = traitFunc.desc.split("\n").map({ currStr =>
       s"  * $currStr"
     })
-    val params = traitFunc.listOfArgs.map({ traitarg =>
-      val currArgName = traitarg.argName match {
+    val params = traitFunc.listOfArgs.map({ absClassArg =>
+      val currArgName = absClassArg.argName match {
                 case "var" => "vari"
                 case "type" => "typeOf"
-                case _ => traitarg.argName
+                case _ => absClassArg.argName
       }
-      s"  * @param $currArgName\t\t${traitarg.argDesc}"
+      s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
     val returnType = s"  * @return ${traitFunc.returnType}"
     s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
   }
 
-  def defBodyGen(traitFunc : traitFunction, isSymbol : Boolean) : String = {
+  def defBodyGen(absClassFunc : absClassFunction, isSymbol : Boolean) : String = {
     var argDef = ListBuffer[String]()
-    traitFunc.listOfArgs.foreach(traitarg => {
-      val currArgName = traitarg.argName match {
+    absClassFunc.listOfArgs.foreach(absClassArg => {
+      val currArgName = absClassArg.argName match {
         case "var" => "vari"
         case "type" => "typeOf"
-        case _ => traitarg.argName
+        case _ => absClassArg.argName
       }
-      if (traitarg.isOptional) {
-        argDef += s"$currArgName : Option[${traitarg.argType}] = None"
+      if (absClassArg.isOptional) {
+        argDef += s"$currArgName : Option[${absClassArg.argType}] = None"
       }
       else {
-        argDef += s"$currArgName : ${traitarg.argType}"
+        argDef += s"$currArgName : ${absClassArg.argType}"
       }
     })
     if (isSymbol) {
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     }
-    s"def ${traitFunc.name} (${argDef.mkString(", ")}) : ${traitFunc.returnType}"
+    s"def ${absClassFunc.name} (${argDef.mkString(", ")}) : ${absClassFunc.returnType}"
   }
 
 
@@ -153,7 +153,7 @@ private[mxnet] object APIDocGenerator{
 
 
   // List and add all the atomic symbol functions to current module.
-  private def initSymbolModule(isSymbol : Boolean): List[traitFunction] = {
+  private def initSymbolModule(isSymbol : Boolean): List[absClassFunction] = {
     val opNames = ListBuffer.empty[String]
     val returnType = if (isSymbol) "Symbol" else "NDArray"
     _LIB.mxListAllOpNames(opNames)
@@ -167,7 +167,7 @@ private[mxnet] object APIDocGenerator{
 
   // Create an atomic symbol function by handle and function name.
   private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String, returnType : String)
-  : traitFunction = {
+  : absClassFunction = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -183,8 +183,8 @@ private[mxnet] object APIDocGenerator{
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
       val typeAndOption = argumentCleaner(argType, returnType)
-      new traitArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
+      new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
-    new traitFunction(aliasName, desc.value, argList.toList, returnType)
+    new absClassFunction(aliasName, desc.value, argList.toList, returnType)
   }
 }
