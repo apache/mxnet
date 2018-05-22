@@ -187,16 +187,15 @@ def foreach(body, data, init_states, name="foreach"):
     # the python function, we need to prune the computation graph constructed from
     # the function. One way of doing it is to mark the nodes in the computation graph
     # with AttrScope and prune the nodes without the special attribute.
-    with AttrScope(subgraph_name=name):
-        if isinstance(data, list):
-            in_eles = [symbol.var(sym.name) for sym in data]
-        else:
-            in_eles = symbol.var(data.name)
-        if isinstance(init_states, list):
-            states = [symbol.var(s.name) for s in init_states]
-        else:
-            states = symbol.var(init_states.name)
-        sym_out, sym_states = body(in_eles, states)
+    if isinstance(data, list):
+        in_eles = [symbol.var(sym.name) for sym in data]
+    else:
+        in_eles = symbol.var(data.name)
+    if isinstance(init_states, list):
+        states = [symbol.var(s.name) for s in init_states]
+    else:
+        states = symbol.var(init_states.name)
+    sym_out, sym_states = body(in_eles, states)
 
     check_data(sym_out, symbol.Symbol, "the output should be an NDArray or a list of NDArrays")
     check_data(sym_states, symbol.Symbol,
