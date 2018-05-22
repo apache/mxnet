@@ -390,6 +390,9 @@ NNVM_REGISTER_OP(_foreach)
 .set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
+// Foreach operator works like an executor. Its code will always run on CPU.
+// So the same code can be registered for both CPU and GPU.
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
 .add_argument("data", "NDArray-or-Symbol[]",
@@ -409,7 +412,8 @@ NNVM_REGISTER_OP(_backward_foreach)
 .set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachGradComputeExCPU);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachGradComputeExCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachGradComputeExCPU);
 
 }  // namespace op
 }  // namespace mxnet
