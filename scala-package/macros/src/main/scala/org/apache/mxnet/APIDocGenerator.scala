@@ -21,6 +21,11 @@ import org.apache.mxnet.init.Base._
 
 import scala.collection.mutable.ListBuffer
 
+/**
+  * This object will generate the Scala documentation of the new Scala API
+  * Two file namely: SymbolAPIBase.scala and NDArrayAPIBase.scala
+  * The code will be executed during Macros stage and file live in Core stage
+  */
 private[mxnet] object APIDocGenerator{
   case class absClassArg(argName : String, argType : String, argDesc : String, isOptional : Boolean)
   case class absClassFunction(name : String, desc : String,
@@ -35,10 +40,10 @@ private[mxnet] object APIDocGenerator{
 
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
     // scalastyle:off
-    val absClassFunctions = initSymbolModule(isSymbol)
+    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
-      val scalaDoc = ScalaDocGen(absClassFunction)
-      val defBody = defBodyGen(absClassFunction, isSymbol)
+      val scalaDoc = generateAPIDocFromBackend(absClassFunction)
+      val defBody = generateAPISignature(absClassFunction, isSymbol)
       s"$scalaDoc\n$defBody"
     })
     val packageName = if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase"
@@ -54,7 +59,7 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Generate ScalaDoc type
-  def ScalaDocGen(traitFunc : absClassFunction) : String = {
+  def generateAPIDocFromBackend(traitFunc : absClassFunction) : String = {
     val desc = traitFunc.desc.split("\n").map({ currStr =>
       s"  * $currStr"
     })
@@ -70,7 +75,7 @@ private[mxnet] object APIDocGenerator{
     s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
   }
 
-  def defBodyGen(absClassFunc : absClassFunction, isSymbol : Boolean) : String = {
+  def generateAPISignature(absClassFunc : absClassFunction, isSymbol : Boolean) : String = {
     var argDef = ListBuffer[String]()
     absClassFunc.listOfArgs.foreach(absClassArg => {
       val currArgName = absClassArg.argName match {
@@ -153,7 +158,7 @@ private[mxnet] object APIDocGenerator{
 
 
   // List and add all the atomic symbol functions to current module.
-  private def initSymbolModule(isSymbol : Boolean): List[absClassFunction] = {
+  private def getSymbolNDArrayMethods(isSymbol : Boolean): List[absClassFunction] = {
     val opNames = ListBuffer.empty[String]
     val returnType = if (isSymbol) "Symbol" else "NDArray"
     _LIB.mxListAllOpNames(opNames)
