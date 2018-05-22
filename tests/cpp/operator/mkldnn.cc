@@ -112,9 +112,6 @@ static void InitNegPosArray(NDArray *arr) {
         data[i] = i - shift;
 }
 
-
-
-
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
                             bool is_rand = false) {
