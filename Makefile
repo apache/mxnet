@@ -592,6 +592,11 @@ scalainstall:
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
+scalarelease-dryrun:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 scalarelease:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn release:clean release:prepare -DautoVersionSubmodules=true \
