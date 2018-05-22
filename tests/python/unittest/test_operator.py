@@ -5929,7 +5929,7 @@ def test_foreach():
             name = name[1:]
             gin_order.append(int(name))
 
-        e = out.bind(ctx=mx.cpu(), args=arg_dict, args_grad=arg_grad_dict)
+        e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         e.forward(is_train=is_train)
         if (is_train):
             # backward
@@ -6048,7 +6048,7 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out.bind(ctx=mx.cpu(), args={'v1':data, 'v2':state},
+    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
     out = mx.nd.zeros_like(data)
@@ -6116,7 +6116,7 @@ def test_foreach_lstm():
     h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
     out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
     out = sym_group(out)
-    e1 = out.bind(ctx=mx.cpu(),
+    e1 = out.bind(ctx=default_context(),
                   args={'data': data_arr, 'h': h_arr, 'c': c_arr,
                         'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
                         'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr},
@@ -6147,7 +6147,7 @@ def test_foreach_lstm():
         unroll_outs.append(mx.sym.expand_dims(h, axis=0))
     unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
     out = mx.sym.Group([unroll_outs, h, c])
-    e2 = out.bind(ctx=mx.cpu(),
+    e2 = out.bind(ctx=default_context(),
                   args={'data': data_arr, 'h': h_arr, 'c': c_arr,
                         'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
                         'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr},
