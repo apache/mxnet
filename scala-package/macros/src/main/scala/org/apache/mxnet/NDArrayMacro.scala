@@ -66,9 +66,9 @@ private[mxnet] object NDArrayMacro {
         if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
           Seq(
             // scalastyle:off
-            // def transpose(kwargs: Map[String, Any] = null)(args: Any*)
+            // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
             q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
-            // def transpose(args: Any*)
+            // e.g def transpose(args: Any*)
             q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
             // scalastyle:on
           )
@@ -101,21 +101,6 @@ private[mxnet] object NDArrayMacro {
 
       // Construct argument field
       var argDef = ListBuffer[String]()
-      ndarrayfunction.listOfArgs.foreach(ndarrayarg => {
-        val currArgName = ndarrayarg.argName match {
-          case "var" => "vari"
-          case "type" => "typeOf"
-          case default => ndarrayarg.argName
-        }
-        if (ndarrayarg.isOptional) {
-          argDef += s"${currArgName} : Option[${ndarrayarg.argType}] = None"
-        }
-        else {
-          argDef += s"${currArgName} : ${ndarrayarg.argType}"
-        }
-      })
-      argDef += "name : String = null"
-      argDef += "attr : Map[String, String] = null"
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
@@ -126,6 +111,12 @@ private[mxnet] object NDArrayMacro {
           case "var" => "vari"
           case "type" => "typeOf"
           case default => ndarrayarg.argName
+        }
+        if (ndarrayarg.isOptional) {
+          argDef += s"${currArgName} : Option[${ndarrayarg.argType}] = None"
+        }
+        else {
+          argDef += s"${currArgName} : ${ndarrayarg.argType}"
         }
         var base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
         if (ndarrayarg.isOptional) {
