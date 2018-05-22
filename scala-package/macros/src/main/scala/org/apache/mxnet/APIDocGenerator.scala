@@ -29,24 +29,26 @@ private[mxnet] object APIDocGenerator{
 
   def main(args: Array[String]) : Unit = {
     val FILE_PATH = args(0)
-    traitGen(FILE_PATH)
+    absClassGen(FILE_PATH, true)
+    absClassGen(FILE_PATH, false)
   }
 
-  def traitGen(FILE_PATH : String) : Unit = {
+  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
     // scalastyle:off
-    val traitFunctions = initSymbolModule(true)
+    val traitFunctions = initSymbolModule(isSymbol)
     val traitfuncs = traitFunctions.filterNot(_.name.startsWith("_")).map(traitfunction => {
       val scalaDoc = ScalaDocGen(traitfunction)
-      val traitBody = traitBodyGen(traitfunction)
+      val traitBody = defBodyGen(traitfunction, isSymbol)
       s"$scalaDoc\n$traitBody"
     })
+    val packageName = if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase"
     val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
     val scalaStyle = "// scalastyle:off"
     val packageDef = "package org.apache.mxnet"
-    val absClassDef = "abstract class SymbolAPIBase"
+    val absClassDef = s"abstract class $packageName"
     val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$absClassDef {\n${traitfuncs.mkString("\n")}\n}"
     import java.io._
-    val pw = new PrintWriter(new File(FILE_PATH + "SymbolAPIBase.scala"))
+    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
     pw.close()
   }
@@ -68,25 +70,28 @@ private[mxnet] object APIDocGenerator{
     s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
   }
 
-  def traitBodyGen(traitFunc : traitFunction) : String = {
+  def defBodyGen(traitFunc : traitFunction, isSymbol : Boolean) : String = {
     var argDef = ListBuffer[String]()
     traitFunc.listOfArgs.foreach(traitarg => {
-              val currArgName = traitarg.argName match {
-                case "var" => "vari"
-                case "type" => "typeOf"
-                case _ => traitarg.argName
-              }
-              if (traitarg.isOptional) {
-                  argDef += s"$currArgName : Option[${traitarg.argType}] = None"
-                }
-              else {
-                  argDef += s"$currArgName : ${traitarg.argType}"
-                }
-            })
-          argDef += "name : String = null"
-          argDef += "attr : Map[String, String] = null"
+      val currArgName = traitarg.argName match {
+        case "var" => "vari"
+        case "type" => "typeOf"
+        case _ => traitarg.argName
+      }
+      if (traitarg.isOptional) {
+        argDef += s"$currArgName : Option[${traitarg.argType}] = None"
+      }
+      else {
+        argDef += s"$currArgName : ${traitarg.argType}"
+      }
+    })
+    if (isSymbol) {
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
+    }
     s"def ${traitFunc.name} (${argDef.mkString(", ")}) : ${traitFunc.returnType}"
   }
+
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "", returnType : String) : String = {
