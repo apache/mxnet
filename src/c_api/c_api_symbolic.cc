@@ -344,26 +344,15 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
   API_END();
 }
 
+namespace mxnet {
+extern std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym);
+}
+
 int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *input_size) {
   API_BEGIN();
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  nnvm::Graph g;
-  g.outputs = s->outputs;
-  std::vector<nnvm::Symbol *> input_syms;
-  const nnvm::IndexedGraph& idx = g.indexed_graph();
   size_t max_input_size = *input_size;
-  // Go through all nodes and return the ones representing variables.
-  for (size_t i = 0; i < idx.num_nodes(); i++) {
-    const nnvm::Node &n = *idx[i].source;
-    for (const nnvm::NodeEntry &e : n.inputs) {
-      auto p = e.node;
-      if (p->is_variable()) {
-        nnvm::Symbol *s = new nnvm::Symbol();
-        s->outputs.push_back(e);
-        input_syms.push_back(s);
-      }
-    }
-  }
+  std::vector<nnvm::Symbol *> input_syms = mxnet::GetInputSymbols(*s);
   CHECK(input_syms.size() <= max_input_size);
   *input_size = input_syms.size();
   std::copy(input_syms.begin(), input_syms.end(), input_arr);
