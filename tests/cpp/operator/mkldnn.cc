@@ -370,7 +370,7 @@ OpAttrs GetCopyOp() {
 
 OpAttrs GetReluOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("relu");
+  attrs.attrs.op = Op::Get("Activation");
   attrs.attrs.dict = {"act_type", "relu"};
   attrs.dispatches.resize(1);
   attrs.dispatches[0] = DispatchMode::kFCompute;
