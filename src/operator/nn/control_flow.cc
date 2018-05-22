@@ -211,6 +211,9 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   }
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
     CHECK_EQ(len, outputs[i].shape()[iter_dim]);
+  for (const auto &arr : outputs)
+    CHECK_EQ(arr.storage_type(), kDefaultStorage)
+        << "The for operator doesn't support the sparse format";
 
   // Initialize the outputs of the subgraph is a little trickier.
   // The states from the previous iteration are used as the inputs of the next
@@ -302,6 +305,9 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   const ForeachParam& params = state.params;
   CHECK_EQ(outputs.size(), (size_t) params.num_args - 1);
   CHECK_GT(params.in_data_locs.ndim(), 0);
+  for (const auto &arr : outputs)
+    CHECK_EQ(arr.storage_type(), kDefaultStorage)
+        << "The for operator doesn't support the sparse format";
   size_t iter_dim = 0;
   std::unordered_set<size_t> in_data_locs(params.in_data_locs.begin(),
                                           params.in_data_locs.end());
