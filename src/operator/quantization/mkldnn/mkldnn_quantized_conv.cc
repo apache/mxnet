@@ -20,7 +20,7 @@
 /*!
  * \file mkldnn_quantized_conv.cc
  * \brief
- * \author Wenting Jiang
+ * \author Wenting Jiang, Xinyu Chen
 */
 
 #if MXNET_USE_MKLDNN == 1
