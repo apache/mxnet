@@ -446,31 +446,30 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
     const DType *bottom_rois = in_data[0].dptr<DType>();
     DType *grad_in = outputs[0].dptr<DType>();
 
-    if (kAddTo == req[roialign::kData] || kWriteTo == req[roialign::kData]) {
-      if (kWriteTo == req[roialign::kData]) {
-        Fill<false>(s, outputs[0], kWriteTo, static_cast<DType>(0));
-      }
-      RoIAlignBackwardKernel<DType>
-      <<<ROI_GET_BLOCKS(count),
-         kMaxThreadsPerBlock,
-         0,
-         stream>>>(
-          count,
-          top_diff,
-          num_rois,
-          param.spatial_scale,
-          channels,
-          height,
-          width,
-          pooled_height,
-          pooled_width,
-          -1,
-          grad_in,
-          bottom_rois);
-    }
     if (kWriteTo == req[roialign::kBox]) {
       Fill<false>(s, outputs[1], kWriteTo, static_cast<DType>(0));
     }
+    if (kNullOp == req[roialign::kData]) return;
+    if (kWriteTo == req[roialign::kData]) {
+      Fill<false>(s, outputs[0], kWriteTo, static_cast<DType>(0));
+    }
+    RoIAlignBackwardKernel<DType>
+    <<<ROI_GET_BLOCKS(count),
+       kMaxThreadsPerBlock,
+       0,
+       stream>>>(
+        count,
+        top_diff,
+        num_rois,
+        param.spatial_scale,
+        channels,
+        height,
+        width,
+        pooled_height,
+        pooled_width,
+        -1,
+        grad_in,
+        bottom_rois);
   })
 }
 
