@@ -24,9 +24,9 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
-#include "../operator_common.h"
-#include "../elemwise_op_common.h"
-#include "../../imperative/imperative_utils.h"
+#include "./operator_common.h"
+#include "./elemwise_op_common.h"
+#include "../imperative/imperative_utils.h"
 #include "./subgraph_op_common.h"
 
 namespace mxnet {
