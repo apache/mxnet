@@ -40,6 +40,7 @@
 #include "./mshadow_op.h"
 #include "./linalg.h"
 
+
 namespace mxnet {
 namespace op {
 
