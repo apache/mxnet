@@ -148,7 +148,7 @@ def test_parameter_str():
 
 
 @with_seed()
-def test_collect_paramters():
+def test_collect_parameters():
     net = nn.HybridSequential(prefix="test_")
     with net.name_scope():
         net.add(nn.Conv2D(10, 3))
@@ -158,6 +158,8 @@ def test_collect_paramters():
     assert set(net.collect_params('.*weight').keys()) == \
         set(['test_conv0_weight', 'test_dense0_weight'])
     assert set(net.collect_params('test_conv0_bias|test_dense0_bias').keys()) == \
+        set(['test_conv0_bias', 'test_dense0_bias'])
+    assert set(net.collect_params('.*weight', exclude=True).keys()) == \
         set(['test_conv0_bias', 'test_dense0_bias'])
 
 @with_seed()

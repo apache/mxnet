@@ -261,7 +261,7 @@ class Block(object):
         children's parameters)."""
         return self._params
 
-    def collect_params(self, select=None):
+    def collect_params(self, select=None, exclude=False):
         """Returns a :py:class:`ParameterDict` containing this :py:class:`Block` and all of its
         children's Parameters(default), also can returns the select :py:class:`ParameterDict`
         which match some given regular expressions.
@@ -279,7 +279,9 @@ class Block(object):
         Parameters
         ----------
         select : str
-            regular expressions
+            Regular expressions.
+        exclude : bool
+            If True, this method only returns parameters that do not match the select expression.
 
         Returns
         -------
@@ -292,9 +294,10 @@ class Block(object):
             ret.update(self.params)
         else:
             pattern = re.compile(select)
-            ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
+            ret.update({name:value for name, value in self.params.items()
+                        if exclude != bool(pattern.match(name))})
         for cld in self._children.values():
-            ret.update(cld.collect_params(select=select))
+            ret.update(cld.collect_params(select=select, exclude=exclude))
         return ret
 
     def _collect_params_with_prefix(self, prefix=''):
