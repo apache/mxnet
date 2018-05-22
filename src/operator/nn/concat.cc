@@ -105,6 +105,7 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+
 inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  const int dev_mask,
                                                  DispatchMode* dispatch_mode,
@@ -112,19 +113,32 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   CHECK_EQ(out_attrs->size(), 1U);
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
+  auto& out_stype = out_attrs->at(0);
+  bool dispatched = false;
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kCSRStorage)
+      && param.dim == 0) {
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched && dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
-      && param.dim > 0)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
+      && param.dim > 0) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
 #endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
 }
+
 
 inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                                              const int dev_mask,
@@ -146,7 +160,7 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                              dispatch_mode, wanted_mode);
 }
 
-#if MXNET_USE_MKLDNN == 1
+
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,
                                const std::vector<NDArray>& inputs,
@@ -156,17 +170,23 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  // MKLDNN support 2D and 4D concat
-  if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
+  if (common::ContainsOnlyStorage(inputs, kCSRStorage)) {
+    ConcatRspImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
+#if MXNET_USE_MKLDNN == 1
+  } else if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
-    return;
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
+#endif
+  } else {
+    LogUnimplementedOp(attrs, op_ctx, inputs, req, outputs);
   }
-  FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
 }
 
+#if MXNET_USE_MKLDNN == 1
 static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<NDArray>& inputs,
@@ -261,9 +281,7 @@ Example::
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatComputeExCPU)
-#endif
 .set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"})
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")

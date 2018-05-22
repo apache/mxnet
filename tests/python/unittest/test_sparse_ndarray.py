@@ -154,6 +154,21 @@ def test_sparse_nd_slice():
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
     check_slice_nd_csr_fallback(shape)
 
+@with_seed()
+def test_sparse_nd_concat():
+    def check_concat(arrays):
+        ret = np.concatenate([arr.asnumpy() for arr in arrays], axis=0)
+        same(mx.nd.concat(*arrays, dim=0).asnumpy(), ret)
+    nds = []
+    zero_nds = []
+    ncols = rnd.randint(2, 10)
+    for i in range(3):
+        shape = (rnd.randint(2, 10), ncols)
+        A, _ = rand_sparse_ndarray(shape, 'csr')
+        nds.append(A)
+        zero_nds.append(mx.nd.zeros(shape).tostype('csr'))
+    check_concat(nds)
+    check_concat(zero_nds)
 
 @with_seed()
 def test_sparse_nd_equal():
@@ -918,22 +933,18 @@ def test_sparse_nd_check_format():
 
 @with_seed()
 def test_sparse_nd_norm():
-    def check_sparse_nd_norm(stype, shape, density, **kwargs):
+    def check_sparse_nd_norm(stype, shape, density):
         data, _ = rand_sparse_ndarray(shape, stype, density)
-        norm = data.norm(**kwargs)
-        expected_norm = data.tostype('default').norm(**kwargs)
-        assert_almost_equal(norm.asnumpy(), expected_norm.asnumpy())
+        norm = data.norm()
+        expected_norm = np.linalg.norm(data.asnumpy())
+        assert_almost_equal(norm.asnumpy(), expected_norm)
 
     shape = (5, 5)
     stypes = ['row_sparse', 'csr']
-    densities = [0, 0.5, 1]
+    densities = [0, 0.5]
     for stype in stypes:
         for density in densities:
-           check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=False, ord=2)
-
-    # test fallback
-    check_sparse_nd_norm(stype, shape, density, axis=0, keepdims=False, ord=2)
-    check_sparse_nd_norm(stype, shape, density, axis=None, keepdims=True, ord=2)
+            check_sparse_nd_norm(stype, shape, density)
 
 @with_seed()
 def test_sparse_fc():
