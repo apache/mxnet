@@ -18,6 +18,7 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.init.Base._
+import org.apache.mxnet.utils.CToScalaUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -41,6 +42,7 @@ private[mxnet] object APIDocGenerator{
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    // TODO: Add Filter to the same location in case of refactor
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
@@ -98,65 +100,6 @@ private[mxnet] object APIDocGenerator{
   }
 
 
-  // Convert C++ Types to Scala Types
-  def typeConversion(in : String, argType : String = "", returnType : String) : String = {
-    in match {
-      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
-      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => s"Array[$returnType]"
-      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
-      case "int" | "intorNone" | "int(non-negative)" => "Int"
-      case "long" | "long(non-negative)" => "Long"
-      case "double" | "doubleorNone" => "Double"
-      case "string" => "String"
-      case "boolean" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
-      case default => throw new IllegalArgumentException(
-        s"Invalid type for args: $default, $argType")
-    }
-  }
-
-
-  /**
-    * By default, the argType come from the C++ API is a description more than a single word
-    * For Example:
-    *   <C++ Type>, <Required/Optional>, <Default=>
-    * The three field shown above do not usually come at the same time
-    * This function used the above format to determine if the argument is
-    * optional, what is it Scala type and possibly pass in a default value
-    * @param argType Raw arguement Type description
-    * @return (Scala_Type, isOptional)
-    */
-  def argumentCleaner(argType : String, returnType : String) : (String, Boolean) = {
-    val spaceRemoved = argType.replaceAll("\\s+", "")
-    var commaRemoved : Array[String] = new Array[String](0)
-    // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
-    if (spaceRemoved.charAt(0)== '{') {
-      val endIdx = spaceRemoved.indexOf('}')
-      commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
-      commaRemoved(0) = "string"
-    } else {
-      commaRemoved = spaceRemoved.split(",")
-    }
-    // Optional Field
-    if (commaRemoved.length >= 3) {
-      // arg: Type, optional, default = Null
-      require(commaRemoved(1).equals("optional"))
-      require(commaRemoved(2).startsWith("default="))
-      (typeConversion(commaRemoved(0), argType, returnType), true)
-    } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType, returnType)
-      val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
-      (tempType, tempOptional)
-    } else {
-      throw new IllegalArgumentException(
-        s"Unrecognized arg field: $argType, ${commaRemoved.length}")
-    }
-
-  }
-
-
   // List and add all the atomic symbol functions to current module.
   private def getSymbolNDArrayMethods(isSymbol : Boolean): List[absClassFunction] = {
     val opNames = ListBuffer.empty[String]
@@ -187,7 +130,7 @@ private[mxnet] object APIDocGenerator{
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = argumentCleaner(argType, returnType)
+      val typeAndOption = CToScalaUtils.argumentCleaner(argType, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     new absClassFunction(aliasName, desc.value, argList.toList, returnType)
