@@ -1668,7 +1668,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     if (inode.source->is_variable()) continue;
     // We shouldn't add control flow operators to a segment.
     // We can't execute these operators in the engine.
-    if (op_node.exec->HasSubgraph()) continue;
+    if (op_node.exec->HasSubgraph()) return ret;
     if (op_node.exec->exec_type() != ExecType::kSync) {
       return ret;
     }
