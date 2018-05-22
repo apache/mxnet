@@ -426,6 +426,17 @@ class Optimizer(object):
             wd *= self.wd_mult.get(self.idx2name[index], 1.0)
         return wd
 
+    def __getstate__(self):
+        ret = self.__dict__.copy()
+        # do not include param_dict in the state
+        del ret['param_dict']
+        return ret
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+        # param_dict needs to be explicitly set by the trainer
+        self.param_dict = {}
+
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
 

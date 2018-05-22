@@ -186,12 +186,17 @@ def test_bvlc_googlenet():
     model_path, inputs, outputs = get_test_files('bvlc_googlenet')
     logging.info("Translating Googlenet model from ONNX to Mxnet")
     sym, arg_params, aux_params = onnx_mxnet.import_model(model_path)
+    metadata = onnx_mxnet.get_model_metadata(model_path)
+    assert len(metadata) == 2
+    assert metadata.get('input_tensor_data')
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
+    assert metadata.get('output_tensor_data')
+    assert metadata.get('output_tensor_data') == [(u'prob_1', (1, 1000))]
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
         mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
         mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
@@ -210,12 +215,17 @@ def test_bvlc_reference_caffenet():
     model_path, inputs, outputs = get_test_files('bvlc_reference_caffenet')
     logging.info("Translating Caffenet model from ONNX to Mxnet")
     sym, arg_params, aux_params = onnx_mxnet.import_model(model_path)
+    metadata = onnx_mxnet.get_model_metadata(model_path)
+    assert len(metadata) == 2
+    assert metadata.get('input_tensor_data')
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
+    assert metadata.get('output_tensor_data')
+    assert metadata.get('output_tensor_data') == [(u'prob_1', (1, 1000))]
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
         mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
         mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
@@ -234,12 +244,17 @@ def test_bvlc_rcnn_ilsvrc13():
     model_path, inputs, outputs = get_test_files('bvlc_reference_rcnn_ilsvrc13')
     logging.info("Translating rcnn_ilsvrc13 model from ONNX to Mxnet")
     sym, arg_params, aux_params = onnx_mxnet.import_model(model_path)
+    metadata = onnx_mxnet.get_model_metadata(model_path)
+    assert len(metadata) == 2
+    assert metadata.get('input_tensor_data')
+    assert metadata.get('input_tensor_data') == [(u'data_0', (1, 3, 224, 224))]
+    assert metadata.get('output_tensor_data')
+    assert metadata.get('output_tensor_data') == [(u'fc-rcnn_1', (1, 200))]
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
 
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
         # create module
-        data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
         mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
         mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
         mod.set_params(arg_params=arg_params, aux_params=aux_params,
