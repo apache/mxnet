@@ -40,8 +40,8 @@
 #include "./mshadow_op.h"
 #include "./linalg.h"
 
-#define UNIDIRECT 1
-#define BIDIRECT 2
+namespace mxnet {
+namespace op {
 
 template<typename DType>
 inline DType sigmoid(DType x) {
@@ -500,7 +500,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  if (D == UNIDIRECT) {
+  if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
@@ -522,7 +522,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
   DType alpha = 1.0;
   DType beta = 0.0;
   linalg_gemm(x, wx, dgemmC1, alpha, beta, false, true);
-  if (D == BIDIRECT) {
+  if (D == 2) {
     linalg_gemm(x, back_wx, dback_gemmC1, alpha, beta, false, true);
   }
 
@@ -530,7 +530,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
     //  perform the first direction, X * wx and H * wh for each step
     //  ht-1 * wh, ht-1:[N, H] wh:[3 * H, H]
     Tensor<cpu, 2, DType> dht_1(ht_1, Shape2(N, D * H));
-    if (D == UNIDIRECT) {
+    if (D == 1) {
       linalg_gemm(dht_1, wh, dgemmC2, alpha, beta, false, true);
     } else {
       Tensor<cpu, 3, DType> dht_1_tmp = Tensor<cpu, 3, DType>(reinterpret_cast<DType*>(tmp_buf),
@@ -558,7 +558,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
     ht_1 = ht;
     ht = ht + D * H * N;
     //  perform the second direction
-    if (D == BIDIRECT) {
+    if (D == 2) {
       gemmC1_t = back_gemmC1 + (T - 1 - t) * N * 3 * H;
       Tensor<cpu, 2, DType> dback_ht_1(back_ht_1, Shape2(N, D * H));
       Tensor<cpu, 3, DType> dback_ht_1_tmp = Tensor<cpu, 3, DType>
@@ -588,7 +588,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
   }
   //  copy last state to hy, from(N, H * D) to (D, N, H)
   if (state_outputs) {
-    if (D == UNIDIRECT) {
+    if (D == 1) {
       DType* y_start = y_ptr + (T - 1) * N * H;
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
@@ -712,7 +712,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  if (D == UNIDIRECT) {
+  if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
       for (int j = 0; j < H; j++) {
@@ -735,7 +735,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
   DType alpha = 1.0;
   DType beta = 0.0;
   linalg_gemm(x, wx, dgemmC1, alpha, beta, false, true);
-  if (D == BIDIRECT) {
+  if (D == 2) {
     linalg_gemm(x, back_wx, dback_gemmC1, alpha, beta, false, true);
   }
 
@@ -743,7 +743,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
     //  perform the first direction, X * wx and H * wh for each step
     //  ht-1 * wh, ht-1:[N, H] wh:[3 * H, H]
     Tensor<cpu, 2, DType> dht_1(ht_1, Shape2(N, D * H));
-    if (D == UNIDIRECT) {
+    if (D == 1) {
       linalg_gemm(dht_1, wh, dgemmC2, alpha, beta, false, true);
     } else {
       Tensor<cpu, 3, DType> dht_1_tmp = Tensor<cpu, 3, DType>(reinterpret_cast<DType*>(tmp_buf),
@@ -778,7 +778,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
     ht_1 = ht;
     ht = ht + D * H * N;
     //  perform the second direction
-    if (D == BIDIRECT) {
+    if (D == 2) {
       rt = back_gateR + (T - 1 - t) * N * H;
       zt = back_gateZ + (T - 1 - t) * N * H;
       nt = back_gateN + (T - 1 - t) * N * H;
@@ -814,7 +814,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
 
   //  copy last state to hy, from(N, H * D) to (D, N, H)
   if (state_outputs) {
-    if (D == UNIDIRECT) {
+    if (D == 1) {
       DType* y_start = y_ptr + (T - 1) * N * H;
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; i++)
@@ -893,11 +893,7 @@ void GruForwardTraining(DType* ws,
     }
     wh_l = wx_l + I * 3 * H;
   }
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < T * N * H * D; i++) {
-    y_ptr[i] = y_l[i];
-  }
+  memcpy(y_ptr, y_l, T * N * H * D * sizeof(DType));
 }
 
 template <typename DType>
@@ -985,7 +981,7 @@ void GruBackwardSingleLayer(DType* ws,
     }
   }
 
-  if (D == BIDIRECT) {
+  if (D == 2) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N * H; ++i) {
       if (dhy_ptr) {
@@ -1076,7 +1072,7 @@ void GruBackwardSingleLayer(DType* ws,
   Tensor<cpu, 2, DType> d_dwx(dwx, Shape2(3 * H, I));
   linalg_gemm(d_da, x, d_dwx, alpha, beta, true, false);
 
-  if (D == BIDIRECT) {
+  if (D == 2) {
     for (int t = 0; t < T; ++t) {
       if (t == T-1) {
         back_ht1 = hx_;
@@ -1152,10 +1148,7 @@ void GruBackwardSingleLayer(DType* ws,
     Tensor<cpu, 2, DType> d_back_dwx(back_dwx, Shape2(3 * H, I));
     linalg_gemm(d_da2, x, d_back_dwx, alpha, beta, true, false);
   }
-  #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < D * N * H; ++i) {
-    dhx[i] = dht1[i];
-  }
+  memcpy(dht1, dhx, N * H * D * sizeof(DType));
 }
 
 template <typename DType>
@@ -1214,7 +1207,6 @@ void GruBackward(DType* ws,
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int l = L - 1; l >= 0; --l) {
     if (l == 0) {
       I = inputsize;
@@ -1229,10 +1221,7 @@ void GruBackward(DType* ws,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
                                   dwx_l, dwh_l, dbx_l, dbh_l);
     if (l > 0) {
-      #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < T * N * D * H; ++i) {
-        dy_l[i] = dx_l[i];
-      }
+      memcpy(dy_l, dx_l, T * N * H * D * sizeof(DType));
       gateR_l = gateR_l - T * D * N * H;
       gateZ_l = gateZ_l - T * D * N * H;
       gateN_l = gateN_l - T * D * N * H;
@@ -1258,4 +1247,6 @@ void GruBackward(DType* ws,
     }
   }
 }
+}  // namespace op
+}  // namespace mxnet
 #endif  // MXNET_OPERATOR_RNN_IMPL_H_
