@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_NN_SUBGRAPH_OP_COMMON_H_
-#define MXNET_OPERATOR_NN_SUBGRAPH_OP_COMMON_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_OP_COMMON_H_
+#define MXNET_OPERATOR_SUBGRAPH_OP_COMMON_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -58,4 +58,4 @@ bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NN_SUBGRAPH_OP_COMMON_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_OP_COMMON_H_
