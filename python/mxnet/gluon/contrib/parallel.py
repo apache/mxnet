@@ -22,14 +22,14 @@ from ... import autograd
 from ...ndarray import NDArray
 from ..utils import split_and_load
 
-__all__ = ['DataParallelModel', 'DataParallelCriterion', 'Barrier']
+__all__ = ['DataParallelModel', 'DataParallelLoss', 'Barrier']
 
 
 class Barrier(object):
-    """Shared NDArray for cross device operation.
+    """Barrier for cross-device operation.
 
     A cross device operation that allows synchronized push and pull. It can be used in
-    Cross-gpu Sycnhronized Batch Normalization and Sparse Blocks.
+    Cross-gpu Sycnhronized Batch Normalization.
 
     Parameters
     ----------
@@ -121,8 +121,8 @@ class DataParallelModel(object):
     In the forward pass, the module is replicated on each device,
     and each replica handles a portion of the input. During the backwards pass,
     gradients from each replica are summed into the original module.
-    Note that the outputs are not gathered, please use compatible
-    :class:`mxnet.gluon.contrib.DataParallelCriterion`.
+    Note that the outputs are not gathered, we recommand using compatible
+    :class:`mxnet.gluon.contrib.DataParallelLoss`.
 
     The batch size should be larger than the number of GPUs used. It should
     also be an integer multiple of the number of GPUs so that each chunk is
@@ -139,15 +139,22 @@ class DataParallelModel(object):
 
 
     Inputs:
+
         - **inputs**: list of input (NDArrays)
 
     Outputs:
+
         - **outputs**: list of output (NDArrays)
 
     Example::
+
         >>> ctx = [mx.gpu(0), mx.gpu(1)]
-        >>> net = DataParallelModel(model, ctx_list=ctx)
-        >>> y = net(x)
+        >>> net = DataParallelModel(model, ctx=ctx)
+        >>> criterion = DataParallelLoss(criterion)
+        >>> with autograd.record()
+        >>>     y = net(x)
+        >>>     loss = criterion(y, t)
+        >>>     autograd.backward(loss)
     """
     def __init__(self, module, ctx_list=None, sync=False):
         module.collect_params().reset_ctx(ctx=ctx_list)
@@ -161,14 +168,14 @@ class DataParallelModel(object):
         inputs, kwargs = _split_load_kwargs(inputs, kwargs, self.ctx_list)
         assert(len(inputs) == len(self.ctx_list))
         if len(self.ctx_list) == 1:
-            return tuple([tuple_map(self.module(*inputs[0], **kwargs[0]))])
+            return (tuple_map(self.module(*inputs[0], **kwargs[0])),)
         return parallel_apply(self.module, inputs, kwargs, self.sync)
 
     def __repr__(self):
         return 'DataParallel:\n module = {' + self.module.__repr__() + '}'
 
 
-class DataParallelCriterion(object):
+class DataParallelLoss(object):
     """Data Parallelism
 
     Hide the difference of single/multiple GPUs to the user.
@@ -203,9 +210,11 @@ class DataParallelCriterion(object):
 
         >>> ctx = [mx.gpu(0), mx.gpu(1)]
         >>> net = DataParallelModel(model, ctx=ctx)
-        >>> criterion = DataParallelCriterion(criterion)
-        >>> y = net(x)
-        >>> losses = criterion(y, t)
+        >>> criterion = DataParallelLoss(criterion)
+        >>> with autograd.record()
+        >>>     y = net(x)
+        >>>     loss = criterion(y, t)
+        >>>     autograd.backward(loss)
     """
     def __init__(self, module, ctx_list=None, sync=False):
         self.module = module
@@ -221,7 +230,7 @@ class DataParallelCriterion(object):
         if len(self.ctx_list) == 1:
             return tuple_map(self.module(*(inputs[0] + targets[0]), **kwargs[0]))
         assert(len(inputs) == len(self.ctx_list))
-        return criterion_parallel_apply(self.module, inputs, targets, kwargs, self.sync)
+        return loss_parallel_apply(self.module, inputs, targets, kwargs, self.sync)
 
 
 def _split_load_kwargs(inputs, kwargs, ctx_list, batch_axis=0):
@@ -309,7 +318,7 @@ def parallel_apply(module, inputs, kwargs_tup=None, sync=False):
         return tuple(outputs)
 
 
-def criterion_parallel_apply(module, inputs, targets, kwargs_tup=None, sync=False):
+def loss_parallel_apply(module, inputs, targets, kwargs_tup=None, sync=False):
     """Data Parallel Criterion"""
     if kwargs_tup:
         assert len(inputs) == len(kwargs_tup)
