@@ -151,5 +151,106 @@ bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
   return true;
 }
 
+void LoopState::Forward(std::vector<NDArray> cinputs,
+                        const std::vector<OpReqType>& req,
+                        std::vector<NDArray> coutputs,
+                        bool is_recording) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  bool orig_is_record;
+  if (is_recording)
+    orig_is_record = Imperative::Get()->set_is_recording(true);
+  else
+    orig_is_record = Imperative::Get()->is_recording();
+
+  std::vector<NDArray *> inputs(cinputs.size());
+  std::vector<NDArray *> outputs(coutputs.size());
+  for (size_t i = 0; i < inputs.size(); i++)
+    inputs[i] = &cinputs[i];
+  for (size_t i = 0; i < outputs.size(); i++)
+    outputs[i] = &coutputs[i];
+
+  if (is_recording) {
+    all_inputs.push_back(cinputs);
+    std::vector<NDArray> gradients(cinputs.size());
+    std::vector<NDArray *> input_ptrs(cinputs.size());
+    std::vector<NDArray *> gradient_ptrs(cinputs.size());
+    std::vector<mx_uint> grad_reqs(cinputs.size());
+    for (size_t i = 0; i < gradients.size(); i++) {
+      gradients[i] = NDArray(cinputs[i].shape(), cinputs[i].ctx(),
+                             true, cinputs[i].dtype());
+      input_ptrs[i] = &cinputs[i];
+      gradient_ptrs[i] = &gradients[i];
+      grad_reqs[i] = kWriteTo;
+    }
+    Imperative::Get()->MarkVariables(input_ptrs, grad_reqs, gradient_ptrs);;
+  }
+
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
+  // Get input names.
+  const auto& idx = subgraph.indexed_graph();
+  std::vector<std::string> arg_names(idx.input_nodes().size());
+  for (size_t i = 0; i < idx.input_nodes().size(); ++i)
+    arg_names[i] = idx[idx.input_nodes()[i]].source->attrs.name;
+  // We don't have parameters for the cached op.
+  std::unordered_map<std::string, std::vector<NDArray> > params;
+  CachedOpPtr op = std::make_shared<Imperative::CachedOp>(subgraph_sym, kwargs,
+                                                          arg_names, params);
+  // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
+  // called. Currently, CachedOp allocates memory each time Forward is called.
+  // I need to fix this once the PR for static memory allocation in CachedOp is
+  // merged. https://github.com/apache/incubator-mxnet/pull/10817
+  op->Forward(nullptr, inputs, outputs);
+
+  if (is_recording) {
+    all_outputs.push_back(coutputs);
+    iter_ops.push_back(op);
+  }
+
+  Imperative::Get()->set_is_recording(orig_is_record);
+}
+
+void LoopState::Backward(int iter_no,
+                         std::vector<NDArray> ograds,
+                         const std::vector<OpReqType> &req,
+                         std::vector<NDArray> igrads) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  CHECK_GT(iter_ops.size(), iter_no)
+      << "We didn't record the computation for iteration " << iter_no;
+  auto op = iter_ops[iter_no];
+  std::vector<NDArray *> inputs;
+  std::vector<NDArray *> outputs;
+  inputs.reserve(op->num_backward_inputs());
+  outputs.reserve(op->num_inputs());
+  for (size_t i = 0; i < ograds.size(); i++)
+    inputs.push_back(&ograds[i]);
+
+  const std::vector<bool> &save_inputs = op->save_inputs();
+  const std::vector<bool> &save_outputs = op->save_outputs();
+  CHECK_EQ(save_inputs.size(), all_inputs[iter_no].size());
+  CHECK_EQ(op->num_outputs(), all_outputs[iter_no].size());
+  for (size_t i = 0; i < all_inputs[iter_no].size(); i++) {
+    if (save_inputs[i])
+      inputs.push_back(&all_inputs[iter_no][i]);
+  }
+  for (size_t i = 0; i < all_outputs[iter_no].size(); i++) {
+    if (save_outputs[i])
+      inputs.push_back(&all_outputs[iter_no][i]);
+  }
+  CHECK_EQ(inputs.size(), op->num_backward_inputs());
+  for (size_t i = 0; i < igrads.size(); i++)
+    outputs.push_back(&igrads[i]);
+  CHECK_EQ(outputs.size(), op->num_inputs());
+
+  CHECK(!Imperative::AGInfo::IsNone(all_outputs[iter_no][0]));
+  const nnvm::NodeEntry &node_entry = all_outputs[iter_no][0].entry();
+  OpStatePtr state = Imperative::AGInfo::Get(node_entry.node).state;
+  op->Backward(false, state, inputs, req, outputs);
+}
+
 }  // namespace op
 }  // namespace mxnet

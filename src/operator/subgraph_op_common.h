@@ -24,6 +24,7 @@
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <vector>
+#include "../imperative/imperative_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -54,6 +55,42 @@ bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
                                   DispatchMode* dispatch_mode,
                                   std::vector<int> *in_attrs,
                                   std::vector<int> *out_attrs);
+
+/*
+ * This contains the states for running a loop and provides methods
+ * of running the subgraph computation for an iteration.
+ */
+class LoopState {
+  // These are output arrays from all iterations.
+  // They also contain the Op state for each CachedOp.
+  std::vector<std::vector<NDArray> > all_outputs;
+  std::vector<std::vector<NDArray> > all_inputs;
+  std::vector<std::vector<NDArray> > all_gradients;
+  std::vector<CachedOpPtr> iter_ops;
+  Symbol subgraph_sym;
+  nnvm::Graph subgraph;
+
+ public:
+  LoopState(const Symbol &g) {
+    this->subgraph_sym = g;
+    this->subgraph.outputs = g.outputs;
+  }
+
+  void Forward(std::vector<NDArray> cinputs,
+               const std::vector<OpReqType>& req,
+               std::vector<NDArray> coutputs,
+               bool is_recording);
+  void Backward(int iter_no,
+                std::vector<NDArray> ograds,
+                const std::vector<OpReqType> &req,
+                std::vector<NDArray> igrads);
+  void Cleanup() {
+    all_outputs.clear();
+    all_inputs.clear();
+    all_gradients.clear();
+    iter_ops.clear();
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet
