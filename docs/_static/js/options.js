@@ -17,6 +17,9 @@ $(document).ready(function () {
         var el = $(this);
         el.siblings().removeClass('active');
         el.addClass('active');
+        if ($(this).hasClass("versions")) {
+            $('.current-version').html( $(this).text() + '<span class="caret"></span></button>' );
+        }
         showContent();
     }
     $('.opt-group').on('click', '.opt', setContent);
