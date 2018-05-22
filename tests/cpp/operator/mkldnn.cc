@@ -106,7 +106,7 @@ static void InitArray(NDArray *arr, bool is_rand = false) {
 static void InitNegPosArray(NDArray *arr) {
     const TBlob &blob = arr->data();
     mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-    size_t size = blob.Size();
+    int size = blob.Size();
     size_t shift = size >> 1;
     for (int i = 0; i < size; i++)
         data[i] = i - shift;
@@ -675,12 +675,12 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-    TestOp(attrs, InitArray, VerifyCopyResult);
+  TestOp(attrs, InitArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
-    TestOp(attrs, InitNegPosArray, VerifyActResult);
+  TestOp(attrs, InitNegPosArray, VerifyActResult);
 }
 
 
