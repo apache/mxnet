@@ -108,7 +108,7 @@ def add_fit_args(parser):
                        help='show progress for every n batches')
     train.add_argument('--model-prefix', type=str,
                        help='model prefix')
-    train.add_argument('--save-period', type=int, default=0, help='params saving period')
+    train.add_argument('--save-period', type=int, default=1, help='params saving period')
     parser.add_argument('--monitor', dest='monitor', type=int, default=0,
                         help='log network parameters every N iters if larger than 0')
     train.add_argument('--load-epoch', type=int,
