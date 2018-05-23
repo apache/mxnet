@@ -40,8 +40,8 @@ def test_data_parallel():
     net.collect_params().initialize()
     criterion = gluon.loss.SoftmaxCELoss(axis=1)
 
-    def test_net_sync(net, criterion, sync, nDevices):
-        ctx_list = [mx.cpu(0) for i in range(nDevices)]
+    def test_net_sync(net, criterion, sync, num_devices):
+        ctx_list = [mx.cpu(0) for i in range(num_devices)]
         net = DataParallelModel(net, ctx_list, sync=sync)
         criterion = DataParallelCriterion(criterion, ctx_list, sync=sync)
         iters = 100
@@ -79,9 +79,9 @@ def test_parallel_barrier():
             assert_allclose(y.asnumpy(), x.asnumpy(), rtol=1e-2, atol=1e-4)
             return y
     
-    nDevices = 2
-    ctx_list = [mx.cpu(0) for i in range(nDevices)]
-    net = MyLayer(nDevices)
+    num_devices = 2
+    ctx_list = [mx.cpu(0) for i in range(num_devices)]
+    net = MyLayer(num_devices)
     net = DataParallelModel(net, ctx_list, sync=True)
     iters = 100
     # train mode

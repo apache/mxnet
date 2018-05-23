@@ -89,7 +89,7 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :nosignatures:
     
     DataParallelModel
-    DataParallelCriterion
+    DataParallelLoss
     Barrier
 
 ```
