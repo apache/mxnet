@@ -263,8 +263,10 @@ class DefaultImageAugmenter : public ImageAugmenter {
           || param_.max_aspect_ratio > 0.0f) {
             CHECK(param_.max_aspect_ratio < 1.0f);
             CHECK(param_.min_random_area <= param_.max_random_area);
-            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_scale, param_.max_random_area);
-            std::uniform_real_distribution<float> rand_uniform_ratio(1 - param_.max_aspect_ratio, 1 + param_.max_aspect_ratio);
+            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_scale,
+                                                                    param_.max_random_area);
+            std::uniform_real_distribution<float> rand_uniform_ratio(1 - param_.max_aspect_ratio,
+                                                                     1 + param_.max_aspect_ratio);
             std::uniform_real_distribution<float> rand_uniform(0, 1);
             float area = res.rows * res.cols;
             bool attemp = false;
@@ -281,11 +283,14 @@ class DefaultImageAugmenter : public ImageAugmenter {
               }
               if (y_area <= res.rows && x_area <= res.cols) {
                 // random crop
-                index_t rand_y_area = std::uniform_int_distribution<index_t>(0, res.rows - y_area)(*prnd);
-                index_t rand_x_area = std::uniform_int_distribution<index_t>(0, res.cols - x_area)(*prnd);
+                index_t rand_y_area =
+                    std::uniform_int_distribution<index_t>(0, res.rows - y_area)(*prnd);
+                index_t rand_x_area =
+                    std::uniform_int_distribution<index_t>(0, res.cols - x_area)(*prnd);
                 cv::Rect roi(rand_x_area, rand_y_area, x_area, y_area);
                 int interpolation_method = GetInterMethod(param_.inter_method, x_area, y_area,
-                                                          param_.data_shape[2], param_.data_shape[1], prnd);
+                                                          param_.data_shape[2],
+                                                          param_.data_shape[1], prnd);
                 cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1]),
                            0, 0, interpolation_method);
                 attemp = true;
