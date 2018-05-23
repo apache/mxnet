@@ -25,9 +25,9 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <cmath>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
-#include <cmath>
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 
 using namespace mxnet;
