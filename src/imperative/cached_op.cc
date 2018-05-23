@@ -307,10 +307,8 @@ bool CachedOp::SetForwardGraph(
   for (const auto i : idx.input_nodes()) {
     storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
   }
-  if (config_.static_alloc) {
-    for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
-    }
+  for (size_t i = 0; i < idx.outputs().size(); ++i) {
+    storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
   }
 
   auto mem_plan = PlanMemory(
@@ -768,6 +766,18 @@ OpStatePtr CachedOp::DynamicForward(
       recording ? "full_mem_plan" : "forward_mem_plan");
   AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
+
+  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    arrays[eid] = outputs[i];
+    if (!outputs[i]->is_none()) continue;
+    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                          shapes[eid], default_ctx, true, dtypes[eid]);
+  }
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 

@@ -790,7 +790,7 @@ inline void AllocateMemory(const nnvm::Graph& g,
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
-    if (!arrays[i]->is_none()) continue;
+    CHECK(arrays[i]->is_none());
     if (mem_plan[i].storage_id == exec::kDynamicStorageID) {
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
                            shapes[i], default_ctx, true, dtypes[i]);
