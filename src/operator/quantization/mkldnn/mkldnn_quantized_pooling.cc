@@ -20,7 +20,7 @@
 /*!
  * \file mkldnn_quantized_pooling.cc
  * \brief
- * \author Tao Lv
+ * \author Tao Lv, Xinyu Chen
 */
 
 #if MXNET_USE_MKLDNN == 1
