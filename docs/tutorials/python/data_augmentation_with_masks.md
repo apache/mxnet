@@ -97,15 +97,9 @@ class ImageWithMaskDataset(dataset.Dataset):
 Usually Datasets are used in conjunction with DataLoaders, but we'll sample a single base image and mask pair for testing purposes. Calling `dataset[0]` (which is equivalent to `dataset.__getitem__(0)`) returns the first base image and mask pair from the `_image_list`. At first download the sample images and then we'll load them without any augmentation.
 
 ```python
-!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg -P ./data/images
-```
-
-```python
-!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0_mask.png -P ./data/images
-```
-
-```python
-image_dir = "./data/images"
+image_dir = os.path.join("data", "images")
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg', dirname=image_dir)
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0_mask.png', dirname=image_dir)
 dataset = ImageWithMaskDataset(root=image_dir)
 sample = dataset.__getitem__(0)
 sample_base = sample[0].astype('float32')
@@ -133,7 +127,7 @@ plot_mx_arrays([sample_base, sample_mask])
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/with_mask/output_16_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/with_mask/output_16_0.png)<!--notebook-skip-line-->
 
 
 # Implementing `transform` for Augmentation
@@ -196,7 +190,7 @@ It's simple to use augmentation now that we have the `joint_transform` function 
 
 
 ```python
-image_dir = "./data/images"
+image_dir = os.path.join("data","images")
 ds = ImageWithMaskDataset(root=image_dir, transform=joint_transform)
 sample = ds.__getitem__(0)
 assert len(sample) == 2
@@ -206,7 +200,7 @@ plot_mx_arrays([sample[0]*255, sample[1]*255])
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/with_mask/output_22_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/with_mask/output_22_0.png)<!--notebook-skip-line-->
 
 
 # Summary
@@ -246,3 +240,5 @@ mkdir coco_data/masks
 mv -v stuff_val2017_pixelmaps/* coco_data/masks/
 rm -r stuff_val2017_pixelmaps
 ```
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

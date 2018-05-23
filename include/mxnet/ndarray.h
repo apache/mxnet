@@ -506,6 +506,9 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
+#if MXNET_USE_MKLDNN == 1
+    ret.InvalidateMKLDNNData();
+#endif
     return ret;
   }
 
@@ -675,10 +678,7 @@ class NDArray {
    */
   NDArray Reorder2Default() const;
 
-  void InvalidateMKLDNNData() {
-    // Removing mkl_mem_ means the NDArray will store data in the default format.
-    ptr_->mkl_mem_ = nullptr;
-  }
+  void InvalidateMKLDNNData();
 
   /*
    * This function is used inside operators to reshape an array.

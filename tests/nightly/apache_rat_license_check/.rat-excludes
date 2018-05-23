@@ -17,7 +17,6 @@ docker_multiarch/*
 .*\\.m
 .*\\.mk
 .*\\.R
-contrib/*
 Dockerfile*
 .*svg
 .*cfg
@@ -26,7 +25,9 @@ docs/*
 __init__.py
 build/*
 .*\\.t
-perl-package/*
+MANIFEST
+Changes
+META.yml
 .*csv
 .*names
 CODEOWNERS

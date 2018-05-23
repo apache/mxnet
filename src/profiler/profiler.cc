@@ -82,7 +82,7 @@ Profiler::Profiler()
   if (dmlc::GetEnv("MXNET_PROFILER_AUTOSTART", 0)) {
     this->state_ = ProfilerState::kRunning;
     this->enable_output_ = true;
-    // Since we want to avoid interfering with pure-VTune analylisys runs, for not set,
+    // Since we want to avoid interfering with pure-VTune analysis runs, for not set,
     // vtune will be recording based upon whether "Start" or "STart Paused" was selected
     vtune::vtune_resume();
   }
@@ -163,17 +163,17 @@ void Profiler::EmitPid(std::ostream *os, const std::string& name, size_t pid) {
         << "        }";
 }
 
-void Profiler::DumpProfile(bool peform_cleanup) {
+void Profiler::DumpProfile(bool perform_cleanup) {
   std::lock_guard<std::recursive_mutex> lock{this->m_};
   if (!IsEnableOutput()) {
     return;
   }
-  if (peform_cleanup) {
+  if (perform_cleanup) {
     SetContinuousProfileDump(false, 1.0f);
   }
   std::ofstream file;
   const bool first_pass = ++profile_dump_count_ == 1;
-  const bool last_pass = peform_cleanup || !continuous_dump_;
+  const bool last_pass = perform_cleanup || !continuous_dump_;
   if (!first_pass && continuous_dump_) {
     file.open(filename_, std::ios::app|std::ios::out);
   } else {

@@ -49,7 +49,7 @@ class Sequential(Block):
             self.register_child(block)
 
     def forward(self, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -57,13 +57,19 @@ class Sequential(Block):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -79,9 +85,10 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
-            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
-                          'using HybridSequential for the best performance.', stacklevel=2)
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+            warnings.warn(
+                "All children of this Sequential layer '%s' are HybridBlocks. Consider "
+                "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -106,7 +113,7 @@ class HybridSequential(HybridBlock):
             self.register_child(block)
 
     def hybrid_forward(self, F, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -114,13 +121,19 @@ class HybridSequential(HybridBlock):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -154,6 +167,8 @@ class Dense(HybridBlock):
         If true, all but the first axis of input data are collapsed together.
         If false, all but the last axis of input data are kept the same, and the transformation
         applies on the last axis.
+    dtype : str or np.dtype, default 'float32'
+        Data type of output embeddings.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -180,7 +195,7 @@ class Dense(HybridBlock):
           `(x1, x2, ..., xn, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
-                 weight_initializer=None, bias_initializer='zeros',
+                 dtype='float32', weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         self._flatten = flatten
@@ -188,11 +203,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer,
+                                          init=weight_initializer, dtype=dtype,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer,
+                                            init=bias_initializer, dtype=dtype,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -366,7 +381,8 @@ class Embedding(HybridBlock):
         Data type of output embeddings.
     weight_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
+    sparse_grad: bool
+        If True, gradient w.r.t. weight will be a 'row_sparse' NDArray.
 
     Inputs:
         - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.
@@ -375,13 +391,14 @@ class Embedding(HybridBlock):
         - **out**: N-D tensor with shape: `(x1, x2, ..., xN-1, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
-                 weight_initializer=None, **kwargs):
+                 weight_initializer=None, sparse_grad=False, **kwargs):
         super(Embedding, self).__init__(**kwargs)
+        grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
-                        'dtype': dtype}
+                        'dtype': dtype, 'sparse_grad': sparse_grad}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer,
-                                      allow_deferred_init=True)
+                                      init=weight_initializer, dtype=dtype,
+                                      allow_deferred_init=True, grad_stype=grad_stype)
 
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, name='fwd', **self._kwargs)

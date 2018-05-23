@@ -29,7 +29,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DotParam);
 
 NNVM_REGISTER_OP(dot)
-.add_alias("_sparse_dot")  // alias for op registration under mxnet.ndarray.sparse
+MXNET_ADD_SPARSE_OP_ALIAS(dot)
 .describe(R"doc(Dot product of two arrays.
 
 ``dot``'s behavior depends on the input array dimensions:
@@ -51,13 +51,20 @@ NNVM_REGISTER_OP(dot)
     dot(x,y)[0,0,1,1] = 0
     sum(x[0,0,:]*y[:,1,1]) = 0
 
-The storage type of ``dot`` output depends on storage types of inputs and transpose options:
+The storage type of ``dot`` output depends on storage types of inputs, transpose option and
+forward_stype option for output storage type. Implemented sparse operations include:
 
+- dot(default, default, transpose_a=True/False, transpose_b=True/False) = default
+- dot(csr, default, transpose_a=True) = default
+- dot(csr, default, transpose_a=True) = row_sparse
 - dot(csr, default) = default
-- dot(csr.T, default) = row_sparse
 - dot(csr, row_sparse) = default
-- dot(default, csr) = csr
-- otherwise, ``dot`` generates output with default storage
+- dot(default, csr) = csr (CPU only)
+- dot(default, csr, forward_stype='default') = default (GPU only)
+- dot(default, csr, transpose_b=True, forward_stype='default') = default (GPU only)
+
+If the combination of input storage types and forward_stype does not match any of the
+above patterns, ``dot`` will fallback and generate output with default storage.
 
 )doc" ADD_FILELINE)
 .set_num_inputs(2)

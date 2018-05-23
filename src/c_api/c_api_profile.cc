@@ -112,7 +112,11 @@ class ProfilingThreadData {
 #endif  // PROFILE_API_INCLUDE_AS_EVENT
 };
 
+#if DMLC_CXX11_THREAD_LOCAL
 static thread_local ProfilingThreadData thread_profiling_data;
+#else
+static MX_THREAD_LOCAL ProfilingThreadData thread_profiling_data;
+#endif
 
 extern void on_enter_api(const char *function) {
   if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kAPI)) {

@@ -13,7 +13,7 @@ With ONNX format support for MXNet, developers can build and train models with a
 ```
 
 ### Installation Instructions
-- To use this module developers need to **install ONNX**, which requires protobuf compiler to be installed separately. Please follow the [instructions to install ONNX and its dependencies](https://github.com/onnx/onnx#installation). Once installed, you can go through the tutorials on how to use this module.
+- To use this module developers need to **install ONNX**, which requires the protobuf compiler to be installed separately. Please follow the [instructions to install ONNX and its dependencies](https://github.com/onnx/onnx#installation). **MXNet currently supports ONNX v1.1.1**. Once installed, you can go through the tutorials on how to use this module.
 
 
 This document describes all the ONNX-MXNet APIs.
@@ -23,6 +23,7 @@ This document describes all the ONNX-MXNet APIs.
     :nosignatures:
 
     mxnet.contrib.onnx.import_model
+    mxnet.contrib.onnx.get_model_metadata
 ```
 
 ## ONNX Tutorials
@@ -43,7 +44,8 @@ This document describes all the ONNX-MXNet APIs.
 ```eval_rst
 
 .. automodule:: mxnet.contrib.onnx
-    :members: import_model 
+    :members: import_model
+    :members: get_model_metadata
 
 ```
 

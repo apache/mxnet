@@ -367,7 +367,11 @@ def add_buttons(app, docname, source):
         # source[i] = '\n'.join(lines)
 
 def setup(app):
-    app.connect("builder-inited", build_mxnet)
+
+    # If MXNET_DOCS_BUILD_MXNET is set something different than 1
+    # Skip the build step
+    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1':
+        app.connect("builder-inited", build_mxnet)
     app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy

@@ -18,13 +18,16 @@
 # coding: utf-8
 """Automatic naming support for symbolic API."""
 from __future__ import absolute_import
+import threading
+import warnings
+from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
 
-class NameManager(object):
+class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
     """NameManager to do automatic naming.
 
     Developers can also inherit from this class to change naming behavior.
     """
-    current = None
+    _current = threading.local()
 
     def __init__(self):
         self._counter = {}
@@ -62,14 +65,30 @@ class NameManager(object):
         return name
 
     def __enter__(self):
-        self._old_manager = NameManager.current
-        NameManager.current = self
+        if not hasattr(NameManager._current, "value"):
+            NameManager._current.value = NameManager()
+        self._old_manager = NameManager._current.value
+        NameManager._current.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
         assert self._old_manager
-        NameManager.current = self._old_manager
+        NameManager._current.value = self._old_manager
 
+    #pylint: disable=no-self-argument
+    @classproperty
+    def current(cls):
+        warnings.warn("NameManager.current has been deprecated. "
+                      "It is advised to use the `with` statement with NameManager.",
+                      DeprecationWarning)
+        if not hasattr(NameManager._current, "value"):
+            cls._current.value = NameManager()
+        return cls._current.value
+
+    @current.setter
+    def current(cls, val):
+        cls._current.value = val
+    #pylint: enable=no-self-argument
 
 class Prefix(NameManager):
     """A name manager that attaches a prefix to all names.
@@ -92,4 +111,4 @@ class Prefix(NameManager):
         return self._prefix + name
 
 # initialize the default name manager
-NameManager.current = NameManager()
+NameManager._current.value = NameManager()

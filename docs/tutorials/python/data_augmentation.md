@@ -11,6 +11,7 @@ import mxnet as mx # used version '1.0.0' at time of writing
 import numpy as np
 from matplotlib.pyplot import imshow
 import multiprocessing
+import os
 
 mx.random.seed(42) # set seed for repeatability
 ```
@@ -28,17 +29,14 @@ def plot_mx_array(array):
 ```
 
 ```python
-!mkdir -p data/images
-!wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg -P ./data/images/
-```
-
-```python
-example_image = mx.image.imread("./data/images/0.jpg").astype("float32")
+image_dir = os.path.join("data", "images")
+mx.test_utils.download('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/inputs/0.jpg', dirname=image_dir)
+example_image = mx.image.imread(os.path.join(image_dir,"0.jpg")).astype("float32")
 plot_mx_array(example_image)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_5_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_5_0.png)<!--notebook-skip-line-->
 
 
 ## Quick start using [`ImageIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imageiter#mxnet.image.ImageIter)
@@ -49,13 +47,21 @@ One of the most convenient ways to augment your image data is via arguments of [
 We show a simple example of this below, after creating an `images.lst` file used by the [`ImageIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imageiter#mxnet.image.ImageIter). Use [`tools/im2rec.py`](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) to create the `images.lst` if you don't already have this for your data.
 
 ```python
-!echo -e "0\t0.000000\timages/0.jpg" > ./data/images.lst
+path_to_image = os.path.join("images", "0.jpg")
+index = 0
+label = 0.
+list_file_content = "{0}\t{1:.5f}\t{2}".format(index, label, path_to_image)
+
+path_list_file = os.path.join(image_dir, "images.lst")
+with open(path_list_file, 'w') as f:
+    f.write(list_file_content)
+
 ```
 
 ```python
 training_iter = mx.image.ImageIter(batch_size = 1,
                                    data_shape = (3, 300, 300),
-                                   path_root= './data', path_imglist='./data/images.lst',
+                                   path_root= 'data', path_imglist=path_list_file,
                                    rand_crop=0.5, rand_mirror=True, inter_method=10,
                                    brightness=0.125, contrast=0.125, saturation=0.125,
                                    pca_noise=0.02
@@ -73,7 +79,7 @@ for batch in training_iter:
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_28_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_28_1.png)<!--notebook-skip-line-->
 
 [`mxnet.image.ImageDetIter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=imagedetiter#mxnet.image.ImageDetIter) works similarly (with [`mxnet.image.CreateDetAugmenter`](https://mxnet.incubator.apache.org/api/python/image/image.html?highlight=createdetaugmenter#mxnet.image.CreateDetAugmenter)), but [`mxnet.io.ImageRecordIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imagerecorditer#mxnet.io.ImageRecordIter) has a slightly different interface, so reference the documentation [here](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imagerecorditer#mxnet.io.ImageRecordIter) if you're using Record IO data format.
 
@@ -93,7 +99,7 @@ assert aug_image.shape == (100, 100, 3)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_16_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_16_0.png)<!--notebook-skip-line-->
 
 
 ### Augmenter Classes
@@ -109,7 +115,7 @@ assert aug_image.shape == (100, 100, 3)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_19_0.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_19_0.png)<!--notebook-skip-line-->
 
 
 ### Augmenter list
@@ -130,7 +136,7 @@ assert all([isinstance(a, mx.image.Augmenter) for a in aug_list])
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_22_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_22_1.png)<!--notebook-skip-line-->
 
 
 
@@ -147,9 +153,11 @@ assert all([isinstance(a, mx.image.Augmenter) for a in aug_list])
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_23_1.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use/output_23_1.png)<!--notebook-skip-line-->
 
 
 __*Watch Out!*__ Check some examples that are output after applying all the augmentations. You may find that the augmentation steps are too severe and may actually prevent the model from learning. Some of the augmentation parameters used in this tutorial are set high for demonstration purposes (e.g. `brightness=1`); you might want to reduce them if your training error stays too high during training. Some examples of excessive augmentation are shown below:
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/data_aug/outputs/use//severe_aug.png" alt="Drawing" style="width: 700px;"/>
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->

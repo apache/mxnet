@@ -384,6 +384,13 @@ MXNET_DLL int MXSetNumOMPThreads(int thread_num);
 MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 
 /*!
+ * \brief Get the number of GPUs.
+ * \param pointer to int that will hold the number of GPUs available.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetGPUCount(int* out);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
@@ -663,6 +670,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
                                  int ndim,
                                  dim_t *dims,
+                                 bool reverse,
                                  NDArrayHandle *out);
 /*!
  * \brief get the shape of the array
@@ -976,9 +984,14 @@ MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
  * \brief create cached operator
  */
 MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
-                                 int num_params,
+                                 int num_flags,
                                  const char** keys,
                                  const char** vals,
+                                 int num_inputs,
+                                 const char** input_names,
+                                 int num_params,
+                                 const char** param_names,
+                                 NDArrayHandle* params,
                                  CachedOpHandle *out);
 /*!
  * \brief free cached operator

@@ -15,12 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import mxnet as mx
 import numpy as np
 from timeit import default_timer as timer
 from dataset.testdb import TestDB
 from dataset.iterator import DetIter
+import logging
+import cv2
+from mxnet.io import DataBatch, DataDesc
+
 
 class Detector(object):
     """
@@ -51,15 +54,32 @@ class Detector(object):
         load_symbol, args, auxs = mx.model.load_checkpoint(model_prefix, epoch)
         if symbol is None:
             symbol = load_symbol
-        self.mod = mx.mod.Module(symbol, label_names=None, context=ctx)
+        self.mod = mx.mod.Module(symbol, label_names=None, context=self.ctx)
         if not isinstance(data_shape, tuple):
             data_shape = (data_shape, data_shape)
         self.data_shape = data_shape
         self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape[0], data_shape[1]))])
         self.mod.set_params(args, auxs)
         self.mean_pixels = mean_pixels
+        self.mean_pixels_nd = mx.nd.array(mean_pixels).reshape((3,1,1))
 
-    def detect(self, det_iter, show_timer=False):
+    def create_batch(self, frame):
+        """
+        :param frame: an (w,h,channels) numpy array (image)
+        :return: DataBatch of (1,channels,data_shape,data_shape)
+        """
+        frame_resize = mx.nd.array(cv2.resize(frame, (self.data_shape[0], self.data_shape[1])))
+        #frame_resize = mx.img.imresize(frame, self.data_shape[0], self.data_shape[1], cv2.INTER_LINEAR)
+        # Change dimensions from (w,h,channels) to (channels, w, h)
+        frame_t = mx.nd.transpose(frame_resize, axes=(2,0,1))
+        frame_norm = frame_t - self.mean_pixels_nd
+        # Add dimension for batch, results in (1,channels,w,h)
+        batch_frame = [mx.nd.expand_dims(frame_norm, axis=0)]
+        batch_shape = [DataDesc('data', batch_frame[0].shape)]
+        batch = DataBatch(data=batch_frame, provide_data=batch_shape)
+        return batch
+
+    def detect_iter(self, det_iter, show_timer=False):
         """
         detect all images in iterator
 
@@ -81,14 +101,21 @@ class Detector(object):
         detections = self.mod.predict(det_iter).asnumpy()
         time_elapsed = timer() - start
         if show_timer:
-            print("Detection time for {} images: {:.4f} sec".format(
+            logging.info("Detection time for {} images: {:.4f} sec".format(
                 num_images, time_elapsed))
-        result = []
-        for i in range(detections.shape[0]):
-            det = detections[i, :, :]
-            res = det[np.where(det[:, 0] >= 0)[0]]
-            result.append(res)
+        result = Detector.filter_positive_detections(detections)
         return result
+
+    def detect_batch(self, batch):
+        """
+        Return detections for batch
+        :param batch:
+        :return:
+        """
+        self.mod.forward(batch, is_train=False)
+        detections = self.mod.get_outputs()[0]
+        positive_detections = Detector.filter_positive_detections(detections)
+        return positive_detections
 
     def im_detect(self, im_list, root_dir=None, extension=None, show_timer=False):
         """
@@ -112,7 +139,7 @@ class Detector(object):
         test_db = TestDB(im_list, root_dir=root_dir, extension=extension)
         test_iter = DetIter(test_db, 1, self.data_shape, self.mean_pixels,
                             is_train=False)
-        return self.detect(test_iter, show_timer)
+        return self.detect_iter(test_iter, show_timer)
 
     def visualize_detection(self, img, dets, classes=[], thresh=0.6):
         """
@@ -136,30 +163,51 @@ class Detector(object):
         height = img.shape[0]
         width = img.shape[1]
         colors = dict()
-        for i in range(dets.shape[0]):
-            cls_id = int(dets[i, 0])
-            if cls_id >= 0:
-                score = dets[i, 1]
-                if score > thresh:
-                    if cls_id not in colors:
-                        colors[cls_id] = (random.random(), random.random(), random.random())
-                    xmin = int(dets[i, 2] * width)
-                    ymin = int(dets[i, 3] * height)
-                    xmax = int(dets[i, 4] * width)
-                    ymax = int(dets[i, 5] * height)
-                    rect = plt.Rectangle((xmin, ymin), xmax - xmin,
-                                         ymax - ymin, fill=False,
-                                         edgecolor=colors[cls_id],
-                                         linewidth=3.5)
-                    plt.gca().add_patch(rect)
-                    class_name = str(cls_id)
-                    if classes and len(classes) > cls_id:
-                        class_name = classes[cls_id]
-                    plt.gca().text(xmin, ymin - 2,
-                                    '{:s} {:.3f}'.format(class_name, score),
-                                    bbox=dict(facecolor=colors[cls_id], alpha=0.5),
+        for det in dets:
+            (klass, score, x0, y0, x1, y1) = det
+            if score < thresh:
+                continue
+            cls_id = int(klass)
+            if cls_id not in colors:
+                colors[cls_id] = (random.random(), random.random(), random.random())
+            xmin = int(x0 * width)
+            ymin = int(y0 * height)
+            xmax = int(x1 * width)
+            ymax = int(y1 * height)
+            rect = plt.Rectangle((xmin, ymin), xmax - xmin,
+                                 ymax - ymin, fill=False,
+                                 edgecolor=colors[cls_id],
+                                 linewidth=3.5)
+            plt.gca().add_patch(rect)
+            class_name = str(cls_id)
+            if classes and len(classes) > cls_id:
+                class_name = classes[cls_id]
+            plt.gca().text(xmin, ymin - 2,
+                            '{:s} {:.3f}'.format(class_name, score),
+                            bbox=dict(facecolor=colors[cls_id], alpha=0.5),
                                     fontsize=12, color='white')
         plt.show()
+
+    @staticmethod
+    def filter_positive_detections(detections):
+        """
+        First column (class id) is -1 for negative detections
+        :param detections:
+        :return:
+        """
+        class_idx = 0
+        assert(isinstance(detections, mx.nd.NDArray) or isinstance(detections, np.ndarray))
+        detections_per_image = []
+        # for each image
+        for i in range(detections.shape[0]):
+            result = []
+            det = detections[i, :, :]
+            for obj in det:
+                if obj[class_idx] >= 0:
+                    result.append(obj)
+            detections_per_image.append(result)
+        logging.info("%d positive detections", len(result))
+        return detections_per_image
 
     def detect_and_visualize(self, im_list, root_dir=None, extension=None,
                              classes=[], thresh=0.6, show_timer=False):
@@ -180,12 +228,11 @@ class Detector(object):
         ----------
 
         """
-        import cv2
         dets = self.im_detect(im_list, root_dir, extension, show_timer=show_timer)
         if not isinstance(im_list, list):
             im_list = [im_list]
         assert len(dets) == len(im_list)
         for k, det in enumerate(dets):
             img = cv2.imread(im_list[k])
-            img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             self.visualize_detection(img, det, classes, thresh)

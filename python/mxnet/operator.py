@@ -552,9 +552,10 @@ class CustomOpProp(object):
             "Default infer_storage_type implementation doesnt allow non default stypes: " \
             "found non default stype '%s' for in_stype[%d]. Please implement " \
             "infer_storage_type and infer_storage_type_backward interface " \
-            "in your custom operator if you have non-default input stypes" % (stype, i)
-        return in_stype, [in_stype[0]]*len(self.list_outputs()), \
-            [in_stype[0]]*len(self.list_auxiliary_states())
+            "in your custom operator if you have non-default input/output stypes" % (stype, i)
+        return in_stype, \
+               [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]*len(self.list_outputs()), \
+               [_STORAGE_TYPE_ID_TO_STR[_STORAGE_TYPE_DEFAULT]]*len(self.list_auxiliary_states())
 
     def infer_storage_type_backward(self, ograd_stype, in_stype, out_stype, igrad_stype, aux_stype):
         """infer_storage_type_backward interface. Used to infer storage

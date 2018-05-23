@@ -1,10 +1,14 @@
 # MXNet - Python API
 
-MXNet provides a rich Python API to serve a broad community of Python developers.
-In this section, we provide an in-depth discussion of the functionality provided by
-various MXNet Python packages. We have included code samples for most of the APIs
-for improved clarity. These code samples will run as-is as long as MXNet is first
-imported by running:
+MXNet provides a comprehensive and flexible Python API to serve a broad community of developers with different levels of experience and wide ranging requirements. In this section, we provide an in-depth discussion of the functionality provided by various MXNet Python packages.
+
+MXNet's Python API has two primary high-level packages*: the Gluon API and Module API. We recommend that new users start with the Gluon API as it's more flexible and easier to debug. Underlying these high-level packages are the core packages of NDArray and Symbol.
+
+NDArray works with arrays in an imperative fashion, i.e. you define how arrays will be transformed to get to an end result. Symbol works with arrays in a declarative fashion, i.e. you define the end result that is required (via a symbolic graph) and the MXNet engine will use various optimizations to determine the steps required to obtain this. With NDArray you have a great deal of flexibility when composing operations (as you can use Python control flow), and you can easily step through your code and inspect the values of arrays, which helps with debugging. Unfortunately, this comes at a performance cost when compared to Symbol, which can perform optimizations on the symbolic graph.
+
+Module API is backed by Symbol, so, although it's very performant, it's also a little more restrictive. With the Gluon API, you can get the best of both worlds. You can develop and test your model imperatively using NDArray, a then switch to Symbol for faster model training and inference (if Symbol equivalents exist for your operations).
+
+Code examples are placed throughout the API documentation and these can be run after importing MXNet as follows:
 
 ```python
 >>> import mxnet as mx
@@ -12,12 +16,14 @@ imported by running:
 
 ```eval_rst
 
-.. note:: A convenient way to execute examples is the ``%doctest_mode`` mode of
+.. note:: A convenient way to execute code examples is using the ``%doctest_mode`` mode of
     Jupyter notebook, which allows for pasting multi-line examples containing
     ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
     for more details.
 
 ```
+
+\* Some old references to Model API may exist, but this API has been deprecated.
 
 ## NDArray API
 
@@ -80,15 +86,6 @@ imported by running:
    gluon/contrib.md
 ```
 
-## KVStore API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   kvstore/kvstore.md
-```
-
 ## IO API
 
 ```eval_rst
@@ -132,6 +129,15 @@ imported by running:
    :maxdepth: 1
 
    metric/metric.md
+```
+
+## Profiler API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   profiler/profiler.md
 ```
 
 ## Run-Time Compilation API
