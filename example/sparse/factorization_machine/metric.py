@@ -105,7 +105,6 @@ class AUCMetric(mx.metric.EvalMetric):
             tmp.append((label_weight[i], preds[i]))
         tmp = sorted(tmp, key=itemgetter(1), reverse=True)
         label_sum = label_weight.sum()
-        # assert label_one_num !=0, "the num of label one in the minibatch shouldn't be zero"
         if label_sum == 0 or label_sum == label_weight.size:
             raise Exception, "AUC with one class is undefined"
             
