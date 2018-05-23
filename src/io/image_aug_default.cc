@@ -242,75 +242,75 @@ class DefaultImageAugmenter : public ImageAugmenter {
       // random resize crop
       if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
           || param_.max_aspect_ratio > 0.0f) {
-         CHECK(param_.max_aspect_ratio < 1.0f);
-         CHECK(param_.min_random_area <= param_.max_random_area);
-         std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_scale,
-                                                                 param_.max_random_area);
-         std::uniform_real_distribution<float> rand_uniform_ratio(1 - param_.max_aspect_ratio,
-                                                                  1 + param_.max_aspect_ratio);
-         std::uniform_real_distribution<float> rand_uniform(0, 1);
-         float area = res.rows * res.cols;
-         bool attemp = false;
-         for (int i = 0; i < 10; ++i) {
-           float rand_area = rand_uniform_area(*prnd);
-           float ratio = rand_uniform_ratio(*prnd);
-           float target_area = area * rand_area;
-           int y_area = std::round(std::sqrt(target_area / ratio));
-           int x_area = std::round(std::sqrt(target_area * ratio));
-           if (rand_uniform(*prnd) > 0.5) {
-             float temp_y_area = y_area;
-             y_area = x_area;
-             x_area = temp_y_area;
-           }
-           if (y_area <= res.rows && x_area <= res.cols) {
-             // random crop
-             index_t rand_y_area = std::uniform_int_distribution<index_t>(0,
-                                                                          res.rows - y_area)(*prnd);
-             index_t rand_x_area = std::uniform_int_distribution<index_t>(0,
-                                                                          res.cols - x_area)(*prnd);
-             cv::Rect roi(rand_x_area, rand_y_area, x_area, y_area);
-             int interpolation_method = GetInterMethod(param_.inter_method, x_area, y_area,
+        CHECK(param_.max_aspect_ratio < 1.0f);
+        CHECK(param_.min_random_area <= param_.max_random_area);
+        std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_scale,
+                                                                param_.max_random_area);
+        std::uniform_real_distribution<float> rand_uniform_ratio(1 - param_.max_aspect_ratio,
+                                                                 1 + param_.max_aspect_ratio);
+        std::uniform_real_distribution<float> rand_uniform(0, 1);
+        float area = res.rows * res.cols;
+        bool attemp = false;
+        for (int i = 0; i < 10; ++i) {
+          float rand_area = rand_uniform_area(*prnd);
+          float ratio = rand_uniform_ratio(*prnd);
+          float target_area = area * rand_area;
+          int y_area = std::round(std::sqrt(target_area / ratio));
+          int x_area = std::round(std::sqrt(target_area * ratio));
+          if (rand_uniform(*prnd) > 0.5) {
+            float temp_y_area = y_area;
+            y_area = x_area;
+            x_area = temp_y_area;
+          }
+          if (y_area <= res.rows && x_area <= res.cols) {
+            // random crop
+            index_t rand_y_area = std::uniform_int_distribution<index_t>(0,
+                                                                         res.rows - y_area)(*prnd);
+            index_t rand_x_area = std::uniform_int_distribution<index_t>(0,
+                                                                         res.cols - x_area)(*prnd);
+            cv::Rect roi(rand_x_area, rand_y_area, x_area, y_area);
+            int interpolation_method = GetInterMethod(param_.inter_method, x_area, y_area,
+                                                      param_.data_shape[2], param_.data_shape[1],
+                                                      prnd);
+            cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
+                      , 0, 0, interpolation_method);
+            attemp = true;
+            break;
+          }
+        }
+        if (!attemp) {
+           // center crop
+           if (res.rows < res.cols) {
+             index_t scale_x = static_cast<index_t>(static_cast<float>(res.cols) /
+                                                    static_cast<float>(res.rows) *
+                                                    static_cast<float>(param_.data_shape[2]));
+             int interpolation_method = GetInterMethod(param_.inter_method,
+                                                       scale_x, param_.data_shape[1],
                                                        param_.data_shape[2], param_.data_shape[1],
                                                        prnd);
-             cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
-                       , 0, 0, interpolation_method);
-             attemp = true;
-             break;
+             cv::resize(res, res, cv::Size(scale_x, param_.data_shape[1]),
+                        0, 0, interpolation_method);
+           } else {
+             index_t scale_y = static_cast<index_t>(static_cast<float>(res.rows) /
+                                                    static_cast<float>(res.cols) *
+                                                    static_cast<float>(param_.data_shape[1]));
+             int interpolation_method = GetInterMethod(param_.inter_method,
+                                                       param_.data_shape[2], scale_y,
+                                                       param_.data_shape[2], param_.data_shape[1],
+                                                       prnd);
+             cv::resize(res, res, cv::Size(param_.data_shape[2], scale_y),
+                        0, 0, interpolation_method);
            }
-         }
-         if (!attemp) {
-            // center crop
-            if (res.rows < res.cols) {
-              index_t scale_x = static_cast<index_t>(static_cast<float>(res.cols) /
-                                                     static_cast<float>(res.rows) *
-                                                     static_cast<float>(param_.data_shape[2]));
-              int interpolation_method = GetInterMethod(param_.inter_method,
-                                                        scale_x, param_.data_shape[1],
-                                                        param_.data_shape[2], param_.data_shape[1],
-                                                        prnd);
-              cv::resize(res, res, cv::Size(scale_x, param_.data_shape[1]),
-                         0, 0, interpolation_method);
-            } else {
-              index_t scale_y = static_cast<index_t>(static_cast<float>(res.rows) /
-                                                     static_cast<float>(res.cols) *
-                                                     static_cast<float>(param_.data_shape[1]));
-              int interpolation_method = GetInterMethod(param_.inter_method,
-                                                        param_.data_shape[2], scale_y,
-                                                        param_.data_shape[2], param_.data_shape[1],
-                                                        prnd);
-              cv::resize(res, res, cv::Size(param_.data_shape[2], scale_y),
-                         0, 0, interpolation_method);
-            }
-            CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
-                  && static_cast<index_t>(res.cols) >= param_.data_shape[2])
-                  << "input image size smaller than input shape";
-            index_t center_y = res.rows - param_.data_shape[1];
-            index_t center_x = res.cols - param_.data_shape[2];
-            center_y /= 2;
-            center_x /= 2;
-            cv::Rect roi(center_x, center_y, param_.data_shape[2], param_.data_shape[1]);
-            res = res(roi);
-         }
+           CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
+                 && static_cast<index_t>(res.cols) >= param_.data_shape[2])
+                 << "input image size smaller than input shape";
+           index_t center_y = res.rows - param_.data_shape[1];
+           index_t center_x = res.cols - param_.data_shape[2];
+           center_y /= 2;
+           center_x /= 2;
+           cv::Rect roi(center_x, center_y, param_.data_shape[2], param_.data_shape[1]);
+           res = res(roi);
+        }
       }
     }
     // normal augmentation by affine transformation.
