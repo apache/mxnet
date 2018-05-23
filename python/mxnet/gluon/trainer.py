@@ -317,6 +317,8 @@ class Trainer(object):
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer
+            param_dict = {i: param for i, param in enumerate(self._params)}
+            self._optimizer.param_dict = param_dict
         else:
             with open(fname, 'rb') as f:
                 states = f.read()

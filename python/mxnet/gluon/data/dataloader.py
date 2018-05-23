@@ -20,27 +20,49 @@
 """Dataset generator."""
 __all__ = ['DataLoader']
 
-import multiprocessing
-import multiprocessing.queues
-from multiprocessing.reduction import ForkingPickler
 import pickle
 import io
 import sys
+import multiprocessing
+import multiprocessing.queues
+from multiprocessing.reduction import ForkingPickler
 import numpy as np
+
+try:
+    import multiprocessing.resource_sharer
+except ImportError:
+    pass
 
 from . import sampler as _sampler
 from ... import nd, context
 
+if sys.platform == 'darwin' or sys.platform == 'win32':
+    def rebuild_ndarray(*args):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        return nd.NDArray(nd.ndarray._new_from_shared_mem(*args))
 
-def rebuild_ndarray(*args):
-    """Rebuild ndarray from pickled shared memory"""
-    # pylint: disable=no-value-for-parameter
-    return nd.NDArray(nd.ndarray._new_from_shared_mem(*args))
+    def reduce_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        return rebuild_ndarray, data._to_shared_mem()
+else:
+    def rebuild_ndarray(pid, fd, shape, dtype):
+        """Rebuild ndarray from pickled shared memory"""
+        # pylint: disable=no-value-for-parameter
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.rebuild_handle(fd)
+        else:
+            fd = fd.detach()
+        return nd.NDArray(nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
 
-
-def reduce_ndarray(data):
-    """Reduce ndarray to shared memory handle"""
-    return rebuild_ndarray, data._to_shared_mem()
+    def reduce_ndarray(data):
+        """Reduce ndarray to shared memory handle"""
+        pid, fd, shape, dtype = data._to_shared_mem()
+        if sys.version_info[0] == 2:
+            fd = multiprocessing.reduction.reduce_handle(fd)
+        else:
+            fd = multiprocessing.reduction.DupFd(fd)
+        return rebuild_ndarray, (pid, fd, shape, dtype)
 
 ForkingPickler.register(nd.NDArray, reduce_ndarray)
 
