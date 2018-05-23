@@ -494,6 +494,9 @@ LINALG_XPU_BATCH_TRMM(gpu, double)
 // for further information about the function and its parameters.
 // Note that this is A = potrf(A), so A is input and output parameter.
 
+static const char *potrf_errstr
+  = "This may happen when the input matrix is either not symmetric or not positive definite.";
+
 template<typename xpu, typename DType>
 inline void check_potrf(const Tensor<xpu, 2, DType>& A, bool lower) {
   // Any checking that helps user debug potential problems.
@@ -507,7 +510,7 @@ void linalg_potrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, bool lower, Stream
   check_potrf(A, lower); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, (lower ? 'L' : 'U'), A.size(0),  \
           A.dptr_ , A.stride_)); \
-  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu. " << potrf_errstr; \
 }
 LINALG_CPU_POTRF(spotrf, float)
 LINALG_CPU_POTRF(dpotrf, double)
@@ -589,6 +592,10 @@ LINALG_GPU_BATCH_POTRF(DnDpotrf, double)
 // for further information about the function and its parameters.
 // Note that this is A = potri(A), so A is input and output parameter.
 
+static const char *potri_errstr
+  = "This may happen when the input matrix is not a Cholesky factorization obtained"
+    " by a prior call of the potrf-operator.";
+
 template<typename xpu, typename DType>
 inline void check_potri(const Tensor<xpu, 2, DType>& A, bool lower) {
   // Any checking that helps user debug potential problems.
@@ -601,7 +608,7 @@ void linalg_potri<cpu, DType>(const Tensor<cpu, 2, DType>& A, bool lower, Stream
   check_potri(A, lower); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, (lower ? 'L' : 'U'), A.size(0),  \
           A.dptr_ , A.stride_)); \
-  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu. " << potri_errstr; \
 }
 LINALG_CPU_POTRI(spotri, float)
 LINALG_CPU_POTRI(dpotri, double)
