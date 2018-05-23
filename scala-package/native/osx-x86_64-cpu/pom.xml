@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-scala-native-parent</artifactId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.2.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -18,7 +18,7 @@
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-      <version>1.2.1-SNAPSHOT</version>
+      <version>1.2.0-SNAPSHOT</version>
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
@@ -71,8 +71,8 @@
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ../../../3rdparty/nnvm/lib/libnnvm.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ${project.basedir}/../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ${project.basedir}/../../../3rdparty/nnvm/lib/libnnvm.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>
