@@ -449,9 +449,9 @@ class Parameter(object):
         NDArray on row_id's context
         """
         if self._stype != 'row_sparse':
-            raise ValueError("Cannot return a copy of Parameter %s via row_sparse_data() " \
-                             "because its storage type is %s. Please use data() instead." \
-                             %(self.name, self._stype))
+            raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
+                               "because its storage type is %s. Please use data() instead." \
+                               %(self.name, self._stype))
         return self._get_row_sparse(self._data, row_id.context, row_id)
 
     def list_row_sparse_data(self, row_id):
@@ -469,9 +469,9 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'row_sparse':
-            raise ValueError("Cannot return copies of Parameter '%s' on all contexts via " \
-                             "list_row_sparse_data() because its storage type is %s. Please " \
-                             "use data() instead." % (self.name, self._stype))
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+                               "list_row_sparse_data() because its storage type is %s. Please " \
+                               "use data() instead." % (self.name, self._stype))
         return self._get_row_sparse(self._data, list, row_id)
 
     def data(self, ctx=None):
@@ -489,9 +489,9 @@ class Parameter(object):
         NDArray on ctx
         """
         if self._stype != 'default':
-            raise ValueError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
-                             "because its storage type is %s. Please use row_sparse_data() " \
-                             "instead." % (self.name, str(ctx), self._stype))
+            raise RuntimeError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
+                               "because its storage type is %s. Please use row_sparse_data() " \
+                               "instead." % (self.name, str(ctx), self._stype))
         return self._check_and_get(self._data, ctx)
 
     def list_data(self):
@@ -504,9 +504,9 @@ class Parameter(object):
         list of NDArrays
         """
         if self._stype != 'default':
-            raise ValueError("Cannot return copies of Parameter '%s' on all contexts via " \
-                             "list_data() because its storage type is %s. Please use " \
-                             "row_sparse_data() instead." % (self.name, self._stype))
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+                               "list_data() because its storage type is %s. Please use " \
+                               "row_sparse_data() instead." % (self.name, self._stype))
         return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
