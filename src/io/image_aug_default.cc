@@ -70,6 +70,14 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   float min_img_size;
   /*! \brief max image size */
   float max_img_size;
+  /*! \brief max random brightness */
+  float brightness;
+  /*! \brief max random contrast */
+  float contrast;
+  /*! \brief max random saturation */
+  float saturation;
+  /*! \brief pca noise level */
+  float pca_noise;
   /*! \brief max random in H channel */
   int random_h;
   /*! \brief max random in S channel */
@@ -134,6 +142,17 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(min_img_size).set_default(0.0f)
         .describe("Set the minimal width and height after all resize and"
                   " rotate argumentation  are applied");
+    DMLC_DECLARE_FIELD(brightness).set_default(0.0f)
+        .describe("Add a random value in ``[-brightness, brightness]`` to "
+                  "the brightness of image.");
+    DMLC_DECLARE_FIELD(contrast).set_default(0.0f)
+        .describe("Add a random value in ``[-contrast, contrast]`` to "
+                  "the contrast of image.");
+    DMLC_DECLARE_FIELD(saturation).set_default(0.0f)
+        .describe("Add a random value in ``[-saturation, saturation]`` to "
+                  "the saturation of image.");
+        DMLC_DECLARE_FIELD(pca_noise).set_default(0.0f)
+                .describe("Add PCA based noise to the image.");
     DMLC_DECLARE_FIELD(random_h).set_default(0)
         .describe("Add a random value in ``[-random_h, random_h]`` to "
                   "the H channel in HSL color space.");
@@ -414,13 +433,49 @@ class DefaultImageAugmenter : public ImageAugmenter {
       res = res(roi);
     }
 
+
+    // color jitter
+    if (param_.brightness > 0.0f || param_.contrast > 0.0f || param_.saturation > 0.0f) {
+      std::uniform_real_distribution<float> rand_uniform(0, 1);
+      float alpha_b = 1.0 + std::uniform_real_distribution<float>(-param_.brightness,
+                                                                  param_.brightness)(*prnd);
+      float alpha_c = 1.0 + std::uniform_real_distribution<float>(-param_.contrast,
+                                                                  param_.contrast)(*prnd);
+      float alpha_s = 1.0 + std::uniform_real_distribution<float>(-param_.saturation,
+                                                                  param_.saturation)(*prnd);
+      int rand_order[3] = {0, 1, 2};
+      std::random_shuffle(std::begin(rand_order), std::end(rand_order));
+      for (int i = 0; i < 3; ++i) {
+        if (rand_order[i] == 0) {
+          // brightness
+          res.convertTo(res, -1, alpha_b, 0);
+        }
+        if (rand_order[i] == 1) {
+          // contrast
+          cvtColor(res, temp_, CV_RGB2GRAY);
+          float gray_mean = cv::mean(temp_)[0];
+          res.convertTo(res, -1, alpha_c, (1 - alpha_c) * gray_mean);
+        }
+        if (rand_order[i] == 2) {
+          // saturation
+          cvtColor(res, temp_, CV_RGB2GRAY);
+          cvtColor(temp_, temp_, CV_GRAY2BGR);
+          cv::addWeighted(res, alpha_s, temp_, 1 - alpha_s, 0.0, res);
+        }
+      }
+    }
+
     // color space augmentation
     if (param_.random_h != 0 || param_.random_s != 0 || param_.random_l != 0) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       cvtColor(res, res, CV_BGR2HLS);
-      int h = rand_uniform(*prnd) * param_.random_h * 2 - param_.random_h;
-      int s = rand_uniform(*prnd) * param_.random_s * 2 - param_.random_s;
-      int l = rand_uniform(*prnd) * param_.random_l * 2 - param_.random_l;
+      // use an approximation of gaussian distribution to reduce extreme value
+      float rh = rand_uniform(*prnd); rh += 4 * rand_uniform(*prnd); rh = rh / 5;
+      float rs = rand_uniform(*prnd); rs += 4 * rand_uniform(*prnd); rs = rs / 5;
+      float rl = rand_uniform(*prnd); rl += 4 * rand_uniform(*prnd); rl = rl / 5;
+      int h = rh * param_.random_h * 2 - param_.random_h;
+      int s = rs * param_.random_s * 2 - param_.random_s;
+      int l = rl * param_.random_l * 2 - param_.random_l;
       int temp[3] = {h, l, s};
       int limit[3] = {180, 255, 255};
       for (int i = 0; i < res.rows; ++i) {
@@ -435,14 +490,45 @@ class DefaultImageAugmenter : public ImageAugmenter {
       }
       cvtColor(res, res, CV_HLS2BGR);
     }
+
+    // pca noise
+    if (param_.pca_noise > 0.0f) {
+      std::normal_distribution<float> rand_normal(0, param_.pca_noise);
+      float pca_alpha_r = rand_normal(*prnd);
+      float pca_alpha_g = rand_normal(*prnd);
+      float pca_alpha_b = rand_normal(*prnd);
+      float pca_r = eigvec[0][0] * pca_alpha_r + eigvec[0][1] * pca_alpha_g +
+           eigvec[0][2] * pca_alpha_b;
+      float pca_g = eigvec[1][0] * pca_alpha_r + eigvec[1][1] * pca_alpha_g +
+           eigvec[1][2] * pca_alpha_b;
+      float pca_b = eigvec[2][0] * pca_alpha_r + eigvec[2][1] * pca_alpha_g +
+           eigvec[2][2] * pca_alpha_b;
+      float pca[3] = { pca_b, pca_g, pca_r };
+      for (int i = 0; i < res.rows; ++i) {
+        for (int j = 0; j < res.cols; ++j) {
+          for (int k = 0; k < 3; ++k) {
+            int vp = res.at<cv::Vec3b>(i, j)[k];
+            vp += pca[k];
+            vp = std::max(0, std::min(255, vp));
+            res.at<cv::Vec3b>(i, j)[k] = vp;
+          }
+        }
+      }
+    }
     return res;
   }
+
 
  private:
   // temporal space
   cv::Mat temp_;
   // rotation param
   cv::Mat rotateM_;
+  // eigval and eigvec for adding pca noise
+  // store eigval * eigvec as eigvec
+  float eigvec[3][3] = { { 55.46 * -0.5675, 4.794 * 0.7192,  1.148 * 0.4009 },
+                         { 55.46 * -0.5808, 4.794 * -0.0045, 1.148 * -0.8140 },
+                         { 55.46 * -0.5836, 4.794 * -0.6948, 1.148 * 0.4203 } };
   // parameters
   DefaultImageAugmentParam param_;
   /*! \brief list of possible rotate angle */

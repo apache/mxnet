@@ -53,6 +53,10 @@ def get_iterator(kv):
         max_aspect_ratio = 0.25,
         min_random_area = 0.08,
         max_random_area = 1,
+        brightness  = 0.4,
+        contrast    = 0.4,
+        saturation  = 0.4,
+        pca_noise   = 0.1,
         rand_mirror = True,
         num_parts   = kv.num_workers,
         part_index  = kv.rank)
