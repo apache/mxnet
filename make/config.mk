@@ -37,8 +37,8 @@
 # choice of compiler
 #--------------------
 
-export CC = gcc
-export CXX = g++
+#export CC = gcc
+#export CXX = g++
 export NVCC = nvcc
 
 # whether compile with options for MXNet developer

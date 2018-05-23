@@ -223,8 +223,14 @@ build_centos7_gpu() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu() {
+    build_ubuntu_cpu_openblas
+}
+
 build_ubuntu_cpu_openblas() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \

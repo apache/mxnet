@@ -130,6 +130,7 @@ def container_run(platform: str,
     local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
+    os.makedirs(local_ccache_dir, exist_ok=True)
     runlist = [docker_binary, 'run', '--rm', '-t',
         '--shm-size={}'.format(shared_memory_size),
         '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
