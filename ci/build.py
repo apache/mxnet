@@ -33,6 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -120,7 +121,9 @@ def default_ccache_dir() -> str:
         ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
         os.makedirs(ccache_dir, exist_ok=True)
         return ccache_dir
-    return os.path.join(buildir(), "ccache")
+    #return os.path.join(buildir(), "ccache")
+    # Share ccache across containers (should we have a separate dir per platform?)
+    return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 def container_run(platform: str,
                   docker_binary: str,

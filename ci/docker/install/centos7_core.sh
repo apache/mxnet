@@ -37,3 +37,4 @@ yum -y install cmake
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+yum -y install ccache

@@ -171,6 +171,8 @@ build_android_arm64() {
 build_centos7_cpu() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -183,6 +185,8 @@ build_centos7_cpu() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -195,6 +199,8 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -225,54 +231,56 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
+    export CC="ccache clang-3.9"
+    export CXX="ccache clang++-3.9"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50() {
     set -ex
+    export CC="ccache clang-5.0"
+    export CXX="ccache clang++-5.0"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
+    export CC="ccache clang-3.9"
+    export CXX="ccache clang++-3.9"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
     set -ex
+    export CC="ccache clang-5.0"
+    export CXX="ccache clang++-5.0"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -283,6 +291,8 @@ build_ubuntu_cpu_mkldnn() {
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -296,6 +306,8 @@ build_ubuntu_gpu_mkldnn() {
 
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_BLAS=openblas             \
@@ -324,6 +336,8 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
@@ -342,6 +356,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
