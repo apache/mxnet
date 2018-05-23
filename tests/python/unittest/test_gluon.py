@@ -79,14 +79,14 @@ def test_parameter_invalid_access():
     # cannot call data on row_sparse parameters
     p0 = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    assertRaises(ValueError, p0.data)
-    assertRaises(ValueError, p0.list_data)
+    assertRaises(RuntimeError, p0.data)
+    assertRaises(RuntimeError, p0.list_data)
     row_id = mx.nd.arange(0, 10)
     # cannot call row_sparse_data on dense parameters
     p1 = gluon.Parameter('weight', shape=(10, 10))
     p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    assertRaises(ValueError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
-    assertRaises(ValueError, p1.list_row_sparse_data, row_id)
+    assertRaises(RuntimeError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
+    assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
 def test_paramdict():
@@ -123,7 +123,6 @@ def test_paramdict():
     params2 = gluon.ParameterDict('net_')
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
-    assertRaises(RuntimeError, params2.load, 'test_paramdict.params', mx.cpu())
     params2.load('test_paramdict.params', mx.cpu())
 
     # compare the values before and after save/load
@@ -348,7 +347,7 @@ def test_sparse_symbol_block():
     net = gluon.SymbolBlock(out, data)
 
 @with_seed()
-@raises(ValueError)
+@raises(RuntimeError)
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
