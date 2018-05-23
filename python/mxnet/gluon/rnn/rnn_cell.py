@@ -480,8 +480,8 @@ class LSTMCell(HybridRecurrentCell):
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
-        self.activation = activation
-        self.recurrent_activation = recurrent_activation
+        self._activation = activation
+        self._recurrent_activation = recurrent_activation
 
 
     def state_info(self, batch_size=0):
@@ -509,15 +509,15 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type=self.recurrent_activation, name=prefix+'i')
+        in_gate = F.Activation(slice_gates[0], act_type=self._recurrent_activation, name=prefix+'i')
         forget_gate = \
-            F.Activation(slice_gates[1], act_type=self.recurrent_activation, name=prefix+'f')
+            F.Activation(slice_gates[1], act_type=self._recurrent_activation, name=prefix+'f')
         in_transform = F.Activation(
-            slice_gates[2], act_type=self.activation, name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type=self.recurrent_activation, name=prefix+'o')
+            slice_gates[2], act_type=self._activation, name=prefix+'c')
+        out_gate = F.Activation(slice_gates[3], act_type=self._recurrent_activation, name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                    name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self.activation),
+        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation),
                                   name=prefix+'out')
 
         return next_h, [next_h, next_c]
