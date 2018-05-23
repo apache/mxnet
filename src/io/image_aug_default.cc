@@ -320,18 +320,16 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float a = cos(angle / 180.0 * M_PI);
       float b = sin(angle / 180.0 * M_PI);
       // scale
+      float scale = 1.0f;
       if (!param_.random_resized_crop) {
-        float scale = rand_uniform(*prnd) *
+        scale = rand_uniform(*prnd) *
             (param_.max_random_scale - param_.min_random_scale) + param_.min_random_scale;
-      } else {
-        float scale = 1.0f;
       }
       // aspect ratio
+      float ratio = 1.0f;
       if (!param_.random_resized_crop) {
-        float ratio = rand_uniform(*prnd) *
+        ratio = rand_uniform(*prnd) *
             param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
-      } else {
-        float ratio = 1.0f;
       }
       float hs = 2 * scale / (1 + ratio);
       float ws = ratio * hs;
