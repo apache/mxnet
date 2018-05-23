@@ -376,6 +376,7 @@ OpAttrs GetReluOp() {
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(1);
   attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
 
@@ -677,12 +678,12 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-  TestOp(attrs, InitArray, VerifyCopyResult);
+    TestUnaryOp(attrs, InitArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
-  TestOp(attrs, InitNegPosArray, VerifyActResult);
+  TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
 }
 
 
