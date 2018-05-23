@@ -29,7 +29,6 @@
 #include "mxnet/imperative.h"
 #include <cmath>
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../../src/operator/nn/activation-inl.h"
 
 using namespace mxnet;
 
@@ -373,7 +372,8 @@ OpAttrs GetCopyOp() {
 OpAttrs GetReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Activation");
-  attrs.attrs.parsed = (op::ActivationParam){op::activation::ActivationOpType::kReLU};
+  attrs.attrs.dict.insert({"act_type", "relu"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(1);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   return attrs;
