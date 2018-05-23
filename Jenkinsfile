@@ -187,9 +187,11 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
           timeout(time: max_time, unit: 'MINUTES') { 
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            pack_lib('cpu', mx_dist_lib)
+            withEnv(['CCACHE_DIR=/tmp/jenkins_ccache']) {
+                init_git()
+                docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
+                pack_lib('cpu', mx_dist_lib)
+            }
           }
         }
       }
