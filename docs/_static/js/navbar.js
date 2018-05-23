@@ -1,10 +1,11 @@
 var searchBox = $("#search-input-wrap");
 var TITLE = ['/install/', '/gluon/', '/api/', '/docs/', '/community/' ];
 var DOC_TITLE = ['/faq/', '/tutorials/', '/architecture/', '/model_zoo/'];
-var APISubmenu, versionSubmenu, docSubmenu;
+var APISubmenu, versionSubmenu, docSubmenu, communitySubmenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
     if($(this).children().first().html().startsWith('Versions')) versionSubmenu = $(this).clone();
+    if($(this).children().first().html().startsWith('Community')) communitySubmenu = $(this).clone();
     if($(this).children().first().html() == 'Docs') docSubmenu= $(this).clone();
 });
 
@@ -49,6 +50,9 @@ function navbar() {
         }
         else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-docs') {
             $("#plusMenu").append(docSubmenu);
+        }
+        else if(plusMenuList[i].attr('id') == 'dropdown-menu-position-anchor-community') {
+            $("#plusMenu").append(communitySubmenu);
         }
         else {
             $("#plusMenu").append("<li></li>");
