@@ -30,7 +30,7 @@
     <connection>scm:git:git@github.com:apache/incubator-mxnet.git</connection>
     <developerConnection>scm:git:git@github.com:apache/incubator-mxnet.git</developerConnection>
     <url>https://github.com/apache/incubator-mxnet</url>
-    <tag></tag>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
