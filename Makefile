@@ -477,7 +477,7 @@ endif
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
-	$(MAKE) CXX=$(CXX) DEPS_PATH=$(DEPS_PATH) -C $(PS_PATH) ps
+	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
