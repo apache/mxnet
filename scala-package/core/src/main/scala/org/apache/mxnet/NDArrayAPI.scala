@@ -20,5 +20,5 @@ package org.apache.mxnet
   * typesafe NDArray API: NDArray.api._
   * Main code will be generated during compile time through Macros
   */
-object NDArrayAPI {
+object NDArrayAPI extends NDArrayAPIBase {
 }
