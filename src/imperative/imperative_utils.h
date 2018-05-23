@@ -23,6 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <map>
 #include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
@@ -776,17 +777,21 @@ inline MemoryPlanVector PlanMemory(
 }
 
 
-inline void AllocateMemory(const nnvm::Graph& g,
-                    const nnvm::IndexedGraph& idx,
-                    const Context& default_ctx,
-                    const uint32_t entry_start, const uint32_t entry_end,
-                    const MemoryPlanVector& mem_plan,
-                    const std::vector<NDArray*>& arrays,
-                    std::vector<OpReqType> *array_reqs) {
+inline std::multimap<size_t, NDArray> AllocateMemory(
+    const nnvm::Graph& g,
+    const nnvm::IndexedGraph& idx,
+    const Context& default_ctx,
+    const uint32_t entry_start, const uint32_t entry_end,
+    const MemoryPlanVector& mem_plan,
+    const std::vector<NDArray*>& arrays,
+    std::vector<OpReqType> *array_reqs,
+    std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+
+  std::multimap<size_t, NDArray> new_pool;
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
@@ -796,22 +801,30 @@ inline void AllocateMemory(const nnvm::Graph& g,
                            shapes[i], default_ctx, true, dtypes[i]);
       continue;
     }
-
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
       CHECK_GT(mem_plan[i].size, 0);
-      NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
-                   default_ctx, true, mshadow::kUint8);
-      *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
-      continue;
-    }
-
-    CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
-    *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);
-    if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
-      array_reqs->at(i) = kWriteInplace;
+      auto iter = pool.lower_bound(mem_plan[i].size);
+      if (iter != pool.end()) {
+        *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
+        new_pool.insert(*iter);
+        pool.erase(iter);
+      } else {
+        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
+                     default_ctx, true, mshadow::kUint8);
+        *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
+        new_pool.insert({mem_plan[i].size, buff});
+      }
+    } else {
+      CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
+      *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);
+      if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
+        array_reqs->at(i) = kWriteInplace;
+      }
     }
   }
+
+  return new_pool;
 }
 
 inline void SetupOpExec(

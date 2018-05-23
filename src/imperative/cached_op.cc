@@ -82,6 +82,8 @@ struct CachedOp::CachedOpState {
   std::vector<OpStatePtr> op_states;
   std::vector<std::shared_ptr<exec::OpExecutor> > execs;
   std::vector<imperative::EngineOprSeg> opr_segs;
+  std::multimap<size_t, NDArray> fwd_reuse_pool;
+  std::multimap<size_t, NDArray> bwd_reuse_pool;
 };
 
 CachedOp::CachedOp(
@@ -495,9 +497,10 @@ void CachedOp::StaticAllocMemory(
     }
   }
 
-  imperative::AllocateMemory(
+  auto& reuse_pool = keep_fwd ? state.bwd_reuse_pool : state.fwd_reuse_pool;
+  reuse_pool = imperative::AllocateMemory(
       g, idx, default_ctx, start_eid, end_eid, mem_plan,
-      state.arrays, &state.array_reqs);
+      state.arrays, &state.array_reqs, std::move(reuse_pool));
 
   state.recording = recording;
   if (keep_fwd) {
@@ -929,7 +932,9 @@ void CachedOp::StaticBackward(
   const auto& idx = g.indexed_graph();
   auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
 
-  if (!state.bwd_alloc || !match) StaticAllocMemory(state_ptr, true, true);
+  if (!state.bwd_alloc || !match) {
+    StaticAllocMemory(state_ptr, true, true);
+  }
 
   if (config_.static_shape) {
     for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {

@@ -1106,7 +1106,7 @@ def test_zero_grad():
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
-def test_hybrid_static_memory():
+def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
@@ -1114,7 +1114,7 @@ def test_hybrid_static_memory():
         1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
     net2 = gluon.model_zoo.vision.get_resnet(
         1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
-    net2.hybridize(use_static_memory=True)
+    net2.hybridize(**kwargs)
     net1(x)
     net2(x)
 
@@ -1134,23 +1134,32 @@ def test_hybrid_static_memory():
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
+def test_hybrid_static_memory():
+    check_hybrid_static_memory()
+    check_hybrid_static_memory(static_alloc=True)
+    check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
-def test_hybrid_static_memory_switching():
-    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+def check_hybrid_static_memory_switching(**kwargs):
     net = gluon.model_zoo.vision.get_resnet(
         1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(use_static_memory=True)
+    net.hybridize(**kwargs)
 
+    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
     net(x)
     with mx.autograd.record():
         y = net(x)
         y.backward()
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     net(x)
     with mx.autograd.record():
         y = net(x)
         y.backward()
     mx.nd.waitall()
 
+def test_hybrid_static_memory_switching():
+    check_hybrid_static_memory_switching()
+    check_hybrid_static_memory_switching(static_alloc=True)
+    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
