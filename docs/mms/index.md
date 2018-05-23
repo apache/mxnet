@@ -65,7 +65,7 @@ Creating a model archive involves rounding up the required model artifacts, then
 
 * [Quickstart: Export a Model](https://github.com/awslabs/mxnet-model-server/README.md#export-a-model)
 * [Model Artifacts](https://github.com/awslabs/mxnet-model-server/docs/export_model_file_tour.md)
-* [Saving a Model from Gluon](#)
+* [Loading and Serving Gluon Models](https://github.com/awslabs/mxnet-model-server/tree/master/examples/gluon_alexnet)
 * [Creating a MMS Model Archive from an ONNX Model](https://github.com/awslabs/mxnet-model-server/docs/export_from_onnx.md)
 
 
@@ -82,7 +82,7 @@ Using Docker or other container services with MMS is a great way to scale your i
 
 The MMS project is open to contributions from the community. If you like the idea of a simple serving solution for your models and would like to provide feedback, suggest features, or even jump in and contribute code or examples, please visit the [project page on GitHub](https://github.com/awslabs/mxnet-model-server). You can create an issue there, or join the discussion on the forum.
 
-* [MXNet Forum - MMS Discussions](#)
+* [MXNet Forum - MMS Discussions](https://discuss.mxnet.io/c/mxnet-model-server)
 
 
 ## Further Reading
