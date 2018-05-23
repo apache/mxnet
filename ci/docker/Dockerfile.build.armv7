@@ -20,7 +20,7 @@
 
 FROM dockcross/linux-armv7
 
-ENV ARCH armv71
+ENV ARCH armv7
 ENV CC /usr/bin/arm-linux-gnueabihf-gcc
 ENV CXX /usr/bin/arm-linux-gnueabihf-g++
 

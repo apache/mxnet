@@ -90,6 +90,7 @@ build_armv6() {
         -G Ninja /work/mxnet
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
     build_wheel
     popd
 }

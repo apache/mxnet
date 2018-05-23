@@ -20,6 +20,9 @@
 
 FROM dockcross/linux-armv6
 
+RUN apt-get update
+RUN apt-get install -y unzip
+
 ENV ARCH armv6l
 ENV FC=/usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
