@@ -524,10 +524,10 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
 
-    trainer.save_states('test.states')
+    trainer.save_states('test_trainer.states')
     states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
              else deepcopy(trainer._updaters[0].states)
-    trainer.load_states('test.states')
+    trainer.load_states('test_trainer.states')
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
         assert trainer._optimizer == trainer._kvstore._updater.optimizer
@@ -553,6 +553,22 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
 
+@with_seed()
+def test_trainer_save_load():
+    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.1
+    trainer.save_states('test_trainer_save_load.states')
+    trainer.load_states('test_trainer_save_load.states')
+    x.lr_mult = 2.0
+    # check if parameter dict is correctly associated with optimizer after load_state
+    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
 @with_seed()
 def test_block_attr_hidden():
@@ -1051,6 +1067,83 @@ def test_zero_grad():
     net.collect_params().zero_grad()
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
+
+
+@with_seed()
+def test_hook():
+    global hook_call_count
+    hook_call_count = 0
+    global pre_hook_call_count
+    pre_hook_call_count = 0
+
+    def call_hook(block, x, y):
+        global hook_call_count
+        hook_call_count += 1
+
+    def call_pre_hook(block, x):
+        global pre_hook_call_count
+        pre_hook_call_count += 1
+
+    block = nn.Dense(10)
+    block.initialize()
+    handle = block.register_forward_hook(call_hook)
+    pre_handle = block.register_forward_pre_hook(call_pre_hook)
+    block(mx.nd.ones((3, 5)))
+
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 1
+
+    handle.detach()
+    block(mx.nd.ones((3, 5)))
+
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 2
+
+    pre_handle.detach()
+    block(mx.nd.ones((3, 5)))
+    assert hook_call_count == 1
+    assert pre_hook_call_count == 2
+
+
+@with_seed()
+def test_apply():
+    global called_blocks
+    called_blocks = []
+
+    def record_name(block):
+        global called_blocks
+        called_blocks.append(block.name)
+
+    block = nn.HybridSequential(prefix='test_')
+    with block.name_scope():
+        block.add(nn.Dense(10))
+        block.add(nn.Dropout(0.5))
+    block.apply(record_name)
+
+    assert called_blocks == ['test_dense0', 'test_dropout0', 'test']
+
+
+@with_seed()
+def test_summary():
+    net = gluon.model_zoo.vision.resnet50_v1()
+    net.initialize()
+    net.summary(mx.nd.ones((32, 3, 224, 224)))
+
+    net2 = nn.Sequential()
+    with net2.name_scope():
+        net2.add(nn.Embedding(10, 20))
+        net2.add(gluon.rnn.LSTM(30))
+        net2.add(nn.Dense(40, flatten=False))
+    net2.initialize()
+    net2.summary(mx.nd.ones((80, 32)))
+
+    net3 = gluon.rnn.LSTM(30)
+    net3.initialize()
+    begin_state = net3.begin_state(32)
+    net3.summary(mx.nd.ones((80, 32, 5)), begin_state)
+
+    net.hybridize()
+    assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
 
 
 if __name__ == '__main__':

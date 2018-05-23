@@ -33,7 +33,6 @@ import re
 import shutil
 import subprocess
 import sys
-import docker_cache
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -232,6 +231,7 @@ def main() -> int:
         platform = args.platform
         tag = get_docker_tag(platform)
         if args.download_docker_cache:
+            import docker_cache
             logging.info('Docker cache download is enabled')
             docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
         build_docker(platform, docker_binary)
@@ -256,6 +256,7 @@ def main() -> int:
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             if args.download_docker_cache:
+                import docker_cache
                 tag = get_docker_tag(platform)
                 logging.info('Docker cache download is enabled')
                 docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)

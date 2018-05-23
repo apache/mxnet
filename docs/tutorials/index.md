@@ -32,8 +32,8 @@ Select API:&nbsp;
     * [60-Minute Gluon Crash Course](http://gluon-crash-course.mxnet.io/) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [MNIST Handwritten Digit Classification](/tutorials/gluon/mnist.html)
 * Models
+    * [Model Zoo: using pre-trained models](/tutorials/gluon/pretrained_models.html)
     * [Linear Regression](http://gluon.mxnet.io/chapter02_supervised-learning/linear-regression-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
-    * [MNIST Handwritten Digit Classification](/tutorials/gluon/mnist.html)
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
@@ -83,8 +83,9 @@ Select API:&nbsp;
     * [Movie Review Classification using Convolutional Networks](/tutorials/nlp/cnn.html)
     * [Generative Adversarial Networks (GANs)](/tutorials/unsupervised_learning/gan.html)
     * [Recommender Systems using Matrix Factorization](/tutorials/python/matrix_factorization.html)
-    * [Speech Recognition with Connectionist Temporal Classification Loss](https://mxnet.incubator.apache.org/tutorials/speech_recognition/ctc.html)
+    * [Speech Recognition with Connectionist Temporal Classification Loss](/tutorials/speech_recognition/ctc.html)
 * Practitioner Guides
+    * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
 * API Guides
@@ -92,7 +93,7 @@ Select API:&nbsp;
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
-            * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
+            * [NDArray Indexing](/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
                 * [Compressed Sparse Row Storage Format (CSRNDArray)](/tutorials/sparse/csr.html)
