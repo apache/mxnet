@@ -351,10 +351,13 @@ def test_sparse_symbol_block():
 @raises(ValueError)
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
-    params.get('weight', shape=(5, 5), stype='row_sparse')
-    params.get('bias', shape=(5,))
-    # an exception is expected when creating a HybridBlock w/ sparse param
+    params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
+    params.get('bias', shape=(5,), dtype='float32')
     net = gluon.nn.Dense(5, params=params)
+    net.initialize()
+    x = mx.nd.ones((2,5))
+    # an exception is expected when forwarding a HybridBlock w/ sparse param
+    y = net(x)
 
 @with_seed()
 def check_layer_forward(layer, dshape):

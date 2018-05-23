@@ -28,7 +28,7 @@ from nose.tools import raises, assert_raises
 @with_seed()
 @raises(RuntimeError)
 def test_multi_trainer():
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
     x.initialize()
     # test set trainer
     trainer0 = gluon.Trainer([x], 'sgd')
@@ -37,7 +37,7 @@ def test_multi_trainer():
     x._set_trainer(None)
     assert(x._trainer is None)
     x._set_trainer(trainer0)
-    # multiple trainers for a single Parameter is not allowed
+    # multiple trainers for a sparse Parameter is not allowed
     trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()

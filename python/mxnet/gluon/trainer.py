@@ -68,6 +68,7 @@ class Trainer(object):
                 "First argument must be a list or dict of Parameters, " \
                 "got %s."%(type(params)))
         self._params = []
+        # parameters to initialize on the kvstore
         self._params_to_init = []
         self._contains_sparse = False
         self._param2idx = {}
@@ -118,28 +119,29 @@ class Trainer(object):
                             for _ in self._contexts]
 
     def _init_params(self):
-        """ Initialize parameters in the KVStore. Parameters whose
-            intiailization is incomplete are ignored.
+        """Initialize parameters in the KVStore.
+
+        Parameters with incomplete initialization are ignored.
+
         """
         assert self._kv_initialized, "Cannot initialize parameters in KVStore " \
                                      "when KVStore is not initialized."
         params_to_init = []
         if self._kvstore:
-            params = [param for param in self._params_to_init \
-                      if not param._deferred_init]
-            params_to_init = [param for param in self._params_to_init \
-                              if param._deferred_init]
-            for param in params:
-                param_arrays = param._check_and_get(param._data, list)
-                idx = self._param2idx[param.name]
-                self._kvstore.init(idx, param_arrays[0])
-                if param._stype == 'default':
-                    self._kvstore.pull(idx, param_arrays, priority=-idx)
+            for param in self._params_to_init:
+                if param._deferred_init:
+                    params_to_init.append(param)
+                else:
+                    param_arrays = param._check_and_get(param._data, list)
+                    idx = self._param2idx[param.name]
+                    self._kvstore.init(idx, param_arrays[0])
+                    if param._stype == 'default':
+                        self._kvstore.pull(idx, param_arrays, priority=-idx)
 
         self._params_to_init = params_to_init
 
     def _init_kvstore(self):
-        """ Create kvstore """
+        """Create kvstore."""
         arg_arrays = {}
         if self._contains_sparse:
             kvstore, update_on_kvstore = _create_sparse_kvstore(self._kvstore)

@@ -171,11 +171,12 @@ class Parameter(object):
 
     def _set_trainer(self, trainer):
         """ Set the trainer this parameter is associated with. """
-        if self._trainer and trainer and self._trainer is not trainer:
+        # trainer cannot be replaced for sparse params
+        if self._stype != 'default' and self._trainer and trainer and self._trainer is not trainer:
             raise RuntimeError(
-                "Failed to set the trainer for Parameter '%s' to %s because it was set to %s. " \
-                "More than one trainers for a single Parameter is not supported." %(
-                    self.name, str(trainer), str(self._trainer)))
+                "Failed to set the trainer for Parameter '%s' because it was already set. " \
+                "More than one trainers for a %s Parameter is not supported." \
+                %(self.name, self._stype))
         self._trainer = trainer
 
     def _check_and_get(self, arr_list, ctx):
@@ -214,8 +215,7 @@ class Parameter(object):
         """ Get row_sparse data from row_sparse parameters based on row_id. """
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
-            raise TypeError("Cannot get 'row_sparse' Parameter %s with %s type. "
-                            "NDArray type is expected." % (self.name, type(row_id)))
+            raise TypeError("row_id must have NDArray type, but %s is given"%(type(row_id)))
         if not self._trainer:
             raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
                                "Trainer is created with it."%self.name)
@@ -228,8 +228,11 @@ class Parameter(object):
     def _load_init(self, data, ctx, cast_stype=False):
         """(Re)initializes by loading from data."""
         if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
-            raise RuntimeError("Cannot (Re)initialize Parameter '%s' when its Trainer " \
-                               "already initialized the parameter on KVStore."%(self.name))
+            if self not in self._trainer._params_to_init:
+                raise RuntimeError("Cannot (re)initialize Parameter '%s' because it was " \
+                                   "already initialized on the trainer's KVStore, and " \
+                                   "trainer._update_on_kvstore is True. Please create a " \
+                                   "new Trainer with this Parameter."%(self.name))
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
