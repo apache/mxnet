@@ -30,7 +30,11 @@ FROM dockcross/linux-armv6
 # extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
+RUN apt-get update
+RUN apt-get install -y unzip
+
 ENV ARCH armv6l
+ENV FC=/usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
 ENV TARGET ARMV6
 
