@@ -182,7 +182,7 @@ private[mxnet] object NDArrayMacro {
       case "long" | "long(non-negative)" => "Long"
       case "double" | "doubleorNone" => "Double"
       case "string" => "String"
-      case "boolean" => "Boolean"
+      case "boolean" | "booleanorNone" => "Boolean"
       case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default, $argType")
