@@ -543,7 +543,7 @@ void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   for (size_t i = 0; i < tmp1.shape().Size(); i++) {
-    EXPECT_EQ(d1[i], std::abs(d2[i]));
+    EXPECT_EQ(d1[i], std::fmax(d2[i], 0));
   }
 }
 
