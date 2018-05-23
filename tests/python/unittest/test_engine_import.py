@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,17 +15,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+import os
+import sys
 
-set -ex
-pushd .
-yum install -y python27 python27-setuptools
-git clone https://github.com/opencv/opencv
-cd opencv
-mkdir -p build
-cd build
-cmake -DBUILD_opencv_gpu=OFF -DWITH_EIGEN=ON -DWITH_TBB=ON -DWITH_CUDA=OFF -DWITH_1394=OFF \
--DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -GNinja ..
-ninja install
-popd
+def test_engine_import():
+    import mxnet
+    def test_import():
+        version = sys.version_info
+        if version >= (3, 4):
+            import importlib
+            importlib.reload(mxnet)
+        elif version >= (3, ):
+            import imp
+            imp.reload(mxnet)
+        else:
+            reload(mxnet)
+    engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
+
+    for type in engine_types:
+        if not type:
+            os.environ.pop('MXNET_ENGINE_TYPE', None)
+        else:
+            os.environ['MXNET_ENGINE_TYPE'] = type
+        test_import()
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()

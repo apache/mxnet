@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,10 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+package AI::MXNet::AutoLoad;
+use strict;
+use warnings;
 
-set -ex
-yum -y install graphviz
-pip install graphviz
-pip install opencv-python
+sub AUTOLOAD
+{
+    my ($class) = @_;
+    my ($prefix, $real_class) = $class->config;
+    my ($name) = our $AUTOLOAD =~ /::(\w+)$/;
+    my $sub = "_${prefix}_$name";
+    {
+        no strict 'refs';
+        *{"$class::$name"} = sub { shift; $real_class->$sub(@_); };
+    }
+    goto $class->can($name);
+}
+
+1;

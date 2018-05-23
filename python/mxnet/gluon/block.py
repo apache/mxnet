@@ -20,6 +20,7 @@
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
+import threading
 import copy
 import warnings
 import re
@@ -30,12 +31,12 @@ from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, HookHandle
 
 
 class _BlockScope(object):
     """Scope for collecting child `Block` s."""
-    _current = None
+    _current = threading.local()
 
     def __init__(self, block):
         self._block = block
@@ -46,10 +47,10 @@ class _BlockScope(object):
     @staticmethod
     def create(prefix, params, hint):
         """Creates prefix and params for new `Block`."""
-        current = _BlockScope._current
+        current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
-                prefix = _name.NameManager.current.get(None, hint) + '_'
+                prefix = _name.NameManager._current.value.get(None, hint) + '_'
             if params is None:
                 params = ParameterDict(prefix)
             else:
@@ -70,8 +71,8 @@ class _BlockScope(object):
     def __enter__(self):
         if self._block._empty_prefix:
             return self
-        self._old_scope = _BlockScope._current
-        _BlockScope._current = self
+        self._old_scope = getattr(_BlockScope._current, "value", None)
+        _BlockScope._current.value = self
         self._name_scope = _name.Prefix(self._block.prefix)
         self._name_scope.__enter__()
         return self
@@ -81,7 +82,7 @@ class _BlockScope(object):
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
-        _BlockScope._current = self._old_scope
+        _BlockScope._current.value = self._old_scope
 
 
 def _flatten(args, inout_str):
@@ -156,7 +157,7 @@ class Block(object):
         Prefix acts like a name space. All children blocks created in parent block's
         :py:meth:`name_scope` will have parent block's prefix in their name.
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/basic/naming.html>`_
+        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
         for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
@@ -172,6 +173,8 @@ class Block(object):
         self._scope = _BlockScope(self)
         self._children = OrderedDict()
         self._reg_params = {}
+        self._forward_hooks = OrderedDict()
+        self._forward_pre_hooks = OrderedDict()
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -249,7 +252,7 @@ class Block(object):
                 self.dense = nn.Dense(20)
 
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/basic/naming.html>`_
+        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
         for more info on prefix and naming.
         """
         return self._scope
@@ -354,13 +357,67 @@ class Block(object):
                         name, filename, _brief_print_list(self._params.keys())))
             params[name]._load_init(loaded[name], ctx)
 
-
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
         self._children[name] = block
+
+    def register_forward_pre_hook(self, hook):
+        r"""Registers a forward pre-hook on the block.
+
+        The hook function is called immediately before :func:`forward`.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        hook : callable
+            The forward hook function of form `hook(block, input) -> None`.
+
+        Returns
+        -------
+        :class:`mxnet.gluon.utils.HookHandle`
+        """
+        handle = HookHandle()
+        handle.attach(self._forward_pre_hooks, hook)
+        return handle
+
+    def register_forward_hook(self, hook):
+        r"""Registers a forward hook on the block.
+
+        The hook function is called immediately after :func:`forward`.
+        It should not modify the input or output.
+
+        Parameters
+        ----------
+        hook : callable
+            The forward hook function of form `hook(block, input, output) -> None`.
+
+        Returns
+        -------
+        :class:`mxnet.gluon.utils.HookHandle`
+        """
+        handle = HookHandle()
+        handle.attach(self._forward_hooks, hook)
+        return handle
+
+    def apply(self, fn):
+        r"""Applies ``fn`` recursively to every child block as well as self.
+
+        Parameters
+        ----------
+        fn : callable
+            Function to be applied to each submodule, of form `fn(block)`.
+
+        Returns
+        -------
+        this block
+        """
+        for cld in self._children.values():
+            cld.apply(fn)
+        fn(self)
+        return self
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
@@ -410,7 +467,15 @@ class Block(object):
 
     def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
-        return self.forward(*args)
+        for hook in self._forward_pre_hooks.values():
+            hook(self, args)
+
+        out = self.forward(*args)
+
+        for hook in self._forward_hooks.values():
+            hook(self, args, out)
+
+        return out
 
     def forward(self, *args):
         """Overrides to implement forward computation using :py:class:`NDArray`. Only
@@ -423,6 +488,105 @@ class Block(object):
         """
         # pylint: disable= invalid-name
         raise NotImplementedError
+
+    def summary(self, *inputs):
+        """Print the summary of the model's output and parameters.
+
+        The network must have been initialized, and must not have been hybridized.
+
+        Parameters
+        ----------
+        inputs : object
+            Any input that the model supports. For any tensor in the input, only
+            :class:`mxnet.ndarray.NDArray` is supported.
+        """
+        summary = OrderedDict()
+        hooks = []
+
+        def _get_shape_str(args):
+            def flatten(args):
+                if not isinstance(args, (list, tuple)):
+                    return [args], int(0)
+                flat = []
+                fmts = []
+                for i in args:
+                    arg, fmt = flatten(i)
+                    flat.extend(arg)
+                    fmts.append(fmt)
+                return flat, fmts
+
+            def regroup(args, fmt):
+                if isinstance(fmt, int):
+                    if fmt == 0:
+                        return args[0], args[1:]
+                    return args[:fmt], args[fmt:]
+                ret = []
+                for i in fmt:
+                    res, args = regroup(args, i)
+                    ret.append(res)
+                return ret, args
+
+            flat_args, fmts = flatten(args)
+            flat_arg_shapes = [x.shape if isinstance(x, ndarray.NDArray) else x
+                               for x in flat_args]
+            shapes = regroup(flat_arg_shapes, fmts)[0]
+            if isinstance(shapes, list):
+                shape_str = str(shapes)[1:-1]
+            else:
+                shape_str = str(shapes)
+            return shape_str.replace('L', '')
+
+        def _register_summary_hook(block):
+            assert not isinstance(block, HybridBlock) or not block._active, \
+                    '"{}" must not be hybridized to print summary.'.format(block.name)
+            def _summary_hook(block, _, outputs):
+                class_name = block.__class__.__name__
+                block_idx = len(summary) - 1
+
+                m_key = '%s-%i' % (class_name, block_idx+1)
+                summary[m_key] = OrderedDict()
+                summary[m_key]['output_shape'] = _get_shape_str(outputs)
+
+                params = 0
+                summary[m_key]['trainable'] = 0
+                for p in block._reg_params.values():
+                    params += p.data().size
+                    summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
+                summary[m_key]['n_params'] = params
+
+            from .nn.basic_layers import Sequential, HybridSequential
+            if not isinstance(block, (Sequential, HybridSequential)):
+                hooks.append(block.register_forward_hook(_summary_hook))
+
+        summary['Input'] = OrderedDict()
+        summary['Input']['output_shape'] = _get_shape_str(inputs)
+        summary['Input']['n_params'] = 0
+        summary['Input']['trainable'] = 0
+
+        try:
+            self.apply(_register_summary_hook)
+            self(*inputs)
+
+            line_format = '{:>20}  {:>42} {:>15}'
+            print('-'*80)
+            print(line_format.format('Layer (type)', 'Output Shape', 'Param #'))
+            print('='*80)
+            total_params = 0
+            trainable_params = 0
+            for layer in summary:
+                print(line_format.format(layer,
+                                         str(summary[layer]['output_shape']),
+                                         summary[layer]['n_params']))
+                total_params += summary[layer]['n_params']
+                trainable_params += summary[layer]['trainable']
+            print('='*80)
+            print('Total params: ' + str(total_params))
+            print('Trainable params: ' + str(trainable_params))
+            print('Non-trainable params: ' + str(total_params - trainable_params))
+            print('-'*80)
+        finally:
+            for h in hooks:
+                h.detach()
 
 
 class HybridBlock(Block):
@@ -447,7 +611,6 @@ class HybridBlock(Block):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
         self._cached_graph = ()
         self._cached_op = None
-        self._cached_op_args = None
         self._out_format = None
         self._in_format = None
         self._active = False
@@ -479,43 +642,46 @@ class HybridBlock(Block):
 
     def _build_cache(self, *args):
         inputs, out = self._get_graph(*args)
-        input_idx = {var.name: i for i, var in enumerate(inputs)}
-        self._cached_op = ndarray.CachedOp(out, self._flags)
-        params = dict(self.collect_params().items())
+        input_names = [i.name for i in inputs]
 
-        # verify graph inputs
-        expected_inputs = set(out.list_inputs())
-        for name in expected_inputs:
-            assert name in params or name in input_idx, \
+        params = self.collect_params()
+        param_names = set(params.keys())
+        expected_names = set(out.list_inputs())
+        for name in expected_names:
+            assert name in param_names or name in input_names, \
                 "Unknown input to HybridBlock: %s"%name
-        for name, i in input_idx.items():
-            if name not in expected_inputs:
-                warnings.warn("The %d-th input to HybridBlock is not used by any "
-                              "computation. Is this intended?"%i, stacklevel=4)
-        for name in params:
-            if name not in expected_inputs:
-                warnings.warn("Parameter %s is not used by any computation. "
-                              "Is this intended?"%name, stacklevel=4)
 
-        self._cached_op_args = [(False, params[name]) if name in params
-                                else (True, input_idx[name])
-                                for name in out.list_inputs()]
+        used_input_names = [i for i in input_names if i in expected_names]
+        if len(used_input_names) != len(input_names):
+            unused = ', '.join(['%d-th'%i for i, name in enumerate(input_names)
+                                if name not in expected_names])
+            warnings.warn("The %s input to HybridBlock is not used by any "
+                          "computation. Is this intended?"%unused, stacklevel=4)
 
-    def _finish_deferred_init(self, hybrid, *args):
+        used_param_names = set(i for i in param_names if i in expected_names)
+        if len(used_param_names) != len(param_names):
+            unused = ', '.join(list(param_names - used_param_names))
+            warnings.warn("Parameter %s is not used by any computation. "
+                          "Is this intended?"%unused, stacklevel=4)
+
+        used_params = {k: params[k] for k in used_param_names}
+        try:
+            param_dict = {k: v.list_data() for k, v in used_params.items()}
+        except DeferredInitializationError:
+            self._deferred_infer_shape(*args)
+            for i in used_params.values():
+                i._finish_deferred_init()
+            param_dict = {k: v.list_data() for k, v in used_params.items()}
+
+        self._cached_op = ndarray.CachedOp(out, self._flags, input_names, param_dict)
+
+    def _deferred_infer_shape(self, *args):
         try:
             self.infer_shape(*args)
         except Exception as e:
             error_msg = "Deferred initialization failed because shape"\
-                        " cannot be inferred \n {}".format(e)
+                        " cannot be inferred. {}".format(e)
             raise ValueError(error_msg)
-
-        if hybrid:
-            for is_arg, i in self._cached_op_args:
-                if not is_arg:
-                    i._finish_deferred_init()
-        else:
-            for _, i in self.params.items():
-                i._finish_deferred_init()
 
     def _call_cached_op(self, *args):
         if self._cached_op is None:
@@ -523,9 +689,7 @@ class HybridBlock(Block):
 
         args, fmt = _flatten(args, "input")
         assert fmt == self._in_format, "Invalid input format"
-        cargs = [args[i] if is_arg else i.data()
-                 for is_arg, i in self._cached_op_args]
-        out = self._cached_op(*cargs)
+        out = self._cached_op(*args)
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)[0]
@@ -533,7 +697,6 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
-        self._cached_op_args = None
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):
@@ -549,6 +712,9 @@ class HybridBlock(Block):
         self._active = active
         self._flags = kwargs.items()
         self._clear_cached_op()
+        if active and self._forward_hooks or self._forward_pre_hooks:
+            warnings.warn('"{}" is being hybridized while still having forward hook/pre-hook. '
+                          'If "{}" is a child of HybridBlock, the hooks will not take effect.')
         super(HybridBlock, self).hybridize(active, **kwargs)
 
     def cast(self, dtype):
@@ -616,16 +782,17 @@ class HybridBlock(Block):
         :py:class:`NDArray` or :py:class:`Symbol`."""
         if isinstance(x, NDArray):
             with x.context as ctx:
-                try:
-                    if self._active:
-                        return self._call_cached_op(x, *args)
-                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
-                except DeferredInitializationError:
-                    self._finish_deferred_init(self._active, x, *args)
-
                 if self._active:
                     return self._call_cached_op(x, *args)
-                params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+
+                try:
+                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+                except DeferredInitializationError:
+                    self._deferred_infer_shape(x, *args)
+                    for _, i in self.params.items():
+                        i._finish_deferred_init()
+                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
         assert isinstance(x, Symbol), \
@@ -647,6 +814,18 @@ class HybridBlock(Block):
         """
         # pylint: disable= invalid-name
         raise NotImplementedError
+
+def _common_prefix(names):
+    """Get the common prefix for all names"""
+    if not names:
+        return ''
+    prefix = names[0]
+    for name in names:
+        i = 0
+        while i < len(prefix) and i < len(name) and prefix[i] == name[i]:
+            i += 1
+        prefix = prefix[:i]
+    return prefix
 
 
 class SymbolBlock(HybridBlock):
@@ -709,16 +888,12 @@ class SymbolBlock(HybridBlock):
                 self.params.get(i, grad_req='null', allow_deferred_init=True)
 
         self._cached_graph = syms, out
-        self._build_cache()
+        len_prefix = len(_common_prefix(list(self._params.keys())))
+        self._reg_params = {key[len_prefix:]: val for key, val in self._params.items()}
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
             with x.context:
-                try:
-                    return self._call_cached_op(x, *args)
-                except DeferredInitializationError:
-                    self._finish_deferred_init(True, x, *args)
-
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \

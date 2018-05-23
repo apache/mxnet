@@ -58,6 +58,6 @@ if(GTEST_FOUND AND NOT MSVC)
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
 else()
-  message(WARNING "Google Test not found")
+  message(STATUS "Google Test not found")
 endif()
 

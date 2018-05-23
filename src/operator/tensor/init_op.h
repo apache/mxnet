@@ -383,8 +383,8 @@ void FillComputeZerosEx(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(outputs.size(), 1);
   auto stype = outputs[0].storage_type();
-  if (req[0] == kNullOp) return;
-  CHECK_EQ(req[0], kWriteTo) << "kWriteTo is expected for FillComputeZerosEx";
+  // x + 0 == x
+  if (req[0] == kNullOp || req[0] == kAddTo) return;
   if (stype == kRowSparseStorage) {
     FillZerosRspImpl(s, outputs[0]);
   } else if (stype == kCSRStorage) {

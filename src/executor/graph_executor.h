@@ -234,8 +234,6 @@ class GraphExecutor : public Executor {
   size_t num_forward_inputs_{0};
   // number of forward nodes
   size_t num_forward_nodes_{0};
-  // saved operator for autograd
-  std::unordered_map<const nnvm::Node*, OpStatePtr> saved_states_;
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
   // whether to enable bulk execution

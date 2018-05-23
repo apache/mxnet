@@ -54,7 +54,8 @@ static void ConvolutionComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConv(inputs[0])) {
+  const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
+  if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConvolutionForward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -68,7 +69,8 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConv(inputs[0])) {
+  const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
+  if (SupportMKLDNNConv(params, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -363,6 +365,18 @@ static void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
     if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
     if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
   }
+  CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim())
+    << "Stride must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while stride is "
+    << param_.stride;
+  CHECK_EQ(param_.kernel.ndim(), param_.dilate.ndim())
+    << "Dilate must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while dilate is "
+    << param_.dilate;
+  CHECK_EQ(param_.kernel.ndim(), param_.pad.ndim())
+    << "Padding must have the same number of dimensions with kernel_size,"
+    << "but kernel_size is set to " << param_.kernel << " while padding is "
+    << param_.pad;
   attrs->parsed = std::move(param_);
 }
 

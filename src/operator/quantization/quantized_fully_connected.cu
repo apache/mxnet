@@ -30,6 +30,7 @@
 namespace mxnet {
 namespace op {
 
+#if CUDA_VERSION >= 8000
 // value + bias_value * (range1 / limit_range1) * (limit_range2 / range2)
 struct QuantizedBiasAddKernel {
   MSHADOW_XINLINE static void Map(int i, size_t k, int32_t *out,
@@ -49,6 +50,7 @@ struct QuantizedBiasAddKernel {
              float_for_one_out_quant;
   }
 };
+#endif  // CUDA_VERSION >= 8000
 
 template<typename SrcType, typename DstType, typename CmpType>
 void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
@@ -56,6 +58,7 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                                        const std::vector<TBlob> &inputs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<TBlob> &outputs) {
+#if CUDA_VERSION >= 8000
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   using namespace mxnet_op;
@@ -113,6 +116,9 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
         outputs[1].dptr<float>(), outputs[2].dptr<float>(),
          inputs[7].dptr<float>(),  inputs[8].dptr<float>());
   }
+#else
+  LOG(FATAL) << "QuantizedFullyConnectedForwardGPU only supports CUDA >= 8.0";
+#endif  // CUDA_VERSION >= 8000
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_fully_connected)

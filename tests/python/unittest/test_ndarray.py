@@ -23,7 +23,7 @@ import unittest
 from nose.tools import raises
 from common import setup_module, with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
@@ -154,30 +154,23 @@ def test_ndarray_negate():
 
 @with_seed()
 def test_ndarray_reshape():
-    tensor  = mx.nd.array([[[1, 2], [3, 4]],
-                           [[5, 6], [7, 8]]])
-    true_res = mx.nd.arange(8) + 1
-    assert same(tensor.reshape((-1, )).asnumpy(), true_res.asnumpy())
-    true_res  = mx.nd.array([[1, 2, 3, 4],
-                             [5, 6, 7, 8]])
-    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape((0, -1)).asnumpy(), true_res.asnumpy())
-    true_res  = mx.nd.array([[1, 2],
-                             [3, 4],
-                             [5, 6],
-                             [7, 8]])
-    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(4, 2).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.asnumpy())
-    true_res = mx.nd.arange(8) + 1
+    tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
+    true_res = mx.nd.arange(30) + 1
+    assert same(tensor.reshape((-1,)).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape((2, -1)).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape((0, -1)).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape((-1, 2)).asnumpy(), true_res.reshape(15, 2).asnumpy())
+    assert same(tensor.reshape(6, 5).asnumpy(), true_res.reshape(6, 5).asnumpy())
+    assert same(tensor.reshape(-1, 2).asnumpy(), true_res.reshape(15, 2).asnumpy())
     assert same(tensor.reshape(-1).asnumpy(), true_res.asnumpy())
-    assert same(tensor.reshape(8).asnumpy(), true_res.asnumpy())
-
-    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 4).asnumpy())
-    assert same(tensor.reshape(-1, 4).asnumpy(), true_res.reshape(2, 4).asnumpy())
-    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
-    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(4, 2).asnumpy())
-    assert same(tensor.reshape(-1, 4).reshape(0, -4, 2, -1).asnumpy(), true_res.reshape(2, 2, 2).asnumpy())
+    assert same(tensor.reshape(30).asnumpy(), true_res.asnumpy())
+    assert same(tensor.reshape(0, -1).asnumpy(), true_res.reshape(2, 15).asnumpy())
+    assert same(tensor.reshape(-1, 6).asnumpy(), true_res.reshape(5, 6).asnumpy())
+    assert same(tensor.reshape(-2,).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
+    assert same(tensor.reshape(-3, -1).asnumpy(), true_res.reshape(6, 5).asnumpy())
+    assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
+    assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
+    assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
 
 
 @with_seed()
@@ -1071,6 +1064,18 @@ def test_ndarray_indexing():
         x_grad[index] = value
         assert same(x_grad.asnumpy(), x.grad.asnumpy())
 
+    def test_setitem_autograd(np_array, index):
+        x = mx.nd.array(np_array, dtype=np_array.dtype)
+        out_shape = x[index].shape
+        y = mx.nd.random.uniform(shape=out_shape)
+        y.attach_grad()
+        try:
+            with mx.autograd.record():
+                x[index] = y
+                assert False  # should not reach here
+        except mx.base.MXNetError as err:
+            assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
+
     def np_int(index, int_type=np.int32):
         def convert(num):
             if num is None:
@@ -1194,6 +1199,7 @@ def test_ndarray_indexing():
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
         test_getitem_autograd(np_array, index[0])
+        test_setitem_autograd(np_array, index[0])
 
 
 def test_assign_float_value_to_ndarray():

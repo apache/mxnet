@@ -38,14 +38,14 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
 
-    Process("wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-symbol.json " +
-      "-P " + tempDirPath + "/resnet18/ -q") !
+    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
+      "/resnet-18/resnet-18-symbol.json " + "-P " + tempDirPath + "/resnet18/ -q") !
 
-    Process("wget http://data.mxnet.io/models/imagenet/resnet/18-layers/resnet-18-0000.params " +
-      "-P " + tempDirPath + "/resnet18/ -q") !
+    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models"
+      + "/resnet-18/resnet-18-0000.params " + "-P " + tempDirPath + "/resnet18/ -q") !
 
-    Process("wget http://data.mxnet.io/models/imagenet/resnet/synset.txt -P " + tempDirPath +
-      "/resnet18/ -q") !
+    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
+      "/resnet-18/synset.txt -P " + tempDirPath + "/resnet18/ -q") !
 
     Process("wget " +
       "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg " +

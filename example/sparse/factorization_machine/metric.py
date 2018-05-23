@@ -104,11 +104,10 @@ class AUCMetric(mx.metric.EvalMetric):
         for i in range(preds.shape[0]):
             tmp.append((label_weight[i], preds[i]))
         tmp = sorted(tmp, key=itemgetter(1), reverse=True)
-        label_zero_num = label_weight[label_weight==0].size
-        label_one_num = label_weight[label_weight==1].size
+        label_sum = label_weight.sum()
         # assert label_one_num !=0, "the num of label one in the minibatch shouldn't be zero"
-        if label_one_num == 0 or label_zero_num == 0:
-            raise Exception, "the num of label zero or one should be zero "
+        if label_sum == 0 or label_sum == label_weight.size:
+            raise Exception, "AUC with one class is undefined"
             
         total_area = label_zero_num * label_one_num
         height = 0

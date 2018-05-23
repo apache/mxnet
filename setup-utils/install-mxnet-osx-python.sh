@@ -506,8 +506,8 @@ print ((a*2).asnumpy());
 END
 	rm -f mxnet_test.expected
 	cat << END > mxnet_test.expected
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
+[[2. 2. 2.]
+ [2. 2. 2.]]
 END
 	diff mxnet_test.log mxnet_test.expected
 	if [[ $? = 0 ]]; then

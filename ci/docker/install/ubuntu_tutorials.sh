@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,12 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ ! -d "./mnist_data" ]; then
-  mkdir mnist_data
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz)
-  (cd mnist_data; wget http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz)
-  (cd mnist_data; gzip -d *.gz)
-fi
-echo "Data downloaded"
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
+
+set -ex
+apt-get install graphviz python-opencv
+pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz
+pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz

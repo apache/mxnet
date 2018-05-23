@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,13 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+package AI::MXNet::Image::NDArray;
+use strict;
+use warnings;
+use parent 'AI::MXNet::AutoLoad';
+sub config { ('image', 'AI::MXNet::NDArray') }
 
-set -ex
-pushd .
-git clone https://github.com/xianyi/OpenBLAS
-cd OpenBLAS
-make FC=gfortran -j $(($(nproc) + 1))
-make PREFIX=/usr/local install
-popd
+1;

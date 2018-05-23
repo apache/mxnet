@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet
 
+1.23    Thu Apr 19 15:38:10 PDT 2018
+        - Support for image operations on symbols and ndarrays.
+
 1.22    Sat Apr 14 17:51:55 PDT 2018
         - Parity with Python Gluon Loss classes
 
