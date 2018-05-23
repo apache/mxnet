@@ -547,7 +547,6 @@ void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
   }
 }
 
-
 void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
   NDArray in1 = in_arrs[0]->Reorder2Default();
   NDArray in2 = in_arrs[1]->Reorder2Default();
@@ -582,7 +581,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(1);
   std::vector<NDArray*> outputs(1);
   std::vector<OpReqType> req(1);
