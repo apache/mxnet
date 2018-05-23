@@ -33,7 +33,8 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t inline_limit;
   uint32_t forward_bulk_size;
   uint32_t backward_bulk_size;
-  bool use_static_memory;
+  bool static_alloc;
+  bool static_shape;
   nnvm::Tuple<uint32_t> data_indices;
   nnvm::Tuple<uint32_t> param_indices;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
@@ -46,9 +47,12 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(backward_bulk_size)
     .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
     .describe("Segment size of bulk execution during backward pass.");
-    DMLC_DECLARE_FIELD(use_static_memory)
+    DMLC_DECLARE_FIELD(static_alloc)
     .set_default(false)
     .describe("Whether to allocate memory statically.");
+    DMLC_DECLARE_FIELD(static_shape)
+    .set_default(false)
+    .describe("If true, optimize for constant shape between iterations.");
     DMLC_DECLARE_FIELD(data_indices)
     .set_default(nnvm::Tuple<uint32_t>())
     .describe("Position of argument variables.");
@@ -121,7 +125,11 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
-  void StaticResetState(
+  void StaticAllocMemory(
+      const OpStatePtr& state_ptr,
+      bool recording,
+      bool keep_fwd);
+  void StaticInitExec(
       const OpStatePtr& state_ptr,
       bool recording,
       bool keep_fwd);

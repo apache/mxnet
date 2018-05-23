@@ -42,40 +42,46 @@ struct CachedOp::DynamicRuntime {
 };
 
 struct CachedOp::CachedOpState {
+  CachedOpState(const Context& context_,
+                const nnvm::Graph& fwd_graph_,
+                const nnvm::Graph& full_graph_) {
+    context = context_;
+    info.fwd_graph = fwd_graph_;
+    info.full_graph = full_graph_;
+
+    size_t max_nodes = info.full_graph.indexed_graph().num_nodes();
+    size_t max_entries = info.full_graph.indexed_graph().num_node_entries();
+    info.fwd_graph.attrs["context"] = std::make_shared<dmlc::any>(
+        std::vector<Context>(info.fwd_graph.indexed_graph().num_nodes(), context));
+    info.full_graph.attrs["context"] = std::make_shared<dmlc::any>(
+        std::vector<Context>(max_nodes, context));
+
+    buff.resize(max_entries);
+    arrays.resize(max_entries);
+    array_reqs.resize(max_entries);
+    dynamic_entries.resize(max_entries, false);
+    op_states.resize(max_nodes);
+    execs.resize(max_nodes);
+    opr_segs.resize(max_nodes);
+  }
+
   std::mutex mutex;
   Context context;
   GraphInfo info;
 
-  bool fwd_initialized = false;
-  bool bwd_initialized = false;
   bool recording = false;
+  bool fwd_alloc = false;
+  bool bwd_alloc = false;
+  bool fwd_exec_init = false;
+  bool bwd_exec_init = false;
+
   std::vector<NDArray> buff;
   std::vector<NDArray*> arrays;
   std::vector<OpReqType> array_reqs;
+  std::vector<bool> dynamic_entries;
+  std::vector<OpStatePtr> op_states;
   std::vector<std::shared_ptr<exec::OpExecutor> > execs;
   std::vector<imperative::EngineOprSeg> opr_segs;
-
-  void ResetStaticRuntime(bool keep_fwd) {
-    using namespace imperative;
-
-    size_t num_forward_nodes = info.fwd_graph.indexed_graph().num_nodes();
-    size_t num_forward_entries = info.fwd_graph.indexed_graph().num_node_entries();
-
-    if (!keep_fwd) {
-      fwd_initialized = false;
-    }
-    bwd_initialized = false;
-
-    for (size_t i = keep_fwd ? num_forward_entries : 0; i < buff.size(); ++i) {
-      buff[i] = NDArray();
-      array_reqs[i] = kNullOp;
-    }
-    for (size_t i = 0; i < buff.size(); ++i) arrays[i] = &buff[i];
-    for (size_t i = keep_fwd ? num_forward_nodes : 0; i < execs.size(); ++i) {
-      execs[i].reset();
-      opr_segs[i] = EngineOprSeg();
-    }
-  }
 };
 
 CachedOp::CachedOp(
@@ -120,7 +126,7 @@ CachedOp::CachedOp(
     fwd_graph_.attrs["forward_ref_count"] =
         std::make_shared<dmlc::any>(std::move(ref_count));
 
-    inlining_ = !config_.use_static_memory &&
+    inlining_ = !config_.static_alloc &&
         (idx.num_nodes() - idx.input_nodes().size()) <= config_.inline_limit;
   }
 
@@ -301,7 +307,7 @@ bool CachedOp::SetForwardGraph(
   for (const auto i : idx.input_nodes()) {
     storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
   }
-  if (config_.use_static_memory) {
+  if (config_.static_alloc) {
     for (size_t i = 0; i < idx.outputs().size(); ++i) {
       storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
     }
@@ -428,34 +434,17 @@ OpStatePtr CachedOp::GetCachedOpState(
   std::lock_guard<std::mutex> lock(mutex_);
   for (const auto& i : cached_op_states_[ctx]) {
     // only create one state per device when not using static memory
-    if (!config_.use_static_memory || i.unique()) {
+    if (!config_.static_alloc || i.unique()) {
       return i;
     }
   }
-
-  size_t max_nodes = full_graph_.indexed_graph().num_nodes();
-  size_t max_entries = full_graph_.indexed_graph().num_node_entries();
-  auto state_ptr = OpStatePtr::Create<CachedOpState>();
-  auto& state = state_ptr.get_state<CachedOpState>();
-  state.context = ctx;
-  state.info.fwd_graph = fwd_graph_;
-  state.info.fwd_graph.attrs["context"] = std::make_shared<dmlc::any>(
-      std::vector<Context>(fwd_graph_.indexed_graph().num_nodes(), ctx));
-  state.info.full_graph = full_graph_;
-  state.info.full_graph.attrs["context"] = std::make_shared<dmlc::any>(
-      std::vector<Context>(max_nodes, ctx));
-
-  state.buff.resize(max_entries);
-  state.arrays.resize(max_entries);
-  state.array_reqs.resize(max_entries);
-  state.execs.resize(max_nodes);
-  state.opr_segs.resize(max_nodes);
+  auto state_ptr = OpStatePtr::Create<CachedOpState>(ctx, fwd_graph_, full_graph_);
 
   cached_op_states_[ctx].push_back(state_ptr);
   return state_ptr;
 }
 
-void CachedOp::StaticResetState(
+void CachedOp::StaticAllocMemory(
     const OpStatePtr& state_ptr,
     bool recording,
     bool keep_fwd) {
@@ -463,7 +452,6 @@ void CachedOp::StaticResetState(
   using namespace imperative;
 
   auto& state = state_ptr.get_state<CachedOpState>();
-
   const auto& default_ctx = state.context;
   nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
@@ -471,24 +459,30 @@ void CachedOp::StaticResetState(
   const auto& mem_plan = g.GetAttr<MemoryPlanVector>(
       keep_fwd ? "backward_mem_plan" : (recording ? "full_mem_plan" : "forward_mem_plan"));
   std::vector<int> addto_entry;
-  std::vector<int> skip_plus_node;
   if (g.attrs.count("addto_entry")) {
     addto_entry = g.GetAttr<std::vector<int> >("addto_entry");
-    skip_plus_node = g.GetAttr<std::vector<int> >("skip_plus_node");
   }
-  size_t start_nid =
-      keep_fwd ? state.info.fwd_graph.indexed_graph().num_nodes() : 0;
-  size_t end_nid = idx.num_nodes();
   size_t start_eid =
       keep_fwd ? state.info.fwd_graph.indexed_graph().num_node_entries() : 0;
   size_t end_eid = idx.num_node_entries();
 
-
-  for (size_t i = start_nid; i < end_nid; ++i) {
-    exec::CreateOpExecs(g, &state.execs, i);
+  if (!keep_fwd) state.fwd_alloc = false;
+  state.bwd_alloc = false;
+  for (size_t i = start_eid; i < state.buff.size(); ++i) {
+    state.buff[i] = NDArray();
+    state.arrays[i] = &state.buff[i];
+    state.array_reqs[i] = kNullOp;
+    state.dynamic_entries[i] = false;
   }
-  exec::AttachOpResources(g, state.execs, start_nid, end_nid);
 
+  for (auto i : idx.input_nodes()) {
+    auto eid = idx.entry_id(i, 0);
+    if (eid >= start_eid) state.dynamic_entries[eid] = true;
+  }
+  for (auto i : idx.outputs()) {
+    auto eid = idx.entry_id(i);
+    if (eid >= start_eid) state.dynamic_entries[eid] = true;
+  }
 
   for (size_t i = start_eid; i < end_eid; ++i) {
     if (addto_entry.size() && addto_entry[i]) {
@@ -507,7 +501,55 @@ void CachedOp::StaticResetState(
       g, idx, default_ctx, start_eid, end_eid, mem_plan,
       state.arrays, &state.array_reqs);
 
+  state.recording = recording;
+  if (keep_fwd) {
+    state.bwd_alloc = true;
+  } else {
+    state.fwd_alloc = true;
+  }
+}
+
+void CachedOp::StaticInitExec(
+    const OpStatePtr& state_ptr,
+    bool recording,
+    bool keep_fwd) {
+  using namespace nnvm;
+  using namespace imperative;
+
+  auto& state = state_ptr.get_state<CachedOpState>();
+  const auto& default_ctx = state.context;
+  nnvm::Graph& g = keep_fwd ? state.info.full_graph : state.info.fwd_graph;
+  const auto& idx = g.indexed_graph();
+  std::vector<int> skip_plus_node;
+  if (g.attrs.count("skip_plus_node")) {
+    skip_plus_node = g.GetAttr<std::vector<int> >("skip_plus_node");
+  }
+  size_t start_nid =
+      keep_fwd ? state.info.fwd_graph.indexed_graph().num_nodes() : 0;
+  size_t end_nid = idx.num_nodes();
+
+  if (!keep_fwd) state.fwd_exec_init = false;
+  state.bwd_exec_init = false;
+
+  for (size_t i = start_nid; i < state.execs.size(); ++i) {
+    state.execs[i].reset();
+    state.opr_segs[i] = EngineOprSeg();
+  }
+
   for (size_t i = start_nid; i < end_nid; ++i) {
+    exec::CreateOpExecs(g, &state.execs, i);
+  }
+  exec::AttachOpResources(g, state.execs, start_nid, end_nid);
+
+  for (size_t i = start_nid; i < end_nid; ++i) {
+    bool skip = idx[i].source->is_variable();
+    for (size_t j = 0; !skip && j < idx[i].inputs.size(); ++j) {
+      skip = state.dynamic_entries[idx.entry_id(idx[i].inputs[j])];
+    }
+    for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
+      skip = state.dynamic_entries[idx.entry_id(i, j)];
+    }
+    if (skip) continue;
     SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
   }
 
@@ -522,7 +564,11 @@ void CachedOp::StaticResetState(
   CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
                     state.execs, skip_plus_node, &state.opr_segs);
 
-  state.recording = recording;
+  if (keep_fwd) {
+    state.bwd_exec_init = true;
+  } else {
+    state.fwd_exec_init = true;
+  }
 }
 
 void CachedOp::StaticRunOps(
@@ -542,20 +588,22 @@ void CachedOp::StaticRunOps(
   const auto& op_execs = state.execs;
 
   std::vector<NDArray*> ndinputs, ndoutputs;
+  nnvm::ShapeVector arg_shapes;
+  nnvm::DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
-  for (size_t i = start_nid; i < end_nid; ++i) {
+  for (size_t i = start_nid; config_.static_shape && i < end_nid; ++i) {
     if (op_execs[i]) op_execs[i]->op_ctx.is_train = is_training;
   }
 
-  for (size_t i = start_nid; i < end_nid; i = state.opr_segs[i].next_nid) {
-    auto& seg = state.opr_segs[i];
-    if (seg.skip) continue;
-    if (seg.opr != nullptr) {
-      Engine::Get()->Push(seg.opr.get(), default_ctx, 0, profiling);
+  for (size_t i = start_nid; i < end_nid;
+       i = config_.static_shape ? state.opr_segs[i].next_nid : i + 1) {
+    if (config_.static_shape && state.opr_segs[i].skip) continue;
+    if (config_.static_shape && state.opr_segs[i].opr != nullptr) {
+      Engine::Get()->Push(state.opr_segs[i].opr.get(), default_ctx, 0, profiling);
     } else {
-      CHECK_EQ(seg.next_nid, i + 1);
       const nnvm::IndexedGraph::Node& node = idx[i];
+      if (node.source->is_variable()) continue;
       auto num_outputs = node.source->num_outputs();
       ndinputs.clear();
       ndinputs.reserve(node.inputs.size());
@@ -571,19 +619,29 @@ void CachedOp::StaticRunOps(
         size_t eid = idx.entry_id(i, j);
         ndoutputs.emplace_back(state.arrays[eid]);
         req.push_back(state.array_reqs[eid]);
-        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
+        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none()) << node.source->attrs.name << " " << j;
       }
       const DispatchMode dispatch_mode = dispatch_modes[i];
       if (createop.count(node.source->op())) {
+        arg_shapes.clear();
+        arg_dtypes.clear();
+        arg_shapes.reserve(ndinputs.size());
+        arg_dtypes.reserve(ndinputs.size());
+        for (size_t i = 0; i < ndinputs.size(); ++i) {
+          arg_shapes.emplace_back(ndinputs[i]->shape());
+          arg_dtypes.emplace_back(ndinputs[i]->dtype());
+        }
+        state.op_states[i] = createop[node.source->op()](
+            node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
-            dispatch_mode, op_execs[i]->state());
+            dispatch_mode, state.op_states[i]);
       } else if (is_layer_backward.get(node.source->op(), false)) {
         nnvm::Node* fwd_node = node.source->control_deps[0].get();
         auto fwd_node_id = idx.node_id(fwd_node);
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs,
-            req, dispatch_mode, op_execs[fwd_node_id]->state());
+            req, dispatch_mode, state.op_states[fwd_node_id]);
       } else {
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
@@ -606,35 +664,37 @@ OpStatePtr CachedOp::StaticForward(
   std::lock_guard<std::mutex> lock(state.mutex);
 
   bool match = SetForwardGraph(&state.info, recording, inputs);
+  match = match && state.recording != recording;
 
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
-
-
-  for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
-    auto nid = idx.input_nodes()[config_.param_indices[i]];
-    match = match && state.arrays[idx.entry_id(nid, 0)]->IsSame(
-        *inputs[config_.param_indices[i]]);
+  if (!state.fwd_alloc || !match)  {
+    StaticAllocMemory(state_ptr, recording, false);
   }
 
-
-  if (!(state.fwd_initialized && state.recording == recording && match)) {
-
-    state.ResetStaticRuntime(false);
-
+  if (config_.static_shape) {
     for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
       auto nid = idx.input_nodes()[config_.param_indices[i]];
-      *state.arrays[idx.entry_id(nid, 0)] = *inputs[config_.param_indices[i]];
+      if (!state.arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[config_.param_indices[i]])) {
+        match = false;
+        auto ptr = &state.buff[idx.entry_id(nid, 0)];
+        CHECK_EQ(state.arrays[idx.entry_id(nid, 0)], ptr);
+        *state.arrays[idx.entry_id(nid, 0)] = *inputs[config_.param_indices[i]];
+        state.dynamic_entries[idx.entry_id(nid, 0)] = false;
+      }
     }
-
-    StaticResetState(state_ptr, recording, false);
-
-    state.fwd_initialized = true;
-  }
-
-  for (auto i : config_.data_indices) {
-    auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-    state.arrays[eid] = inputs[i];
+    if (!state.fwd_exec_init || !match) {
+      StaticInitExec(state_ptr, recording, false);
+    }
+    for (auto i : config_.data_indices) {
+      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+      state.arrays[eid] = inputs[i];
+    }
+  } else {
+    for (size_t i = 0; i < num_inputs(); ++i) {
+      auto nid = idx.input_nodes()[i];
+      state.arrays[idx.entry_id(nid, 0)] = inputs[i];
+    }
   }
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
@@ -744,7 +804,7 @@ void CachedOp::Forward(
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
 
   OpStatePtr op_state;
-  if (config_.use_static_memory) {
+  if (config_.static_alloc) {
     op_state = StaticForward(default_ctx, inputs, outputs);
   } else {
     op_state = DynamicForward(default_ctx, inputs, outputs);
@@ -859,49 +919,47 @@ void CachedOp::StaticBackward(
   const auto& idx = g.indexed_graph();
   auto num_forward_nodes = state.info.fwd_graph.indexed_graph().num_nodes();
 
-  for (size_t i = 0; match && i < config_.param_indices.ndim(); ++i) {
-    const auto iter = fwd_input_to_grad_output_.find(config_.param_indices[i]);
-    if (iter == fwd_input_to_grad_output_.end()) continue;
-    auto entry = grad_graph_.outputs[iter->second];
-    if (!idx.exist(entry.node.get())) continue;
-    auto eid = idx.entry_id(entry);
-    match = match && state.arrays[eid]->IsSame(*outputs[iter->second]);
-  }
+  if (!state.bwd_alloc || !match) StaticAllocMemory(state_ptr, true, true);
 
-
-  if (!(state.bwd_initialized && match)) {
-    state.ResetStaticRuntime(true);
-
-    for (auto i : config_.param_indices) {
+  if (config_.static_shape) {
+    for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
+      const auto iter = fwd_input_to_grad_output_.find(config_.param_indices[i]);
+      if (iter == fwd_input_to_grad_output_.end()) continue;
+      auto entry = grad_graph_.outputs[iter->second];
+      if (!idx.exist(entry.node.get())) continue;
+      auto eid = idx.entry_id(entry);
+      if (!state.arrays[eid]->IsSame(*outputs[iter->second]) ||
+          !(state.array_reqs[eid] == reqs[iter->second])) {
+        match = false;
+        state.array_reqs[eid] = reqs[iter->second];
+        *state.arrays[eid] = *outputs[iter->second];
+        state.dynamic_entries[eid] = false;
+      }
+    }
+    if (!state.bwd_exec_init || !match) StaticInitExec(state_ptr, true, true);
+    for (auto i : config_.data_indices) {
       const auto iter = fwd_input_to_grad_output_.find(i);
       if (iter == fwd_input_to_grad_output_.end()) continue;
       auto entry = grad_graph_.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[iter->second];
-      *state.arrays[eid] = *outputs[iter->second];
+      state.arrays[eid] = outputs[iter->second];
     }
-
-    StaticResetState(state_ptr, true, true);
-
-    state.bwd_initialized = true;
+  } else {
+    for (size_t i = 0; i < grad_graph_.outputs.size(); ++i) {
+      auto entry = grad_graph_.outputs[i];
+      if (!idx.exist(entry.node.get())) continue;
+      auto eid = idx.entry_id(entry);
+      state.array_reqs[eid] = reqs[i];
+      state.arrays[eid] = outputs[i];
+    }
   }
 
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
-    state.arrays[eid] = inputs[i];
+    if (state.dynamic_entries[eid]) state.arrays[eid] = inputs[i];
   }
-
-  for (auto i : config_.data_indices) {
-    const auto iter = fwd_input_to_grad_output_.find(i);
-    if (iter == fwd_input_to_grad_output_.end()) continue;
-    auto entry = grad_graph_.outputs[iter->second];
-    if (!idx.exist(entry.node.get())) continue;
-    auto eid = idx.entry_id(entry);
-    state.array_reqs[eid] = reqs[iter->second];
-    state.arrays[eid] = outputs[iter->second];
-  }
-
 
   StaticRunOps(default_ctx, g, state_ptr, num_forward_nodes, idx.num_nodes());
 }
@@ -920,7 +978,7 @@ void CachedOp::Backward(
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
-  if (config_.use_static_memory) {
+  if (config_.static_alloc) {
     StaticBackward(retain_graph, state, inputs, reqs, outputs);
   } else {
     DynamicBackward(retain_graph, state, inputs, reqs, outputs);

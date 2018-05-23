@@ -822,22 +822,15 @@ inline void SetupOpExec(
     const std::vector<OpReqType> array_reqs) {
   const auto& idx = g.indexed_graph();
   const auto& inode = idx[nid];
-  if (inode.source->is_variable()) return;
-
-  for (const auto& e : inode.inputs) {
-    if (arrays[idx.entry_id(e)]->is_none()) return;
-  }
-  for (uint32_t i = 0; i < inode.source->num_outputs(); ++i) {
-    if (arrays[idx.entry_id(nid, i)]->is_none()) return;
-  }
-
   CHECK_EQ(exec->in_array.size(), 0U);
   CHECK_EQ(exec->out_array.size(), 0U);
   for (const auto& e : inode.inputs) {
+    CHECK(!arrays[idx.entry_id(e)]->is_none()) << inode.source->attrs.name;
     exec->in_array.push_back(*arrays[idx.entry_id(e)]);
   }
   for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
     uint32_t eid = idx.entry_id(nid, index);
+    CHECK(!arrays[eid]->is_none()) << inode.source->attrs.name;
     exec->out_array.push_back(*arrays[eid]);
     exec->req.push_back(array_reqs[eid]);
   }
