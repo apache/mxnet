@@ -225,7 +225,7 @@ class Parameter(object):
         self._trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx, cast_stype=False):
+    def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
             if self not in self._trainer._params_to_init:
@@ -246,13 +246,7 @@ class Parameter(object):
                 "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
-            if not cast_stype:
-                raise RuntimeError("Failed loading Parameter '%s' from saved params: storage " \
-                                   "type incompatible expected %s vs saved %s. Set " \
-                                   "cast_stype=True to cast saved params to the same stype " \
-                                   "as '%s'."%(self.name, self._stype, data.stype, self.name))
-            else:
-                data = data.tostype(self._stype)
+            data = data.tostype(self._stype)
         if isinstance(ctx, Context):
             ctx = [ctx]
         if self._data is None:
@@ -872,7 +866,7 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix='', cast_stype=False):
+             ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 
         filename : str
@@ -886,9 +880,6 @@ class ParameterDict(object):
             present in this ParameterDict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
-        cast_stype: bool, default False
-            Whether to cast the storage type of parameters from the file to current
-            Parameter's storage type if stypes mismatch.
         """
         if restore_prefix:
             for name in self.keys():
@@ -913,4 +904,4 @@ class ParameterDict(object):
                     "Please make sure source and target networks have the same prefix."%(
                         name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx, cast_stype=cast_stype)
+            self[name]._load_init(arg_dict[name], ctx)

@@ -124,7 +124,7 @@ def test_paramdict():
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
     assertRaises(RuntimeError, params2.load, 'test_paramdict.params', mx.cpu())
-    params2.load('test_paramdict.params', mx.cpu(), cast_stype=True)
+    params2.load('test_paramdict.params', mx.cpu())
 
     # compare the values before and after save/load
     cur_w0 = params2.get('w0').data(mx.cpu())
