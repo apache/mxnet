@@ -170,4 +170,4 @@ List of Contributors
 * [Sina Afrooze](https://github.com/safrooze)
 * [Sergey Sokolov](https://github.com/Ishitori)
 * [Thomas Delteil](https://github.com/ThomasDelteil)
-
+* [Hang Zhang](http://hangzh.com)
