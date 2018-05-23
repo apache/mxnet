@@ -610,7 +610,7 @@ void CachedOp::StaticRunOps(
       ndinputs.reserve(node.inputs.size());
       for (const auto& j : node.inputs) {
         ndinputs.emplace_back(state.arrays[idx.entry_id(j)]);
-        CHECK(!ndinputs.back()->is_none()) << idx[j.node_id].source->attrs.name << " " << j.index;
+        CHECK(!ndinputs.back()->is_none());
       }
       ndoutputs.clear();
       ndoutputs.reserve(num_outputs);
@@ -620,7 +620,7 @@ void CachedOp::StaticRunOps(
         size_t eid = idx.entry_id(i, j);
         ndoutputs.emplace_back(state.arrays[eid]);
         req.push_back(state.array_reqs[eid]);
-        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none()) << node.source->attrs.name << " " << j;
+        CHECK(req.back() == kNullOp || !ndoutputs.back()->is_none());
       }
       const DispatchMode dispatch_mode = dispatch_modes[i];
       if (createop.count(node.source->op())) {
