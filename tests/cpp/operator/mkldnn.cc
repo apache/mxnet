@@ -90,44 +90,42 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
 }
 
 // Init arrays with the default layout.
-static void InitArray(NDArray *arr, bool is_rand = false) {
+static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   size_t size = blob.Size();
-  if (is_rand) {
-    for (size_t i = 0; i < size; i++)
-      data[i] = std::rand();
-  } else {
-    for (size_t i = 0; i < size; i++)
-      data[i] = i;
-  }
+    if (is_rand) {
+        for (size_t i = 0; i < size; i++)
+            data[i] = std::rand();
+    } else {
+        for (size_t i = 0; i < size; i++)
+            data[i] = i;
+    }
 }
 
 // Init arrays with negative and positive values
-static void InitNegPosArray(NDArray *arr) {
-    const TBlob &blob = arr->data();
-    mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-    int size = blob.Size();
+static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
+  const TBlob &blob = arr->data();
+  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
+  int size = blob.Size();
+  if (is_rand) {
+    for (int i = 0; i < size; i++)
+      data[i] = std::rand() - 0.5;
+  } else {
     size_t shift = size >> 1;
     for (int i = 0; i < size; i++)
-        data[i] = i - shift;
+      data[i] = i - shift;
+  }
 }
+
+using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
-                            bool is_rand = false) {
-  const TBlob &blob = arr->data();
-  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-  size_t size = blob.Size();
-  if (is_rand) {
-    for (size_t i = 0; i < size; i++)
-      data[i] = std::rand();
-  } else {
-    for (size_t i = 0; i < size; i++)
-      data[i] = i;
-  }
-  arr->MKLDNNDataReorderAsync(pd);
-  arr->WaitToRead();
+                            InitFunc init_fn, bool is_rand = false) {
+    init_fn(arr, is_rand);
+    arr->MKLDNNDataReorderAsync(pd);
+    arr->WaitToRead();
 }
 
 static void VerifyDefMem(const mkldnn::memory &mem) {
@@ -301,7 +299,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
   // Reorder from the default to any other layout.
   for (auto s : shapes) {
     NDArray arr(s, Context());
-    InitArray(&arr);
+    InitDefaultArray(&arr);
     for (auto pd : pds) {
       if (s.Size() == pd.get_size() / sizeof(mshadow::default_real_t)) {
         const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(pd);
@@ -333,7 +331,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
         for (int i = 0; i < from_pd.desc().data.ndims; i++)
           printf("%d, ", from_pd.desc().data.dims[i]);
         printf("), format: %d\n", from_pd.desc().data.format);
-        InitMKLDNNArray(&arr, from_pd);
+        InitMKLDNNArray(&arr, from_pd, InitDefaultArray);
         for (auto to_pd : pds) {
           if (to_pd.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
             const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(to_pd);
@@ -398,8 +396,6 @@ OpAttrs GetSumOp() {
   return attrs;
 }
 
-using InitFunc = std::function<void (NDArray *arr)>;
-
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -429,17 +425,17 @@ std::vector<NDArray> GetTestInputArrays(InitFunc init_fn) {
   std::vector<NDArray> in_arrs;
   for (auto shape : shapes) {
     in_arrs.emplace_back(shape, Context());
-    init_fn(&in_arrs.back());
+    init_fn(&in_arrs.back(), false);
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
 
       in_arrs.emplace_back(shape, Context());
-      InitMKLDNNArray(&in_arrs.back(), pd);
+      InitMKLDNNArray(&in_arrs.back(), pd, init_fn);
 
       // Get a sliced version.
       NDArray arr(shape, Context());
-      InitMKLDNNArray(&arr, pd);
+      InitMKLDNNArray(&arr, pd, init_fn);
       arr = arr.Slice(1, arr.shape()[0] - 1);
       in_arrs.emplace_back(arr);
     }
@@ -466,11 +462,12 @@ std::vector<NDArray> GetTestInputArrays(InitFunc init_fn) {
  * 9. Reused NDArray with MKLDNN layout of different dimensions.
  */
 std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
-                                         const std::vector<mkldnn::memory::primitive_desc> &pds) {
+                                         const std::vector<mkldnn::memory::primitive_desc> &pds,
+                                         const InitFunc init_fn) {
   std::vector<NDArray> in_arrs;
   // Type 1.
   in_arrs.emplace_back(shape, Context());
-  InitArray(&in_arrs.back(), true);
+  init_fn(&in_arrs.back(), false);
 
   // Type 4.
   TShape tmp_shape = shape;
@@ -492,7 +489,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-  InitArray(&arr2, true);
+  init_fn(&arr2, true);
   in_arrs.emplace_back(arr2);
 
   // Type 7
@@ -500,7 +497,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  InitArray(&arr3, true);
+  init_fn(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1));
 
   for (auto pd : pds) {
@@ -509,7 +506,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
 
     // Type 2, 3.
     in_arrs.emplace_back(shape, Context());
-    InitMKLDNNArray(&in_arrs.back(), pd, true);
+    InitMKLDNNArray(&in_arrs.back(), pd, init_fn, true);
 
     // Type 8, 9.
     // Get a reused version.
@@ -517,7 +514,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, pd, true);
+    InitMKLDNNArray(&arr, pd, init_fn, true);
     in_arrs.emplace_back(arr);
   }
   return in_arrs;
@@ -594,7 +591,7 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray> in_arrs = GetTestInputArrays(init_fn);
   for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
-      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds);
+      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
         inputs[0] = &in_arr;
@@ -678,7 +675,7 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-    TestUnaryOp(attrs, InitArray, VerifyCopyResult);
+    TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
