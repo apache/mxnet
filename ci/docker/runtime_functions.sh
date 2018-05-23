@@ -38,23 +38,7 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-
-
-    # workaround for old version of ccache that has a bug working with nvcc
-
-    echo '#!/bin/sh\nccache ${CC} "$@"\n' > cc
-    echo '#!/bin/sh\nccache ${CXX} "$@"\n' > cxx
-
-    chmod +x cc
-    chmod +x cxx
-
-    export DIR=$(pwd)
-
-    export CC="${DIR}/cc"
-    export CXX="${DIR}/cxx"
-
     mv make/config.mk make/config.tmp
-
     cp -f make/crosscompile.jetson.mk make/config.mk
     make -j$(nproc)
 
