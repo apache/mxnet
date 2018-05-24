@@ -354,6 +354,11 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
   }
 }
 
+struct NDArrayAttrs {
+  NDArray arr;
+  std::string desc;
+};
+
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
@@ -418,43 +423,47 @@ OpAttrs GetSumOp() {
  *    reordered to 5 dimensions.
  *
  */
-std::vector<NDArray> GetTestInputArrays(InitFunc init_fn) {
+std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArray> in_arrs;
+  std::vector<NDArrayAttrs> in_arrs;
   for (auto shape : shapes) {
-    in_arrs.emplace_back(shape, Context());
-    init_fn(&in_arrs.back(), false);
+    // Type 1.
+    NDArray arr(shape, Context());
+    in_arrs.emplace_back(arr, "Normal NDArray");
+    init_fn(&in_arrs.back().arr, false);
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
 
-      in_arrs.emplace_back(shape, Context());
-      InitMKLDNNArray(&in_arrs.back(), pd, init_fn);
+      // Type 2, 3.
+      arr = NDArray(shape, Context());
+      in_arrs.emplace_back(arr, "MKLDNN NDArray");
+      InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn);
 
-      // Get a sliced version.
-      NDArray arr(shape, Context());
+      // Type 4, 5, 6.
+      arr = NDArray(shape, Context());
       InitMKLDNNArray(&arr, pd, init_fn);
       arr = arr.Slice(1, arr.shape()[0] - 1);
-      in_arrs.emplace_back(arr);
+      in_arrs.emplace_back(arr, "MDKLDNN Reshpae NDArray");
     }
   }
   return in_arrs;
 }
 
 TEST(MKLDNN_NDArray, GetTestInputArrays) {
-  std::vector<NDArray> in_arrs = GetTestInputArrays(InitDefaultArray);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   int mkldnn_count = 0, mkldnn_view_count = 0;
   for (auto arr : in_arrs) {
 
-    if (arr.IsView() && arr.IsMKLDNNData()) {
+    if (arr.arr.IsView() && arr.arr.IsMKLDNNData()) {
       mkldnn_view_count++;
       continue;
     }
 
-    if (arr.IsMKLDNNData()) {
+    if (arr.arr.IsMKLDNNData()) {
       mkldnn_count++;
       continue;
     }
@@ -529,7 +538,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   init_fn(&arr2, true);
   in_arrs.emplace_back(arr2);
 
-  // Type 7
+  // Type 7.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
@@ -625,13 +634,13 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArray> in_arrs = GetTestInputArrays(init_fn);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(init_fn);
   for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
-      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds, init_fn);
+      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
-        inputs[0] = &in_arr;
+        inputs[0] = &in_arr.arr;
         outputs[0] = &out_arr;
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -645,13 +654,13 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
     in_arrs = GetTestInputArrays(init_fn);
     for (auto arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
-      if (arr.IsView())
+      if (arr.arr.IsView())
         continue;
 
-      NDArray orig = arr.Copy(arr.ctx());
+      NDArray orig = arr.arr.Copy(arr.arr.ctx());
       req[0] = kWriteInplace;
-      inputs[0] = &arr;
-      outputs[0] = &arr;
+      inputs[0] = &arr.arr;
+      outputs[0] = &arr.arr;
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
