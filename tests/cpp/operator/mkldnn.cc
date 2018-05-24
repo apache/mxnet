@@ -448,7 +448,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
       arr = NDArray(shape, Context());
       InitMKLDNNArray(&arr, pd, init_fn);
       arr = arr.Slice(1, arr.shape()[0] - 1);
-      in_arrs.emplace_back(arr, "MDKLDNN Reshpae NDArray");
+      in_arrs.emplace_back(arr, "MDKLDNN Reshape NDArray");
     }
   }
   return in_arrs;
@@ -575,6 +575,12 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
+  printf("Comparing Arrays:\n");
+  printf("Input Array (");
+  TShape t1 = tmp1.shape();
+  for (size_t i = 0; i < t1.Size(); i++)
+    printf("%d, ", t1[i]);
+  printf(") %s\n", in_arr.desc);
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
