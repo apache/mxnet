@@ -227,12 +227,6 @@ class Parameter(object):
 
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
-        if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
-            if self not in self._trainer._params_to_init:
-                raise RuntimeError("Cannot (re)initialize Parameter '%s' because it was " \
-                                   "already initialized on the trainer's KVStore, and " \
-                                   "trainer._update_on_kvstore is True. Please create a " \
-                                   "new Trainer with this Parameter."%(self.name))
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
                 assert self_dim == 0 or self_dim == data_dim, \
@@ -424,6 +418,11 @@ class Parameter(object):
                 "Parameter '%s' has not been initialized"%self.name
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
+
+        # if update_on_kvstore, we need to make sure the copy stored in kvstore is in sync
+        if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
+            if self not in self._trainer._params_to_init:
+                self._trainer._reset_kvstore()
 
         for arr in self._check_and_get(self._data, list):
             arr[:] = data

@@ -69,7 +69,6 @@ class Trainer(object):
                 "got %s."%(type(params)))
         self._params = []
         # parameters to initialize on the kvstore
-        self._params_to_init = []
         self._contains_sparse = False
         self._param2idx = {}
         for i, param in enumerate(params):
@@ -79,7 +78,6 @@ class Trainer(object):
                     "got list of %s."%(type(param)))
             self._param2idx[param.name] = i
             self._params.append(param)
-            self._params_to_init.append(param)
             param._set_trainer(self)
             if param._stype != 'default':
                 self._contains_sparse = True
@@ -88,9 +86,12 @@ class Trainer(object):
         self._scale = float(optimizer_params.get('rescale_grad', 1.0))
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
+        self._kvstore_params = {'kvstore': kvstore, 'update_on_kvstore': update_on_kvstore}
         self._kv_initialized = False
-        self._kvstore = kvstore
-        self._update_on_kvstore = update_on_kvstore
+        self._kvstore = None
+        self._update_on_kvstore = None
+        self._params_to_init = []
+        self._reset_kvstore()
 
     def _check_contexts(self):
         contexts = None
@@ -140,30 +141,37 @@ class Trainer(object):
 
         self._params_to_init = params_to_init
 
+    def _reset_kvstore(self):
+        """Reset kvstore."""
+        if self._kvstore and 'dist' in self._kvstore.type:
+            raise RuntimeError("Cannot reset distributed KVStore.")
+        self._kv_initialized = False
+        self._kvstore = None
+        self._update_on_kvstore = None
+        self._params_to_init = [param for param in self._params]
+
     def _init_kvstore(self):
         """Create kvstore."""
         arg_arrays = {}
+        config = self._kvstore_params
         if self._contains_sparse:
-            kvstore, update_on_kvstore = _create_sparse_kvstore(self._kvstore)
+            kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
             # update_on_kvstore is set to False by the user
-            if self._update_on_kvstore is False:
+            if config['update_on_kvstore'] is False:
                 raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
                                    "gradients and/or sparse weights are present for "
-                                   "Parameter %s." % param.name)
+                                   "Parameter '%s'."%param.name)
         else:
-            kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
+            kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
-            update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
-                                else update_on_kvstore
+            if config['update_on_kvstore'] is not None:
+                update_on_kvstore = config['update_on_kvstore']
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
             # kv.pull(row_sparse_grad) is not supported
-            if self._contains_sparse:
-                update_on_kvstore = True
-            else:
-                if 'dist' in kvstore.type:
-                    update_on_kvstore = False
+            if 'dist' in kvstore.type and not self._contains_sparse:
+                update_on_kvstore = False
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)

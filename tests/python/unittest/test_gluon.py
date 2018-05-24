@@ -102,8 +102,6 @@ def test_paramdict():
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     # save params
     params0.save('test_paramdict.params')
-    # cannot load parameters if they are already initialized on trainer's kvstore
-    assertRaises(RuntimeError, params0.load, 'test_paramdict.params', mx.cpu())
 
     # load params
     params1 = gluon.ParameterDict('net_')
