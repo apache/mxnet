@@ -537,7 +537,9 @@ TEST(MKLDNN_NDArray, CopyFrom) {
       const mkldnn::memory *mem = in_arr.GetMKLDNNData();
       out_arr.CopyFrom(*mem);
       MKLDNNStream::Get()->Submit();
-      VerifyCopyResult(in_arr, out_arr);
+      std::vector<NDArray *> inputs(1);
+      inputs[0] = &in_arr;
+      VerifyCopyResult(inputs, out_arr);
     }
   }
 }
@@ -598,22 +600,21 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
   std::vector<NDArray> in_arrs = GetTestInputArrays();
   for (auto in_arr1 : in_arrs) {
-    for (auto in_arr2 : in_arrs) {
-      if (in_arr1.shape() != in_arr2.shape())
-        continue;
-
-      for (auto dispatch : dispatches) {
-        std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr1.shape(), pds);
-        for (auto out_arr : out_arrs) {
-          req[0] = kWriteTo;
-          inputs[0] = &in_arr1;
-          inputs[1] = &in_arr2;
-          outputs[0] = &out_arr;
-          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                      outputs, req, dispatch, mxnet::OpStatePtr());
-          out_arr.WaitToRead();
-          verify_fn(inputs, out_arr);
-        }
+    for (auto dispatch : dispatches) {
+      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr1.shape(), pds);
+      for (auto out_arr : out_arrs) {
+        req[0] = kWriteTo;
+        inputs[0] = &in_arr1;
+        inputs[1] = &in_arr1;
+        outputs[0] = &out_arr;
+        printf("test1\n");
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        printf("test2\n");
+        out_arr.WaitToRead();
+        printf("test3\n");
+        verify_fn(inputs, out_arr);
+        printf("test4\n");
       }
     }
   }
