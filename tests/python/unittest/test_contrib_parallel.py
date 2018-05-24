@@ -43,7 +43,7 @@ def test_data_parallel():
     def test_net_sync(net, criterion, sync, num_devices):
         ctx_list = [mx.cpu(0) for i in range(num_devices)]
         net = DataParallelModel(net, ctx_list, sync=sync)
-        criterion = DataParallelCriterion(criterion, ctx_list, sync=sync)
+        criterion = DataParallelLoss(criterion, ctx_list, sync=sync)
         iters = 100
         # train mode
         for i in range(iters):
