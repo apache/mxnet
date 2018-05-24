@@ -171,8 +171,8 @@ object DataBatch {
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
     private var bucketKey: AnyRef = null
-    private var providedData: ListMap[String, Shape] = ListMap.empty
-    private var providedLabel: ListMap[String, Shape] = ListMap.empty
+    private var datatShapes: ListMap[String, Shape] = ListMap.empty
+    private var labelShapes: ListMap[String, Shape] = ListMap.empty
 
     /**
      * Set the input data.
@@ -232,8 +232,8 @@ object DataBatch {
      * @param shape data shape.
      * @return this.
      */
-    def provideData(name: String, shape: Shape): Builder = {
-      providedData = providedData.updated(name, shape)
+    def provideDataShape(name: String, shape: Shape): Builder = {
+      datatShapes = datatShapes.updated(name, shape)
       this
     }
 
@@ -243,14 +243,13 @@ object DataBatch {
      * @param shape label shape.
      * @return this.
      */
-    def provideLabel(name: String, shape: Shape): Builder = {
-      providedLabel = providedLabel.updated(name, shape)
+    def provideLabelShape(name: String, shape: Shape): Builder = {
+      labelShapes = labelShapes.updated(name, shape)
       this
     }
 
     def build(): DataBatch = {
-      new DataBatch(data, label, index, pad,
-        bucketKey, providedData, providedLabel)
+      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes)
     }
   }
 }

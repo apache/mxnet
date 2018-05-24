@@ -669,7 +669,7 @@ object Module {
 
     /**
      * Set the input data names.
-     * @param name a list of data names.
+     * @param name a list of data names. Cannot be null.
      * @return this.
      */
     @varargs def setDataNames(name: String*): Builder = {
@@ -680,10 +680,11 @@ object Module {
     /**
      * Set the label names.
      * @param name a list of label names.
+     *             Set to null if no label is required.
      * @return this.
      */
     @varargs def setLabelNames(name: String*): Builder = {
-      labelNames = name.toVector
+      labelNames = if (name == null) IndexedSeq.empty[String] else name.toVector
       this
     }
 
