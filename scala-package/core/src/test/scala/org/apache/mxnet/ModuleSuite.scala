@@ -17,10 +17,7 @@
 
 package org.apache.mxnet
 
-import org.apache
-import org.apache.mxnet
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
-import org.apache.mxnet.CheckUtils._
 import org.apache.mxnet.module._
 import org.apache.mxnet.optimizer._
 import org.apache.mxnet.io._

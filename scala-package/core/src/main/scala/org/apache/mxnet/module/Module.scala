@@ -650,7 +650,7 @@ object Module {
    * Builder class for Module.
    * @param modelDef model definition in Symbol.
    */
-  class Builder (private val modelDef: Symbol) {
+  class Builder(private val modelDef: Symbol) {
     private var dataNames: IndexedSeq[String] = IndexedSeq("data")
     private var labelNames: IndexedSeq[String] = IndexedSeq("softmax_label")
     private var contexts: Array[Context] = Array(Context.cpu())
