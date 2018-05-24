@@ -357,7 +357,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
 struct NDArrayAttrs {
   NDArray arr;
   std::string desc;
-  NDArrayAttrs(NDArray arr, std::string desc) : arr(arr), desc(desc) {};
+  NDArrayAttrs(NDArray arr, std::string desc) : arr(arr), desc(desc) {}
 };
 
 struct OpAttrs {
@@ -458,7 +458,6 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   int mkldnn_count = 0, mkldnn_view_count = 0;
   for (auto arr : in_arrs) {
-
     if (arr.arr.IsView() && arr.arr.IsMKLDNNData()) {
       mkldnn_view_count++;
       continue;
@@ -468,7 +467,6 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
       mkldnn_count++;
       continue;
     }
-
   }
 
   EXPECT_GT(mkldnn_view_count, 0);
