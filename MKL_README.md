@@ -1,20 +1,12 @@
-## Build/Install MXNet with a full MKL installation:
+* [1. Build/Install MXNet with MKLDNN on Linux](#1)
+* [2. Build/Install MXNet with MKLDNN on MacOS](#2)
+* [3. Build/Install MXNet with MKLDNN on Windows](#3)
+* [4. Verify MXNet with python](#4)
+* [5. Build/Install MXNet with a full MKL installation](#5)
 
-To make it convenient for customers, Intel introduced a new license called [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) that allows to redistribute not only dynamic libraries but also headers, examples and static libraries.
+<h2 id="1">Build/Install MXNet with MKLDNN on Linux</h2>
 
-Installing and enabling the full MKL installation enables MKL support for all operators under the linalg namespace.
-
-  1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl)
-
-  2. Run 'make -j ${nproc} USE_BLAS=mkl'
-
-  3. Navigate into the python directory
-
-  4. Run 'sudo python setup.py install'
-
-## Build/Install MXNet with MKLDNN on Linux:
-
-### Ubuntu pre-req
+### Prerequisites
 
 ```
 apt-get update && apt-get install -y build-essential git libopencv-dev curl gcc libopenblas-dev python python-pip python-dev python-opencv graphviz python-scipy python-sklearn
@@ -36,23 +28,9 @@ make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas USE_PROFILER=1
 
 If you want to use Intel MKL blas, you can set `USE_BLAS=mkl USE_INTEL_PATH=/opt/intel`.
 
-### Verify MXNet with python
+<h2 id="2">Build/Install MXNet with MKLDNN on MacOS</h2>
 
-```
-export PYTHONPATH=~/incubator-mxnet/python
-pip install --upgrade pip 
-pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
-python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
-
-Expected Output:
-
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
-```
-
-## Build/Install MXNet with MKLDNN on MacOS:
-
-### MacOS pre-req
+### Prerequisites
 
 Install the dependencies, required for MXNet, with the following commands:
 
@@ -75,9 +53,9 @@ brew install gcc49
 brew link gcc49
 ```
 
-### Modify Makefile to enable openMP for MacOS
+### Enable openMP for MacOS
 
-If you want to enable openMP for better performance, you should modify these two file:
+If you want to enable openMP for better performance, you should modify these two files:
 
 1. Makefile L138:
 
@@ -103,21 +81,7 @@ make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=app
 
 *Note: Temporarily disable OPENCV.*
 
-### Verify MXNet with python
-
-```
-export PYTHONPATH=~/incubator-mxnet/python
-pip install --upgrade pip 
-pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
-python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
-
-Expected Output:
-
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
-```
-
-## Build/Install MXNet with MKLDNN on Windows:
+<h2 id="3">Build/Install MXNet with MKLDNN on Windows</h2>
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
@@ -156,26 +120,36 @@ Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/`
 
 6. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading mxnet.
 
-## Install MXNet for Python
+<h2 id="4">Verify MXNet with python</h2>
 
-1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
-2. Install ```Numpy``` using windows installer available [here](http://scipy.org/install.html).
-3. Next, we install Python package interface for MXNet. You can find the Python interface package for [MXNet on GitHub](https://github.com/dmlc/mxnet/tree/master/python/mxnet).
-
-```CMD
-    cd python
-    python setup.py install
 ```
-Done! We have installed MXNet with Python interface. Run below commands to verify our installation is successful.
-```CMD
-    # Open Python terminal
-    python
+export PYTHONPATH=~/incubator-mxnet/python
+pip install --upgrade pip 
+pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
+python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
 
-    # You should be able to import mxnet library without any issues.
-    >>> import mxnet as mx;
-    >>> a = mx.nd.ones((2, 3));
-    >>> print ((a*2).asnumpy());
-        [[ 2.  2.  2.]
-        [ 2.  2.  2.]]
+Expected Output:
+
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
 ```
-We actually did a small tensor computation using MXNet! You are all set with MKLDNN MXNet on your Windows machine.
+
+### Verify whether MKLDNN works:
+
+```
+WIP
+```
+
+<h2 id="5">Build/Install MXNet with a full MKL installation</h2>
+
+To make it convenient for customers, Intel introduced a new license called [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) that allows to redistribute not only dynamic libraries but also headers, examples and static libraries.
+
+Installing and enabling the full MKL installation enables MKL support for all operators under the linalg namespace.
+
+  1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl)
+
+  2. Run 'make -j ${nproc} USE_BLAS=mkl'
+
+  3. Navigate into the python directory
+
+  4. Run 'sudo python setup.py install'
