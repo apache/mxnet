@@ -357,13 +357,13 @@ if __name__ == "__main__":
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
-    if opt.type == 'all' or  opt.type == 'init':
+    if opt.type == 'all' or opt.type == 'init':
         test_sync_init(opt.gpu)
     kv = init_kv()
-    if opt.type == 'all' or  opt.type == 'default':
+    if opt.type == 'all' or opt.type == 'default':
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
     # dont run non compressed tests after this as kvstore compression will be set here
-    if opt.type == 'all' or  opt.type == 'compressed':
+    if opt.type == 'all' or opt.type == 'compressed':
         kv, threshold = init_kv_compressed(kv)
         test_sync_2bit_compression(threshold, opt.nrepeat)
