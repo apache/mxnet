@@ -580,7 +580,7 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   TShape t1 = tmp1.shape();
   for (size_t i = 0; i < t1.ndim(); i++)
     printf("%ld, ", t1[i]);
-  printf(") %s\n", in_arr.desc);
+  printf(") %s\n", in_arr.desc.c_str());
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
