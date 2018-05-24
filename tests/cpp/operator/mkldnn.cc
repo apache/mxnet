@@ -447,14 +447,14 @@ std::vector<NDArray> GetTestInputArrays(InitFunc init_fn) {
 TEST(MKLDNN_NDArray, GetTestInputArrays) {
   std::vector<NDArray> in_arrs = GetTestInputArrays(InitDefaultArray);
   int mkldnn_count = 0, mkldnn_view_count = 0;
-  for (auto in_arr : in_arrs) {
+  for (auto arr : in_arrs) {
 
-    if (in_arr.isView() && in_arr.IsMKLDNNData()) {
+    if (arr.IsView() && arr.IsMKLDNNData()) {
       mkldnn_view_count++;
       continue;
     }
 
-    if (in_arr.IsMKLDNNData()) {
+    if (arr.IsMKLDNNData()) {
       mkldnn_count++;
       continue;
     }
