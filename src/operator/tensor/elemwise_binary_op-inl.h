@@ -539,10 +539,9 @@ void ElemwiseBinaryOp::DnsCsrCsrOp(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(dns.storage_type(), kDefaultStorage);
   CHECK_EQ(csr.storage_type(), kCSRStorage);
   CHECK_EQ(req, kWriteTo) << "elemwise(dns, csr) = csr only supports kWriteTo";
-  CHECK(req != kNullOp);
-  const bool supported_op = std::is_same<OP, mshadow_op::mul>::value ||
-                            std::is_same<OP, mshadow_op::div>::value;
-  CHECK(supported_op == true) << "elemwise(dns, csr) = csr only supports mul/div";
+  if (req == kNullOp) return;
+  const bool supported_op = std::is_same<OP, mshadow_op::mul>::value;
+  CHECK(supported_op == true) << "elemwise(dns, csr) = csr only supports mul";
   const nnvm::dim_t num_csr_rows = csr.shape()[0];
   const nnvm::dim_t num_csr_cols = csr.shape()[1];
   const nnvm::dim_t nnz = csr.storage_shape()[0];
@@ -580,7 +579,6 @@ void ElemwiseBinaryOp::DnsCsrCsrOp(const nnvm::NodeAttrs &attrs,
     FillZerosCsrImpl(s, output);
   }
 }
-
 
 /*!
  * \brief Kernel for performing elemwise op between dense and rsp tensor
