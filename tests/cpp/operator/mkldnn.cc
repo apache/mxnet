@@ -448,7 +448,7 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
   std::vector<NDArray> in_arrs = GetTestInputArrays(InitDefaultArray);
   int mkldnn_count = 0, mkldnn_view_count = 0;
   for (auto in_arr : in_arrs) {
-    
+
     if (in_arr.isView() && in_arr.IsMKLDNNData()) {
       mkldnn_view_count++;
       continue;
@@ -506,6 +506,21 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   arr1 = arr1.AsArray(shape, arr1.dtype());
   init_fn(&arr1, true);
   in_arrs.emplace_back(arr1);
+
+  // Type 6.
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
+  NDArray arr2(s, Context(), true, mshadow::kUint8);
+  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
+  init_fn(&arr2, true);
+  in_arrs.emplace_back(arr2);
+
+  // Type 7
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+  NDArray arr3(s, Context(), true, mshadow::kUint8);
+  tmp_shape[0] = shape[0] * 2;
+  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
+  init_fn(&arr3, true);
+  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1));
 
   // Type 6.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
