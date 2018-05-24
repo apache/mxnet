@@ -303,13 +303,8 @@ def test_quantized_fc():
 
 @with_seed()
 def test_quantized_flatten():
-    if mx.current_context().device_type != 'gpu':
-        dtype = 'uint8'
-    else:
-        dtype = 'int8'
-
     def check_quantized_flatten(shape):
-        qdata = mx.nd.random.uniform(low=-127, high=127, shape=shape).astype(dtype)
+        qdata = mx.nd.random.uniform(low=-127, high=127, shape=shape).astype('int8')
         min_data = mx.nd.array([-1023.343], dtype='float32')
         max_data = mx.nd.array([2343.324275], dtype='float32')
         qoutput, min_output, max_output = mx.nd.contrib.quantized_flatten(qdata, min_data, max_data)

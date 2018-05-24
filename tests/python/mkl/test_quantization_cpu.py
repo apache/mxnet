@@ -21,7 +21,6 @@ import mxnet as mx
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
-from mxnet.test_utils import set_default_context
 from test_quantization import *
 
 if __name__ == '__main__':
