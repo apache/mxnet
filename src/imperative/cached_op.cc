@@ -537,33 +537,40 @@ void CachedOp::StaticInitExec(
     state.opr_segs[i] = EngineOprSeg();
   }
 
-  for (size_t i = start_nid; i < end_nid; ++i) {
-    exec::CreateOpExecs(g, &state.execs, i);
-  }
-  exec::AttachOpResources(g, state.execs, start_nid, end_nid);
-
-  for (size_t i = start_nid; i < end_nid; ++i) {
-    bool skip = idx[i].source->is_variable();
-    for (size_t j = 0; !skip && j < idx[i].inputs.size(); ++j) {
-      skip = state.dynamic_entries[idx.entry_id(idx[i].inputs[j])];
+  if (!config_.static_shape) {
+    for (size_t i = start_nid; i < end_nid; ++i) {
+      state.opr_segs[i].next_nid = i + 1;
+      state.opr_segs[i].skip = skip_plus_node.size() && skip_plus_node[i];
     }
-    for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
-      skip = state.dynamic_entries[idx.entry_id(i, j)];
+  } else {
+    for (size_t i = start_nid; i < end_nid; ++i) {
+      exec::CreateOpExecs(g, &state.execs, i);
     }
-    if (skip) continue;
-    SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
-  }
+    exec::AttachOpResources(g, state.execs, start_nid, end_nid);
 
-  size_t bulk_size = idx.num_nodes();
-  std::unordered_set<uint32_t> excludes;
-  if (recording || keep_fwd) {
-    bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-    for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
-    for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
-  }
+    for (size_t i = start_nid; i < end_nid; ++i) {
+      bool skip = idx[i].source->is_variable();
+      for (size_t j = 0; !skip && j < idx[i].inputs.size(); ++j) {
+        skip = state.dynamic_entries[idx.entry_id(idx[i].inputs[j])];
+      }
+      for (size_t j = 0; !skip && j < idx[i].source->num_outputs(); ++j) {
+        skip = state.dynamic_entries[idx.entry_id(i, j)];
+      }
+      if (skip) continue;
+      SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
+    }
 
-  CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
-                    state.execs, skip_plus_node, &state.opr_segs);
+    size_t bulk_size = idx.num_nodes();
+    std::unordered_set<uint32_t> excludes;
+    if (recording || keep_fwd) {
+      bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
+      for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
+      for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
+    }
+
+    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
+                      state.execs, skip_plus_node, &state.opr_segs);
+  }
 
   if (keep_fwd) {
     state.bwd_exec_init = true;
@@ -597,11 +604,11 @@ void CachedOp::StaticRunOps(
     if (op_execs[i]) op_execs[i]->op_ctx.is_train = is_training;
   }
 
-  for (size_t i = start_nid; i < end_nid;
-       i = config_.static_shape ? state.opr_segs[i].next_nid : i + 1) {
-    if (config_.static_shape && state.opr_segs[i].skip) continue;
-    if (config_.static_shape && state.opr_segs[i].opr != nullptr) {
-      Engine::Get()->Push(state.opr_segs[i].opr.get(), default_ctx, 0, profiling);
+  for (size_t i = start_nid; i < end_nid; i = state.opr_segs[i].next_nid) {
+    const auto& opr_seg = state.opr_segs[i];
+    if (opr_seg.skip) continue;
+    if (opr_seg.opr != nullptr) {
+      Engine::Get()->Push(opr_seg.opr.get(), default_ctx, 0, profiling);
     } else {
       const nnvm::IndexedGraph::Node& node = idx[i];
       if (node.source->is_variable()) continue;
@@ -674,18 +681,15 @@ OpStatePtr CachedOp::StaticForward(
   }
 
   if (config_.static_shape) {
-    for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
-      auto nid = idx.input_nodes()[config_.param_indices[i]];
-      if (!state.arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[config_.param_indices[i]])) {
+    for (auto i : config_.param_indices) {
+      auto nid = idx.input_nodes()[i];
+      if (!state.arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[i])) {
         match = false;
         auto ptr = &state.buff[idx.entry_id(nid, 0)];
         CHECK_EQ(state.arrays[idx.entry_id(nid, 0)], ptr);
-        *state.arrays[idx.entry_id(nid, 0)] = *inputs[config_.param_indices[i]];
+        *state.arrays[idx.entry_id(nid, 0)] = *inputs[i];
         state.dynamic_entries[idx.entry_id(nid, 0)] = false;
       }
-    }
-    if (!state.fwd_exec_init || !match) {
-      StaticInitExec(state_ptr, recording, false);
     }
     for (auto i : config_.data_indices) {
       auto eid = idx.entry_id(idx.input_nodes()[i], 0);
@@ -696,6 +700,10 @@ OpStatePtr CachedOp::StaticForward(
       auto nid = idx.input_nodes()[i];
       state.arrays[idx.entry_id(nid, 0)] = inputs[i];
     }
+  }
+
+  if (!state.fwd_exec_init || !match) {
+    StaticInitExec(state_ptr, recording, false);
   }
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
@@ -937,8 +945,8 @@ void CachedOp::StaticBackward(
   }
 
   if (config_.static_shape) {
-    for (size_t i = 0; i < config_.param_indices.ndim(); ++i) {
-      const auto iter = fwd_input_to_grad_output_.find(config_.param_indices[i]);
+    for (auto i : config_.param_indices) {
+      const auto iter = fwd_input_to_grad_output_.find(i);
       if (iter == fwd_input_to_grad_output_.end()) continue;
       auto entry = grad_graph_.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
@@ -951,7 +959,6 @@ void CachedOp::StaticBackward(
         state.dynamic_entries[eid] = false;
       }
     }
-    if (!state.bwd_exec_init || !match) StaticInitExec(state_ptr, true, true);
     for (auto i : config_.data_indices) {
       const auto iter = fwd_input_to_grad_output_.find(i);
       if (iter == fwd_input_to_grad_output_.end()) continue;
@@ -969,6 +976,10 @@ void CachedOp::StaticBackward(
       state.array_reqs[eid] = reqs[i];
       state.arrays[eid] = outputs[i];
     }
+  }
+
+  if (!state.bwd_exec_init || !match) {
+    StaticInitExec(state_ptr, true, true);
   }
 
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
