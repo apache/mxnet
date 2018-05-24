@@ -154,9 +154,9 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-             init_git()
-             docker_run('centos7_cpu', 'build_centos7_cpu', false)
-             pack_lib('centos7_cpu')
+            init_git()
+            docker_run('centos7_cpu', 'build_centos7_cpu', false)
+            pack_lib('centos7_cpu')
           }
         }
       }
@@ -187,9 +187,9 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
           timeout(time: max_time, unit: 'MINUTES') { 
-             init_git()
-             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-             pack_lib('cpu', mx_dist_lib)
+            init_git()
+            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
+            pack_lib('cpu', mx_dist_lib)
           }
         }
       }

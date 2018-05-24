@@ -199,8 +199,6 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -254,45 +252,45 @@ build_ubuntu_cpu_clang50() {
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
+    # mkldnn gets compiled with a script 
+    # and compilation fails with clang-3.9
     set -ex
-    export CC="ccache clang-3.9"
-    export CXX="ccache clang++-3.9"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
+        CC="ccache clang-3.9"         \
+        CXX="ccache clang++-3.9"      \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
     set -ex
-    export CC="ccache clang-5.0"
-    export CXX="ccache clang++-5.0"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
+        CC="ccache clang-5.0"         \
+        CXX="ccache clang++-5.0"      \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
+        CC="ccache gcc"               \
+        CXX="ccache g++"              \
         -j$(nproc)
 }
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -306,8 +304,6 @@ build_ubuntu_gpu_mkldnn() {
 
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     make  \
         DEV=1                         \
         USE_BLAS=openblas             \
@@ -336,8 +332,6 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
@@ -356,8 +350,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     cmake \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
@@ -408,7 +400,7 @@ unittest_ubuntu_python3_cpu() {
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
