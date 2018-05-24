@@ -136,10 +136,44 @@ Expected Output:
  [ 2.  2.  2.]]
 ```
 
-### Verify whether MKL-DNN works:
+### Verify whether MKL-DNN works
+
+After MXNet is installed, you can verify if MKL-DNN backend works well with a single Convolution layer.
 
 ```
-WIP
+import mxnet as mx
+import numpy as np
+from mxnet import Context
+
+num_filter = 32
+kernel = (3, 3)
+pad = (1, 1)
+shape = (32, 32, 256, 256)
+
+x = mx.sym.Variable('x')
+w = mx.sym.Variable('w')
+y = mx.sym.Convolution(data=x, weight=w, num_filter=num_filter, kernel=kernel, no_bias=True, pad=pad)
+exe = y.simple_bind(Context.default_ctx, x=shape)
+
+exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
+exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+
+exe.forward(is_train=False)
+o = exe.outputs[0]
+t = o.asnumpy()
+```
+
+You can open the `MKLDNN_VERBOSE` flag by setting environment variable:
+```
+export MKLDNN_VERBOSE=1
+```
+Then by running above code snippet, you probably will get the following output message which means `convolution` and `reorder` primitive from MKL-DNN are called. Layout information and primitive execution performance are also demonstrated in the log message.
+```
+mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nchw out:f32_nChw16c,num:1,32x32x256x256,6.47681
+mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,32x32x3x3,0.0429688
+mkldnn_verbose,exec,convolution,jit:avx512_common,forward_inference,fsrc:nChw16c fwei:OIhw16i16o fbia:undef fdst:nChw16c,alg:convolution_direct,mb32_g1ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,9.98193
+mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,32x32x3x3,0.0510254
+mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nChw16c out:f32_nchw,num:1,32x32x256x256,20.4819
 ```
 
 <h2 id="5">Build/Install MXNet with a full MKL installation</h2>
