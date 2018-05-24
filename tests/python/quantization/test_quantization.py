@@ -121,69 +121,71 @@ def test_requantize_int32_to_int8():
 @with_seed()
 def test_quantized_conv():
     if mx.current_context().device_type != 'gpu':
-        print('skipped testing quantized_conv on cpu since it is not implemented yet')
-        return
+        dtype = 'uint8'
+        shift = 127
+    else:
+        dtype = 'int8'
+        shift = 0
 
     def check_quantized_conv(data_shape, kernel, num_filter, pad, stride, no_bias):
-        with mx.Context('gpu', 0):
-            # run fp32 conv
-            data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
-            conv2d = mx.sym.Convolution(data=data, kernel=kernel, num_filter=num_filter, pad=pad, stride=stride,
-                                        no_bias=no_bias, cudnn_off=False, name='conv2d')
-            arg_shapes, _, _ = conv2d.infer_shape(data=data_shape)
-            arg_names = conv2d.list_arguments()
-            conv_exe_fp32 = conv2d.simple_bind(ctx=mx.current_context(), grad_req='null')
-            conv_exe_fp32.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
-                                                                           shape=data_shape).astype('int32')
-            conv_exe_fp32.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
-                                                                           shape=arg_shapes[1]).astype('int32')
-            if not no_bias:
-                conv_exe_fp32.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
-                                                                               shape=arg_shapes[2]).astype('int32')
-            output = conv_exe_fp32.forward()[0]
+        # run fp32 conv
+        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        conv2d = mx.sym.Convolution(data=data, kernel=kernel, num_filter=num_filter, pad=pad, stride=stride,
+                                    no_bias=no_bias, cudnn_off=False, name='conv2d')
+        arg_shapes, _, _ = conv2d.infer_shape(data=data_shape)
+        arg_names = conv2d.list_arguments()
+        conv_exe_fp32 = conv2d.simple_bind(ctx=mx.current_context(), grad_req='null')
+        conv_exe_fp32.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=-127.0 + shift, high=127.0,
+                                                                        shape=data_shape).astype('int32')
+        conv_exe_fp32.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+                                                                        shape=arg_shapes[1]).astype('int32')
+        if not no_bias:
+            conv_exe_fp32.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+                                                                            shape=arg_shapes[2]).astype('int32')
+        output = conv_exe_fp32.forward()[0]
 
-            # run quantized conv
-            qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
-            qweight = mx.sym.Variable(name='qweight', dtype='int8')
-            min_data = mx.sym.Variable(name='min_data')
-            max_data = mx.sym.Variable(name='max_data')
-            min_weight = mx.sym.Variable(name='min_weight')
-            max_weight = mx.sym.Variable(name='max_weight')
-            quantized_conv2d = mx.sym.contrib.quantized_conv(data=qdata, weight=qweight, min_data=min_data,
-                                                             max_data=max_data, min_weight=min_weight,
-                                                             max_weight=max_weight, kernel=kernel,
-                                                             num_filter=num_filter, pad=pad, stride=stride,
-                                                             no_bias=no_bias)
-            qarg_names = quantized_conv2d.list_arguments()
-            type_dict = None
-            if not no_bias:
-                type_dict = {qarg_names[2]: 'int8'}
-            conv_exe_int8 = quantized_conv2d.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
-            conv_exe_int8.arg_dict[qarg_names[0]][:] = conv_exe_fp32.arg_dict[arg_names[0]].astype('int8')
-            conv_exe_int8.arg_dict[qarg_names[1]][:] = conv_exe_fp32.arg_dict[arg_names[1]].astype('int8')
-            quantized_range = 127.0
-            if no_bias:
-                conv_exe_int8.arg_dict[qarg_names[2]][:] = -quantized_range
-                conv_exe_int8.arg_dict[qarg_names[3]][:] = quantized_range
-                conv_exe_int8.arg_dict[qarg_names[4]][:] = -quantized_range
-                conv_exe_int8.arg_dict[qarg_names[5]][:] = quantized_range
-            else:
-                conv_exe_int8.arg_dict[qarg_names[2]][:] = conv_exe_fp32.arg_dict[arg_names[2]].astype('int8')
-                conv_exe_int8.arg_dict[qarg_names[3]][:] = -quantized_range
-                conv_exe_int8.arg_dict[qarg_names[4]][:] = quantized_range
-                conv_exe_int8.arg_dict[qarg_names[5]][:] = -quantized_range
-                conv_exe_int8.arg_dict[qarg_names[6]][:] = quantized_range
-                conv_exe_int8.arg_dict[qarg_names[7]][:] = -quantized_range
-                conv_exe_int8.arg_dict[qarg_names[8]][:] = quantized_range
-            qoutput, min_range, max_range = conv_exe_int8.forward()
+        # run quantized conv
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=dtype)
+        qweight = mx.sym.Variable(name='qweight', dtype='int8')
+        min_data = mx.sym.Variable(name='min_data')
+        max_data = mx.sym.Variable(name='max_data')
+        min_weight = mx.sym.Variable(name='min_weight')
+        max_weight = mx.sym.Variable(name='max_weight')
+        quantized_conv2d = mx.sym.contrib.quantized_conv(data=qdata, weight=qweight, min_data=min_data,
+                                                            max_data=max_data, min_weight=min_weight,
+                                                            max_weight=max_weight, kernel=kernel,
+                                                            num_filter=num_filter, pad=pad, stride=stride,
+                                                            no_bias=no_bias)
+        qarg_names = quantized_conv2d.list_arguments()
+        type_dict = None
+        if not no_bias:
+            type_dict = {qarg_names[2]: 'int8'}
+        conv_exe_int8 = quantized_conv2d.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+        conv_exe_int8.arg_dict[qarg_names[0]][:] = conv_exe_fp32.arg_dict[arg_names[0]].astype(dtype)
+        conv_exe_int8.arg_dict[qarg_names[1]][:] = conv_exe_fp32.arg_dict[arg_names[1]].astype('int8')
+        quantized_range = 127.0
+        if no_bias:
+            conv_exe_int8.arg_dict[qarg_names[2]][:] = -quantized_range
+            conv_exe_int8.arg_dict[qarg_names[3]][:] = quantized_range
+            conv_exe_int8.arg_dict[qarg_names[4]][:] = -quantized_range
+            conv_exe_int8.arg_dict[qarg_names[5]][:] = quantized_range
+        else:
+            conv_exe_int8.arg_dict[qarg_names[2]][:] = conv_exe_fp32.arg_dict[arg_names[2]].astype('int8')
+            conv_exe_int8.arg_dict[qarg_names[3]][:] = -quantized_range
+            conv_exe_int8.arg_dict[qarg_names[4]][:] = quantized_range
+            conv_exe_int8.arg_dict[qarg_names[5]][:] = -quantized_range
+            conv_exe_int8.arg_dict[qarg_names[6]][:] = quantized_range
+            conv_exe_int8.arg_dict[qarg_names[7]][:] = -quantized_range
+            conv_exe_int8.arg_dict[qarg_names[8]][:] = quantized_range
+        qoutput, min_range, max_range = conv_exe_int8.forward()
 
-            if no_bias:
-                assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
-            else:
-                # with adding bias, accuracy loss should not be greater than one
-                diff = mx.nd.abs(output - qoutput.astype(output.dtype))
-                cond = mx.nd.lesser(2, diff).sum().asscalar()
-                assert cond == 0
+        if no_bias:
+            assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+        else:
+            # with adding bias, accuracy loss should not be greater than one
+            diff = mx.nd.abs(output - qoutput.astype(output.dtype))
+            cond = mx.nd.lesser(2, diff).sum().asscalar()
+            assert cond == 0
 
     check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), True)
     check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), False)
@@ -192,42 +194,44 @@ def test_quantized_conv():
 @with_seed()
 def test_quantized_pooling():
     if mx.current_context().device_type != 'gpu':
-        print('skipped testing quantized_pooling on cpu since it is not implemented yet')
-        return
+        dtype = 'uint8'
+        shift = 127
+    else:
+        dtype = 'int8'
+        shift = 0
 
     def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool):
-        with mx.Context('gpu', 0):
-            data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
-            pooling_fp32 = mx.sym.Pooling(data=data, kernel=kernel, pad=pad, stride=stride,
-                                          pool_type=pool_type, global_pool=global_pool, cudnn_off=False)
-            arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
-            arg_names = pooling_fp32.list_arguments()
-            pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
-            pooling_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
-                                                                              shape=data_shape).astype('int32')
-            output = pooling_fp32_exe.forward()[0]
+        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        pooling_fp32 = mx.sym.Pooling(data=data, kernel=kernel, pad=pad, stride=stride,
+                                        pool_type=pool_type, global_pool=global_pool, cudnn_off=False)
+        arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
+        arg_names = pooling_fp32.list_arguments()
+        pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        pooling_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=-127.0 + shift, high=127.0,
+                                                                            shape=data_shape).astype('int32')
+        output = pooling_fp32_exe.forward()[0]
 
-            qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
-            min_data = mx.sym.Variable(name='min_data')
-            max_data = mx.sym.Variable(name='max_data')
-            quantized_pooling = mx.sym.contrib.quantized_pooling(data=qdata, min_data=min_data,
-                                                                 max_data=max_data, kernel=kernel,
-                                                                 pad=pad, stride=stride, pool_type=pool_type,
-                                                                 global_pool=global_pool)
-            pooling_int8_exe = quantized_pooling.simple_bind(ctx=mx.current_context(), grad_req='null')
-            qarg_names = quantized_pooling.list_arguments()
-            pooling_int8_exe.arg_dict[qarg_names[0]][:] = pooling_fp32_exe.arg_dict[arg_names[0]].astype('int8')
-            quantized_range = 127.0
-            pooling_int8_exe.arg_dict[qarg_names[1]][:] = -quantized_range
-            pooling_int8_exe.arg_dict[qarg_names[2]][:] = quantized_range
-            qoutput, min_range, max_range = pooling_int8_exe.forward()
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=dtype)
+        min_data = mx.sym.Variable(name='min_data')
+        max_data = mx.sym.Variable(name='max_data')
+        quantized_pooling = mx.sym.contrib.quantized_pooling(data=qdata, min_data=min_data,
+                                                                max_data=max_data, kernel=kernel,
+                                                                pad=pad, stride=stride, pool_type=pool_type,
+                                                                global_pool=global_pool)
+        pooling_int8_exe = quantized_pooling.simple_bind(ctx=mx.current_context(), grad_req='null')
+        qarg_names = quantized_pooling.list_arguments()
+        pooling_int8_exe.arg_dict[qarg_names[0]][:] = pooling_fp32_exe.arg_dict[arg_names[0]].astype(dtype)
+        quantized_range = 127.0
+        pooling_int8_exe.arg_dict[qarg_names[1]][:] = -quantized_range
+        pooling_int8_exe.arg_dict[qarg_names[2]][:] = quantized_range
+        qoutput, min_range, max_range = pooling_int8_exe.forward()
 
-            if pool_type == 'max':
-                assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
-            elif pool_type == 'avg':  # for avg pooling, fp32 and int8 may be different due to rounding errors
-                diff = mx.nd.abs(output - qoutput.astype(output.dtype))
-                cond = mx.nd.lesser(2, diff).sum().asscalar()
-                assert cond == 0
+        if pool_type == 'max':
+            assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+        elif pool_type == 'avg':  # for avg pooling, fp32 and int8 may be different due to rounding errors
+            diff = mx.nd.abs(output - qoutput.astype(output.dtype))
+            cond = mx.nd.lesser(2, diff).sum().asscalar()
+            assert cond == 0
 
     check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), False)
     check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True)
@@ -299,8 +303,13 @@ def test_quantized_fc():
 
 @with_seed()
 def test_quantized_flatten():
+    if mx.current_context().device_type != 'gpu':
+        dtype = 'uint8'
+    else:
+        dtype = 'int8'
+
     def check_quantized_flatten(shape):
-        qdata = mx.nd.random.uniform(low=-127, high=127, shape=shape).astype('int8')
+        qdata = mx.nd.random.uniform(low=-127, high=127, shape=shape).astype(dtype)
         min_data = mx.nd.array([-1023.343], dtype='float32')
         max_data = mx.nd.array([2343.324275], dtype='float32')
         qoutput, min_output, max_output = mx.nd.contrib.quantized_flatten(qdata, min_data, max_data)
@@ -319,6 +328,11 @@ def test_quantized_flatten():
 
 @with_seed()
 def test_quantize_params():
+    if mx.current_context().device_type != 'gpu':
+        dtype = 'uint8'
+    else:
+        dtype = 'int8'
+
     data = mx.sym.Variable('data')
     conv = mx.sym.Convolution(data, kernel=(1, 1), num_filter=2048, name='conv')
     sym = mx.sym.BatchNorm(data=conv, eps=2e-05, fix_gamma=False, momentum=0.9, use_global_stats=False, name='bn')
@@ -327,7 +341,7 @@ def test_quantize_params():
     params = {}
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
+    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params, quantized_dtype=dtype)
     qparams = mx.contrib.quant._quantize_params(qsym, params)
     param_names = params.keys()
     qparam_names = qparams.keys()
@@ -353,6 +367,10 @@ def get_fp32_sym():
 
 @with_seed()
 def test_quantize_model():
+    if mx.current_context().device_type != 'gpu':
+        print('skipped testing quantized_model on cpu since it is not implemented yet')
+        return
+
     def check_params(params, qparams, qsym=None):
         if qsym is None:
             assert len(params) == len(qparams)
@@ -409,11 +427,19 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
-    requantize_op_names = ['requantize_conv', 'requantize_fc']
-    th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
-               'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
-    op_name_to_th_name = {'requantize_conv': 'conv_output', 'requantize_fc': 'fc_output'}
+    if mx.current_context().device_type != 'gpu':
+        dtype = 'uint8'
+        requantize_op_names = ['requantize_conv']
+        th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
+        op_name_to_th_name = {'requantize_conv': 'conv_output'}
+    else:
+        dtype = 'int8'
+        requantize_op_names = ['requantize_conv', 'requantize_fc']
+        th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
+                   'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
+        op_name_to_th_name = {'requantize_conv': 'conv_output', 'requantize_fc': 'fc_output'}
+
+    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params, quantized_dtype=dtype)
     cqsym = mx.contrib.quant._calibrate_quantized_sym(qsym, th_dict)
     attr_dict = cqsym.attr_dict()
     for name in requantize_op_names:
