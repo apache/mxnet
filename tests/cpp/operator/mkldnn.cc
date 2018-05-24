@@ -468,13 +468,13 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   std::vector<NDArray> in_arrs;
   // Type 1.
   in_arrs.emplace_back(shape, Context());
-  init_fn(&in_arrs.back(), false);
+  init_fn(&in_arrs.back(), true);
 
   // Type 4.
   TShape tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  InitArray(&arr0, true);
+  init_fn(&arr0, true);
   in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1));
 
   // Type 5.
@@ -483,7 +483,7 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   s[0] = shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
-  InitArray(&arr1, true);
+  init_fn(&arr1, true);
   in_arrs.emplace_back(arr1);
 
   // Type 6.
