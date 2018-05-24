@@ -12,6 +12,110 @@ Installing and enabling the full MKL installation enables MKL support for all op
 
   4. Run 'sudo python setup.py install'
 
+## Build/Install MXNet with MKLDNN on Linux:
+
+### Ubuntu pre-req
+
+```
+apt-get update && apt-get install -y build-essential git libopencv-dev curl gcc libopenblas-dev python python-pip python-dev python-opencv graphviz python-scipy python-sklearn
+```
+
+### Clone MXNet sources
+
+```
+git clone --recursive https://github.com/apache/incubator-mxnet.git
+cd incubator-mxnet
+git submodule update --recursive --init
+```
+
+### Build MXNet with MKLDNN
+
+```
+make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas USE_PROFILER=1
+```
+
+If you want to use Intel MKL blas, you can set `USE_BLAS=mkl USE_INTEL_PATH=/opt/intel`.
+
+### Verify MXNet with python
+
+```
+export PYTHONPATH=~/incubator-mxnet/python
+pip install --upgrade pip 
+pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
+python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
+
+Expected Output:
+
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
+
+## Build/Install MXNet with MKLDNN on MacOS:
+
+### MacOS pre-req
+
+Install the dependencies, required for MXNet, with the following commands:
+
+- Homebrew
+- gcc (clang in macOS does not support openMP)
+- OpenCV (for computer vision operations)
+
+```
+# Paste this command in Mac terminal to install Homebrew
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+# install dependency
+brew update
+brew install pkg-config
+brew install graphviz
+brew tap homebrew/core
+brew install opencv
+brew tap homebrew/versions
+brew install gcc49
+brew link gcc49
+```
+
+### Modify Makefile to enable openMP for MacOS
+
+If you want to enable openMP for better performance, you should modify these two file:
+
+1. Makefile L138:
+
+```
+ifeq ($(USE_OPENMP), 1)
+	# ifneq ($(UNAME_S), Darwin)
+		CFLAGS += -fopenmp
+	# endif
+endif
+```
+
+2. prepare_mkldnn.sh L96:
+
+```
+CC=gcc-4.9 CXX=g++-4.9 cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
+```
+
+### Build MXNet with MKLDNN
+
+```
+make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+```
+
+*Note: Temporarily disable OPENCV.*
+
+### Verify MXNet with python
+
+```
+export PYTHONPATH=~/incubator-mxnet/python
+pip install --upgrade pip 
+pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
+python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
+
+Expected Output:
+
+[[ 2.  2.  2.]
+ [ 2.  2.  2.]]
+```
 
 ## Build/Install MXNet with MKLDNN on Windows:
 
