@@ -247,6 +247,11 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
     }
+    else if(target_stype == kDefaultStorage){
+      // csr.T, rsp/dns -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
