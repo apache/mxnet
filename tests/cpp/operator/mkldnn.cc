@@ -577,32 +577,33 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
-  printf("Comparing Arrays: ");
-  printf("%s (", in_arr.desc.c_str());
-  TShape t1 = tmp1.shape();
-  for (size_t i = 0; i < t1.ndim(); i++)
-    printf("%ld, ", t1[i]);
-  printf(") with %s (", arr.desc.c_str());
-  TShape t2 = tmp2.shape();
-  for (size_t i = 0; i < t2.ndim(); i++)
-    printf("%ld, ", t2[i]);
-  printf(")\n");
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
-//void VerifyActResult(const NDArrayAttrs &in_arr, const NDArray &arr) {
-//  NDArray tmp1 = in_arr.Reorder2Default();
-//  NDArray tmp2 = arr.Reorder2Default();
-//  TBlob blob1 = tmp1.data();
-//  TBlob blob2 = tmp2.data();
-//  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
-//  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
-//  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
-//  for (size_t i = 0; i < tmp1.shape().Size(); i++) {
-//    EXPECT_EQ(d1[i], std::fmax(d2[i], 0));
-//  }
-//}
+void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
+  NDArray tmp1 = in_arr.Reorder2Default();
+  NDArray tmp2 = arr.Reorder2Default();
+  TBlob blob1 = tmp1.data();
+  TBlob blob2 = tmp2.data();
+  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  for (size_t i = 0; i < tmp1.shape().Size(); i++) {
+    EXPECT_EQ(d1[i], std::fmax(d2[i], 0));
+  }
+}
+
+void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
+  printf("Verifying: %s (", arr1.desc.c_str());
+  TShape t1 = arr1..shape();
+  for (size_t i = 0; i < t1.ndim(); i++)
+    printf("%ld, ", t1[i]);
+  printf(") with %s (", arr2.desc.c_str());
+  for (size_t i = 0; i < t1.ndim(); i++)
+    printf("%ld, ", t1[i]);
+  print(")\n");
+}
 
 void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
   NDArray in1 = in_arrs[0]->Reorder2Default();
@@ -658,7 +659,8 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         out_arr.WaitToRead();
-        verify_fn(inputs, out_arr);
+        PrintVerifyMsg(in_arr, out_arr);
+        verify_fn(in_arr, out_arr.arr);
       }
     }
   }
@@ -678,6 +680,7 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
       inputs[0] = &orig;
+      PrintVerifyMsg(orig, arr);
       verify_fn(inputs, arr);
     }
   }
@@ -737,10 +740,10 @@ TEST(IMPERATIVE, UnaryOp) {
     TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
-//TEST(IMPERATIVE, ActOp) {
-//  OpAttrs attrs = GetReluOp();
-//  TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
-//}
+TEST(IMPERATIVE, ActOp) {
+  OpAttrs attrs = GetReluOp();
+  TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
+}
 
 
 TEST(IMPERATIVE, BinaryOp) {
