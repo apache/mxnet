@@ -1,7 +1,41 @@
+var versionSelect   = 'v1.2.0';
+var deviceSelect    = 'Linux';
+var languageSelect  = 'Python';
+var processorSelect = 'CPU';
+var environSelect   = 'Pip';
+
 $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
     }
+
+    function setSelects(){
+        let urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('version'))
+            versionSelect = urlParams.get('version');
+        $('li a:contains(' + versionSelect + ')').parent().siblings().removeClass('active');
+        $('li a:contains(' + versionSelect + ')').parent().addClass('active');
+        $('.current-version').html( versionSelect + ' <span class="caret"></span></button>' );
+        if (urlParams.get('device'))
+            deviceSelect = urlParams.get('device');
+        $('button:contains(' + deviceSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + deviceSelect + ')').addClass('active');
+        if (urlParams.get('language'))
+            languageSelect = urlParams.get('language');
+        $('button:contains(' + languageSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + languageSelect + ')').addClass('active');
+        if (urlParams.get('processor'))
+            processorSelect = urlParams.get('processor');
+        $('button:contains(' + processorSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + processorSelect + ')').addClass('active');
+        if (urlParams.get('environ'))
+            environSelect = urlParams.get('environ');
+        $('button:contains(' + environSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + environSelect + ')').addClass('active');
+        showContent();
+        history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+    }
+
     function showContent() {
         $('.opt-group .opt').each(function(){
             $('.'+label($(this).text())).hide();
@@ -13,14 +47,30 @@ $(document).ready(function () {
         });
     }
     showContent();
+    setSelects();
     function setContent() {
         var el = $(this);
+        let urlParams = new URLSearchParams(window.location.search);
         el.siblings().removeClass('active');
         el.addClass('active');
         if ($(this).hasClass("versions")) {
             $('.current-version').html( $(this).text() + ' <span class="caret"></span></button>' );
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
+        }
+        if ($(this).hasClass("Devices")) {
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('device'), $(this).text() ));
+        }
+        if ($(this).hasClass("languages")) {
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('language'), $(this).text() ));
+        }
+        if ($(this).hasClass("processors")) {
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
         }
         showContent();
+        //$.param.querystring(window.location.href, window.location.search.replace(urlParams.get('device'), $(this).text()));
+        //window.location.search = window.location.search.replace( urlParams.get('version'), $(this).text() );
+        //history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
+        console.log("Trying " + window.location.search.replace(urlParams.get('version'), $(this).text()));
     }
     $('.opt-group').on('click', '.opt', setContent);
 });

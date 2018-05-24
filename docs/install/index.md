@@ -20,22 +20,22 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- START - OS Menu -->
 
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Linux</button>
-  <button type="button" class="btn btn-default opt">MacOS</button>
-  <button type="button" class="btn btn-default opt">Windows</button>
-  <button type="button" class="btn btn-default opt">Cloud</button>
-  <button type="button" class="btn btn-default opt">Devices</button>
+  <button type="button" class="btn btn-default opt active Devices">Linux</button>
+  <button type="button" class="btn btn-default opt Devices">MacOS</button>
+  <button type="button" class="btn btn-default opt Devices">Windows</button>
+  <button type="button" class="btn btn-default opt Devices">Cloud</button>
+  <button type="button" class="btn btn-default opt Devices">Devices</button>
 </div>
 
 <!-- START - Language Menu -->
 
 <div class="linux macos windows">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Python</button>
-  <button type="button" class="btn btn-default opt">Scala</button>
-  <button type="button" class="btn btn-default opt">R</button>
-  <button type="button" class="btn btn-default opt">Julia</button>
-  <button type="button" class="btn btn-default opt">Perl</button>
+  <button type="button" class="btn btn-default opt active languages">Python</button>
+  <button type="button" class="btn btn-default opt languages">Scala</button>
+  <button type="button" class="btn btn-default opt languages">R</button>
+  <button type="button" class="btn btn-default opt languages">Julia</button>
+  <button type="button" class="btn btn-default opt languages">Perl</button>
 </div>
 </div>
 
