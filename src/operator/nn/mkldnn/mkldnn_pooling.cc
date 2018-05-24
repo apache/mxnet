@@ -150,6 +150,16 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwd(const PoolingParam &param,
   int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
   int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
+  if (param.pooling_convention == pool_enum::kFull) {
+    if ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_ != 0) {
+        pad_b_ += (stride_h_ % 2) ? (stride_h_ / 2 + 1) : (stride_h_ / 2);
+    }
+
+    if ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_ != 0) {
+        pad_r_ += (stride_w_ % 2) ? (stride_w_ / 2 + 1) : (stride_w_ / 2);
+    }
+  }
+
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (param.global_pool) {
     pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
@@ -222,6 +232,16 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
     int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
     int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      if ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_ != 0) {
+        pad_b_ += (stride_h_ % 2) ? (stride_h_ / 2 + 1) : (stride_h_ / 2);
+      }
+
+      if ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_ != 0) {
+        pad_r_ += (stride_w_ % 2) ? (stride_w_ / 2 + 1) : (stride_w_ / 2);
+      }
+    }
 
     if (param.global_pool) {
         pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
