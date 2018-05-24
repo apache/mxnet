@@ -607,19 +607,14 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         inputs[0] = &in_arr1;
         inputs[1] = &in_arr1;
         outputs[0] = &out_arr;
-        printf("test1\n");
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
-        printf("test2\n");
         out_arr.WaitToRead();
-        printf("test3\n");
         verify_fn(inputs, out_arr);
-        printf("test4\n");
       }
     }
   }
 
-#if 0
   for (auto dispatch : dispatches) {
     in_arrs = GetTestInputArrays();
     for (auto arr : in_arrs) {
@@ -630,14 +625,17 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       NDArray orig = arr.Copy(arr.ctx());
       req[0] = kWriteInplace;
       inputs[0] = &arr;
+      inputs[1] = &arr;
       outputs[0] = &arr;
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
-      verify_fn(orig, arr);
+      std::vector<NDArray *> orig_inputs(2);
+      orig_inputs[0] = &orig;
+      orig_inputs[1] = &orig;
+      verify_fn(orig_inputs, arr);
     }
   }
-#endif
 }
 
 TEST(IMPERATIVE, UnaryOp) {
