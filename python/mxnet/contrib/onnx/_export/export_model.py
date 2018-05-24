@@ -28,7 +28,7 @@ from .export_helper import load_module
 
 import numpy as np
 
-def export_model(model, weights, input_shape, input_type, log=False):
+def export_model(model, weights, input_shape, input_type, onnx_file_path, log=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
@@ -63,4 +63,11 @@ def export_model(model, weights, input_shape, input_type, log=False):
                                                  mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
     # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
+
+    # Save model on disk
+    with open(onnx_file_path, "wb") as f:
+            serialized = onnx_model.SerializeToString()
+            f.write(serialized)
+            print("\nONNX file %s serialized to disk" % onnx_file_path)
+
     return onnx_model

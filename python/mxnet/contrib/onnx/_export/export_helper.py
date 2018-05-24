@@ -18,6 +18,7 @@
 # coding: utf-8
 import os
 import mxnet as mx
+import numpy as np
 
 def load_module(json_path, params_path, input_shape):
     """Loads the MXNet model file, retrieves symbol and parameters and returns.
@@ -42,16 +43,21 @@ def load_module(json_path, params_path, input_shape):
     if not (os.path.isfile(json_path) and os.path.isfile(params_path)):
         raise ValueError("Provide valid path to the json and params file")
     else:
-        model_name = json_path.rsplit('.')[0].rsplit('-', 1)[0]
-        num_epochs = int(params_path.rsplit('.')[0].rsplit('-', 1)[1])
-        trained_model = mx.mod.Module.load(model_name, num_epochs)
-        trained_model.bind(data_shapes=[('data', input_shape)], label_shapes=None, for_training=False, force_rebind=True)
+        try:
+            model_name = json_path.rsplit('.', 1)[0].rsplit('-', 1)[0]
+            num_epochs = int(params_path.rsplit('.', 1)[0].rsplit('-', 1)[1])
+        except IndexError:
+            print("Model and params name should be in format: prefix-symbol.json, prefix-epoch.params")
+            raise
 
-        sym = trained_model.symbol
-        arg_params, aux_params = trained_model.get_params()
+        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
+        trained_model = mx.mod.Module(symbol=sym, label_names=None)
+        trained_model.bind(data_shapes=[('data', input_shape[0])], label_shapes=trained_model._label_shapes,
+                           for_training=False)
 
         # Merging arg and aux parameters
         params = {}
         params.update(arg_params)
         params.update(aux_params)
+
         return sym, params

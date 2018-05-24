@@ -117,9 +117,9 @@ class MXNetBackend(Backend):
         params.update(aux_params)
         # exporting to onnx graph proto format
         converter = MxNetToONNXConverter()
-        graph_proto = converter.convert_mx2onnx_graph(sym, arg_params, aux_params, in_shape=input_shape, in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
+        graph_proto = converter.convert_mx2onnx_graph(sym, params, in_shape=input_shape, in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
 
-        # importing back to MXNET for verfiying result.
+        # importing back to MXNET for verifying result.
         sym, arg_params, aux_params = graph.from_onnx(graph_proto)
 
         return sym, arg_params, aux_params
@@ -219,11 +219,10 @@ class MXNetBackend(Backend):
             Returns object of MXNetBackendRep class which will be in turn
             used to run inference on the input model and return the result for comparison.
         """
-        graph = GraphProto()
 
         metadata = MXNetBackend.get_graph_metadata(model.graph)
         input_data = metadata['input_tensor_data']
-        input_shape = [ data[1] for data in  input_data]
+        input_shape = [data[1] for data in input_data]
         sym, arg_params, aux_params = MXNetBackend.perform_import_export(model.graph, input_shape)
         return MXNetBackendRep(sym, arg_params, aux_params, device)
 
@@ -231,6 +230,7 @@ class MXNetBackend(Backend):
     def supports_device(cls, device):
         """Supports only CPU for testing"""
         return device == 'CPU'
+
 
 prepare = MXNetBackend.prepare
 

@@ -69,10 +69,11 @@ class MxNetToONNXConverter:
     def forward_pass(inputs, sym, arg_params, aux_params):
         """ Do a forward pass based on the sym and params"""
         data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params]
+                      if graph_input not in arg_params and graph_input not in aux_params
+                      and graph_input != 'softmax_label']
 
         data_shapes = []
-        dim_added = False;
+        dim_added = False
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
             batch_size = 1
@@ -94,7 +95,7 @@ class MxNetToONNXConverter:
         if arg_params is None and aux_params is None:
             test_mod.init_params()
         else:
-            test_mod.set_params(arg_params=arg_params, aux_params=aux_params)
+            test_mod.set_params(arg_params=arg_params, aux_params=aux_params, allow_missing=True)
 
         data_forward = []
         for idx, input_name in enumerate(data_names):
@@ -114,11 +115,27 @@ class MxNetToONNXConverter:
         else:
             return result.shape
 
+
     @staticmethod
-    def infer_output_shape(sym, arg, aux, in_shape):
+    def split_params(sym, params):
+        # splitting params into args and aux params
+        arg_params ={}
+        aux_params = {}
+        for args in sym.list_arguments():
+            if args in params:
+                arg_params.update({args: nd.array(params[args])})
+        for aux in sym.list_auxiliary_states():
+            if aux in params:
+                aux_params.update({aux: nd.array(params[aux])})
+        return arg_params, aux_params
+
+
+    @staticmethod
+    def infer_output_shape(sym, params, in_shape):
         """Infer output shape by doing a forward pass using dummy inputs """
         #create dummy input
         inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
+        arg, aux = MxNetToONNXConverter.split_params(sym, params)
         return MxNetToONNXConverter.forward_pass(inputs, sym, arg, aux)
 
     # Add transpose?
@@ -126,18 +143,14 @@ class MxNetToONNXConverter:
     def convert_weights_to_numpy(weights_dict):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy()) for k, v in weights_dict.items()])
 
-    def convert_mx2onnx_graph(self, sym, arg, aux, in_shape, in_type, log=False):
+    def convert_mx2onnx_graph(self, sym, params, in_shape, in_type, log=False):
 
         # Determine output shape
-        output_shape = MxNetToONNXConverter.infer_output_shape(sym, arg, aux, in_shape)
+        output_shape = MxNetToONNXConverter.infer_output_shape(sym, params, in_shape)
 
         print("\nconverting weights from MxNet NDArrays to NumPy arrays.\n")
-        params = {}
-        params.update(arg)
-        params.update(aux)
+
         weights = MxNetToONNXConverter.convert_weights_to_numpy(params)
-
-
 
         mx_graph = json.loads(sym.tojson())["nodes"]
 
@@ -155,8 +168,10 @@ class MxNetToONNXConverter:
             if log:
                 print("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
 
-            if op == "null" and name not in arg and name not in aux:
+            if op == "null" and name not in params:
                 """ Handling graph input """
+                if name == 'softmax_label':
+                    continue
                 converted = MxNetToONNXConverter.convert_layer(
                     node,
                     is_input=True,
@@ -224,8 +239,13 @@ class MxNetToONNXConverter:
                         raise ValueError("node is of an unrecognized type: %s" % type(node))
 
                     all_processed_nodes.append(converted_node)
-                if idx>0:
-                    index_lookup.append(index_lookup[idx-1]+len(converted))
+
+                if idx > 0:
+                    if name != 'softmax':
+                        prev_index = index_lookup[idx-1]
+                    else:
+                        prev_index = index_lookup[idx - 2]
+                    index_lookup.append(prev_index+len(converted))
                 else:
                     index_lookup.append(len(converted) - 1)
 
