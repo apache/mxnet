@@ -81,11 +81,16 @@ bool QuantizedPoolingType(const nnvm::NodeAttrs& attrs,
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), 3U);
   CHECK_EQ(out_type->size(), 3U);
-  if (param.pool_type != pool_enum::kMaxPooling && param.pool_type != pool_enum::kAvgPooling) {
+  if (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) {
+#if MXNET_USE_MKLDNN  == 1
+    TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
+#else
+    TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
+    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt8);
+#endif
+  } else {
     LOG(FATAL) << "QuantizedPoolingOp only supports pool_type=max/avg for now";
   }
-  const int dtype = (*in_type)[0];
-  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);

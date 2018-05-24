@@ -73,9 +73,8 @@ by keep zero centered for the quantized value:
 .set_attr<FInferStorageType>("FInferStorageType", DequantizeStorageType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNDequantizeCompute)
-#else
-.set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)
 #endif
+.set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
   "possibly produced for the input in float32")

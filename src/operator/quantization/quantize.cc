@@ -84,9 +84,8 @@ where
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
-#else
-.set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
 #endif
+.set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
   "possibly produced for the input")
