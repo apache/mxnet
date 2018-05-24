@@ -595,14 +595,16 @@ void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
 }
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
+  TShape t1 = arr1.arr.shape();
+  TShape t2 = arr2.arr.shape();
+
   printf("Verifying: %s (", arr1.desc.c_str());
-  TShape t1 = arr1..shape();
   for (size_t i = 0; i < t1.ndim(); i++)
     printf("%ld, ", t1[i]);
   printf(") with %s (", arr2.desc.c_str());
-  for (size_t i = 0; i < t1.ndim(); i++)
-    printf("%ld, ", t1[i]);
-  print(")\n");
+  for (size_t i = 0; i < t2.ndim(); i++)
+    printf("%ld, ", t2[i]);
+  printf(")\n");
 }
 
 void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
