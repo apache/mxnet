@@ -577,7 +577,7 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
-  printf("Comparing Arrays:\n");
+  printf("Comparing Arrays: ");
   printf("%s (", in_arr.desc.c_str());
   TShape t1 = tmp1.shape();
   for (size_t i = 0; i < t1.ndim(); i++)
