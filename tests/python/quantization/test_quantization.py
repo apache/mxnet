@@ -363,8 +363,9 @@ def get_fp32_sym():
 @with_seed()
 def test_quantize_model():
     if mx.current_context().device_type != 'gpu':
-        print('skipped testing quantized_model on cpu since it is not implemented yet')
-        return
+        dtype = 'uint8'
+    else:
+        dtype = 'int8'
 
     def check_params(params, qparams, qsym=None):
         if qsym is None:
@@ -398,6 +399,7 @@ def test_quantize_model():
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
                                                                      ctx=mx.current_context(),
+                                                                     quantized_dtype=dtype,
                                                                      calib_mode='none')
     check_params(arg_params, qarg_params, qsym)
     check_params(aux_params, qaux_params)
@@ -409,6 +411,7 @@ def test_quantize_model():
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
                                                                      ctx=mx.current_context(),
+                                                                     quantized_dtype=dtype,
                                                                      calib_mode='naive',
                                                                      calib_data=calib_data,
                                                                      num_calib_examples=20)
