@@ -1,10 +1,12 @@
-* [1. Build/Install MXNet with MKLDNN on Linux](#1)
-* [2. Build/Install MXNet with MKLDNN on MacOS](#2)
-* [3. Build/Install MXNet with MKLDNN on Windows](#3)
+<h2 id="0">Contents</h2>
+
+* [1. Build/Install MXNet with MKL-DNN on Linux](#1)
+* [2. Build/Install MXNet with MKL-DNN on MacOS](#2)
+* [3. Build/Install MXNet with MKL-DNN on Windows](#3)
 * [4. Verify MXNet with python](#4)
 * [5. Build/Install MXNet with a full MKL installation](#5)
 
-<h2 id="1">Build/Install MXNet with MKLDNN on Linux</h2>
+<h2 id="1">Build/Install MXNet with MKL-DNN on Linux</h2>
 
 ### Prerequisites
 
@@ -20,22 +22,22 @@ cd incubator-mxnet
 git submodule update --recursive --init
 ```
 
-### Build MXNet with MKLDNN
+### Build MXNet with MKL-DNN
 
 ```
-make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=openblas USE_PROFILER=1
+make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
-If you want to use Intel MKL blas, you can set `USE_BLAS=mkl USE_INTEL_PATH=/opt/intel`.
+If you don't have full MKL library installed, you can use OpenBLAS by setting `USE_BLAS=openblas`.
 
-<h2 id="2">Build/Install MXNet with MKLDNN on MacOS</h2>
+<h2 id="2">Build/Install MXNet with MKL-DNN on MacOS</h2>
 
 ### Prerequisites
 
 Install the dependencies, required for MXNet, with the following commands:
 
 - Homebrew
-- gcc (clang in macOS does not support openMP)
+- gcc (clang in macOS does not support OpenMP)
 - OpenCV (for computer vision operations)
 
 ```
@@ -53,9 +55,9 @@ brew install gcc49
 brew link gcc49
 ```
 
-### Enable openMP for MacOS
+### Enable OpenMP for MacOS
 
-If you want to enable openMP for better performance, you should modify these two files:
+If you want to enable OpenMP for better performance, you should modify these two files:
 
 1. Makefile L138:
 
@@ -73,7 +75,7 @@ endif
 CC=gcc-4.9 CXX=g++-4.9 cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
 ```
 
-### Build MXNet with MKLDNN
+### Build MXNet with MKL-DNN
 
 ```
 make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
@@ -81,7 +83,7 @@ make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=app
 
 *Note: Temporarily disable OPENCV.*
 
-<h2 id="3">Build/Install MXNet with MKLDNN on Windows</h2>
+<h2 id="3">Build/Install MXNet with MKL-DNN on Windows</h2>
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
@@ -99,7 +101,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 
 1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet). Don't forget to pull the submodules:
 ```
-    git clone https://github.com/apache/incubator-mxnet.git --recursive
+git clone https://github.com/apache/incubator-mxnet.git --recursive
 ```
 
 2. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
@@ -109,9 +111,9 @@ After you have installed all of the required dependencies, build the MXNet sourc
 4. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
 [CMake](https://cmake.org/) command:
 ```
-    mkdir build
-    cd build
-    cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
+mkdir build
+cd build
+cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
 
 5. In Visual Studio, open the solution file,```.sln```, and compile it.
@@ -134,7 +136,7 @@ Expected Output:
  [ 2.  2.  2.]]
 ```
 
-### Verify whether MKLDNN works:
+### Verify whether MKL-DNN works:
 
 ```
 WIP
