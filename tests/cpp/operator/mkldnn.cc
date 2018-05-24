@@ -95,13 +95,13 @@ static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   size_t size = blob.Size();
+  for (size_t i = 0; i < size; i++) {
     if (is_rand) {
-        for (size_t i = 0; i < size; i++)
-            data[i] = std::rand();
+      data[i] = std::rand();
     } else {
-        for (size_t i = 0; i < size; i++)
-            data[i] = i;
+      data[i] = i;
     }
+  }
 }
 
 // Init arrays with negative and positive values
@@ -109,14 +109,14 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   int size = blob.Size();
-  if (is_rand) {
-    for (int i = 0; i < size; i++)
+
+  for (int i = 0; i < size; i++)
+    if (is_rand) {
       data[i] = std::rand() - INT_MAX / 2;
-  } else {
-    size_t shift = size >> 1;
-    for (int i = 0; i < size; i++)
+    } else {
+      size_t shift = size >> 1;
       data[i] = i - shift;
-  }
+    }
 }
 
 using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
@@ -357,6 +357,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
 struct NDArrayAttrs {
   NDArray arr;
   std::string desc;
+  NDArrayAttrs(NDArray arr, std::string desc) : arr(arr), desc(desc) {};
 };
 
 struct OpAttrs {
