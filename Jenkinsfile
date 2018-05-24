@@ -322,6 +322,17 @@ try {
         }
       }
     },
+    'GPU: CMake with USE_OLDCMAKECUDA': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cmake-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_oldcmakecuda', false)
+            pack_lib('cmake_gpu', mx_cmake_lib)
+          }
+        }
+      }
+    },
     'Build CPU windows':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {

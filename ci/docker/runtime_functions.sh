@@ -344,6 +344,22 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_gpu_cmake_oldcmakecuda() {
+    set -ex
+    cd /work/build
+    cmake \
+        -DUSE_CUDA=1               \
+        -DUSE_OLDCMAKECUDA=1        \
+        -DUSE_CUDNN=1              \
+        -DUSE_MKLML_MKL=0          \
+        -DUSE_MKLDNN=0             \
+        -DUSE_DIST_KVSTORE=1       \
+        -DCMAKE_BUILD_TYPE=Release \
+        -G Ninja                   \
+        /work/mxnet
+
+    ninja -v
+}
 
 # Testing
 
