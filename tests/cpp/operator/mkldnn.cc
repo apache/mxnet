@@ -578,15 +578,15 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
   printf("Comparing Arrays:\n");
-  printf("Input Array (");
+  printf("%s (", in_arr.desc.c_str());
   TShape t1 = tmp1.shape();
   for (size_t i = 0; i < t1.ndim(); i++)
     printf("%ld, ", t1[i]);
-  printf(") %s with ", in_arr.desc.c_str());
+  printf(") with %s", arr.desc.c_str());
   TShape t2 = tmp2.shape();
   for (size_t i = 0; i < t2.ndim(); i++)
     printf("%ld, ", t2[i]);
-  printf(") %s\n", in_arr.desc.c_str());
+  printf(")\n");
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
