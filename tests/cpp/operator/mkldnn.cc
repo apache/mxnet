@@ -578,7 +578,7 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
   printf("Comparing Arrays:\n");
   printf("Input Array (");
   TShape t1 = tmp1.shape();
-  for (size_t i = 0; i < t1.Size(); i++)
+  for (size_t i = 0; i < t1.ndim(); i++)
     printf("%ld, ", t1[i]);
   printf(") %s\n", in_arr.desc);
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
