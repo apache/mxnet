@@ -1,11 +1,11 @@
 # Model Server for Apache MXNet (incubating)
 
-Model Server for Apache MXNet (incubating), otherwise known as MXNet Model Server (MMS), is an open source project aimed at providing a simple yet scalable solution for model inference. It is a set of command line tools for packaging model archives and serving them. The tools are written in Python, and have been extended to support containers for easy deployment and scaling. MMS also supports basic logging and advanced logging with AWS CloudWatch integration.
+[Model Server for Apache MXNet (incubating)](https://github.com/awslabs/mxnet-model-server), otherwise known as MXNet Model Server (MMS), is an open source project aimed at providing a simple yet scalable solution for model inference. It is a set of command line tools for packaging model archives and serving them. The tools are written in Python, and have been extended to support containers for easy deployment and scaling. MMS also supports basic logging and advanced metrics with AWS CloudWatch integration.
 
 
 ## Multi-Framework Model Support with ONNX
 
-While the name implies that MMS is just for MXNet, it is in fact much more flexible, as it can support models in the [ONNX](https://onnx.ai) format. This means that models created and trained in PyTorch, Caffe2, or other ONNX-supporting frameworks can be served with MMS.
+MMS supports both *symbolic* MXNet and *imperative* Gluon models. While the name implies that MMS is just for MXNet, it is in fact much more flexible, as it can support models in the [ONNX](https://onnx.ai) format. This means that models created and trained in PyTorch, Caffe2, or other ONNX-supporting frameworks can be served with MMS.
 
 To find out more about MXNet's support for ONNX models and using ONNX with MMS, refer to the following resources:
 
@@ -54,10 +54,24 @@ curl -O https://s3.amazonaws.com/model-server/inputs/kitten.jpg
 curl -X POST http://127.0.0.1:8080/squeezenet/predict -F "data=@kitten.jpg"
 ```
 
+The predict endpoint will return a prediction response in JSON. It will look something like the following result:
+
+```
+{
+  "prediction": [
+    [
+      {
+        "class": "n02124075 Egyptian cat",
+        "probability": 0.9408261179924011
+      },
+...
+```
+
 For more examples of serving models visit the following resources:
 
 * [Quickstart: Model Serving](https://github.com/awslabs/mxnet-model-server/README.md#serve-a-model)
 * [Running the Model Server](https://github.com/awslabs/mxnet-model-server/docs/server.md)
+
 
 ## Create a Model Archive
 
@@ -67,6 +81,7 @@ Creating a model archive involves rounding up the required model artifacts, then
 * [Model Artifacts](https://github.com/awslabs/mxnet-model-server/docs/export_model_file_tour.md)
 * [Loading and Serving Gluon Models](https://github.com/awslabs/mxnet-model-server/tree/master/examples/gluon_alexnet)
 * [Creating a MMS Model Archive from an ONNX Model](https://github.com/awslabs/mxnet-model-server/docs/export_from_onnx.md)
+* [Create an ONNX model (that will run with MMS) from PyTorch](https://github.com/onnx/onnx-mxnet/blob/master/README.md#quick-start)
 
 
 ## Using Containers
@@ -76,6 +91,7 @@ Using Docker or other container services with MMS is a great way to scale your i
 * [Docker Quickstart](https://github.com/awslabs/mxnet-model-server/docker/README.md)
 * [MMS on Fargate](https://github.com/awslabs/mxnet-model-server/docs/mms_on_fargate.md)
 * [Optimized Configurations](https://github.com/awslabs/mxnet-model-server/docs/optimized_config.md)
+* [Orchestrating, monitoring, and scaling with MMS, AWS Elastic Container Service, AWS Fargate, and AWS CloudWatch)](https://aws.amazon.com/blogs/machine-learning/apache-mxnet-model-server-adds-optimized-container-images-for-model-serving-at-scale/)
 
 
 ## Community & Contributions
