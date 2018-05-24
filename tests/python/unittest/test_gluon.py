@@ -20,7 +20,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, teardown
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
