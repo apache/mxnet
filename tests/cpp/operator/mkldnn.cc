@@ -26,6 +26,7 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <cmath>
+#include <climits>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -110,7 +111,7 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
   int size = blob.Size();
   if (is_rand) {
     for (int i = 0; i < size; i++)
-      data[i] = std::rand() - 0.5;
+      data[i] = std::rand() - INT_MAX / 2;
   } else {
     size_t shift = size >> 1;
     for (int i = 0; i < size; i++)
