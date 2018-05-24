@@ -303,16 +303,24 @@ class DefaultImageAugmenter : public ImageAugmenter {
                 index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
                                                         static_cast<float>(res.rows) *
                                                         static_cast<float>(res.cols));
-                cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]));
+                int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                          param_.data_shape[2],
+                                                          param_.data_shape[1], prnd);
+                cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]),
+                           0, 0, interpolation_method);
               }
               if (res.cols < param_.data_shape[2]) {
                 index_t new_rows = static_cast<index_t>(static_cast<float>(param_.data_shape[2]) /
                                                         static_cast<float>(res.cols) *
                                                         static_cast<float>(res.rows));
-                cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows));
+                int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                          param_.data_shape[2],
+                                                          param_.data_shape[1], prnd);
+                cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows),
+                           0, 0, interpolation_method);
               }
               CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
-                    && static_cast<index_t>(res.cols) >= param_.data_shape[2] && 1)
+                    && static_cast<index_t>(res.cols) >= param_.data_shape[2])
                     << "input image size smaller than input shape";
               index_t center_y = res.rows - param_.data_shape[1];
               index_t center_x = res.cols - param_.data_shape[2];
@@ -413,16 +421,24 @@ class DefaultImageAugmenter : public ImageAugmenter {
         index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
                                                 static_cast<float>(res.rows) *
                                                 static_cast<float>(res.cols));
-        cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]));
+        int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                  param_.data_shape[2],
+                                                  param_.data_shape[1], prnd);
+        cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]),
+                   0, 0, interpolation_method);
       }
       if (res.cols < param_.data_shape[2]) {
         index_t new_rows = static_cast<index_t>(static_cast<float>(param_.data_shape[2]) /
                                                 static_cast<float>(res.cols) *
                                                 static_cast<float>(res.rows));
-        cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows));
+        int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                  param_.data_shape[2],
+                                                  param_.data_shape[1], prnd);
+        cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows),
+                   0, 0, interpolation_method);
       }
       CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
-            && static_cast<index_t>(res.cols) >= param_.data_shape[2] && 2)
+            && static_cast<index_t>(res.cols) >= param_.data_shape[2])
           << "input image size smaller than input shape";
       index_t y = res.rows - param_.data_shape[1];
       index_t x = res.cols - param_.data_shape[2];
