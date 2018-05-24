@@ -57,6 +57,16 @@ if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   endif()
 endif()
 
+# f16 support
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/F16.cmake)
+
+if(SUPPORT_F16C)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mf16c")
+else()
+  add_definitions(-DMSHADOW_USE_F16C=0)
+endif()
+
 if(MSVC)
   set(SYSTEM_ARCHITECTURE x86_64)
 else()
@@ -83,9 +93,6 @@ if(MSVC)
   add_definitions(-DNNVM_EXPORTS)
   add_definitions(-DDMLC_STRICT_CXX11)
   add_definitions(-DNOMINMAX)
-  if(USE_F16C)
-    message("F16C instruction set is not yet supported for MSVC")
-  endif()
   set(CMAKE_C_FLAGS "/MP")
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else(MSVC)
@@ -101,29 +108,6 @@ else(MSVC)
     check_cxx_compiler_flag("-msse2"     SUPPORT_MSSE2)
   else()
     set(SUPPORT_MSSE2 FALSE)
-  endif()
-  # For cross complication, turn off flag if target device does not support it
-  if(USE_F16C)
-    check_cxx_compiler_flag("-mf16c"     COMPILER_SUPPORT_MF16C)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-      execute_process(COMMAND cat /proc/cpuinfo
-              COMMAND grep flags
-              COMMAND grep f16c
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-      execute_process(COMMAND sysctl -a
-              COMMAND grep machdep.cpu.features
-              COMMAND grep F16C
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    endif()
-    if(NOT CPU_SUPPORT_F16C)
-      message("CPU does not support F16C instructions")
-    endif()
-    if(CPU_SUPPORT_F16C AND COMPILER_SUPPORT_MF16C)
-      set(SUPPORT_F16C TRUE)
-    endif()
-  else()
-    set(SUPPORT_F16C FALSE)
   endif()
   set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
