@@ -20,10 +20,11 @@ package org.apache.mxnet.spark
 import java.io.{File, FileFilter}
 
 import org.apache.mxnet.{Context, Shape, Symbol}
-import org.apache.spark.{SparkConf, SparkContext}
-import org.scalatest.{BeforeAndAfterEach, FunSuite}
 
-trait SharedSparkContext extends FunSuite with BeforeAndAfterEach {
+import org.apache.spark.{SparkConf, SparkContext}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FunSuite}
+
+trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAndAfterAll {
 
   protected var sc: SparkContext = _
 

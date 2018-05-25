@@ -17,12 +17,19 @@
 
 package org.apache.mxnet.spark
 
+import java.io.{BufferedReader, File, InputStreamReader}
+import java.nio.file.Files
+
+import scala.sys.process.Process
+
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 
 class MXNetGeneralSuite extends SharedSparkContext {
+
+  private var testDataDir: String = _
 
   private def parseRawData(sc: SparkContext, path: String): RDD[LabeledPoint] = {
     val raw = sc.textFile(path)
@@ -34,16 +41,32 @@ class MXNetGeneralSuite extends SharedSparkContext {
     }
   }
 
+  private def downloadTestData(): Unit = {
+    Process("wget http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon" +
+      "/dataset/mxnet-spark-test/train.txt" + " -P " + testDataDir + " -q") !
+  }
+
+  override def beforeAll(): Unit = {
+    val tempDirFile = Files.createTempDirectory(s"mxnet-spark-test-${System.currentTimeMillis()}").
+      toFile
+    testDataDir = tempDirFile.getPath
+    tempDirFile.deleteOnExit()
+    // download testset
+    // scalastyle:off
+    println("downloading data")
+    downloadTestData()
+    println("finished downloading")
+  }
+
+
   test("run spark with MLP") {
-    val trainData = parseRawData(sc,
-      "/Users/nanzhu/code/mxnet/scala-package/spark/train.txt")
+    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
     val model = buildMlp().fit(trainData)
     assert(model != null)
   }
 
   test("run spark with LeNet") {
-    val trainData = parseRawData(sc,
-      "/Users/nanzhu/code/mxnet/scala-package/spark/train.txt")
+    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
     val model = buildLeNet().fit(trainData)
     assert(model != null)
   }
