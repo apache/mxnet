@@ -160,6 +160,10 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (quantized_op_map.count(e.node->op())) {
+          // here we calculate the output number (exclude min/max, in order to
+          // calculate min/max index from mirror node) based on assumption that
+          // there is only 1min and 1max output from mirror node (which is
+          // currently true)
           size_t  num_outputs = mirror_node->num_outputs() - 2;
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
@@ -201,6 +205,10 @@ Graph QuantizeGraph(Graph &&src) {
           mirror_node, e.index, e.version};
         // if input node is quantized operator, add dequantize node
         if (NeedQuantize(e.node, excluded_nodes)) {
+          // here we calculate the output number (exclude min/max, in order to
+          // calculate min/max index from mirror node) based on assumption that
+          // there is only 1min and 1max output from mirror node (which is
+          // currently true)
           size_t num_outputs = mirror_node->num_outputs() - 2;
           uint32_t min_index = num_outputs + 2 * e.index;
           uint32_t max_index = num_outputs + 2 * e.index + 1;
