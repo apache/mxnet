@@ -640,10 +640,10 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
         req[0] = kWriteTo;
         inputs[0] = &in_arr.arr;
         outputs[0] = &out_arr.arr;
+        PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         out_arr.arr.WaitToRead();
-        PrintVerifyMsg(in_arr, out_arr);
         verify_fn(inputs, *outputs[0]);
       }
     }
@@ -660,11 +660,11 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       req[0] = kWriteInplace;
       inputs[0] = &arr.arr;
       outputs[0] = &arr.arr;
+      PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.arr.WaitToRead();
       inputs[0] = &orig.arr;
-      PrintVerifyMsg(orig, arr);
       verify_fn(inputs, *outputs[0]);
     }
   }
