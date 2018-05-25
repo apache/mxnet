@@ -152,10 +152,6 @@ class UpsampleConvLayer(Block):
             stride, upsample=None):
         super(UpsampleConvLayer, self).__init__()
         self.upsample = upsample
-        """
-        if upsample:
-            self.upsample_layer = torch.nn.UpsamplingNearest2d(scale_factor=upsample)
-        """
         self.reflection_padding = int(np.floor(kernel_size / 2))
         self.conv2d = nn.Conv2D(in_channels=in_channels, 
                                 channels=out_channels, 
@@ -165,10 +161,6 @@ class UpsampleConvLayer(Block):
     def forward(self, x):
         if self.upsample:
             x = F.UpSampling(x, scale=self.upsample, sample_type='nearest')
-        """
-        if self.reflection_padding != 0:
-            x = self.reflection_pad(x)
-        """
         out = self.conv2d(x)
         return out
 
