@@ -643,6 +643,7 @@ TEST(IMPERATIVE, UnaryOp) {
   TestUnaryOp(attrs, VerifyCopyResult);
 }
 
+
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
   TestBinaryOp(attrs, VerifySumResult);
