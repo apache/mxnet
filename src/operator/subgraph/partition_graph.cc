@@ -60,7 +60,10 @@ struct SimpleNode {
   SimpleNode() : label(-1), node(nullptr) {}
   int label;
   nnvm::Node* node;
-  std::unordered_map<Node*, int> outputs;
+  // key is node ptr
+  // value is the index array standing for the entry indices
+  // in key->inputs that use this->node as input node
+  std::unordered_map<Node*, std::vector<int>> outputs;
   //std::unordered_map<SimpleNodePtr, int> inputs;
   //std::unordered_map<SimpleNodePtr, int> outputs;
 };
@@ -72,15 +75,16 @@ void CreateSimpleGraph(const Graph& g,
   for (size_t nid = 0; nid < indexed_graph.num_nodes(); ++nid) {
     SimpleNodePtr sn = SimpleNode::Create();
     sn->node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
-    for (auto& e : sn->node->inputs) {
+    for (size_t i = 0; i < sn->node->inputs.size(); ++i) {
+      const auto& e = sn->node->inputs[i];
       const auto input_nid = indexed_graph.node_id(e.node.get());
       CHECK_LT(input_nid, simple_nodes->size());
-      std::unordered_map<Node*, int>& input_node_outputs = (*simple_nodes)[input_nid]->outputs;
+      auto& input_node_outputs = (*simple_nodes)[input_nid]->outputs;
       auto it = input_node_outputs.find(sn->node);
       if (it == input_node_outputs.end()) {
-        input_node_outputs.emplace(sn->node, 1);
+        input_node_outputs.emplace(sn->node, std::vector<int>{static_cast<int>(i)});
       } else {
-        ++(it->second);
+        it->second.push_back(i);
       }
     }
     simple_nodes->emplace_back(std::move(sn));
@@ -154,6 +158,56 @@ void FindSubgraphs(const Graph& g,
     if (!node->is_variable() && simple_nodes[i]->label == -1 && op_names.count(node->op()->name)) {
       subgraph_nodes->emplace_back();
       LabelSubgraph(g, op_names, subgraph_nodes->size() - 1, i, simple_nodes, &subgraph_nodes->back());
+    }
+  }
+}
+
+// find the input entries of a subgraph
+void FindInputEntries(const Graph& g,
+                      const std::vector<SimpleNodePtr>& simple_nodes,
+                      const std::vector<SimpleNode*>& subgraph_nodes,
+                      std::vector<nnvm::NodeEntry*>* input_entries) {
+  const auto& indexed_graph = g.indexed_graph();
+  int label = -1;
+  for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
+    if (label == -1) {
+      label = subgraph_nodes[i]->label;
+    } else {
+      CHECK_EQ(subgraph_nodes[i]->label, label);
+    }
+    for (auto& e : subgraph_nodes[i]->node->inputs) {
+      const auto nid = indexed_graph.node_id(e.node.get());
+      if (simple_nodes[nid]->label == -1) {  // this is a node not belonging to the subgraph
+        input_entries->push_back(&e);
+      } else {
+        CHECK_EQ(simple_nodes[nid]->label, label);
+      }
+    }
+  }
+}
+
+// find the output entries of a subgraph
+void FindOutputEntries(const Graph& g,
+                       const std::vector<SimpleNodePtr>& simple_nodes,
+                       const std::vector<SimpleNode*>& subgraph_nodes,
+                       std::vector<nnvm::NodeEntry*>* output_entries) {
+  const auto& indexed_graph = g.indexed_graph();
+  int label = -1;
+  for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
+    if (label == -1) {
+      label = subgraph_nodes[i]->label;
+    } else {
+      CHECK_EQ(subgraph_nodes[i]->label, label);
+    }
+    for (auto it = subgraph_nodes[i]->outputs.begin(); it != subgraph_nodes[i]->outputs.end(); ++it) {
+      const auto nid = indexed_graph.node_id(it->first);
+      if (simple_nodes[nid]->label == -1) {  // this is a node not belonging to the subgraph
+        for (int idx : it->second) {
+          output_entries->push_back(&simple_nodes[nid]->node->inputs[idx]);
+        }
+      } else {
+        CHECK_EQ(simple_nodes[nid]->label, label);
+      }
     }
   }
 }
