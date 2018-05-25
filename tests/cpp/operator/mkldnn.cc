@@ -380,7 +380,7 @@ OpAttrs GetReluOp() {
   attrs.attrs.op = Op::Get("Activation");
   attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(1);
+  attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -728,7 +728,6 @@ TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
   TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
 }
-
 
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
