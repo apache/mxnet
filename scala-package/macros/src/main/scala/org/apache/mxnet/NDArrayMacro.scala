@@ -92,9 +92,11 @@ private[mxnet] object NDArrayMacro {
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
+
     val newNDArrayFunctions = {
-      if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
+      if (isContrib) ndarrayFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
     val functionDefs = newNDArrayFunctions map { ndarrayfunction =>
