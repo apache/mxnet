@@ -25,9 +25,18 @@
 
 #include <nnvm/symbolic.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
+
+namespace nnvm {
+NodePtr CreateVariableNode(const std::string& name);
+}
 
 namespace mxnet {
 
+/*
+ * Given a computation graph, this function finds the input nodes of the graph
+ * and create symbols for the input nodes. It returns the input symbols.
+ */
 std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym) {
   nnvm::Graph g;
   std::vector<nnvm::Symbol *> input_syms;
@@ -46,6 +55,31 @@ std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym) {
     }
   }
   return input_syms;
+}
+
+/*
+ * Given a computation graph and a set of input node entries, this function cuts
+ * the node entries and creates new variable nodes as the input nodes of the
+ * subgraph. It returns the nodes that connect to the subgraph directly and
+ * the names of the new variable nodes.
+ */
+bool CutGraph(const std::vector<nnvm::NodeEntry *> &input_entries,
+              const std::string &in_name_prefix, bool skip_var,
+              std::vector<nnvm::NodeEntry> *orig_entries,
+              std::vector<std::string> *new_var_names) {
+  orig_entries->reserve(input_entries.size());
+  for (size_t i = 0; i < input_entries.size(); i++) {
+    nnvm::NodeEntry *e = input_entries[i];
+    // If the node is a variable itself, we may want to skip the node.
+    if (e->node->is_variable() && skip_var)
+      continue;
+
+    orig_entries->push_back(*e);
+    new_var_names->push_back(in_name_prefix + std::to_string(i));
+    nnvm::NodePtr n = nnvm::CreateVariableNode(new_var_names->back());
+    *e = nnvm::NodeEntry{n, 0, 0};
+  }
+  return true;
 }
 
 }
