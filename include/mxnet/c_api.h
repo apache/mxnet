@@ -1458,6 +1458,8 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                                SymbolHandle* ret_sym_handle);
 
 MXNET_DLL int MXPartitionGraph(SymbolHandle sym_handle,
+                               const mx_uint num_ops,
+                               const char** op_names,
                                SymbolHandle* ret_sym_handle);
 
 //--------------------------------------------

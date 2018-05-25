@@ -103,6 +103,14 @@ void CreateSimpleGraph(const Graph& g,
 #endif
 }
 
+void PrintSubgraph(const std::vector<SimpleNode*>& simple_nodes) {
+  std::string op_names = "";
+  for (size_t i = 0; i < simple_nodes.size(); ++i) {
+    op_names += simple_nodes[i]->node->attrs.name + ' ';
+  }
+  LOG(INFO) << "Subgraph node names: " << op_names;
+}
+
 void LabelSubgraph(const Graph&g,
                    const std::unordered_set<std::string>& op_names,
                    const int label,
@@ -212,6 +220,18 @@ void FindOutputEntries(const Graph& g,
   }
 }
 
+void PrintNodeEntry(const nnvm::NodeEntry& entry) {
+  std::string ret = "NodeEntry: node_name=" + entry.node->attrs.name
+    + ", index=" + std::to_string(entry.index) + ", version=" + std::to_string(entry.version);
+  LOG(INFO) << ret;
+}
+
+void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
+  for (size_t i = 0; i < entries.size(); ++i) {
+    PrintNodeEntry(*entries[i]);
+  }
+}
+
 }  // namespace sg
 
 Graph PartitionGraph(Graph&& g) {
@@ -223,34 +243,57 @@ Graph PartitionGraph(Graph&& g) {
     }
   });
 #endif
+  const std::unordered_set<std::string>& op_names = g.GetAttr<std::unordered_set<std::string>>("subgraph_op_names");
+  if (op_names.empty()) {  // treat the whole graph as a subgraph
+    Symbol whole_graph_sym;
+    whole_graph_sym.outputs = g.outputs;
+    // DO NOT define node name for subgraph op because it would serve
+    // as the prefix of the output names. We want to use the original
+    // output names of the subgraph.
+    NodePtr subgraph_node_ptr = CreateNode("_subgraph_op", "");
+    subgraph_node_ptr->attrs.parsed = whole_graph_sym;
+    const auto& idx = g.indexed_graph();
+    const auto& input_node_ids = idx.input_nodes();
+    for (size_t i = 0; i < input_node_ids.size(); ++i) {
+      const auto& input_node = idx[input_node_ids[i]];
+      // also need to clone the attrs of the source variable node
+      NodePtr new_input_node = CloneVariableNode(*input_node.source);
+      CHECK_EQ(new_input_node->inputs.size(), 0U);
+      CHECK_EQ(subgraph_node_ptr->inputs.size(), i);
+      nnvm::NodeEntry new_node_entry{new_input_node, 0, 0};
+      subgraph_node_ptr->inputs.emplace_back(new_node_entry);
+    }
+    Graph ret;
+    static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+    auto list_output_names_func = flist_outputs.get(subgraph_node_ptr->op(), nullptr);
+    CHECK(list_output_names_func != nullptr);
+    const size_t num_outputs = list_output_names_func(subgraph_node_ptr->attrs).size();
+    for (uint32_t i = 0; i < num_outputs; ++i) {
+      ret.outputs.emplace_back(nnvm::NodeEntry{subgraph_node_ptr, i, 0});
+    }
+    return ret;
+  } else {
+    using namespace sg;
+    std::vector<SimpleNodePtr> simple_nodes;
+    CreateSimpleGraph(g, &simple_nodes);
+    std::vector<std::vector<SimpleNode*>> subgraph_nodes;
+    FindSubgraphs(g, op_names, simple_nodes, &subgraph_nodes);
+    std::vector<nnvm::NodeEntry*> entries;
+    for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
+      PrintSubgraph(subgraph_nodes[i]);
 
-  Symbol whole_graph_sym;
-  whole_graph_sym.outputs = g.outputs;
-  // DO NOT define node name for subgraph op because it would serve
-  // as the prefix of the output names. We want to use the original
-  // output names of the subgraph.
-  NodePtr subgraph_node_ptr = CreateNode("_subgraph_op", "");
-  subgraph_node_ptr->attrs.parsed = whole_graph_sym;
-  const auto& idx = g.indexed_graph();
-  const auto& input_node_ids = idx.input_nodes();
-  for (size_t i = 0; i < input_node_ids.size(); ++i) {
-    const auto& input_node = idx[input_node_ids[i]];
-    // also need to clone the attrs of the source variable node
-    NodePtr new_input_node = CloneVariableNode(*input_node.source);
-    CHECK_EQ(new_input_node->inputs.size(), 0U);
-    CHECK_EQ(subgraph_node_ptr->inputs.size(), i);
-    nnvm::NodeEntry new_node_entry{new_input_node, 0, 0};
-    subgraph_node_ptr->inputs.emplace_back(new_node_entry);
+      LOG(INFO) << "Searching for input entries...";
+      entries.clear();
+      FindInputEntries(g, simple_nodes, subgraph_nodes[i], &entries);
+      PrintNodeEntries(entries);
+
+      LOG(INFO) << "Searching for input entries...";
+      entries.clear();
+      FindOutputEntries(g, simple_nodes, subgraph_nodes[i], &entries);
+      PrintNodeEntries(entries);
+    }
+    return g;
   }
-  Graph ret;
-  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
-  auto list_output_names_func = flist_outputs.get(subgraph_node_ptr->op(), nullptr);
-  CHECK(list_output_names_func != nullptr);
-  const size_t num_outputs = list_output_names_func(subgraph_node_ptr->attrs).size();
-  for (uint32_t i = 0; i < num_outputs; ++i) {
-    ret.outputs.emplace_back(nnvm::NodeEntry{subgraph_node_ptr, i, 0});
-  }
-  return ret;
 }
 
 NNVM_REGISTER_PASS(PartitionGraph)
