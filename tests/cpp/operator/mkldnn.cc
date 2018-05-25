@@ -497,7 +497,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   std::vector<NDArrayAttrs> in_arrs;
   // Type 1.
   NDArray arr(shape, Context());
-  in_arrs.emplace_back(&arr, "Normal NDArray");
+  in_arrs.emplace_back(arr, "Normal NDArray");
   init_fn(&in_arrs.back().arr, true);
 
   // Type 4.
@@ -538,7 +538,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
 
     // Type 2, 3.
     arr = NDArray(shape, Context());
-    in_arrs.emplace_back(&arr, "MKLDNN NDArray");
+    in_arrs.emplace_back(arr, "MKLDNN NDArray");
     InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn, true);
 
     // Type 8, 9.
