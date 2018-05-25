@@ -88,6 +88,7 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
     return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
 
+def get_caltech101_iterator()
 
 class DummyIter(mx.io.DataIter):
     def __init__(self, batch_size, data_shape, batches = 100):

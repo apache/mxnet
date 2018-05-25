@@ -1,12 +1,12 @@
 # Mixed precision training using float16
+In this tutorial you will walk through how one can train deep learning neural networks with mixed precision on supported hardware. You will first see how to use float16 (both with Gluon and Symbolic APIs) and then some techniques on achieving good performance and accuracy.
 
-The computational resources required for training deep neural networks has been increasing of late because of complexity of the architectures and size of models. Mixed precision training allows us to reduces the resources required by using lower precision arithmetic. In this approach we train using 16 bit floating points (half precision) while using 32 bit floating points (single precision) for output buffers of float16 computation. This combination of single and half precision gives rise to the name Mixed precision. It allows us to achieve the same accuracy as training with single precision, while decreasing the required memory and training or inference time.
+## Background
+The computational resources required for training deep neural networks have been increasing of late because of complexity of the architectures and size of models. Mixed precision training allows us to reduces the resources required by using lower precision arithmetic. In this approach you can train using 16 bit floating points (half precision) while using 32 bit floating points (single precision) for output buffers of float16 computation. This combination of single and half precision gives rise to the name mixed precision. It allows us to achieve the same accuracy as training with single precision, while decreasing the required memory and training or inference time.
 
-The float16 data type, is a 16 bit floating point representation according to the IEEE 754 standard. It has a dynamic range where the precision can go from 0.0000000596046 (highest, for values closest to 0) to 32 (lowest, for values in the range 32768-65536). Despite the decreased precision when compared to single precision (float32), float16 computation can be much faster on supported hardware. The motivation for using float16 for deep learning comes from the idea that deep neural network architectures have natural resilience to errors due to backpropagation. Half precision is typically sufficient for training neural networks. This means that on hardware with specialized support for float16 computation we can greatly improve the speed of training and inference. This speedup results from faster matrix multiplication, saving on memory bandwidth and reduced communication costs. It also reduces the size of the model, allowing us to train larger models and use larger batch sizes. 
+The float16 data type is a 16 bit floating point representation according to the IEEE 754 standard. It has a dynamic range where the precision can go from 0.0000000596046 (highest, for values closest to 0) to 32 (lowest, for values in the range 32768-65536). Despite the decreased precision when compared to single precision (float32), float16 computation can be much faster on supported hardware. The motivation for using float16 for deep learning comes from the idea that deep neural network architectures have natural resilience to errors due to backpropagation. Half precision is typically sufficient for training neural networks. This means that on hardware with specialized support for float16 computation we can greatly improve the speed of training and inference. This speedup results from faster matrix multiplication, saving on memory bandwidth and reduced communication costs. It also reduces the size of the model, allowing us to train larger models and use larger batch sizes.
 
-The Volta range of Graphics Processing Units (GPUs) from Nvidia have Tensor Cores which perform efficient float16 computation. A tensor core allows accumulation of half precision products into single or half precision outputs. For the rest of this tutorial we assume that we are working with Nvidia's Tensor Cores on a Volta GPU.
-
-In this tutorial we will walk through how one can train deep learning neural networks with mixed precision on supported hardware. We will first see how to use float16 and then some techniques on achieving good performance and accuracy.
+The Volta range of Graphics Processing Units (GPUs) from Nvidia have [Tensor Cores](https://www.nvidia.com/en-us/data-center/tensorcore/) which perform efficient float16 computation. A tensor core allows accumulation of half precision products into single or half precision outputs. For the rest of this tutorial we assume that we are working with Nvidia's Tensor Cores on a Volta GPU.
 
 ## Prerequisites
 
@@ -16,14 +16,14 @@ In this tutorial we will walk through how one can train deep learning neural net
 
 ## Using the Gluon API
 
-With Gluon, we need to take care of two things to convert a model to support float16.
+With Gluon, you need to take care of two main things to convert a model to support float16.
 1. Cast the Gluon Block, so as to cast the parameters of layers and change the type of input expected, to float16.
 2. Cast the data to float16 to match the input type expected by the blocks if necessary.
 
 ### Training
-Let us look at an example of training a Resnet50 model with the Caltech101 dataset with float16. 
-First, let us get some import stuff out of the way.
+Let us look at an example of training a Resnet50 model with the [Caltech101](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) dataset using float16.
 
+Before you begin, you can import the methods you will be using at once.
 
 ```python
 import os
@@ -38,8 +38,7 @@ from mxnet.metric import Accuracy
 from mxnet.gluon.data.vision.datasets import ImageFolderDataset
 ```
 
-Let us start by fetching the Caltech101 dataset and extracting it. 
-
+To start with, fetch the Caltech101 dataset and extract it. Caltech101 dataset has images of objects corresponding to 101 categories. The total number of training images in this dataset is 8677. Please note that this archive file is about 110MB.
 
 ```python
 url = "https://s3.us-east-2.amazonaws.com/mxnet-public/101_ObjectCategories.tar.gz"
@@ -58,7 +57,10 @@ training_path = os.path.join(data_folder, dataset_name)
 testing_path = os.path.join(data_folder, "{}_test".format(dataset_name))
 ```
 
-Now we have the images in two folders, one for training and the other for test. Let us next create Gluon Dataset from these folders, and then create Gluon DataLoader from those datasets. Let us also define a transform function so that each image loaded is resized, cropped and transposed. 
+You will now have the images in two folders, one for training and the other for test.
+To load this dataset for training you need to create Gluon Dataset from these folders, and then create Gluon DataLoader from those datasets.
+Please refer to the tutorial on [Gluon Datasets and DataLoader](https://mxnet.incubator.apache.org/tutorials/gluon/datasets.html) for more details about this step.
+In the next block you would also want to define a transform function which is applied to each image loaded. For this example, you can resize the images such that the shortest side is 224px, then crop it and transpose it.
 
 
 ```python
@@ -81,7 +83,7 @@ train_data = gluon.data.DataLoader(dataset_train, BATCH_SIZE, shuffle=True, num_
 test_data = gluon.data.DataLoader(dataset_test, BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 ```
 
-Next, we'll define softmax cross entropy as our loss, accuracy as our metric and the context on which to run our training jobs. It is set by default to gpu. Please note that float16 on CPU might not be supported for all operators, as float16 on CPU is slower than float32.
+Next, you need define softmax cross entropy as our loss, accuracy as our metric and the context on which to run our training jobs. It is set by default to gpu. Please note that float16 on CPU might not be supported for all operators, as float16 on CPU is slower than float32.
 
 
 ```python
@@ -169,7 +171,7 @@ train(net, dtype=DTYPE, num_epochs=25)
 Note the accuracy you observe above. You can change DTYPE above to float32 if you want to observe the speedup gained by using float16.
 
 
-### Finetuning
+### Fine-tuning
 
 You can also finetune in float16, a model which was originally trained in float32. The section of the code which builds the network would now look as follows. We first fetch the pretrained resnet50_v2 model from model zoo. This was trained using Imagenet data, so we need to pass classes as 1000 for fetching the pretrained model. Then we create our new network for Caltech 101 by passing number of classes as 101. We will then cast it to `float16` so that we cast all parameters to `float16`.
 

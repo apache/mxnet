@@ -47,7 +47,7 @@ fh.setFormatter(formatter)
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
 parser.add_argument('--dataset', type=str, default='cifar10',
-                    help='dataset to use. options are mnist, cifar10, imagenet and dummy.')
+                    help='dataset to use. options are mnist, cifar10, caltech101, imagenet and dummy.')
 parser.add_argument('--data-dir', type=str, default='',
                     help='training directory of imagenet images, contains train/val subdirs.')
 parser.add_argument('--batch-size', type=int, default=32,
