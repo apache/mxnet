@@ -152,11 +152,11 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwd(const PoolingParam &param,
 
   if (param.pooling_convention == pool_enum::kFull) {
     if ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_ != 0) {
-        pad_b_ += (stride_h_ % 2) ? (stride_h_ / 2 + 1) : (stride_h_ / 2);
+      pad_b_ += stride_h_ - ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_);
     }
 
     if ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_ != 0) {
-        pad_r_ += (stride_w_ % 2) ? (stride_w_ / 2 + 1) : (stride_w_ / 2);
+      pad_r_ += stride_w_ - ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_);
     }
   }
 
@@ -235,11 +235,11 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 
     if (param.pooling_convention == pool_enum::kFull) {
       if ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_ != 0) {
-        pad_b_ += (stride_h_ % 2) ? (stride_h_ / 2 + 1) : (stride_h_ / 2);
+        pad_b_ += stride_h_ - ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_);
       }
 
       if ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_ != 0) {
-        pad_r_ += (stride_w_ % 2) ? (stride_w_ / 2 + 1) : (stride_w_ / 2);
+        pad_r_ += stride_w_ - ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_);
       }
     }
 
@@ -322,11 +322,11 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
 
   if (param.pooling_convention == pool_enum::kFull) {
     if ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_ != 0) {
-      pad_b_ += (stride_h_ % 2) ? (stride_h_ / 2 + 1) : (stride_h_ / 2);
+      pad_b_ += stride_h_ - ((data_md.data.dims[2] + pad_t_ + pad_b_ - kernel_h_) % stride_h_);
     }
 
     if ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_ != 0) {
-      pad_r_ += (stride_w_ % 2) ? (stride_w_ / 2 + 1) : (stride_w_ / 2);
+      pad_r_ += stride_w_ - ((data_md.data.dims[3] + pad_l_ + pad_r_ - kernel_w_) % stride_w_);
     }
   }
 
