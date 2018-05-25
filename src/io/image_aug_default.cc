@@ -52,6 +52,8 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   int max_rotate_angle;
   /*! \brief max aspect ratio */
   float max_aspect_ratio;
+  /*! \brief min aspect ratio */
+  float min_aspect_ratio;
   /*! \brief random shear the image [-max_shear_ratio, max_shear_ratio] */
   float max_shear_ratio;
   /*! \brief max crop size */
@@ -107,9 +109,12 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
                   "for resnet training on ImageNet data.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
         .describe("Rotate by a random degree in ``[-v, v]``");
-    DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
+    DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(1.0f)
         .describe("Change the aspect (namely width/height) to a random value "
-                  "in ``[1 - max_aspect_ratio, 1 + max_aspect_ratio]``");
+                  "in ``[min_aspect_ratio, max_aspect_ratio]``");
+    DMLC_DECLARE_FIELD(min_aspect_ratio).set_default(1.0f)
+        .describe("Change the aspect (namely width/height) to a random value "
+                  "in ``[min_aspect_ratio, max_aspect_ratio]``");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
         .describe("Apply a shear transformation (namely ``(x,y)->(x+my,y)``) "
                   "with ``m`` randomly chose from "
@@ -236,6 +241,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
+    bool random_resized_crop_exec = false;
     cv::Mat res;
     if (param_.resize != -1) {
       int new_height, new_width;
@@ -260,13 +266,14 @@ class DefaultImageAugmenter : public ImageAugmenter {
     if (param_.random_resized_crop) {
       // random resize crop
       if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
-          || param_.max_aspect_ratio > 0.0f) {
-            CHECK(param_.max_aspect_ratio < 1.0f);
+          || param_.max_aspect_ratio != 1.0f || param_.min_aspect_ratio != 1.0f) {
+            CHECK(param_.min_aspect_ratio > 0.0f);
             CHECK(param_.min_random_area <= param_.max_random_area);
-            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_scale,
+            CHECK(param_.min_aspect_ratio <= param_.max_aspect_ratio);
+            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_area,
                                                                     param_.max_random_area);
-            std::uniform_real_distribution<float> rand_uniform_ratio(1 - param_.max_aspect_ratio,
-                                                                     1 + param_.max_aspect_ratio);
+            std::uniform_real_distribution<float> rand_uniform_ratio(param_.min_aspect_ratio,
+                                                                     param_.max_aspect_ratio);
             std::uniform_real_distribution<float> rand_uniform(0, 1);
             float area = res.rows * res.cols;
             bool attemp = false;
@@ -329,12 +336,14 @@ class DefaultImageAugmenter : public ImageAugmenter {
               cv::Rect roi(center_x, center_y, param_.data_shape[2], param_.data_shape[1]);
               res = res(roi);
             }
+            random_resized_crop_exec = true;
       }
     }
     // normal augmentation by affine transformation.
     if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
-        || param_.rotate > 0 || rotate_list_.size() > 0 || param_.max_random_scale != 1.0
-        || param_.min_random_scale != 1.0 || param_.max_aspect_ratio != 0.0f
+        || param_.rotate > 0 || rotate_list_.size() > 0
+        || param_.max_random_scale != 1.0f || param_.min_random_scale != 1.0
+        || param_.min_aspect_ratio != 1.0f || param_.max_aspect_ratio != 1.0f
         || param_.max_img_size != 1e10f || param_.min_img_size != 0.0f) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       // shear
@@ -358,7 +367,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float ratio = 1.0f;
       if (!param_.random_resized_crop) {
         ratio = rand_uniform(*prnd) *
-            param_.max_aspect_ratio * 2 - param_.max_aspect_ratio + 1;
+            (param_.max_aspect_ratio - param_.min_aspect_ratio) + param_.min_aspect_ratio;
       }
       float hs = 2 * scale / (1 + ratio);
       float ws = ratio * hs;
@@ -416,7 +425,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
                                                 param_.data_shape[2], param_.data_shape[1], prnd);
       cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
                 , 0, 0, interpolation_method);
-    } else if (!param_.random_resized_crop) {
+    } else if (!random_resized_crop_exec) {
       if (res.rows < param_.data_shape[1]) {
         index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
                                                 static_cast<float>(res.rows) *
