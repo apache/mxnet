@@ -1654,6 +1654,47 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    NDArrayHandle** aux_states,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
+
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ *
+ * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+ * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param num_in_args length of in_args
+ * \param in_args in args array
+ * \param arg_grads arg grads handle array
+ * \param num_aux_states length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return a new executor
+ */
+MXNET_DLL int MXExecutorReshape(int partial_shaping,
+                                int allow_up_sizing,
+                                int dev_type,
+                                int dev_id,
+                                mx_uint num_map_keys,
+                                const char** map_keys,
+                                const int* map_dev_types,
+                                const int* map_dev_ids,
+                                const mx_uint num_provided_arg_shapes,
+                                const char** provided_arg_shape_names,
+                                const mx_uint* provided_arg_shape_data,
+                                const mx_uint* provided_arg_shape_idx,
+                                mx_uint* num_in_args,
+                                NDArrayHandle** in_args,
+                                NDArrayHandle** arg_grads,
+                                mx_uint* num_aux_states,
+                                NDArrayHandle** aux_states,
+                                ExecutorHandle shared_exec,
+                                ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
  */
