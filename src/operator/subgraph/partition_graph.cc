@@ -22,6 +22,7 @@
  * \file quantization.cc
  * \brief
  */
+#include <queue>
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
 #include <mxnet/op_attr_types.h>
@@ -47,6 +48,117 @@ NodePtr CloneVariableNode(const nnvm::Node& src) {
   return node;
 }
 
+namespace sg {  // sg stands for subgraph
+
+struct SimpleNode;
+using SimpleNodePtr = std::shared_ptr<SimpleNode>;
+
+struct SimpleNode {
+  static SimpleNodePtr Create() {
+    return std::make_shared<SimpleNode>();
+  }
+  SimpleNode() : label(-1), node(nullptr) {}
+  int label;
+  nnvm::Node* node;
+  std::unordered_map<Node*, int> outputs;
+  //std::unordered_map<SimpleNodePtr, int> inputs;
+  //std::unordered_map<SimpleNodePtr, int> outputs;
+};
+
+void CreateSimpleGraph(const Graph& g,
+                       std::vector<SimpleNodePtr>* simple_nodes) {
+  const auto& indexed_graph = g.indexed_graph();
+  simple_nodes->reserve(indexed_graph.num_nodes());
+  for (size_t nid = 0; nid < indexed_graph.num_nodes(); ++nid) {
+    SimpleNodePtr sn = SimpleNode::Create();
+    sn->node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+    for (auto& e : sn->node->inputs) {
+      const auto input_nid = indexed_graph.node_id(e.node.get());
+      CHECK_LT(input_nid, simple_nodes->size());
+      std::unordered_map<Node*, int>& input_node_outputs = (*simple_nodes)[input_nid]->outputs;
+      auto it = input_node_outputs.find(sn->node);
+      if (it == input_node_outputs.end()) {
+        input_node_outputs.emplace(sn->node, 1);
+      } else {
+        ++(it->second);
+      }
+    }
+    simple_nodes->emplace_back(std::move(sn));
+  }
+#if 0
+  DFSVisit(g.outputs, [&](const NodePtr& node) {
+    LOG(INFO) << node->attrs.name;
+    auto it = node_map2->find(node.get());
+    if (it == node_map2.end()) {
+    }
+
+    for (const auto& e : node->inputs) {
+      LOG(INFO) << "NodeEntry: " << e.node->attrs.name << ", " << e.index << ", " << e.version;
+    }
+  });
+#endif
+}
+
+void LabelSubgraph(const Graph&g,
+                   const std::unordered_set<std::string>& op_names,
+                   const int label,
+                   const size_t snid,  // simple node id
+                   const std::vector<SimpleNodePtr>& simple_nodes,
+                   std::vector<SimpleNode*>* subgraph_nodes) {
+  const auto& indexed_graph = g.indexed_graph();
+  std::queue<SimpleNode*> node_queue;
+  node_queue.push(simple_nodes[snid].get());
+  while (!node_queue.empty()) {
+    SimpleNode* cur_node = node_queue.front();
+    node_queue.pop();
+    cur_node->label = label;
+    subgraph_nodes->push_back(cur_node);
+    // get qualified adjacent input nodes
+    for (auto& e : cur_node->node->inputs) {
+      if (!e.node->is_variable() && op_names.count(e.node->op()->name)) {
+        const auto nid = indexed_graph.node_id(e.node.get());
+        CHECK_LT(nid, simple_nodes.size());
+        if (simple_nodes[nid]->label == -1) {  // this node has not been visited yet
+          node_queue.push(simple_nodes[nid].get());
+        } else {
+          CHECK_EQ(simple_nodes[nid]->label, label);
+        }
+      }
+    }
+    // get qualified output nodes
+    for (auto it = cur_node->outputs.begin(); it != cur_node->outputs.end(); ++it) {
+      CHECK(!it->first->is_variable());
+      if (op_names.count(it->first->op()->name)) {
+        const auto nid = indexed_graph.node_id(it->first);
+        CHECK_LT(nid, simple_nodes.size());
+        if (simple_nodes[nid]->label == -1) {  // this node has not been visited yet
+          node_queue.push(simple_nodes[nid].get());
+        } else {
+          CHECK_EQ(simple_nodes[nid]->label, label);
+        }
+      }
+    }
+  }
+}
+
+// number of subgraphs found
+void FindSubgraphs(const Graph& g,
+                   const std::unordered_set<std::string>& op_names,
+                   const std::vector<SimpleNodePtr>& simple_nodes,
+                   std::vector<std::vector<SimpleNode*>>* subgraph_nodes) {
+  //CHECK(simple_nodes != nullptr);
+  const auto& indexed_graph = g.indexed_graph();
+  CHECK_EQ(indexed_graph.num_nodes(), simple_nodes.size());
+  for (size_t i = 0; i < simple_nodes.size(); ++i) {
+    nnvm::Node* node = simple_nodes[i]->node;
+    if (!node->is_variable() && simple_nodes[i]->label == -1 && op_names.count(node->op()->name)) {
+      subgraph_nodes->emplace_back();
+      LabelSubgraph(g, op_names, subgraph_nodes->size() - 1, i, simple_nodes, &subgraph_nodes->back());
+    }
+  }
+}
+
+}  // namespace sg
 
 Graph PartitionGraph(Graph&& g) {
 #if 0
