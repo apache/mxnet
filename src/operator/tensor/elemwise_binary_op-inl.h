@@ -552,7 +552,7 @@ void ElemwiseBinaryOp::DnsRspDnsOp(mshadow::Stream<xpu> *s,
   TBlob rsp_data = rsp.data();
   TBlob rsp_indices = rsp.aux_data(rowsparse::kIdx);
 
-  MSHADOW_SGL_DBL_TYPE_SWITCH(rsp_data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(rsp_data.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(rsp_indices.type_flag_, IType, {
       MXNET_ASSIGN_REQ_SWITCH(req, Req, {
         if (reverse && std::is_same<OP, mshadow_op::minus>::value) {

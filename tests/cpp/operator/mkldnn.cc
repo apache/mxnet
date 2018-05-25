@@ -89,12 +89,17 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
 }
 
 // Init arrays with the default layout.
-static void InitArray(NDArray *arr) {
+static void InitArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   size_t size = blob.Size();
-  for (size_t i = 0; i < size; i++)
-    data[i] = i;
+  if (is_rand) {
+    for (size_t i = 0; i < size; i++)
+      data[i] = std::rand();
+  } else {
+    for (size_t i = 0; i < size; i++)
+      data[i] = i;
+  }
 }
 
 // Init arrays with the specified layout.
@@ -361,6 +366,15 @@ OpAttrs GetLeakyReluOp() {
   return attrs;
 }
 
+OpAttrs GetSumOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("elemwise_add");
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -418,34 +432,65 @@ std::vector<NDArray> GetTestInputArrays() {
  *    pass them to all operators.
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
- * 4. Reused NDArray (this is created by the MXNet executor). This type of
+ * 4. Reshaped/sliced NDArray
+ * 5. Reused NDArray (this is created by the MXNet executor). This type of
  *    NDArrays can only be used as output arrays.
+ * 6. Reused NDArray converted from an array with a different data type.
+ * 7. Reused reshaped/sliced NDArray.
+ * 8. Reused NDArray with MKLDNN layout.
+ * 9. Reused NDArray with MKLDNN layout of different dimensions.
  */
 std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds) {
   std::vector<NDArray> in_arrs;
+  // Type 1.
   in_arrs.emplace_back(shape, Context());
-  InitArray(&in_arrs.back());
+  InitArray(&in_arrs.back(), true);
 
+  // Type 4.
+  TShape tmp_shape = shape;
+  tmp_shape[0] = shape[0] * 2;
+  NDArray arr0(tmp_shape, Context());
+  InitArray(&arr0, true);
+  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1));
+
+  // Type 5.
   // Get a reused version.
   nnvm::TShape s(1);
   s[0] = shape.Size();
-  NDArray arr(s, Context());
-  arr = arr.AsArray(shape, arr.dtype());
-  InitArray(&arr);
-  in_arrs.emplace_back(arr);
+  NDArray arr1(s, Context());
+  arr1 = arr1.AsArray(shape, arr1.dtype());
+  InitArray(&arr1, true);
+  in_arrs.emplace_back(arr1);
+
+  // Type 6.
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
+  NDArray arr2(s, Context(), true, mshadow::kUint8);
+  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
+  InitArray(&arr2, true);
+  in_arrs.emplace_back(arr2);
+
+  // Type 7
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+  NDArray arr3(s, Context(), true, mshadow::kUint8);
+  tmp_shape[0] = shape[0] * 2;
+  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
+  InitArray(&arr3, true);
+  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1));
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
+    // Type 2, 3.
     in_arrs.emplace_back(shape, Context());
     InitMKLDNNArray(&in_arrs.back(), pd, true);
 
+    // Type 8, 9.
     // Get a reused version.
     nnvm::TShape s(1);
     s[0] = shape.Size();
-    arr = NDArray(s, Context());
+    NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
     InitMKLDNNArray(&arr, pd, true);
     in_arrs.emplace_back(arr);
@@ -453,16 +498,50 @@ std::vector<NDArray> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-using VerifyFunc = std::function<void (const NDArray &in_arr, const NDArray &arr)>;
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const NDArray &arr)>;
 
-void VerifyCopyResult(const NDArray &in_arr, const NDArray &arr) {
-  NDArray tmp1 = in_arr.Reorder2Default();
+void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = arr.Reorder2Default();
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
   EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+  NDArray in1 = in_arrs[0]->Reorder2Default();
+  NDArray in2 = in_arrs[1]->Reorder2Default();
+  NDArray out = arr.Reorder2Default();
+  EXPECT_EQ(in1.shape().Size(), in2.shape().Size());
+  EXPECT_EQ(in1.shape().Size(), out.shape().Size());
+
+  mshadow::default_real_t *d1 = in1.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *d2 = in2.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *o = out.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < in1.shape().Size(); i++)
+    EXPECT_EQ(d1[i] + d2[i], o[i]);
+}
+
+TEST(MKLDNN_NDArray, CopyFrom) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  for (auto in_arr : in_arrs) {
+    std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr.shape(), pds);
+    for (auto out_arr : out_arrs) {
+      if (in_arr.IsMKLDNNData() && in_arr.IsView())
+        in_arr = in_arr.Reorder2Default();
+      const mkldnn::memory *mem = in_arr.GetMKLDNNData();
+      out_arr.CopyFrom(*mem);
+      MKLDNNStream::Get()->Submit();
+      std::vector<NDArray *> inputs(1);
+      inputs[0] = &in_arr;
+      VerifyCopyResult(inputs, out_arr);
+    }
+  }
 }
 
 void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
@@ -485,7 +564,7 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         out_arr.WaitToRead();
-        verify_fn(in_arr, out_arr);
+        verify_fn(inputs, out_arr);
       }
     }
   }
@@ -504,7 +583,57 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.WaitToRead();
-      verify_fn(orig, arr);
+      inputs[0] = &orig;
+      verify_fn(inputs, arr);
+    }
+  }
+}
+
+void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(2);
+  std::vector<NDArray*> outputs(1);
+  std::vector<OpReqType> req(1);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArray> in_arrs = GetTestInputArrays();
+  for (auto in_arr1 : in_arrs) {
+    for (auto dispatch : dispatches) {
+      std::vector<NDArray> out_arrs = GetTestOutputArrays(in_arr1.shape(), pds);
+      for (auto out_arr : out_arrs) {
+        req[0] = kWriteTo;
+        inputs[0] = &in_arr1;
+        inputs[1] = &in_arr1;
+        outputs[0] = &out_arr;
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        out_arr.WaitToRead();
+        verify_fn(inputs, out_arr);
+      }
+    }
+  }
+
+  for (auto dispatch : dispatches) {
+    in_arrs = GetTestInputArrays();
+    for (auto arr : in_arrs) {
+      // If the array is a view, we shouldn't write data to it.
+      if (arr.IsView())
+        continue;
+
+      NDArray orig = arr.Copy(arr.ctx());
+      req[0] = kWriteInplace;
+      inputs[0] = &arr;
+      inputs[1] = &arr;
+      outputs[0] = &arr;
+      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                  dispatch, mxnet::OpStatePtr());
+      arr.WaitToRead();
+      std::vector<NDArray *> orig_inputs(2);
+      orig_inputs[0] = &orig;
+      orig_inputs[1] = &orig;
+      verify_fn(orig_inputs, arr);
     }
   }
 }
@@ -512,6 +641,12 @@ void TestUnaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
   TestUnaryOp(attrs, VerifyCopyResult);
+}
+
+
+TEST(IMPERATIVE, BinaryOp) {
+  OpAttrs attrs = GetSumOp();
+  TestBinaryOp(attrs, VerifySumResult);
 }
 
 #endif
