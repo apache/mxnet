@@ -59,8 +59,15 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   std::vector<float> scales(inputs.size(), 1);
   in_prims.reserve(inputs.size());
   bool pd_same = true;
+  std::vector<NDArray> in_bufs(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
-    auto in_mem = inputs[i].GetMKLDNNData();
+    const mkldnn::memory *in_mem;
+    if (inputs[i].IsMKLDNNData() && inputs[i].IsView()) {
+      in_bufs[i] = inputs[i].Reorder2Default();
+      in_mem = in_bufs[i].GetMKLDNNData();
+    } else {
+      in_mem = inputs[i].GetMKLDNNData();
+    }
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
   }
@@ -68,9 +75,16 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
   pd_same = pd_same && (pdesc.dst_primitive_desc() == in_pds[0]);
   auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
-  bool addr_same = out_mem->get_data_handle() == inputs[0].GetMKLDNNData()->get_data_handle();
-  if ((req == kWriteTo) ||
-      (req == kWriteInplace && pd_same && addr_same)) {
+  bool addr_same = false;
+  const void *first_data_handle;
+  if (in_bufs[0].is_none())
+    first_data_handle = inputs[0].GetMKLDNNData()->get_data_handle();
+  else
+    first_data_handle = in_bufs[0].GetMKLDNNData()->get_data_handle();
+  if (out_mem)
+    addr_same = out_mem->get_data_handle() == first_data_handle;
+  if (((req == kWriteTo) || (req == kWriteInplace && pd_same && addr_same))
+      && out_mem) {
     // do sum computation directly on output NDArray
     MKLDNNStream *stream = MKLDNNStream::Get();
     stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
