@@ -36,8 +36,8 @@ build_wheel() {
     set -ex
     pushd .
 
-    PYTHON_DIR = ${1:/work/mxnet/python}
-    BUILD_DIR = ${2:/work/build}
+    PYTHON_DIR = ${1:-/work/mxnet/python}
+    BUILD_DIR = ${2:-/work/build}
 
     # build
 
