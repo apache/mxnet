@@ -213,6 +213,8 @@ class GraphExecutor : public Executor {
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
 
+  // indicate whether there is a backward graph for gradients.
+  bool need_grad_;
   // internal graph
   nnvm::Graph graph_;
   // operator node

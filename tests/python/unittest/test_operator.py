@@ -24,7 +24,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str, MXNetError
+from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed
 import unittest
 
@@ -5661,6 +5661,313 @@ def test_float16_min_max():
     assert a.dtype == np.float16
     assert np.finfo('float16').min == mx.nd.min(a).asscalar()
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
+
+
+@with_seed()
+def test_foreach():
+    v3 = mx.sym.var("v0")
+    v4 = mx.sym.var("v1")
+    v5 = mx.sym.var("v2")
+    v6 = mx.sym.var("v3")
+    v7 = mx.sym.var("v4")
+
+    # This tests foreach with accumulation sum.
+    def step1(in1, states, free):
+        out = in1 * 2 + states[0] + free[0]
+        return (out, [out])
+    def step2(in1, states, free):
+        out = states[0] + in1 * 2 + free[0]
+        return (out, [out])
+    def step3(in1, states, free):
+        out = in1[0] + in1[1] + states[0] + states[1] + free[0]
+        return ([out, out * 2], [out * 2, out * 3])
+
+    def verify_foreach(step, in_syms, state_syms, free_syms,
+            in_arrs, init_states, frees, out_grads, is_train=True,
+            free_vars_func=None):
+        step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
+        res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
+        out = _as_list(res)
+        for i in range(len(out)):
+            out[i] = out[i] * 2
+        out.extend(states)
+        out = mx.sym.Group(out)
+        arr_grads = []
+        arg_dict = {}
+        arg_grad_dict = {}
+        i = 0
+        for arr in _as_list(in_arrs):
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+        for arr in init_states:
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+        for arr in frees:
+            arr_grad = mx.nd.empty(arr.shape)
+            arr_grads.append(arr_grad)
+            arg_dict['v'+str(i)] = arr
+            arg_grad_dict['v'+str(i)] = arr_grad
+            i = i + 1
+
+        gin_order = []
+        for name in out.list_inputs():
+            name = name[1:]
+            gin_order.append(int(name))
+
+        e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+        e.forward(is_train=is_train)
+        if (is_train):
+            # backward
+            tmp_grads = out_grads[0][:]
+            tmp_grads.extend(out_grads[1])
+            e.backward(tmp_grads)
+
+        # Below we use imperative to reimplement foreach and compute its gradients.
+        res = []
+        for i in range(len(_as_list(out_grads[0]))):
+            res.append([])
+        for arr in _as_list(in_arrs):
+            arr.attach_grad()
+        for arr in init_states:
+            arr.attach_grad()
+        for arr in frees:
+            arr.attach_grad()
+        with mx.autograd.record():
+            frees_imp = frees if free_vars_func is None else free_vars_func(frees)
+            step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees_imp)
+            states = [mx.nd.expand_dims(s, 0) for s in init_states]
+            res, states = mx.nd.contrib.foreach(step_imp, in_arrs, init_states)
+
+            res2 = _as_list(res)
+            for i in range(len(res2)):
+                res2[i] = res2[i] * 2
+            if isinstance(states, list):
+                states = [mx.nd.expand_dims(s, 0) for s in states]
+                res2.extend(states)
+            else:
+                states = mx.nd.expand_dims(states, 0)
+                res2.append(states)
+            res = mx.nd.concat(*res2, dim=0)
+
+        tmp_grads = out_grads[0][:]
+        tmp_grads1 = [mx.nd.expand_dims(grad, 0) for grad in out_grads[1]]
+        tmp_grads.extend(tmp_grads1)
+        if (is_train):
+            res.backward(mx.nd.concat(*tmp_grads, dim=0))
+        for i in range(len(res2)):
+            assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(),
+                    rtol=0.001, atol=0.0001)
+        if (is_train):
+            all_ins = _as_list(in_arrs)[:]
+            all_ins.extend(init_states)
+            all_ins.extend(frees)
+            for i in range(len(all_ins)):
+                assert_almost_equal(all_ins[i].grad.asnumpy(),
+                        e.grad_arrays[gin_order[i]].asnumpy())
+
+    # Test cases:
+    # * graph inputs are stored in different orders.
+    #   This is to test if foreach finds the data arrays and weight arrays
+    #   in the right location.
+    # * the number of iterations: odd or even.
+    # * multiple inputs and multiple outputs.
+    # * inference.
+
+    #states = [mx.nd.random.uniform(shape=(2))]
+
+    #frees1 = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    #arrs = mx.nd.random.uniform(shape=(3, 2))
+    states = [mx.nd.arange(2)]
+
+    frees1 = [mx.nd.arange(2), mx.nd.arange(2) + 1]
+    arrs = mx.nd.arange(6).reshape(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
+            lambda frees : [frees[0] + frees[1]])
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
+            lambda frees : [frees[0] + frees[1]])
+
+    frees = [mx.nd.random.uniform(shape=(2))]
+    arrs = mx.nd.random.uniform(shape=(2, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
+    arrs = mx.nd.random.uniform(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
+    arrs = mx.nd.random.uniform(shape=(2, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
+    arrs = mx.nd.random.uniform(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
+    # Test multiple inputs and outputs.
+    arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
+    verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
+
+
+@with_seed()
+def test_foreach_nested():
+    # Test nested foreach.
+    def step_in(in1, states):
+        out = in1 * 2 + states[0]
+        return (out, [out])
+
+    def step(in1, states):
+        out1 = mx.sym.contrib.foreach(step_in, in1, states)
+        out = mx.sym.broadcast_add(out1[0], states[0])
+        return (out, [mx.sym.squeeze(mx.sym.slice(out, begin=(0, 0), end=(1, 2)))])
+
+    data_sym = mx.sym.var("v1")
+    state_sym = mx.sym.var("v2")
+    out = mx.sym.contrib.foreach(step, data_sym, [state_sym])
+
+    out1 = _as_list(out[0])
+    for i in range(len(out1)):
+        out1[i] = out1[i]
+    out1.extend(out[1])
+    out = mx.sym.Group(out1)
+
+    data = mx.nd.arange(4).reshape((1, 2, 2))
+    state = mx.nd.arange(2)
+    data_grad = mx.nd.empty(data.shape)
+    state_grad = mx.nd.empty(state.shape)
+    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
+            args_grad={'v1':data_grad, 'v2':state_grad})
+    e.forward(is_train=True)
+    out = mx.nd.zeros_like(data)
+    for i in range(data.shape[0]):
+        data1 = data[i]
+        out1 = mx.nd.zeros_like(data1)
+        for j in range(data1.shape[0]):
+            if (j > 0):
+                out1[j] = out1[j-1] + data1[j] * 2
+            else:
+                out1[j] = data1[j] * 2  + state
+        if (i > 0):
+            state = mx.nd.squeeze(mx.nd.slice(out[i-1], begin=(0, 0), end=(1, 2)))
+            out[i] = mx.nd.broadcast_add(out1, state)
+        else:
+            out[i] = mx.nd.broadcast_add(out1, state)
+    out = out
+    assert_almost_equal(out.asnumpy(), e.outputs[0].asnumpy(), rtol=0.001, atol=0.0001)
+
+
+@with_seed()
+def test_foreach_lstm():
+    data = mx.sym.var("data")
+    init_h = mx.sym.var("h")
+    init_c = mx.sym.var("c")
+    i2h_weight = mx.sym.var("i2h_weight")
+    h2h_weight = mx.sym.var("h2h_weight")
+    i2h_bias = mx.sym.var("i2h_bias")
+    h2h_bias = mx.sym.var("h2h_bias")
+
+    # This tests foreach with accumulation sum.
+    def step(in1, states):
+        params = mx.rnn.RNNParams()
+        params._params['i2h_weight'] = i2h_weight
+        params._params['h2h_weight'] = h2h_weight
+        params._params['i2h_bias'] = i2h_bias
+        params._params['h2h_bias'] = h2h_bias
+        lstm = mx.rnn.LSTMCell(4, prefix='mylstm_', params=params)
+        next_h, [next_h, next_c] = lstm(in1, states)
+        # TODO This is problematic. We can't count on the user to define two different symbols.
+        return (next_h, [next_h, next_c])
+
+    def sym_group(out):
+        if (isinstance(out[0], mx.sym.Symbol)):
+            ret = [out[0]]
+        else:
+            ret = out[0]
+        ret.extend(out[1])
+        return mx.sym.Group(ret)
+
+    data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
+    h_arr = mx.nd.random.uniform(shape=(2, 4))
+    c_arr = mx.nd.random.uniform(shape=(2, 4))
+    i2h_warr = mx.nd.random.uniform(shape=(16, 4))
+    h2h_warr = mx.nd.random.uniform(shape=(16, 4))
+    i2h_barr = mx.nd.random.uniform(shape=(16))
+    h2h_barr = mx.nd.random.uniform(shape=(16))
+
+    data_arr_grad1 = mx.nd.empty(data_arr.shape)
+    h_arr_grad1 = mx.nd.empty(h_arr.shape)
+    c_arr_grad1 = mx.nd.empty(c_arr.shape)
+    i2h_warr_grad1 = mx.nd.empty(i2h_warr.shape)
+    h2h_warr_grad1 = mx.nd.empty(h2h_warr.shape)
+    i2h_barr_grad1 = mx.nd.empty(i2h_barr.shape)
+    h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
+    out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
+    out = sym_group(out)
+    e1 = out.bind(ctx=default_context(),
+                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+                        'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
+                        'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr},
+                  args_grad={'data': data_arr_grad1, 'h': h_arr_grad1, 'c': c_arr_grad1,
+                             'i2h_weight': i2h_warr_grad1, 'h2h_weight': h2h_warr_grad1,
+                             'i2h_bias': i2h_barr_grad1, 'h2h_bias': h2h_barr_grad1})
+    e1.forward(is_train=True)
+    outputs1 = e1.outputs
+    # backward
+    out_grads = []
+    for arr in e1.outputs:
+        out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
+    e1.backward(out_grads)
+
+    data_arr_grad2 = mx.nd.empty(data_arr.shape)
+    h_arr_grad2 = mx.nd.empty(h_arr.shape)
+    c_arr_grad2 = mx.nd.empty(c_arr.shape)
+    i2h_warr_grad2 = mx.nd.empty(i2h_warr.shape)
+    h2h_warr_grad2 = mx.nd.empty(h2h_warr.shape)
+    i2h_barr_grad2 = mx.nd.empty(i2h_barr.shape)
+    h2h_barr_grad2 = mx.nd.empty(h2h_barr.shape)
+    lstm = mx.rnn.LSTMCell(4, prefix='mylstm_')
+    h = init_h
+    c = init_c
+    unroll_outs = []
+    for inputs in mx.sym.split(data, num_outputs=data_arr.shape[0], axis=0, squeeze_axis=True):
+        h, [h, c] = lstm(inputs, [h, c])
+        unroll_outs.append(mx.sym.expand_dims(h, axis=0))
+    unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
+    out = mx.sym.Group([unroll_outs, h, c])
+    e2 = out.bind(ctx=default_context(),
+                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
+                        'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
+                        'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr},
+                  args_grad={'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
+                             'mylstm_i2h_weight': i2h_warr_grad2, 'mylstm_h2h_weight': h2h_warr_grad2,
+                             'mylstm_i2h_bias': i2h_barr_grad2, 'mylstm_h2h_bias': h2h_barr_grad2})
+    e2.forward(is_train=True)
+    outputs2 = e2.outputs
+    e2.backward(out_grads)
+
+    for i in range(len(outputs2)):
+        assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
+    for i in range(len(e1.grad_arrays)):
+        assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
 
 
 @with_seed()
