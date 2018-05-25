@@ -434,7 +434,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
   for (auto shape : shapes) {
     // Type 1.
     NDArray arr(shape, Context());
-    in_arrs.emplace_back(arr, "Normal NDArray");
+    in_arrs.emplace_back(&arr, "Normal NDArray");
     init_fn(in_arrs.back().arr, false);
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -442,14 +442,14 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
 
       // Type 2, 3.
       arr = NDArray(shape, Context());
-      in_arrs.emplace_back(arr, "MKLDNN NDArray");
+      in_arrs.emplace_back(&arr, "MKLDNN NDArray");
       InitMKLDNNArray(in_arrs.back().arr, pd, init_fn);
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());
       InitMKLDNNArray(&arr, pd, init_fn);
       arr = arr.Slice(1, arr.shape()[0] - 1);
-      in_arrs.emplace_back(arr, "Reshaped MKLDNN NDArray");
+      in_arrs.emplace_back(&arr, "Reshaped MKLDNN NDArray");
     }
   }
   return in_arrs;
@@ -498,7 +498,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   std::vector<NDArrayAttrs> in_arrs;
   // Type 1.
   NDArray arr(shape, Context());
-  in_arrs.emplace_back(arr, "Normal NDArray");
+  in_arrs.emplace_back(&arr, "Normal NDArray");
   init_fn(in_arrs.back().arr, true);
 
   // Type 4.
@@ -506,7 +506,8 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
   init_fn(&arr0, true);
-  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+  NDArray tmp = arr0.Slice(1, shape[0] + 1);
+  in_arrs.emplace_back(&tmp, "Reshaped NDArray");
 
   // Type 5.
   // Get a reused version.
@@ -515,14 +516,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
   init_fn(&arr1, true);
-  in_arrs.emplace_back(arr1);
+  in_arrs.emplace_back(&arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
   init_fn(&arr2, true);
-  in_arrs.emplace_back(arr2);
+  in_arrs.emplace_back(&arr2, "Reused NDArray with diff data type");
 
   // Type 7
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
@@ -530,22 +531,9 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   tmp_shape[0] = shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
   init_fn(&arr3, true);
-  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
+  tmp = arr3.Slice(1, shape[0] + 1);
+  in_arrs.emplace_back(&tmp, "Reused+Reshaped NDArray");
 
-//  // Type 6.
-//  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
-//  NDArray arr2(s, Context(), true, mshadow::kUint8);
-//  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-//  init_fn(&arr2, true);
-//  in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
-//
-//  // Type 7.
-//  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
-//  NDArray arr3(s, Context(), true, mshadow::kUint8);
-//  tmp_shape[0] = shape[0] * 2;
-//  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-//  init_fn(&arr3, true);
-//  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused reshaped NDArray");
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -553,7 +541,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
 
     // Type 2, 3.
     arr = NDArray(shape, Context());
-    in_arrs.emplace_back(arr, "MKLDNN NDArray");
+    in_arrs.emplace_back(&arr, "MKLDNN NDArray");
     InitMKLDNNArray(in_arrs.back().arr, pd, init_fn, true);
 
     // Type 8, 9.
@@ -563,7 +551,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
     InitMKLDNNArray(&arr, pd, init_fn, true);
-    in_arrs.emplace_back(arr, "Reused MKLDNN NDArray");
+    in_arrs.emplace_back(&arr, "Reused MKLDNN NDArray");
   }
   return in_arrs;
 }
@@ -578,8 +566,8 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
-void VerifyActResult(const NDArray &in_arr, const NDArray &arr) {
-  NDArray tmp1 = in_arr.Reorder2Default();
+void VerifyActResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = arr.Reorder2Default();
   TBlob blob1 = tmp1.data();
   TBlob blob2 = tmp2.data();
@@ -671,15 +659,15 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       if (arr.arr->IsView())
         continue;
 
-      NDArray *tmp = arr.arr->Copy(arr.arr->ctx();
-      NDArrayAttrs orig(tmp, "InPlace Copy");
+      NDArray tmp = arr.arr->Copy(arr.arr->ctx());
+      NDArrayAttrs orig(&tmp, "InPlace Copy");
       req[0] = kWriteInplace;
       inputs[0] = arr.arr;
       outputs[0] = arr.arr;
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.arr->WaitToRead();
-      inputs[0] = tmp;
+      inputs[0] = &tmp;
       PrintVerifyMsg(orig, arr);
       verify_fn(inputs, *outputs[0]);
     }
