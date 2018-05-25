@@ -609,7 +609,8 @@ TEST(MKLDNN_NDArray, CopyFrom) {
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, InitDefaultArray);
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+        InitDefaultArray);
     for (auto out_arr : out_arrs) {
       if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
         in_arr.arr = in_arr.arr.Reorder2Default();
@@ -682,7 +683,8 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   for (auto in_arr1 : in_arrs) {
     for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr1.arr.shape(), pds, InitDefaultArray);
+      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr1.arr.shape(), pds,
+          InitDefaultArray);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
         inputs[0] = &in_arr1.arr;
