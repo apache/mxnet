@@ -19,6 +19,7 @@ import numpy as np
 import mxnet as mx
 import argparse
 
+
 parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--test', default=False, action='store_true',
