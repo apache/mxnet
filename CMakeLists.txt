@@ -61,7 +61,7 @@ endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/F16.cmake)
 
-if(SUPPORT_F16C)
+if(USE_F16C AND SUPPORT_F16C)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mf16c")
 else()
   add_definitions(-DMSHADOW_USE_F16C=0)
