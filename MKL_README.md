@@ -36,7 +36,7 @@ If you don't have full MKL library installed, you can use OpenBLAS by setting `U
 
 Install the dependencies, required for MXNet, with the following commands:
 
-- Homebrew
+- [Homebrew](https://brew.sh/)
 - gcc (clang in macOS does not support OpenMP)
 - OpenCV (for computer vision operations)
 
