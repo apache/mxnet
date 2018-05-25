@@ -173,6 +173,75 @@ class Speedometer(object):
             self.tic = time.time()
 
 
+class TensorboardSpeedometer(object):
+    """Logs training speed and evaluation metrics periodically,
+    and at the same time, dump the results using tensorboard.
+    Parameters
+    ----------
+    summary_writer : Tensorboard Summary Writer
+    batch_size : int
+        Batch size of data.
+    frequent : int
+        Specifies how frequently training speed and evaluation metrics
+        must be logged. Default behavior is to log once every 50 batches.
+    auto_reset : bool
+        Reset the evaluation metrics after each log.
+    """
+
+    def __init__(self, summary_writer, batch_size, frequent=50, auto_reset=True):
+        self.summary_writer = summary_writer
+
+        self.batch_size = batch_size
+        self.frequent = frequent
+        self.init = False
+        self.tic = 0
+        self.last_count = 0
+        self.auto_reset = auto_reset
+
+        self.global_step = 0
+
+    def __call__(self, param):
+        """Callback to show speed."""
+        count = param.nbatch
+        if self.last_count > count:
+            self.init = False
+        self.last_count = count
+
+        if self.init:
+            if count % self.frequent == 0:
+                speed = self.frequent * self.batch_size / (time.time() - self.tic)
+
+                if param.eval_metric is not None:
+                    name_value = param.eval_metric.get_name_value()
+                    if self.auto_reset:
+                        param.eval_metric.reset()
+
+                    for name, value in dict(name_value).items():
+                        self.summary_writer.add_scalar(tag=name,
+                                                       value=value,
+                                                       global_step=self.global_step)
+
+                    msg = 'Global Step[%d] Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec'
+                    msg += '\t%s=%f' * len(name_value)
+                    logging.info(msg, self.global_step, param.epoch, count, speed,
+                                 *sum(name_value, ()))
+
+                else:
+                    logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
+                                 param.epoch, count, speed)
+
+                self.summary_writer.add_scalar(tag='Speed',
+                                               value=speed,
+                                               global_step=self.global_step)
+
+                self.tic = time.time()
+        else:
+            self.init = True
+            self.tic = time.time()
+
+        self.global_step += 1
+
+
 class ProgressBar(object):
     """Displays a progress bar, indicating the percentage of batches processed within each epoch.
 
@@ -212,3 +281,28 @@ class LogValidationMetricsCallback(object):
         name_value = param.eval_metric.get_name_value()
         for name, value in name_value:
             logging.info('Epoch[%d] Validation-%s=%f', param.epoch, name, value)
+
+
+class TensorboardLogValidationMetricsCallback(object):
+    """Logs the eval metrics at the end of an epoch using tensorboard.
+    Parameters
+    ----------
+    summary_writer : Tensorboard Summary Writer
+    """
+
+    def __init__(self, summary_writer, prefix='validation-'):
+        self.summary_writer = summary_writer
+        self.prefix = prefix
+        self.global_step = 0
+
+    def __call__(self, param):
+        if not param.eval_metric:
+            return
+
+        name_value = param.eval_metric.get_name_value()
+        for name, value in name_value:
+            self.summary_writer.add_scalar(tag=self.prefix + name,
+                                           value=value,
+                                           global_step=self.global_step)
+
+        self.global_step += 1
