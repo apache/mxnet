@@ -60,7 +60,7 @@ class ReflectancePadding(HybridBlock):
         return F.pad(x, mode='reflect', pad_width=self.pad_width)
 
     
-class Bottleneck(HybridBlock):
+class Bottleneck(Block):
     """ Pre-activation residual block
     Identity Mapping in Deep Residual Networks
     ref https://arxiv.org/abs/1603.05027
@@ -73,7 +73,7 @@ class Bottleneck(HybridBlock):
             self.residual_layer = nn.Conv2D(in_channels=inplanes, 
                                             channels=planes * self.expansion,
                                             kernel_size=1, strides=(stride, stride))
-        self.conv_block = nn.HybridSequential()
+        self.conv_block = nn.Sequential()
         with self.conv_block.name_scope():
             self.conv_block.add(norm_layer(in_channels=inplanes))
             self.conv_block.add(nn.Activation('relu'))
@@ -89,7 +89,7 @@ class Bottleneck(HybridBlock):
                                  channels=planes * self.expansion, 
                                  kernel_size=1))
         
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         if self.downsample is not None:
             residual = self.residual_layer(x)
         else:
@@ -97,7 +97,7 @@ class Bottleneck(HybridBlock):
         return residual + self.conv_block(x)
 
 
-class UpBottleneck(HybridBlock):
+class UpBottleneck(Block):
     """ Up-sample residual block (from MSG-Net paper)
     Enables passing identity all the way through the generator
     ref https://arxiv.org/abs/1703.06953
@@ -107,7 +107,7 @@ class UpBottleneck(HybridBlock):
         self.expansion = 4
         self.residual_layer = UpsampleConvLayer(inplanes, planes * self.expansion,
                                                       kernel_size=1, stride=1, upsample=stride)
-        self.conv_block = nn.HybridSequential()
+        self.conv_block = nn.Sequential()
         with self.conv_block.name_scope():
             self.conv_block.add(norm_layer(in_channels=inplanes))
             self.conv_block.add(nn.Activation('relu'))
@@ -122,11 +122,11 @@ class UpBottleneck(HybridBlock):
                                 channels=planes * self.expansion, 
                                 kernel_size=1))
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         return  self.residual_layer(x) + self.conv_block(x)
 
 
-class ConvLayer(HybridBlock):
+class ConvLayer(Block):
     def __init__(self, in_channels, out_channels, kernel_size, stride):
         super(ConvLayer, self).__init__()
         padding = int(np.floor(kernel_size / 2))
@@ -135,13 +135,13 @@ class ConvLayer(HybridBlock):
                                 kernel_size=kernel_size, strides=(stride,stride),
                                 padding=0)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         x = self.pad(x)
         out = self.conv2d(x)
         return out
 
 
-class UpsampleConvLayer(HybridBlock):
+class UpsampleConvLayer(Block):
     """UpsampleConvLayer
     Upsamples the input and then does a convolution. This method gives better results
     compared to ConvTranspose2d.
@@ -152,57 +152,41 @@ class UpsampleConvLayer(HybridBlock):
             stride, upsample=None):
         super(UpsampleConvLayer, self).__init__()
         self.upsample = upsample
+        """
+        if upsample:
+            self.upsample_layer = torch.nn.UpsamplingNearest2d(scale_factor=upsample)
+        """
         self.reflection_padding = int(np.floor(kernel_size / 2))
         self.conv2d = nn.Conv2D(in_channels=in_channels, 
                                 channels=out_channels, 
                                 kernel_size=kernel_size, strides=(stride,stride),
                                 padding=self.reflection_padding)
 
-    def hybrid_forward(self, F, x):
+    def forward(self, x):
         if self.upsample:
             x = F.UpSampling(x, scale=self.upsample, sample_type='nearest')
+        """
+        if self.reflection_padding != 0:
+            x = self.reflection_pad(x)
+        """
         out = self.conv2d(x)
         return out
 
 
-class gram_matrix(mx.operator.CustomOp):
-    def forward(self, is_train, req, in_data, out_data, aux):
-        x = in_data[0]
-        _, ch, h, w = x.shape
-        features = x.reshape((0, 0, -1))
-        y = F.batch_dot(features, features, transpose_b=True) / (ch * h * w)
-        self.assign(out_data[0], req[0], y)
-
-    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        dy = out_grad[0]
-        x = in_data[0]
-        _, ch, h, w = x.shape
-        features = x.reshape((0, 0, -1))
-        dx = F.batch_dot(dy, features) + F.batch_dot(dy, features, transpose_a=True)
-        dx = dx.view(0, 0, h, w)  / (ch * h * w)
-        self.assign(in_grad[0], req[0], dx)
+def gram_matrix(y):
+    (b, ch, h, w) = y.shape
+    features = y.reshape((b, ch, w * h))
+    #features_t = F.SwapAxis(features,1, 2)
+    gram = F.batch_dot(features, features, transpose_b=True) / (ch * h * w)
+    return gram
 
 
-@mx.operator.register("gram_matrix")
-class GramProp(mx.operator.CustomOpProp):
-    def list_arguments(self):
-        return ['data']
+class GramMatrix(Block):
+    def forward(self, x):
+        gram = gram_matrix(x)
+        return gram
 
-    def infer_shape(self, in_shapes):
-        data_shape = in_shapes[0]
-        output_shape = (data_shape[0], data_shape[1], data_shape[1])
-        return (data_shape, ), (output_shape,), ()
-
-    def create_operator(self, ctx, in_shapes, in_dtypes):
-        return gram_matrix()
-
-
-class GramMatrix(HybridBlock):
-    def hybrid_forward(self, F, x):
-        return mx.nd.Custom(x, op_type='gram_matrix')
-
-
-class Net(HybridBlock):
+class Net(Block):
     def __init__(self, input_nc=3, output_nc=3, ngf=64, 
                  norm_layer=InstanceNorm, n_blocks=6, gpu_ids=[]):
         super(Net, self).__init__()
@@ -214,9 +198,9 @@ class Net(HybridBlock):
         expansion = 4
 
         with self.name_scope():
-            self.model1 = nn.HybridSequential()
+            self.model1 = nn.Sequential()
             self.ins = Inspiration(ngf*expansion)
-            self.model = nn.HybridSequential()
+            self.model = nn.Sequential()
 
             self.model1.add(ConvLayer(input_nc, 64, kernel_size=7, stride=1))
             self.model1.add(norm_layer(in_channels=64))
@@ -243,43 +227,11 @@ class Net(HybridBlock):
         G = self.gram(F)
         self.ins.set_target(G)
 
-    def hybrid_forward(self, F, input):
+    def forward(self, input):
         return self.model(input)
 
 
-class broadcast_like(mx.operator.CustomOp):
-    def forward(self, is_train, req, in_data, out_data, aux):
-        x = in_data[0]
-        z = in_data[1]
-        b, c, _, _ = z.shape
-        y = F.broadcast_to(x, (b, c, c))
-        self.assign(out_data[0], req[0], y)
-
-    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        dy = out_grad[0]
-        x = in_data[0]
-        z = in_data[1]
-        # hacky solution, only allow expanding at batch dims
-        dx = F.mean(dy, axis=0)
-        self.assign(in_grad[0], req[0], dx)
-
-
-@mx.operator.register("broadcast_like")
-class BroadcastLikeProp(mx.operator.CustomOpProp):
-    def list_arguments(self):
-        return ['data', 'target']
-
-    def infer_shape(self, in_shapes):
-        input_shape = in_shapes[1]
-        output_shape = (input_shape[0], input_shape[1], input_shape[1])
-        # return 3 lists representing inputs shapes, outputs shapes, and aux data shapes.
-        return in_shapes, (output_shape,), ()
-
-    def create_operator(self, ctx, in_shapes, in_dtypes):
-        return broadcast_like()
-
-
-class Inspiration(HybridBlock):
+class Inspiration(Block):
     """ Inspiration Layer (from MSG-Net paper)
     tuning the featuremap with target Gram Matrix
     ref https://arxiv.org/abs/1703.06953
@@ -288,7 +240,6 @@ class Inspiration(HybridBlock):
         super(Inspiration, self).__init__()
         # B is equal to 1 or input mini_batch
         self.C = C
-        self.B = B
         self.weight = self.params.get('weight', shape=(1,C,C),
                                       init=mx.initializer.Uniform(),
                                       allow_deferred_init=True)
@@ -297,22 +248,17 @@ class Inspiration(HybridBlock):
     def set_target(self, target):
         self.gram = target
 
-    def hybrid_forward(self, F, X, weight):
+    def forward(self, X):
         # input X is a 3D feature map
-        P = F.batch_dot(
-            F.broadcast_to(weight, shape=(self.B, self.C, self.C)), self.gram)
-        P = F.SwapAxis(P,1,2)
-        return F.batch_dot(
-            #P.broadcast_to((X.shape[0], self.C, self.C)),
-            mx.nd.Custom(P, X, op_type='broadcast_like'),
-            X.reshape((0, 0, -1))).reshape_like(X)
+        self.P = F.batch_dot(F.broadcast_to(self.weight.data(), shape=(self.gram.shape)), self.gram)
+        return F.batch_dot(F.SwapAxis(self.P,1,2).broadcast_to((X.shape[0], self.C, self.C)), X.reshape((0,0,X.shape[2]*X.shape[3]))).reshape(X.shape)
 
     def __repr__(self):
         return self.__class__.__name__ + '(' \
             + 'N x ' + str(self.C) + ')'
 
 
-class Vgg16(HybridBlock):
+class Vgg16(Block):
     def __init__(self):
         super(Vgg16, self).__init__()
         self.conv1_1 = nn.Conv2D(in_channels=3, channels=64, kernel_size=3, strides=1, padding=1)
@@ -333,7 +279,7 @@ class Vgg16(HybridBlock):
         self.conv5_2 = nn.Conv2D(in_channels=512, channels=512, kernel_size=3, strides=1, padding=1)
         self.conv5_3 = nn.Conv2D(in_channels=512, channels=512, kernel_size=3, strides=1, padding=1)
 
-    def hybrid_forward(self, F, X):
+    def forward(self, X):
         h = F.Activation(self.conv1_1(X), act_type='relu')
         h = F.Activation(self.conv1_2(h), act_type='relu')
         relu1_2 = h
@@ -355,4 +301,4 @@ class Vgg16(HybridBlock):
         h = F.Activation(self.conv4_3(h), act_type='relu')
         relu4_3 = h
 
-        return relu1_2, relu2_2, relu3_3, relu4_3
+        return [relu1_2, relu2_2, relu3_3, relu4_3]
