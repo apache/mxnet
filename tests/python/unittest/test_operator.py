@@ -5957,7 +5957,8 @@ def test_foreach():
         return ([out, out * 2], [out * 2, out * 3])
 
     def verify_foreach(step, in_syms, state_syms, free_syms,
-            in_arrs, init_states, frees, out_grads, is_train=True):
+            in_arrs, init_states, frees, out_grads, is_train=True,
+            free_vars_func=None):
         step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
         res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
         out = _as_list(res)
@@ -6015,8 +6016,9 @@ def test_foreach():
             arr.attach_grad()
         for arr in frees:
             arr.attach_grad()
-        step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees)
         with mx.autograd.record():
+            frees_imp = frees if free_vars_func is None else free_vars_func(frees)
+            step_imp = lambda in_arrs, state_arrs : step(in_arrs, state_arrs, frees_imp)
             states = [mx.nd.expand_dims(s, 0) for s in init_states]
             res, states = mx.nd.contrib.foreach(step_imp, in_arrs, init_states)
 
@@ -6060,7 +6062,21 @@ def test_foreach():
     # * multiple inputs and multiple outputs.
     # * inference.
 
-    states = [mx.nd.random.uniform(shape=(2))]
+    #states = [mx.nd.random.uniform(shape=(2))]
+
+    #frees1 = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    #arrs = mx.nd.random.uniform(shape=(3, 2))
+    states = [mx.nd.arange(2)]
+
+    frees1 = [mx.nd.arange(2), mx.nd.arange(2) + 1]
+    arrs = mx.nd.arange(6).reshape(shape=(3, 2))
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
+            lambda frees : [frees[0] + frees[1]])
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
+            lambda frees : [frees[0] + frees[1]])
+
     frees = [mx.nd.random.uniform(shape=(2))]
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
