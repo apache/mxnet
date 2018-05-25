@@ -67,8 +67,8 @@ build_wheel() {
     set -ex
     pushd .
 
-    PYTHON_DIR = ${1:-/work/mxnet/python}
-    BUILD_DIR = ${2:-/work/build}
+    PYTHON_DIR=${1:-/work/mxnet/python}
+    BUILD_DIR=${2:-/work/build}
 
     # build
 
@@ -81,8 +81,8 @@ build_wheel() {
 
     # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
     # mxnet folder, then repackage the wheel.
-    WHEEL = `readlink -f dist/*.whl`
-    TMPDIR = `mktemp -d`
+    WHEEL=`readlink -f dist/*.whl`
+    TMPDIR=`mktemp -d`
     unzip -d ${TMPDIR} ${WHEEL}
     rm ${WHEEL}
     cd ${TMPDIR}
