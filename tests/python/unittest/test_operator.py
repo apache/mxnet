@@ -6019,7 +6019,7 @@ def test_context_num_gpus():
         if str(e).find("CUDA") == -1:
             raise e
 
-    
+
 @with_seed()
 def test_op_roi_align():
     # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_roi_align_op.py
@@ -6146,7 +6146,7 @@ def test_op_roi_align():
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size, spatial_scale, sampling_ratio, dy.asnumpy())
         assert np.allclose(output.asnumpy(), real_output)
         # It seems that the precision between Cfloat and Pyfloat is different.
-        assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-6), np.abs(data.grad.asnumpy() - dx).max()
+        assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
         assert np.allclose(rois.grad.asnumpy(), drois)
 
     # modified from test_roipooling()
