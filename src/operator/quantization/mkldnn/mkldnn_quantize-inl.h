@@ -20,7 +20,7 @@
 /*!
  * \file mkldnn_quantize-inl.h
  * \brief
- * \author Wenting Jiang
+ * \author Wenting Jiang, Xinyu Chen
  */
 
 #ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZE_INL_H_
