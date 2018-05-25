@@ -346,7 +346,13 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
 }
 
 namespace mxnet {
+
 extern std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym);
+extern bool CutGraph(const std::vector<nnvm::NodeEntry *> &input_entries,
+                     const std::string &in_name_prefix, bool skip_var,
+                     std::vector<nnvm::NodeEntry> *orig_entries,
+                     std::vector<std::string> *new_var_names);
+
 }
 
 int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *input_size) {
@@ -357,6 +363,54 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *inpu
   CHECK(input_syms.size() <= max_input_size);
   *input_size = input_syms.size();
   std::copy(input_syms.begin(), input_syms.end(), input_arr);
+  API_END_HANDLE_ERROR();
+}
+
+int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
+                        int *input_size) {
+  // Given a graph, we want to fetch the nodes that have been marked as part of
+  // a subgraph.
+  API_BEGIN();
+  nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
+  size_t max_input_size = *input_size;
+  std::string subg_attr = "__subgraph_name__";
+  auto out_node = s->outputs[0].node;
+  auto it = out_node->attrs.dict.find(subg_attr);
+  if (it != out_node->attrs.dict.end()) {
+    std::string subg_name = it->second;
+    std::vector<nnvm::NodeEntry *> input_entries;
+    DFSVisit(s->outputs, [subg_attr, subg_name, &input_entries]
+             (nnvm::NodePtr n) {
+      // If the node itself isn't in the subgraph, we ignore it.
+      auto it = n->attrs.dict.find(subg_attr);
+      if (it == n->attrs.dict.end() || it->second != subg_name)
+        return;
+
+      // We search for nodes whose node entries aren't in the subgraph.
+      for (size_t j = 0; j < n->inputs.size(); j++) {
+        auto in_node = n->inputs[j].node;
+        auto it = in_node->attrs.dict.find(subg_attr);
+        if (it == in_node->attrs.dict.end() || it->second != subg_name)
+          input_entries.push_back(&n->inputs[j]);
+      }
+    });
+
+    std::vector<nnvm::NodeEntry> orig_entries;
+    std::vector<std::string> new_var_names;
+    CutGraph(input_entries, subg_name + "_var", false, &orig_entries, &new_var_names);
+
+    std::vector<nnvm::Symbol *> input_syms(orig_entries.size());
+    for (size_t i = 0; i < input_syms.size(); i++) {
+      input_syms[i] = new nnvm::Symbol();
+      input_syms[i]->outputs.push_back(orig_entries[i]);
+    }
+    CHECK(input_syms.size() <= max_input_size);
+    *input_size = input_syms.size();
+    memcpy(input_symbols, input_syms.data(), sizeof(*input_symbols) * input_syms.size());
+  } else {
+    *input_size = 0;
+  }
+
   API_END_HANDLE_ERROR();
 }
 

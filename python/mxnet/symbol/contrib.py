@@ -20,6 +20,7 @@
 """Contrib Symbol API of MXNet."""
 import math
 import ctypes
+import re
 
 from .random import uniform
 from .symbol import Symbol
@@ -107,6 +108,17 @@ def _get_graph_inputs(subg):
     syms = []
     for i in range(num_handles.value):
         s = Symbol(SymbolHandle(handles[i]))
+        syms.append(s)
+    return syms
+
+def _cut_subgraph(subg):
+    num_handles = ctypes.c_int(1000)
+    handles = c_array(SymbolHandle, [SymbolHandle(0) for i in range(1000)])
+    check_call(_LIB.MXSymbolCutSubgraph(subg.handle, handles, ctypes.byref(num_handles)))
+
+    syms = []
+    for i in range(num_handles.value):
+        s = Symbol(handles[i])
         syms.append(s)
     return syms
 
@@ -198,28 +210,31 @@ def foreach(body, data, init_states, name="foreach"):
             states = symbol.var(init_states.name)
         sym_out, sym_states = body(in_eles, states)
 
-    check_data(sym_out, symbol.Symbol, "the output should be an NDArray or a list of NDArrays")
-    check_data(sym_states, symbol.Symbol,
-            "the output states should be an NDArray or a list of NDArrays")
-    if isinstance(sym_states, list):
-        assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
-                "the number of output states (%d) should be the same as input states (%d)" \
-                % (len(sym_states), len(init_states))
+        check_data(sym_out, symbol.Symbol,
+                "the output should be an NDArray or a list of NDArrays")
+        check_data(sym_states, symbol.Symbol,
+                "the output states should be an NDArray or a list of NDArrays")
+        if isinstance(sym_states, list):
+            assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
+                    "the number of output states (%d) should be the same as input states (%d)" \
+                    % (len(sym_states), len(init_states))
 
-    if isinstance(sym_out, list):
-        flat_out = sym_out
-    else:
-        flat_out = [sym_out]
-    num_out_data = len(flat_out)
-    if isinstance(sym_states, list):
-        for s in sym_states:
-            # There is a problem if the outputs are the same as the inputs
-            # or the first output. By calling identity, we can make sure that
-            # all symbols will refer to different NDArrays.
-            flat_out.append(symbol.op.identity(s))
-    else:
-        flat_out.append(symbol.op.identity(sym_states))
-    g = symbol.Group(flat_out)
+        if isinstance(sym_out, list):
+            flat_out = sym_out
+        else:
+            flat_out = [sym_out]
+        num_out_data = len(flat_out)
+        if isinstance(sym_states, list):
+            for s in sym_states:
+                # There is a problem if the outputs are the same as the inputs
+                # or the first output. By calling identity, we can make sure that
+                # all symbols will refer to different NDArrays.
+                flat_out.append(symbol.op.identity(s))
+        else:
+            flat_out.append(symbol.op.identity(sym_states))
+        g = symbol.Group(flat_out)
+
+    cut_syms = _cut_subgraph(g)
     input_syms = _get_graph_inputs(g)
 
     # Here we need to find out how the input symbols are ordered as well as
@@ -230,12 +245,13 @@ def foreach(body, data, init_states, name="foreach"):
     gin_names = input_syms.keys()
     # This array contains the symbols for the inputs of foreach.
     # They are ordered according to the inputs of the subgraph.
-    ordered_ins = []
     states_map = {sym.name:sym for sym in init_states}
     state_names = states_map.keys()
     data_syms = _as_list(data)
     data_map = {sym.name:sym for sym in data_syms}
     data_names = data_map.keys()
+
+    ordered_ins = []
     in_state_locs = []
     in_data_locs = []
     for in_name in g.list_inputs():
@@ -248,7 +264,12 @@ def foreach(body, data, init_states, name="foreach"):
             ordered_ins.append(data_map[in_name])
             in_data_locs.append(len(ordered_ins) - 1)
         else:
-            ordered_ins.append(input_syms[in_name])
+            # The remaining inputs are the ones cut from the original graph.
+            # The names of these variable nodes contain the index in cut_syms.
+            m = re.search(r'\d+$', in_name)
+            idx = int(m.group()) if m else None
+            assert idx < len(cut_syms)
+            ordered_ins.append(cut_syms[idx])
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
