@@ -165,7 +165,7 @@ class UpsampleConvLayer(HybridBlock):
         return out
 
 
-class gram_matrix(mx.operator.CustomOp):
+class GramMatrix(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):
         x = in_data[0]
         _, ch, h, w = x.shape
@@ -179,7 +179,7 @@ class gram_matrix(mx.operator.CustomOp):
         _, ch, h, w = x.shape
         features = x.reshape((0, 0, -1))
         dx = F.batch_dot(dy, features) + F.batch_dot(dy, features, transpose_a=True)
-        dx = dx.view(0, 0, h, w)  / (ch * h * w)
+        dx = dx.reshape(0, 0, h, w)  / (ch * h * w)
         self.assign(in_grad[0], req[0], dx)
 
 
@@ -194,12 +194,11 @@ class GramProp(mx.operator.CustomOpProp):
         return (data_shape, ), (output_shape,), ()
 
     def create_operator(self, ctx, in_shapes, in_dtypes):
-        return gram_matrix()
+        return GramMatrix()
 
 
-class GramMatrix(HybridBlock):
-    def hybrid_forward(self, F, x):
-        return mx.nd.Custom(x, op_type='gram_matrix')
+def gram_matrix(x):
+    return mx.nd.Custom(x, op_type='gram_matrix')
 
 
 class Net(HybridBlock):
@@ -207,7 +206,7 @@ class Net(HybridBlock):
                  norm_layer=InstanceNorm, n_blocks=6, gpu_ids=[]):
         super(Net, self).__init__()
         self.gpu_ids = gpu_ids
-        self.gram = GramMatrix()
+        self.gram = gram_matrix
 
         block = Bottleneck
         upblock = UpBottleneck
