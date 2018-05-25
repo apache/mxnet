@@ -41,6 +41,7 @@ Select API:&nbsp;
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
+    * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
 * API Guides
     * Core APIs
         * NDArray

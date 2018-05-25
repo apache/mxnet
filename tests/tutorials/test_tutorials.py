@@ -204,3 +204,6 @@ def test_unsupervised_learning_gan():
 
 def test_vision_large_scale_classification():
     assert _test_tutorial_nb('vision/large_scale_classification')
+
+def test_vision_cnn_visualization():
+    assert _test_tutorial_nb('vision/cnn_visualization')

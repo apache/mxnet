@@ -21,6 +21,9 @@ from timeit import default_timer as timer
 from dataset.testdb import TestDB
 from dataset.iterator import DetIter
 import logging
+import cv2
+from mxnet.io import DataBatch, DataDesc
+
 
 class Detector(object):
     """
@@ -58,8 +61,25 @@ class Detector(object):
         self.mod.bind(data_shapes=[('data', (batch_size, 3, data_shape[0], data_shape[1]))])
         self.mod.set_params(args, auxs)
         self.mean_pixels = mean_pixels
+        self.mean_pixels_nd = mx.nd.array(mean_pixels).reshape((3,1,1))
 
-    def detect(self, det_iter, show_timer=False):
+    def create_batch(self, frame):
+        """
+        :param frame: an (w,h,channels) numpy array (image)
+        :return: DataBatch of (1,channels,data_shape,data_shape)
+        """
+        frame_resize = mx.nd.array(cv2.resize(frame, (self.data_shape[0], self.data_shape[1])))
+        #frame_resize = mx.img.imresize(frame, self.data_shape[0], self.data_shape[1], cv2.INTER_LINEAR)
+        # Change dimensions from (w,h,channels) to (channels, w, h)
+        frame_t = mx.nd.transpose(frame_resize, axes=(2,0,1))
+        frame_norm = frame_t - self.mean_pixels_nd
+        # Add dimension for batch, results in (1,channels,w,h)
+        batch_frame = [mx.nd.expand_dims(frame_norm, axis=0)]
+        batch_shape = [DataDesc('data', batch_frame[0].shape)]
+        batch = DataBatch(data=batch_frame, provide_data=batch_shape)
+        return batch
+
+    def detect_iter(self, det_iter, show_timer=False):
         """
         detect all images in iterator
 
@@ -86,6 +106,17 @@ class Detector(object):
         result = Detector.filter_positive_detections(detections)
         return result
 
+    def detect_batch(self, batch):
+        """
+        Return detections for batch
+        :param batch:
+        :return:
+        """
+        self.mod.forward(batch, is_train=False)
+        detections = self.mod.get_outputs()[0]
+        positive_detections = Detector.filter_positive_detections(detections)
+        return positive_detections
+
     def im_detect(self, im_list, root_dir=None, extension=None, show_timer=False):
         """
         wrapper for detecting multiple images
@@ -108,7 +139,7 @@ class Detector(object):
         test_db = TestDB(im_list, root_dir=root_dir, extension=extension)
         test_iter = DetIter(test_db, 1, self.data_shape, self.mean_pixels,
                             is_train=False)
-        return self.detect(test_iter, show_timer)
+        return self.detect_iter(test_iter, show_timer)
 
     def visualize_detection(self, img, dets, classes=[], thresh=0.6):
         """
@@ -197,7 +228,6 @@ class Detector(object):
         ----------
 
         """
-        import cv2
         dets = self.im_detect(im_list, root_dir, extension, show_timer=show_timer)
         if not isinstance(im_list, list):
             im_list = [im_list]
