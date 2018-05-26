@@ -52,7 +52,7 @@ cdef class NDArrayBase:
         def __get__(self):
             return bool(self.cwritable)
 
-    def __init__(self, handle, writable=True):
+    def __init__(self, handle, writable=True, stype=-1):
         self._set_handle(handle)
         self.cwritable = writable
 
@@ -70,12 +70,9 @@ def _set_ndarray_class(cls):
     _ndarray_cls = cls
 
 
-cdef NewArray(NDArrayHandle handle):
+cdef NewArray(NDArrayHandle handle, int stype=-1):
     """Create a new array given handle"""
-    nd = _ndarray_cls(None)
-    (<NDArrayBase>nd).chandle = handle
-    (<NDArrayBase>nd).cwritable = True
-    return nd
+    return _ndarray_cls(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
 
 
 cdef class CachedOp:
@@ -99,10 +96,44 @@ cdef class CachedOp:
         def __set__(self, value):
             self._set_handle(value)
 
-    def __init__(self, sym):
-        cdef unsigned long long ptr = sym.handle.value
-        CALL(MXCreateCachedOp(
-            (<SymbolHandle>ptr),
+    def __init__(self, sym, flags=(), inputs=None, params=None):
+        cdef vector[string] s_flag_keys
+        cdef vector[string] s_flag_vals
+        if flags is not None:
+            for k, v in flags:
+                s_flag_keys.push_back(c_str(k))
+                s_flag_vals.push_back(c_str(str(v)))
+        cdef vector[const char*] c_flag_keys = SVec2Ptr(s_flag_keys)
+        cdef vector[const char*] c_flag_vals = SVec2Ptr(s_flag_vals)
+
+        cdef vector[string] s_param_names
+        cdef vector[NDArrayHandle] param_arrays
+        if inputs is None:
+            assert params is None, "When inputs is None params must also be None."
+            inputs = sym.list_inputs()
+        elif params is not None:
+            for name, arrs in params.items():
+                c_name = c_str(name)
+                for a in arrs:
+                    param_arrays.push_back((<NDArrayBase>a).chandle)
+                    s_param_names.push_back(c_name)
+        cdef vector[const char*] param_names = SVec2Ptr(s_param_names)
+
+        cdef vector[string] s_inputs
+        for i in inputs:
+            s_inputs.push_back(c_str(i))
+        cdef vector[const char*] c_inputs = SVec2Ptr(s_inputs)
+
+        CALL(MXCreateCachedOpEx(
+            <SymbolHandle>(<unsigned long long>sym.handle.value),
+            len(flags),
+            CBeginPtr(c_flag_keys),
+            CBeginPtr(c_flag_vals),
+            len(inputs),
+            CBeginPtr(c_inputs),
+            len(param_names),
+            CBeginPtr(param_names),
+            &param_arrays[0] if param_arrays.size() != 0 else NULL,
             &self.chandle))
 
     def __del__(self):
@@ -115,6 +146,7 @@ cdef class CachedOp:
         cdef NDArrayHandle* p_output_vars
         cdef NDArrayHandle ret_handle
         cdef int num_output
+        cdef const int* p_output_stypes
 
         for i in args:
             ndvars.push_back((<NDArrayBase>i).chandle)
@@ -130,24 +162,24 @@ cdef class CachedOp:
 
         num_output = output_vars.size()
         if output_vars.size() == 0:
-            output_vars.resize(1)
             p_output_vars = NULL
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOp(
-            (<CachedOp>self).chandle,
+        CALL(MXInvokeCachedOpEx(
+            self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
             &num_output,
-            &p_output_vars))
+            &p_output_vars,
+            &p_output_stypes))
 
         if original_output is not None:
             return original_output
         if num_output == 1:
-            return NewArray(p_output_vars[0])
+            return NewArray(p_output_vars[0], p_output_stypes[0])
         else:
-            return tuple(NewArray(p_output_vars[i]) for i in range(num_output))
+            return [NewArray(p_output_vars[i], p_output_stypes[i]) for i in range(num_output)]
 
 
 def _imperative_invoke(handle, ndargs, keys, vals, out):
@@ -161,6 +193,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     cdef NDArrayHandle* p_output_vars
     cdef NDArrayHandle ret_handle
     cdef int num_output
+    cdef const int* p_output_stypes
 
     for i in ndargs:
         ndvars.push_back((<NDArrayBase>i).chandle)
@@ -180,7 +213,6 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 
     num_output = output_vars.size()
     if output_vars.size() == 0:
-        output_vars.resize(1)
         p_output_vars = NULL
     else:
         p_output_vars = &output_vars[0]
@@ -188,7 +220,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
     cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    CALL(MXImperativeInvoke(
+    CALL(MXImperativeInvokeEx(
         chandle,
         <int>ndvars.size(),
         &ndvars[0] if ndvars.size() != 0 else NULL,
@@ -196,11 +228,12 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
         &p_output_vars,
         <int>param_keys.size(),
         CBeginPtr(param_keys),
-        CBeginPtr(param_vals)))
+        CBeginPtr(param_vals),
+        &p_output_stypes))
 
     if original_output is not None:
         return original_output
     if num_output == 1:
-        return NewArray(p_output_vars[0])
+        return NewArray(p_output_vars[0], p_output_stypes[0])
     else:
-        return tuple(NewArray(p_output_vars[i]) for i in range(num_output))
+        return [NewArray(p_output_vars[i], p_output_stypes[i]) for i in range(num_output)]
