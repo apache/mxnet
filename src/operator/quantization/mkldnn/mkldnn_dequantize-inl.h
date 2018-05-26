@@ -19,7 +19,7 @@
 
 /*!
  * \file mkldnn_dequantize-inl.h
- * \author Wenting Jiang
+ * \author Wenting Jiang, Xinyu Chen
  * \brief
  */
 
