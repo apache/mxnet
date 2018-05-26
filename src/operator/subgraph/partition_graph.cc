@@ -279,6 +279,7 @@ Graph PartitionGraph(Graph&& g) {
     std::vector<std::vector<SimpleNode*>> subgraph_nodes;
     FindSubgraphs(g, op_names, simple_nodes, &subgraph_nodes);
     std::vector<nnvm::NodeEntry*> entries;
+    // TODO(junwu): take care of the situation when the op is the last op
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
       PrintSubgraph(subgraph_nodes[i]);
 
@@ -287,7 +288,7 @@ Graph PartitionGraph(Graph&& g) {
       FindInputEntries(g, simple_nodes, subgraph_nodes[i], &entries);
       PrintNodeEntries(entries);
 
-      LOG(INFO) << "Searching for input entries...";
+      LOG(INFO) << "Searching for output entries...";
       entries.clear();
       FindOutputEntries(g, simple_nodes, subgraph_nodes[i], &entries);
       PrintNodeEntries(entries);
