@@ -195,11 +195,12 @@ void FindInputEntries(const Graph& g,
 }
 
 // find the output entries of a subgraph
-void FindOutputEntries(const Graph& g,
+void FindOutputEntries(Graph* g,
                        const std::vector<SimpleNodePtr>& simple_nodes,
                        const std::vector<SimpleNode*>& subgraph_nodes,
                        std::vector<nnvm::NodeEntry*>* output_entries) {
-  const auto& indexed_graph = g.indexed_graph();
+  if (subgraph_nodes.empty()) return;
+  const auto& indexed_graph = g->indexed_graph();
   int label = -1;
   for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
     if (label == -1) {
@@ -216,6 +217,14 @@ void FindOutputEntries(const Graph& g,
       } else {
         CHECK_EQ(simple_nodes[nid]->label, label);
       }
+    }
+  }
+  // Check if current subgraph contains a node which is the last node
+  // of the whole graph. If so, save its corresponding entry as well.
+  for (auto& entry : g->outputs) {
+    const auto nid = indexed_graph.node_id(entry.node.get());
+    if (simple_nodes[nid]->label == label) {
+      output_entries->push_back(&entry);
     }
   }
 }
@@ -290,7 +299,7 @@ Graph PartitionGraph(Graph&& g) {
 
       LOG(INFO) << "Searching for output entries...";
       entries.clear();
-      FindOutputEntries(g, simple_nodes, subgraph_nodes[i], &entries);
+      FindOutputEntries(&g, simple_nodes, subgraph_nodes[i], &entries);
       PrintNodeEntries(entries);
     }
     return g;
