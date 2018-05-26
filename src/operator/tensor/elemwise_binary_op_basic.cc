@@ -43,16 +43,8 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
              && inputs[1].storage_type() == kDefaultStorage) {
-    // This happens if inputs are supposed to be in MKLDNN format
-    // but MKLDNN doesn't support the data type or the shape. We're
-    // forced to convert it to the default format.
-    std::vector<TBlob> in_blobs(2);
-    std::vector<TBlob> out_blobs(1);
-    in_blobs[0] = inputs[0].data();
-    in_blobs[1] = inputs[1].data();
-    out_blobs[0] = outputs[0].data();
-    ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>(attrs, ctx, in_blobs,
-                                                         req, out_blobs);
+    FallBackCompute(ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>,
+                    attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
