@@ -250,6 +250,8 @@ def foreach(body, data, init_states, name="foreach"):
     data_syms = _as_list(data)
     data_map = {sym.name:sym for sym in data_syms}
     data_names = data_map.keys()
+    cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
+    cut_var_names = cut_var_map.keys()
 
     ordered_ins = []
     in_state_locs = []
@@ -264,12 +266,11 @@ def foreach(body, data, init_states, name="foreach"):
             ordered_ins.append(data_map[in_name])
             in_data_locs.append(len(ordered_ins) - 1)
         else:
+            assert in_name in cut_var_names
             # The remaining inputs are the ones cut from the original graph.
-            # The names of these variable nodes contain the index in cut_syms.
-            m = re.search(r'\d+$', in_name)
-            idx = int(m.group()) if m else None
-            assert idx < len(cut_syms)
-            ordered_ins.append(cut_syms[idx])
+            # The names of new created variable nodes should match the ones
+            # of the original nodes.
+            ordered_ins.append(cut_var_map[in_name])
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
