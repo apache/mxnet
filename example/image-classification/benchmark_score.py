@@ -90,6 +90,7 @@ if __name__ == '__main__':
     for net in networks:
         # AlexNet doesn't support float16
         if (net == 'alexnet' and dtype == 'float16'):
+            print("alexnet doesn't support float16")
             continue
         logging.info('network: %s', net)
         for d in devs:
