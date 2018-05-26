@@ -72,7 +72,7 @@ private[mxnet] object NDArrayMacro {
             // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
             q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
             // e.g def transpose(args: Any*)
-            q"@scala.annotation.varargs def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
+            q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
             // scalastyle:on
           )
         } else {
