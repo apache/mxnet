@@ -348,10 +348,8 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
 namespace mxnet {
 
 extern std::vector<nnvm::Symbol *> GetInputSymbols(const nnvm::Symbol &sym);
-extern bool CutGraph(const std::vector<nnvm::NodeEntry *> &input_entries,
-                     const std::string &in_name_prefix, bool skip_var,
-                     std::vector<nnvm::NodeEntry> *orig_entries,
-                     std::vector<std::string> *new_var_names);
+extern bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
+                           bool skip_var, std::vector<nnvm::NodeEntry> *orig_entries);
 
 }
 
@@ -396,9 +394,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     });
 
     std::vector<nnvm::NodeEntry> orig_entries;
-    std::vector<std::string> new_var_names;
-    CutGraph(input_entries, subg_name + "_var", false, &orig_entries, &new_var_names);
-
+    CutGraphInputs(input_entries, false, &orig_entries);
     std::vector<nnvm::Symbol *> input_syms(orig_entries.size());
     for (size_t i = 0; i < input_syms.size(); i++) {
       input_syms[i] = new nnvm::Symbol();
