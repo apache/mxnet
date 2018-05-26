@@ -921,6 +921,35 @@ def test_pooling_versions():
 
 
 @with_seed()
+def test_pooling_full_2d():
+    def test_pooling_full_2d_type(pool_type):
+        data = (2, 2, 10, 10)
+        kernel = (4, 5)
+        pad = (1, 2)
+        stride = (3, 4)
+
+        convention = 'full'
+        ctx_list = []
+        sym_list = []
+
+        # o_h = ceil((10 + 1 + 1 - 4) / 3) + 1 = 4
+        # o_w = ceil((10 + 2 + 2 - 5) / 4) + 1 = 4
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=convention, global_pool=True, name='pool'))
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=convention, global_pool=True, name='pool'))
+
+        check_consistency(sym_list, ctx_list)
+
+    test_pooling_full_2d_type('max')
+    test_pooling_full_2d_type('avg')
+    test_pooling_full_2d_type('sum')
+
+
+@with_seed()
 def test_global_pooling():
     def test_1d_pooling(pool_type, p_value=2):
         data = (2, 3, 20)
