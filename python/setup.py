@@ -20,7 +20,8 @@
 from __future__ import absolute_import
 import os
 import sys
-from setuptools import find_packages
+from setuptools import find_packages # This must precede distutils
+
 # need to use distutils.core for correct placement of cython dll
 kwargs = {}
 if "--inplace" in sys.argv:
