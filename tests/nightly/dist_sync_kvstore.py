@@ -358,10 +358,7 @@ def test_gluon_trainer_reset():
     params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
     row_id = mx.nd.arange(0, 4)
     w = x.row_sparse_data(row_id)
-    with mx.autograd.record():
-        y = w + 1
-        y.backward()
-    trainer.step(1)
+    assert trainer._kv_initialized and trainer._update_on_kvstore
     # load would fail to reset kvstore since update_on_kvstore is True
     assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_reset')
