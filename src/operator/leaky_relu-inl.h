@@ -73,12 +73,6 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
   }
 };
 
-struct prelu_grad {
-  MSHADOW_XINLINE static real_t Map(real_t a) {
-    return a > 0.0f ? 0.0f : a;
-  }
-};
-
 template<typename xpu, typename DType>
 class LeakyReLUOp : public Operator {
  public:
@@ -224,20 +218,29 @@ class LeakyReLUOp : public Operator {
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, DType>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, DType>(s);
-        if (weight.shape_.Size() == 1) {
-          Shape<4> gshape = Shape4(1, grad.shape_[0], grad.shape_[1], grad.shape_[2]);
-          Assign(grad_weight, req[leakyrelu::kGamma],
-                 sumall_except_dim<0>(reshape(F<prelu_grad>(data) * grad, gshape)));
-          Assign(gdata, req[leakyrelu::kData],
-                 F<mshadow_op::xelu_grad>(data,
-                                          mshadow::expr::broadcast_scalar(weight, data.shape_))
-                 * grad);
+        TShape new_lshape, new_rshape, new_oshape;
+        const bool need_bc = BinaryBroadcastShapeCompact(in_data[leakyrelu::kData].shape_,
+                                                         in_data[leakyrelu::kGamma].shape_,
+                                                         out_grad[leakyrelu::kOut].shape_,
+                                                         &new_lshape,
+                                                         &new_rshape,
+                                                         &new_oshape) != 0;
+        if (!need_bc) {
+          ElemwiseBinaryOp::BackwardUseIn<xpu,
+                                          mshadow_op::xelu_grad,
+                                          mshadow_op::prelu_grad>(
+            nnvm::NodeAttrs(), ctx, {out_grad[leakyrelu::kOut],
+                                     in_data[leakyrelu::kData],
+                                     in_data[leakyrelu::kGamma]}, req, in_grad);
         } else {
-          Assign(grad_weight, req[leakyrelu::kGamma],
-                 sumall_except_dim<1>(F<prelu_grad>(data) * grad));
-          Assign(gdata, req[leakyrelu::kData],
-                 F<mshadow_op::xelu_grad>(data, mshadow::expr::broadcast<1>(weight, data.shape_))
-                 * grad);
+          BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
+            BinaryBroadcastBackwardUseInImpl<xpu, NDim, DType,
+              mshadow_op::xelu_grad, mshadow_op::prelu_grad>(
+                ctx, {out_grad[leakyrelu::kOut],
+                      in_data[leakyrelu::kData],
+                      in_data[leakyrelu::kGamma]}, req, in_grad,
+                new_lshape, new_rshape, new_oshape);
+          });
         }
         break;
       }
@@ -403,6 +406,11 @@ class LeakyReLUProp : public OperatorProperty {
     } else {
       return std::vector<ResourceRequest>();
     }
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
   }
 
   Operator* CreateOperator(Context ctx) const override {
