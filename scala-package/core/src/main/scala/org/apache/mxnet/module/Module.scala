@@ -17,12 +17,15 @@
 
 package org.apache.mxnet.module
 
-import java.io.{FileInputStream, BufferedInputStream, BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedInputStream, BufferedOutputStream, FileInputStream, FileOutputStream}
+
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 import org.apache.mxnet.module.DataParallelExecutorGroup.Builder
 import org.apache.mxnet.optimizer.SGD
 import org.slf4j.LoggerFactory
+
+import scala.annotation.varargs
 
 /**
  * Module is a basic module that wrap a `Symbol`. It is functionally the same
@@ -641,5 +644,73 @@ object Module {
       mod.preloadOptStates = Some("%s-%04d.states".format(prefix, epoch))
     }
     mod
+  }
+
+  /**
+   * Builder class for Module.
+   * @param modelDef model definition in Symbol.
+   */
+  class Builder(private val modelDef: Symbol) {
+    private var dataNames: IndexedSeq[String] = IndexedSeq("data")
+    private var labelNames: IndexedSeq[String] = IndexedSeq("softmax_label")
+    private var contexts: Array[Context] = Array(Context.cpu())
+    private var workLoadList: IndexedSeq[Float] = _
+    private var fixedParamNames: Set[String] = _
+
+    /**
+     * Set the context for execution.
+     * @param ctx a list of contexts.
+     * @return this.
+     */
+    @varargs def setContext(ctx: Context*): Builder = {
+      contexts = ctx.toArray
+      this
+    }
+
+    /**
+     * Set the input data names.
+     * @param name a list of data names. Cannot be null.
+     * @return this.
+     */
+    @varargs def setDataNames(name: String*): Builder = {
+      dataNames = name.toVector
+      this
+    }
+
+    /**
+     * Set the label names.
+     * @param name a list of label names.
+     *             Set to null if no label is required.
+     * @return this.
+     */
+    @varargs def setLabelNames(name: String*): Builder = {
+      labelNames = if (name == null) IndexedSeq.empty[String] else name.toVector
+      this
+    }
+
+    /**
+     * Set the workloads.
+     * @param workloads a list of workloads
+     * @return this.
+     */
+    @varargs def setWorkLoadList(workloads: Float*): Builder = {
+      workLoadList = workloads.toVector
+      this
+    }
+
+    /**
+     * Specify the parameters need to be fixed.
+     * @param name a list of parameter names.
+     * @return this.
+     */
+    @varargs def setFixedParamNames(name: String*): Builder = {
+      fixedParamNames = name.toSet
+      this
+    }
+
+    def build(): Module = {
+      new Module(modelDef, dataNames, labelNames, contexts,
+        Option(workLoadList), Option(fixedParamNames))
+    }
   }
 }
