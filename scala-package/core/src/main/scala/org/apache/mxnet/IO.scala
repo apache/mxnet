@@ -257,6 +257,7 @@ object DataBatch {
     }
 
     def build(): DataBatch = {
+      require(data != null, "data is required.")
       new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes)
     }
   }
