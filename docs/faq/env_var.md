@@ -111,6 +111,19 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 	- If set to '0', profiler records the events of the symbolic operators.
 	- If set to '1', profiler records the events of all operators.
 
+## Interface between Python and the C API
+
+* MXNET_ENABLE_CYTHON
+  - Values: 0(false), 1(true) ```(default=1)```
+  - If set to 0, MXNet uses the ctypes to interface with the C API.
+  - If set to 1, MXNet tries to use the cython modules for the ndarray and symbol. If it fails, the ctypes is used or an error occurs depending on MXNET_ENFORCE_CYTHON.
+
+* MXNET_ENFORCE_CYTHON
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - This has an effect only if MXNET_ENABLE_CYTHON is 1.
+  - If set to 0, MXNet fallbacks to the ctypes if importing the cython modules fails.
+  - If set to 1, MXNet raises an error if importing the cython modules fails.
+
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
@@ -120,7 +133,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
-  
+
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
