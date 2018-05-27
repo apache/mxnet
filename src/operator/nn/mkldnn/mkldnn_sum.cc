@@ -64,10 +64,8 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     const mkldnn::memory *in_mem;
     if (inputs[i].IsMKLDNNData() && inputs[i].IsView()) {
       in_bufs[i] = inputs[i].Reorder2Default();
-      in_mem = in_bufs[i].GetMKLDNNData();
-    } else {
-      in_mem = inputs[i].GetMKLDNNData();
     }
+      in_mem = in_bufs[i].GetMKLDNNData();
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
   }
