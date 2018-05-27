@@ -85,16 +85,21 @@ if __name__ == '__main__':
     devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]
-    dtype='float32'
+    dtypes=['float16', 'float32']
 
-    for net in networks:
-        # AlexNet doesn't support float16
-        if (net == 'alexnet' and dtype == 'float16'):
-            print("alexnet doesn't support float16")
-            continue
-        logging.info('network: %s', net)
-        for d in devs:
-            logging.info('device: %s', d)
-            for b in batch_sizes:
-                speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
-                logging.info('batch size %2d, image/sec: %f', b, speed)
+    for dtype in dtypes:
+        for net in networks:
+            # AlexNet doesn't support float16
+            if (net == 'alexnet' and dtype == 'float16'):
+                print("alexnet doesn't support float16")
+                continue
+            logging.info('network: %s', net)
+            for d in devs:
+                if (dtype == 'float16' and d == mx.cpu()):
+                    print("CPU doesn't support float16")
+                    continue
+
+                logging.info('device: %s', d)
+                for b in batch_sizes:
+                    speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
+                    logging.info('batch size %2d, image/sec: %f', b, speed)
