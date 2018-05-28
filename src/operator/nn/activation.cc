@@ -72,7 +72,6 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   FallBackCompute(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
-
 }
 
 void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
