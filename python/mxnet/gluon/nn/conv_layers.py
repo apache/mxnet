@@ -432,7 +432,7 @@ class Conv1DTranspose(_Conv):
         output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 1 int
         Controls the spacing between the kernel points; also known as the
-        à trous algorithm
+        a trous algorithm
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
@@ -519,7 +519,7 @@ class Conv2DTranspose(_Conv):
         output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 2 int
         Controls the spacing between the kernel points; also known as the
-        à trous algorithm
+        a trous algorithm
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
@@ -611,7 +611,7 @@ class Conv3DTranspose(_Conv):
         output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 3 int
         Controls the spacing between the kernel points; also known as the
-        à trous algorithm.
+        a trous algorithm.
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
