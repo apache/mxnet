@@ -1,12 +1,14 @@
+# Build/Install MXNet with MKL-DNN
+
 <h2 id="0">Contents</h2>
 
-* [1. Build/Install MXNet with MKL-DNN on Linux](#1)
-* [2. Build/Install MXNet with MKL-DNN on MacOS](#2)
-* [3. Build/Install MXNet with MKL-DNN on Windows](#3)
+* [1. Linux](#1)
+* [2. MacOS](#2)
+* [3. Windows](#3)
 * [4. Verify MXNet with python](#4)
-* [5. Build/Install MXNet with a full MKL installation](#5)
+* [5. Enable MKL BLAS](#5)
 
-<h2 id="1">Build/Install MXNet with MKL-DNN on Linux</h2>
+<h2 id="1">Linux</h2>
 
 ### Prerequisites
 
@@ -30,7 +32,7 @@ make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/inte
 
 If you don't have full MKL library installed, you can use OpenBLAS by setting `USE_BLAS=openblas`.
 
-<h2 id="2">Build/Install MXNet with MKL-DNN on MacOS</h2>
+<h2 id="2">MacOS</h2>
 
 ### Prerequisites
 
@@ -83,7 +85,7 @@ make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=app
 
 *Note: Temporarily disable OPENCV.*
 
-<h2 id="3">Build/Install MXNet with MKL-DNN on Windows</h2>
+<h2 id="3">Windows</h2>
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
@@ -143,7 +145,6 @@ After MXNet is installed, you can verify if MKL-DNN backend works well with a si
 ```
 import mxnet as mx
 import numpy as np
-from mxnet import Context
 
 num_filter = 32
 kernel = (3, 3)
@@ -153,7 +154,7 @@ shape = (32, 32, 256, 256)
 x = mx.sym.Variable('x')
 w = mx.sym.Variable('w')
 y = mx.sym.Convolution(data=x, weight=w, num_filter=num_filter, kernel=kernel, no_bias=True, pad=pad)
-exe = y.simple_bind(Context.default_ctx, x=shape)
+exe = y.simple_bind(mx.cpu(), x=shape)
 
 exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
 exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
@@ -176,7 +177,7 @@ mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,3
 mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nChw16c out:f32_nchw,num:1,32x32x256x256,20.4819
 ```
 
-<h2 id="5">Build/Install MXNet with a full MKL installation</h2>
+<h2 id="5">Enable MKL BLAS</h2>
 
 To make it convenient for customers, Intel introduced a new license called [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) that allows to redistribute not only dynamic libraries but also headers, examples and static libraries.
 
@@ -184,8 +185,45 @@ Installing and enabling the full MKL installation enables MKL support for all op
 
   1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl)
 
-  2. Run 'make -j ${nproc} USE_BLAS=mkl'
+  2. Run `make -j ${nproc} USE_BLAS=mkl`
 
   3. Navigate into the python directory
 
-  4. Run 'sudo python setup.py install'
+  4. Run `sudo python setup.py install`
+
+### Verify whether MKL works
+
+After MXNet is installed, you can verify if MKL BLAS works well with a single dot layer.
+
+```
+import mxnet as mx
+import numpy as np
+
+shape_x = (1, 10, 8)
+shape_w = (1, 12, 8)
+
+x_npy = np.random.normal(0, 1, shape_x)
+w_npy = np.random.normal(0, 1, shape_w)
+
+x = mx.sym.Variable('x')
+w = mx.sym.Variable('w')
+y = mx.sym.batch_dot(x, w, transpose_b=True)
+exe = y.simple_bind(mx.cpu(), x=x_npy.shape, w=w_npy.shape)
+
+exe.forward(is_train=False)
+o = exe.outputs[0]
+t = o.asnumpy()
+```
+
+You can open the `MKL_VERBOSE` flag by setting environment variable:
+```
+export MKL_VERBOSE=1
+```
+Then by running above code snippet, you probably will get the following output message which means `SGEMM` primitive from MKL are called. Layout information and primitive execution performance are also demonstrated in the log message.
+```
+Numpy + Intel(R) MKL: THREADING LAYER: (null)
+Numpy + Intel(R) MKL: setting Intel(R) MKL to use INTEL OpenMP runtime
+Numpy + Intel(R) MKL: preloading libiomp5.so runtime
+MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) enabled processors, Lnx 2.40GHz lp64 intel_thread NMICDev:0
+MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
+```
