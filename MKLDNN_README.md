@@ -103,7 +103,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 
 1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet). Don't forget to pull the submodules:
 ```
-git clone https://github.com/apache/incubator-mxnet.git --recursive
+git clone --recursive https://github.com/apache/incubator-mxnet.git
 ```
 
 2. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
