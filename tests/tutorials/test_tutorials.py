@@ -79,12 +79,12 @@ def _test_tutorial_nb(tutorial):
         os.makedirs(working_dir)
     try:
         notebook = nbformat.read(tutorial_path + '.ipynb', as_version=IPYTHON_VERSION)
+        time.sleep(0.5) # Adding a small delay to allow time for sockets to be freed
         if kernel is not None:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
-        nb, stuff = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
-        print(stuff)
+        nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
@@ -147,6 +147,9 @@ def test_gluon_gluon():
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
+    
+def test_gluon_pretrained_models():
+    assert _test_tutorial_nb('gluon/pretrained_models')    
 
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
@@ -201,3 +204,6 @@ def test_unsupervised_learning_gan():
 
 def test_vision_large_scale_classification():
     assert _test_tutorial_nb('vision/large_scale_classification')
+
+def test_vision_cnn_visualization():
+    assert _test_tutorial_nb('vision/cnn_visualization')

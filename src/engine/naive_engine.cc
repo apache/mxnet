@@ -63,6 +63,12 @@ class NaiveEngine final : public Engine {
 #endif
   }
 
+  void Stop() override {
+  }
+
+  void Start() override {
+  }
+
   // new variables
   VarHandle NewVariable() override {
     size_t v = ++counter_;

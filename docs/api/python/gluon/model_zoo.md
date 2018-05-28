@@ -42,9 +42,12 @@ The following table summarizes the available models.
 | mobilenet0.5  | [MobileNet 0.5](https://arxiv.org/abs/1704.04861)                                     | 1,342,536    | 0.6307         | 0.8475         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | mobilenet0.75 | [MobileNet 0.75](https://arxiv.org/abs/1704.04861)                                    | 2,601,976    | 0.6738         | 0.8782         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | mobilenet1.0  | [MobileNet 1.0](https://arxiv.org/abs/1704.04861)                                     | 4,253,864    | 0.7105         | 0.9006         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
-| mobilenetv2_1.0 | [MobileNetV2 1.0](https://arxiv.org/abs/1801.04381)                                 | 3,539,136    | 0.7159         | 0.9047         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
-| resnet18_v1   | [ResNet-18 V1](http://arxiv.org/abs/1512.03385)                                       | 11,699,112   | 0.7039         | 0.8959         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
-| resnet34_v1   | [ResNet-34 V1](http://arxiv.org/abs/1512.03385)                                       | 21,814,696   | 0.7411         | 0.9184         | Trained with [script](https://github.com/dmlc/gluon-cv/blob/15ed8a4c71d411b878f0d71d1c7afdce6710c913/scripts/classification/imagenet/train_imagenet.py) |
+| mobilenetv2_1.0  | [MobileNetV2 1.0](https://arxiv.org/abs/1801.04381)                                | 3,539,136    | 0.7192         | 0.9056         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
+| mobilenetv2_0.75 | [MobileNetV2 0.75](https://arxiv.org/abs/1801.04381)                               | 2,653,864    | 0.6961         | 0.8895         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
+| mobilenetv2_0.5  | [MobileNetV2 0.5](https://arxiv.org/abs/1801.04381)                                | 1,983,104    | 0.6449         | 0.8547         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
+| mobilenetv2_0.25 | [MobileNetV2 0.25](https://arxiv.org/abs/1801.04381)                               | 1,526,856    | 0.5074         | 0.7456         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
+| resnet18_v1   | [ResNet-18 V1](http://arxiv.org/abs/1512.03385)                                       | 11,699,112   | 0.7039         | 0.8959         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
+| resnet34_v1   | [ResNet-34 V1](http://arxiv.org/abs/1512.03385)                                       | 21,814,696   | 0.7411         | 0.9184         | Trained with [script](https://gluon-cv.mxnet.io/model_zoo/index.html#image-classification)                                      |
 | resnet50_v1   | [ResNet-50 V1](http://arxiv.org/abs/1512.03385)                                       | 25,629,032   | 0.7540         | 0.9266         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | resnet101_v1  | [ResNet-101 V1](http://arxiv.org/abs/1512.03385)                                      | 44,695,144   | 0.7693         | 0.9334         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
 | resnet152_v1  | [ResNet-152 V1](http://arxiv.org/abs/1512.03385)                                      | 60,404,072   | 0.7727         | 0.9353         | Trained with [script](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)              |
@@ -205,6 +208,9 @@ The following table summarizes the available models.
     mobilenet0_5
     mobilenet0_25
     mobilenet_v2_1_0
+    mobilenet_v2_0_75
+    mobilenet_v2_0_5
+    mobilenet_v2_0_25
 ```
 
 ```eval_rst

@@ -132,7 +132,7 @@ After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
 **Step 3.** Setup project properties:
-  - Specify project properties in `pom.xml` by pasting the following content in the `<properties>` tag. You will be overwriting the `<scala.version>` tag in the process, upgrading from `2.11.5` to `2.11.8`.
+  - Specify project properties in `pom.xml` by pasting the following content in the `properties` tag. You will be overwriting the `scala.version` tag in the process, upgrading from `2.11.5` to `2.11.8`.
 
 ```xml
 <properties>
@@ -143,7 +143,7 @@ The project's `pom.xml` will be open for editing.
 
 **Step 4.** Setup project profiles and platforms:
 
-  - Specify project profiles and platforms in `pom.xml` by pasting the following content below the `</properties>` tag:
+  - Specify project profiles and platforms in `pom.xml` by pasting the following content below the closing `properties` tag:
 
 ```xml
 <profiles>
@@ -170,7 +170,7 @@ The project's `pom.xml` will be open for editing.
 
 **Step 5.** Setup project dependencies:
 
-  - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `<dependencies>` tag:
+  - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `dependencies` tag:
 
 ```xml
 <dependencies>
@@ -233,7 +233,7 @@ The project's `pom.xml` will be open for editing.
 
 ![project 2](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-2.png)
 
-Note the `<systemPath>` tag and update it to match the file path to the jar file that was created when you built the MXNet-Scala package. It can be found in the `mxnet-incubator/scala-package/assembly/{platform}/target` directory, and is named with the pattern `mxnet-full_${scala.binary.version}-${platform}-{version-SNAPSHOT}.jar`.
+Note the `systemPath` tag and update it to match the file path to the jar file that was created when you built the MXNet-Scala package. It can be found in the `mxnet-incubator/scala-package/assembly/{platform}/target` directory, and is named with the pattern `mxnet-full_${scala.binary.version}-${platform}-{version-SNAPSHOT}.jar`.
 
 **Step 6.** Import dependencies with Maven:
 
@@ -246,7 +246,7 @@ Click "Import Changes" in this prompt.
 **Step 7.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
-**Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is: `<arg>-make:transitive</arg>`.
+**Note**: During the build you may experience `[ERROR] scalac error: bad option: '-make:transitive'`. You can fix this by deleting or commenting this out in your `pom.xml`. This line in question is the `arg` tag, and it should contain: `-make:transitive`.
 
 **Step 8.** Run the Hello World App:
 
@@ -306,5 +306,5 @@ The build generates a new jar file in the `target` folder called `scalaInference
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/incubator-mxnet/tree/master/scala-package/examples/)
+* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)

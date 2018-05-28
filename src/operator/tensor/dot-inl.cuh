@@ -31,8 +31,6 @@
 #include "./sort_op.h"
 #include "./util/tensor_util-inl.h"
 #include "./util/tensor_util-inl.cuh"
-#include "./indexing_op.h"
-
 
 namespace mxnet {
 namespace op {

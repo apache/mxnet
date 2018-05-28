@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
-  <version>1.2.0-SNAPSHOT</version>
+  <version>1.3.0-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
   <description>MXNet Scala Package</description>

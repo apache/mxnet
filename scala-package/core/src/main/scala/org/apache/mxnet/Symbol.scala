@@ -101,7 +101,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     var index: Int = -1
     for ((output, i) <- listOutputs().view.zipWithIndex) {
       if (output == name) {
-        require(index == -1, s"There are multiple outputs with name $name")
         index = i
       }
     }
@@ -829,6 +828,8 @@ object Symbol {
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
+
+  val api = SymbolAPI
 
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))

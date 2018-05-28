@@ -17,10 +17,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+set -e
+set -x
 
-set -ex
-yum -y install graphviz
-pip install graphviz
 pip install opencv-python
+pip install scipy
+
+# Install arcade learning environment
+sudo apt-get install libsdl1.2-dev libsdl-gfx1.2-dev libsdl-image1.2-dev cmake
+git clone git@github.com:mgbellemare/Arcade-Learning-Environment.git || true
+pushd .
+cd Arcade-Learning-Environment
+mkdir -p build
+cd build
+cmake -DUSE_SDL=ON -DUSE_RLGLUE=OFF -DBUILD_EXAMPLES=ON -GNinja ..
+ninja
+cd ..
+pip install -e .
+popd
+cp Arcade-Learning-Environment/ale.cfg .
+
+# Copy roms
+git clone git@github.com:npow/atari.git || true
+cp -R atari/roms .
+

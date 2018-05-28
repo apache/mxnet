@@ -130,6 +130,9 @@ class CuDNNActivationOp {
     #endif
   }
 
+  // backward computation for cudnn activation operator. Note that for relu
+  // it's okay to pass "out_data" as "in_data", since it doesn't make any
+  // difference in terms of computing the gradient of relu.
   void Backward(const OpContext &ctx, const TBlob &out_grad,
       const TBlob &in_data, const TBlob &out_data,
       const OpReqType &req, const TBlob &in_grad) {
