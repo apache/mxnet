@@ -71,7 +71,8 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  FallBackCompute(ActivationCompute<cpu>>, attrs, ctx, inputs, req, outputs);
+  FallBackCompute(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
+
 }
 
 void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
