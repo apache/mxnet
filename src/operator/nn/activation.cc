@@ -62,7 +62,6 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNN(inputs[0])) {
