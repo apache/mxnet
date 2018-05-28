@@ -278,81 +278,81 @@ class CuDNNConvolutionOp {
     }
     #else
     for (uint32_t g = 0; g < param_.num_group; ++g) {
-        typename DataType<DType>::ScaleType alpha = 1.0f;
-        typename DataType<DType>::ScaleType beta = 0.0f;
-        typename DataType<DType>::ScaleType beta_add = 1.0f;
-        if (!param_.no_bias && (req[conv::kBias] != kNullOp)) {
-            Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
-            CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
+      typename DataType<DType>::ScaleType alpha = 1.0f;
+      typename DataType<DType>::ScaleType beta = 0.0f;
+      typename DataType<DType>::ScaleType beta_add = 1.0f;
+      if (!param_.no_bias && (req[conv::kBias] != kNullOp)) {
+        Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
+        CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
                                                 &alpha,
                                                 out_desc_,
                                                 grad_ptr + out_offset_ * g,
                                                 req[conv::kBias] == kAddTo ? &beta_add : &beta,
                                                 bias_desc_,
                                                 gbias.dptr_ + bias_offset_ * g));
-        }
-        if (req[conv::kWeight] != kNullOp) {
-            #if CUDNN_MAJOR <= 4
-            CUDNN_CALL(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
-                &alpha,
-                in_desc_,
-                data_ptr + data_offset_ * g,
-                out_desc_,
-                grad_ptr + out_offset_ * g,
-                back_conv_desc_w_,
-                back_algo_w_.AlgoNumber(),
-                workspace.dptr_,
-                workspace_size,
-                req[conv::kWeight] == kAddTo? &beta_add : &beta,
-                filter_desc_,
-                gwmat_ptr + weight_offset_ * g));
-            #elif CUDNN_MAJOR >= 5
-            CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
-                &alpha,
-                in_desc_,
-                data_ptr + data_offset_ * g,
-                out_desc_,
-                grad_ptr + out_offset_ * g,
-                back_conv_desc_w_,
-                back_algo_w_.AlgoNumber(),
-                workspace.dptr_,
-                workspace_size,
-                req[conv::kWeight] == kAddTo? &beta_add : &beta,
-                filter_desc_,
-                gwmat_ptr + weight_offset_ * g));
-            #endif
-        }
-        if (req[conv::kData] != kNullOp) {
-            #if CUDNN_MAJOR <= 4
-            CUDNN_CALL(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
-                &alpha,
-                filter_desc_,
-                wmat_ptr + weight_offset_ * g,
-                out_desc_,
-                grad_ptr + out_offset_ * g,
-                back_conv_desc_,
-                back_algo_.AlgoNumber(),
-                workspace.dptr_,
-                workspace_size,
-                req[conv::kData] == kAddTo? &beta_add : &beta,
-                in_desc_,
-                gdata_ptr + data_offset_ * g));
-            #elif CUDNN_MAJOR >= 5
-            CUDNN_CALL(cudnnConvolutionBackwardData(s->dnn_handle_,
-                &alpha,
-                filter_desc_,
-                wmat_ptr + weight_offset_ * g,
-                out_desc_,
-                grad_ptr + out_offset_ * g,
-                back_conv_desc_,
-                back_algo_.AlgoNumber(),
-                workspace.dptr_,
-                workspace_size,
-                req[conv::kData] == kAddTo? &beta_add : &beta,
-                in_desc_,
-                gdata_ptr + data_offset_ * g));
-            #endif
-        }
+      }
+      if (req[conv::kWeight] != kNullOp) {
+        #if CUDNN_MAJOR <= 4
+        CUDNN_CALL(cudnnConvolutionBackwardFilter_v3(s->dnn_handle_,
+             &alpha,
+             in_desc_,
+             data_ptr + data_offset_ * g,
+             out_desc_,
+             grad_ptr + out_offset_ * g,
+             back_conv_desc_w_,
+             back_algo_w_.AlgoNumber(),
+             workspace.dptr_,
+             workspace_size,
+             req[conv::kWeight] == kAddTo? &beta_add : &beta,
+             filter_desc_,
+             gwmat_ptr + weight_offset_ * g));
+        #elif CUDNN_MAJOR >= 5
+        CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
+             &alpha,
+             in_desc_,
+             data_ptr + data_offset_ * g,
+             out_desc_,
+             grad_ptr + out_offset_ * g,
+             back_conv_desc_w_,
+             back_algo_w_.AlgoNumber(),
+             workspace.dptr_,
+             workspace_size,
+             req[conv::kWeight] == kAddTo? &beta_add : &beta,
+             filter_desc_,
+             gwmat_ptr + weight_offset_ * g));
+        #endif
+      }
+      if (req[conv::kData] != kNullOp) {
+        #if CUDNN_MAJOR <= 4
+        CUDNN_CALL(cudnnConvolutionBackwardData_v3(s->dnn_handle_,
+             &alpha,
+             filter_desc_,
+             wmat_ptr + weight_offset_ * g,
+             out_desc_,
+             grad_ptr + out_offset_ * g,
+             back_conv_desc_,
+             back_algo_.AlgoNumber(),
+             workspace.dptr_,
+             workspace_size,
+             req[conv::kData] == kAddTo? &beta_add : &beta,
+             in_desc_,
+             gdata_ptr + data_offset_ * g));
+        #elif CUDNN_MAJOR >= 5
+        CUDNN_CALL(cudnnConvolutionBackwardData(s->dnn_handle_,
+             &alpha,
+             filter_desc_,
+             wmat_ptr + weight_offset_ * g,
+             out_desc_,
+             grad_ptr + out_offset_ * g,
+             back_conv_desc_,
+             back_algo_.AlgoNumber(),
+             workspace.dptr_,
+             workspace_size,
+             req[conv::kData] == kAddTo? &beta_add : &beta,
+             in_desc_,
+             gdata_ptr + data_offset_ * g));
+        #endif
+      }
     }
     #endif  // CUDNN_MAJOR >= 7
   }
