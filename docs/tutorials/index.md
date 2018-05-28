@@ -69,6 +69,7 @@ Select API:&nbsp;
             * [AutoGrad API with Python control flow](http://gluon-crash-course.mxnet.io/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
         * Data
             * [Datasets and DataLoaders](/tutorials/gluon/datasets.html)
+            * [Applying Data Augmentation](/tutorials/gluon/data_augmentation.html)
             * [Data Augmentation with Masks (for Object Segmentation)](https://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
 </div> <!--end of gluon-->
 
@@ -89,6 +90,7 @@ Select API:&nbsp;
     * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
+    * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -105,7 +107,10 @@ Select API:&nbsp;
             * [Key-Value Store API](/tutorials/python/kvstore.html)
     * Module APIs
         * [Module API](/tutorials/basic/module.html)
-        * [Data Iterators](/tutorials/basic/data.html)
+        * Data
+            * [Data Iterators](/tutorials/basic/data.html)
+            * [Applying Data Augmentation](/tutorials/python/data_augmentation.html)
+            * [Types of Data Augmentation](/tutorials/python/types_of_data_augmentation.html)
 </div> <!--end of module-->
 
 <hr>
