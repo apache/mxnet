@@ -518,7 +518,7 @@ class Conv2DTranspose(_Conv):
         Controls the amount of implicit zero-paddings on both sides of the
         output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 2 int
-        Controls the spacing between the kernel points; also known as the 
+        Controls the spacing between the kernel points; also known as the
         à trous algorithm
     groups : int
         Controls the connections between inputs and outputs.
@@ -610,7 +610,7 @@ class Conv3DTranspose(_Conv):
         Controls the amount of implicit zero-paddings on both sides of the
         output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 3 int
-        Controls the spacing between the kernel points; also known as the 
+        Controls the spacing between the kernel points; also known as the
         à trous algorithm.
     groups : int
         Controls the connections between inputs and outputs.
