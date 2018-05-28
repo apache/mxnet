@@ -120,8 +120,10 @@ void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
 }
 
 template<typename xpu>
-void ActivationComputeImpl(const ActivationParam &param, const OpContext &ctx,
+void ActivationComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                            const TBlob &input, OpReqType req, const TBlob &output) {
+
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   switch (param.act_type) {
     case activation::kReLU:
       ActivationForward<xpu, mshadow_op::relu, mshadow_op::relu_grad>(
@@ -149,9 +151,10 @@ void ActivationComputeImpl(const ActivationParam &param, const OpContext &ctx,
 }
 
 template<typename xpu>
-void ActivationGradComputeImpl(const ActivationParam &param, const OpContext &ctx,
+void ActivationGradComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                                const TBlob &out_grad, const TBlob &out_data,
                                OpReqType req, const TBlob &output) {
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   switch (param.act_type) {
     case activation::kReLU:
       ActivationBackward<xpu, mshadow_op::relu, mshadow_op::relu_grad>(
@@ -186,8 +189,7 @@ void ActivationCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  ActivationComputeImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+  ActivationComputeImpl<xpu>(attrs, ctx, inputs[0], req[0], outputs[0]);
 }
 
 template<typename xpu>
@@ -205,7 +207,7 @@ void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
 #endif
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  ActivationGradComputeImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], outputs[0]);
+  ActivationGradComputeImpl<xpu>(attrs, ctx, inputs[0], inputs[1], req[0], outputs[0]);
 }
 
 }  // namespace op
