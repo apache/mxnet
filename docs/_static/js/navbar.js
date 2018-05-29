@@ -9,6 +9,9 @@ $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'Docs') docSubmenu= $(this).clone();
 });
 
+$('.burger-link').on('click', function(e) { e.stopPropagation() });
+$('.burger-link').on('touchstart', function(e) { e.stopPropagation() });
+
 function navbar() {
     var leftOffset = 40;
     var plusMenuList = [];
