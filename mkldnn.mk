@@ -33,13 +33,14 @@ endif
 
 .PHONY: mkldnn mkldnn_clean mkldnn_lib_sync
 
-mkldnn_build: $(MKLDNN_INSTALLDIR)/lib/libmkldnn.so 
+mkldnn_build: $(MKLDNN_INSTALLDIR)/lib/libmkldnn.so
 
 $(MKLDNN_INSTALLDIR)/lib/libmkldnn.so:
-	cd $(MKLDNN_ROOTDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh >&2 && cd .. && cp -a external/*/* $(MKLDNN_INSTALLDIR)/.
-	cmake $(MKLDNN_ROOTDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNN_INSTALLDIR) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
-	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1 >&2
-	$(MAKE) -C $(MKLDNN_BUILDDIR) install >&2
+	mkdir -p $(MKLDNN_INSTALLDIR)
+	cd $(MKLDNN_ROOTDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh && cd .. && cp -a external/*/* $(MKLDNN_INSTALLDIR)/.
+	cmake $(MKLDNN_ROOTDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNN_INSTALLDIR) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF
+	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
+	$(MAKE) -C $(MKLDNN_BUILDDIR) install
 	mkdir -p $(MKLDNN_LIBDIR)
 	rsync -a $(OMP_LIBFILE) $(MKLDNN_LIBDIR)
 	rsync -a $(MKLML_LIBFILE) $(MKLDNN_LIBDIR)
