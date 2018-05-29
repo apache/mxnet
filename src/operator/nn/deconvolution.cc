@@ -209,7 +209,7 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
     if (param_.target_shape.ndim() > 2) {
       if (param_.target_shape[0] > 0) {
         CHECK_EQ(param_.target_shape[0], oshape[2]) \
-          << "param_.target_shape[0] was not reasonable, please it carefully";
+          << "param_.target_shape[0] was not reasonable, please set it carefully";
       }
       if (param_.target_shape[1] > 0) {
         CHECK_EQ(param_.target_shape[1], oshape[3]) \
