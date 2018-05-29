@@ -65,9 +65,9 @@ If you want to enable OpenMP for better performance, you should modify these two
 
 ```
 ifeq ($(USE_OPENMP), 1)
-	# ifneq ($(UNAME_S), Darwin)
-		CFLAGS += -fopenmp
-	# endif
+# ifneq ($(UNAME_S), Darwin)
+    CFLAGS += -fopenmp
+# endif
 endif
 ```
 
