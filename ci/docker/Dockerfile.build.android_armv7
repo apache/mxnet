@@ -18,8 +18,14 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
+FROM ccache/build.ubuntu as ccachebuilder
+
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
+
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
+ENV CCACHE_MAXSIZE 10G
+ENV CCACHE_DIR /work/ccache
 
 # The cross-compiling emulator
 RUN apt-get update && apt-get install -y \

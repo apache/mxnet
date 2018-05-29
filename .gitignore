@@ -166,3 +166,7 @@ python/.eggs
 *DartConfiguration.tcl
 tests/Makefile
 tests/mxnet_unit_tests
+
+# generated wrappers for ccache
+cc
+cxx

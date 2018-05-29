@@ -18,7 +18,13 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
+FROM ccache/build.ubuntu as ccachebuilder
+
 FROM dockcross/linux-armv7
+
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
+ENV CCACHE_MAXSIZE 10G
+ENV CCACHE_DIR /work/ccache
 
 ENV ARCH armv71
 ENV CC /usr/bin/arm-linux-gnueabihf-gcc
