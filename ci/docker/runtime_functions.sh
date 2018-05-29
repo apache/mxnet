@@ -31,6 +31,25 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
+# this function is nessesary for cuda enabled make based builds, since nvcc needs just an exacutable for -ccbin
+build_ccache_wrappers() {
+    set -ex
+
+    rm -f cc
+    rm -f cxx
+
+    touch cc
+    touch cxx
+
+    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
+    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
+
+    chmod +x cc
+    chmod +x cxx
+
+    export CC=`pwd`/cc
+    export CXX=`pwd`/cxx
+}
 
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
@@ -38,6 +57,8 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
+
+    build_ccache_wrappers
 
     cp -f make/crosscompile.jetson.mk ./config.mk
 

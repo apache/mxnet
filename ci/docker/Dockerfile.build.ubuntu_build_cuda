@@ -21,7 +21,13 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
+FROM ccache/build.ubuntu as ccachebuilder
+
 FROM nvidia/cuda:9.1-cudnn7-devel
+
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
+ENV CCACHE_MAXSIZE 10G
+ENV CCACHE_DIR /work/ccache
 
 WORKDIR /work/deps
 

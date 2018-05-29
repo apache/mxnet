@@ -18,7 +18,13 @@
 #
 # Dockerfile to build and run MXNet on CentOS 7 for GPU
 
+FROM ccache/build.centos7 as ccachebuilder
+
 FROM nvidia/cuda:9.1-cudnn7-devel-centos7
+
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
+ENV CCACHE_MAXSIZE 10G
+ENV CCACHE_DIR /work/ccache
 
 WORKDIR /work/deps
 
