@@ -57,20 +57,17 @@ $(document).ready(function () {
             $('.current-version').html( $(this).text() + ' <span class="caret"></span></button>' );
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
         }
-        if ($(this).hasClass("Devices")) {
+        else if ($(this).hasClass("Devices")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('device'), $(this).text() ));
         }
-        if ($(this).hasClass("languages")) {
+        else if ($(this).hasClass("languages")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('language'), $(this).text() ));
         }
-        if ($(this).hasClass("processors")) {
+        else if ($(this).hasClass("processors")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
         }
         showContent();
-        //$.param.querystring(window.location.href, window.location.search.replace(urlParams.get('device'), $(this).text()));
         //window.location.search = window.location.search.replace( urlParams.get('version'), $(this).text() );
-        //history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
-        console.log("Trying " + window.location.search.replace(urlParams.get('version'), $(this).text()));
     }
     $('.opt-group').on('click', '.opt', setContent);
 });

@@ -42,16 +42,16 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- No CPU GPU for other Devices -->
 <div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">CPU</button>
-  <button type="button" class="btn btn-default opt">GPU</button>
+  <button type="button" class="btn btn-default processors opt active">CPU</button>
+  <button type="button" class="btn btn-default processors opt">GPU</button>
 </div>
 </div>
 
 <!-- other devices -->
 <div class="devices">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
-  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
+  <button type="button" class="btn btn-default iots opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default iots opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -61,10 +61,10 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu gpu">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Pip</button>
-  <button type="button" class="btn btn-default opt">Virtualenv</button>
-  <button type="button" class="btn btn-default opt">Docker</button>
-  <button type="button" class="btn btn-default opt">Build from Source</button>
+  <button type="button" class="btn btn-default environs opt active">Pip</button>
+  <button type="button" class="btn btn-default environs opt">Virtualenv</button>
+  <button type="button" class="btn btn-default environs opt">Docker</button>
+  <button type="button" class="btn btn-default environs opt">Build from Source</button>
 </div>
 </div>
 </div>
