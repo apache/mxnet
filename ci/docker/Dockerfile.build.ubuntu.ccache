@@ -16,27 +16,31 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build MXNet for ARMv6
+# Dockerfile to build ccache for ubuntu based images
 
-FROM ccache/build.ubuntu as ccachebuilder
+FROM ubuntu:16.04
 
-FROM dockcross/linux-armv6
-
-COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
-
-ENV ARCH armv6l
-ENV HOSTCC gcc
-ENV TARGET ARMV6
+RUN apt update && \
+    apt install -y --no-install-recommends \
+        git \
+        ssh \
+        apt-transport-https \
+        build-essential \
+        ca-certificates \
+        autoconf \
+        google-perftools \
+        asciidoc \
+        libxslt1-dev \
+        docbook-xsl \
+        xsltproc \
+        libxml2-utils
 
 WORKDIR /work/deps
 
-# Build OpenBLAS
-RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
-    cd OpenBLAS && \
+# build ccache
+RUN git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git && \
+    cd ccache && \
+    ./autogen.sh && \
+    ./configure && \
     make -j$(nproc) && \
-    make PREFIX=$CROSS_ROOT install
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+    make install

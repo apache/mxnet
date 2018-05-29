@@ -57,10 +57,10 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS =
+ADD_LDFLAGS = -L${CROSS_ROOT}/lib
 
 # the additional compile flags you want to add
-ADD_CFLAGS =
+ADD_CFLAGS = -I${CROSS_ROOT}/include
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
@@ -96,7 +96,7 @@ USE_LIBJPEG_TURBO = 0
 USE_LIBJPEG_TURBO_PATH = NONE
 
 # use openmp for parallelization
-USE_OPENMP = 1
+USE_OPENMP = 0
 
 # whether use MKL-DNN library
 USE_MKLDNN = 0

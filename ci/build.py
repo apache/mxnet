@@ -33,6 +33,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -72,11 +73,11 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
     tag = get_docker_tag(platform=platform, registry=registry)
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
     cmd = [docker_binary, "build",
-        "-f", get_dockerfile(platform),
-        "--build-arg", "USER_ID={}".format(os.getuid()),
-        "--cache-from", tag,
-        "-t", tag,
-        "docker"]
+           "-f", get_dockerfile(platform),
+           "--build-arg", "USER_ID={}".format(os.getuid()),
+           "--cache-from", tag,
+           "-t", tag,
+           "docker"]
     logging.info("Running command: '%s'", ' '.join(cmd))
     check_call(cmd)
 
@@ -87,6 +88,31 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
     return image_id
 
+def build_ccache(platform: str, docker_binary: str) -> None:
+    """
+    Build a ccache container for the given platform
+    :param platform: Platform
+    :param docker_binary: docker binary to use (docker/nvidia-docker)
+    :return: Id of the top level image
+    """
+
+    tag = "ccache/build.{}".format(platform)
+    logging.info("Building ccache container tagged '%s' with %s", tag, docker_binary)
+    cmd = [docker_binary, "build",
+           "-f", get_dockerfile("{}.ccache".format(platform)),
+           "--rm=true", # We only need the binary
+           "--cache-from", tag,
+           "-t", tag,
+           "docker"]
+    logging.info("Running command: '%s'", ' '.join(cmd))
+    check_call(cmd)
+
+    # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
+    # check_call would have failed
+    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
+    if not image_id:
+        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
+    return image_id
 
 def _get_local_image_id(docker_binary, docker_tag):
     """
@@ -115,11 +141,19 @@ def get_mxnet_root() -> str:
 def buildir() -> str:
     return os.path.join(get_mxnet_root(), "build")
 
+def default_ccache_dir() -> str:
+    if 'CCACHE_DIR' in os.environ:
+        ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
+        os.makedirs(ccache_dir, exist_ok=True)
+        return ccache_dirpython
+    # Share ccache across containers (should we have a separate dir per platform?)
+    return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 def container_run(platform: str,
                   docker_binary: str,
                   docker_registry: str,
                   shared_memory_size: str,
+                  local_ccache_dir: str,
                   command: List[str],
                   dry_run: bool = False,
                   into_container: bool = False) -> str:
@@ -128,12 +162,16 @@ def container_run(platform: str,
     local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
     os.makedirs(local_build_folder, exist_ok=True)
+    os.makedirs(local_ccache_dir, exist_ok=True)
+    logging.info("Using ccache directory: %s", local_ccache_dir)
     runlist = [docker_binary, 'run', '--rm', '-t',
-        '--shm-size={}'.format(shared_memory_size),
-        '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
-        '-v', "{}:/work/build".format(local_build_folder), # mount mxnet/build for storing build artifacts
-        '-u', '{}:{}'.format(os.getuid(), os.getgid()),
-        tag]
+               '--shm-size={}'.format(shared_memory_size),
+               '-v', "{}:/work/mxnet".format(mx_root), # mount mxnet root
+               '-v', "{}:/work/build".format(local_build_folder), # mount mxnet/build for storing build artifacts
+               '-v', "{}:/work/ccache".format(local_ccache_dir),
+               '-u', '{}:{}'.format(os.getuid(), os.getgid()),
+               '-e', "CCACHE_DIR=/work/ccache", # this path is inside the container as /work/ccache is mounted
+               tag]
     runlist.extend(command)
     cmd = ' '.join(runlist)
     if not dry_run and not into_container:
@@ -180,11 +218,10 @@ def main() -> int:
     os.chdir(base)
 
     logging.getLogger().setLevel(logging.INFO)
-
     def script_name() -> str:
         return os.path.split(sys.argv[0])[1]
-
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
+
 
     parser = argparse.ArgumentParser(description="""Utility for building and testing MXNet on docker
     containers""",epilog="")
@@ -230,6 +267,11 @@ def main() -> int:
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
 
+    parser.add_argument("--ccache-dir",
+                        default=default_ccache_dir(),
+                        help="Ccache directory",
+                        type=str)
+
     args = parser.parse_args()
     docker_registry = args.docker_registry
     command = list(chain(*args.command))
@@ -241,27 +283,33 @@ def main() -> int:
         list_platforms()
     elif args.platform:
         platform = args.platform
-        tag = get_docker_tag(platform=platform, registry=docker_registry)
-        load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform, docker_binary, registry=docker_registry)
+        tag = get_docker_tag(platform)
+        if args.download_docker_cache:
+            import docker_cache
+            logging.info('Docker cache download is enabled')
+            docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
+        # prepare ccache
+        build_ccache("ubuntu", docker_binary)
+        build_ccache("centos7", docker_binary)
+        build_docker(platform, docker_binary)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=command, docker_registry=docker_registry)
+                          command=command, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
         elif args.print_docker_run:
             print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                                command=[], dry_run=True, docker_registry=docker_registry))
+                                command=[], dry_run=True, docker_registry=docker_registry, ccache_dir=args.ccache_dir))
         elif args.into_container:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=[], dry_run=False, into_container=True, docker_registry=docker_registry)
+                          command=[], dry_run=False, into_container=True, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry)
+                          command=cmd, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
 
     elif args.all:
         platforms = get_platforms()
@@ -277,7 +325,7 @@ def main() -> int:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry)
+                          command=cmd, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
             plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)

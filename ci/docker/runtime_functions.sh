@@ -38,7 +38,9 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    mv make/crosscompile.jetson.mk make/config.mk
+
+    cp -f make/crosscompile.jetson.mk ./config.mk
+
     make -j$(nproc)
 
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
@@ -73,6 +75,7 @@ build_armv6() {
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
