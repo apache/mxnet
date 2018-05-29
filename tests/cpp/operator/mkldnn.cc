@@ -723,7 +723,7 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-    TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
+  TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
