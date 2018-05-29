@@ -6008,24 +6008,21 @@ def test_histogram():
     def f(x, bins=10, range=None):
         return np.histogram(x, bins, range=range)
 
-    shape = (3, 3, 3)
-    x = rand_ndarray(shape, stype='default')
-    mx_bins = mx.nd.array([-1.0, 0.5, 2.0, 4.5, 50.0])
-    np_bins = mx_bins.asnumpy()
-    bin_cnt = 5
-    bin_range = (-2.5, 2.5)
-    mx_histo1, mx_bins1 = mx.nd.histogram(x, bins=bin_cnt, range_=bin_range)
-    np_histo1, np_bins1 = f(x.asnumpy(), bins=bin_cnt, range=bin_range)
-    assert_almost_equal(mx_bins1.asnumpy(), np_bins1)
-    assert_almost_equal(mx_histo1.asnumpy(), np_histo1, rtol=1e-3, atol=1e-5)
-    mx_histo2, mx_bins2 = mx.nd.histogram(x, bins=mx_bins)
-    np_histo2, np_bins2 = f(x.asnumpy(), bins=np_bins)
-    assert_almost_equal(mx_histo2.asnumpy(), np_histo2, rtol=1e-3, atol=1e-5)
-    assert_almost_equal(mx_bins2.asnumpy(), np_bins2, rtol=1e-3, atol=1e-5)
-    mx_histo3, mx_bins3 = mx.nd.histogram(x, bins=bin_cnt)
-    np_histo3, np_bins3 = f(x.asnumpy(), bins=bin_cnt)
-    assert_almost_equal(mx_bins3.asnumpy(), np_bins3, atol=1e-5)
-    assert_almost_equal(mx_histo3.asnumpy(), np_histo3, rtol=1e-3, atol=1e-5)
+    for ndim in range(1, 6):
+        shape = rand_shape_nd(ndim)
+        x = rand_ndarray(shape, stype='default', dtype=np.float64)
+        mx_bins = mx.nd.array([-1.0, 0.5, 2.0, 4.5, 50.0], dtype=np.float64)
+        np_bins = mx_bins.asnumpy()
+        bin_cnt = random.randint(2, 10)
+        bin_range = (-2.5, 2.5)
+        mx_histo1, mx_bins1 = mx.nd.histogram(x, bins=bin_cnt, range=bin_range)
+        np_histo1, np_bins1 = f(x.asnumpy(), bins=bin_cnt, range=bin_range)
+        assert_almost_equal(mx_bins1.asnumpy(), np_bins1)
+        assert_almost_equal(mx_histo1.asnumpy(), np_histo1, rtol=1e-3, atol=1e-5)
+        mx_histo2, mx_bins2 = mx.nd.histogram(x, bins=mx_bins)
+        np_histo2, np_bins2 = f(x.asnumpy(), bins=np_bins)
+        assert_almost_equal(mx_histo2.asnumpy(), np_histo2, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(mx_bins2.asnumpy(), np_bins2, rtol=1e-3, atol=1e-5)
 
 
 def test_op_output_names_monitor():

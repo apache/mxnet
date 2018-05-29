@@ -24,30 +24,32 @@ namespace op {
 
 struct ComputeBinKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* in_data, int* bin_indices,
-                                  int bin_cnt, float width, float min, float max) {
+  MSHADOW_XINLINE static void Map(int i, const DType* in_data, const DType* bin_bounds,
+                                  int* bin_indices, int bin_cnt, double min, double max) {
     DType data = in_data[i];
+    int target = -1;
     if (data >= min && data <= max) {
-      bin_indices[i] = mshadow_op::floor::Map((in_data[i] - min) / width);
-      bin_indices[i] = mshadow_op::minimum::Map(bin_cnt - 1, bin_indices[i]);
-    } else {
-      bin_indices[i] = -1;
+      target = (data - min) * bin_cnt / (max - min);
+      target = mshadow_op::minimum::Map(bin_cnt - 1, target);
+      target -= (data < bin_bounds[target]) ? 1 : 0;
+      target += ((data >= bin_bounds[target + 1]) && (target != bin_cnt - 1)) ? 1 : 0;
     }
+    bin_indices[i] = target;
   }
 
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, const DType* in_data, int* bin_indices,
                                    const DType* bin_bounds, int num_bins) {
     DType data = in_data[i];
-    int target_idx = -1;
+    int target = -1;
     if (data >= bin_bounds[0] && data <= bin_bounds[num_bins]) {
-      target_idx = 0;
-      while ((data - bin_bounds[target_idx]) >= 0) {
-        target_idx += 1;
+      target = 0;
+      while ((data - bin_bounds[target]) >= 0) {
+        target += 1;
       }
-      target_idx = mshadow_op::minimum::Map(target_idx - 1, num_bins - 1);
+      target = mshadow_op::minimum::Map(target - 1, num_bins - 1);
     }
-    bin_indices[i] = target_idx;
+    bin_indices[i] = target;
   }
 };
 
@@ -71,37 +73,44 @@ void HistogramForwardImpl(mshadow::Stream<cpu>* s,
                           const TBlob& out_bins) {
   using namespace mshadow;
   using namespace mxnet_op;
-  HistogramParam param = nnvm::get<HistogramParam>(attrs.parsed);
-  const bool has_cnt = param.bin_cnt.has_value();
-  const bool has_range = param.range.has_value();
-  const bool legal_param = (has_cnt && has_range) || (!has_cnt && !has_range);
-  CHECK(legal_param) << "width and range should both or neither be specified";
-  CHECK(!has_range || (has_range && (param.range.value().ndim() == 2U)))
-    << "range should be a tuple with only 2 elements";
-  CHECK(!has_range || (has_range && (param.range.value()[0] < param.range.value()[1])))
-    << "left hand side of range should be less than or equal to right hand side";
-
   Tensor<cpu, 1, int> bin_indices =
     ctx.requested[0].get_space_typed<cpu, 1, int>(Shape1(in_data.Size()), s);
   const int bin_cnt = out_data.Size();
 
   MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
-    if (has_cnt) {
-      float max = param.range.value()[1];
-      float min = param.range.value()[0];
-      float width = (max - min) / bin_cnt;
-      Kernel<ComputeBinKernel, cpu>::Launch(
-        s, in_data.Size(), in_data.dptr<DType>(), bin_indices.dptr_,
-        bin_cnt, width, min, max);
-      Kernel<FillBinBoundsKernel, cpu>::Launch(
-        s, bin_cnt+1, out_bins.dptr<DType>(), bin_cnt, min, max);
-    } else {
-      Kernel<ComputeBinKernel, cpu>::Launch(
-        s, in_data.Size(), in_data.dptr<DType>(), bin_indices.dptr_, bin_bounds.dptr<DType>(),
-        bin_cnt);
-      Kernel<op_with_req<mshadow_op::identity, kWriteTo>, cpu>::Launch(
-        s, bin_bounds.Size(), out_bins.dptr<DType>(), bin_bounds.dptr<DType>());
-    }
+    Kernel<ComputeBinKernel, cpu>::Launch(
+      s, in_data.Size(), in_data.dptr<DType>(), bin_indices.dptr_, bin_bounds.dptr<DType>(),
+      bin_cnt);
+    Kernel<op_with_req<mshadow_op::identity, kWriteTo>, cpu>::Launch(
+      s, bin_bounds.Size(), out_bins.dptr<DType>(), bin_bounds.dptr<DType>());
+  });
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, CType, {
+    Kernel<set_zero, cpu>::Launch(s, bin_cnt, out_data.dptr<CType>());
+    ComputeHistogram(bin_indices.dptr_, out_data.dptr<CType>(), in_data.Size());
+  });
+}
+
+template<typename cpu>
+void HistogramForwardImpl(mshadow::Stream<cpu>* s,
+                          const OpContext& ctx,
+                          const nnvm::NodeAttrs& attrs,
+                          const TBlob& in_data,
+                          const TBlob& out_data,
+                          const TBlob& out_bins,
+                          const int bin_cnt,
+                          const double min,
+                          const double max) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Tensor<cpu, 1, int> bin_indices =
+    ctx.requested[0].get_space_typed<cpu, 1, int>(Shape1(in_data.Size()), s);
+
+  MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
+    Kernel<FillBinBoundsKernel, cpu>::Launch(
+      s, bin_cnt+1, out_bins.dptr<DType>(), bin_cnt, min, max);
+    Kernel<ComputeBinKernel, cpu>::Launch(
+      s, in_data.Size(), in_data.dptr<DType>(), out_bins.dptr<DType>(), bin_indices.dptr_,
+      bin_cnt, min, max);
   });
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, CType, {
     Kernel<set_zero, cpu>::Launch(s, bin_cnt, out_data.dptr<CType>());
@@ -124,7 +133,10 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<HistogramParam>)
-.set_num_inputs(2)
+.set_num_inputs([](const NodeAttrs& attrs) {
+    const HistogramParam& params = nnvm::get<HistogramParam>(attrs.parsed);
+    return params.bin_cnt.has_value() ? 1 : 2;
+})
 .set_num_outputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {

@@ -3742,7 +3742,8 @@ def empty(shape, ctx=None, dtype=None):
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 
-def histogram(a, bins=10, range_=None):
+# pylint: disable= redefined-builtin
+def histogram(a, bins=10, range=None):
     """Compute the histogram of the input data.
 
     Parameters
@@ -3763,9 +3764,12 @@ def histogram(a, bins=10, range_=None):
     # pylint: disable= no-member, protected-access
     if isinstance(bins, NDArray):
         return _internal._histogram(data=a, bins=bins)
-    elif isinstance(bins, int):
-        if range_ is None:
-            range_ = (float(a.min().asnumpy()[0]), float(a.max().asnumpy()[0]))
-        return _internal._histogram(data=a, bins=array([]), bin_cnt=bins, range=range_)
+    elif isinstance(bins, integer_types):
+        if range is None:
+            warnings.warn("range_ is not specified, using numpy's result "
+                          "to ensure consistency with numpy")
+            res, bin_bounds = np.histogram(a.asnumpy(), bins=bins)
+            return array(res), array(bin_bounds)
+        return _internal._histogram(data=a, bin_cnt=bins, range=range)
     return None
-    # pylint: enable= no-member, protected-access
+    # pylint: enable= no-member, protected-access, redefined-builtin
