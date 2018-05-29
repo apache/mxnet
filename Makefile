@@ -66,21 +66,14 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-ifeq ($(MAKECMDGOALS),)
-    BUILD_MKLDNN := 1
-else ifeq ($(MAKECMDGOALS),all)
-    BUILD_MKLDNN := 1
+ifneq ($(MKLDNN_ROOT),)
+    MKLDNNROOT = $(MKLDNN_ROOT)
+    MKLROOT = $(MKLDNN_ROOT)
 else
-    BUILD_MKLDNN := 0
+    MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
+    MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 endif
-ifeq ($(BUILD_MKLDNN), 1)
-	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
-	LAST_WORD_INDEX := $(words $(RETURN_STRING))
-	# fetch the 2nd last word as MKLDNNROOT
-	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
-	MKLROOT := $(lastword $(RETURN_STRING))
-	export USE_MKLML = 1
-endif
+    export USE_MKLML = 1
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -127,10 +120,6 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
@@ -436,7 +425,7 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc
+build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -510,6 +499,7 @@ include cpp-package/cpp-package.mk
 endif
 
 include tests/cpp/unittest.mk
+include mkldnn.mk
 
 extra-packages: $(EXTRA_PACKAGES)
 
@@ -621,10 +611,9 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
-		3rdparty/mkldnn/install/*
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
