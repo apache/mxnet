@@ -6019,10 +6019,14 @@ def test_foreach():
             res2 = _as_list(res)
             for i in range(len(res2)):
                 res2[i] = res2[i] * 2
+            outs = []
+            outs[:] = res2[:]
             if isinstance(states, list):
+                outs.extend(states)
                 states = [mx.nd.expand_dims(s, 0) for s in states]
                 res2.extend(states)
             else:
+                outs.append(states)
                 states = mx.nd.expand_dims(states, 0)
                 res2.append(states)
             res = mx.nd.concat(*res2, dim=0)
@@ -6032,8 +6036,9 @@ def test_foreach():
         tmp_grads.extend(tmp_grads1)
         if (is_train):
             res.backward(mx.nd.concat(*tmp_grads, dim=0))
-        for i in range(len(res2)):
-            assert_almost_equal(e.outputs[i].asnumpy(), res2[i].asnumpy(),
+        for i in range(len(outs)):
+            assert e.outputs[i].shape == outs[i].shape
+            assert_almost_equal(e.outputs[i].asnumpy(), outs[i].asnumpy(),
                     rtol=0.001, atol=0.0001)
         if (is_train):
             all_ins = _as_list(in_arrs)[:]
