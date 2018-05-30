@@ -38,7 +38,7 @@ class Monitor(
 
   if (statFunc == null) {
     statFunc = (x: NDArray) => {
-      NDArray.norm(x) / math.sqrt(x.size.toDouble).toFloat
+      NDArray.api.norm(x) / math.sqrt(x.size.toDouble).toFloat
     }
   }
 
