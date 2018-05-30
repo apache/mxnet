@@ -133,7 +133,7 @@ private[mxnet] object NDArrayMacro {
       impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
-      val returnType = "org.apache.mxnet.NDArray"
+      val returnType = "org.apache.mxnet.NDArrayFuncReturn"
       var finalStr = s"def ${ndarrayfunction.name}"
       finalStr += s" (${argDef.mkString(",")}) : $returnType"
       finalStr += s" = {${impl.mkString("\n")}}"
