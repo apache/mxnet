@@ -66,6 +66,9 @@ private[mxnet] object NDArrayMacro {
         if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
           Seq(
             // scalastyle:off
+            // (yizhi) We are investigating a way to make these functions type-safe
+            // and waiting to see the new approach is stable enough.
+            // Thus these functions may be deprecated in the future.
             // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
             q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
             // e.g def transpose(args: Any*)
@@ -92,9 +95,11 @@ private[mxnet] object NDArrayMacro {
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
+
     val newNDArrayFunctions = {
-      if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
+      if (isContrib) ndarrayFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
     val functionDefs = newNDArrayFunctions map { ndarrayfunction =>
