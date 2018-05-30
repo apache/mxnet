@@ -37,9 +37,9 @@ namespace op {
 
 template<typename SrcType, typename DstType>
 static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
-                              const std::vector<NDArray>& outputs,
-                              const QuantizeParam& param,
-                              const std::vector<OpReqType> &req) {
+                                     const std::vector<NDArray>& outputs,
+                                     const QuantizeParam& param,
+                                     const std::vector<OpReqType> &req) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -92,9 +92,9 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
 }
 
 static void MKLDNNQuantizeCompute(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                           const std::vector<NDArray> &inputs,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<NDArray> &outputs) {
+                                  const std::vector<NDArray> &inputs,
+                                  const std::vector<OpReqType> &req,
+                                  const std::vector<NDArray> &outputs) {
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   if (param.out_type == mshadow::kUint8) {
     MKLDNNQuantizeComputeKer<float, uint8_t>(inputs, outputs, param, req);

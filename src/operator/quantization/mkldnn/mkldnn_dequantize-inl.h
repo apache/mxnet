@@ -36,8 +36,8 @@ namespace op {
 
 template<typename SrcType, typename DstType>
 static void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
-                                const std::vector<NDArray> &outputs,
-                                const std::vector<OpReqType> &req) {
+                                       const std::vector<NDArray> &outputs,
+                                       const std::vector<OpReqType> &req) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -86,9 +86,9 @@ static void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
 }
 
 static void MKLDNNDequantizeCompute(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                             const std::vector<NDArray> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<NDArray> &outputs) {
+                                    const std::vector<NDArray> &inputs,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<NDArray> &outputs) {
   if (inputs[0].dtype() == mshadow::kUint8) {
     MKLDNNDequantizeComputeKer<uint8_t, float>(inputs, outputs, req);
   } else if (inputs[0].dtype() == mshadow::kInt8) {

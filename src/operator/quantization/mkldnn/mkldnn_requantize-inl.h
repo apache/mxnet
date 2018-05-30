@@ -35,11 +35,11 @@ namespace mxnet {
 namespace op {
 
 static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs,
-                                const float real_range) {
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs,
+                                       const float real_range) {
   using namespace mshadow;
   using namespace mxnet_op;
   using red::limits::MaxValue;
@@ -93,10 +93,10 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
 }
 
 static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
-                             const OpContext& ctx,
-                             const std::vector<NDArray>& inputs,
-                             const std::vector<OpReqType>& req,
-                             const std::vector<NDArray>& outputs) {
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   typedef int32_t SrcDType;
