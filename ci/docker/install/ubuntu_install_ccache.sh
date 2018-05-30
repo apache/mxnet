@@ -52,3 +52,6 @@ make install
 popd
 
 rm -rf /work/ccache
+
+export CCACHE_MAXSIZE=${CCACHE_MAXSIZE:=10G}
+export CCACHE_DIR=${CCACHE_DIR:=/work/ccache}

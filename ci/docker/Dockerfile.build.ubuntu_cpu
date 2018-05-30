@@ -20,9 +20,6 @@
 
 FROM ubuntu:16.04
 
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/

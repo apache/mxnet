@@ -26,8 +26,6 @@ RUN /work/ubuntu_install_ccache.sh
 FROM dockcross/linux-armv7
 
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
 
 ENV ARCH armv71
 ENV CC /usr/bin/arm-linux-gnueabihf-gcc

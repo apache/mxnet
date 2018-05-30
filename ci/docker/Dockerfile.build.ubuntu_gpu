@@ -20,9 +20,6 @@
 
 FROM nvidia/cuda:9.1-cudnn7-devel
 
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
