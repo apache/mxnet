@@ -20,9 +20,6 @@
 
 FROM centos:7
 
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
-
 WORKDIR /work/deps
 
 COPY install/centos7_core.sh /work/

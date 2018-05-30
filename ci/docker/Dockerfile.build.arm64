@@ -28,8 +28,6 @@ RUN /work/ubuntu_install_ccache.sh
 FROM mxnetci/dockcross-linux-arm64:05082018
 
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
-ENV CCACHE_MAXSIZE 10G
-ENV CCACHE_DIR /work/ccache
 
 ENV ARCH aarch64
 ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
