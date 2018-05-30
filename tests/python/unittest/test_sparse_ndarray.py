@@ -154,6 +154,7 @@ def test_sparse_nd_slice():
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
     check_slice_nd_csr_fallback(shape)
 
+
 @with_seed()
 def test_sparse_nd_concat():
     def check_concat(arrays):
