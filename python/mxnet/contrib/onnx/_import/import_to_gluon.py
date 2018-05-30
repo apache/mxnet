@@ -17,6 +17,8 @@
 
 # coding: utf-8
 """Import ONNX model to gluon interface"""
+# pylint: disable=no-member
+
 from .import_onnx import GraphProto
 
 def import_to_gluon(model_file, context):

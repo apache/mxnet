@@ -64,7 +64,7 @@ def multiply(attrs, inputs, cls):
     """Multiply two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis=attrs['axis']
+        broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
                                                     broadcast_axis, cls)
         return op_value, new_attr, inputs
@@ -74,7 +74,7 @@ def divide(attrs, inputs, cls):
     """Divide two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis=attrs['axis']
+        broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
                                                     broadcast_axis, cls)
         return op_value, new_attr, inputs

@@ -20,7 +20,7 @@
 """ Support import export formats."""
 from __future__ import absolute_import as _abs
 from .... import symbol
-from .... import cpu
+from .... import cpu, gpu
 from .... import ndarray as nd
 from ....base import string_types
 from .import_helper import _convert_map as convert_map
