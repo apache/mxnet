@@ -36,9 +36,6 @@ pytest_plugins = "onnx.backend.test.report",
 
 BACKEND_TESTS = onnx.backend.test.BackendTest(gluon_backend, __name__)
 
-for op_test in test_cases.IMPLEMENTED_OPERATORS_TEST:
-    BACKEND_TESTS.include(op_test)
-
 for std_model_test in test_cases.STANDARD_MODEL:
     BACKEND_TESTS.include(std_model_test)
 

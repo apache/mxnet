@@ -58,7 +58,7 @@ class GluonBackendRep(BackendRep):
         if self.device == 'CPU':
             ctx = mx.cpu()
         else:
-            raise NotImplementedError("Only CPU context is supported for now")
+            raise NotImplementedError("ONNX tests are run only for CPU context.")
 
         # run inference
         net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]

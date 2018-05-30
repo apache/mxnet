@@ -77,43 +77,6 @@ class GluonBackend(Backend):
         return graph_proto
 
     @classmethod
-    def run_node(cls, node, inputs, device='CPU'):
-        """Running individual node inference on gluon backend and
-        return the result to onnx test infrastructure.
-
-        Parameters
-        ----------
-        node   : onnx node object
-            loaded onnx node (individual layer)
-        inputs : numpy array
-            input to run a node on
-        device : 'CPU'
-            device to run a node on
-
-        Returns
-        -------
-        params : numpy array
-            result obtained after running the operator
-        """
-        graph = GraphProto()
-        net = graph.graph_to_gluon(GluonBackend.make_graph(node, inputs))
-
-        # create module, passing cpu context
-        if device == 'CPU':
-            ctx = mx.cpu()
-        else:
-            raise NotImplementedError("Only CPU context is supported for now")
-
-        if node.op_type in ['Conv']:
-            inputs = inputs[:1]
-        net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
-        net_outputs = net(*net_inputs)
-        results = []
-        results.extend([o for o in net_outputs.asnumpy()])
-        result = np.array(results)
-        return [result]
-
-    @classmethod
     def prepare(cls, model, device='CPU', **kwargs):
         """For running end to end model(used for onnx test backend)
 

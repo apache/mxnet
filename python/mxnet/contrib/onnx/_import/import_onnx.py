@@ -34,6 +34,9 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         self._params = {}
         self._num_input = 0
         self._num_param = 0
+        self.auxDict = {}
+        self.argDict = {}
+        self.model_metadata = {}
 
     def _convert_operator(self, node_name, op_name, attrs, inputs):
         """Convert from onnx operator to mxnet operator.
@@ -85,6 +88,8 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         params : dict
             A dict of name: nd.array pairs, used as pretrained weights
         """
+        #get input, output shapes
+        self.model_metadata = self.get_graph_metadata(graph)
         # parse network inputs, aka parameters
         for init_tensor in graph.initializer:
             if not init_tensor.name.strip():
@@ -99,10 +104,6 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
                                                       shape=self._params[i.name].shape)
             else:
                 self._nodes[i.name] = symbol.Variable(name=i.name)
-
-        # For storing arg  and aux params for the graph.
-        auxDict = {}
-        argDict = {}
 
         # constructing nodes, nodes are stored as directed acyclic graph
         # converting NodeProto message
@@ -120,10 +121,10 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             # splitting params into args and aux params
             for args in mxnet_sym.list_arguments():
                 if args in self._params:
-                    argDict.update({args: nd.array(self._params[args])})
+                    self.argDict.update({args: nd.array(self._params[args])})
             for aux in mxnet_sym.list_auxiliary_states():
                 if aux in self._params:
-                    auxDict.update({aux: nd.array(self._params[aux])})
+                    self.auxDict.update({aux: nd.array(self._params[aux])})
 
         # now return the outputs
         out = [self._nodes[i.name] for i in graph.output]
@@ -131,7 +132,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             out = symbol.Group(out)
         else:
             out = out[0]
-        return out, argDict, auxDict
+        return out, self.argDict, self.auxDict
 
     def get_graph_metadata(self, graph):
         """

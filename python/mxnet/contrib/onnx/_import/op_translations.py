@@ -43,32 +43,42 @@ def add(attrs, inputs, cls):
     """Adding two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op_value = translation_utils._fix_bias_shape('broadcast_add', inputs, cls)
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_add', inputs, 
+                                                     broadcast_axis, cls)
         return op_value, new_attr, inputs
-    return 'elemwise_add', new_attr, inputs
+    return 'broadcast_add', new_attr, inputs
 
 def subtract(attrs, inputs, cls):
     """Subtracting two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_sub', new_attr, inputs
-    return 'elemwise_sub', new_attr, inputs
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_sub', inputs, 
+                                                     broadcast_axis, cls)
+        return op_value, new_attr, inputs
+    return 'broadcast_sub', new_attr, inputs
 
 
 def multiply(attrs, inputs, cls):
     """Multiply two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op_value = translation_utils._fix_bias_shape('broadcast_mul', inputs, cls)
+        broadcast_axis=attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_mul', inputs, 
+                                                     broadcast_axis, cls)
         return op_value, new_attr, inputs
-    return 'elemwise_mul', new_attr, inputs
+    return 'broadcast_mul', new_attr, inputs
 
 def divide(attrs, inputs, cls):
     """Divide two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_div', new_attr, inputs
-    return 'elemwise_div', new_attr, inputs
+        broadcast_axis=attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_div', inputs, 
+                                                     broadcast_axis, cls)
+        return op_value, new_attr, inputs
+    return 'broadcast_div', new_attr, inputs
 
 def absolute(attrs, inputs, cls):
     """Returns element-wise absolute value of the input."""
@@ -140,7 +150,6 @@ def concat(attrs, inputs, cls):
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'dim'})
     return 'concat', new_attrs, inputs
 
-
 # Basic neural network functions
 def sigmoid(attrs, inputs, cls):
     """Computes elementwise sigmoid of the input array"""
@@ -173,7 +182,6 @@ def batch_norm(attrs, inputs, cls):
     # in test mode "fix_gamma" should be unset.
     new_attrs['fix_gamma'] = 0 if new_attrs['fix_gamma'] == 1 else 1
     return 'BatchNorm', new_attrs, inputs
-
 
 def leaky_relu(attrs, inputs, cls):
     """Leaky Relu function"""
@@ -337,7 +345,11 @@ def dropout(attrs, inputs, cls):
 # Changing shape and type.
 def reshape(attrs, inputs, cls):
     """Reshape the given array by the shape attribute."""
-    return 'reshape', attrs, inputs
+    reshape_shape = list(cls._params[inputs[1].name].asnumpy())
+    reshape_shape = [int(i) for i in reshape_shape]
+    new_attrs = {'shape': reshape_shape}
+    return 'reshape', new_attrs, inputs[:1]
+
 
 def cast(attrs, inputs, cls):
     """ Cast input to a given dtype"""
