@@ -167,6 +167,10 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, cls):
             op_sym = symbol.broadcast_add(inputs[0], op_sym)
         elif op_name == 'broadcast_mul':
             op_sym = symbol.broadcast_mul(inputs[0], op_sym)
+        elif op_name == 'broadcast_sub':
+            op_sym = symbol.broadcast_sub(inputs[0], op_sym)
+        elif op_name == 'broadcast_div':
+            op_sym = symbol.broadcast_div(inputs[0], op_sym)
     else:
         op_sym = op_name
     return op_sym
