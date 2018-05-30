@@ -78,10 +78,12 @@ struct CachedOp::CachedOpState {
   std::vector<NDArray> buff;
   std::vector<NDArray*> arrays;
   std::vector<OpReqType> array_reqs;
-  std::vector<bool> dynamic_entries;
+
   std::vector<OpStatePtr> op_states;
   std::vector<std::shared_ptr<exec::OpExecutor> > execs;
   std::vector<imperative::EngineOprSeg> opr_segs;
+
+  std::vector<bool> dynamic_entries;
   std::multimap<size_t, NDArray> fwd_reuse_pool;
   std::multimap<size_t, NDArray> bwd_reuse_pool;
 };
