@@ -18,7 +18,7 @@ import os
 import sys
 import mxnet as mx
 
-
+os.environ['USE_MKLDNN'] = '1'
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 from test_quantization import *

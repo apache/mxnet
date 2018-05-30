@@ -107,20 +107,6 @@ def python3_ut(docker_container_name) {
   }
 }
 
-// Python 2 quantization
-def python2_quantization(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python2_quantization_cpu"
-  }
-}
-
-// Python 3 quantization
-def python3_quantization(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_quantization_cpu"
-  }
-}
-
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     sh "ci/build.py --platform ${docker_container_name} /work/runtime_functions.sh unittest_ubuntu_python3_cpu_mkldnn"
@@ -520,28 +506,6 @@ try {
             init_git()
             unpack_lib('gpu', mx_lib)
             sh "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_quantization_gpu"
-          }
-        }
-      }
-    },
-    'Python2: Quantize CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python2-quantize-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-            python2_quantization('ubuntu_cpu')
-          }
-        }
-      }
-    },
-    'Python3: Quantize CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python3-quantize-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-            python3_quantization('ubuntu_cpu')
           }
         }
       }

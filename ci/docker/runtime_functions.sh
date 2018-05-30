@@ -365,6 +365,7 @@ unittest_ubuntu_python2_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 --verbose tests/python/unittest
     nosetests-2.7 --verbose tests/python/train
+    nosetests-2.7 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
@@ -375,39 +376,17 @@ unittest_ubuntu_python3_cpu() {
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
-}
-
-# quantization cpu currently only support MKLDNN
-unittest_ubuntu_python2_quantization_cpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/mkl
-}
-
-# quantization cpu currently only support MKLDNN
-unittest_ubuntu_python3_quantization_cpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/mkl
+    nosetests-3.4 --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
-    nosetests-3.4 --verbose tests/python/quantization
     nosetests-3.4 --verbose tests/python/mkl
 }
 

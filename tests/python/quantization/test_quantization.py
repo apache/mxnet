@@ -24,7 +24,15 @@ from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, s
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
+import os
 
+def is_test_for_mkldnn():
+    return (mx.current_context().device_type == 'cpu'
+                     and os.environ.get('USE_MKLDNN') == '1')
+
+def is_test_for_naive_cpu():
+    return (mx.current_context().device_type == 'cpu'
+                     and os.environ.get('USE_MKLDNN') == None)
 
 @with_seed()
 def test_quantize_float32_to_int8():
@@ -120,7 +128,11 @@ def test_requantize_int32_to_int8():
 
 @with_seed()
 def test_quantized_conv():
-    if mx.current_context().device_type != 'gpu':
+    if is_test_for_naive_cpu():
+        print('skipped testing quantized_conv for naive cpu since it is not implemented yet')
+        return
+
+    if is_test_for_mkldnn():
         dtype = 'uint8'
         shift = 127
     else:
@@ -193,7 +205,11 @@ def test_quantized_conv():
 
 @with_seed()
 def test_quantized_pooling():
-    if mx.current_context().device_type != 'gpu':
+    if is_test_for_naive_cpu():
+        print('skipped testing quantized_pooling for naive cpu since it is not implemented yet')
+        return
+
+    if is_test_for_mkldnn():
         dtype = 'uint8'
         shift = 127
     else:
@@ -323,7 +339,7 @@ def test_quantized_flatten():
 
 @with_seed()
 def test_quantize_params():
-    if mx.current_context().device_type != 'gpu':
+    if is_test_for_mkldnn():
         dtype = 'uint8'
     else:
         dtype = 'int8'
@@ -362,7 +378,7 @@ def get_fp32_sym():
 
 @with_seed()
 def test_quantize_model():
-    if mx.current_context().device_type != 'gpu':
+    if is_test_for_mkldnn():
         dtype = 'uint8'
     else:
         dtype = 'int8'
@@ -425,7 +441,7 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
-    if mx.current_context().device_type != 'gpu':
+    if is_test_for_mkldnn():
         dtype = 'uint8'
         requantize_op_names = ['requantize_conv']
         th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
