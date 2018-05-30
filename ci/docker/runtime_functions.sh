@@ -41,6 +41,16 @@ build_ccache_wrappers() {
     touch cc
     touch cxx
 
+    if [ -z ${CC+x} ]; then
+        echo "No \$CC set, defaulting to gcc";
+        export CC=gcc
+    fi
+
+    if [ -z ${CXX+x} ]; then
+        echo "No \$CXX set, defaulting to g++";
+        export CXX=g++
+    fi
+
     # this function is nessesary for cuda enabled make based builds, since nvcc needs just an exacutable for -ccbin
 
     echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
@@ -343,7 +353,7 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     build_ccache_wrappers
-    make  \
+    make \
         DEV=1                         \
         USE_BLAS=openblas             \
         USE_CUDA=1                    \
