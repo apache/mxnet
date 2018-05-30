@@ -1067,7 +1067,7 @@ def convert_addn(node, **kwargs):
 
  # Rounding
 @mx2onnx.register("ceil")
-def convert_floor(node, **kwargs):
+def convert_ceil(node, **kwargs):
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1222,6 +1222,26 @@ def convert_slice_channel(node, **kwargs):
             name=name,
         )
 
+    return [node]
+
+
+@mx2onnx.register("expand_dims")
+def convert_expand_dims(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    axis = int(node["attrs"]["axis"])
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+
+    node = helper.make_node(
+        "Unsqueeze",
+        [a_node],
+        [name],
+        axes=[axis],
+        name=name,
+    )
     return [node]
 
 

@@ -39,17 +39,19 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
         Path to the json file or Symbol object
     weights : str or symbol object
         Path to the params file or Params object. (Including both arg_params and aux_params)
-    input_shape :
+    input_shape : List of tuple
         Input shape of the model e.g (1,3,224,224)
     input_type :
         Input data type e.g. np.float32
+    onnx_file_path : str
+        Path where to save the generated onnx file
     log : Boolean
         If true will print logs of the model conversion
 
     Returns
     -------
-    onnx_model : onnx ModelProto
-        Onnx modelproto object
+    onnx_file_path : str
+        Onnx file path
     """
     converter = MxNetToONNXConverter()
 
@@ -60,7 +62,7 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
                                                      mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
     else:
         onnx_graph = converter.convert_mx2onnx_graph(model, weights, input_shape,
-                                                 mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
     # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
 
@@ -70,4 +72,4 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
             f.write(serialized)
             print("\nONNX file %s serialized to disk" % onnx_file_path)
 
-    return onnx_model
+    return onnx_file_path

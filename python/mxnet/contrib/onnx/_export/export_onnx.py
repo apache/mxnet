@@ -199,12 +199,9 @@ class MxNetToONNXConverter:
             )
 
             if isinstance(converted, list):
-                for converted_node in converted:
+                for converted_idx, converted_node in enumerate(converted):
                     if isinstance(converted_node, onnx_pb2.ValueInfoProto):
-                        if idx < (len(mx_graph) - 1):
-                            onnx_processed_inputs.append(converted_node)
-                        else:
-                            onnx_processed_outputs.append(converted_node)
+                        onnx_processed_inputs.append(converted_node)
                     elif isinstance(converted_node, onnx_pb2.NodeProto):
                         if idx < (len(mx_graph) - 1):
                             onnx_processed_nodes.append(converted_node)
