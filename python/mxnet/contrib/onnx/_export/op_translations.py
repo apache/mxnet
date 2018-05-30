@@ -515,6 +515,40 @@ def convert_exp(node, **kwargs):
     return [node]
 
 
+@mx2onnx.register("LeakyReLU")
+def convert_leakyrelu(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+    attrs = node["attrs"]
+
+    act_type = attrs.get("act_type", "LeakyRelu")
+    alpha = float(attrs.get("slope", 0.25))
+
+    act_name = {"elu": "Elu", "LeakyRelu": "LeakyRelu", "prelu": "PRelu"}
+
+    if act_type == "prelu":
+        alpha_node_index = kwargs["index_lookup"][inputs[1][0]]
+        alpha_node_name = proc_nodes[alpha_node_index].name
+
+        node = helper.make_node(
+            act_name[act_type],
+            inputs=[a_node, alpha_node_name],
+            outputs=[name],
+            name=name)
+    else:
+        node = helper.make_node(
+            act_name[act_type],
+            inputs=[a_node],
+            outputs=[name],
+            name=name,
+            alpha=alpha)
+
+    return [node]
+
+
 @mx2onnx.register("softmax")
 def convert_softmax(node, **kwargs):
     inputs = node["inputs"]
