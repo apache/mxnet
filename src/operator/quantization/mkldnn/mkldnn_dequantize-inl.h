@@ -35,7 +35,7 @@ namespace mxnet {
 namespace op {
 
 template<typename SrcType, typename DstType>
-void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
+static void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
                                 const std::vector<NDArray> &outputs,
                                 const std::vector<OpReqType> &req) {
   using namespace mshadow;
@@ -60,13 +60,18 @@ void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
   attr.set_output_scales(mask, scales);
   attr.set_int_output_round_mode(round_nearest);
   mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
-  auto i_mem = inputs[0].GetMKLDNNData();
+
+  NDArray in_buffer = inputs[0];
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    in_buffer = inputs[0].Reorder2Default();
+
+  auto i_mem = in_buffer.GetMKLDNNData();
   auto i_mpd = i_mem->get_primitive_desc();
   auto i_desc = i_mpd.desc();
-  size_t i_ndim = inputs[0].shape().ndim();
+  size_t i_ndim = in_buffer.shape().ndim();
   mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
   for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(inputs[0].shape()[i]);
+    i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
   }
   mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
   auto o_desc = mkldnn::memory::desc(i_dims,
@@ -80,7 +85,7 @@ void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
   MKLDNNStream::Get()->Submit();
 }
 
-void MKLDNNDequantizeCompute(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+static void MKLDNNDequantizeCompute(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const std::vector<NDArray> &inputs,
                              const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs) {

@@ -30,20 +30,19 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                                    const std::vector<NDArray> &in_data,
                                    const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> &out_data) {
-  if (in_data[0].dtype() == mshadow::kUint8 || in_data[0].dtype() == mshadow::kInt8) {
-    const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-    auto fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0]);
-    fwd.SetDataHandle(in_data[0], out_data[0]);
-    fwd.Execute();
-    out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
-    out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
-  } else {
-    LOG(FATAL) << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
-  }
+  CHECK(in_data[0].dtype() == mshadow::kUint8
+    || in_data[0].dtype() == mshadow::kInt8)
+    << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
+  const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
+  auto fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0]);
+  fwd.SetDataHandle(in_data[0], out_data[0]);
+  fwd.Execute();
+  out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
+  out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
