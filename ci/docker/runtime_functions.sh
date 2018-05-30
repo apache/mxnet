@@ -31,7 +31,7 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
-# this function is nessesary for cuda enabled make based builds, since nvcc needs just an exacutable for -ccbin
+# wrap compiler calls with ccache
 build_ccache_wrappers() {
     set -ex
 
@@ -40,6 +40,8 @@ build_ccache_wrappers() {
 
     touch cc
     touch cxx
+
+    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an exacutable for -ccbin
 
     echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
     echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
@@ -97,6 +99,7 @@ build_armv6() {
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -119,7 +122,9 @@ build_armv7() {
     set -ex
     pushd .
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
@@ -137,7 +142,9 @@ build_armv7() {
 
 build_amzn_linux_cpu() {
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -152,7 +159,9 @@ build_amzn_linux_cpu() {
 }
 
 build_arm64() {
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
@@ -170,7 +179,9 @@ build_arm64() {
 build_android_arm64() {
     set -ex
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DUSE_LAPACK=OFF\
@@ -189,6 +200,7 @@ build_android_arm64() {
 
 build_centos7_cpu() {
     set -ex
+    build_ccache_wrappers
     cd /work/mxnet
     make \
         DEV=1 \
@@ -201,6 +213,7 @@ build_centos7_cpu() {
 
 build_centos7_mkldnn() {
     set -ex
+    build_ccache_wrappers
     cd /work/mxnet
     make \
         DEV=1 \
@@ -213,6 +226,7 @@ build_centos7_mkldnn() {
 
 build_centos7_gpu() {
     set -ex
+    build_ccache_wrappers
     cd /work/mxnet
     make \
         DEV=1 \
@@ -228,6 +242,7 @@ build_centos7_gpu() {
 
 build_ubuntu_cpu_openblas() {
     set -ex
+    build_ccache_wrappers
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -238,54 +253,71 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
+
+    export CXX=clang++-3.9
+    export CC=clang-3.9
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50() {
     set -ex
-    make \
+
+    export CXX=clang++-5.0
+    export CC=clang-5.0
+
+    build_ccache_wrappers
+
+    make  \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
+
+    export CXX=clang++-3.9
+    export CC=clang-3.9
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
     set -ex
+
+    export CXX=clang++-5.0
+    export CC=clang-5.0
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
+    build_ccache_wrappers
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -296,6 +328,7 @@ build_ubuntu_cpu_mkldnn() {
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
+    build_ccache_wrappers
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -309,6 +342,7 @@ build_ubuntu_gpu_mkldnn() {
 
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
+    build_ccache_wrappers
     make  \
         DEV=1                         \
         USE_BLAS=openblas             \
@@ -338,6 +372,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
@@ -356,6 +392,8 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
