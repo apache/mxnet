@@ -106,7 +106,7 @@ def _get_graph_inputs(subg):
 
     syms = []
     for i in range(num_handles.value):
-        s = Symbol(handles[i])
+        s = Symbol(SymbolHandle(handles[i]))
         syms.append(s)
     return syms
 
