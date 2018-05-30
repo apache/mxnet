@@ -270,6 +270,12 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = dispatch_mode_assign(dispatch_mode, target_mode);
     }
   }
+  // Print user friendly error message to notify misuses of sparse_grad
+  if (weight_grad_stype != target_stype) {
+    LOG(FATAL) << "Cannot use sparse_grad = " << sparse_grad
+               << ", while stype of gradients w.r.t embedding weight is "
+               << common::stype_string(weight_grad_stype);
+  }
   return dispatched;
 }
 

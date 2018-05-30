@@ -97,7 +97,9 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Forward(ctx, inputs, req, outputs);
     })
     return;
-  } else if (param.num_filter == param.num_group &&
+  }
+#if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
+  if (param.num_filter == param.num_group &&
       param.layout.value() == mshadow::kNCHW &&
       param.num_filter == inputs[conv::kData].shape_[1] &&
       param.kernel.ndim() == 2 &&
@@ -112,6 +114,7 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
     op.Forward(ctx, inputs, req, outputs);
     return;
   }
+#endif
 
 #if MXNET_USE_CUDNN == 1
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).
@@ -167,7 +170,9 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     })
     return;
-  } else if (param.num_filter == param.num_group &&
+  }
+#if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
+  if (param.num_filter == param.num_group &&
       param.layout.value() == mshadow::kNCHW &&
       param.num_filter == in_data[conv::kData].shape_[1] &&
       param.kernel.ndim() == 2 &&
@@ -183,6 +188,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     return;
   }
+#endif
 
 #if MXNET_USE_CUDNN == 1
   // On fp16-I/O instances, use fp32 compute (i.e. pseudo-fp16).

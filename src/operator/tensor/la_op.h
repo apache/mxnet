@@ -40,6 +40,7 @@ namespace op {
 struct LaMatrixMacParam : public dmlc::Parameter<LaMatrixMacParam> {
   bool transpose_a, transpose_b;
   double alpha, beta;
+  int axis;
   DMLC_DECLARE_PARAMETER(LaMatrixMacParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .set_default(false)
@@ -53,6 +54,9 @@ struct LaMatrixMacParam : public dmlc::Parameter<LaMatrixMacParam> {
     DMLC_DECLARE_FIELD(beta)
       .set_default(1.0)
       .describe("Scalar factor multiplied with C.");
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(-2)
+      .describe("Axis corresponding to the matrix rows.");
   }
 };
 
@@ -60,6 +64,7 @@ struct LaMatrixMacParam : public dmlc::Parameter<LaMatrixMacParam> {
 struct LaMatrixMultParam : public dmlc::Parameter<LaMatrixMultParam> {
   bool transpose_a, transpose_b;
   double alpha;
+  int axis;
   DMLC_DECLARE_PARAMETER(LaMatrixMultParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .set_default(false)
@@ -70,6 +75,9 @@ struct LaMatrixMultParam : public dmlc::Parameter<LaMatrixMultParam> {
     DMLC_DECLARE_FIELD(alpha)
       .set_default(1.0)
       .describe("Scalar factor multiplied with A*B.");
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(-2)
+      .describe("Axis corresponding to the matrix row indices.");
   }
 };
 
@@ -112,30 +120,37 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   bool transpose_a(false), transpose_b(false);
+  int axis_param(-2);
   if ( in_attrs->size() == 2 ) {
      // Matrix-Matrix mult
      transpose_a = nnvm::get<LaMatrixMultParam>(attrs.parsed).transpose_a;
      transpose_b = nnvm::get<LaMatrixMultParam>(attrs.parsed).transpose_b;
+     axis_param  = nnvm::get<LaMatrixMultParam>(attrs.parsed).axis;
   } else {
      // Matrix-Matrix mac
      transpose_a = nnvm::get<LaMatrixMacParam>(attrs.parsed).transpose_a;
      transpose_b = nnvm::get<LaMatrixMacParam>(attrs.parsed).transpose_b;
+     axis_param  = nnvm::get<LaMatrixMacParam>(attrs.parsed).axis;
   }
   if ( (*in_attrs)[0].ndim() >= 2 && (*in_attrs)[0].ndim() == (*in_attrs)[1].ndim() ) {
     // Forward shape inference.
-    const int ndim((*in_attrs)[0].ndim());
+    const int ndim((*in_attrs)[0].ndim()), axis(axis_param < 0 ? ndim + axis_param : axis_param);
+    CHECK(axis >= 0 && axis < ndim-1)
+      << "Invalid row axis (" << axis_param << ")";
     std::vector<int> oshape(ndim);
-    for ( int i = 0; i < ndim-2; ++i ) {
-      // Both inputs must have same shape except for last two dimensions.
-      CHECK_EQ((*in_attrs)[0][i], (*in_attrs)[1][i])
-        << "Shapes of inputs 0, 1 must be the same, except on last two dimensions";
+    for ( int i = 0; i < ndim-1; ++i ) {
+      if (i != axis) {
+        // Both inputs must have same shape except for row/col dimensions.
+        CHECK_EQ((*in_attrs)[0][i], (*in_attrs)[1][i])
+          << "Shapes of inputs 0, 1 must be the same, except on row/col axis";
+      }
       oshape[i] = (*in_attrs)[0][i];
     }
-    CHECK_EQ((transpose_a ? (*in_attrs)[0][ndim-2] : (*in_attrs)[0][ndim-1]),
-             (transpose_b ? (*in_attrs)[1][ndim-1] : (*in_attrs)[1][ndim-2]))
+    CHECK_EQ((transpose_a ? (*in_attrs)[0][axis] : (*in_attrs)[0][ndim-1]),
+             (transpose_b ? (*in_attrs)[1][ndim-1] : (*in_attrs)[1][axis]))
              << "Incompatible matrix dimensions for multiplication";
-    oshape[ndim-2] = (transpose_a ? (*in_attrs)[0][ndim-1] : (*in_attrs)[0][ndim-2]);
-    oshape[ndim-1] = (transpose_b ? (*in_attrs)[1][ndim-2] : (*in_attrs)[1][ndim-1]);
+    oshape[axis] = (transpose_a ? (*in_attrs)[0][ndim-1] : (*in_attrs)[0][axis]);
+    oshape[ndim-1] = (transpose_b ? (*in_attrs)[1][axis] : (*in_attrs)[1][ndim-1]);
     TShape tshape(oshape.begin(), oshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
     if ( in_attrs->size() > 2 ) {
@@ -340,6 +355,33 @@ inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
+// Flattener for following adaptors.
+template<typename xpu, int dim, typename DType>
+mshadow::Tensor<xpu, dim, DType> LaOpFlatten(const TBlob& blob,
+                                             mshadow::Stream<xpu> *s, int axis = -2) {
+  if (axis < 0) {
+    axis = blob.ndim() + axis;
+  }
+  if (axis >= blob.ndim()-2) {
+    // Leave highest axis, collapse rest.
+    return blob.FlatToKD<xpu, dim, DType>(s);
+  }
+  // Collapse ranges [0,axis-1] and [axis+1,ndim-2].
+  CHECK_EQ(dim, 4);
+  TShape shape(dim);
+  shape[0] = 1;
+  for (int i = 0; i < axis; ++i) {
+    shape[0] *= blob.shape_[i];
+  }
+  shape[1] = blob.shape_[axis];
+  shape[2] = 1;
+  for (int i = axis+1; i < blob.ndim()-1; ++i) {
+    shape[2] *= blob.shape_[i];
+  }
+  shape[3] = blob.shape_[blob.ndim()-1];
+  return blob.get_with_shape<xpu, dim, DType>(shape.get<dim>(), s);
+}
+
 // Adapters for calling the various operators with appropriate signatures.
 
 template<typename xpu, typename DType, int idim, int odim, int inum, int onum, typename laop>
@@ -347,7 +389,7 @@ struct LaOpCaller {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     CHECK(false) << "no specialized LaOpCaller defined for template parameters";
   }
 };
@@ -356,10 +398,10 @@ struct LaOpCaller<xpu, DType, idim, odim, 1, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -367,11 +409,11 @@ struct LaOpCaller<xpu, DType, idim, odim, 1, 2, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[1], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -379,11 +421,11 @@ struct LaOpCaller<xpu, DType, idim, odim, 2, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -391,12 +433,12 @@ struct LaOpCaller<xpu, DType, idim, odim, 3, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[2], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -404,13 +446,13 @@ struct LaOpCaller<xpu, DType, idim, odim, 3, 2, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[2], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[1], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -418,13 +460,13 @@ struct LaOpCaller<xpu, DType, idim, odim, 4, 1, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[3].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[2], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[3], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -432,14 +474,14 @@ struct LaOpCaller<xpu, DType, idim, odim, 4, 2, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[3].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[2], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[3], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[1], s, axis), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, int idim, int odim, typename laop>
@@ -447,15 +489,15 @@ struct LaOpCaller<xpu, DType, idim, odim, 4, 3, laop> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
                  const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx) {
+                 const OpContext& ctx, int axis = -2) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[1].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[2].FlatToKD<xpu, idim+1, DType>(s),
-             inputs[3].FlatToKD<xpu, idim+1, DType>(s),
-             outputs[0].FlatToKD<xpu, odim+1, DType>(s),
-             outputs[1].FlatToKD<xpu, odim+1, DType>(s),
-             outputs[2].FlatToKD<xpu, odim+1, DType>(s), ctx, attrs);
+    laop::op(LaOpFlatten<xpu, idim+1, DType>(inputs[0], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[1], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[2], s, axis),
+             LaOpFlatten<xpu, idim+1, DType>(inputs[3], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[0], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[1], s, axis),
+             LaOpFlatten<xpu, odim+1, DType>(outputs[2], s, axis), ctx, attrs);
   }
 };
 
@@ -495,6 +537,64 @@ void LaOpBackward(const nnvm::NodeAttrs& attrs,
     }
     LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, tspace,
                                                              attrs, ctx);
+    for ( int i = 0; i < onum; ++i ) {
+      if ( req[i] == kAddTo ) {
+        Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
+        out += tspace[i].FlatTo1D<xpu, OType>(s);
+      }
+    }
+  });
+}
+
+template<typename xpu, int idim, int odim, int inum, int onum, typename laop>
+void LaOpGemmForward(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), inum);
+  CHECK_EQ(outputs.size(), onum);
+  const int axis(inputs.size() == 2 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis
+                                    : nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    if (axis == -2 || axis == inputs[0].ndim()-2) {
+      LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, outputs,
+                                                               attrs, ctx);
+    } else {
+      LaOpCaller<xpu, OType, idim+1, odim+1, inum, onum, laop>::op(inputs, outputs,
+                                                                   attrs, ctx, axis);
+    }
+  });
+}
+
+template<typename xpu, int idim, int odim, int inum, int onum, typename laop>
+void LaOpGemmBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK_EQ(inputs.size(), inum);
+  CHECK_EQ(outputs.size(), onum);
+  const int axis(inputs.size() == 3 ? nnvm::get<LaMatrixMultParam>(attrs.parsed).axis
+                                    : nnvm::get<LaMatrixMacParam>(attrs.parsed).axis);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    std::vector<TBlob> tspace(outputs);
+    for ( int i = 0; i < onum; ++i ) {
+      if ( req[i] == kAddTo ) {
+        tspace[i].dptr_ = ctx.requested[0]
+                             .get_space_typed<xpu, 1, OType>(Shape1(outputs[i].Size()), s).dptr_;
+      }
+    }
+    if (axis == -2 || axis == inputs[0].ndim()-2) {
+      LaOpCaller<xpu, OType, idim, odim, inum, onum, laop>::op(inputs, outputs,
+                                                               attrs, ctx);
+    } else {
+      LaOpCaller<xpu, OType, idim+1, odim+1, inum, onum, laop>::op(inputs, outputs,
+                                                                   attrs, ctx, axis);
+    }
     for ( int i = 0; i < onum; ++i ) {
       if ( req[i] == kAddTo ) {
         Tensor<xpu, 1, OType> out = outputs[i].FlatTo1D<xpu, OType>(s);
