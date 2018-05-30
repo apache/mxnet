@@ -88,32 +88,6 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
     return image_id
 
-def build_ccache(platform: str, docker_binary: str) -> None:
-    """
-    Build a ccache container for the given platform
-    :param platform: Platform
-    :param docker_binary: docker binary to use (docker/nvidia-docker)
-    :return: Id of the top level image
-    """
-
-    tag = "ccache/build.{}".format(platform)
-    logging.info("Building ccache container tagged '%s' with %s", tag, docker_binary)
-    cmd = [docker_binary, "build",
-           "-f", get_dockerfile("{}.ccache".format(platform)),
-           "--rm=true", # We only need the binary
-           "--cache-from", tag,
-           "-t", tag,
-           "docker"]
-    logging.info("Running command: '%s'", ' '.join(cmd))
-    check_call(cmd)
-
-    # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
-    # check_call would have failed
-    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
-    if not image_id:
-        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
-    return image_id
-
 def _get_local_image_id(docker_binary, docker_tag):
     """
     Get the image id of the local docker layer with the passed tag
@@ -289,8 +263,6 @@ def main() -> int:
             logging.info('Docker cache download is enabled')
             docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
         # prepare ccache
-        build_ccache("ubuntu", docker_binary)
-        build_ccache("centos7", docker_binary)
         build_docker(platform, docker_binary)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")

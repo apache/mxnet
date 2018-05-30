@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,32 +16,32 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build ccache for ubuntu based images
 
-FROM ubuntu:16.04
+# Script to build ccache for centos7 based images
 
-RUN apt update && \
-    apt install -y --no-install-recommends \
-        git \
-        ssh \
-        apt-transport-https \
-        build-essential \
-        ca-certificates \
-        autoconf \
-        google-perftools \
-        asciidoc \
-        libxslt1-dev \
-        docbook-xsl \
-        xsltproc \
-        libxml2-utils
+set -ex
 
-WORKDIR /work/deps
+pushd .
 
-# build ccache
-RUN git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git && \
-    cd ccache && \
-    ./autogen.sh && \
-    ./configure && \
-    make -j$(nproc) && \
-    make install
+yum -y install epel-release
+yum -y install git
+yum -y install ssh
+yum -y install autoconf
+yum -y install wget
+yum -y install make
+yum -y install google-perftools
+yum -y install asciidoc
+yum -y install gcc-c++-4.8.*
+
+cd /work
+
+git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
+
+cd ccache
+
+./autogen.sh
+./configure
+make -j$(nproc)
+make install
+
+popd
