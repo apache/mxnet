@@ -18,21 +18,21 @@
 """Some of the tests using CUDNN require a special GPU instruction called dp4a.
 Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Final-Letter-Web.pdf
 """
+import os
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, same, DummyIter
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
-import os
 
 def is_test_for_mkldnn():
     return (mx.current_context().device_type == 'cpu'
-                     and os.environ.get('USE_MKLDNN') == '1')
+            and os.environ.get('USE_MKLDNN') == '1')
 
 def is_test_for_naive_cpu():
     return (mx.current_context().device_type == 'cpu'
-                     and os.environ.get('USE_MKLDNN') == None)
+            and os.environ.get('USE_MKLDNN') == None)
 
 @with_seed()
 def test_quantize_float32_to_int8():
