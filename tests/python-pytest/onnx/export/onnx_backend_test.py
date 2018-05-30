@@ -127,25 +127,26 @@ BASIC_MODEL_TESTS = [
     ]
 
 STANDARD_MODEL = [
-    'test_bvlc_alexnet',
-    'test_densenet121',
-    # 'test_inception_v1',
-    # 'test_inception_v2',
-    'test_resnet50',
-    # # 'test_shufflenet',
-    'test_squeezenet',
-    'test_vgg16',
-    'test_vgg19'
+    'test_bvlc_googlenet',
+    # 'test_bvlc_alexnet',
+    # 'test_densenet121',
+    # # 'test_inception_v1',
+    # # 'test_inception_v2',
+    # 'test_resnet50',
+    # # # 'test_shufflenet',
+    # 'test_squeezenet',
+    # 'test_vgg16',
+    # 'test_vgg19'
     ]
 
-for op_test in IMPLEMENTED_OPERATORS_TEST:
-    BACKEND_TEST.include(op_test)
-
+# for op_test in IMPLEMENTED_OPERATORS_TEST:
+#     BACKEND_TEST.include(op_test)
+#
 for basic_model_test in BASIC_MODEL_TESTS:
     BACKEND_TEST.include(basic_model_test)
 
-for std_model_test in STANDARD_MODEL:
-    BACKEND_TEST.include(std_model_test)
+# for std_model_test in STANDARD_MODEL:
+#     BACKEND_TEST.include(std_model_test)
 
 
 # import all test cases at global scope to make them visible to python.unittest
