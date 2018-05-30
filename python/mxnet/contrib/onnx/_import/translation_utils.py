@@ -156,10 +156,10 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, cls):
     """A workaround to reshape bias term to (1, num_channel)."""
     if int(len(cls._params)) > 0:
         assert len(list(inputs)) == 2
-         
+
         input0_shape = get_input_shape(inputs[0], cls)
         #creating reshape shape
-        reshape_shape= list(len(input0_shape) * (1,))
+        reshape_shape = list(len(input0_shape) * (1,))
         reshape_shape[broadcast_axis] = -1
         reshape_shape = tuple(reshape_shape)
         op_sym = symbol.reshape(inputs[1], shape=reshape_shape)
@@ -212,6 +212,7 @@ def _fix_gemm(op_name, inputs, old_attr, cls):
     return op_sym, new_attr, new_inputs
 
 def get_input_shape(sym, cls):
+    """Helper function to obtain the shape of an array"""
     arg_params = cls.argDict
     aux_params = cls.auxDict
 
@@ -219,7 +220,7 @@ def get_input_shape(sym, cls):
     data_names = [data[0] for data  in cls.model_metadata.get('input_tensor_data')]
 
     #creating dummy inputs
-    inputs=[]
+    inputs = []
     for  in_shape in model_input_shape:
         inputs.append(nd.ones(shape=in_shape))
 
