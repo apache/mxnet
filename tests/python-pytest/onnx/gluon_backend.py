@@ -96,7 +96,7 @@ class GluonBackend(Backend):
             used to run inference on the input model and return the result for comparison.
         """
         graph = GraphProto()
-        net = graph.graph_to_gluon(model.graph)
+        net = graph.graph_to_gluon(model.graph, device)
         return GluonBackendRep(net, device)
 
     @classmethod

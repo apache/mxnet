@@ -42,11 +42,6 @@ for std_model_test in test_cases.STANDARD_MODEL:
 for basic_model_test in test_cases.BASIC_MODEL_TESTS:
     BACKEND_TESTS.include(basic_model_test)
 
-#test_elu_example
-#test_leakyrelu_example
-
-#GLUON_TEST.include('test_elu_example')
-
 # import all test cases at global scope to make them visible to python.unittest
 globals().update(BACKEND_TESTS.enable_report().test_cases)
 
