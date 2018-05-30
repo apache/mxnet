@@ -18,11 +18,8 @@
 #
 # Dockerfile to run MXNet on Ubuntu 16.04 for CPU
 
-FROM ccache/build.ubuntu as ccachebuilder
-
 FROM nvidia/cuda:9.1-cudnn7-devel
 
-COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 ENV CCACHE_MAXSIZE 10G
 ENV CCACHE_DIR /work/ccache
 
@@ -30,6 +27,8 @@ WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
+COPY install/ubuntu_install_ccache.sh /work/
+RUN /work/ubuntu_install_ccache.sh
 COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 COPY install/ubuntu_scala.sh /work/
