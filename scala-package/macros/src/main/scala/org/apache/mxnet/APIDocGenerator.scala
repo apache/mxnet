@@ -92,11 +92,14 @@ private[mxnet] object APIDocGenerator{
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
     })
+    var returnType = absClassFunc.returnType
     if (isSymbol) {
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
+    } else {
+      returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
-    s"def ${absClassFunc.name} (${argDef.mkString(", ")}) : ${absClassFunc.returnType}"
+    s"def ${absClassFunc.name} (${argDef.mkString(", ")}) : ${returnType}"
   }
 
 
