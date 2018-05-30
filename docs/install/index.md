@@ -36,6 +36,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <button type="button" class="btn btn-default opt languages">R</button>
   <button type="button" class="btn btn-default opt languages">Julia</button>
   <button type="button" class="btn btn-default opt languages">Perl</button>
+  <button type="button" class="btn btn-default opt languages">Cpp</button>
 </div>
 </div>
 
@@ -1020,6 +1021,11 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+<div class="cpu gpu">
+To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. 
+</div> <!-- End of cpu gpu -->
+</div> <!-- END - C++-->
 </div> <!-- END - Linux -->
 
 
@@ -1447,6 +1453,9 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.
+</div>
 </div> <!-- END - Mac OS -->
 
 

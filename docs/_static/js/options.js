@@ -33,7 +33,10 @@ $(document).ready(function () {
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
         $('button:contains(' + environSelect + ')').addClass('active');
         showContent();
-        history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+
+        if (window.location.pathname.includes("/install/index.html")) {
+            history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+        }
     }
 
     function showContent() {
