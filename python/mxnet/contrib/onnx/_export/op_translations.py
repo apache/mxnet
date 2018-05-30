@@ -322,6 +322,8 @@ def convert_string_to_list(string_val):
         val = val.replace("(", "")
         val = val.replace(")", "")
         val = val.replace("L", "")
+        val = val.replace("[", "")
+        val = val.replace("]", "")
         if val is not "":
             result_list.append(int(val))
 
@@ -679,12 +681,12 @@ def convert_mul_scalar(node, **kwargs):
     initializer = kwargs["initializer"]
     flag = True
     for i in initializer:
-        if i.name==a_node:
+        if i.name == a_node:
             new_initializer = scalar_mul_value[0]*numpy_helper.to_array(i)
             flag = False
             break
 
-    if flag == True:
+    if flag is True:
         np_arr = np.array(scalar_mul_value)
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
         dims = np.shape(np_arr)
@@ -1098,7 +1100,7 @@ def convert_floor(node, **kwargs):
     )
     return [node]
 
-#Changing shape and type.
+# Changing shape and type.
 @mx2onnx.register("Reshape")
 def convert_reshape(node, **kwargs):
     name = node["name"]
@@ -1106,25 +1108,43 @@ def convert_reshape(node, **kwargs):
     inputs = node["inputs"]
     attrs = node["attrs"]
 
-    output_shape = convert_string_to_list(attrs["shape"])
+    output_shape_list = convert_string_to_list(attrs["shape"])
+
+    initializer = kwargs["initializer"]
+    output_shape_np = np.array(output_shape_list)
+    data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
+    dims = np.shape(output_shape_np)
+
+    output_shape_name = "reshape_attr_tensor" + str(kwargs["idx"])
+    tensor_node = helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=output_shape_list,
+            raw=False,
+        )
+    )
+
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
     input_node_name = proc_nodes[input_node_idx].name
 
-    not_supported_shape = [ -2, -3, -4]
+    not_supported_shape = [-2, -3, -4]
 
-    for val in output_shape:
+    for val in output_shape_list:
         if val in not_supported_shape:
             raise AttributeError("Shape value not supported in ONNX", val)
 
-    node = helper.make_node(
+    reshape_node = helper.make_node(
         "Reshape",
-        [input_node_name],
+        [input_node_name, output_shape_name],
         [name],
-        name=name,
-        shape=output_shape
+        name=name
     )
 
-    return [node]
+    return [tensor_node, reshape_node]
 
 @mx2onnx.register("Cast")
 def convert_cast(node, **kwargs):

@@ -113,12 +113,12 @@ BASIC_MODEL_TESTS = [
     'test_AvgPool2D',
     'test_BatchNorm',
     'test_ConstantPad2d',
-    # 'test_Conv2d',
+    'test_Conv2d',
     # 'test_ELU',
     # 'test_LeakyReLU',
     # 'test_MaxPool',
     # 'test_PReLU',
-    'test_ReLU',
+    # 'test_ReLU',
     'test_Sigmoid',
     'test_Softmax',
     'test_softmax_functional',
@@ -127,8 +127,8 @@ BASIC_MODEL_TESTS = [
     ]
 
 STANDARD_MODEL = [
-    #'test_bvlc_alexnet',
-    #'test_densenet121',
+    'test_bvlc_alexnet',
+    'test_densenet121',
     # 'test_inception_v1',
     # 'test_inception_v2',
     'test_resnet50',
