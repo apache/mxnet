@@ -2080,13 +2080,13 @@ fixed-size items.
             Whether to compute gradient for training or inference.
         """
         if out_grad is None:
-            ograd_handles = [NDArrayHandle(0)]
+            ograd_handles = ctypes.c_void_p(0)
         else:
-            ograd_handles = [out_grad.handle]
+            ograd_handles = c_array(NDArrayHandle, [out_grad.handle])
 
         check_call(_LIB.MXAutogradBackwardEx(
             1, c_handle_array([self]),
-            c_array(NDArrayHandle, ograd_handles),
+            ograd_handles,
             0,
             ctypes.c_void_p(0),
             ctypes.c_int(retain_graph),
