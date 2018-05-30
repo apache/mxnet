@@ -116,8 +116,7 @@ def convert_convolution(node, **kwargs):
     pad_dims = list(parse_helper("pad", [0, 0]))
     num_group = int(attrs.get("num_group", 1))
 
-    if len(pad_dims) < 2 * len(kernel_dims):
-        pad_dims = [0] * (2 * len(kernel_dims) - len(pad_dims)) + pad_dims
+    pad_dims = pad_dims + pad_dims
 
     input_nodes = [input_node, weights_node]
     if num_inputs > 2:
