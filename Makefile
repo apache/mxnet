@@ -79,7 +79,7 @@ include $(DMLC_CORE)/make/dmlc.mk
 
 # all tge possible warning tread
 WARNFLAGS= -Wall -Wsign-compare
-CFLAGS += -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -93,7 +93,7 @@ else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS += -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else

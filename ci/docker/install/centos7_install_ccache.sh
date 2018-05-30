@@ -32,7 +32,8 @@ yum -y install google-perftools
 yum -y install asciidoc
 yum -y install gcc-c++-4.8.*
 
-cd /work
+mkdir -p /work/deps
+cd /work/deps
 
 git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
 
@@ -43,9 +44,10 @@ cd ccache
 make -j$(nproc)
 make install
 
-popd
+cd /work/deps
+rm -rf /work/deps/ccache
 
-rm -rf /work/ccache
+popd
 
 export CCACHE_MAXSIZE=${CCACHE_MAXSIZE:=10G}
 export CCACHE_DIR=${CCACHE_DIR:=/work/ccache}

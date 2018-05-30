@@ -47,11 +47,11 @@ build_ccache_wrappers() {
     fi
 
     if [ -z ${CXX+x} ]; then
-        echo "No \$CXX set, defaulting to g++";
-        export CXX=g++
+       echo "No \$CXX set, defaulting to g++";
+       export CXX=g++
     fi
 
-    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an exacutable for -ccbin
+    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an executable for -ccbin
 
     echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
     echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
@@ -210,8 +210,9 @@ build_android_arm64() {
 
 build_centos7_cpu() {
     set -ex
-    build_ccache_wrappers
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -223,8 +224,9 @@ build_centos7_cpu() {
 
 build_centos7_mkldnn() {
     set -ex
-    build_ccache_wrappers
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -236,8 +238,9 @@ build_centos7_mkldnn() {
 
 build_centos7_gpu() {
     set -ex
-    build_ccache_wrappers
     cd /work/mxnet
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -250,9 +253,14 @@ build_centos7_gpu() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu() {
+    build_ubuntu_cpu_openblas
+}
+
 build_ubuntu_cpu_openblas() {
     set -ex
-    build_ccache_wrappers
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -352,7 +360,8 @@ build_ubuntu_gpu_mkldnn() {
 
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
-    build_ccache_wrappers
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
     make \
         DEV=1                         \
         USE_BLAS=openblas             \
