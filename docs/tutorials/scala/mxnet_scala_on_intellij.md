@@ -145,7 +145,7 @@ The project's `pom.xml` will be open for editing.
 
   - Specify project profiles and platforms in `pom.xml` by pasting the following content below the closing `properties` tag:
 
-```xml
+```
 <profiles>
     <profile>
         <id>osx-x86_64-cpu</id>
@@ -172,7 +172,7 @@ The project's `pom.xml` will be open for editing.
 
   - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `dependencies` tag:
 
-```xml
+```
 <dependencies>
   <!-- Begin deps for MXNet -->
   <dependency>
