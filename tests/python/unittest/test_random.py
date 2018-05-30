@@ -407,6 +407,15 @@ def test_sample_multinomial():
                 for j in range(samples):
                     real_dx[int(y[i][j])] += 5.0 / rprob[j]
                 mx.test_utils.assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
+    for dtype in ['uint8', 'float16', 'float32']:
+        # Bound check for the output data types. 'int32' and 'float64' require large memory so are skipped.
+        x = mx.nd.zeros(2 ** 25)  # Larger than the max integer in float32 without precision loss.
+        bound_check = False
+        try:
+            y = mx.nd.random.multinomial(x, dtype=dtype)
+        except mx.MXNetError as e:
+            bound_check = True
+        assert bound_check
 
 # Test the generators with the chi-square testing
 @with_seed()

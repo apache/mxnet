@@ -70,6 +70,10 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   const TShape& ishape = (*in_attrs)[0];
   if (!ishape.ndim()) return false;
 
+  MSHADOW_TYPE_SWITCH(param.dtype, DType, {
+    CHECK_LE(ishape[ishape.ndim() - 1], mxnet::common::MaxIntegerValue<DType>());
+  });
+
   if (ishape.ndim() == 1) {
     if (param.shape.ndim()) {
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
