@@ -25,7 +25,6 @@ pushd .
 
 yum -y install epel-release
 yum -y install git
-yum -y install ssh
 yum -y install autoconf
 yum -y install wget
 yum -y install make
