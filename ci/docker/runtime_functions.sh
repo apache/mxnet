@@ -515,7 +515,7 @@ integrationtest_ubuntu_cpu_onnx() {
 	export PYTHONPATH=./python/
 	python example/onnx/super_resolution.py
 	pytest tests/python-pytest/onnx/import/mxnet_backend_test.py
-	pytest tests/python-pytest/onnx/import/onnx_test.py
+	pytest tests/python-pytest/onnx/import/onnx_import_test.py
 	pytest tests/python-pytest/onnx/import/gluon_backend_test.py
 }
 
