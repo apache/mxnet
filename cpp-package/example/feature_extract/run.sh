@@ -27,9 +27,9 @@
 # Getting the data
 mkdir -p model
 wget -nc http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz
-wget -nc -O 1.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true 
-wget -nc -O 2.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true 
-wget -nc -O model/mean_224.nd https://github.com/h2oai/deepwater/raw/master/mxnet/src/main/resources/deepwater/backends/mxnet/models/Inception/mean_224.nd
+wget -nc -O cat.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true
+wget -nc -O dog.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true
+wget -nc -O model/mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/example/feature_extract/mean_224.nd
 tar -xvzf inception-bn.tar.gz -C model --skip-old-files
 
 # Building

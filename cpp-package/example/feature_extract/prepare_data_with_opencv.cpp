@@ -29,7 +29,7 @@ using namespace std;
 
 /*read images and store them the NDArray format that MXNet.cpp can handle*/
 void Mat2Array() {
-  string file_name_list[] = {"./1.jpg", "./2.jpg"};
+  string file_name_list[] = {"./dog.jpg", "./cat.jpg"};
 
   std::vector<float> array;
   for (auto &t : file_name_list) {

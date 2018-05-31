@@ -99,7 +99,7 @@ class FeatureExtractor {
     data.Slice(0, 1) -= mean_img;
     data.Slice(1, 2) -= mean_img;
     args_map["data"] = data;
-    /*bind the excutor*/
+    /*bind the executor*/
     executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
                               map<string, OpReqType>(), aux_map);
     executor->Forward(false);
