@@ -459,8 +459,8 @@ var Search = {
                 // normal html builders
                 var baseURL = 'https://' + window.location.hostname + '/';
                 var urlHref = window.location.href;
-                var urlSplits = urlHref.split("/");
-                versionString = '';
+                let urlSplits = urlHref.split("/");
+                let versionString = '';
                 for (var idx = 0; idx < urlSplits.length; ++idx) {
                     if(urlSplits[idx] == 'versions') {
                         versionString = 'versions/' + urlSplits[idx + 1] + '/';
@@ -523,8 +523,8 @@ var Search = {
             displayNextItem();
           });
         } else if (DOCUMENTATION_OPTIONS.HAS_SOURCE) {
-          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + item[0] + '.txt',
-                  dataType: "txt",
+          $.ajax({url: DOCUMENTATION_OPTIONS.URL_ROOT + '_sources/' + item[0] + '.txt',
+                  dataType: "text",
                   complete: function(jqxhr, textstatus) {
                     var data = jqxhr.responseText;
                     if (data !== '' && data !== undefined) {
