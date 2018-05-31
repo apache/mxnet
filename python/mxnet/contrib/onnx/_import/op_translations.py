@@ -407,6 +407,18 @@ def flatten(attrs, inputs, cls):
     new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
     return 'Flatten', new_attrs, inputs
 
+def topk(attrs, inputs, cls):
+    """topk"""
+    return
+
+def tile(attrs, inputs, cls):
+    """tile"""
+    return
+
+def clip(attrs, inputs, cls):
+    """clip"""
+    return
+
 #Powers
 def reciprocal(attrs, inputs, cls):
     """Returns the reciprocal of the argument, element-wise."""

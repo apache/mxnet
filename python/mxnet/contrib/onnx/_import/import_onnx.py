@@ -34,8 +34,8 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         self._params = {}
         self._num_input = 0
         self._num_param = 0
-        self.auxDict = {}
-        self.argDict = {}
+        self.aux_dict = {}
+        self.arg_dict = {}
         self.model_metadata = {}
 
     def _convert_operator(self, node_name, op_name, attrs, inputs):
@@ -121,10 +121,10 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             # splitting params into args and aux params
             for args in mxnet_sym.list_arguments():
                 if args in self._params:
-                    self.argDict.update({args: nd.array(self._params[args])})
+                    self.arg_dict.update({args: nd.array(self._params[args])})
             for aux in mxnet_sym.list_auxiliary_states():
                 if aux in self._params:
-                    self.auxDict.update({aux: nd.array(self._params[aux])})
+                    self.aux_dict.update({aux: nd.array(self._params[aux])})
 
         # now return the outputs
         out = [self._nodes[i.name] for i in graph.output]
@@ -132,7 +132,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             out = symbol.Group(out)
         else:
             out = out[0]
-        return out, self.argDict, self.auxDict
+        return out, self.arg_dict, self.aux_dict
 
     def get_graph_metadata(self, graph):
         """
