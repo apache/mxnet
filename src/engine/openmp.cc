@@ -50,8 +50,9 @@ OpenMP::OpenMP()
       omp_thread_max_ = omp_get_num_procs();
 #ifdef ARCH_IS_INTEL_X86
       try {
+        cpuinfo_initialize();
         omp_thread_max_ = cpuinfo_get_cores_count();
-      } catch {
+      } catch (...) {
         omp_thread_max_ >>= 1;
       }
 #endif
