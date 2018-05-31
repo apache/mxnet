@@ -26,6 +26,7 @@ RUN /work/ubuntu_install_ccache.sh
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
+# extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 # The cross-compiling emulator

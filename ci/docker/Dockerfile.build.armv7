@@ -25,6 +25,7 @@ RUN /work/ubuntu_install_ccache.sh
 
 FROM dockcross/linux-armv7
 
+# extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 ENV ARCH armv71
