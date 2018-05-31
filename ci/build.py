@@ -124,7 +124,7 @@ def default_ccache_dir() -> str:
         ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
         os.makedirs(ccache_dir, exist_ok=True)
         return ccache_dirpython
-    # Share ccache across containers (should we have a separate dir per platform?)
+    # Share ccache across containers
     return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 
@@ -261,31 +261,28 @@ def main() -> int:
         list_platforms()
     elif args.platform:
         platform = args.platform
-        tag = get_docker_tag(platform)
-        if args.download_docker_cache:
-            import docker_cache
-            logging.info('Docker cache download is enabled')
-            docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
-        # prepare ccache
-        build_docker(platform, docker_binary)
+        tag = get_docker_tag(platform=platform, registry=docker_registry)
+        load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        build_docker(platform, docker_binary, registry=docker_registry)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=command, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
+                          command=command, docker_registry=docker_registry, local_ccache_dir=args.ccache_dir)
         elif args.print_docker_run:
             print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                                command=[], dry_run=True, docker_registry=docker_registry, ccache_dir=args.ccache_dir))
+                                command=[], dry_run=True, docker_registry=docker_registry, local_ccache_dir=args.ccache_dir))
         elif args.into_container:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=[], dry_run=False, into_container=True, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
+                          command=[], dry_run=False, into_container=True,
+                          docker_registry=docker_registry, local_ccache_dir=args.ccache_dir)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
+                          command=cmd, docker_registry=docker_registry, local_ccache_dir=args.ccache_dir)
 
     elif args.all:
         platforms = get_platforms()
@@ -301,7 +298,7 @@ def main() -> int:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry, ccache_dir=args.ccache_dir)
+                          command=cmd, docker_registry=docker_registry, local_ccache_dir=args.ccache_dir)
             plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)

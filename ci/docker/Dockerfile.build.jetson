@@ -31,6 +31,7 @@ RUN /work/ubuntu_install_ccache.sh
 # FROM dockcross/linux-arm64
 FROM mxnetci/dockcross-linux-arm64:05082018
 
+# extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 ENV ARCH aarch64
