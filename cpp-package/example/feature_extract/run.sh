@@ -24,6 +24,19 @@
 ### 2.
 ### Then Prepare 2 pictures, 1.jpg 2.jpg to extract
 
+# Getting the data
+mkdir -p model
+wget -nc http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz
+wget -nc -O 1.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true 
+wget -nc -O 2.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true 
+wget -nc -O model/mean_224.nd https://github.com/h2oai/deepwater/raw/master/mxnet/src/main/resources/deepwater/backends/mxnet/models/Inception/mean_224.nd
+tar -xvzf inception-bn.tar.gz -C model --skip-old-files
+
+# Building
 make
+
+# Preparing the data
 ./prepare_data_with_opencv
-LD_LIBRARY_PATH=../../lib/linux ./feature_extract
+
+# Running the featurization
+LD_LIBRARY_PATH=../../../lib/linux ./feature_extract
