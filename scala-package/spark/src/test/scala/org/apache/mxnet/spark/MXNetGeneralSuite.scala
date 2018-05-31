@@ -51,11 +51,7 @@ class MXNetGeneralSuite extends SharedSparkContext {
       toFile
     testDataDir = tempDirFile.getPath
     tempDirFile.deleteOnExit()
-    // download testset
-    // scalastyle:off
-    println("downloading data")
     downloadTestData()
-    println("finished downloading")
   }
 
 
