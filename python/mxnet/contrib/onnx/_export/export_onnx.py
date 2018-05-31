@@ -23,22 +23,20 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import numpy as np
 
-import json
-from .... import symbol
+from onnx import (checker, helper, onnx_pb2)
+from onnx.helper import make_tensor_value_info
+
 from .... import context
 from .... import ndarray as nd
 from .... import io
 from .... import module as mod
 
-from onnx import (defs, checker, helper, numpy_helper, mapping, onnx_pb2,
-                  ModelProto, GraphProto, NodeProto, AttributeProto, TensorProto)
-
-from onnx.helper import make_tensor, make_tensor_value_info
-
 
 class MxNetToONNXConverter:
+    """Class to convert MXNet to ONNX graph"""
     registry_ = {}
     input_output_maps_ = {}
 
@@ -50,8 +48,9 @@ class MxNetToONNXConverter:
 
     @staticmethod
     def register(op_name):
-
+        """Register operator"""
         def wrapper(func):
+            """Helper function to map functions"""
             MxNetToONNXConverter.registry_[op_name] = func
             return func
 
@@ -59,6 +58,7 @@ class MxNetToONNXConverter:
 
     @staticmethod
     def convert_layer(node, **kwargs):
+        """Convert MXNet layer to ONNX"""
         op = str(node["op"])
         if op not in MxNetToONNXConverter.registry_:
             raise AttributeError("No conversion function registered for op type %s yet." % op)
@@ -73,18 +73,9 @@ class MxNetToONNXConverter:
                       and graph_input != 'softmax_label']
 
         data_shapes = []
-        dim_added = False
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
         for idx, input_name in enumerate(data_names):
-            batch_size = 1
-            if len(inputs) > 1 and len(inputs[idx].shape) < 4 and  \
-                            len(set(x.shape[0] for x in inputs)) != 1:
-                tuples = ((batch_size,), inputs[idx].shape)
-                new_shape = sum(tuples, ())
-                data_shapes.append((input_name, new_shape))
-                dim_added = True
-            else:
-                data_shapes.append((input_name, inputs[idx].shape))
+            data_shapes.append((input_name, inputs[idx].shape))
 
         # create module, passing cpu context
         ctx = context.cpu()
@@ -99,27 +90,19 @@ class MxNetToONNXConverter:
 
         data_forward = []
         for idx, input_name in enumerate(data_names):
-            # slice and pad operator tests needs 1 less dimension in forward pass
-            # otherwise it will throw an error.
-            # for squeeze operator, need to retain shape of input as provided
             val = inputs[idx]
-            if dim_added is True:
-                data_forward.append(nd.array([val]))
-            else:
-                data_forward.append(nd.array(val))
+            data_forward.append(nd.array(val))
 
         test_mod.forward(io.DataBatch(data_forward))
         result = test_mod.get_outputs()[0].asnumpy()
-        if dim_added is True:
-            return result[0].shape
-        else:
-            return result.shape
+
+        return result.shape
 
 
     @staticmethod
     def split_params(sym, params):
-        # splitting params into args and aux params
-        arg_params ={}
+        """splitting params into args and aux params"""
+        arg_params = {}
         aux_params = {}
         for args in sym.list_arguments():
             if args in params:
@@ -138,17 +121,18 @@ class MxNetToONNXConverter:
         arg, aux = MxNetToONNXConverter.split_params(sym, params)
         return MxNetToONNXConverter.forward_pass(inputs, sym, arg, aux)
 
-    # Add transpose?
+
     @staticmethod
     def convert_weights_to_numpy(weights_dict):
-        return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy()) for k, v in weights_dict.items()])
+        """Convert weights to numpy"""
+        return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
+                     for k, v in weights_dict.items()])
 
     def convert_mx2onnx_graph(self, sym, params, in_shape, in_type, log=False):
+        """Convert MXNet graph to ONNX graph"""
 
         # Determine output shape
         output_shape = MxNetToONNXConverter.infer_output_shape(sym, params, in_shape)
-
-        print("\nconverting weights from MxNet NDArrays to NumPy arrays.\n")
 
         weights = MxNetToONNXConverter.convert_weights_to_numpy(params)
 
@@ -161,7 +145,7 @@ class MxNetToONNXConverter:
         onnx_processed_outputs = []
         index_lookup = []
 
-        graph_input_idx=0
+        graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
             op = node["op"]
             name = node["name"]
@@ -169,7 +153,7 @@ class MxNetToONNXConverter:
                 print("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
 
             if op == "null" and name not in params:
-                """ Handling graph input """
+                #Handling graph input
                 if name == 'softmax_label':
                     continue
                 converted = MxNetToONNXConverter.convert_layer(
@@ -196,10 +180,10 @@ class MxNetToONNXConverter:
                     initializer=initializer,
                     index_lookup=index_lookup,
                     idx=idx
-            )
+                )
 
             if isinstance(converted, list):
-                for converted_idx, converted_node in enumerate(converted):
+                for converted_node in converted:
                     if isinstance(converted_node, onnx_pb2.ValueInfoProto):
                         onnx_processed_inputs.append(converted_node)
                     elif isinstance(converted_node, onnx_pb2.NodeProto):
@@ -211,7 +195,7 @@ class MxNetToONNXConverter:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=converted_node.output[0],
-                                        elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                        elem_type=in_type,
                                         shape=output_shape
                                     )
                                 )
@@ -219,7 +203,7 @@ class MxNetToONNXConverter:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=converted_node.name,
-                                        elem_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')],
+                                        elem_type=in_type,
                                         shape=output_shape
                                     )
                                 )
@@ -227,12 +211,7 @@ class MxNetToONNXConverter:
                                 print("Output node is: %s" % converted_node.name)
                     elif isinstance(converted_node, onnx_pb2.TensorProto):
                         raise ValueError("Did not expect TensorProto")
-                        if idx < (len(mx_graph) - 1):
-                            onnx_processed_inputs.append(converted_node)
-                        else:
-                            onnx_processed_outputs.append(converted_node)
                     else:
-                        print(converted_node)
                         raise ValueError("node is of an unrecognized type: %s" % type(node))
 
                     all_processed_nodes.append(converted_node)
