@@ -110,11 +110,11 @@ def convert_convolution(node, **kwargs):
                 raise AttributeError("Malformed %s dimensions: %s" % (attrs_name, str(attrs_str)))
         return alt_value
 
-    num_filter = int(attrs["num_filter"])
     kernel_dims = list(parse_helper("kernel"))
     stride_dims = list(parse_helper("stride", [1, 1]))
     pad_dims = list(parse_helper("pad", [0, 0]))
     num_group = int(attrs.get("num_group", 1))
+    dilations = list(parse_helper("dilate", [1, 1]))
 
     pad_dims = pad_dims + pad_dims
 
@@ -128,6 +128,7 @@ def convert_convolution(node, **kwargs):
         outputs=[name],
         kernel_shape=kernel_dims,
         strides=stride_dims,
+        dilations=dilations,
         pads=pad_dims,
         group=num_group,
         name=name
