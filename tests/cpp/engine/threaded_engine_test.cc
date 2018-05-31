@@ -129,12 +129,14 @@ TEST(Engine, start_stop) {
   engine[2] = mxnet::engine::CreateThreadedEnginePerDevice();
   std::string type_names[3] = {"NaiveEngine", "ThreadedEnginePooled", "ThreadedEnginePerDevice"};
 
+  for (int j = 0; j < 10000; ++j) {
   for (int i = 0; i < num_engine; ++i) {
     LOG(INFO) << "Stopping: " << type_names[i];
     engine[i]->Stop();
     LOG(INFO) << "Stopped: " << type_names[i] << " Starting...";
     engine[i]->Start();
     LOG(INFO) << "Started: " << type_names[i] << " Done...";
+  }
   }
 }
 
