@@ -105,28 +105,14 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle"]
-    def __init__(self, sym, flags=(), inputs=None, params=None):
+    def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
-        param_names = []
-        param_arrays = []
-        if inputs is None:
-            assert params is None, "When inputs is None params must also be None."
-            inputs = sym.list_inputs()
-        elif params is not None:
-            for name, arrs in params.items():
-                param_arrays.extend(arrs)
-                param_names.extend([name] * len(arrs))
 
         check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
             len(flags),
             c_str_array([key for key, _ in flags]),
             c_str_array([str(val) for _, val in flags]),
-            len(inputs),
-            c_str_array(inputs),
-            len(param_names),
-            c_str_array(param_names),
-            c_handle_array(param_arrays),
             ctypes.byref(self.handle)))
 
     def __del__(self):
