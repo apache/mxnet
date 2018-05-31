@@ -152,12 +152,12 @@ def _fix_bias(op_name, attrs, num_inputs):
         raise ValueError("Unexpected number of inputs for: {}".format(op_name))
     return attrs
 
-def _fix_broadcast(op_name, inputs, broadcast_axis, cls):
+def _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj):
     """A workaround to reshape bias term to (1, num_channel)."""
-    if int(len(cls._params)) > 0:
+    if int(len(proto_obj._params)) > 0:
         assert len(list(inputs)) == 2
 
-        input0_shape = get_input_shape(inputs[0], cls)
+        input0_shape = get_input_shape(inputs[0], proto_obj)
         #creating reshape shape
         reshape_shape = list(len(input0_shape) * (1,))
         reshape_shape[broadcast_axis] = -1
@@ -168,15 +168,15 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, cls):
         op_sym = op_name
     return op_sym
 
-def _fix_channels(op_name, attrs, inputs, cls):
+def _fix_channels(op_name, attrs, inputs, proto_obj):
     """A workaround for getting 'channels' or 'units' since onnx don't provide
     these attributes. We check the shape of weights provided to get the number.
     """
     weight_name = inputs[1].name
-    if not weight_name in cls._params:
+    if not weight_name in proto_obj._params:
         raise ValueError("Unable to get channels/units attr from onnx graph.")
     else:
-        wshape = cls._params[weight_name].shape
+        wshape = proto_obj._params[weight_name].shape
         assert len(wshape) >= 2, "Weights shape is invalid: {}".format(wshape)
 
         if op_name == 'FullyConnected':
@@ -193,7 +193,7 @@ def _fix_channels(op_name, attrs, inputs, cls):
     return attrs
 
 
-def _fix_gemm(op_name, inputs, old_attr, cls):
+def _fix_gemm(op_name, inputs, old_attr, proto_obj):
     """Using FullyConnected operator in place of linalg_gemm to perform same operation"""
     op_sym = getattr(symbol, op_name, None)
     alpha = float(old_attr.get('alpha', 1.0))
@@ -205,16 +205,16 @@ def _fix_gemm(op_name, inputs, old_attr, cls):
     if not trans_b:
         inputs[1] = symbol.transpose(inputs[1], axes=(1, 0))
     new_inputs = [alpha*inputs[0], inputs[1], beta*inputs[2]]
-    new_attr = {'num_hidden' : cls._params[inputs[2].name].shape[0]}
+    new_attr = {'num_hidden' : proto_obj._params[inputs[2].name].shape[0]}
     return op_sym, new_attr, new_inputs
 
-def get_input_shape(sym, cls):
+def get_input_shape(sym, proto_obj):
     """Helper function to obtain the shape of an array"""
-    arg_params = cls.argDict
-    aux_params = cls.auxDict
+    arg_params = proto_obj.arg_dict
+    aux_params = proto_obj.aux_dict
 
-    model_input_shape = [data[1] for data  in cls.model_metadata.get('input_tensor_data')]
-    data_names = [data[0] for data  in cls.model_metadata.get('input_tensor_data')]
+    model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
+    data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
 
     #creating dummy inputs
     inputs = []
