@@ -15,7 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import zipfile
+import shutil
 from mxnet.test_utils import download
 
-download('https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/models/21styles-32f7205c.params', 'models/21styles.params')
+zip_file_path = 'models/msgnet_21styles.zip'
+download('https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/models/msgnet_21styles-2cb88353.zip', zip_file_path)
 
+with zipfile.ZipFile(zip_file_path) as zf:
+        zf.extractall()
+
+os.remove(zip_file_path)
+
+shutil.move('msgnet_21styles-2cb88353.params', 'models/21styles.params')
