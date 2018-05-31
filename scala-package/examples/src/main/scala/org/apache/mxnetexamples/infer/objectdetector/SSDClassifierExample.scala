@@ -100,7 +100,9 @@ object SSDClassifierExample {
         batch = ListBuffer[String]()
       }
     }
-    output += batch.toList
+    if (batch.length > 0) {
+      output += batch.toList
+    }
     output.toList
   }
 

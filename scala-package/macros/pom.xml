@@ -53,6 +53,7 @@
     </dependency>
   </dependencies>
 
+
   <build>
     <plugins>
       <plugin>
@@ -69,6 +70,29 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>apidoc-generation</id>
+            <phase>package</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <additionalClasspathElements>
+            <additionalClasspathElement>${project.parent.basedir}/init/target/classes</additionalClasspathElement>
+          </additionalClasspathElements>
+          <arguments>
+            <argument>${project.parent.basedir}/core/src/main/scala/org/apache/mxnet/</argument>
+          </arguments>
+          <mainClass>org.apache.mxnet.APIDocGenerator</mainClass>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.scalatest</groupId>
