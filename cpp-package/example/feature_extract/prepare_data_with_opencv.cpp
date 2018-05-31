@@ -45,7 +45,7 @@ void Mat2Array() {
     }
   }
   ofstream outf("./img.dat", ios::binary);
-  outf.write(reinterpret_cast<char *>array.data(), array.size() * sizeof(float));
+  outf.write(reinterpret_cast<char *>(array.data()), array.size() * sizeof(float));
   outf.close();
 }
 
