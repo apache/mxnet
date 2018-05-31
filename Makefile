@@ -226,6 +226,7 @@ ifeq ($(USE_GPERFTOOLS), 1)
 				FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 				ifeq (,$(FIND_LIBFILE))
 					USE_GPERFTOOLS=0
+				endif
 			endif
 		endif
 	endif
@@ -251,6 +252,7 @@ ifneq ($(USE_GPERFTOOLS), 1)
 						FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 						ifeq (,$(FIND_LIBFILE))
 							USE_JEMALLOC=0
+						endif
 					endif
 				endif
 			endif
