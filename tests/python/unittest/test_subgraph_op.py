@@ -1,6 +1,6 @@
 import ctypes
 import mxnet as mx
-from mxnet.base import SymbolHandle, check_call, _LIB
+from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array
 from mxnet.symbol import Symbol
 import numpy as np
 
@@ -14,7 +14,11 @@ def test_subgraph_op_whole_graph():
 
     out = SymbolHandle()
 
-    check_call(_LIB.MXPartitionGraph(regular_sym.handle, ctypes.byref(out)))
+    op_names = []
+    #op_names = [mx.sym.sin.__name__, mx.sym.Convolution.__name__]
+
+    check_call(_LIB.MXPartitionGraph(regular_sym.handle, mx_uint(len(op_names)),
+                                     c_str_array(op_names), ctypes.byref(out)))
 
     subgraph_sym = Symbol(out)
     assert regular_sym.list_inputs() == subgraph_sym.list_inputs()
