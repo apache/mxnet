@@ -5,6 +5,9 @@ They also include workflow questions, e.g., how to visualize a neural network co
 These answers are fairly focused. For more didactic, self-contained introductions to neural networks
 and full working examples, visit the [tutorials section](../tutorials/index.md).
 
+## API
+
+* [What's the difference between the Module and Gluon APIs for Python?](http://mxnet.io/api/python/index.html)
 
 ## Modeling
 * [How do I fine-tune pre-trained models to a new dataset?](http://mxnet.io/faq/finetune.html)

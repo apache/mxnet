@@ -4688,7 +4688,24 @@ def test_laop():
     check_fw(test_gemm, [a, b, c], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b, c])
-
+    # Check for different axis that describes matrix rows.
+    a2 = np.copy(np.swapaxes(a, 0, 2))
+    b2 = np.copy(np.swapaxes(b, 0, 2))
+    c2 = np.copy(np.swapaxes(c, 0, 2))
+    r2 = np.copy(np.swapaxes(r, 0, 2))
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7., axis = 0)
+    check_fw(test_gemm, [a2, b2, c2], [r2])
+    if grad_check == 1:
+        check_grad(test_gemm, [a2, b2, c2])
+    a2 = np.copy(np.swapaxes(a, 1, 2))
+    b2 = np.copy(np.swapaxes(b, 1, 2))
+    c2 = np.copy(np.swapaxes(c, 1, 2))
+    r2 = np.copy(np.swapaxes(r, 1, 2))
+    test_gemm = mx.sym.linalg.gemm(data1, data2, data3, alpha=4., beta=7., axis = -3)
+    check_fw(test_gemm, [a2, b2, c2], [r2])
+    if grad_check == 1:
+        check_grad(test_gemm, [a2, b2, c2])
+    
     # Check gemm2 operator same way as gemm.
     res_gemm = 4. * np.dot(data_in1, data_in2)
     test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
@@ -4720,6 +4737,20 @@ def test_laop():
     check_fw(test_gemm, [a, b], [r])
     if grad_check == 1:
         check_grad(test_gemm, [a, b])
+    a2 = np.copy(np.swapaxes(a, 0, 2))
+    b2 = np.copy(np.swapaxes(b, 0, 2))
+    r2 = np.copy(np.swapaxes(r, 0, 2))
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., axis = 0)
+    check_fw(test_gemm, [a2, b2], [r2])
+    if grad_check == 1:
+        check_grad(test_gemm, [a2, b2])
+    a2 = np.copy(np.swapaxes(a, 1, 2))
+    b2 = np.copy(np.swapaxes(b, 1, 2))
+    r2 = np.copy(np.swapaxes(r, 1, 2))
+    test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4., axis = -3)
+    check_fw(test_gemm, [a2, b2], [r2])
+    if grad_check == 1:
+        check_grad(test_gemm, [a2, b2])
 
     # Now test all the other operators.
 
@@ -5787,7 +5818,7 @@ def test_multi_proposal_op():
     rpn_min_size = 16
 
     batch_size = 20
-    feat_len = 14
+    feat_len = (1000 + 15) // 16
     H, W = feat_len, feat_len
     num_anchors = len(scales) * len(ratios)
     count_anchors = H * W * num_anchors
@@ -5821,7 +5852,7 @@ def test_multi_proposal_op():
         single_score = []
         for i in range(batch_size):
             rois, score = mx.nd.contrib.Proposal(
-                    cls_score = get_sub(cls_prob, i),
+                    cls_prob = get_sub(cls_prob, i),
                     bbox_pred = get_sub(bbox_pred, i),
                     im_info = get_sub(im_info, i),
                     feature_stride = feature_stride,
@@ -5835,7 +5866,7 @@ def test_multi_proposal_op():
             single_score.append(score)
 
         multi_proposal, multi_score = mx.nd.contrib.MultiProposal(
-                cls_score = cls_prob,
+                cls_prob = cls_prob,
                 bbox_pred = bbox_pred,
                 im_info = im_info,
                 feature_stride = feature_stride,
@@ -5965,6 +5996,7 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
+
 @with_seed()
 def test_activation():
     shape=(9, 10)
@@ -6006,6 +6038,21 @@ def test_activation():
         finite_diff_unary_op(
             name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
 
+@with_seed()
+def test_ravel():
+    # be aware that check_symbolic_forward will use float type internally
+    # for the arrays and that limits the representable flat index range.
+    # Taking dim==4 and a range of [0,..,100] for the data can already
+    # cause precision issues and break this test.
+    for dim in [1, 2, 3, 4]:
+      data = np.random.randint(50, size=(dim, 500))
+      shape = tuple(np.add(np.amax(data, axis=1), [1]))
+      a = mx.sym.Variable('a')
+      ravel_npy = np.ravel_multi_index(data, shape)
+      b = mx.sym.ravel_multi_index(a, shape=shape)
+      check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
+      c = mx.sym.unravel_index(a, shape=shape)
+      check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
 
 def test_context_num_gpus():
     try:
@@ -6017,6 +6064,157 @@ def test_context_num_gpus():
         # of GPUs
         if str(e).find("CUDA") == -1:
             raise e
+
+
+@with_seed()
+def test_op_roi_align():
+    # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_roi_align_op.py
+    def bilinear_interpolate(bottom, height, width, y, x):
+        if y < -1.0 or y > height or x < -1.0 or x > width:
+            return 0.0, []
+        x = max(0.0, x)
+        y = max(0.0, y)
+        x_low = int(x)
+        y_low = int(y)
+        if x_low >= width - 1:
+            x_low = x_high = width - 1
+            x = x_low
+        else:
+            x_high = x_low + 1
+
+        if y_low >= height - 1:
+            y_low = y_high = height - 1
+            y = y_low
+        else:
+            y_high = y_low + 1
+
+        ly = y - y_low
+        lx = x - x_low
+        hy = 1.0 - ly
+        hx = 1.0 - lx
+
+        v1 = bottom[y_low, x_low]
+        v2 = bottom[y_low, x_high]
+        v3 = bottom[y_high, x_low]
+        v4 = bottom[y_high, x_high]
+
+        '''
+        ----------->x
+        |hx hy | lx hy
+        |------+------
+        |hx ly | lx ly
+        V
+        y
+        v1|v2
+        --+--
+        v3|v4
+        '''
+        w1 = hy * hx
+        w2 = hy * lx
+        w3 = ly * hx
+        w4 = ly * lx
+
+        val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
+        grad = [(y_low, x_low, w1), (y_low, x_high, w2),
+                (y_high, x_low, w3), (y_high, x_high, w4)
+               ]
+        return val, grad
+
+    def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio, dy):
+        N, C, H, W = data.shape
+        R = rois.shape[0]
+        PH, PW = pooled_size
+        assert len(rois.shape) == 2
+        assert rois.shape[1] == 5
+
+        out = np.zeros((R, C, PH, PW))
+        dx = np.zeros_like(data)
+        drois = np.zeros_like(rois)
+
+        for r in range(R):
+            batch_ind = int(rois[r, 0])
+            sw, sh, ew, eh = rois[r, 1:5] * spatial_scale
+            roi_w = max(ew - sw, 1.0)
+            roi_h = max(eh - sh, 1.0)
+            bin_h = roi_h * 1.0 / PH
+            bin_w = roi_w * 1.0 / PW
+            bdata = data[batch_ind]
+            if sampling_ratio > 0:
+                roi_bin_grid_h = roi_bin_grid_w = sampling_ratio
+            else:
+                roi_bin_grid_h = int(np.ceil(roi_h * 1.0 / PH))
+                roi_bin_grid_w = int(np.ceil(roi_w * 1.0 / PW))
+            count = roi_bin_grid_h * roi_bin_grid_w
+            for c in range(C):
+                for ph in range(PH):
+                    for pw in range(PW):
+                        val = 0.0
+                        for iy in range(roi_bin_grid_h):
+                            y = sh + ph * bin_h + (iy + 0.5) * bin_h / roi_bin_grid_h
+                            for ix in range(roi_bin_grid_w):
+                                x = sw + pw * bin_w + (ix + 0.5) * bin_w / roi_bin_grid_w
+                                v, g = bilinear_interpolate(bdata[c], H, W, y, x)
+                                val += v
+                                # compute grad
+                                for qy, qx, qw in g:
+                                    dx[batch_ind, c, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
+
+                        out[r, c, ph, pw] = val * 1.0 / count
+        return out, [dx, drois]
+
+    def test_roi_align_value():
+        ctx=default_context()
+        dtype = np.float32
+
+        dlen = 224
+        N, C, H, W = 5, 3, 16, 16
+        assert H == W
+        R = 7
+        pooled_size = (3, 4)
+
+        spatial_scale = H * 1.0 / dlen
+        sampling_ratio = 0
+        data = mx.nd.array(np.arange(N*C*W*H).reshape((N,C,H,W)), ctx=ctx, dtype = dtype)
+        # data = mx.nd.random.uniform(0, 1, (N, C, H, W), dtype = dtype)
+        center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype = dtype)
+        wh = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype = dtype)
+        batch_ind = mx.nd.array(np.random.randint(0, N, size = (R,1)), ctx=ctx)
+        pos = mx.nd.concat(center_xy - wh / 2, center_xy + wh / 2, dim = 1)
+        rois = mx.nd.concat(batch_ind, pos, dim = 1)
+
+        data.attach_grad()
+        rois.attach_grad()
+        with mx.autograd.record():
+            output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
+                    spatial_scale=spatial_scale)
+        dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
+        output.backward(dy)
+        real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size, spatial_scale, sampling_ratio, dy.asnumpy())
+        assert np.allclose(output.asnumpy(), real_output)
+        # It seems that the precision between Cfloat and Pyfloat is different.
+        assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
+        assert np.allclose(rois.grad.asnumpy(), drois)
+
+    # modified from test_roipooling()
+    def test_roi_align_autograd():
+        ctx=default_context()
+        data = mx.symbol.Variable(name='data')
+        rois = mx.symbol.Variable(name='rois')
+        test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
+
+        x1 = np.random.rand(4, 1, 12, 12).astype('float64')
+        x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2],
+                       [1, 3.1, 1.1, 5.2, 10.2]], dtype='float64')
+
+        check_numeric_gradient(sym=test, location=[x1, x2],
+                               grad_nodes={'data':'write', 'rois':'null'},
+                               numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
+        check_numeric_gradient(sym=test, location=[x1, x2],
+                               grad_nodes={'data':'add', 'rois':'null'},
+                               numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
+
+    test_roi_align_value()
+    test_roi_align_autograd()
 
 
 if __name__ == '__main__':

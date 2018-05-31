@@ -420,15 +420,19 @@ class Conv1DTranspose(_Conv):
     channels : int
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
-    kernel_size :int or tuple/list of 3 int
+    kernel_size :int or tuple/list of 1 int
         Specifies the dimensions of the convolution window.
-    strides : int or tuple/list of 3 int,
+    strides : int or tuple/list of 1 int
         Specify the strides of the convolution.
-    padding : int or a tuple/list of 3 int,
+    padding : int or a tuple/list of 1 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation : int or tuple/list of 3 int
-        Specifies the dilation rate to use for dilated convolution.
+    output_padding: int or a tuple/list of 1 int
+        Controls the amount of implicit zero-paddings on both sides of the
+        output for output_padding number of points for each dimension.
+    dilation : int or tuple/list of 1 int
+        Controls the spacing between the kernel points; also known as the
+        a trous algorithm
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
@@ -503,15 +507,19 @@ class Conv2DTranspose(_Conv):
     channels : int
         The dimensionality of the output space, i.e. the number of output
         channels (filters) in the convolution.
-    kernel_size :int or tuple/list of 3 int
+    kernel_size :int or tuple/list of 2 int
         Specifies the dimensions of the convolution window.
-    strides : int or tuple/list of 3 int,
+    strides : int or tuple/list of 2 int
         Specify the strides of the convolution.
-    padding : int or a tuple/list of 3 int,
+    padding : int or a tuple/list of 2 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation : int or tuple/list of 3 int
-        Specifies the dilation rate to use for dilated convolution.
+    output_padding: int or a tuple/list of 2 int
+        Controls the amount of implicit zero-paddings on both sides of the
+        output for output_padding number of points for each dimension.
+    dilation : int or tuple/list of 2 int
+        Controls the spacing between the kernel points; also known as the
+        a trous algorithm
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
@@ -593,13 +601,17 @@ class Conv3DTranspose(_Conv):
         channels (filters) in the convolution.
     kernel_size :int or tuple/list of 3 int
         Specifies the dimensions of the convolution window.
-    strides : int or tuple/list of 3 int,
+    strides : int or tuple/list of 3 int
         Specify the strides of the convolution.
     padding : int or a tuple/list of 3 int,
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
+    output_padding: int or a tuple/list of 3 int
+        Controls the amount of implicit zero-paddings on both sides of the
+        output for output_padding number of points for each dimension.
     dilation : int or tuple/list of 3 int
-        Specifies the dilation rate to use for dilated convolution.
+        Controls the spacing between the kernel points; also known as the
+        a trous algorithm.
     groups : int
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.

@@ -12,7 +12,7 @@ CFLAGS+= `pkg-config --cflags opencv`
 LDFLAGS+=`pkg-config --libs opencv`
 
 # Added for mxnet
-export MXNET_ROOT=`pwd`/../../../../mxnet
+export MXNET_ROOT=`pwd`/../../..
 
 CFLAGS+=-Wall -I$(MXNET_ROOT)/include
 LDFLAGS+=$(MXNET_ROOT)/lib/libmxnet.so
