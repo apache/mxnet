@@ -116,7 +116,7 @@ BASIC_MODEL_TESTS = [
     'test_Conv2d',
     'test_ELU',
     'test_LeakyReLU',
-    # 'test_MaxPool',
+    'test_MaxPool',
     'test_PReLU',
     'test_ReLU',
     'test_Sigmoid',
@@ -132,7 +132,7 @@ STANDARD_MODEL = [
     # 'test_inception_v1',
     # 'test_inception_v2',
     'test_resnet50',
-    # # 'test_shufflenet',
+    # 'test_shufflenet',
     'test_squeezenet',
     'test_vgg16',
     'test_vgg19'
@@ -140,12 +140,12 @@ STANDARD_MODEL = [
 
 # for op_test in IMPLEMENTED_OPERATORS_TEST:
 #     BACKEND_TEST.include(op_test)
-#
+
 for basic_model_test in BASIC_MODEL_TESTS:
     BACKEND_TEST.include(basic_model_test)
 
-# for std_model_test in STANDARD_MODEL:
-#     BACKEND_TEST.include(std_model_test)
+for std_model_test in STANDARD_MODEL:
+    BACKEND_TEST.include(std_model_test)
 
 
 # import all test cases at global scope to make them visible to python.unittest
