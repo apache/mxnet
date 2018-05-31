@@ -173,14 +173,14 @@ def matrix_multiplication(attrs, inputs, proto_obj):
 
 def batch_norm(attrs, inputs, proto_obj):
     """Batch normalization."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps',
-                                                               'is_test':'fix_gamma'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon': 'eps',
+                                                               'is_test': 'fix_gamma'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
                                                      ['spatial', 'consumed_inputs'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
 
     # in test mode "fix_gamma" should be unset.
-    new_attrs['fix_gamma'] = 0 if new_attrs['fix_gamma'] == 1 else 1
+    new_attrs['fix_gamma'] = not attrs.get('is_test', 1)
     return 'BatchNorm', new_attrs, inputs
 
 def leaky_relu(attrs, inputs, proto_obj):
@@ -334,7 +334,7 @@ def local_response_norm(attrs, inputs, proto_obj):
 def dropout(attrs, inputs, proto_obj):
     """Dropout Regularization."""
     mode = 'training'
-    if attrs['is_test'] == 0:
+    if 'is_test' in attrs and attrs['is_test'] == 0:
         mode = 'always'
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'ratio': 'p'})
