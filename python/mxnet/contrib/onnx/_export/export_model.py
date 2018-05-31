@@ -21,12 +21,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import numpy as np
 
-from onnx import defs, checker, helper, numpy_helper, mapping
+from onnx import helper, mapping
 from .export_onnx import MxNetToONNXConverter
 from .export_helper import load_module
 
-import numpy as np
 
 def export_model(model, weights, input_shape, input_type, onnx_file_path, log=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
@@ -55,21 +55,24 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
     """
     converter = MxNetToONNXConverter()
 
+    data_format = np.dtype(input_type)
     if isinstance(model, basestring) and isinstance(weights, basestring):
         print("Converting json and params file to sym and weights")
         sym, params = load_module(model, weights, input_shape)
         onnx_graph = converter.convert_mx2onnx_graph(sym, params, input_shape,
-                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                     log=log)
     else:
         onnx_graph = converter.convert_mx2onnx_graph(model, weights, input_shape,
-                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(input_type)], log=log)
+                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                     log=log)
     # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
 
     # Save model on disk
-    with open(onnx_file_path, "wb") as f:
-            serialized = onnx_model.SerializeToString()
-            f.write(serialized)
-            print("\nONNX file %s serialized to disk" % onnx_file_path)
+    with open(onnx_file_path, "wb") as file_handle:
+        serialized = onnx_model.SerializeToString()
+        file_handle.write(serialized)
+        print("\nONNX file %s serialized to disk" % onnx_file_path)
 
     return onnx_file_path
