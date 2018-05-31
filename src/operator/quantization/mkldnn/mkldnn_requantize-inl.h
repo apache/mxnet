@@ -104,12 +104,12 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const RequantizeParam& param = nnvm::get<RequantizeParam>(attrs.parsed);
   float real_range;
-  // model is calibrated
+  // Model is calibrated
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     real_range =
           MaxAbs(param.min_calib_range.value(), param.max_calib_range.value());
     MKLDNNRequantizeForwardKer(attrs, ctx, inputs, req, outputs, real_range);
-  // model is not calibrated
+  // Model is not calibrated
   } else {
     TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
