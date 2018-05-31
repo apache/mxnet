@@ -15,15 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-### To run the this example,
-###
-### 1.
-### Get Inseption-BN model first, from here
-###     https://github.com/dmlc/mxnet-model-gallery
-###
-### 2.
-### Then Prepare 2 pictures, 1.jpg 2.jpg to extract
-
 # Getting the data
 mkdir -p model
 wget -nc http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz
