@@ -764,8 +764,8 @@ class Module(BaseModule):
         ----------
         eval_metric : EvalMetric
             Evaluation metric to use.
-        labels : list of NDArray if `pre_sliced` parameter is set to `False`, list of lists of NDArray otherwise
-            Typically `data_batch.label`.
+        labels : list of NDArray if `pre_sliced` parameter is set to `False`,
+            list of lists of NDArray otherwise. Typically `data_batch.label`.
         pre_sliced: bool
             Whether the labels are already sliced per device (default: False).
         """

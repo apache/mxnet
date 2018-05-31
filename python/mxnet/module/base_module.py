@@ -146,7 +146,8 @@ class BaseModule(object):
         - `get_outputs()`: get outputs of the previous forward operation.
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
-        - `update_metric(metric, labels, pre_sliced=False)`: update performance metric for the previous forward
+        - `update_metric(metric, labels, pre_sliced=False)`: update performance metric
+          for the previous forward
           computed results.
 
     - other properties (mostly for backward compatibility)
@@ -521,7 +522,9 @@ class BaseModule(object):
                     end_of_batch = True
 
                 if isinstance(data_batch, list):
-                    self.update_metric(eval_metric, [db.label for db in data_batch], pre_sliced=True)
+                    self.update_metric(eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
                 else:
                     self.update_metric(eval_metric, data_batch.label)
 
@@ -957,8 +960,8 @@ class BaseModule(object):
         ----------
         eval_metric : EvalMetric
             Evaluation metric to use.
-        labels : list of NDArray if `pre_sliced` parameter is set to `False`, list of lists of NDArray otherwise
-            Typically `data_batch.label`.
+        labels : list of NDArray if `pre_sliced` parameter is set to `False`,
+            list of lists of NDArray otherwise. Typically `data_batch.label`.
         pre_sliced: bool
             Whether the labels are already sliced per device (default: False).
 
