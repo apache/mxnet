@@ -33,9 +33,6 @@ import numpy as np
 
 import re
 
-import sys
-
-
 def looks_like_weight(name):
     """Internal helper to figure out if node should be hidden with `hide_weights`.
     """
@@ -159,7 +156,6 @@ def convert_fully_connected(node, **kwargs):
         [name],  # output
         alpha=1.0,
         beta=1.0,
-        broadcast=True,
         transA=False,
         transB=True,
         name=name
@@ -204,10 +200,8 @@ def convert_batchnorm(node, **kwargs):
         name=name,
         epsilon=eps,
         momentum=momentum,
-        is_test=1,
         spatial=1
     )
-
     return [bn_node]
 
 
@@ -481,7 +475,6 @@ def convert_pooling(node, **kwargs):
             pool_types[pool_type],
             [input_node.name],  # input
             [name],
-            #        dilations = [0, 0],
             kernel_shape=kernel,
             pads=[0, 0],
             strides=stride,
@@ -671,16 +664,12 @@ def convert_dropout(node, **kwargs):
     input_name = kwargs["proc_nodes"][input_id].name
     attrs = node["attrs"]
     p = float(attrs["p"])
-    if "mode" in attrs:
-        is_test = 0 if str(attrs["mode"]) is "always" else 1
-    else:
-        is_test = 1
+
     dropout_node = helper.make_node(
         "Dropout",
         [input_name],
         [name],
         ratio=p,
-        is_test=is_test,
         name=name
     )
     return [dropout_node]
@@ -743,9 +732,7 @@ def convert_mul_scalar(node, **kwargs):
             "Mul",
             [a_node, scalar_op_name],
             [name],
-            name=name,
-            broadcast=1,
-            axis=3
+            name=name
         )
 
         return [tensor_node, mul_node]
@@ -900,8 +887,6 @@ def covert_broadcast_add(node, **kwargs):
         "Add",
         [a_node, b_node],
         [name],
-        broadcast=1,
-        axis=1,
         name=name,
     )
 
@@ -945,7 +930,6 @@ def covert_broadcast_sub(node, **kwargs):
         "Sub",
         [a_node, b_node],
         [name],
-        broadcast=1,
         name=name,
     )
 
@@ -989,9 +973,7 @@ def convert_mul(node, **kwargs):
         "Mul",
         [a_node, b_node],
         [name],
-        name=name,
-        broadcast=1,
-        axis=1
+        name=name
     )
 
     return [mul_node]
@@ -1013,7 +995,7 @@ def convert_mul(node, **kwargs):
         "Div",
         [a_node, b_node],
         [name],
-        name=name,
+        name=name
     )
 
     return [div_node]
@@ -1035,8 +1017,7 @@ def convert_div(node, **kwargs):
         "Div",
         [a_node, b_node],
         [name],
-        name=name,
-        broadcast=1
+        name=name
     )
 
     return [div_node]
@@ -1076,7 +1057,7 @@ def convert_abs(node, **kwargs):
         "Abs",
         [a_node],
         [name],
-        name=name,
+        name=name
     )
 
     return [abs_node]
@@ -1096,7 +1077,7 @@ def convert_addn(node, **kwargs):
         "Sum",
         input_list,
         [name],
-        name=name,
+        name=name
     )
     return [sum_node]
 
@@ -1114,7 +1095,7 @@ def convert_ceil(node, **kwargs):
         "Ceil",
         [a_node],
         [name],
-        name=name,
+        name=name
     )
     return [node]
 
@@ -1131,7 +1112,7 @@ def convert_floor(node, **kwargs):
         "Floor",
         [a_node],
         [name],
-        name=name,
+        name=name
     )
     return [node]
 
@@ -1335,30 +1316,6 @@ def convert_power(node, **kwargs):
         name=None
     )
     return [node]
-
-#[TODO] broadcast_power with axis
-@mx2onnx.register("broadcast_power")
-def convert_power(node, **kwargs):
-    name = node["name"]
-    proc_nodes = kwargs["proc_nodes"]
-    inputs = node["inputs"]
-
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
-
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
-
-    node = helper.make_node(
-        "Pow",
-        [a_node, b_node],
-        outputs=[name],
-        name=name,
-        axis=1,
-        broadcast=1,
-    )
-    return [node]
-
 
 @mx2onnx.register("sqrt")
 def convert_sqrt(node, **kwargs):
