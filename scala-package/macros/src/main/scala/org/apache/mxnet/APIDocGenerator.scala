@@ -73,7 +73,7 @@ private[mxnet] object APIDocGenerator{
       }
       s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
-    val returnType = s"  * @return ${traitFunc.returnType}"
+    val returnType = s"  * @return ${func.returnType}"
     s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
   }
 
@@ -99,7 +99,7 @@ private[mxnet] object APIDocGenerator{
     } else {
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
-    s"def ${absClassFunc.name} (${argDef.mkString(", ")}) : ${returnType}"
+    s"def ${func.name} (${argDef.mkString(", ")}) : ${returnType}"
   }
 
 
