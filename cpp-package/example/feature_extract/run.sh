@@ -39,4 +39,4 @@ make
 ./prepare_data_with_opencv
 
 # Running the featurization
-LD_LIBRARY_PATH=../../../lib/linux ./feature_extract
+LD_LIBRARY_PATH=../../../lib ./feature_extract
