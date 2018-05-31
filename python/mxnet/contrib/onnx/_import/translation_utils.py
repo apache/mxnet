@@ -162,15 +162,8 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, cls):
         reshape_shape = list(len(input0_shape) * (1,))
         reshape_shape[broadcast_axis] = -1
         reshape_shape = tuple(reshape_shape)
-        op_sym = symbol.reshape(inputs[1], shape=reshape_shape)
-        if op_name == 'broadcast_add':
-            op_sym = symbol.broadcast_add(inputs[0], op_sym)
-        elif op_name == 'broadcast_mul':
-            op_sym = symbol.broadcast_mul(inputs[0], op_sym)
-        elif op_name == 'broadcast_sub':
-            op_sym = symbol.broadcast_sub(inputs[0], op_sym)
-        elif op_name == 'broadcast_div':
-            op_sym = symbol.broadcast_div(inputs[0], op_sym)
+        reshape_op_sym = symbol.reshape(inputs[1], shape=reshape_shape)
+        op_sym = getattr(symbol, op_name)(inputs[0], reshape_op_sym)
     else:
         op_sym = op_name
     return op_sym
