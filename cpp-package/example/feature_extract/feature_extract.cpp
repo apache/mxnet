@@ -58,13 +58,13 @@ class FeatureExtractor {
       LG<<layer_name;
     }
     */
-    net = Symbol::Load("./model/Inception_BN-symbol.json")
+    net = Symbol::Load("./model/Inception-BN-symbol.json")
               .GetInternals()["global_pool_output"];
   }
   /*Fill the trained paramters into the model, a.k.a. net, executor*/
   void LoadParameters() {
     map<string, NDArray> paramters;
-    NDArray::Load("./model/Inception_BN-0039.params", 0, &paramters);
+    NDArray::Load("./model/Inception-BN-0126.params", 0, &paramters);
     for (const auto &k : paramters) {
       if (k.first.substr(0, 4) == "aux:") {
         auto name = k.first.substr(4, k.first.size() - 4);
@@ -117,7 +117,7 @@ NDArray Data2NDArray() {
   NDArray ret(Shape(2, 3, 224, 224), global_ctx, false);
   ifstream inf("./img.dat", ios::binary);
   vector<float> data(2 * 3 * 224 * 224);
-  inf.read(reinterpret_cast<char *>data.data(), 2 * 3 * 224 * 224 * sizeof(float));
+  inf.read(reinterpret_cast<char *>(data.data()), 2 * 3 * 224 * 224 * sizeof(float));
   inf.close();
   ret.SyncCopyFromCPU(data.data(), 2 * 3 * 224 * 224);
   NDArray::WaitAll();
