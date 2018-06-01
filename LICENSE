@@ -511,6 +511,12 @@
 
     =======================================================================================
 
+    11. cpuinfo
+    This file is Distributed under the terms of the simplified BSD license.
+    For details, see, src/common/cpuinfo/
+
+    =======================================================================================
+
     11. ONNX Export module
     For details, see, python/mxnet/contrib/onnx/_export/LICENSE
 
