@@ -845,7 +845,6 @@ struct slice_assign<ndim, req, gpu> {
     const int out_last_dim_size = vshape[ndim-1];
     const int step_last_dim = step[ndim-1];
     const int begin_last_dim = begin[ndim-1];
-    int offset = i * out_last_dim_size;
     const int j = i % out_last_dim_size;
     int irow = 0;  // row id of flattend 2D out
     int stride = 1;
