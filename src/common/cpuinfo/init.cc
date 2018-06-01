@@ -1,17 +1,12 @@
-#include <stdint.h>
-#include <string.h>
-
-#include "../cpuinfo.h"
-#include "./cpuid.h"
-#include "./api.h"
-#include "./utils.h"
-
-
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <pthread.h>
 #endif
+
+
+#include "../cpuinfo.h"
+#include "./api.h"
 
 #ifdef __APPLE__
 #include "TargetConditionals.h"
@@ -23,6 +18,14 @@ static INIT_ONCE init_guard = INIT_ONCE_STATIC_INIT;
 #else
 static pthread_once_t init_guard = PTHREAD_ONCE_INIT;
 #endif
+
+#include <stdint.h>
+#include <string.h>
+
+#include "../cpuinfo.h"
+#include "cpuid.h"
+#include "api.h"
+#include "utils.h"
 
 
 
@@ -53,9 +56,6 @@ void cpuinfo_x86_init_processor(struct cpuinfo_x86_processor* processor) {
 	const struct cpuid_regs leaf0x80000000 = cpuid(UINT32_C(0x80000000));
 	const uint32_t max_extended_index =
 			leaf0x80000000.eax >= UINT32_C(0x80000000) ? leaf0x80000000.eax : 0;
-
-	const struct cpuid_regs leaf0x80000001 = max_extended_index >= UINT32_C(0x80000001) ?
-																					 cpuid(UINT32_C(0x80000001)) : (struct cpuid_regs) { 0, 0, 0, 0 };
 
 	if (max_base_index >= 1) {
 		const struct cpuid_regs leaf1 = cpuid(1);

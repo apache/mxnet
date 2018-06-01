@@ -36,7 +36,7 @@ void cpuinfo_x86_detect_topology(
 			topology->core_bits_offset = log2_max_threads_per_core;
 			topology->thread_bits_length = log2_max_threads_per_core;
 		}
-		cpuinfo_log_debug("HTT: APIC ID = %08"PRIx32", logical processors = %"PRIu32, apic_id, logical_processors);
+		cpuinfo_log_debug("HTT: APIC ID = %08, logical processors = %", apic_id, logical_processors);
 	}
 
 	/*
@@ -55,35 +55,34 @@ void cpuinfo_x86_detect_topology(
 			type = (leafB.ecx >> 8) & UINT32_C(0x000000FF);
 			const uint32_t level_shift = leafB.eax & UINT32_C(0x0000001F);
 			const uint32_t x2apic_id   = leafB.edx;
-			// const uint32_t logical_processors = leafB.ebx & UINT32_C(0x0000FFFF);
 			apic_id = x2apic_id;
 			switch (type) {
 				case topology_type_invalid:
 					break;
 				case topology_type_smt:
-					cpuinfo_log_debug("x2 level %"PRIu32": APIC ID = %08"PRIx32", "
-						"type SMT, shift %"PRIu32", total shift %"PRIu32,
+					cpuinfo_log_debug("x2 level %: APIC ID = %08, "
+						"type SMT, shift %, total shift %",
 						level, apic_id, level_shift, total_shift);
 					topology->thread_bits_offset = total_shift;
 					topology->thread_bits_length = level_shift;
 					break;
 				case topology_type_core:
-					cpuinfo_log_debug("x2 level %"PRIu32": APIC ID = %08"PRIx32", "
-						"type core, shift %"PRIu32", total shift %"PRIu32,
+					cpuinfo_log_debug("x2 level %: APIC ID = %08, "
+						"type core, shift %, total shift %",
 						level, apic_id, level_shift, total_shift);
 					topology->core_bits_offset = total_shift;
 					topology->core_bits_length = level_shift;
 					break;
 				default:
-					cpuinfo_log_warning("unexpected topology type %"PRIu32" (offset %"PRIu32", length %"PRIu32") "
+					cpuinfo_log_warning("unexpected topology type % (offset %, length %) "
 						"reported in leaf 0x0000000B is ignored", type, total_shift, level_shift);
 					break;
 			}
 			total_shift += level_shift;
 			level += 1;
 		} while (type != 0);
-		cpuinfo_log_debug("x2APIC ID 0x%08"PRIx32", "
-			"SMT offset %"PRIu32" length %"PRIu32", core offset %"PRIu32" length %"PRIu32, apic_id,
+		cpuinfo_log_debug("x2APIC ID 0x%08, "
+			"SMT offset % length %, core offset % length %", apic_id,
 			topology->thread_bits_offset, topology->thread_bits_length,
 			topology->core_bits_offset, topology->core_bits_length);
 	}

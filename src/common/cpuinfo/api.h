@@ -41,8 +41,8 @@ void cpuinfo_x86_detect_topology(
 
 
 extern bool cpuinfo_is_initialized;
-//extern struct cpuinfo_processor* cpuinfo_processors;
-//extern struct cpuinfo_core* cpuinfo_cores;
+extern struct cpuinfo_processor* cpuinfo_processors;
+extern struct cpuinfo_core* cpuinfo_cores;
 extern uint32_t cpuinfo_cores_count;
 
 void cpuinfo_x86_mach_init(void);

@@ -165,17 +165,17 @@ static bool parse_line(
 				if (new_processor_index < processor_index) {
 					/* Strange: decreasing processor number */
 					cpuinfo_log_warning(
-						"unexpectedly low processor number %"PRIu32" following processor %"PRIu32" in /proc/cpuinfo",
+						"unexpectedly low processor number % following processor % in /proc/cpuinfo",
 						new_processor_index, processor_index);
 				} else if (new_processor_index > processor_index + 1) {
 					/* Strange, but common: skipped processor $(processor_index + 1) */
 					cpuinfo_log_info(
-						"unexpectedly high processor number %"PRIu32" following processor %"PRIu32" in /proc/cpuinfo",
+						"unexpectedly high processor number % following processor % in /proc/cpuinfo",
 						new_processor_index, processor_index);
 				}
 				if (new_processor_index >= max_processors_count) {
 					/* Log and ignore processor */
-					cpuinfo_log_warning("processor %"PRIu32" in /proc/cpuinfo is ignored: index exceeds system limit %"PRIu32,
+					cpuinfo_log_warning("processor % in /proc/cpuinfo is ignored: index exceeds system limit %",
 						new_processor_index, max_processors_count - 1);
 				}
 				state->processor_index = new_processor_index;

@@ -43,10 +43,6 @@ bool cpuinfo_linux_parse_multiline_file(const char* filename, size_t buffer_size
 uint32_t cpuinfo_linux_get_max_processors_count(void);
 uint32_t cpuinfo_linux_get_max_possible_processor(uint32_t max_processors_count);
 uint32_t cpuinfo_linux_get_max_present_processor(uint32_t max_processors_count);
-uint32_t cpuinfo_linux_get_processor_min_frequency(uint32_t processor);
-uint32_t cpuinfo_linux_get_processor_max_frequency(uint32_t processor);
-bool cpuinfo_linux_get_processor_package_id(uint32_t processor, uint32_t package_id[1]);
-bool cpuinfo_linux_get_processor_core_id(uint32_t processor, uint32_t core_id[1]);
 
 bool cpuinfo_linux_detect_possible_processors(uint32_t max_processors_count,
 																							uint32_t* processor0_flags, uint32_t processor_struct_size, uint32_t possible_flag);

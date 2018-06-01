@@ -4,18 +4,28 @@
 #ifndef _WIN32
 	#include <unistd.h>
 #endif
+#ifdef __ANDROID__
+	#include <android/log.h>
+	#define CPUINFO_LOG_TAG "cpuinfo"
+#endif
 
 #include "./log.h"
 
 #ifndef CPUINFO_LOG_TO_STDIO
-	#define CPUINFO_LOG_TO_STDIO 1
+	#ifdef __ANDROID__
+		#define CPUINFO_LOG_TO_STDIO 0
+	#else
+		#define CPUINFO_LOG_TO_STDIO 1
+	#endif
 #endif
 
 void cpuinfo_log_fatal(const char* format, ...) {
 	va_list args;
 	va_start(args, format);
 
-	#if defined(__ANDROID__) || defined(_WIN32)
+	#if defined(__ANDROID__) && !CPUINFO_LOG_TO_STDIO
+		__android_log_vprint(ANDROID_LOG_FATAL, CPUINFO_LOG_TAG, format, args);
+	#elif defined(__ANDROID__) || defined(_WIN32)
 		fprintf(stderr, "Fatal error: ");
 		vfprintf(stderr, format, args);
 		fprintf(stderr, "\n");
@@ -35,7 +45,9 @@ void cpuinfo_log_fatal(const char* format, ...) {
 		va_list args;
 		va_start(args, format);
 
-		#if defined(__ANDROID__) || defined(_WIN32)
+		#if defined(__ANDROID__) && !CPUINFO_LOG_TO_STDIO
+			__android_log_vprint(ANDROID_LOG_ERROR, CPUINFO_LOG_TAG, format, args);
+		#elif defined(__ANDROID__) || defined(_WIN32)
 			fprintf(stderr, "Error: ");
 			vfprintf(stderr, format, args);
 			fprintf(stderr, "\n");

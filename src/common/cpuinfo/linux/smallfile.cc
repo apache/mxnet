@@ -21,10 +21,6 @@ bool cpuinfo_linux_parse_small_file(const char* filename, size_t buffer_size, cp
 	bool status = false;
 	char* buffer = (char*) alloca(buffer_size);
 
-	#if CPUINFO_LOG_DEBUG_PARSERS
-		cpuinfo_log_debug("parsing small file %s", filename);
-	#endif
-
 	size_t buffer_position = 0;
 	ssize_t bytes_read;
 	file = open(filename, O_RDONLY);
