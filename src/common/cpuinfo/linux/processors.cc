@@ -43,6 +43,10 @@
 #define POSSIBLE_CPULIST_FILENAME "/sys/devices/system/cpu/possible"
 #define PRESENT_CPULIST_FILENAME "/sys/devices/system/cpu/present"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 inline static const char* parse_number(const char* start, const char* end, uint32_t number_ptr[1]) {
 	uint32_t number = 0;
@@ -211,6 +215,10 @@ bool cpuinfo_linux_detect_present_processors(uint32_t max_processors_count,
 		return false;
 	}
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif
 

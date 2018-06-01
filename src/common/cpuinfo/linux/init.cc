@@ -37,6 +37,10 @@
 #include "./api.h"
 #include "../log.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 static inline uint32_t bit_mask(uint32_t bits) {
 	return (UINT32_C(1) << bits) - UINT32_C(1);
@@ -160,5 +164,9 @@ void cpuinfo_x86_linux_init(void) {
 	cpuinfo_is_initialized = true;
 
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

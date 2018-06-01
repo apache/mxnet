@@ -42,6 +42,10 @@
 #include "./api.h"
 #include "../log.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 bool cpuinfo_linux_parse_multiline_file(const char* filename, size_t buffer_size, cpuinfo_line_callback callback, void* context)
 {
@@ -122,5 +126,9 @@ cleanup:
 	}
 	return status;
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

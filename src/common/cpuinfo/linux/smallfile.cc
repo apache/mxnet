@@ -42,6 +42,10 @@
 #include "./api.h"
 #include "../log.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 bool cpuinfo_linux_parse_small_file(const char* filename, size_t buffer_size, cpuinfo_smallfile_callback callback, void* context) {
 	int file = -1;
@@ -78,5 +82,9 @@ cleanup:
 	}
 	return status;
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

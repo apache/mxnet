@@ -36,6 +36,10 @@
 
 #include "api.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 #if defined(__GNUC__) || defined(_MSC_VER)
 	static inline struct cpuid_regs cpuid(uint32_t eax) {
@@ -90,3 +94,7 @@
 		#endif
 	}
 #endif
+
+} // cpuinfo
+} // common
+} // mxnet

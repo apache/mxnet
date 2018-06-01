@@ -30,9 +30,17 @@
 #include "../cpuinfo.h"
 #include "./api.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 uint32_t cpuinfo_cores_count = 0;
 bool cpuinfo_is_initialized = false;
 
 uint32_t cpuinfo_get_cores_count(void) {
   return cpuinfo_cores_count;
 }
+
+} // cpuinfo
+} // common
+} // mxnet

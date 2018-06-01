@@ -36,6 +36,9 @@
 #include <windows.h>
 #endif
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
 
 struct cpuid_regs {
 	uint32_t eax;
@@ -80,3 +83,6 @@ BOOL CALLBACK cpuinfo_x86_windows_init(PINIT_ONCE init_once, PVOID parameter, PV
 
 typedef void (*cpuinfo_processor_callback)(uint32_t);
 
+} // cpuinfo
+} // common
+} // mxnet

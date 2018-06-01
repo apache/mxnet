@@ -51,6 +51,10 @@
  */
 #define BUFFER_SIZE 256
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 /* Locale-independent */
 inline static bool is_whitespace(char c) {
@@ -214,5 +218,9 @@ bool cpuinfo_linux_parse_cpulist(const char* filename, cpuinfo_cpulist_callback 
 		}
 	return status;
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

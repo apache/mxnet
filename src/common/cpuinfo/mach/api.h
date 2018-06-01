@@ -34,12 +34,19 @@
 
 #define CPUINFO_MACH_MAX_CACHE_LEVELS 8
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 struct cpuinfo_mach_topology {
 	uint32_t cores;
 };
 
-
 struct cpuinfo_mach_topology cpuinfo_mach_detect_topology(void);
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

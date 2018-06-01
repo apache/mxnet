@@ -54,6 +54,10 @@ static pthread_once_t init_guard = PTHREAD_ONCE_INIT;
 #include "api.h"
 #include "utils.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 
 bool CPUINFO_ABI cpuinfo_initialize(void) {
@@ -92,3 +96,7 @@ void cpuinfo_x86_init_processor(struct cpuinfo_x86_processor* processor) {
 
 	}
 }
+
+} // cpuinfo
+} // common
+} // mxnet

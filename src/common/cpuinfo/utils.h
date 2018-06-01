@@ -33,6 +33,9 @@
 #include <windows.h>
 #endif
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
 
 inline static uint32_t bit_length(uint32_t n) {
 	const uint32_t n_minus_1 = n - 1;
@@ -48,3 +51,7 @@ inline static uint32_t bit_length(uint32_t n) {
 		#endif
 	}
 }
+
+} // cpuinfo
+} // common
+} // mxnet

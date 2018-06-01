@@ -50,6 +50,10 @@
 #include "../../cpuinfo.h"
 #include "../api.h"
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 struct cpuinfo_x86_linux_processor {
 	uint32_t apic_id;
@@ -80,5 +84,10 @@ typedef bool (*cpuinfo_siblings_callback)(uint32_t, uint32_t, uint32_t, void*);
 
 extern const struct cpuinfo_processor** cpuinfo_linux_cpu_to_processor_map;
 extern const struct cpuinfo_core** cpuinfo_linux_cpu_to_core_map;
+
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

@@ -42,6 +42,10 @@
  */
 #define BUFFER_SIZE 2048
 
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
+
 
 static uint32_t parse_processor_number(
 	const char* processor_start,
@@ -231,5 +235,9 @@ bool cpuinfo_x86_linux_parse_proc_cpuinfo(
 	return cpuinfo_linux_parse_multiline_file("/proc/cpuinfo", BUFFER_SIZE,
 		(cpuinfo_line_callback) parse_line, &state);
 }
+
+} // cpuinfo
+} // common
+} // mxnet
 
 #endif

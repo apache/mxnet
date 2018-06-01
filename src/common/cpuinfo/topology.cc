@@ -32,7 +32,11 @@
 #include "./utils.h"
 #include "./api.h"
 #include "./cpuid.h"
-#include <dmlc/logging.h>
+#include "./log.h"
+
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
 
 
 enum topology_type {
@@ -115,3 +119,7 @@ void cpuinfo_x86_detect_topology(
 
 	topology->apic_id = apic_id;
 }
+
+} // cpuinfo
+} // common
+} // mxnet

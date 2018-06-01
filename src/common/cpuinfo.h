@@ -1,6 +1,4 @@
 #pragma once
-#ifndef CPUINFO_H
-#define CPUINFO_H
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
@@ -37,8 +35,14 @@
 #define CPUINFO_ARCH_X86_64 0
 #endif
 
-bool CPUINFO_ABI cpuinfo_initialize(void);
+namespace mxnet {
+namespace common {
+namespace cpuinfo {
 
+bool CPUINFO_ABI cpuinfo_initialize(void);
 uint32_t CPUINFO_ABI cpuinfo_get_cores_count(void);
 
-#endif /* CPUINFO_H */
+} // cpuinfo
+} // common
+} // mxnet
+
