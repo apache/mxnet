@@ -770,8 +770,8 @@ class HybridBlock(Block):
         self._infer_attrs('infer_type', 'dtype', *args)
 
     def export(self, path, epoch=0):
-        """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
-        or the C++ interface.
+        """Export HybridBlock to json format that can be loaded by
+        `SymbolBlock.import_`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
