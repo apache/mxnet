@@ -178,65 +178,6 @@ private[mxnet] object SymbolImplMacros {
     result
   }
 
-  // Convert C++ Types to Scala Types
-  def typeConversion(in : String, argType : String = "") : String = {
-    in match {
-      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "org.apache.mxnet.Symbol"
-      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => "Array[org.apache.mxnet.Symbol]"
-      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
-      case "int" | "intorNone" | "int(non-negative)" => "Int"
-      case "long" | "long(non-negative)" => "Long"
-      case "double" | "doubleorNone" => "Double"
-      case "string" => "String"
-      case "boolean" | "booleanorNone" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
-      case default => throw new IllegalArgumentException(
-        s"Invalid type for args: $default, $argType")
-    }
-  }
-
-
-  /**
-    * By default, the argType come from the C++ API is a description more than a single word
-    * For Example:
-    *   <C++ Type>, <Required/Optional>, <Default=>
-    * The three field shown above do not usually come at the same time
-    * This function used the above format to determine if the argument is
-    * optional, what is it Scala type and possibly pass in a default value
-    * @param argType Raw arguement Type description
-    * @return (Scala_Type, isOptional)
-    */
-  def argumentCleaner(argType : String) : (String, Boolean) = {
-    val spaceRemoved = argType.replaceAll("\\s+", "")
-    var commaRemoved : Array[String] = new Array[String](0)
-    // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
-    if (spaceRemoved.charAt(0)== '{') {
-      val endIdx = spaceRemoved.indexOf('}')
-      commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
-      commaRemoved(0) = "string"
-    } else {
-      commaRemoved = spaceRemoved.split(",")
-    }
-    // Optional Field
-    if (commaRemoved.length >= 3) {
-      // arg: Type, optional, default = Null
-      require(commaRemoved(1).equals("optional"))
-      require(commaRemoved(2).startsWith("default="))
-      (typeConversion(commaRemoved(0), argType), true)
-    } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType)
-      val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
-      (tempType, tempOptional)
-    } else {
-      throw new IllegalArgumentException(
-        s"Unrecognized arg field: $argType, ${commaRemoved.length}")
-    }
-
-  }
-
-
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]

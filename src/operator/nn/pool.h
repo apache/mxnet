@@ -340,7 +340,9 @@ inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TS
                 }
               }
             }
-            out_data[(pd*pooled_height+ph)*pooled_width+pw] = a_root_p<DType, p>::Map(sum);
+            out_data[(pd*pooled_height+ph)*pooled_width+pw] = (pool_size == 0) ?
+                                                              DType(0.0f / 0) :
+                                                              a_root_p<DType, p>::Map(sum);
           }
         }
       }
