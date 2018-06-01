@@ -1023,7 +1023,8 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 </div> <!-- End of scala julia perl -->
 <div class="cpp">
 <div class="cpu gpu">
-To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. 
+<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
 </div> <!-- END - Linux -->
@@ -1454,7 +1455,8 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
 <div class="cpp">
-To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.
+<p>To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.</p>
+<br/>
 </div>
 </div> <!-- END - Mac OS -->
 
@@ -1771,6 +1773,12 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+<div class="cpu gpu">
+<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<br/>
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of C++>
 </div> <!-- End of Windows -->
 
 
@@ -2333,7 +2341,7 @@ b
 
 
 <div class="linux">
-  <div class="scala julia perl">
+  <div class="scala julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -2343,7 +2351,7 @@ Will be available soon.
 </div>
 
 <div class="macos">
-  <div class="scala julia perl">
+  <div class="scala julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -2365,7 +2373,7 @@ Will be available soon.
 </div>
 </div>
 
-<div class="scala julia perl">
+<div class="scala julia perl cpp">
 <div class="cpu gpu">
 
 Will be available soon.
