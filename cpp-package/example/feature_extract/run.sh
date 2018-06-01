@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Getting the data
+# Downloading the data and model
 mkdir -p model
 wget -nc http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz
 wget -nc -O cat.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true
