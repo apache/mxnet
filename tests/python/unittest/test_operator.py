@@ -5901,6 +5901,10 @@ def test_foreach():
             out[i] = out[i] * 2
         out.extend(states)
         out = mx.sym.Group(out)
+        js_1 = out.tojson()
+        out = mx.sym.load_json(js_1)
+        js_2 = out.tojson()
+        assert js_1 == js_2
         arr_grads = []
         arg_dict = {}
         arg_grad_dict = {}
@@ -6048,6 +6052,10 @@ def test_foreach_nested():
         out1[i] = out1[i]
     out1.extend(out[1])
     out = mx.sym.Group(out1)
+    js_1 = out.tojson()
+    out = mx.sym.load_json(js_1)
+    js_2 = out.tojson()
+    assert js_1 == js_2
 
     data = mx.nd.arange(4).reshape((1, 2, 2))
     state = mx.nd.arange(2)
@@ -6121,6 +6129,11 @@ def test_foreach_lstm():
     h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
     out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
     out = sym_group(out)
+    js_1 = out.tojson()
+    out = mx.sym.load_json(js_1)
+    js_2 = out.tojson()
+    assert js_1 == js_2
+
     e1 = out.bind(ctx=default_context(),
                   args={'data': data_arr, 'h': h_arr, 'c': c_arr,
                         'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
@@ -6152,6 +6165,11 @@ def test_foreach_lstm():
         unroll_outs.append(mx.sym.expand_dims(h, axis=0))
     unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
     out = mx.sym.Group([unroll_outs, h, c])
+    js_1 = out.tojson()
+    out = mx.sym.load_json(js_1)
+    js_2 = out.tojson()
+    assert js_1 == js_2
+
     e2 = out.bind(ctx=default_context(),
                   args={'data': data_arr, 'h': h_arr, 'c': c_arr,
                         'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
