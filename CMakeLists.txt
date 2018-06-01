@@ -423,6 +423,8 @@ endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/cpuinfo/cmake)
   add_subdirectory(3rdparty/cpuinfo)
+  set(CPUINFO_LIB cpuinfo)
+  list(APPEND mxnet_LINKER_LIBS ${CPUINFO_LIB})
 endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
