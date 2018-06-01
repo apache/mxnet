@@ -242,7 +242,7 @@ Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and u
 
 ```python
 # Load the network architecture and parameters
-sym, arg_params, aux_params = mx.model.load_checkpoint('lenet', 1)
+sym = mx.sym.load('lenet-symbol.json')
 # Create a Gluon Block using the loaded network architecture.
 # 'inputs' parameter specifies the name of the symbol in the computation graph
 # that should be treated as input. 'data' is the default name used for input when
