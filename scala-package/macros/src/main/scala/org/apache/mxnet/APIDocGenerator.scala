@@ -97,6 +97,7 @@ private[mxnet] object APIDocGenerator{
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     } else {
+      argDef += "out : Option[NDArray] = None"
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
     s"def ${func.name} (${argDef.mkString(", ")}) : ${returnType}"

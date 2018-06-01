@@ -106,6 +106,57 @@ object NDArray {
   }
 
   /**
+    * Used by NDArrayMacro for New Scala NDArray API.
+    * Invoke this function by passing in parameters.
+    * Parameters
+    * ----------
+    * @param kwargs Key-value arguments of input scalars
+    * @return The result NDArrays of result of computation.
+    */
+  private[mxnet] def genericNewAPINDArrayFunctionInvoke(
+    funcName: String, kwargs: Map[String, Any] = null) : NDArrayFuncReturn = {
+    val function = functions(funcName)
+    val ndArgs = ArrayBuffer.empty[NDArray]
+    val updatedKwargs: Map[String, String] =
+      Option(kwargs).getOrElse(Map.empty[String, String]).filter{ case (key, value) =>
+        !value.isInstanceOf[NDArray] && !value.isInstanceOf[NDArrayFuncReturn]
+      } .map { case (k, v) => k -> v.toString }
+
+    Option(kwargs).getOrElse(Map.empty[String, String]).filter{ case (key, value) =>
+          value.isInstanceOf[NDArray] || value.isInstanceOf[NDArrayFuncReturn]
+        } .filter{ case (key, value) => key != "out"}.foreach{
+      case (key, value) => value match {
+        case nd : NDArray =>
+          ndArgs.append(nd.asInstanceOf[NDArray])
+        case arrFunRet: NDArrayFuncReturn =>
+          arrFunRet.asInstanceOf[NDArrayFuncReturn].arr.foreach(ndArgs.append(_))
+      }
+    }
+
+    val (oriOutputs, outputVars) =
+      if (kwargs != null && kwargs.contains("out")) {
+        val output = kwargs("out")
+        output match {
+          case nd: NDArray => (Array(nd), Array(nd.handle))
+          case ndFuncRet: NDArrayFuncReturn => (ndFuncRet.arr, ndFuncRet.arr.map(_.handle))
+          case ndArr: Seq[NDArray] => (ndArr.toArray, ndArr.toArray.map(_.handle))
+          case _ => throw new IllegalArgumentException(
+            "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
+        }
+      } else {
+        (null, null)
+      }
+    val outputs = ArrayBuffer.empty[NDArrayHandle]
+    checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.map(_.handle).toArray, outputVars,
+      outputs, updatedKwargs.size, updatedKwargs.keys.toArray, updatedKwargs.values.toArray))
+    new NDArrayFuncReturn(Option(oriOutputs).getOrElse {
+      val outputArrs = outputs.map(new NDArray(_)).toArray
+      addDependency(ndArgs.toArray, outputArrs)
+      outputArrs
+    })
+  }
+
+  /**
    * Return a new empty handle.
    * Empty handle can be used to hold result
    *
@@ -535,6 +586,10 @@ object NDArray {
     val handleRef = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
     new NDArray(handleRef.value)
+  }
+
+  private def _crop_assign(kwargs: Map[String, Any] = null)(args: Any*) : NDArrayFuncReturn = {
+    genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
   // TODO: imdecode
