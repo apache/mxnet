@@ -776,7 +776,7 @@ def test_export():
     model = gluon.model_zoo.vision.resnet18_v1(
         prefix='resnet', ctx=ctx, pretrained=True)
     model.hybridize()
-    data = mx.nd.random.normal(shape=(1, 3, 224, 224))
+    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
     model.export('gluon')
@@ -794,6 +794,22 @@ def test_export():
 
     assert_almost_equal(out.asnumpy(), out2.asnumpy())
 
+@with_seed()
+def test_import():
+    ctx = mx.context.current_context()
+    net1 = gluon.model_zoo.vision.resnet18_v1(
+        prefix='resnet', ctx=ctx, pretrained=True)
+    net1.hybridize()
+    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
+    out1 = net1(data)
+
+    net1.export('net1', epoch=1)
+
+    net2 = gluon.SymbolBlock.import_(
+        'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
+    out2 = net2(data)
+
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
 
 @with_seed()
 def test_hybrid_stale_cache():

@@ -885,6 +885,49 @@ class SymbolBlock(HybridBlock):
     >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> print(feat_model(x))
     """
+    @staticmethod
+    def import_(symbol_file, input_names, param_file=None, ctx=None):
+        """Import model previously saved by `HybridBlock.export` or
+        `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
+
+        Parameters
+        ----------
+        symbol_file : str
+            Path to symbol file.
+        input_names : list of str
+            List of input variable names
+        param_file : str, optional
+            Path to parameter file.
+        ctx : Context, default None
+            The context to initialize SymbolBlock on.
+
+        Returns
+        -------
+        SymbolBlock
+            SymbolBlock loaded from symbol and parameter files.
+
+        Examples
+        --------
+        >>> net1 = gluon.model_zoo.vision.resnet18_v1(
+        ...     prefix='resnet', pretrained=True)
+        >>> net1.hybridize()
+        >>> x = mx.nd.random.normal(shape=(1, 3, 32, 32))
+        >>> out1 = net1(x)
+        >>> net1.export('net1', epoch=1)
+        >>>
+        >>> net2 = gluon.SymbolBlock.import_(
+        ...     'net1-symbol.json', ['data'], 'net1-0001.params')
+        >>> out2 = net2(x)
+        """
+        sym = symbol.load(symbol_file)
+        if isinstance(input_names, str):
+            input_names = [input_names]
+        inputs = [symbol.var(i) for i in input_names]
+        ret = SymbolBlock(sym, inputs)
+        if param_file is not None:
+            ret.collect_params().load(param_file, ctx=ctx)
+        return ret
+
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__(prefix=None, params=None)
         self._prefix = ''
