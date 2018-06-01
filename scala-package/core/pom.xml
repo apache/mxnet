@@ -73,6 +73,7 @@
         </configuration>
         <executions>
           <execution>
+            <phase>package</phase>
             <id>attach-javadocs</id>
             <goals>
               <goal>doc-jar</goal>

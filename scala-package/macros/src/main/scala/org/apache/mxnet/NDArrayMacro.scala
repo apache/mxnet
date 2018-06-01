@@ -120,7 +120,7 @@ private[mxnet] object NDArrayMacro {
         impl += base
       })
       // scalastyle:off
-      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
+      impl += "org.apache.mxnet.NDArray.genericNewAPINDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.NDArrayFuncReturn"
