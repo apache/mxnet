@@ -61,11 +61,12 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Generate ScalaDoc type
-  def generateAPIDocFromBackend(traitFunc : absClassFunction) : String = {
-    val desc = traitFunc.desc.split("\n").map({ currStr =>
+
+  def generateAPIDocFromBackend(func : absClassFunction) : String = {
+    val desc = func.desc.split("\n").map({ currStr =>
       s"  * $currStr"
     })
-    val params = traitFunc.listOfArgs.map({ absClassArg =>
+    val params = func.listOfArgs.map({ absClassArg =>
       val currArgName = absClassArg.argName match {
                 case "var" => "vari"
                 case "type" => "typeOf"
@@ -73,13 +74,13 @@ private[mxnet] object APIDocGenerator{
       }
       s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
-    val returnType = s"  * @return ${traitFunc.returnType}"
+    val returnType = s"  * @return ${func.returnType}"
     s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
   }
 
-  def generateAPISignature(absClassFunc : absClassFunction, isSymbol : Boolean) : String = {
+  def generateAPISignature(func : absClassFunction, isSymbol : Boolean) : String = {
     var argDef = ListBuffer[String]()
-    absClassFunc.listOfArgs.foreach(absClassArg => {
+    func.listOfArgs.foreach(absClassArg => {
       val currArgName = absClassArg.argName match {
         case "var" => "vari"
         case "type" => "typeOf"
@@ -92,14 +93,14 @@ private[mxnet] object APIDocGenerator{
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
     })
-    var returnType = absClassFunc.returnType
+    var returnType = func.returnType
     if (isSymbol) {
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     } else {
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
-    s"def ${absClassFunc.name} (${argDef.mkString(", ")}) : ${returnType}"
+    s"def ${func.name} (${argDef.mkString(", ")}) : ${returnType}"
   }
 
 

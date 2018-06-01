@@ -987,11 +987,6 @@ MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
                                  int num_flags,
                                  const char** keys,
                                  const char** vals,
-                                 int num_inputs,
-                                 const char** input_names,
-                                 int num_params,
-                                 const char** param_names,
-                                 NDArrayHandle* params,
                                  CachedOpHandle *out);
 /*!
  * \brief free cached operator
