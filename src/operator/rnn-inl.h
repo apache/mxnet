@@ -495,6 +495,9 @@ class RNNOp : public Operator{
     CHECK(dw.CheckContiguous());
     CHECK(dhx.CheckContiguous());
     CHECK(dy.CheckContiguous());
+    if (req[rnn_enum::kParams] != kAddTo) {
+      dw = mshadow::expr::ScalarExp<DType>(0.0f);
+    }
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
