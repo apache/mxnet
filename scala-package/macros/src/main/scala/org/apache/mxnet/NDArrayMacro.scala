@@ -18,7 +18,7 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.OperatorBuildUtils
+import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
@@ -66,6 +66,9 @@ private[mxnet] object NDArrayMacro {
         if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
           Seq(
             // scalastyle:off
+            // (yizhi) We are investigating a way to make these functions type-safe
+            // and waiting to see the new approach is stable enough.
+            // Thus these functions may be deprecated in the future.
             // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
             q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
             // e.g def transpose(args: Any*)
@@ -92,9 +95,11 @@ private[mxnet] object NDArrayMacro {
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
+
     val newNDArrayFunctions = {
-      if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
+      if (isContrib) ndarrayFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
     val functionDefs = newNDArrayFunctions map { ndarrayfunction =>
@@ -128,8 +133,8 @@ private[mxnet] object NDArrayMacro {
       impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
-      val returnType = "org.apache.mxnet.NDArray"
-      var finalStr = s"def ${ndarrayfunction.name}New"
+      val returnType = "org.apache.mxnet.NDArrayFuncReturn"
+      var finalStr = s"def ${ndarrayfunction.name}"
       finalStr += s" (${argDef.mkString(",")}) : $returnType"
       finalStr += s" = {${impl.mkString("\n")}}"
       c.parse(finalStr).asInstanceOf[DefDef]
@@ -170,63 +175,6 @@ private[mxnet] object NDArrayMacro {
   }
 
 
-  // Convert C++ Types to Scala Types
-  private def typeConversion(in : String, argType : String = "") : String = {
-    in match {
-      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "org.apache.mxnet.NDArray"
-      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => "Array[org.apache.mxnet.NDArray]"
-      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
-      case "int" | "intorNone" | "int(non-negative)" => "Int"
-      case "long" | "long(non-negative)" => "Long"
-      case "double" | "doubleorNone" => "Double"
-      case "string" => "String"
-      case "boolean" | "booleanorNone" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
-      case default => throw new IllegalArgumentException(
-        s"Invalid type for args: $default, $argType")
-    }
-  }
-
-
-  /**
-    * By default, the argType come from the C++ API is a description more than a single word
-    * For Example:
-    *   <C++ Type>, <Required/Optional>, <Default=>
-    * The three field shown above do not usually come at the same time
-    * This function used the above format to determine if the argument is
-    * optional, what is it Scala type and possibly pass in a default value
-    * @param argType Raw arguement Type description
-    * @return (Scala_Type, isOptional)
-    */
-  private def argumentCleaner(argType : String) : (String, Boolean) = {
-    val spaceRemoved = argType.replaceAll("\\s+", "")
-    var commaRemoved : Array[String] = new Array[String](0)
-    // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
-    if (spaceRemoved.charAt(0)== '{') {
-      val endIdx = spaceRemoved.indexOf('}')
-      commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
-      commaRemoved(0) = "string"
-    } else {
-      commaRemoved = spaceRemoved.split(",")
-    }
-    // Optional Field
-    if (commaRemoved.length >= 3) {
-      // arg: Type, optional, default = Null
-      require(commaRemoved(1).equals("optional"))
-      require(commaRemoved(2).startsWith("default="))
-      (typeConversion(commaRemoved(0), argType), true)
-    } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType)
-      val tempOptional = tempType.equals("org.apache.mxnet.NDArray")
-      (tempType, tempOptional)
-    } else {
-      throw new IllegalArgumentException(
-        s"Unrecognized arg field: $argType, ${commaRemoved.length}")
-    }
-
-  }
 
 
   // List and add all the atomic symbol functions to current module.
@@ -268,7 +216,7 @@ private[mxnet] object NDArrayMacro {
     }
     // scalastyle:on println
     val argList = argNames zip argTypes map { case (argName, argType) =>
-      val typeAndOption = argumentCleaner(argType)
+      val typeAndOption = CToScalaUtils.argumentCleaner(argType, "org.apache.mxnet.NDArray")
       new NDArrayArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new NDArrayFunction(aliasName, argList.toList)
