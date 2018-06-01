@@ -20,7 +20,7 @@
 #include <dmlc/base.h>
 #include <dmlc/parameter.h>
 #include <climits>
-#include "<cpuinfo.h>"
+#include <cpuinfo.h>
 #include "./openmp.h"
 
 namespace mxnet {
