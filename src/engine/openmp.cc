@@ -16,11 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <cpuinfo.h>
 #include <dmlc/omp.h>
 #include <dmlc/base.h>
 #include <dmlc/parameter.h>
 #include <climits>
-#include <cpuinfo.h>
 #include "./openmp.h"
 
 namespace mxnet {
