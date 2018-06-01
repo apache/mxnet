@@ -1,9 +1,12 @@
+<div align="center">
+  <a href="https://mxnet.incubator.apache.org/"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet_logo_2.png"></a><br>
+</div>
+
 Apache MXNet (incubating) for Deep Learning
 =====
-
-[![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
-[![Documentation Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/)
-[![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
+| Master         | Docs          | License  |
+| :-------------:|:-------------:|:--------:|
+| [![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)  | [![Documentation Status](http://jenkins.mxnet-ci.amazon-ml.com/job/restricted-website-build/badge/icon)](https://mxnet.incubator.apache.org/) | [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE) |
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
 
