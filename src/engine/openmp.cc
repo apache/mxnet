@@ -49,8 +49,8 @@ OpenMP::OpenMP()
     if (!omp_num_threads_set_in_environment_) {
       omp_thread_max_ = omp_get_num_procs();
 #ifdef ARCH_IS_INTEL_X86
-      if (cpuinfo_initialize()) {
-        omp_thread_max_ = cpuinfo_get_cores_count();
+      if (mxnet::common::cpuinfo::cpuinfo_initialize()) {
+        omp_thread_max_ = mxnet::common::cpuinfo::cpuinfo_get_cores_count();
       } else {
         omp_thread_max_ >>= 1;
       }
