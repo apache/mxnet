@@ -135,6 +135,8 @@ net.save_params(file_name)
 
 We have successfully saved the parameters of the model into a file.
 
+Note: `Block.collect_params().save()` is not a recommended way to save parameters of a Gluon network if you plan to load the parameters back into a Gluon network using `Block.load_params()`.
+
 ## Loading model parameters from file
 
 Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_params` function.
