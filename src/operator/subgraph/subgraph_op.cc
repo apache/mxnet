@@ -27,20 +27,29 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
+#include "./subgraph_op.h"
 
 namespace mxnet {
 namespace op {
 
-struct SubgraphOpState {
+static std::unordered_map<std::string, SubgraphPropertyPtr> subg_props;
+
+void RegisterSubgraphProperty(SubgraphPropertyPtr property) {
+  auto ret = subg_props.insert(std::pair<std::string, SubgraphPropertyPtr>(
+          property->GetType(), property));
+  CHECK(!ret.second) << "The subgraph property for " << property->GetType()
+      << " has been registered";
+}
+
+class DefaultSubgraphOperator: public SubgraphOperator {
+ public:
   // TODO: initialize uuid
-  SubgraphOpState(const Symbol& sym) :
-      subgraph_sym_(&sym),
+  DefaultSubgraphOperator(const Symbol& sym) : SubgraphOperator(sym),
       subgraph_uuid_("dfasdfadsmxdfw324"),
       immutable_data_names_(sym.ListInputNames(Symbol::kReadOnlyArgs)),
       mutable_data_names_(sym.ListInputNames(Symbol::kAuxiliaryStates)),
       //input_data_names_(sym.ListInputNames(Symbol::kAll)),
-      output_data_names_(sym.ListOutputNames()),
-      subgraph_executor_(nullptr) {
+      output_data_names_(sym.ListOutputNames()) {
     const std::vector<std::string> input_data_names = sym.ListInputNames(Symbol::kAll);
     //const std::vector<std::string> immutable_data_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
     //const std::vector<std::string> mutable_data_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
@@ -60,8 +69,20 @@ struct SubgraphOpState {
     ndarray_var_versions_.resize(input_data_names.size(), -1);
   }
 
-	// arguments should have the same order as NDArrays in FCompute
-  const Symbol* subgraph_sym_;
+  void Forward(const OpContext& ctx,
+               const std::vector<NDArray>& inputs,
+               const std::vector<OpReqType>& req,
+               const std::vector<NDArray>& outputs);
+  void Backward(const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
+    // TODO we don't support backward yet.
+    // Many of the subgraphs don't need backward computation.
+  }
+
+ private:
+  std::string subgraph_uuid_;
   // this variable records the NDArrays' var versions of the last run.
   std::vector<int64_t> ndarray_var_versions_;
   std::vector<uint32_t> immutable_data_indices_;
@@ -70,16 +91,88 @@ struct SubgraphOpState {
   std::vector<std::string> mutable_data_names_;
   //std::vector<std::string> input_data_names_;
   std::vector<std::string> output_data_names_;
-  std::string subgraph_uuid_;
   std::shared_ptr<Executor> subgraph_executor_;
-};  // SubgraphOpState
+};
+
+SubgraphOperatorPtr SimpleSubgraphProperty::CreateSubgraphOperator(const nnvm::Symbol &sym) const {
+  return std::make_shared<DefaultSubgraphOperator>(sym);
+}
+
+void DefaultSubgraphOperator::Forward(const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
+  // We can create an executor to run this subgraph op
+  if (this->subgraph_executor_.get() == nullptr) {
+    std::vector<NDArray> arg_arrays;
+    std::vector<NDArray> aux_arrays;
+    for (size_t i = 0; i < this->immutable_data_indices_.size(); ++i) {
+      arg_arrays.push_back(inputs[this->immutable_data_indices_[i]]);
+    }
+    for (size_t i = 0; i < this->mutable_data_indices_.size(); ++i) {
+      aux_arrays.push_back(inputs[this->mutable_data_indices_[i]]);
+    }
+    std::vector<NDArray> grad_store(arg_arrays.size());
+    std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
+    this->subgraph_executor_.reset(Executor::Bind(this->GetSubgraph(),
+          ctx.run_ctx.ctx, std::map<std::string, Context>(), arg_arrays, grad_store,
+          grad_req, aux_arrays));
+  }
+  // TODO: replace the hard-coded integer with inputs[i].var().version
+  // If var version is old, need to update ndarray in the executor.
+  const int64_t max_var_version = 12034324324;
+  for (size_t i = 0; i < this->immutable_data_names_.size(); ++i) {
+    if (this->ndarray_var_versions_[this->immutable_data_indices_[i]] < max_var_version) {
+      auto it = this->subgraph_executor_->in_arg_map().find(this->immutable_data_names_[i]);
+      CHECK(it != this->subgraph_executor_->in_arg_map().end());
+      // Commented out because we don't have interface to do it yet
+      it->second = inputs[this->immutable_data_indices_[i]];
+      ++this->ndarray_var_versions_[this->immutable_data_indices_[i]];
+    }
+  }
+  for (size_t i = 0; i < this->mutable_data_names_.size(); ++i) {
+    if (this->ndarray_var_versions_[this->mutable_data_indices_[i]] < max_var_version) {
+      auto it = this->subgraph_executor_->aux_state_map().find(this->mutable_data_names_[i]);
+      CHECK(it != this->subgraph_executor_->aux_state_map().end());
+      // Commented out because we don't have interface to do it yet
+      it->second = inputs[this->mutable_data_indices_[i]];
+      ++this->ndarray_var_versions_[this->mutable_data_indices_[i]];
+    }
+  }
+  this->subgraph_executor_->Forward(false);
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    //NDArray tmp = outputs[i];
+    //this->subgraph_executor_->output_arrays()[i].WaitToRead();
+    CopyFromTo(this->subgraph_executor_->output_arrays()[i], &outputs[i]);
+    //tmp = this->subgraph_executor_->output_arrays()[i];
+  }
+}
+
+struct SubgraphOpState {
+  SubgraphOperatorPtr op;
+
+  SubgraphOpState(SubgraphOperatorPtr op) {
+    this->op = op;
+  }
+};
 
 OpStatePtr CreateSubgraphOpState(const NodeAttrs& attrs,
                                  Context ctx,
                                  const std::vector<TShape>& in_shapes,
                                  const std::vector<int>& in_types) {
   const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  return OpStatePtr::Create<SubgraphOpState>(subgraph_sym);
+  auto it = attrs.dict.find("exec_type");
+  if (it == attrs.dict.end()) {
+    auto op = std::make_shared<DefaultSubgraphOperator>(subgraph_sym);
+    return OpStatePtr::Create<SubgraphOpState>(op);
+  }
+
+  std::string exec_name = it->second;
+  auto prop_iter = subg_props.find(exec_name);
+  CHECK(prop_iter != subg_props.end()) << "We don't support the execution type: "
+      << exec_name;
+  auto op = prop_iter->second->CreateSubgraphOperator(subgraph_sym);
+  return OpStatePtr::Create<SubgraphOpState>(op);
 }
 
 bool SubgraphOpShape(const nnvm::NodeAttrs& attrs,
@@ -175,62 +268,7 @@ void SubgraphOpForward(const OpStatePtr& state_ptr,
                        const std::vector<OpReqType>& req,
                        const std::vector<NDArray>& outputs) {
   SubgraphOpState& state = state_ptr.get_state<SubgraphOpState>();
-  // We can create an executor to run this subgraph op
-  if (state.subgraph_executor_.get() == nullptr) {
-    std::vector<NDArray> arg_arrays;
-    std::vector<NDArray> aux_arrays;
-    for (size_t i = 0; i < state.immutable_data_indices_.size(); ++i) {
-      arg_arrays.push_back(inputs[state.immutable_data_indices_[i]]);
-    }
-    for (size_t i = 0; i < state.mutable_data_indices_.size(); ++i) {
-      aux_arrays.push_back(inputs[state.mutable_data_indices_[i]]);
-    }
-    std::vector<NDArray> grad_store(arg_arrays.size());
-    std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-    state.subgraph_executor_.reset(Executor::Bind(*state.subgraph_sym_,
-          ctx.run_ctx.ctx, std::map<std::string, Context>(), arg_arrays, grad_store,
-          grad_req, aux_arrays));
-  }
-  // TODO: replace the hard-coded integer with inputs[i].var().version
-  // If var version is old, need to update ndarray in the executor.
-  const int64_t max_var_version = 12034324324;
-  for (size_t i = 0; i < state.immutable_data_names_.size(); ++i) {
-    if (state.ndarray_var_versions_[state.immutable_data_indices_[i]] < max_var_version) {
-      auto it = state.subgraph_executor_->in_arg_map().find(state.immutable_data_names_[i]);
-      CHECK(it != state.subgraph_executor_->in_arg_map().end());
-      // Commented out because we don't have interface to do it yet
-      it->second = inputs[state.immutable_data_indices_[i]];
-      ++state.ndarray_var_versions_[state.immutable_data_indices_[i]];
-    }
-  }
-  for (size_t i = 0; i < state.mutable_data_names_.size(); ++i) {
-    if (state.ndarray_var_versions_[state.mutable_data_indices_[i]] < max_var_version) {
-      auto it = state.subgraph_executor_->aux_state_map().find(state.mutable_data_names_[i]);
-      CHECK(it != state.subgraph_executor_->aux_state_map().end());
-      // Commented out because we don't have interface to do it yet
-      it->second = inputs[state.mutable_data_indices_[i]];
-      ++state.ndarray_var_versions_[state.mutable_data_indices_[i]];
-    }
-  }
-  state.subgraph_executor_->Forward(false);
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    //NDArray tmp = outputs[i];
-    //state.subgraph_executor_->output_arrays()[i].WaitToRead();
-    CopyFromTo(state.subgraph_executor_->output_arrays()[i], &outputs[i]);
-    //tmp = state.subgraph_executor_->output_arrays()[i];
-  }
-
-#if 0
-  for (const auto& name : state.immutable_data_names_) {
-    LOG(INFO) << "SubgraphOpForward: input_data_name = " << name;
-  }
-  for (const auto& name : state.output_data_names_) {
-    LOG(INFO) << "SubgraphOpForward: output_data_name = " << name;
-  }
-  for (const auto v : state.ndarray_var_versions_) {
-    LOG(INFO) << "SubgraphOpForward: var_version = " << v;
-  }
-#endif
+  state.op->Forward(ctx, inputs, req, outputs);
 }
 
 NNVM_REGISTER_OP(_subgraph_op)

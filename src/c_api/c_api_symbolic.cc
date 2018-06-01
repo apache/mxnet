@@ -31,6 +31,7 @@
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
+#include "../operator/subgraph/subgraph_op.h"
 
 namespace mxnet {
 namespace op {
@@ -639,7 +640,11 @@ int MXPartitionGraph(SymbolHandle sym_handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
-  g.attrs["subgraph_op_names"] = std::make_shared<nnvm::any>(std::move(op_name_set));
+  if (!op_name_set.empty()) {
+    mxnet::op::SubgraphPropertyPtr property
+        = std::make_shared<mxnet::op::SimpleSubgraphProperty>(op_name_set);
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+  }
   g = ApplyPass(std::move(g), "PartitionGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
