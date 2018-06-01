@@ -28,4 +28,4 @@
 	url = https://github.com/dmlc/tvm
 [submodule "3rdparty/cpuinfo"]
 	path = 3rdparty/cpuinfo
-	url = git@github.com:pytorch/cpuinfo.git
+	url = https://github.com/pytorch/cpuinfo.git
