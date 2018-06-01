@@ -537,6 +537,10 @@ object NDArray {
     new NDArray(handleRef.value)
   }
 
+  private def _crop_assign(kwargs: Map[String, Any] = null)(args: Any*) : NDArrayFuncReturn = {
+    genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
+  }
+
   // TODO: imdecode
 }
 

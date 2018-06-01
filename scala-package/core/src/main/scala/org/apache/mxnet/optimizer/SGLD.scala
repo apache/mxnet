@@ -62,7 +62,7 @@ class SGLD(val learningRate: Float = 0.01f, rescaleGradient: Float = 1.0f,
     if (clipGradient != 0f) {
       // to get rid of memory leak
       val oldResdGrad = resdGrad
-      resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      resdGrad = NDArray.api.clip(resdGrad, -clipGradient, clipGradient)
       oldResdGrad.dispose()
     }
 

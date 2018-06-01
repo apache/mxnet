@@ -40,18 +40,8 @@ private object DataParallelExecutorGroup {
           val end = shape.toArray
           begin(axis) = sliceIdxStart
           end(axis) = sliceIdxStop
-          if (dSrc.context == dDst.context) {
-            NDArray.crop(Map(
-              "begin" -> new Shape(begin),
-              "end" -> new Shape(end),
-              "out" -> dDst))(dSrc)
-          } else {
-            // on different device, crop and then do cross device copy
-            val dDstCopy: NDArray = NDArray.crop(Map(
-              "begin" -> new Shape(begin),
-              "end" -> new Shape(end)))(dSrc)
-            dDstCopy.copyTo(dDst)
-          }
+          NDArray.api.crop(data = dSrc,
+            begin = new Shape(begin), end = new Shape(end)).copyTo(dDst)
         } else {
           dSrc.copyTo(dDst)
         }
@@ -569,8 +559,8 @@ class DataParallelExecutorGroup private[module](
         if (outGrads != null) {
           (outGrads zip outputLayouts).map { case (grad, axis) =>
             if (axis >= 0) {
-              val ogMySlice: NDArray = NDArray.slice_axis(
-                Map("axis" -> axis, "begin" -> islice._1, "end" -> islice._2))(grad)
+              val ogMySlice: NDArray = NDArray.api.slice_axis(data = grad,
+                axis = axis, begin = islice._1, end = islice._2)
               ogMySlice.asInContext(contexts(i))
             } else {
               grad.copyTo(contexts(i))
@@ -595,8 +585,8 @@ class DataParallelExecutorGroup private[module](
           if (axis == 0) {
             label.slice(islice)
           } else if (axis > 0) {
-            val labelMySlice: NDArray = NDArray.slice_axis(Map(
-              "axis" -> axis, "begin" -> islice._1, "end" -> islice._2))(label)
+            val labelMySlice: NDArray = NDArray.api.slice_axis(data = label,
+              axis = axis, begin = islice._1, end = islice._2)
               .asInContext(label.context)
             labelMySlice
           } else {

@@ -57,14 +57,13 @@ private[mxnet] object NDArrayMacro {
 
     val newNDArrayFunctions = {
       if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
+      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
      val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
         val funcName = NDArrayfunction.name
         val termName = TermName(funcName)
-        if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
-          Seq(
+       Seq(
             // scalastyle:off
             // (yizhi) We are investigating a way to make these functions type-safe
             // and waiting to see the new approach is stable enough.
@@ -75,16 +74,7 @@ private[mxnet] object NDArrayMacro {
             q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
             // scalastyle:on
           )
-        } else {
-          // Default private
-          Seq(
-            // scalastyle:off
-            q"private def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
-            q"private def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
-            // scalastyle:on
-          )
         }
-      }
 
     structGeneration(c)(functionDefs, annottees : _*)
   }
