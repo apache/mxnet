@@ -266,6 +266,7 @@ include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
+include_directories("3rdparty/cpuinfo/include")
 
 # commented out until PR goes through
 #if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
@@ -419,6 +420,11 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
   add_subdirectory("3rdparty/mshadow")
 endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/cpuinfo/cmake)
+  add_subdirectory(3rdparty/cpuinfo)
+endif()
+
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
