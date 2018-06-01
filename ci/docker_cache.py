@@ -28,10 +28,9 @@ import os
 import logging
 import argparse
 import sys
-import build as build_util
 import subprocess
 import json
-from subprocess import check_call, call
+import build as build_util
 from joblib import Parallel, delayed
 
 
@@ -54,7 +53,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     is_error = False
     for platform_result in platform_results:
         if platform_result is not None:
-            logging.error('Failed to generate {}'.format(platform_result))
+            logging.error('Failed to generate %s', platform_result)
             is_error = True
 
     return 1 if is_error else 0
@@ -75,16 +74,16 @@ def _build_save_container(platform, registry, load_cache) -> str:
         load_docker_cache(registry=registry, docker_tag=docker_tag)
 
     # Start building
-    logging.debug('Building {} as {}'.format(platform, docker_tag))
+    logging.debug('Building %s as %s', platform, docker_tag)
     try:
         image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry)
-        logging.info('Built {} as {}'.format(docker_tag, image_id))
+        logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
         _upload_image(registry=registry, docker_tag=docker_tag, image_id=image_id)
         return None
     except Exception:
-        logging.exception('Unexpected exception during build of {}'.format(docker_tag))
+        logging.exception('Unexpected exception during build of %s', docker_tag)
         return platform
         # Error handling is done by returning the errorous platform name. This is necessary due to
         # Parallel being unable to handle exceptions
@@ -99,9 +98,10 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     :return: None
     """
     _login_dockerhub()
-    # TODO: Check if we have to re-tag the image
+    # We don't have to retag the image since it is already in the right format
+    logging.info('Uploading %s (%s) to %s', docker_tag, image_id, registry)
     push_cmd = ['docker', 'push', docker_tag]
-    check_call(push_cmd)
+    subprocess.check_call(push_cmd)
 
 
 def _login_dockerhub():
@@ -112,7 +112,7 @@ def _login_dockerhub():
     dockerhub_credentials = _get_dockerhub_credentials()
     login_cmd = ['docker', 'login', '--username', dockerhub_credentials['username'], '--password',
                  dockerhub_credentials['password']]
-    check_call(login_cmd)
+    subprocess.check_call(login_cmd)
 
 
 def load_docker_cache(registry, docker_tag) -> None:
@@ -122,9 +122,10 @@ def load_docker_cache(registry, docker_tag) -> None:
     :param docker_tag: Docker tag to load
     :return: None
     """
-    # TODO: Check if we have to re-tag the image
+    # We don't have to retag the image since it's already in the right format
+    logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
-    call(pull_cmd)  # Don't throw an error if the image does not exist
+    subprocess.call(pull_cmd)  # Don't throw an error if the image does not exist
 
 
 def delete_local_docker_cache(docker_tag):
@@ -181,6 +182,10 @@ def _get_dockerhub_credentials():  # pragma: no cover
 
 
 def main() -> int:
+    """
+    Utility to create and publish the Docker cache to Docker Hub
+    :return:
+    """
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
     # expected. But the script can be invoked from a different path
     base = os.path.split(os.path.realpath(__file__))[0]
@@ -197,7 +202,7 @@ def main() -> int:
 
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
 
-    parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache",epilog="")
+    parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache", epilog="")
     parser.add_argument("--docker-registry",
                         help="Docker hub registry name",
                         type=str,

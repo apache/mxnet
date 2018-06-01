@@ -18,16 +18,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""
+Distributed Docker cache tests
+"""
 
-import unittest
 import unittest.mock
 import tempfile
 import os
-import io
 import logging
 import subprocess
 import sys
-from contextlib import redirect_stdout
 
 sys.path.append(os.path.dirname(__file__))
 import docker_cache
@@ -45,8 +45,9 @@ class RedirectSubprocessOutput(object):
     """
     def __enter__(self):
         self.buf_output = tempfile.TemporaryFile()
-        
-        def trampoline(*popenargs, **kwargs): self.call(*popenargs, **kwargs)
+
+        def trampoline(*popenargs, **kwargs):
+            self.call(*popenargs, **kwargs)
 
         self.old_method = subprocess.call
         subprocess.call = trampoline
@@ -67,7 +68,7 @@ class RedirectSubprocessOutput(object):
         """
         kwargs['stderr'] = subprocess.STDOUT
         kwargs['stdout'] = self.buf_output
-        return self.old_method(*popenargs,**kwargs)
+        return self.old_method(*popenargs, **kwargs)
 
     def get_output(self):
         self.buf_output.seek(0)
@@ -75,6 +76,9 @@ class RedirectSubprocessOutput(object):
 
 
 class TestDockerCache(unittest.TestCase):
+    """
+    Test utility class
+    """
     def setUp(self):
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -97,7 +101,7 @@ class TestDockerCache(unittest.TestCase):
         self._stop_local_docker_registry()
 
     @classmethod
-    def _start_local_docker_registry(self):
+    def _start_local_docker_registry(cls):
         # https://docs.docker.com/registry/deploying/#run-a-local-registrys
         start_cmd = [
             'docker', 'run', '-d', '-p', '{}:{}'.format(DOCKER_REGISTRY_PORT, DOCKER_REGISTRY_PORT),
@@ -106,7 +110,7 @@ class TestDockerCache(unittest.TestCase):
         subprocess.check_call(start_cmd)
 
     @classmethod
-    def _stop_local_docker_registry(self):
+    def _stop_local_docker_registry(cls):
         # https://docs.docker.com/registry/deploying/#run-a-local-registry
         stop_cmd = ['docker', 'container', 'stop', DOCKER_REGISTRY_NAME]
         subprocess.check_call(stop_cmd)
