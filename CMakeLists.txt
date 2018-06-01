@@ -277,7 +277,6 @@ else()
 endif()
 
 if(USE_CUDA AND FIRST_CUDA)
-  include(cmake/ChooseBlas.cmake)
   include(3rdparty/mshadow/cmake/Utils.cmake)
   include(cmake/FirstClassLangCuda.cmake)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
@@ -417,16 +416,8 @@ elseif(UNIX AND NOT ANDROID)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
-
-# ---[ LAPack
-if(USE_LAPACK)
-  message("USE_LAPACK is ON")
-  add_definitions(-DMXNET_USE_LAPACK=1)
-  if (NOT MSVC)
-    list(APPEND mxnet_LINKER_LIBS lapack)
-  endif()
-endif()
-
+# ---[ BLAS
+include(cmake/ChooseBlas.cmake)
 
 # ---[ jemalloc
 if(USE_JEMALLOC)

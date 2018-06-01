@@ -15,77 +15,137 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Find the OpenBLAS libraries
+#
+# The following variables are optionally searched for defaults
+#
+# OpenBLAS_HOME:        Base directory where all OpenBLAS components are found
+# OpenBLAS_NEED_LAPACK: Whether need lapack libraries
+#
+# The following are set after configuration is done:
+#
+# OpenBLAS_FOUND
+# OpenBLAS_LAPACK_FOUND
+# OpenBLAS_INCLUDE_DIRS
+# OpenBLAS_LIBRARIES
+
 file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
+file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
 
-SET(Open_BLAS_INCLUDE_SEARCH_PATHS
-  /usr/include
-  /usr/include/openblas
-  /usr/include/openblas-base
-  /usr/local/include
-  /usr/local/include/openblas
-  /usr/local/include/openblas-base
-  /opt/OpenBLAS/include
-  /usr/local/opt/openblas/include
-  ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
-  ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
-  ${OpenBLAS_HOME}
-  ${OpenBLAS_HOME}/include
-)
+if(CMAKE_CROSSCOMPILING)
+  set(OpenBLAS_INCLUDE_SEARCH_PATHS
+      ${CROSS_ROOT}
+      ${CROSS_ROOT}/include
+      )
+endif()
 
-SET(Open_BLAS_LIB_SEARCH_PATHS
-        /lib/
-        /lib/openblas-base
-        /lib64/
-        /usr/lib
-        /usr/lib/openblas-base
-        /usr/lib64
-        /usr/local/lib
-        /usr/local/lib64
-        /opt/OpenBLAS/lib
-        /usr/local/opt/openblas/lib
-        ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
-        ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-	${OpenBLAS_DIR}
-	${OpenBLAS_DIR}/lib
-        ${OpenBLAS_HOME}
-        ${OpenBLAS_HOME}/lib
- )
+set(OpenBLAS_INCLUDE_SEARCH_PATHS
+    ${OpenBLAS_INCLUDE_SEARCH_PATHS}
 
-FIND_PATH(OpenBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Open_BLAS_INCLUDE_SEARCH_PATHS})
-FIND_LIBRARY(OpenBLAS_LIB NAMES openblas PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
-IF(NOT OpenBLAS_LIB)
-	FIND_FILE(OpenBLAS_LIB NAMES libopenblas.dll.a PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
-ENDIF()
+    ${OpenBLAS_HOME}
+    ${OpenBLAS_HOME}/include
 
-SET(OpenBLAS_FOUND ON)
+    /usr/include
+    /usr/include/openblas
+    /usr/include/openblas-base
+    /usr/local/include
+    /usr/local/include/openblas
+    /usr/local/include/openblas-base
+    /opt/OpenBLAS/include
+    /usr/local/opt/openblas/include
 
-#    Check include files
-IF(NOT OpenBLAS_INCLUDE_DIR)
-    SET(OpenBLAS_FOUND OFF)
-    MESSAGE(STATUS "Could not find OpenBLAS include. Turning OpenBLAS_FOUND off")
-ENDIF()
+    ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
+    ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
+    )
 
-#    Check libraries
-IF(NOT OpenBLAS_LIB)
-    SET(OpenBLAS_FOUND OFF)
-    MESSAGE(STATUS "Could not find OpenBLAS lib. Turning OpenBLAS_FOUND off")
-ENDIF()
+if(CMAKE_CROSSCOMPILING)
+  set(Open_BLAS_LIB_SEARCH_PATHS
+      ${CROSS_ROOT}
+      ${CROSS_ROOT}/include
+      )
+endif()
 
-IF (OpenBLAS_FOUND)
-  IF (NOT OpenBLAS_FIND_QUIETLY)
-    MESSAGE(STATUS "Found OpenBLAS libraries: ${OpenBLAS_LIB}")
-    MESSAGE(STATUS "Found OpenBLAS include: ${OpenBLAS_INCLUDE_DIR}")
-  ENDIF (NOT OpenBLAS_FIND_QUIETLY)
-ELSE (OpenBLAS_FOUND)
-  IF (OpenBLAS_FIND_REQUIRED)
-    MESSAGE(FATAL_ERROR "Could not find OpenBLAS")
-  ENDIF (OpenBLAS_FIND_REQUIRED)
-ENDIF (OpenBLAS_FOUND)
+set(OpenBLAS_LIB_SEARCH_PATHS
+    ${OpenBLAS_LIB_SEARCH_PATHS}
 
-MARK_AS_ADVANCED(
+    ${OpenBLAS_DIR}
+    ${OpenBLAS_DIR}/lib
+    ${OpenBLAS_DIR}/lib64
+    ${OpenBLAS_HOME}
+    ${OpenBLAS_HOME}/lib
+    ${OpenBLAS_HOME}/lib64
+
+    /lib/
+    /lib/openblas-base
+    /lib64/
+    /usr/lib
+    /usr/lib/openblas-base
+    /usr/lib64
+    /usr/local/lib
+    /usr/local/lib64
+    /opt/OpenBLAS/lib
+    /usr/local/opt/openblas/lib
+
+    ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
+    ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
+    )
+
+find_path(OpenBLAS_INCLUDE_DIR
+          NAMES cblas.h
+          PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
+find_library(OpenBLAS_LIBRARY
+             NAMES openblas libopenblas.dll.a libopenblas.dll
+             PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
+
+set(LOOKED_FOR
     OpenBLAS_INCLUDE_DIR
-    OpenBLAS_LIB
-    OpenBLAS
-)
+    OpenBLAS_LIBRARY
+    )
 
+if(OpenBLAS_NEED_LAPACK)
+  message(STATUS "Looking for lapack support...")
+
+  find_path(OpenBLAS_LAPACK_INCLUDE_DIR
+            NAMES clapack.h
+            PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
+  # lapack if present in OpenBLAS build is included into the libopenblas. But it requires gfortran to be linked
+  # dynamically.
+  # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
+  # Static linking goes with openblas, but fortran needs to be linked dynamically:
+  # https://github.com/xianyi/OpenBLAS/issues/460#issuecomment-61293128
+  find_library(OpenBLAS_LAPACK_LIBRARY
+               NAMES gfortran
+               PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
+
+  set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LIBRARY})
+  include(CheckFunctionExists)
+  check_function_exists("cheev_" LAPACK_FOUND)
+
+  if(LAPACK_FOUND)
+    set(OpenBLAS_LAPACK_FOUND True)
+
+    set(LOOKED_FOR
+        ${LOOKED_FOR}
+        OpenBLAS_LAPACK_INCLUDE_DIR
+        OpenBLAS_LAPACK_LIBRARY
+        )
+    message(STATUS "Lapack found")
+  else()
+    set(OpenBLAS_LAPACK_FOUND False)
+    message(WARNING "OpenBlas has not been compiled with Lapack support, lapack functionality will not be available")
+  endif()
+
+endif()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(OpenBLAS DEFAULT_MSG ${LOOKED_FOR})
+
+if(OpenBLAS_FOUND)
+  set(OpenBLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIR} ${OpenBLAS_LAPACK_INCLUDE_DIR})
+  set(OpenBLAS_LIBRARIES ${OpenBLAS_LIBRARY} ${OpenBLAS_LAPACK_LIBRARY})
+
+  mark_as_advanced(${LOOKED_FOR})
+
+  message(STATUS "Found OpenBLAS (include: ${OpenBLAS_INCLUDE_DIRS}, libraries: ${OpenBLAS_LIBRARIES})")
+endif()
