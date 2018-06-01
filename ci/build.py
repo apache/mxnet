@@ -160,6 +160,19 @@ def container_run(platform: str,
 def list_platforms() -> str:
     print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
 
+
+def load_docker_cache(tag, docker_registry) -> None:
+    if docker_registry:
+        try:
+            import docker_cache
+            logging.info('Docker cache download is enabled')
+            docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
+        except Exception:
+            logging.exception('Unable to retrieve Docker cache. Continue without...')
+    else:
+        logging.info('Distributed docker cache disabled')
+
+
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
     # expected. But the script can be invoked from a different path
@@ -229,13 +242,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=docker_registry)
-        if args.docker_registry:
-            try:
-                import docker_cache
-                logging.info('Docker cache download is enabled')
-                docker_cache.load_docker_cache(registry=args.docker_registry, docker_tag=tag)
-            except Exception:
-                logging.exception('Unable to retrieve Docker cache. Continue without...')
+        load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         build_docker(platform, docker_binary, registry=docker_registry)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
@@ -261,14 +268,8 @@ def main() -> int:
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
-            if args.docker_registry:
-                try:
-                    import docker_cache
-                    tag = get_docker_tag(platform=platform, registry=docker_registry)
-                    logging.info('Attempting to download Docker cache')
-                    docker_cache.load_docker_cache(registry=args.docker_registry, docker_tag=tag)
-                except Exception:
-                    logging.exception('Unable to retrieve Docker cache. Continue without...')
+            tag = get_docker_tag(platform=platform, registry=docker_registry)
+            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, docker_binary)
             if args.build_only:
                 continue
