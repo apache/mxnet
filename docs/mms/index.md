@@ -86,11 +86,18 @@ Creating a model archive involves rounding up the required model artifacts, then
 
 ## Using Containers
 
-Using Docker or other container services with MMS is a great way to scale your inference applications. It is recommended that you review the following resources for more information:
+Using Docker or other container services with MMS is a great way to scale your inference applications. You can use Docker to pull the latest version:
 
-* [Docker Quickstart](https://github.com/awslabs/mxnet-model-server/docker/README.md)
+```
+docker pull awsdeeplearningteam/mms_gpu
+```
+
+It is recommended that you review the following resources for more information:
+
+* [MMS Docker Hub](https://hub.docker.com/u/awsdeeplearningteam/)
+* [Using MMS with Docker Quickstart](https://github.com/awslabs/mxnet-model-server/docker/README.md)
 * [MMS on Fargate](https://github.com/awslabs/mxnet-model-server/docs/mms_on_fargate.md)
-* [Optimized Configurations](https://github.com/awslabs/mxnet-model-server/docs/optimized_config.md)
+* [Optimized Container Configurations for MMS](https://github.com/awslabs/mxnet-model-server/docs/optimized_config.md)
 * [Orchestrating, monitoring, and scaling with MMS, AWS Elastic Container Service, AWS Fargate, and AWS CloudWatch)](https://aws.amazon.com/blogs/machine-learning/apache-mxnet-model-server-adds-optimized-container-images-for-model-serving-at-scale/)
 
 
