@@ -181,7 +181,7 @@ def test(args):
                             cell,
                             mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='%s_%dr0_'%(args.rnntype,i)),
                             output_prefix='bi_%s_%d'%(args.rnntype,i))
-            if args.rnntype == 'gru':
+            elif args.rnntype == 'gru':
                 cell = mx.rnn.GRUCell(num_hidden=args.num_hidden, prefix='%s_%dl0_'%(args.rnntype,i))
                 if args.bidirectional:
                     cell = mx.rnn.BidirectionalCell(
