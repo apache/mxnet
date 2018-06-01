@@ -319,7 +319,7 @@ def convert_string_to_list(string_val):
         val = val.replace("L", "")
         val = val.replace("[", "")
         val = val.replace("]", "")
-        if val is not "":
+        if val is not "" and val is not "None":
             result_list.append(int(val))
 
     return result_list
@@ -826,7 +826,7 @@ def convert_max(node, **kwargs):
 
 
 @mx2onnx.register("_minimum")
-def convert_min(node, **kwargs):
+def convert_minimum(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -847,13 +847,160 @@ def convert_min(node, **kwargs):
     return [node]
 
 
+@mx2onnx.register("min")
+def convert_min(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    mx_axis = node.get("attrs", {}).get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = int(node.get("attrs", {}).get("keepdims", 0))
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+
+    if axes is not None:
+        node = helper.make_node(
+            'ReduceMin',
+            inputs=[a_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+    else:
+        node = helper.make_node(
+            'ReduceMin',
+            inputs=[a_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+
+
+@mx2onnx.register("max")
+def convert_max(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    mx_axis = node.get("attrs", {}).get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = int(node.get("attrs", {}).get("keepdims", 0))
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+
+    if axes is not None:
+        node = helper.make_node(
+            'ReduceMax',
+            inputs=[a_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+    else:
+        node = helper.make_node(
+            'ReduceMax',
+            inputs=[a_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+
+
+@mx2onnx.register("mean")
+def convert_mean(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    mx_axis = node.get("attrs", {}).get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = int(node.get("attrs", {}).get("keepdims", 0))
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+
+    if axes is not None:
+        node = helper.make_node(
+            'ReduceMean',
+            inputs=[a_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+    else:
+        node = helper.make_node(
+            'ReduceMean',
+            inputs=[a_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+
+
+@mx2onnx.register("prod")
+def convert_prod(node, **kwargs):
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    mx_axis = node.get("attrs", {}).get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = int(node.get("attrs", {}).get("keepdims", 0))
+
+    a = kwargs["index_lookup"][inputs[0][0]]
+    a_node = proc_nodes[a].name
+
+    if axes is not None:
+        node = helper.make_node(
+            'ReduceProd',
+            inputs=[a_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+    else:
+        node = helper.make_node(
+            'ReduceProd',
+            inputs=[a_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+
+        return [node]
+
+
 # Arithmetic Operations
 @mx2onnx.register("elemwise_add")
 def convert_elementwise_add(node, **kwargs):
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
-    weights = kwargs["weights"]
 
     a = kwargs["index_lookup"][inputs[0][0]]
     b = kwargs["index_lookup"][inputs[1][0]]

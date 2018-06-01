@@ -56,13 +56,14 @@ class MXNetBackendRep(BackendRep):
         params : numpy array
             result obtained after running the inference on mxnet
         """
-        input_data = np.asarray(inputs[0], dtype='f')
-
+        data_forward = []
+        for val in inputs:
+            data_forward.append(mx.nd.array(val))
         # create module, passing cpu context
         if self.device == 'CPU':
             ctx = mx.cpu()
         else:
-            raise NotImplementedError("Only CPU context is supported for now")
+            raise NotImplementedError("ONNX tests are run only for CPU context.")
 
         # To fetch the data names of the input to the model we list the inputs of the symbol graph
         # and exclude the argument and auxiliary parameters from the list
@@ -80,8 +81,6 @@ class MXNetBackendRep(BackendRep):
         mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
 
         # run inference
-        batch = namedtuple('Batch', ['data'])
-
-        mod.forward(batch([mx.nd.array(input_data)]))
+        mod.forward(mx.io.DataBatch(data_forward))
         result = mod.get_outputs()[0].asnumpy()
         return [result]
