@@ -208,10 +208,6 @@ def main() -> int:
                         help="go in a shell inside the container",
                         action='store_true')
 
-    parser.add_argument("--download-docker-cache",
-                        help="Download the docker cache from our central repository instead of rebuilding locally",
-                        action='store_true')
-
     parser.add_argument("--docker-registry",
                         help="Dockerhub registry name to retrieve cache from",
                         default='mxnetci',
@@ -233,11 +229,11 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=docker_registry)
-        if args.download_docker_cache:
+        if args.docker_registry:
             try:
                 import docker_cache
                 logging.info('Docker cache download is enabled')
-                docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
+                docker_cache.load_docker_cache(registry=args.docker_registry, docker_tag=tag)
             except Exception:
                 logging.exception('Unable to retrieve Docker cache. Continue without...')
         build_docker(platform, docker_binary, registry=docker_registry)
@@ -265,12 +261,12 @@ def main() -> int:
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
-            if args.download_docker_cache:
+            if args.docker_registry:
                 try:
                     import docker_cache
                     tag = get_docker_tag(platform=platform, registry=docker_registry)
                     logging.info('Attempting to download Docker cache')
-                    docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
+                    docker_cache.load_docker_cache(registry=args.docker_registry, docker_tag=tag)
                 except Exception:
                     logging.exception('Unable to retrieve Docker cache. Continue without...')
             build_docker(platform, docker_binary)
