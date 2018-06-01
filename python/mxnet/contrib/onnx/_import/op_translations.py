@@ -345,11 +345,12 @@ def dropout(attrs, inputs, proto_obj):
 # Changing shape and type.
 def reshape(attrs, inputs, proto_obj):
     """Reshape the given array by the shape attribute."""
+    if len(inputs) == 1:
+        return 'reshape', attrs, inputs[0]
     reshape_shape = list(proto_obj._params[inputs[1].name].asnumpy())
     reshape_shape = [int(i) for i in reshape_shape]
     new_attrs = {'shape': reshape_shape}
     return 'reshape', new_attrs, inputs[:1]
-
 
 def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""

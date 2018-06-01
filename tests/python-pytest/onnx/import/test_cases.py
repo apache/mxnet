@@ -17,6 +17,53 @@
 
 """Test Cases to be run for the import module"""
 
+IMPLEMENTED_OPERATORS_TEST = [
+    'test_random_uniform',
+    'test_random_normal',
+    'test_add',
+    'test_sub',
+    'test_mul',
+    'test_div',
+    'test_neg',
+    'test_abs',
+    'test_sum',
+    'test_tanh',
+    'test_ceil',
+    'test_floor',
+    'test_concat',
+    'test_sigmoid',
+    'test_relu',
+    'test_constant_pad',
+    'test_edge_pad',
+    'test_reflect_pad',
+    'test_reduce_min',
+    'test_reduce_max',
+    'test_reduce_mean',
+    'test_reduce_prod',
+    'test_squeeze',
+    'test_softmax_example',
+    'test_softmax_large_number',
+    'test_softmax_axis_2',
+    'test_transpose',
+    'test_globalmaxpool',
+    'test_globalaveragepool',
+    'test_slice_cpu',
+    'test_slice_neg',
+    'test_squeeze_',
+    'test_reciprocal',
+    'test_sqrt',
+    'test_pow',
+    'test_exp',
+    'test_argmax',
+    'test_argmin',
+    'test_min',
+    #pytorch operator tests
+    'test_operator_exp',
+    'test_operator_maxpool',
+    'test_operator_params',
+    'test_operator_permute2'
+    ]
+
 BASIC_MODEL_TESTS = [
     'test_AvgPool2D',
     'test_BatchNorm',
@@ -42,6 +89,6 @@ STANDARD_MODEL = [
     'test_resnet50',
     #'test_shufflenet',
     'test_squeezenet',
-    'test_vgg16',
+    'test_zfnet512',
     'test_vgg19'
     ]
