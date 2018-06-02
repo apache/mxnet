@@ -77,7 +77,7 @@ class SubgraphProperty {
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const = 0;
   // create an nnvm node for a given subgraph. Here users can customize how to
   // execute the operators in the subgraph.
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s) const = 0;
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s, const int subgraph_id = 0) const = 0;
 };
 
 using SubgraphPropertyPtr = std::shared_ptr<SubgraphProperty>;
@@ -117,10 +117,10 @@ class SimpleSubgraphProperty: public SubgraphProperty {
  public:
   SimpleSubgraphProperty(const std::unordered_set<std::string> &op_names) :
     op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym) const {
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym, const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_subgraph_op");
-    n->attrs.name = "_subgraph_op";
+    n->attrs.name = "_subgraph_op" + std::to_string(subgraph_id);
     n->attrs.parsed = sym;
     return n;
   }

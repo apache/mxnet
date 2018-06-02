@@ -324,7 +324,6 @@ Graph PartitionGraph(Graph&& g) {
     std::vector<std::vector<SimpleNode*>> subgraph_nodes;
     FindSubgraphs(g, *subg_prop, simple_nodes, &subgraph_nodes);
     std::vector<nnvm::NodeEntry*> entries;
-    // TODO(junwu): take care of the situation when the op is the last op
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
       PrintSubgraph(subgraph_nodes[i]);
 
@@ -345,7 +344,7 @@ Graph PartitionGraph(Graph&& g) {
       sym.outputs.resize(entries.size());
       for (size_t i = 0; i < entries.size(); i++)
         sym.outputs[i] = *entries[i];
-      nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym);
+      nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, i);
 
       // Connect the external nodes to the subgraph node.
       for (uint32_t i = 0; i < entries.size(); i++)
