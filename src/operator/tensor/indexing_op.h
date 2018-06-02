@@ -44,7 +44,6 @@
 #include "./sort_op.h"
 #include "./dot-inl.h"
 #include "./init_op.h"
-#include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
 
 namespace mxnet {
