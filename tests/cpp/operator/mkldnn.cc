@@ -762,6 +762,28 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       verify_fn(orig_inputs, outputs);
     }
   }
+
+  in_arrs = GetTestInputArrays(init_fn);
+  for (auto in_arr : in_arrs) {
+    for (auto dispatch : dispatches) {
+      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                                               InitDefaultArray);
+      for (auto out_arr : out_arrs) {
+        req[0] = kAddTo;
+
+        NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+        for (size_t i = 0; i < num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+
+        outputs[0] = &out_arr.arr;
+        PrintVerifyMsg(in_arr, out_arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        out_arr.arr.WaitToRead();
+        VerifyAddRequest(inputs, {&orig_output}, outputs, verify_fn);
+      }
+    }
+  }
 }
 
 TEST(IMPERATIVE, CopyOp) {
