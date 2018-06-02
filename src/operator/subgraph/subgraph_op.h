@@ -115,9 +115,8 @@ class ContainOpSelector: public SubgraphSelector {
  */
 class SimpleSubgraphProperty: public SubgraphProperty {
  public:
-  SimpleSubgraphProperty(const std::unordered_set<std::string> &op_names) {
-    this->op_names = std::make_shared<std::unordered_set<std::string>>(op_names);
-  }
+  SimpleSubgraphProperty(const std::unordered_set<std::string> &op_names) :
+    op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym) const {
     nnvm::NodePtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_subgraph_op");
@@ -126,11 +125,11 @@ class SimpleSubgraphProperty: public SubgraphProperty {
     return n;
   }
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<ContainOpSelector>(op_names);
+    return std::make_shared<ContainOpSelector>(op_names_);
   }
 
  private:
-  std::shared_ptr<const std::unordered_set<std::string>> op_names;
+  std::shared_ptr<const std::unordered_set<std::string>> op_names_;
 };
 
 }

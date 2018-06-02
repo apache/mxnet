@@ -166,6 +166,20 @@ void FindSubgraphs(const Graph& g,
   }
 }
 
+// Reorder entries according to their source nodes' topological order
+void ReorderEntries(const Graph& g, std::vector<nnvm::NodeEntry*>* entries) {
+  const auto& indexed_graph = g.indexed_graph();
+  auto top_cmp = [&](const nnvm::NodeEntry* e1, const nnvm::NodeEntry* e2) {
+    const auto nid1 = indexed_graph.node_id(e1->node.get());
+    const auto nid2 = indexed_graph.node_id(e2->node.get());
+    if (nid1 == nid2) {
+      return e1->index < e2->index;
+    }
+    return nid1 < nid2;
+  };
+  std::sort(entries->begin(), entries->end(), top_cmp);
+}
+
 // find the input entries of a subgraph
 void FindInputEntries(const Graph& g,
                       const std::vector<SimpleNodePtr>& simple_nodes,
@@ -186,6 +200,7 @@ void FindInputEntries(const Graph& g,
         input_entries->push_back(&e);
     }
   }
+  ReorderEntries(g, input_entries);
 }
 
 // find the output entries of a subgraph
@@ -222,6 +237,7 @@ void FindOutputEntries(Graph* g,
       output_entries->push_back(&entry);
     }
   }
+  ReorderEntries(*g, output_entries);
 }
 
 void PrintNodeEntry(const nnvm::NodeEntry& entry) {
@@ -254,7 +270,9 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
     orig_entries->push_back(*e);
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
-    nnvm::NodePtr n = nnvm::CreateVariableNode(sym.ListOutputNames()[0]);
+    const auto output_names = sym.ListOutputNames();
+    CHECK_EQ(output_names.size(), 1U);
+    nnvm::NodePtr n = nnvm::CreateVariableNode(output_names[0]);
     *e = nnvm::NodeEntry{n, 0, 0};
   }
 }
@@ -300,7 +318,7 @@ Graph PartitionGraph(Graph&& g) {
     return ret;
   } else {
     using namespace sg;
-    SubgraphPropertyPtr subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
+    const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
     std::vector<SimpleNodePtr> simple_nodes;
     CreateSimpleGraph(g, &simple_nodes);
     std::vector<std::vector<SimpleNode*>> subgraph_nodes;
