@@ -885,7 +885,7 @@ def test_pooling_versions():
                                          global_pool=True, count_include_pad=count_include_pad)
 
     def test_3d_pooling(pool_type, p_value=2, count_include_pad=True):
-        data = (1, 1, 20, 20, 20)
+        data = (2, 3, 20, 20, 20)
         kernel = (4, 5, 3)
         pad = (0, 0, 0)
         stride = (1, 1, 1)

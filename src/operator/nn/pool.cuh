@@ -266,7 +266,7 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
     if (getAvg && !count_include_pad) {
       pool_size = (hend - hstart) * (wend - wstart);
     }
-    DType sum = 0.0f;
+    DType sum = 0;
     const DType* out_slice = in_data + (n * channels + c) * height * width;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
@@ -322,7 +322,9 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
         }
       }
     }
-    out_data[index] = (pool_size == 0) ? DType(0.0f / 0) : a_root_p<DType, p>::Map(sum);
+    out_data[index] = (pool_size == 0) ?
+                      DType(0.0f / pool_size) :
+                      a_root_p<DType, p>::Map(sum);
   }
 }
 
