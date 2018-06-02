@@ -32,24 +32,15 @@
 namespace mxnet {
 namespace op {
 
-static std::unordered_map<std::string, SubgraphPropertyPtr> subg_props;
-
-void RegisterSubgraphProperty(SubgraphPropertyPtr property) {
-  auto ret = subg_props.insert(std::pair<std::string, SubgraphPropertyPtr>(
-          property->GetType(), property));
-  CHECK(!ret.second) << "The subgraph property for " << property->GetType()
-      << " has been registered";
-}
-
-class DefaultSubgraphOperator: public SubgraphOperator {
+class DefaultSubgraphOperator {
  public:
   // TODO: initialize uuid
-  DefaultSubgraphOperator(const Symbol& sym) : SubgraphOperator(sym),
-      subgraph_uuid_("dfasdfadsmxdfw324"),
+  DefaultSubgraphOperator(const Symbol& sym) : subgraph_uuid_("dfasdfadsmxdfw324"),
       immutable_data_names_(sym.ListInputNames(Symbol::kReadOnlyArgs)),
       mutable_data_names_(sym.ListInputNames(Symbol::kAuxiliaryStates)),
       //input_data_names_(sym.ListInputNames(Symbol::kAll)),
       output_data_names_(sym.ListOutputNames()) {
+    this->subg_sym = sym;
     const std::vector<std::string> input_data_names = sym.ListInputNames(Symbol::kAll);
     //const std::vector<std::string> immutable_data_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
     //const std::vector<std::string> mutable_data_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
@@ -82,6 +73,7 @@ class DefaultSubgraphOperator: public SubgraphOperator {
   }
 
  private:
+  nnvm::Symbol subg_sym;
   std::string subgraph_uuid_;
   // this variable records the NDArrays' var versions of the last run.
   std::vector<int64_t> ndarray_var_versions_;
@@ -93,10 +85,6 @@ class DefaultSubgraphOperator: public SubgraphOperator {
   std::vector<std::string> output_data_names_;
   std::shared_ptr<Executor> subgraph_executor_;
 };
-
-SubgraphOperatorPtr SimpleSubgraphProperty::CreateSubgraphOperator(const nnvm::Symbol &sym) const {
-  return std::make_shared<DefaultSubgraphOperator>(sym);
-}
 
 void DefaultSubgraphOperator::Forward(const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
@@ -114,7 +102,7 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
     }
     std::vector<NDArray> grad_store(arg_arrays.size());
     std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-    this->subgraph_executor_.reset(Executor::Bind(this->GetSubgraph(),
+    this->subgraph_executor_.reset(Executor::Bind(subg_sym,
           ctx.run_ctx.ctx, std::map<std::string, Context>(), arg_arrays, grad_store,
           grad_req, aux_arrays));
   }
@@ -148,31 +136,12 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
   }
 }
 
-struct SubgraphOpState {
-  SubgraphOperatorPtr op;
-
-  SubgraphOpState(SubgraphOperatorPtr op) {
-    this->op = op;
-  }
-};
-
 OpStatePtr CreateSubgraphOpState(const NodeAttrs& attrs,
                                  Context ctx,
                                  const std::vector<TShape>& in_shapes,
                                  const std::vector<int>& in_types) {
   const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  auto it = attrs.dict.find("exec_type");
-  if (it == attrs.dict.end()) {
-    auto op = std::make_shared<DefaultSubgraphOperator>(subgraph_sym);
-    return OpStatePtr::Create<SubgraphOpState>(op);
-  }
-
-  std::string exec_name = it->second;
-  auto prop_iter = subg_props.find(exec_name);
-  CHECK(prop_iter != subg_props.end()) << "We don't support the execution type: "
-      << exec_name;
-  auto op = prop_iter->second->CreateSubgraphOperator(subgraph_sym);
-  return OpStatePtr::Create<SubgraphOpState>(op);
+  return OpStatePtr::Create<DefaultSubgraphOperator>(subgraph_sym);
 }
 
 bool SubgraphOpShape(const nnvm::NodeAttrs& attrs,
@@ -267,8 +236,8 @@ void SubgraphOpForward(const OpStatePtr& state_ptr,
                        const std::vector<NDArray>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<NDArray>& outputs) {
-  SubgraphOpState& state = state_ptr.get_state<SubgraphOpState>();
-  state.op->Forward(ctx, inputs, req, outputs);
+  DefaultSubgraphOperator& op = state_ptr.get_state<DefaultSubgraphOperator>();
+  op.Forward(ctx, inputs, req, outputs);
 }
 
 NNVM_REGISTER_OP(_subgraph_op)

@@ -120,27 +120,23 @@ void LabelSubgraph(const Graph&g,
     cur_node->label = label;
     subgraph_nodes->push_back(cur_node);
     // get qualified adjacent input nodes
-    if (select_func->UseIncomingEdges()) {
-      for (auto& e : cur_node->node->inputs) {
-        if (select_func->Select(*e.node)) {
-          const auto nid = indexed_graph.node_id(e.node.get());
-          CHECK_LT(nid, simple_nodes.size());
-          // this node has not been visited yet
-          if (simple_nodes[nid]->label == -1)
-            node_queue.push(simple_nodes[nid].get());
-        }
+    for (auto& e : cur_node->node->inputs) {
+      if (select_func->SelectInput(*cur_node->node, *e.node)) {
+        const auto nid = indexed_graph.node_id(e.node.get());
+        CHECK_LT(nid, simple_nodes.size());
+        // this node has not been visited yet
+        if (simple_nodes[nid]->label == -1)
+          node_queue.push(simple_nodes[nid].get());
       }
     }
     // get qualified output nodes
-    if (select_func->UseOutgoingEdges()) {
-      for (auto it = cur_node->outputs.begin(); it != cur_node->outputs.end(); ++it) {
-        if (select_func->Select(*it->first)) {
-          const auto nid = indexed_graph.node_id(it->first);
-          CHECK_LT(nid, simple_nodes.size());
-          // this node has not been visited yet
-          if (simple_nodes[nid]->label == -1)
-            node_queue.push(simple_nodes[nid].get());
-        }
+    for (auto it = cur_node->outputs.begin(); it != cur_node->outputs.end(); ++it) {
+      if (select_func->SelectOutput(*cur_node->node, *it->first)) {
+        const auto nid = indexed_graph.node_id(it->first);
+        CHECK_LT(nid, simple_nodes.size());
+        // this node has not been visited yet
+        if (simple_nodes[nid]->label == -1)
+          node_queue.push(simple_nodes[nid].get());
       }
     }
   }

@@ -56,47 +56,15 @@ class SubgraphSelector {
  public:
   virtual ~SubgraphSelector() {
   }
-  /*
-   * Given a set of nodes that have been selected so far for a subgraph, determine
-   * if the input node should be selected for a subgraph.
-   */
+  // Determine if the node should be selected for a subgraph.
   virtual bool Select(const nnvm::Node &n) = 0;
-  virtual bool UseIncomingEdges() const = 0;
-  virtual bool UseOutgoingEdges() const = 0;
+  // Determine if the input node should be selected for a subgraph.
+  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  // Determine if the output node should be selected for a subgraph.
+  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
 };
 
 using SubgraphSelectorPtr = std::shared_ptr<SubgraphSelector>;
-
-/*
- * This is the interface of the subgraph operator that executes the computation
- * in the subgraph.
- */
-class SubgraphOperator {
-public:
-  SubgraphOperator(const nnvm::Symbol &sym) {
-    this->subgraph_sym_ = sym;
-  }
-
-  virtual ~SubgraphOperator() {
-  }
-
-  const nnvm::Symbol &GetSubgraph() const {
-    return subgraph_sym_;
-  }
-
-  virtual void Forward(const OpContext& ctx,
-                       const std::vector<NDArray>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<NDArray>& outputs) = 0;
-  virtual void Backward(const OpContext& ctx,
-                        const std::vector<NDArray>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<NDArray>& outputs) = 0;
-private:
-  nnvm::Symbol subgraph_sym_;
-};
-
-using SubgraphOperatorPtr = std::shared_ptr<SubgraphOperator>;
 
 /*
  * This provides a set of properties for partitioning a graph into subgraphs,
@@ -110,10 +78,6 @@ class SubgraphProperty {
   // create an nnvm node for a given subgraph. Here users can customize how to
   // execute the operators in the subgraph.
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s) const = 0;
-  // Create a subgraph operator for execution.
-  virtual SubgraphOperatorPtr CreateSubgraphOperator(const nnvm::Symbol &sym) const = 0;
-  // The type of the subgraph.
-  virtual std::string GetType() const = 0;
 };
 
 using SubgraphPropertyPtr = std::shared_ptr<SubgraphProperty>;
@@ -132,16 +96,16 @@ class ContainOpSelector: public SubgraphSelector {
     this->op_names = op_names;
   }
 
-  virtual bool UseIncomingEdges() const {
-    return true;
-  }
-
-  virtual bool UseOutgoingEdges() const {
-    return true;
-  }
-
   virtual bool Select(const nnvm::Node &n) {
     return !n.is_variable() && op_names->count(n.op()->name);
+  }
+
+  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
+    return !new_node.is_variable() && op_names->count(new_node.op()->name);
+  }
+
+  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
+    return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 };
 
@@ -158,17 +122,11 @@ class SimpleSubgraphProperty: public SubgraphProperty {
     nnvm::NodePtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_subgraph_op");
     n->attrs.name = "_subgraph_op";
-    n->attrs.dict.insert(std::pair<std::string, std::string>("exec_type", GetType()));
     n->attrs.parsed = sym;
     return n;
   }
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<ContainOpSelector>(op_names);
-  }
-
-  virtual SubgraphOperatorPtr CreateSubgraphOperator(const nnvm::Symbol &sym) const;
-  virtual std::string GetType() const {
-    return "default";
   }
 
  private:
