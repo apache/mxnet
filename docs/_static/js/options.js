@@ -1,4 +1,4 @@
-var versionSelect   = 'v1.2.0';
+var versionSelect   = defaultVersion = 'v1.2.0';
 var deviceSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';
@@ -33,10 +33,13 @@ $(document).ready(function () {
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
         $('button:contains(' + environSelect + ')').addClass('active');
         showContent();
-
-        if (window.location.pathname.includes("/install/index.html")) {
-            history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
-        }
+        if (window.location.href.includes("/install/index.html")) {
+            if (versionSelect.includes(defaultVersion)) {
+                history.pushState(null, null, '/install/index.html?device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+            } else {
+                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+            }
+        } 
     }
 
     function showContent() {
@@ -58,7 +61,15 @@ $(document).ready(function () {
         el.addClass('active');
         if ($(this).hasClass("versions")) {
             $('.current-version').html( $(this).text() + ' <span class="caret"></span></button>' );
-            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
+            if (!$(this).text().includes(defaultVersion)) {
+                if (!window.location.search.includes("version")) {
+                    history.pushState(null, null, '/install/index.html' + window.location.search.concat( '&version=' + $(this).text() ));
+                } else {
+                    history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
+                }
+            } else if (window.location.search.includes("version")) {
+                  history.pushState(null, null, '/install/index.html' + window.location.search.replace( 'version', 'prev' ));
+              }
         }
         else if ($(this).hasClass("Devices")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('device'), $(this).text() ));
