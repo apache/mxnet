@@ -6,7 +6,7 @@ In this tutorial, we will show how to train a model faster using multi-host dist
 
 ![Multiple GPUs connected to multiple hosts](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/distributed_training/distributed_training.png)
 
-We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
+We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes a lot faster.
 
 In this tutorial, we will train a ResNet18 network using CIFAR-10 dataset using two hosts each having four GPUs.
 
@@ -174,8 +174,8 @@ python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts \
 
 - `-n 2` specifies the number of workers that must be launched
 - `-s 2` specifies the number of parameter servers that must be launched.
-- `--sync-dst-dir` specifies a destination location where the contents of the current directory with be rsync'd
-- `--launcher ssh` tells `launch.py` to use ssh to login to each machine in the cluster and launch processes.
+- `--sync-dst-dir` specifies a destination location where the contents of the current directory will be rsync'd
+- `--launcher ssh` tells `launch.py` to use ssh to login on each machine in the cluster and launch processes.
 - `"python /home/ubuntu/dist/dist.py"` is the command that will get executed in each of the launched processes.
 - Finally, `-H hosts` specifies the list of hosts in the cluster to be used for distributed training.
 
