@@ -65,6 +65,4 @@ class MXNetBackend(Backend):
 
 prepare = MXNetBackend.prepare
 
-run_node = MXNetBackend.run_node
-
 supports_device = MXNetBackend.supports_device

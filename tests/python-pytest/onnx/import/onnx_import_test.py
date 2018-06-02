@@ -53,6 +53,30 @@ URLS = {
         'https://s3.amazonaws.com/onnx-mxnet/model-zoo/opset7/bvlc_reference_rcnn_ilsvrc13.tar.gz',
 }
 
+@with_seed()
+def test_broadcast():
+    """Test for broadcasting in onnx operators."""
+    input1 = np.random.rand(1, 3, 4, 5).astype("float32")
+    input2 = np.random.rand(1, 5).astype("float32")
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=(1, 3, 4, 5)),
+              helper.make_tensor_value_info("input2", TensorProto.FLOAT, shape=(1, 5))]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 3, 4, 5))]
+
+    nodes = [helper.make_node("Add", ["input1", "input2"], ["output"])]
+
+    graph = helper.make_graph(nodes,
+                              "bcast_test",
+                              inputs,
+                              outputs)
+
+    bcast_model = helper.make_model(graph)
+    
+    bkd_rep = mxnet_backend.prepare(bcast_model)
+    numpy_op = input1 + input2
+    output = bkd_rep.run([input1, input2])
+    npt.assert_almost_equal(output[0], numpy_op)
+
 def test_super_resolution_example():
     """Test the super resolution example in the example/onnx folder"""
     sys.path.insert(0, os.path.join(CURR_PATH, '../../../../example/onnx/'))
