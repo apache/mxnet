@@ -666,7 +666,17 @@ struct DotDnsCsrCsrByRowBlocks {
 struct DotDnsCsrDnsByRowBlocks {
   /*!
    * \brief
-   * \param i the i-th thread
+   * \param i           the i-th thread
+   * \param out         output matrix
+   * \param data_l      data of lhs
+   * \param data_r      values of csr
+   * \param indptr_r    row offsets of csr
+   * \param col_idx_r   column indices of csr
+   * \param seg_len     workload of this thread
+   * \param num_rows_l  number of rows in lhs
+   * \param num_cols_l  number of columns in lhs
+   * \param num_rows_r  number of rows in rhs
+   * \param num_cols_r  number of columns in rhs
    */
   template<typename DType, typename IType, typename CType>
   MSHADOW_CINLINE static void Map(int i,
@@ -704,7 +714,17 @@ struct DotDnsCsrDnsByRowBlocks {
 struct DotDnsCsrTransDnsByRowBlocks {
   /*!
    * \brief
-   * \param i the i-th thread
+   * \param i           the i-th thread
+   * \param out         output matrix
+   * \param data_l      data of lhs
+   * \param data_r      values of csr
+   * \param indptr_r    row offsets of csr
+   * \param col_idx_r   column indices of csr
+   * \param seg_len     workload of this thread
+   * \param num_rows_l  number of rows in lhs
+   * \param num_cols_l  number of columns in lhs
+   * \param num_rows_r  number of rows in rhs
+   * \param num_cols_r  number of columns in rhs
    */
   template<typename DType, typename IType, typename CType>
   MSHADOW_CINLINE static void Map(int i,
