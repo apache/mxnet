@@ -8,7 +8,7 @@ In this tutorial, we will show how to train a model faster using multi-host dist
 
 We will use data parallelism to distribute the training which involves splitting the training data across GPUs attached to multiple hosts. Since the hosts are working with different subset of the training data in parallel, the training completes lot faster.
 
-In this tutorial, we will train a LeNet network using MNIST dataset using two hosts each having four GPUs.
+In this tutorial, we will train a ResNet18 network using CIFAR-10 dataset using two hosts each having four GPUs.
 
 ## Distributed Training Architecture:
 
@@ -27,7 +27,7 @@ Scheduler is responsible for scheduling the workers and parameter servers. There
 
 ## Moving to distributed training:
 
-[mnist_dist.py](mnist_dist.py) contains code that trains a LeNet network using distributed training. In this section we'll walk through parts of that file that are unique to distributed training.
+[cifar10_dist.py](cifar10_dist.py) contains code that trains a ResNet18 network using distributed training. In this section we'll walk through parts of that file that are unique to distributed training.
 
 ### Step 1: Use a distributed key-value store:
 
@@ -41,7 +41,7 @@ It is the job of the trainer to take the gradients computed in the backward pass
 
 ```python
 trainer = gluon.Trainer(net.collect_params(),
-                        'sgd', {'learning_rate': .1},
+                        'adam', {'learning_rate': .001},
                         kvstore=store)
 ```
 
@@ -95,10 +95,9 @@ We can then create a `DataLoader` using the `SplitSampler` like shown below:
 
 ```python
 # Load the training data
-train_data = gluon.data.DataLoader(
-              gluon.data.vision.MNIST(train=True, transform=transform),
-              batch_size,
-              sampler=SplitSampler(60000, store.num_workers, store.rank))
+train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True, transform=transform),
+                                      batch_size,
+                                      sampler=SplitSampler(50000, store.num_workers, store.rank))
 ```
 
 ## Step 3: Training with multiple GPUs

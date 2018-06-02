@@ -18,27 +18,27 @@
 # under the License.
 
 from __future__ import print_function
-import numpy as np
+import random, sys
+
 import mxnet as mx
-from mxnet import nd, autograd, gluon
-from mxnet import kv
-import random
+from mxnet import autograd, gluon, kv, nd
+from mxnet.gluon.model_zoo import vision
+
+import numpy as np
 
 # Create a distributed key-value store
 store = kv.create('dist')
 
-# MNIST images are 28x28. Total pixels in input layer is 28x28 = 784
-num_inputs = 784
 # Clasify the images into one of the 10 digits
 num_outputs = 10
 
 # 64 images in a batch
 batch_size_per_gpu = 64
 # How many epochs to run the training
-epochs = 2
+epochs = 5
 
 # How many GPUs per machine
-gpus_per_machine = 1
+gpus_per_machine = 4
 # Effective batch size across all GPUs
 batch_size = batch_size_per_gpu * gpus_per_machine
 
@@ -81,33 +81,16 @@ class SplitSampler(gluon.data.sampler.Sampler):
         return self.part_len
 
 # Load the training data
-train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True, transform=transform),
-                                      batch_size, sampler=SplitSampler(60000, store.num_workers, store.rank))
+train_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=True, transform=transform),
+                                      batch_size,
+                                      sampler=SplitSampler(50000, store.num_workers, store.rank))
+
 # Load the test data 
-test_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=False, transform=transform),
+test_data = gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=False, transform=transform),
                                      batch_size, shuffle=False)
 
-# Create a sequential network
-net = gluon.nn.Sequential()
-
-with net.name_scope():
-
-    # First convolution
-    net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-
-    # Second convolution
-    net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-
-    # Flatten the output before the fully connected layers
-    net.add(gluon.nn.Flatten())
-
-    # First fully connected layers with 512 neurons
-    net.add(gluon.nn.Dense(512, activation="relu"))
-
-    # Second fully connected layer with as many neurons as the number of classes
-    net.add(gluon.nn.Dense(num_outputs))
+# Use ResNet from model zoo
+net = vision.resnet18_v1()
 
 # Initialize the parameters with Xavier initializer
 net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
@@ -115,21 +98,21 @@ net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
 # SoftmaxCrossEntropy is the most common choice of loss function for multiclass classification
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 
-# Use SGD optimizer with a learning rate of 0.1
-trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .1}, kvstore=store)
+# Use Adam optimizer. Ask trainer to use the distributer kv store.
+trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': .001}, kvstore=store)
 
 # Evaluate accuracy of the given network using the given data
 def evaluate_accuracy(data_iterator, net):
 
     acc = mx.metric.Accuracy()
-    
+
     # Iterate through data and label
     for i, (data, label) in enumerate(data_iterator):
-        
+
         # Get the data and label into the GPU
         data = data.as_in_context(ctx[0])
         label = label.as_in_context(ctx[0])
-        
+
         # Get network's output which is a probability distribution
         # Apply argmax on the probability distribution to get network's classification.
         output = net(data)
@@ -158,7 +141,7 @@ def forward_backward(net, data, label):
 
 # Train a batch using multiple GPUs
 def train_batch(batch, ctx, net, trainer):
-    
+
     # Split and load data into multiple GPUs
     data = batch[0]
     data = gluon.utils.split_and_load(data, ctx)
@@ -169,7 +152,7 @@ def train_batch(batch, ctx, net, trainer):
 
     # Run the forward and backward pass
     forward_backward(net, data, label)
-    
+
     # Update the parameters
     this_batch_size = batch[0].shape[0]
     trainer.step(this_batch_size)
@@ -181,15 +164,13 @@ for epoch in range(epochs):
     batch_num = 1
     for batch in train_data:
 
-        # Print progress once in a while
-        if batch_num % 50 == 0:
-            print("Worker %d processing batch %d" % (store.rank, batch_num))
-
         # Train the batch using multiple GPUs
         train_batch(batch, ctx, net, trainer)
 
         batch_num += 1
-    
+
     # Print test accuracy after every epoch
     test_accuracy = evaluate_accuracy(test_data, net)
-    print("Epoch %d: Test_acc %f" % (epoch, test_accuracy)) 
+    print("Epoch %d: Test_acc %f" % (epoch, test_accuracy))
+    sys.stdout.flush()
+
