@@ -63,5 +63,9 @@ ENV NVCCFLAGS "-m64"
 ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
 ENV NVCC /usr/local/cuda/bin/nvcc
 
+# we need to install latest ccache that contains fixes for working with nvcc
+
+RUN apt update && apt install -y ccache
+
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

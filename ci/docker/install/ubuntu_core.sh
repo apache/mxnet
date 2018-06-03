@@ -40,4 +40,5 @@ apt-get install -y \
     software-properties-common \
     sudo \
     unzip \
-    wget
+    wget \
+    ccache

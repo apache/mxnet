@@ -38,8 +38,11 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    mv make/crosscompile.jetson.mk make/config.mk
+    mv make/config.mk make/config.tmp
+    cp -f make/crosscompile.jetson.mk make/config.mk
     make -j$(nproc)
+
+    mv make/config.tmp make/config.mk
 
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
@@ -62,6 +65,7 @@ build_jetson() {
 build_armv6() {
     set -ex
     pushd .
+
     cd /work/build
 
     # Lapack functionality will be included and statically linked to openblas.
@@ -73,6 +77,7 @@ build_armv6() {
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -166,6 +171,8 @@ build_android_arm64() {
 build_centos7_cpu() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -178,6 +185,8 @@ build_centos7_cpu() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -202,8 +211,14 @@ build_centos7_gpu() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu() {
+    build_ubuntu_cpu_openblas
+}
+
 build_ubuntu_cpu_openblas() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -214,37 +229,39 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
+    export CC="ccache clang-3.9"
+    export CXX="ccache clang++-3.9"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50() {
     set -ex
+    export CC="ccache clang-5.0"
+    export CXX="ccache clang++-5.0"
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
+    # mkldnn gets compiled with a script 
+    # and compilation fails with clang-3.9
     set -ex
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
+        CC="ccache clang-3.9"         \
+        CXX="ccache clang++-3.9"      \
         -j$(nproc)
 }
 
@@ -255,8 +272,8 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
+        CC="ccache clang-5.0"         \
+        CXX="ccache clang++-5.0"      \
         -j$(nproc)
 }
 
@@ -267,6 +284,8 @@ build_ubuntu_cpu_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
+        CC="ccache gcc"               \
+        CXX="ccache g++"              \
         -j$(nproc)
 }
 
@@ -381,7 +400,7 @@ unittest_ubuntu_python3_cpu() {
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present

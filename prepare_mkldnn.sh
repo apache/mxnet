@@ -17,7 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# set -ex
 #
 # All modification made by Intel Corporation: © 2016 Intel Corporation
 #
@@ -54,6 +53,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+
+set -e
 
 MXNET_ROOTDIR="$(pwd)"
 MKLDNN_ROOTDIR="$MXNET_ROOTDIR/3rdparty/mkldnn/"

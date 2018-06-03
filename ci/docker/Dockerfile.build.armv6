@@ -20,6 +20,8 @@
 
 FROM dockcross/linux-armv6
 
+RUN apt update && apt install -y ccache
+
 ENV ARCH armv6l
 ENV FC=/usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
