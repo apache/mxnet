@@ -49,11 +49,11 @@ def init_git() {
 
 try {
   stage("Docker cache build & publish") {
-    node('mxnetlinux-cpu') {
+    node('restricted-mxnetlinux-cpu') {
       ws('workspace/docker_cache') {
         timeout(time: total_timeout, unit: 'MINUTES') {
           init_git()
-          sh "ci/docker_cache.py --docker-cache-bucket ${env.DOCKER_CACHE_BUCKET}"
+          sh "ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY}"
         }
       }
     }
@@ -62,13 +62,13 @@ try {
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     sh "echo caught ${caughtError}"
     err = caughtError
     currentBuild.result = "FAILURE"
   }
 } finally {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     // Only send email if master failed
     if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
       emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
