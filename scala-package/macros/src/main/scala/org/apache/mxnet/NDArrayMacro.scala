@@ -122,7 +122,7 @@ private[mxnet] object NDArrayMacro {
       // add default out parameter
       argDef += "out : Option[NDArray] = None"
       // scalastyle:off
-      impl += "org.apache.mxnet.NDArray.genericNewAPINDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", map.toMap)"
+      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.NDArrayFuncReturn"
