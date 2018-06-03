@@ -102,10 +102,14 @@
        must come *after* these tags. #}
     {{ metatags }}
     {%- block htmltitle %}
+    <meta property="og:title"              content="{{ title }}" />
+    <meta property="og:description"        content="{{ title }}" />
+    <meta property="og:image"              content="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet_logo.png" />
     {%- if pagename != 'index' %}
-
+    <meta property="og:description"        content="A flexible and efficient library for deep learning." />
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
+    <meta property="og:description"        content="{{ title }}" />
     <title>MXNet: A Scalable Deep Learning Framework</title>
     {%- endif %}
     {%- endblock %}
