@@ -41,7 +41,7 @@ struct SimpleNode {
   // key is node ptr
   // value is the index array standing for the entry indices
   // in key->inputs that use this->node as input node
-  std::unordered_map<nnvm::Node*, std::vector<int>> outputs;
+  std::unordered_map<nnvm::Node*, std::vector<size_t>> outputs;
 };
 
 }
