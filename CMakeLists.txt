@@ -193,7 +193,7 @@ if(USE_MKLDNN)
   set(WITH_TEST OFF)
   set(WITH_EXAMPLE OFF)
   add_subdirectory(3rdparty/mkldnn)
-  
+
   include_directories(3rdparty/mkldnn/include)
   add_definitions(-DUSE_MKL=1)
   add_definitions(-DCUB_MKL=1)
@@ -261,8 +261,8 @@ endforeach()
 include_directories("include")
 include_directories("3rdparty/mshadow")
 include_directories("3rdparty/cub")
-include_directories("3rdparty/nnvm/include")
-include_directories("3rdparty/nnvm/tvm/include")
+include_directories("3rdparty/tvm/nnvm/include")
+include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
 
@@ -418,13 +418,13 @@ FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
-  3rdparty/nnvm/src/c_api/*.cc
-  3rdparty/nnvm/src/core/*.cc
-  3rdparty/nnvm/src/pass/*.cc
-  3rdparty/nnvm/src/c_api/*.h
-  3rdparty/nnvm/src/core/*.h
-  3rdparty/nnvm/src/pass/*.h
-  3rdparty/nnvm/include/*.h)
+  3rdparty/tvm/nnvm/src/c_api/*.cc
+  3rdparty/tvm/nnvm/src/core/*.cc
+  3rdparty/tvm/nnvm/src/pass/*.cc
+  3rdparty/tvm/nnvm/src/c_api/*.h
+  3rdparty/tvm/nnvm/src/core/*.h
+  3rdparty/tvm/nnvm/src/pass/*.h
+  3rdparty/tvm/nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
@@ -434,8 +434,8 @@ list(APPEND SOURCE ${MSHADOWSOURCE})
 list(APPEND CUDA ${MSHADOW_CUDASOURCE})
 
 # add source group
-FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/nnvm/*.cc" "plugin/*.cc")
-FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
+FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
+FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/tvm/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
 FILE(GLOB_RECURSE GROUP_CUDA "src/*.cu" "src/*.cuh" "3rdparty/mshadow/mshadow/*.cuh" "plugin/*.cu"
   "plugin/*.cuh" "3rdparty/cub/cub/*.cuh")
 assign_source_group("Source" ${GROUP_SOURCE})
@@ -574,7 +574,7 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnvm/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
 endif()
@@ -593,7 +593,7 @@ else()
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /OPT:REF /OPT:ICF")
   set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL} /OPT:REF /OPT:ICF")
   set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /OPT:REF /OPT:ICF")
-  
+
 endif()
 
 set(MXNET_INSTALL_TARGETS mxnet)
