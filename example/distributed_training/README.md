@@ -59,6 +59,11 @@ print("Total number of workers: %d" % store.num_workers)
 print("This worker's rank: %d" % store.rank)
 ```
 
+```
+Total number of workers: 2
+This worker's rank: 0
+```
+
 Knowing the number of workers and a particular worker's rank, it is easy to split the dataset into partitions and pick one partition to train depending on the rank of the worker. Here is a sampler that does exactly that.
 
 ```python
