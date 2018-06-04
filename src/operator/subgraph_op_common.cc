@@ -191,13 +191,8 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
   // Get input names.
   const auto& idx = subgraph.indexed_graph();
-  std::vector<std::string> arg_names(idx.input_nodes().size());
-  for (size_t i = 0; i < idx.input_nodes().size(); ++i)
-    arg_names[i] = idx[idx.input_nodes()[i]].source->attrs.name;
   // We don't have parameters for the cached op.
-  std::unordered_map<std::string, std::vector<NDArray> > params;
-  CachedOpPtr op = std::make_shared<Imperative::CachedOp>(subgraph_sym, kwargs,
-                                                          arg_names, params);
+  CachedOpPtr op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
   // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
   // called. Currently, CachedOp allocates memory each time Forward is called.
   // I need to fix this once the PR for static memory allocation in CachedOp is
