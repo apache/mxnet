@@ -3771,5 +3771,5 @@ def histogram(a, bins=10, range=None):
             res, bin_bounds = np.histogram(a.asnumpy(), bins=bins)
             return array(res), array(bin_bounds)
         return _internal._histogram(data=a, bin_cnt=bins, range=range)
-    return None
+    raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
