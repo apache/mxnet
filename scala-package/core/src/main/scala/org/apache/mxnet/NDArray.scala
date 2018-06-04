@@ -118,7 +118,7 @@ object NDArray {
       outputArrs
     })
   }
-  
+
   /**
    * Return a new empty handle.
    * Empty handle can be used to hold result
