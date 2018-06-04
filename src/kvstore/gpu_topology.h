@@ -152,7 +152,7 @@ void GetP2PWeight( std::vector<T>&             matrix,
   // If all GPUs have at least 1 NVLink connection, then we can use NVLink only
   // to communicate instead of going over PCI-E
   if (max_value > 0) {
-    for (auto matrix_value : matrix) {
+    for (auto& matrix_value : matrix) {
       matrix_value = (matrix_value==1) ? 0 : matrix_value;
     }
   }
