@@ -68,7 +68,7 @@ class Parameter(object):
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
-    shape : tuple of int, default None
+    shape : int or tuple of int, default None
         Shape of this parameter. By default shape is not specified. Parameter with
         unknown shape can be used for :py:class:`Symbol` API, but ``init`` will throw an error
         when using :py:class:`NDArray` API.
@@ -112,6 +112,8 @@ class Parameter(object):
         self._differentiable = differentiable
         self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
+        if isinstance(shape, int):
+            shape = (shape,)
         self._shape = shape
         self.name = name
         self.dtype = dtype
