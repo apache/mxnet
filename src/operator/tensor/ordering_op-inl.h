@@ -693,7 +693,7 @@ inline bool SortType(const nnvm::NodeAttrs& attrs,
                                                  << (*in_attrs)[0];
   CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]="
                                                   << (*out_attrs)[0];
-  if(data_type == -1) return false;
+  if (data_type == -1) return false;
   return true;
 }
 
