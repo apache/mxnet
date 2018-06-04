@@ -167,9 +167,9 @@ For example, the following command launches distributed training on two machines
 
 ```
 python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts \
-    --sync-dst-dir /home/ubuntu/mnist_dist \
+    --sync-dst-dir /home/ubuntu/cifar10_dist \
     --launcher ssh \
-    "python /home/ubuntu/mnist_dist/mnist_dist.py"
+    "python /home/ubuntu/cifar10_dist/cifar10_dist.py"
 ```
 
 - `-n 2` specifies the number of workers that must be launched
@@ -227,4 +227,24 @@ Host d2
 ```
 
 A better way is to use ssh agent forwarding. Check [this](https://aws.amazon.com/blogs/security/securely-connect-to-linux-instances-running-in-a-private-amazon-vpc/) article for more details.
+
+Here is a sample output from running distributed training:
+
+```
+$ python ~/mxnet/tools/launch.py -n 2 -s 2 -H hosts --sync-dst-dir /home/ubuntu/cifar10_dist --launcher ssh "python /home/ubuntu/cifar10_dist/cifar10_dist.py"
+2018-06-03 05:30:05,609 INFO rsync /home/ubuntu/cifar10_dist/ -> a1:/home/ubuntu/cifar10_dist
+2018-06-03 05:30:05,879 INFO rsync /home/ubuntu/cifar10_dist/ -> a2:/home/ubuntu/cifar10_dist
+Epoch 0: Test_acc 0.467400
+Epoch 0: Test_acc 0.466800
+Epoch 1: Test_acc 0.568500
+Epoch 1: Test_acc 0.571300
+Epoch 2: Test_acc 0.586300
+Epoch 2: Test_acc 0.594000
+Epoch 3: Test_acc 0.659200
+Epoch 3: Test_acc 0.653300
+Epoch 4: Test_acc 0.681200
+Epoch 4: Test_acc 0.687900
+```
+
+Note that the output from all hosts are merged and printed to the console.
 
