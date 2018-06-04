@@ -698,6 +698,14 @@ def test_order():
         gt_ind = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk_val, gt_val)
         assert_almost_equal(nd_ret_topk_ind, gt_ind)
+        # test for kNullOp
+        _, nd_ret_topk_ind = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True)
+        nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
+        assert_almost_equal(nd_ret_topk_ind, gt_ind)
+        # test for kNullOp
+        nd_ret_topk_val, _ = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True)
+        nd_ret_topk_val = nd_ret_topk_val.asnumpy()
+        assert_almost_equal(nd_ret_topk_val, gt_val)
 
         # test for sort
         nd_ret_sort = mx.nd.sort(a_nd, axis=1, is_ascend=True).asnumpy()

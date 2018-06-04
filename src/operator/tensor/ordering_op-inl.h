@@ -416,9 +416,9 @@ void TopKImpl(RunContext ctx,
       sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
                                       Shape3(0, 2, 1));
     }
-    if(req[0] == kNullOp) {
+    if (req[0] == kNullOp) {
       return;
-    } else if(req[0] == kWriteTo) {
+    } else if (req[0] == kWriteTo) {
       IndexFill(ret_mask, sel_indices, mask_val);
     } else {
       LOG(FATAL) << "req=" << req[0] << " is not supported yet.";
@@ -462,7 +462,8 @@ void TopKImpl(RunContext ctx,
         ret[0].get_with_shape<xpu, 2, DType>(Shape2(batch_size, k), s);
       Tensor<xpu, 2, int> ret_indices =
         ret[1].get_with_shape<xpu, 2, int>(Shape2(batch_size, k), s);
-      Assign(ret_value, req[0], slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k));
+      Assign(ret_value, req[0],
+             slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k));
       Assign(ret_indices, req[1], slice<1>(
                       inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
     }
@@ -549,7 +550,8 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
       inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
     Tensor<xpu, 2, DType> in_grad =
       outputs[0].get_with_shape<xpu, 2, DType>(Shape2(outputs[0].shape_.Size(), 1), s);
-    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0, element_num, kWriteTo, batch_shift.dptr_);
+    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0, element_num, kWriteTo,
+                                             batch_shift.dptr_);
     if (do_transpose) {
       Tensor<xpu, 1, int> indices = inputs[2].FlatTo1D<xpu, int>(s);
       TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
@@ -577,7 +579,8 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
     } else if (kAddTo == req[0]) {
       // TODO(sxjscience) We can use AddTakeGrad in the future.
       // However, the current implementation of AddTakeGrad is not so efficient.
-      mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0, 1, kWriteTo, dummy_index.dptr_);
+      mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0, 1, kWriteTo,
+                                               dummy_index.dptr_);
       mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
     } else if (kNullOp == req[0]) {
       return;
@@ -615,17 +618,23 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   size_t out_size = out_attrs->size();
   CHECK_EQ(in_size, 1);
   CHECK(out_size == 1 || out_size == 2);
-  if(out_size > 1) {
-    CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32)) << "Failed to set the type of ret_indices to int32.";
+  if (out_size > 1) {
+    CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
+            << "Failed to set the type of ret_indices to int32.";
   }
-  if(param.ret_typ == topk_enum::kReturnIndices) {
-    CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32)) << "Failed to set the type of ret_indices to int32.";
+  if (param.ret_typ == topk_enum::kReturnIndices) {
+    CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32))
+            << "Failed to set the type of ret_indices to int32.";
   } else {
-    CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]=" << (*in_attrs)[0];
-    CHECK(type_assign(&data_type, (*out_attrs)[0])) << "Incompatible dtype of output, out_attrs[0]=" << (*out_attrs)[0];
-    CHECK(type_assign(&(*in_attrs)[0], data_type)) << "Incompatible dtype of input, in_attrs[0]=" << (*in_attrs)[0];
-    CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]=" << (*out_attrs)[0];
-    if(data_type == -1) return false;
+    CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]="
+                                                   << (*in_attrs)[0];
+    CHECK(type_assign(&data_type, (*out_attrs)[0])) << "Incompatible dtype of output, out_attrs[0]="
+                                                    << (*out_attrs)[0];
+    CHECK(type_assign(&(*in_attrs)[0], data_type)) << "Incompatible dtype of input, in_attrs[0]="
+                                                   << (*in_attrs)[0];
+    CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]="
+                                                    << (*out_attrs)[0];
+    if (data_type == -1) return false;
   }
   return true;
 }
@@ -674,11 +683,16 @@ inline bool SortType(const nnvm::NodeAttrs& attrs,
   size_t out_size = out_attrs->size();
   CHECK_EQ(in_size, 1);
   CHECK_EQ(out_size, 2);
-  CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32)) << "Failed to set the type of ret_indices to int32.";
-  CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]=" << (*in_attrs)[0];
-  CHECK(type_assign(&data_type, (*out_attrs)[0])) << "Incompatible dtype of output, out_attrs[0]=" << (*out_attrs)[0];
-  CHECK(type_assign(&(*in_attrs)[0], data_type)) << "Incompatible dtype of input, in_attrs[0]=" << (*in_attrs)[0];
-  CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]=" << (*out_attrs)[0];
+  CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
+          << "Failed to set the type of ret_indices to int32.";
+  CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]="
+                                                 << (*in_attrs)[0];
+  CHECK(type_assign(&data_type, (*out_attrs)[0])) << "Incompatible dtype of output, out_attrs[0]="
+                                                  << (*out_attrs)[0];
+  CHECK(type_assign(&(*in_attrs)[0], data_type)) << "Incompatible dtype of input, in_attrs[0]="
+                                                 << (*in_attrs)[0];
+  CHECK(type_assign(&(*out_attrs)[0], data_type)) << "Incompatible dtype of output, out_attrs[0]="
+                                                  << (*out_attrs)[0];
   if(data_type == -1) return false;
   return true;
 }
@@ -698,7 +712,8 @@ inline bool SortShape(const nnvm::NodeAttrs& attrs,
 inline bool ArgSortType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
-  CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32)) << "Failed to set the type of ret_indices to int32.";
+  CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32))
+          << "Failed to set the type of ret_indices to int32.";
   return true;
 }
 
