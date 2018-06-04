@@ -100,7 +100,8 @@ private[mxnet] object APIDocGenerator{
       argDef += "out : Option[NDArray] = None"
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
-    s"def ${func.name} (${argDef.mkString(", ")}) : ${returnType}"
+    val experimentalTag = "@Experimental"
+    s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : $returnType"
   }
 
 
