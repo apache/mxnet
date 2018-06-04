@@ -928,6 +928,7 @@ class SymbolBlock(HybridBlock):
             ret.collect_params().load(param_file, ctx=ctx)
         return ret
 
+
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__(prefix=None, params=None)
         self._prefix = ''
