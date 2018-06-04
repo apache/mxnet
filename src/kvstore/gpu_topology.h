@@ -780,7 +780,7 @@ void UpdateWeight( std::vector<T>&            W,
                    const std::vector<size_t>& topo_row,
                    int                        num_elements,
                    float                      alpha ) {
-  for (unsigned i = 0; i < topo_row.size() - 1; i += 2) {
+  for (unsigned i = 1; i < topo_row.size() - 1; i += 2) {
     unsigned parent = topo_row[i];
     unsigned child  = topo_row[i+1];
     if (parent >= num_elements*num_elements || 

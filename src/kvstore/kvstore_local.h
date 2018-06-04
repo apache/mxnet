@@ -57,7 +57,7 @@ class KVStoreLocal : public KVStore {
    */
   explicit KVStoreLocal(bool use_device_comm) : KVStore() {
     if (use_device_comm) {
-      bool tree = dmlc::GetEnv("MXNET_USE_TREE", 1);
+      bool tree = dmlc::GetEnv("MXNET_KVSTORE_USETREE", 1);
       if (tree) {
         comm_ = new CommDeviceTree();
       } else {
