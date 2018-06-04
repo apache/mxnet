@@ -130,7 +130,7 @@ def maximum(attrs, inputs, proto_obj):
         for op_input in inputs[2:]:
             mxnet_op = symbol.maximum(mxnet_op, op_input)
     else:
-        mxnet_op = inputs[0]
+        mxnet_op = symbol.maximum(inputs[0], inputs[0])
     return mxnet_op, attrs, inputs
 
 def minimum(attrs, inputs, proto_obj):
@@ -143,7 +143,7 @@ def minimum(attrs, inputs, proto_obj):
         for op_input in inputs[2:]:
             mxnet_op = symbol.minimum(mxnet_op, op_input)
     else:
-        mxnet_op = inputs[0]
+        mxnet_op = symbol.minimum(inputs[0], inputs[0])
     return mxnet_op, attrs, inputs
 
 def lesser(attrs, inputs, proto_obj):

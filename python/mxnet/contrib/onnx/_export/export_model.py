@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 import numpy as np
 
 from onnx import helper, mapping
+from six import string_types
 from .export_onnx import MxNetToONNXConverter
 from .export_helper import load_module
 
@@ -56,7 +57,7 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
     converter = MxNetToONNXConverter()
 
     data_format = np.dtype(input_type)
-    if isinstance(model, basestring) and isinstance(weights, basestring):
+    if isinstance(model, string_types) and isinstance(weights, string_types):
         print("Converting json and params file to sym and weights")
         sym, params = load_module(model, weights, input_shape)
         onnx_graph = converter.convert_mx2onnx_graph(sym, params, input_shape,

@@ -53,7 +53,7 @@ def load_module(json_path, params_path, input_shape):
         sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
         trained_model = mx.mod.Module(symbol=sym, label_names=None)
         trained_model.bind(data_shapes=[('data', input_shape[0])],
-                           label_shapes=trained_model.label_shapes, for_training=False)
+                           label_shapes=None, for_training=False)
 
         # Merging arg and aux parameters
         params = {}

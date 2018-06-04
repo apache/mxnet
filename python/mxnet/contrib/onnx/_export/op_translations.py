@@ -462,6 +462,7 @@ def convert_pooling(node, **kwargs):
     kernel = eval(attrs["kernel"])
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
+    global_pool = attrs.get("global_pool", 0)
     node_inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx]
@@ -470,7 +471,14 @@ def convert_pooling(node, **kwargs):
     pool_types = {"max": "MaxPool", "avg": "AveragePool"}
     global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool"}
 
-    if stride:
+    if global_pool:
+        node = helper.make_node(
+            global_pool_types[pool_type],
+            [input_node.name],  # input
+            [name],
+            name=name
+        )
+    else:
         node = helper.make_node(
             pool_types[pool_type],
             [input_node.name],  # input
@@ -478,13 +486,6 @@ def convert_pooling(node, **kwargs):
             kernel_shape=kernel,
             pads=[0, 0],
             strides=stride,
-            name=name
-        )
-    else:
-        node = helper.make_node(
-            global_pool_types[pool_type],
-            [input_node.name],  # input
-            [name],
             name=name
         )
 
