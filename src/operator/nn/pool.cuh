@@ -323,7 +323,7 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
       }
     }
     out_data[index] = (pool_size == 0) ?
-                      DType(0.0f / pool_size) :
+                      DType(nanf("")) :
                       a_root_p<DType, p>::Map(sum);
   }
 }
