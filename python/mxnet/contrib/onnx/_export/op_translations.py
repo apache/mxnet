@@ -24,14 +24,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
-from onnx import defs, checker, helper, numpy_helper, mapping
-
-from .export_onnx import MxNetToONNXConverter as mx2onnx
-
+import re
 import numpy as np
 
-import re
+from onnx import helper, numpy_helper, mapping
+from .export_onnx import MxNetToONNXConverter as mx2onnx
 
 def looks_like_weight(name):
     """Internal helper to figure out if node should be hidden with `hide_weights`.
@@ -40,14 +37,16 @@ def looks_like_weight(name):
         return True
     if name.endswith("_bias") or name == "B":
         return True
-    if name.endswith("_beta") or name.endswith("_gamma") or name.endswith("_moving_var") or name.endswith(
-            "_moving_mean"):
+    if name.endswith("_beta") or name.endswith("_gamma") or \
+            name.endswith("_moving_var") or name.endswith("_moving_mean"):
         return True
     return False
 
 
 @mx2onnx.register("null")
 def convert_weights_and_inputs(node, **kwargs):
+    """Helper function to convert weights and inputs.
+    """
     name = node["name"]
 
     if kwargs["is_input"] is False:
@@ -77,6 +76,9 @@ def convert_weights_and_inputs(node, **kwargs):
 
 @mx2onnx.register("Convolution")
 def convert_convolution(node, **kwargs):
+    """Map MXNet's convolution operator attributes to onnx
+    and return "Conv" onnx node
+    """
     name = node["name"]
     inputs = node["inputs"]
 
@@ -195,7 +197,7 @@ def convert_batchnorm(node, **kwargs):
          beta_node,  # bias
          mov_mean_node,
          mov_var_node
-         ],
+        ],
         [name],
         name=name,
         epsilon=eps,
@@ -297,8 +299,8 @@ def transform_padding(pad_width):
 
     start_index = 0
     end_index = int(num_pad_values/2)
-    for idx in range(0,num_pad_values):
-        if idx%2 == 0:
+    for idx in range(0, num_pad_values):
+        if idx % 2 == 0:
             onnx_pad_width[start_index] = pad_width[idx]
             start_index += 1
         else:
@@ -640,9 +642,9 @@ def convert_lrn(node, **kwargs):
 
     attrs = node["attrs"]
     alpha = float(attrs["alpha"]) if "alpha" in attrs else 0.0001
-    beta  = float(attrs["beta"]) if "beta" in attrs else 0.75
-    bias  = float(attrs["knorm"]) if "knorm" in attrs else 1.0
-    size  = int(attrs["nsize"])
+    beta = float(attrs["beta"]) if "beta" in attrs else 0.75
+    bias = float(attrs["knorm"]) if "knorm" in attrs else 1.0
+    size = int(attrs["nsize"])
 
     lrn_node = helper.make_node(
         "LRN",
@@ -1368,7 +1370,7 @@ def convert_slice_channel(node, **kwargs):
     a = kwargs["index_lookup"][inputs[0][0]]
     a_node = proc_nodes[a].name
 
-    if num_outputs==1 and squeeze_axis==1:
+    if num_outputs == 1 and squeeze_axis == 1:
         node = helper.make_node(
             "Squeeze",
             [a_node],
