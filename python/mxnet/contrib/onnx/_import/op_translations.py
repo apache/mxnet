@@ -399,6 +399,15 @@ def squeeze(attrs, inputs, proto_obj):
         mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
     return mxnet_op, new_attrs, inputs
 
+def unsqueeze(attrs, inputs, cls):
+    """Inserts a new axis of size 1 into the array shape"""
+    # MXNet can only add one axis at a time.
+    mxnet_op = inputs[0]
+    for axis in attrs["axes"]:
+        mxnet_op = symbol.expand_dims(mxnet_op, axis=axis)
+
+    return mxnet_op, attrs, inputs
+
 
 def flatten(attrs, inputs, proto_obj):
     """Flattens the input array into a 2-D array by collapsing the higher dimensions."""
