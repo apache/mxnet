@@ -67,6 +67,4 @@ class GluonBackend(Backend):
 
 prepare = GluonBackend.prepare
 
-run_node = GluonBackend.run_node
-
 supports_device = GluonBackend.supports_device

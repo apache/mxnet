@@ -48,8 +48,8 @@ def get_platforms(path: Optional[str]="docker"):
     return platforms
 
 
-def get_docker_tag(platform: str) -> str:
-    return "mxnet/build.{0}".format(platform)
+def get_docker_tag(platform: str, registry: str) -> str:
+    return "{0}/build.{1}".format(registry, platform)
 
 
 def get_dockerfile(platform: str, path="docker") -> str:
@@ -60,19 +60,19 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
     return "nvidia-docker" if use_nvidia_docker else "docker"
 
 
-def build_docker(platform: str, docker_binary: str) -> None:
+def build_docker(platform: str, docker_binary: str, registry: str) -> None:
     """
     Build a container for the given platform
     :param platform: Platform
     :param docker_binary: docker binary to use (docker/nvidia-docker)
+    :param registry: Dockerhub registry name
     :return: Id of the top level image
     """
 
-    tag = get_docker_tag(platform)
+    tag = get_docker_tag(platform=platform, registry=registry)
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
     cmd = [docker_binary, "build",
         "-f", get_dockerfile(platform),
-        "--rm=false",  # Keep intermediary layers to prime the build cache
         "--build-arg", "USER_ID={}".format(os.getuid()),
         "--cache-from", tag,
         "-t", tag,
@@ -118,11 +118,12 @@ def buildir() -> str:
 
 def container_run(platform: str,
                   docker_binary: str,
+                  docker_registry: str,
                   shared_memory_size: str,
                   command: List[str],
                   dry_run: bool = False,
                   into_container: bool = False) -> str:
-    tag = get_docker_tag(platform)
+    tag = get_docker_tag(platform=platform, registry=docker_registry)
     mx_root = get_mxnet_root()
     local_build_folder = buildir()
     # We need to create it first, otherwise it will be created by the docker daemon with root only permissions
@@ -158,6 +159,19 @@ def container_run(platform: str,
 
 def list_platforms() -> str:
     print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
+
+
+def load_docker_cache(tag, docker_registry) -> None:
+    if docker_registry:
+        try:
+            import docker_cache
+            logging.info('Docker cache download is enabled')
+            docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
+        except Exception:
+            logging.exception('Unable to retrieve Docker cache. Continue without...')
+    else:
+        logging.info('Distributed docker cache disabled')
+
 
 def main() -> int:
     # We need to be in the same directory than the script so the commands in the dockerfiles work as
@@ -207,12 +221,9 @@ def main() -> int:
                         help="go in a shell inside the container",
                         action='store_true')
 
-    parser.add_argument("--download-docker-cache",
-                        help="Download the docker cache from our central repository instead of rebuilding locally",
-                        action='store_true')
-
-    parser.add_argument("--docker-cache-bucket",
-                        help="S3 docker cache bucket, e.g. mxnet-ci-docker-cache",
+    parser.add_argument("--docker-registry",
+                        help="Dockerhub registry name to retrieve cache from",
+                        default='mxnetci',
                         type=str)
 
     parser.add_argument("command",
@@ -220,6 +231,7 @@ def main() -> int:
                         nargs='*', action='append', type=str)
 
     args = parser.parse_args()
+    docker_registry = args.docker_registry
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
     shared_memory_size = args.shared_memory_size
@@ -229,44 +241,43 @@ def main() -> int:
         list_platforms()
     elif args.platform:
         platform = args.platform
-        tag = get_docker_tag(platform)
-        if args.download_docker_cache:
-            import docker_cache
-            logging.info('Docker cache download is enabled')
-            docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
-        build_docker(platform, docker_binary)
+        tag = get_docker_tag(platform=platform, registry=docker_registry)
+        load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        build_docker(platform, docker_binary, registry=docker_registry)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
-            container_run(platform, docker_binary, shared_memory_size, command)
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+                          command=command, docker_registry=docker_registry)
         elif args.print_docker_run:
-            print(container_run(platform, docker_binary, shared_memory_size, [], True))
+            print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+                                command=[], dry_run=True, docker_registry=docker_registry))
         elif args.into_container:
-            container_run(platform, docker_binary, shared_memory_size, [], False, True)
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+                          command=[], dry_run=False, into_container=True, docker_registry=docker_registry)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
-            container_run(platform, docker_binary, shared_memory_size, cmd)
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+                          command=cmd, docker_registry=docker_registry)
 
     elif args.all:
         platforms = get_platforms()
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
-            if args.download_docker_cache:
-                import docker_cache
-                tag = get_docker_tag(platform)
-                logging.info('Docker cache download is enabled')
-                docker_cache.load_docker_cache(bucket_name=args.docker_cache_bucket, docker_tag=tag)
+            tag = get_docker_tag(platform=platform, registry=docker_registry)
+            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
             build_docker(platform, docker_binary)
             if args.build_only:
                 continue
             build_platform = "build_{}".format(platform)
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
-            container_run(platform, docker_binary, shared_memory_size, cmd)
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+                          command=cmd, docker_registry=docker_registry)
             plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
