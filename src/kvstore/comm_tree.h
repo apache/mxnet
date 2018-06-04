@@ -52,6 +52,7 @@ class CommDeviceTree : public Comm {
     inited_ = false;
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000000);
     link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_LINK_USAGE_PENALTY", 0.7);
+    stream_ = dmlc::GetEnv("MXNET_KVSTORE_STREAM", 1);
   }
 
   virtual ~CommDeviceTree() { }
@@ -169,7 +170,7 @@ class CommDeviceTree : public Comm {
         }
       }
     } else {
-      LOG(WARNING) << "Only dense input supported for now";
+      //LOG(WARNING) << "Only dense input supported for now";
     }
 
     int topo_id = topology[0];
@@ -301,13 +302,14 @@ class CommDeviceTree : public Comm {
   }
 
   void BroadcastInner(int key, const NDArray& src,
-                      const std::vector<NDArray*> dst, int root, int merged_row,
+                      const std::vector<NDArray*>& dst, int root, int merged_row,
                       int priority) {
     // copy to root of tree
     std::vector<size_t>& topology = topology_[root];
     std::vector<NDArray> temp(devs_.size());
     int gpu_id = topology[0];
-    CopyFromTo(src, dst[gpu_id], priority);
+    if (merged_row == -1)
+      CopyFromTo(src, dst[gpu_id], priority);
     temp[gpu_id] = *dst[gpu_id];
     //LOG(WARNING) << "Bcast copy from " << src.ctx() << " to " << buf.merged[merged_row].ctx();
 
@@ -376,7 +378,7 @@ class CommDeviceTree : public Comm {
       } else {
         int root = 0;
         //LOG(WARNING) << "Executing single tree broadcast for key " << key << " root " << root;
-        BroadcastInner(key, src, dst, root, 0, priority);
+        BroadcastInner(key, src, dst, root, -1, priority);
       }
     }
   }
@@ -641,6 +643,7 @@ class CommDeviceTree : public Comm {
   int   depth_;
   int   bigarray_bound_;
   bool  inited_;
+  bool  stream_;
   float link_usage_penalty_;
 
   /// \brief constant for maximum size of recv buffer per GPU
