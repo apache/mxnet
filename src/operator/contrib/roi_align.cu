@@ -399,7 +399,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
           width,
           pooled_height,
           pooled_width,
-          -1,
+          param.sample_ratio,
           bottom_rois,
           top_data);
   })
@@ -467,7 +467,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         width,
         pooled_height,
         pooled_width,
-        -1,
+        param.sample_ratio,
         grad_in,
         bottom_rois);
   })

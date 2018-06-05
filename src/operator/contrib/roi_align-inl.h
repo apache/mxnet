@@ -47,6 +47,7 @@ enum ROIAlignOpOutputs {kOut};
 struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
   TShape pooled_size;
   float spatial_scale;
+  int sample_ratio;
   DMLC_DECLARE_PARAMETER(ROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
@@ -54,6 +55,8 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
     DMLC_DECLARE_FIELD(spatial_scale).set_range(0.0, 1.0)
     .describe("Ratio of input feature map height (or w) to raw image height (or w). "
     "Equals the reciprocal of total stride in convolutional layers");
+    DMLC_DECLARE_FIELD(sample_ratio).set_default(-1)
+    .describe("Optional sampling ratio of ROI align, using adaptive size by default.");
   }
 };
 
