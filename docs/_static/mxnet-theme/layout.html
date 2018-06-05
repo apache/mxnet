@@ -103,6 +103,7 @@
     {{ metatags }}
     {%- block htmltitle %}
     {%- if pagename != 'index' and 'no title' not in title%}
+    <rex>{{ title }}</rex>
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
     <title>MXNet: A Scalable Deep Learning Framework</title>
