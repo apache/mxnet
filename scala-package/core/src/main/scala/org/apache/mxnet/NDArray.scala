@@ -64,7 +64,6 @@ object NDArray extends NDArrayBase {
     val function = functions(funcName)
     val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
-    if (args != null) {
       args.foreach {
         case arr: NDArray =>
           ndArgs.append(arr)
@@ -73,27 +72,16 @@ object NDArray extends NDArrayBase {
         case arg =>
           posArgs.append(arg.toString)
       }
-    }
+
+
     require(posArgs.length <= function.arguments.length,
       s"len(posArgs) = ${posArgs.length}, should be less or equal to len(arguments) " +
       s"= ${function.arguments.length}")
     val updatedKwargs: Map[String, String] =
       (Option(kwargs).getOrElse(Map.empty[String, String])
         ++ function.arguments.slice(0, posArgs.length).zip(posArgs) - "out"
-      ).filter{ case (key, value) =>
-        !value.isInstanceOf[NDArray] && !value.isInstanceOf[NDArrayFuncReturn]
-      }.map { case (k, v) => k -> v.toString }
+      ).map { case (k, v) => k -> v.toString }
 
-    Option(kwargs).getOrElse(Map.empty[String, String]).filter{ case (key, value) =>
-      value.isInstanceOf[NDArray] || value.isInstanceOf[NDArrayFuncReturn]
-    } .filter{ case (key, value) => key != "out"}.foreach{
-      case (key, value) => value match {
-        case nd : NDArray =>
-          ndArgs.append(nd.asInstanceOf[NDArray])
-        case arrFunRet: NDArrayFuncReturn =>
-          arrFunRet.asInstanceOf[NDArrayFuncReturn].arr.foreach(ndArgs.append(_))
-      }
-    }
 
     val (oriOutputs, outputVars) =
       if (kwargs != null && kwargs.contains("out")) {
