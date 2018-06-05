@@ -368,11 +368,9 @@ class CommDeviceTree : public Comm {
         for (unsigned gpu_id = 0; gpu_id < dst.size(); ++gpu_id) {
           BufferEntry& buf = merge_buf_[gpu_id][key];
           for (unsigned i = 0; i < devs_.size(); ++i) {
-            if ( devs_[gpu_id] == dst[gpu_id]->ctx() ) {
-              NDArray curr_slice = dst[gpu_id]->Slice(slice_scan[i], slice_scan[i+1]);
-              CopyFromTo(buf.merged[i], &curr_slice, priority);
+            NDArray curr_slice = dst[gpu_id]->Slice(slice_scan[i], slice_scan[i+1]);
+            CopyFromTo(buf.merged[i], &curr_slice, priority);
               //LOG(WARNING) << "Bcast return copy from " << buf.merged[i].ctx() << " to " << curr_slice.ctx();
-            }
           }
         }
       } else {
