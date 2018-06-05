@@ -21,7 +21,7 @@
 __all__ = ['Trainer']
 
 from .. import optimizer as opt
-from ..model import _create_kvstore
+from ..model import _create_kvstore, _create_sparse_kvstore
 from .parameter import ParameterDict, Parameter
 
 class Trainer(object):
@@ -68,20 +68,30 @@ class Trainer(object):
                 "First argument must be a list or dict of Parameters, " \
                 "got %s."%(type(params)))
         self._params = []
-        for param in params:
+        # parameters to initialize on the kvstore
+        self._contains_sparse = False
+        self._param2idx = {}
+        for i, param in enumerate(params):
             if not isinstance(param, Parameter):
                 raise ValueError(
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
+            self._param2idx[param.name] = i
             self._params.append(param)
+            param._set_trainer(self)
+            if param._stype != 'default':
+                self._contains_sparse = True
         self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = float(optimizer_params.get('rescale_grad', 1.0))
         self._contexts = self._check_contexts()
         self._init_optimizer(optimizer, optimizer_params)
+        self._kvstore_params = {'kvstore': kvstore, 'update_on_kvstore': update_on_kvstore}
         self._kv_initialized = False
-        self._kvstore = kvstore
-        self._update_on_kvstore = update_on_kvstore
+        self._kvstore = None
+        self._update_on_kvstore = None
+        self._params_to_init = []
+        self._reset_kvstore()
 
     def _check_contexts(self):
         contexts = None
@@ -109,38 +119,62 @@ class Trainer(object):
         self._updaters = [opt.get_updater(self._optimizer) \
                             for _ in self._contexts]
 
+    def _init_params(self):
+        """Initialize parameters in the KVStore.
+
+        Parameters with incomplete initialization are ignored.
+
+        """
+        assert self._kv_initialized, "Cannot initialize parameters in KVStore " \
+                                     "when KVStore is not initialized."
+        params_to_init = []
+        if self._kvstore:
+            for param in self._params_to_init:
+                if param._deferred_init:
+                    params_to_init.append(param)
+                else:
+                    param_arrays = param._check_and_get(param._data, list)
+                    idx = self._param2idx[param.name]
+                    self._kvstore.init(idx, param_arrays[0])
+                    if param._stype == 'default':
+                        self._kvstore.pull(idx, param_arrays, priority=-idx)
+
+        self._params_to_init = params_to_init
+
+    def _reset_kvstore(self):
+        """Reset kvstore."""
+        if self._kvstore and 'dist' in self._kvstore.type:
+            raise RuntimeError("Cannot reset distributed KVStore.")
+        self._kv_initialized = False
+        self._kvstore = None
+        self._update_on_kvstore = None
+        self._params_to_init = [param for param in self._params]
+
     def _init_kvstore(self):
+        """Create kvstore."""
         arg_arrays = {}
-        contains_sparse = False
-        for param in self._params:
-            arg_arrays[param.name] = param.data(self._contexts[0])
-            if param._grad_stype != 'default':
-                contains_sparse = True
-                # update_on_kvstore is set to False by the user
-                if self._update_on_kvstore is False:
-                    raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
-                                       "gradients and/or sparse weights are present for "
-                                       "Parameter %s." % param.name)
-        kvstore, update_on_kvstore = _create_kvstore(self._kvstore, len(self._contexts),
-                                                     arg_arrays)
-        update_on_kvstore = self._update_on_kvstore if self._update_on_kvstore is not None \
-                            else update_on_kvstore
+        config = self._kvstore_params
+        if self._contains_sparse:
+            kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
+            # update_on_kvstore is set to False by the user
+            if config['update_on_kvstore'] is False:
+                raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
+                                   "gradients and/or sparse weights are present for "
+                                   "Parameter '%s'."%param.name)
+        else:
+            kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
+                                                         arg_arrays)
+            if config['update_on_kvstore'] is not None:
+                update_on_kvstore = config['update_on_kvstore']
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
             # kv.pull(row_sparse_grad) is not supported
-            if contains_sparse:
-                update_on_kvstore = True
-            else:
-                if 'dist' in kvstore.type:
-                    update_on_kvstore = False
+            if 'dist' in kvstore.type and not self._contains_sparse:
+                update_on_kvstore = False
             if update_on_kvstore:
+                # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
-            # optimizer preferably needs to be set before init for multiprecision
-            for i, param in enumerate(self._params):
-                param_arrays = param.list_data()
-                kvstore.init(i, param_arrays[0])
-                kvstore.pull(i, param_arrays, priority=-i)
             self._kvstore = kvstore
             self._update_on_kvstore = update_on_kvstore
         else:
@@ -171,6 +205,15 @@ class Trainer(object):
         else:
             self._optimizer.set_learning_rate(lr)
 
+    def _row_sparse_pull(self, parameter, out, row_id):
+        # initialize kv and params if not already
+        if not self._kv_initialized:
+            self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
+        self._kvstore.row_sparse_pull(self._param2idx[parameter.name], \
+                                      out=out, row_ids=row_id)
+
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
         `autograd.backward()` and outside of `record()` scope.
@@ -191,6 +234,8 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
 
         self._optimizer.rescale_grad = self._scale / batch_size
 
@@ -210,6 +255,8 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
         assert not (self._kvstore and self._update_on_kvstore), \
                 'allreduce_grads() when parameters are updated on kvstore ' \
                 'is not supported. Try setting `update_on_kvstore` ' \
@@ -250,6 +297,8 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
         assert not (self._kvstore and self._update_on_kvstore), \
                 'update() when parameters are updated on kvstore ' \
                 'is not supported. Try setting `update_on_kvstore` ' \
@@ -264,7 +313,7 @@ class Trainer(object):
                 continue
 
             if not ignore_stale_grad:
-                for data in param.list_data():
+                for data in param._check_and_get(param._data, list):
                     if not data._fresh_grad:
                         raise UserWarning(
                             "Gradient of Parameter `%s` on context %s has not been updated "
@@ -276,7 +325,10 @@ class Trainer(object):
                             %(param.name, str(data.context)))
 
             if self._kvstore and self._update_on_kvstore:
-                self._kvstore.pull(i, param.list_data(), priority=-i)
+                if param._stype == 'default':
+                    # 'row_sparse' parameters are not pulled immediately - they're pulled
+                    # in `SparseBlock.sparse_forward`
+                    self._kvstore.pull(i, param.list_data(), priority=-i)
                 continue
 
             for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
@@ -296,8 +348,12 @@ class Trainer(object):
 
         if not self._kv_initialized:
             self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
 
         if self._update_on_kvstore:
+            assert not self._params_to_init, "Cannot save trainer states when some " \
+                                             "parameters are not yet initialized in kvstore."
             self._kvstore.save_optimizer_states(fname, dump_optimizer=True)
         else:
             with open(fname, 'wb') as fout:
@@ -313,6 +369,8 @@ class Trainer(object):
         """
         if not self._kv_initialized:
             self._init_kvstore()
+        if self._params_to_init:
+            self._init_params()
 
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)

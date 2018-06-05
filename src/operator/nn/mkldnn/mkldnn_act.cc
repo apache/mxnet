@@ -159,13 +159,19 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const NDArray &in_data, const OpReqType &req,
                              const NDArray &out_data) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  auto input_mem = in_data.GetMKLDNNData();
-  MKLDNNActForward &fwd = GetActForward(param, ctx, in_data, *input_mem);
-  auto out_mem = const_cast<NDArray &>(out_data).CreateMKLDNNData(
-      fwd.fwd_pd.dst_primitive_desc());
-  fwd.SetNewMem(*input_mem, *out_mem);
+
+  NDArray in_buffer = in_data;
+  if (in_data.IsView() && in_data.IsMKLDNNData())
+    in_buffer = in_data.Reorder2Default();
+
+  auto input_mem = in_buffer.GetMKLDNNData();
+  MKLDNNActForward &fwd = GetActForward(param, ctx, in_buffer, *input_mem);
+  auto out_mem = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_primitive_desc(),
+                                 req);
+  fwd.SetNewMem(*input_mem, *out_mem.second);
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(fwd.GetFwd());
+  CommitOutput(out_data, out_mem);
   stream->Submit();
 }
 
