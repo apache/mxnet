@@ -20,8 +20,10 @@
 
 FROM ccache/build.ubuntu as ccachebuilder
 
-COPY install/ubuntu_install_ccache.sh /work/
-RUN /work/ubuntu_install_ccache.sh
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+COPY install/ubuntu_ccache.sh /work/
+RUN /work/ubuntu_ccache.sh
 
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"

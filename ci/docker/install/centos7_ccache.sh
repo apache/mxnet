@@ -23,14 +23,8 @@ set -ex
 
 pushd .
 
-yum -y install epel-release
-yum -y install git
 yum -y install autoconf
-yum -y install wget
-yum -y install make
-yum -y install google-perftools
 yum -y install asciidoc
-yum -y install gcc-c++-4.8.*
 
 mkdir -p /work/deps
 cd /work/deps
@@ -49,5 +43,3 @@ rm -rf /work/deps/ccache
 
 popd
 
-export CCACHE_MAXSIZE=${CCACHE_MAXSIZE:=10G}
-export CCACHE_DIR=${CCACHE_DIR:=/work/ccache}

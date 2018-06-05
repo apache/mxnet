@@ -25,18 +25,9 @@ pushd .
 
 apt update
 apt install -y --no-install-recommends \
-    git \
-    ssh \
-    apt-transport-https \
-    build-essential \
-    ca-certificates \
     autoconf \
-    google-perftools \
     asciidoc \
-    libxslt1-dev \
-    docbook-xsl \
-    xsltproc \
-    libxml2-utils
+    xsltproc
 
 mkdir -p /work/deps
 cd /work/deps
@@ -55,5 +46,3 @@ rm -rf /work/deps/ccache
 
 popd
 
-export CCACHE_MAXSIZE=${CCACHE_MAXSIZE:=10G}
-export CCACHE_DIR=${CCACHE_DIR:=/work/ccache}

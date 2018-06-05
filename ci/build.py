@@ -39,6 +39,7 @@ from itertools import chain
 from subprocess import call, check_call
 from typing import *
 
+CCACHE_MAXSIZE = '10G'
 
 def get_platforms(path: Optional[str] = "docker"):
     """Get a list of architectures given our dockerfiles"""
@@ -149,6 +150,7 @@ def container_run(platform: str,
                '-v', "{}:/work/build".format(local_build_folder),  # mount mxnet/build for storing build artifacts
                '-v', "{}:/work/ccache".format(local_ccache_dir),
                '-u', '{}:{}'.format(os.getuid(), os.getgid()),
+               '-e', 'CCACHE_MAXSIZE={}'.format(CCACHE_MAXSIZE),
                '-e', "CCACHE_DIR=/work/ccache",  # this path is inside the container as /work/ccache is mounted
                tag]
     runlist.extend(command)
