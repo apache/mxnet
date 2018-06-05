@@ -324,7 +324,7 @@ MSHADOW_XINLINE DType Intersect(const DType *a, const DType *b, int encode) {
    * \param force force suppress regardless of class id
    * \param offset_id class id offset, used when force == false, usually 0
    * \param encode box encoding type, corner(0) or center(1)
-   * \tparam DType the data type
+   * \param DType the data type
    */
 struct nms_impl {
   template<typename DType>
@@ -360,13 +360,28 @@ struct nms_impl {
   }
 };
 
+/*!
+   * \brief Assign output of nms by indexing input
+   * 
+   * \param i the launched thread index (total num_batch)
+   * \param out output array [cls, conf, b0, b1, b2, b3]
+   * \param record book keeping the selected index for backward
+   * \param index compact sorted_index, use batch_start to access
+   * \param batch_start map(b, k) to compact index by index[batch_start[b] + k]
+   * \param k nms topk number
+   * \param num number of input boxes in each batch
+   * \param stride input stride, usually 6 (id-score-x1-y2-x2-y2)
+   */
 struct nms_assign {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, DType *record, const DType *input,
-                                  const DType *index, int k, int num, int stride) {
+                                  const DType *index, const DType *batch_start,
+                                  int k, int num, int stride) {
     int count = 0;
     for (int j = 0; j < k; ++j) {
-      int location = static_cast<int>(index[i * num + j]);
+      int pos = static_cast<int>(batch_start[i]) + j;
+      if (pos >= static_cast<int>(batch_start[i + 1])) return;
+      int location = static_cast<int>(index[pos]);
       if (location >= 0) {
         // copy to output
         int out_location = (i * num + count) * stride;
@@ -480,6 +495,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     if (num_valid < num_batch * num_elem) {
       slice<0>(sorted_index, num_valid, num_batch * num_elem) = -1;
     }
+    printf("num_valid %d\n", num_valid);
 
     // only sort the valid scores and batch_id
     Shape<1> valid_score_shape = Shape1(num_valid);
@@ -497,6 +513,15 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     for (int b = 0; b < num_batch + 1; b++) {
       slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
     }
+#ifdef __CUDACC__
+    std::vector<float> cpu_batch_start(num_batch + 1);
+    cudaMemcpy(&cpu_batch_start[0], batch_start.dptr_, sizeof(float) * cpu_batch_start.size(), cudaMemcpyDeviceToHost);
+    printf("batch_start ");
+    for (int b = 0; b < num_batch + 1; b++) {
+      printf("%d ", static_cast<int>(cpu_batch_start[b]));
+    }
+    printf("\n");
+#endif
 
     // pre-compute areas of candidates
     areas = 0;
@@ -520,8 +545,9 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // store the results to output, keep a record for backward
     record = -1;
     out = -1;
-    Kernel<nms_assign, xpu>::Launch(s, num_batch, out.dptr_, record.dptr_,
-      buffer.dptr_, sorted_index.dptr_, topk, num_elem, width_elem);
+    Kernel<nms_assign, xpu>::Launch(s, num_batch,
+      out.dptr_, record.dptr_, buffer.dptr_, sorted_index.dptr_, batch_start.dptr_,
+      topk, num_elem, width_elem);
 
     // convert encoding
     if (param.in_format != param.out_format) {
