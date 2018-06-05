@@ -154,9 +154,21 @@ void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   });
 }
 
-
+/*!
+ * \brief concat CSRNDArray on the first dimension.
+ */
 struct concat_csr_first_dim {
-  // i is the i-th row of the output ndarray
+  /*!
+   * \param i              the i-th row of the input ndarray
+   * \param out_idx        output csr ndarray column indices
+   * \param out_data       output csr ndarray data
+   * \param out_indptr     output csr ndarray row index pointer
+   * \param in_idx         input csr ndarray column indices
+   * \param in_data        input csr ndarray data
+   * \param in_indptr      input csr ndarray row index pointer
+   * \param indptr_offset  offset for ouput ndarray row index pointer
+   * \param idx_offset     offset for ouput ndarray column indices
+   */
   template<typename DType, typename RType, typename IType>
   MSHADOW_XINLINE static void Map(int i, const OpReqType req,
                                   DType* out_data, const DType* in_data,
@@ -173,15 +185,12 @@ struct concat_csr_first_dim {
   }
 };
 
-
-
 template<typename xpu>
 void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<NDArray>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<NDArray>& outputs) {
-  if (req[0] == kNullOp) return;
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -192,6 +201,7 @@ void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1);
   int axis = CheckAxis(concat_dim, inputs[0].shape().ndim());
   CHECK_EQ(axis, 0);
+  if (req[0] == kNullOp) return;
   Stream<xpu>* s = ctx.get_stream<xpu>();
   nnvm::dim_t nnz = 0;
   for (int i=0; i < num_args; i++) {

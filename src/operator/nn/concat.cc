@@ -105,7 +105,6 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
 inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                                  const int dev_mask,
                                                  DispatchMode* dispatch_mode,
@@ -139,7 +138,6 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-
 inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                                              const int dev_mask,
                                              DispatchMode* dispatch_mode,
@@ -159,7 +157,6 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }
-
 
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,

@@ -171,6 +171,7 @@ def test_sparse_nd_concat():
     check_concat(nds)
     check_concat(zero_nds)
 
+
 @with_seed()
 def test_sparse_nd_equal():
     for stype in ['row_sparse', 'csr']:
