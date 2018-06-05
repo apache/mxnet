@@ -306,6 +306,10 @@ void RNNBackward(DType* ws,
                  DType* dcx_ptr,
                  DType* dw_ptr,
                  DType* db_ptr,
+                 int req_data,
+                 int req_params,
+                 int req_state,
+                 int req_statecell,
                  int mode) {
   switch (mode) {
     case rnn_enum::kRnnRelu:
@@ -314,12 +318,14 @@ void RNNBackward(DType* ws,
     case rnn_enum::kLstm:
       LstmBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
                           input_size, state_size, x_ptr, hx_ptr, cx_ptr, w_ptr, y_ptr,
-                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr);
+                          dy_ptr, dhy_ptr, dcy_ptr, dx_ptr, dhx_ptr, dcx_ptr, dw_ptr, db_ptr,
+                          req_data, req_params, req_state, req_statecell);
       break;
     case rnn_enum::kGru:
       GruBackward<DType>(ws, rs, num_layers, direction, seq_length, batch_size,
                          input_size, state_size, x_ptr, hx_ptr, w_ptr,
-                         dy_ptr, dhy_ptr, dx_ptr, dhx_ptr, dw_ptr);
+                         dy_ptr, dhy_ptr, dx_ptr, dhx_ptr, dw_ptr,
+                         req_data, req_params, req_state);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode" << mode;
@@ -495,7 +501,7 @@ class RNNOp : public Operator{
     CHECK(dw.CheckContiguous());
     CHECK(dhx.CheckContiguous());
     CHECK(dy.CheckContiguous());
-    if (req[rnn_enum::kParams] != kAddTo && req[rnn_enum::kParams] != kNullOp) {
+    if (req[rnn_enum::kParams] != kAddTo) {
       dw = mshadow::expr::ScalarExp<DType>(0.0f);
     }
     param_.seq_length_ = x.shape_[0];
@@ -559,6 +565,10 @@ class RNNOp : public Operator{
                        dcx_ptr,
                        dw.dptr_,
                        db_ptr,
+                       req[rnn_enum::kData],
+                       req[rnn_enum::kParams],
+                       req[rnn_enum::kState],
+                       req[rnn_enum::kStateCell],
                        param_.mode);
   }
 

@@ -318,7 +318,11 @@ void LstmBackwardSingleLayer(DType* ws,
                              DType* dcy_ptr,
                              DType* w_ptr,
                              DType* dw_ptr,
-                             DType* db_ptr) {
+                             DType* db_ptr,
+                             int req_data,
+                             int req_params,
+                             int req_state,
+                             int req_statecell) {
   using namespace mshadow;
   const Tensor<cpu, 2, DType> wx(w_ptr, Shape2(H * 4, I));
   const Tensor<cpu, 2, DType> wh(w_ptr + I * H * 4, Shape2(H * 4, H));
@@ -371,24 +375,36 @@ void LstmBackwardSingleLayer(DType* ws,
       difgo[t][j][1][k] = dc[j][k] * cnext[j][k] * ft * (1 - ft);
       difgo[t][j][2][k] = dc[j][k] * it * (1 - gt * gt);
       difgo[t][j][3][k] = dh[j][k] * tc * ot * (1 - ot);
-      dcnext[j][k] = dc[j][k] * ft;
+      if (req_statecell != kNullOp || i > 0) {
+        dcnext[j][k] = dc[j][k] * ft;
+      }
       if (i) {
         htmp[j][k] = y[tnext][j][k + offset];
       }
     }
     Tensor<cpu, 2, DType> dyh(difgo[t].dptr_, Shape2(N, H * 4));
-    linalg_gemm(dyh, wh, dhnext, alpha, beta0, false, false);
-    linalg_gemm(dyh, hnext, dwh, alpha, beta1, true, false);
+    if (req_state != kNullOp || i > 0) {
+      linalg_gemm(dyh, wh, dhnext, alpha, beta0, false, false);
+    }
+    if (req_params != kNullOp) {
+      linalg_gemm(dyh, hnext, dwh, alpha, beta1, true, false);
+    }
   }
   Tensor<cpu, 2, DType> dyx(difgo.dptr_, Shape2(T * N, H * 4));
-  linalg_gemm(dyx, wx, dx, alpha, bid ? beta1 : beta0, false, false);
-  linalg_gemm(dyx, x, dwx, alpha, beta0, true, false);
+  if (req_data != kNullOp) {
+    linalg_gemm(dyx, wx, dx, alpha, bid ? beta1 : beta0, false, false);
+  }
+  if (req_params != kNullOp) {
+    linalg_gemm(dyx, x, dwx, alpha, beta0, true, false);
+  }
   const int row = T * N;
   const int col = H * 4;
-  for (int i = 0; i < row; ++i) {
-    for (int j = 0; j < col; ++j) {
-      dbx[j] += dyx[i][j];
-      dbh[j] = dbx[j];
+  if (req_params != kNullOp) {
+    for (int i = 0; i < row; ++i) {
+      for (int j = 0; j < col; ++j) {
+        dbx[j] += dyx[i][j];
+        dbh[j] = dbx[j];
+      }
     }
   }
 }
@@ -414,7 +430,11 @@ void LstmBackward(DType* ws,
                   DType* dhx_ptr,
                   DType* dcx_ptr,
                   DType* dw_ptr,
-                  DType* db_ptr) {
+                  DType* db_ptr,
+                  int req_data,
+                  int req_params,
+                  int req_state,
+                  int req_statecell) {
   const int total_layers = D * L;
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
@@ -443,7 +463,8 @@ void LstmBackward(DType* ws,
     Tensor<cpu, 2, DType> dx(i ? dy_tmp_ptr : dx_ptr, Shape2(T * N, input_size));
     LstmBackwardSingleLayer<DType>(ws, rs_cur_ptr, false, T, N, input_size, H,
                                    x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
-                                   dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr);
+                                   dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
+                                   req_data, req_params, req_state, req_statecell);
     if (D == 2) {
       w_cur_ptr += w_size;
       dw_cur_ptr += w_size;
@@ -453,7 +474,8 @@ void LstmBackward(DType* ws,
       dcy_cur_ptr = dcy_ptr ? dcy_cur_ptr + cell_size : NULL;
       LstmBackwardSingleLayer<DType>(ws, rs_cur_ptr, true, T, N, input_size, H,
                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
-                                     dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr);
+                                     dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
+                                     req_data, req_params, req_state, req_statecell);
     }
     dy_ptr = dx.dptr_;
   }
@@ -752,8 +774,6 @@ void GruForwardTrainingSingleLayer(DType* ws,
       dht_1_tmp = reshape(dht_1.T(), Shape3(D, H, N));
       linalg_gemm(dht_1_tmp[0], wh, dgemmC2, alpha, beta, true, true);
     }
-    gemmC1_t = gemmC1 + t * N * 3 * H;
-
     rt = gateR + t * N * H;
     zt = gateZ + t * N * H;
     nt = gateN + t * N * H;
@@ -921,7 +941,10 @@ void GruBackwardSingleLayer(DType* ws,
                             DType* dwx,
                             DType* dwh,
                             DType* dbx,
-                            DType* dbh) {
+                            DType* dbh,
+                            int req_data,
+                            int req_params,
+                            int req_state) {
   DType* dyt;
   DType* ht1;  // [N, D, H]
   DType* rt;
@@ -955,17 +978,6 @@ void GruBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wx(back_wx_ptr, Shape2(H * 3, I));
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < D * H * 3 * H; ++i) {
-    dwh[i] = 0;
-  }
-
-  #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < D * 3 * H; ++i) {
-    dbx[i] = 0;
-    dbh[i] = 0;
-  }
-
   #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < N * H; ++i) {
     if (dhy_ptr) {
@@ -1053,12 +1065,14 @@ void GruBackwardSingleLayer(DType* ws,
     linalg_gemm(d_dart, d_ht1_tmp[0], d_dwh, alpha, beta, true, true);
   }
 
-  // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
-  #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < 3 * H; ++i) {
-    for (int j = 0; j < N * T; ++j) {
-      dbx[i] += da[j * 3 * H + i];
-      dbh[i] += dar[j * 3 * H + i];
+  if (req_params != kNullOp) {
+    // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < 3 * H; ++i) {
+      for (int j = 0; j < N * T; ++j) {
+        dbx[i] += da[j * 3 * H + i];
+        dbh[i] += dar[j * 3 * H + i];
+      }
     }
   }
   alpha = 1.0;
@@ -1066,12 +1080,16 @@ void GruBackwardSingleLayer(DType* ws,
 
   // dx = da * wx    [T * N, I] = [T * N, 3 * H] * [3 * H, I]
   Tensor<cpu, 2, DType> d_da(da, Shape2(T * N, 3 * H));
-  Tensor<cpu, 2, DType> d_dx(dx, Shape2(T * N, I));
-  linalg_gemm(d_da, wx, d_dx, alpha, beta, false, false);
+  if (req_data != kNullOp) {
+    Tensor<cpu, 2, DType> d_dx(dx, Shape2(T * N, I));
+    linalg_gemm(d_da, wx, d_dx, alpha, beta, false, false);
+  }
 
   // dwx = da.T * x    [3 * H, I] = [3 * H, T * N] * [T * N, I]
-  Tensor<cpu, 2, DType> d_dwx(dwx, Shape2(3 * H, I));
-  linalg_gemm(d_da, x, d_dwx, alpha, beta, true, false);
+  if (req_params != kNullOp) {
+    Tensor<cpu, 2, DType> d_dwx(dwx, Shape2(3 * H, I));
+    linalg_gemm(d_da, x, d_dwx, alpha, beta, true, false);
+  }
 
   if (D == 2) {
     for (int t = 0; t < T; ++t) {
@@ -1129,27 +1147,35 @@ void GruBackwardSingleLayer(DType* ws,
       linalg_gemm(d_dart, d_back_ht1_tmp[0], d_back_dwh, alpha, beta, true, true);
     }
 
+    if (req_params != kNullOp) {
     // dbx = e * da       [1, 3 * H] = [1, N] * [N, 3 * H]
-    #pragma omp parallel for num_threads(omp_threads)
-    for (int i = 0; i < 3 * H; ++i) {
-      for (int j = 0; j < N * T; ++j) {
-        back_dbx[i] += da[j * 3 * H + i];
-        back_dbh[i] += dar[j * 3 * H + i];
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < 3 * H; ++i) {
+        for (int j = 0; j < N * T; ++j) {
+          back_dbx[i] += da[j * 3 * H + i];
+          back_dbh[i] += dar[j * 3 * H + i];
+        }
       }
     }
     alpha = 1.0;
     beta = 1.0;
     // dxt = da * wx    [T * N, I] = [T * N, 3 * H] * [3 * H, I]
     Tensor<cpu, 2, DType> d_da2(da, Shape2(T * N, 3 * H));
-    Tensor<cpu, 2, DType> d_dx(dx, Shape2(T * N, I));
-    linalg_gemm(d_da2, back_wx, d_dx, alpha, beta, false, false);
+    if (req_data != kNullOp) {
+      Tensor<cpu, 2, DType> d_dx(dx, Shape2(T * N, I));
+      linalg_gemm(d_da2, back_wx, d_dx, alpha, beta, false, false);
+    }
     alpha = 1.0;
     beta = 0.0;
     // dwx = da.T * xt    [3 * H, I] = [3 * H, N] * [N, I]
-    Tensor<cpu, 2, DType> d_back_dwx(back_dwx, Shape2(3 * H, I));
-    linalg_gemm(d_da2, x, d_back_dwx, alpha, beta, true, false);
+    if (req_params != kNullOp) {
+      Tensor<cpu, 2, DType> d_back_dwx(back_dwx, Shape2(3 * H, I));
+      linalg_gemm(d_da2, x, d_back_dwx, alpha, beta, true, false);
+    }
   }
-  memcpy(dht1, dhx, N * H * D * sizeof(DType));
+  if (req_state != kNullOp) {
+    memcpy(dhx, dht1, N * H * D * sizeof(DType));
+  }
 }
 
 template <typename DType>
@@ -1168,7 +1194,10 @@ void GruBackward(DType* ws,
                  DType* dhy_ptr,
                  DType* dx_ptr,
                  DType* dhx_ptr,
-                 DType* dw_ptr) {
+                 DType* dw_ptr,
+                 int req_data,
+                 int req_params,
+                 int req_state) {
   DType* wx = w_ptr;
   DType* dwx = dw_ptr;
   DType* dwh = dwx + I * H * 3;
@@ -1220,7 +1249,7 @@ void GruBackward(DType* ws,
     Tensor<cpu, 2, DType> x_l(y_tmp, Shape2(T * N, I));
     GruBackwardSingleLayer<DType>(ws2, tmp_buf, D, T, N, I, H, x_l, hx_l, wx_l, wh_l, y_l, dy_l,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
-                                  dwx_l, dwh_l, dbx_l, dbh_l);
+                                  dwx_l, dwh_l, dbx_l, dbh_l, req_data, req_params, req_state);
     if (l > 0) {
       memcpy(dy_l, dx_l, T * N * H * D * sizeof(DType));
       gateR_l = gateR_l - T * D * N * H;
