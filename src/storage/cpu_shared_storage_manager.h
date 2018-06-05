@@ -215,18 +215,20 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
       << "Failed to unmap shared memory. munmap failed with error "
       << strerror(errno);
 
-  if (count == 0) {
 #ifdef __linux__
+    if (handle.shared_id != -1) {
     CHECK_EQ(close(handle.shared_id), 0)
         << "Failed to close shared memory. close failed with error "
         << strerror(errno);
+    }
 #else
+  if (count == 0) {
     auto filename = SharedHandleToString(handle.shared_pid, handle.shared_id);
     CHECK_EQ(shm_unlink(filename.c_str()), 0)
         << "Failed to unlink shared memory. shm_unlink failed with error "
         << strerror(errno);
-#endif  // __linux__
   }
+#endif  // __linux__
 #endif  // _WIN32
 }
 
