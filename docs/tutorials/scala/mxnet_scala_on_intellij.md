@@ -156,7 +156,7 @@ The project's `pom.xml` will be open for editing.
   <licenses>
     <license>
       <name>Apache2</name>
-      <url>http://mxnet.io</url>
+      <url>http://mxnet.apache.org</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
