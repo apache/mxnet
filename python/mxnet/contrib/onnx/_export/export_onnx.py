@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name,too-many-locals,no-self-use
+# pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments
 """MXNet to ONNX graph converter functions"""
 from __future__ import absolute_import
 from __future__ import division

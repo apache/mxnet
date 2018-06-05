@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=too-many-locals
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
@@ -95,6 +96,7 @@ def convert_convolution(node, **kwargs):
     tuple_re = re.compile('\([0-9L|,| ]+\)')
 
     def parse_helper(attrs_name, alt_value=None):
+        """Helper function to parse operator attributes in required format."""
         if attrs is None:
             return alt_value
         attrs_str = str(attrs.get(attrs_name))
@@ -410,17 +412,16 @@ def convert_linalg_gemm2(node, **kwargs):
     if "attrs" in node:
         attrs = node["attrs"]
         alpha = float(attrs["alpha"])
-        transA = int(attrs["transpose_a"])
-        transB = int(attrs["transpose_b"])
-        beta = 0.0
+        trans_a = int(attrs["transpose_a"])
+        trans_b = int(attrs["transpose_b"])
     else:
         alpha = 1.0
-        transA = 0
-        transB = 0
+        trans_a = 0
+        trans_b = 0
 
     op_name = "transpose" + str(kwargs["idx"])
 
-    if alpha == 1.0 and transA == 0 and transB == 0:
+    if alpha == 1.0 and trans_a == 0 and trans_b == 0:
         matmul_node = helper.make_node(
             'MatMul',
             inputs=[input_node_a, input_node_b],
@@ -428,9 +429,9 @@ def convert_linalg_gemm2(node, **kwargs):
             name=name
         )
         return [matmul_node]
-    elif transA == 1 and transB == 0:
+    elif trans_a == 1 and trans_b == 0:
         op_name = "transpose" + str(kwargs["idx"])
-        transA_node = helper.make_node(
+        trans_a_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
             outputs=[op_name+"_a"],
@@ -439,14 +440,14 @@ def convert_linalg_gemm2(node, **kwargs):
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[transA_node.name, input_node_b],
+            inputs=[trans_a_node.name, input_node_b],
             outputs=[name],
             name=name
         )
-        return [transA_node, matmul_node]
+        return [trans_a_node, matmul_node]
 
-    elif transA == 0 and transB == 1:
-        transB_node = helper.make_node(
+    elif trans_a == 0 and trans_b == 1:
+        trans_b_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
             outputs=[op_name+"_b"],
@@ -455,21 +456,21 @@ def convert_linalg_gemm2(node, **kwargs):
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[input_node_a, transB_node.name],
+            inputs=[input_node_a, trans_b_node.name],
             outputs=[name],
             name=name
         )
 
-        return [transB_node, matmul_node]
+        return [trans_b_node, matmul_node]
     else:
-        transA_node = helper.make_node(
+        trans_a_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
             outputs=[op_name+"_a"],
             name=op_name+"_a"
         )
 
-        transB_node = helper.make_node(
+        trans_b_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
             outputs=[op_name+"_b"],
@@ -478,12 +479,12 @@ def convert_linalg_gemm2(node, **kwargs):
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[transA_node.name, transB_node.name],
+            inputs=[trans_a_node.name, trans_b_node.name],
             outputs=[name],
             name=name
         )
 
-        return [transA_node, transB_node, matmul_node]
+        return [trans_a_node, trans_b_node, matmul_node]
 
 
 @mx2onnx.register("Pooling")
@@ -506,7 +507,7 @@ def convert_pooling(node, **kwargs):
     pool_types = {"max": "MaxPool", "avg": "AveragePool"}
     global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool"}
 
-    if global_pool:
+    if global_pool == 1:
         node = helper.make_node(
             global_pool_types[pool_type],
             [input_node.name],  # input
@@ -536,12 +537,12 @@ def convert_exp(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Exp",
-        [a_node],
+        [input_node],
         [name],
         name=name,
     )
@@ -556,8 +557,8 @@ def convert_leakyrelu(node, **kwargs):
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
     attrs = node["attrs"]
 
     act_type = attrs.get("act_type", "LeakyRelu")
@@ -571,13 +572,13 @@ def convert_leakyrelu(node, **kwargs):
 
         node = helper.make_node(
             act_name[act_type],
-            inputs=[a_node, alpha_node_name],
+            inputs=[input_node, alpha_node_name],
             outputs=[name],
             name=name)
     else:
         node = helper.make_node(
             act_name[act_type],
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             name=name,
             alpha=alpha)
@@ -723,13 +724,13 @@ def convert_dropout(node, **kwargs):
     input_id = kwargs["index_lookup"][node["inputs"][0][0]]
     input_name = kwargs["proc_nodes"][input_id].name
     attrs = node["attrs"]
-    p = float(attrs["p"])
+    probability = float(attrs["p"])
 
     dropout_node = helper.make_node(
         "Dropout",
         [input_name],
         [name],
-        ratio=p,
+        ratio=probability,
         name=name
     )
     return [dropout_node]
@@ -766,13 +767,13 @@ def convert_mul_scalar(node, **kwargs):
     inputs = node["inputs"]
     scalar_mul_value = [int(node.get("attrs", {}).get("scalar", 1))]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_name_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_name_id].name
 
     initializer = kwargs["initializer"]
     flag = True
     for i in initializer:
-        if i.name == a_node:
+        if i.name == input_node:
             new_initializer = scalar_mul_value[0]*numpy_helper.to_array(i)
             flag = False
             break
@@ -797,7 +798,7 @@ def convert_mul_scalar(node, **kwargs):
 
         mul_node = helper.make_node(
             "Mul",
-            [a_node, scalar_op_name],
+            [input_node, scalar_op_name],
             [name],
             name=name
         )
@@ -808,7 +809,7 @@ def convert_mul_scalar(node, **kwargs):
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
         dims = np.shape(new_initializer)
 
-        new_a_node = a_node + str(kwargs["idx"])
+        new_a_node = input_node + str(kwargs["idx"])
         tensor_node = helper.make_tensor_value_info(new_a_node, data_type, dims)
 
         initializer.append(
@@ -877,7 +878,7 @@ def convert_argmin(node, **kwargs):
     return [node]
 
 @mx2onnx.register("_maximum")
-def convert_max(node, **kwargs):
+def convert_maximum(node, **kwargs):
     """Map MXNet's _maximum operator attributes to onnx's Max operator
     and return the created node.
     """
@@ -940,13 +941,13 @@ def convert_min(node, **kwargs):
 
     keepdims = int(node.get("attrs", {}).get("keepdims", 0))
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     if axes is not None:
         node = helper.make_node(
             'ReduceMin',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             axes=axes,
             keepdims=keepdims,
@@ -957,7 +958,7 @@ def convert_min(node, **kwargs):
     else:
         node = helper.make_node(
             'ReduceMin',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             keepdims=keepdims,
             name=name
@@ -980,13 +981,13 @@ def convert_max(node, **kwargs):
 
     keepdims = int(node.get("attrs", {}).get("keepdims", 0))
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     if axes is not None:
         node = helper.make_node(
             'ReduceMax',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             axes=axes,
             keepdims=keepdims,
@@ -997,7 +998,7 @@ def convert_max(node, **kwargs):
     else:
         node = helper.make_node(
             'ReduceMax',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             keepdims=keepdims,
             name=name
@@ -1020,13 +1021,13 @@ def convert_mean(node, **kwargs):
 
     keepdims = int(node.get("attrs", {}).get("keepdims", 0))
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     if axes is not None:
         node = helper.make_node(
             'ReduceMean',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             axes=axes,
             keepdims=keepdims,
@@ -1037,7 +1038,7 @@ def convert_mean(node, **kwargs):
     else:
         node = helper.make_node(
             'ReduceMean',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             keepdims=keepdims,
             name=name
@@ -1060,13 +1061,13 @@ def convert_prod(node, **kwargs):
 
     keepdims = int(node.get("attrs", {}).get("keepdims", 0))
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     if axes is not None:
         node = helper.make_node(
             'ReduceProd',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             axes=axes,
             keepdims=keepdims,
@@ -1077,7 +1078,7 @@ def convert_prod(node, **kwargs):
     else:
         node = helper.make_node(
             'ReduceProd',
-            inputs=[a_node],
+            inputs=[input_node],
             outputs=[name],
             keepdims=keepdims,
             name=name
@@ -1096,15 +1097,15 @@ def convert_elementwise_add(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     add_node = helper.make_node(
         "Add",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name,
     )
@@ -1121,15 +1122,15 @@ def covert_broadcast_add(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     add_node = helper.make_node(
         "Add",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name,
     )
@@ -1146,15 +1147,15 @@ def convert_elementwise_sub(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     sub_node = helper.make_node(
         "Sub",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name,
     )
@@ -1170,15 +1171,15 @@ def covert_broadcast_sub(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     sub_node = helper.make_node(
         "Sub",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name,
     )
@@ -1187,7 +1188,7 @@ def covert_broadcast_sub(node, **kwargs):
 
 
 @mx2onnx.register("elemwise_mul")
-def convert_mul(node, **kwargs):
+def convert_elemwise_mul(node, **kwargs):
     """Map MXNet's elemwise_mul operator attributes to onnx's Mul operator
     and return the created node.
     """
@@ -1195,15 +1196,15 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     mul_node = helper.make_node(
         "Mul",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name,
     )
@@ -1211,7 +1212,7 @@ def convert_mul(node, **kwargs):
     return [mul_node]
 
 @mx2onnx.register("broadcast_mul")
-def convert_mul(node, **kwargs):
+def convert_broadcast_mul(node, **kwargs):
     """Map MXNet's broadcast_mul operator attributes to onnx's Mul operator
     and return the created node.
     """
@@ -1219,15 +1220,15 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     mul_node = helper.make_node(
         "Mul",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name
     )
@@ -1236,7 +1237,7 @@ def convert_mul(node, **kwargs):
 
 
 @mx2onnx.register("elemwise_div")
-def convert_mul(node, **kwargs):
+def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
     and return the created node.
     """
@@ -1244,15 +1245,15 @@ def convert_mul(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     div_node = helper.make_node(
         "Div",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name
     )
@@ -1261,7 +1262,7 @@ def convert_mul(node, **kwargs):
 
 
 @mx2onnx.register("broadcast_div")
-def convert_div(node, **kwargs):
+def convert_broadcast_div(node, **kwargs):
     """Map MXNet's broadcast_div operator attributes to onnx's Div operator
     and return the created node.
     """
@@ -1269,15 +1270,15 @@ def convert_div(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     div_node = helper.make_node(
         "Div",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=name
     )
@@ -1294,13 +1295,13 @@ def convert_negative(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
 
-    a_node = proc_nodes[a].name
+    input_node = proc_nodes[input_node_id].name
 
     neg_node = helper.make_node(
         "Neg",
-        [a_node],
+        [input_node],
         [name],
         name=name,
     )
@@ -1317,13 +1318,13 @@ def convert_abs(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
 
-    a_node = proc_nodes[a].name
+    input_node = proc_nodes[input_node_id].name
 
     abs_node = helper.make_node(
         "Abs",
-        [a_node],
+        [input_node],
         [name],
         name=name
     )
@@ -1341,7 +1342,7 @@ def convert_addn(node, **kwargs):
     inputs = node["inputs"]
 
     input_list = []
-    for idx, input_val in enumerate(inputs):
+    for input_val in inputs:
         input_list.append(proc_nodes[kwargs["index_lookup"][input_val[0]]].name)
 
     sum_node = helper.make_node(
@@ -1362,12 +1363,12 @@ def convert_ceil(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Ceil",
-        [a_node],
+        [input_node],
         [name],
         name=name
     )
@@ -1382,12 +1383,12 @@ def convert_floor(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Floor",
-        [a_node],
+        [input_node],
         [name],
         name=name
     )
@@ -1453,12 +1454,12 @@ def convert_cast(node, **kwargs):
     inputs = node["inputs"]
     dtype = node["attrs"]["dtype"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Cast",
-        [a_node],
+        [input_node],
         [name],
         to=dtype,
         name=name,
@@ -1478,12 +1479,12 @@ def convert_slice_axis(node, **kwargs):
     starts = int(node["attrs"]["begin"])
     ends = int(node["attrs"]["end"])
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Slice",
-        [a_node],
+        [input_node],
         [name],
         axes=[axes],
         starts=[starts],
@@ -1508,13 +1509,13 @@ def convert_slice_channel(node, **kwargs):
     axis = int(node.get("attrs", {}).get("axis", 1))
     squeeze_axis = int(node.get("attrs", {}).get("squeeze_axis", 0))
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     if num_outputs == 1 and squeeze_axis == 1:
         node = helper.make_node(
             "Squeeze",
-            [a_node],
+            [input_node],
             [name],
             axes=[axis],
             name=name,
@@ -1522,7 +1523,7 @@ def convert_slice_channel(node, **kwargs):
     else:
         node = helper.make_node(
             "Split",
-            [a_node],
+            [input_node],
             [name],
             axis=axis,
             split=[num_outputs],
@@ -1542,12 +1543,12 @@ def convert_expand_dims(node, **kwargs):
     inputs = node["inputs"]
     axis = int(node["attrs"]["axis"])
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Unsqueeze",
-        [a_node],
+        [input_node],
         [name],
         axes=[axis],
         name=name,
@@ -1564,12 +1565,12 @@ def convert_log(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Log",
-        [a_node],
+        [input_node],
         [name],
         name=name,
     )
@@ -1585,12 +1586,12 @@ def convert_reciprocal(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Reciprocal",
-        [a_node],
+        [input_node],
         [name],
         name=name,
     )
@@ -1606,15 +1607,15 @@ def convert_power(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    b = kwargs["index_lookup"][inputs[1][0]]
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
 
-    a_node = proc_nodes[a].name
-    b_node = proc_nodes[b].name
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
 
     node = helper.make_node(
         "Pow",
-        [a_node, b_node],
+        [input_node_a, input_node_b],
         [name],
         name=None
     )
@@ -1629,12 +1630,12 @@ def convert_sqrt(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
 
-    a = kwargs["index_lookup"][inputs[0][0]]
-    a_node = proc_nodes[a].name
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
 
     node = helper.make_node(
         "Sqrt",
-        [a_node],
+        [input_node],
         [name],
         name=name,
     )
