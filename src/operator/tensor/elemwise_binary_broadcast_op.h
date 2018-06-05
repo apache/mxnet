@@ -445,10 +445,12 @@ void BinaryBroadcastComputeSparseEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = out.storage_type();
   // If the input is a matrix with the same shape, should be elemwise
   if ((rhs.shape().ndim() != 1U) && (rhs.shape()[0] != 1) && (rhs.shape()[1] != 1)) {
-    // Currently do not support elementwise_mul/div(csr, dense) = csr, log and exit
-    using common::operator_string;
-    LOG(FATAL) << operator_string(attrs, ctx, inputs, req, outputs)
-               << "\nIf shape of lhs and rhs match, please explicitly use elemwise_mul/div\n";
+    if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
+      const bool supported_op = std::is_same<OP, mshadow_op::mul>::value;
+      CHECK(supported_op)
+        << "Please use elemwise_div for division between csr and dense of the same shape";
+      ElemwiseBinaryOp::DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, rhs, lhs, req[0], out, true);
+    }
   } else {
     // broadcast(CSR, Dense(1D)) = CSR
     if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
