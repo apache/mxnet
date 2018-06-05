@@ -102,8 +102,8 @@
        must come *after* these tags. #}
     {{ metatags }}
     {%- block htmltitle %}
-    {%- if pagename != 'index' and 'no title' not in title%}
-    <rex>{{ title }}</rex>
+    {%- if pagename != 'index' %}
+
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
     {%- else %}
     <title>MXNet: A Scalable Deep Learning Framework</title>
