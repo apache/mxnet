@@ -31,7 +31,7 @@ if __name__ == '__main__':
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
     # use a large aug level
-    # data.set_data_aug_level(parser, 3)
+    data.set_data_aug_level(parser, 0)
     parser.set_defaults(
         # network
         network          = 'resnet',

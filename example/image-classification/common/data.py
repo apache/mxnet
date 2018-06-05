@@ -53,8 +53,10 @@ def add_data_aug_args(parser):
                      help='max change of saturation, whose range is [0, 255]')
     aug.add_argument('--max-random-l', type=int, default=0,
                      help='max change of intensity, whose range is [0, 255]')
-    aug.add_argument('--max-random-aspect-ratio', type=float, default=0,
-                     help='max change of aspect ratio, whose range is [0, 1]')
+    aug.add_argument('--min-random-aspect-ratio', type=float, default=1,
+                     help='min value of aspect ratio, whose value should be positive.')
+    aug.add_argument('--max-random-aspect-ratio', type=float, default=1,
+                     help='max value of aspect ratio')
     aug.add_argument('--max-random-rotate-angle', type=int, default=0,
                      help='max angle to rotate, whose range is [0, 360]')
     aug.add_argument('--max-random-shear-ratio', type=float, default=0,
@@ -153,6 +155,7 @@ def get_rec_iter(args, kv=None):
         random_resized_crop = random_resized_crop,
         min_random_scale    = args.min_random_scale,
         max_aspect_ratio    = args.max_random_aspect_ratio,
+        min_aspect_ratio    = args.min_random_aspect_ratio,
         max_random_area     = args.max_random_area,
         min_random_area     = args.min_random_area,
         brightness          = args.brightness,
@@ -178,6 +181,7 @@ def get_rec_iter(args, kv=None):
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
         mean_b              = rgb_mean[2],
+        resize              = 256,
         data_name           = 'data',
         label_name          = 'softmax_label',
         batch_size          = args.batch_size,
