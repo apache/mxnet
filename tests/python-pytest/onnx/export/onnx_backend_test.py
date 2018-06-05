@@ -32,81 +32,54 @@ import backend as mxnet_backend
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
-BACKEND_TEST = onnx.backend.test.BackendTest(mxnet_backend, __name__)
+BACKEND_TESTS = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 IMPLEMENTED_OPERATORS_TEST = [
-    #Arithmetic Operators
-    'test_add'
+    'test_random_uniform',
+    'test_random_normal',
+    'test_add',
     'test_sub',
     'test_mul',
     'test_div',
     'test_neg',
     'test_abs',
     'test_sum',
-
-    # Hyperbolic functions
     'test_tanh',
-
-    #Rounding
     'test_ceil',
     'test_floor',
-
-    ## Joining and spliting
     'test_concat',
-
-    # Basic neural network functions
     'test_sigmoid',
     'test_relu',
-    # 'test_elu',
     'test_constant_pad',
     'test_edge_pad',
     'test_reflect_pad',
-    'test_matmul',
-    'test_maxpool_2d_default',
-    'test_maxpool_2d_pads',
-    'test_maxpool_2d_strides',
-    'test_maxpool_3d_default',
-    'test_globalmaxpool',
-    'test_globalaveragepool',
-    'test_conv',
-    'test_basic_conv',
+    'test_reduce_min',
+    'test_reduce_max',
+    'test_reduce_mean',
+    'test_reduce_prod',
+    'test_squeeze',
     'test_softmax_example',
     'test_softmax_large_number',
     'test_softmax_axis_2',
-    #'test_conv',
-    #'test_basic_conv',
-
-    # Sorting and Searching
-    'test_argmax',
-    'test_argmin',
-    'test_max_',
-    'test_min',
-
-    #Changing shape and type.
-    #'test_reshape_',
-    'test_cast',
-    'test_slice_cpu',
-    'test_default_axes', #make PR against onnx to fix the test name(grep-able)
-    'test_slice_neg',
     'test_transpose',
+    'test_globalmaxpool',
+    'test_globalaveragepool',
+    'test_slice_cpu',
+    'test_slice_neg',
     'test_squeeze_',
-    'test_flatten_default',
-
-    #Powers
     'test_reciprocal',
     'test_sqrt',
-    'test_pow_example',
-    'test_pow_cpu',
-    'test_pow_bcast_cpu',
-    'test_log_',
+    'test_pow',
     'test_exp',
-
+    'test_argmax',
+    'test_argmin',
+    'test_min',
+    'test_max'
     #pytorch operator tests
     'test_operator_exp',
-    'test_operator_conv',
-    'test_operator_non_float_params',
+    'test_operator_maxpool',
     'test_operator_params',
-    'test_operator_permute2',
+    'test_operator_permute2'
     ]
 
 BASIC_MODEL_TESTS = [
@@ -138,18 +111,21 @@ STANDARD_MODEL = [
     'test_vgg19'
     ]
 
-# for op_test in IMPLEMENTED_OPERATORS_TEST:
-#     BACKEND_TEST.include(op_test)
+for op_test in IMPLEMENTED_OPERATORS_TEST:
+    BACKEND_TESTS.include(op_test)
 
 for basic_model_test in BASIC_MODEL_TESTS:
-    BACKEND_TEST.include(basic_model_test)
+    BACKEND_TESTS.include(basic_model_test)
 
 for std_model_test in STANDARD_MODEL:
-    BACKEND_TEST.include(std_model_test)
+    BACKEND_TESTS.include(std_model_test)
+
+BACKEND_TESTS.exclude('.*broadcast.*')
+BACKEND_TESTS.exclude('.*bcast.*')
 
 
 # import all test cases at global scope to make them visible to python.unittest
-globals().update(BACKEND_TEST.enable_report().test_cases)
+globals().update(BACKEND_TESTS.enable_report().test_cases)
 
 if __name__ == '__main__':
     unittest.main()

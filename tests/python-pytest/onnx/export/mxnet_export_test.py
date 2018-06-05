@@ -45,6 +45,12 @@ URLS = {
         'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_reference_caffenet.tar.gz',
     'bvlc_reference_rcnn_ilsvrc13':
         'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_reference_rcnn_ilsvrc13.tar.gz',
+    'inception_v1':
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/inception_v1.tar.gz',
+    'inception_v2':
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/inception_v2.tar.gz',
+    'shufflenet':
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/shufflenet.tar.gz'
 }
 
 def get_test_files(name):
@@ -80,10 +86,25 @@ def get_test_files(name):
 
     return model_path, inputs, outputs
 
+
+def forward_pass(sym, arg, aux, data_names, input_data):
+    """ Perform forward pass on given data"""
+    # create module
+    mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
+    mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
+    mod.set_params(arg_params=arg, aux_params=aux,
+                   allow_missing=True, allow_extra=True)
+    # run inference
+    batch = namedtuple('Batch', ['data'])
+    mod.forward(batch([mx.nd.array(input_data)]), is_train=False)
+
+    return mod.get_outputs()[0].asnumpy()
+
+
 def test_models(model_name, input_shape, output_shape):
     """ Tests Googlenet model for both onnx import and export"""
     model_path, inputs, outputs = get_test_files(model_name)
-    logging.info("Translating Googlenet model from ONNX model zoo to Mxnet")
+    logging.info("Translating model from ONNX model zoo to Mxnet")
     sym, arg_params, aux_params = onnx_mxnet.import_model(model_path)
     params = {}
     params.update(arg_params)
@@ -91,7 +112,7 @@ def test_models(model_name, input_shape, output_shape):
 
     onnx_file = model_path.rsplit('/', 1)[0] + "/exported_"+model_name+".onnx"
 
-    logging.info("Translating converted googlenet model from mxnet to ONNX")
+    logging.info("Translating converted model from mxnet to ONNX")
     converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
 
     sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model_path)
@@ -107,23 +128,63 @@ def test_models(model_name, input_shape, output_shape):
     logging.info("Running inference on onnx re-import model in mxnet")
     # run test for each test file
     for input_data, output_data in zip(inputs, outputs):
-        # create module
-        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
-        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
-        mod.set_params(arg_params=arg_params, aux_params=aux_params,
-                       allow_missing=True, allow_extra=True)
-        # run inference
-        batch = namedtuple('Batch', ['data'])
-        mod.forward(batch([mx.nd.array(input_data)]), is_train=False)
+        result = forward_pass(sym, arg_params, aux_params, data_names, input_data)
 
         # verify the results
-        npt.assert_equal(mod.get_outputs()[0].shape, output_data.shape)
-        npt.assert_almost_equal(output_data, mod.get_outputs()[0].asnumpy(), decimal=3)
+        npt.assert_equal(result.shape, output_data.shape)
+        npt.assert_almost_equal(output_data, result, decimal=3)
     logging.info(model_name + " conversion successful")
+
+
+def test_model_accuracy(model_name, input_shape):
+    """ Imports ONNX model, runs inference, exports and imports back
+        run inference, compare result with the previous inference result"""
+    model_path, inputs, outputs = get_test_files(model_name)
+    logging.info("Translating model from ONNX model zoo to Mxnet")
+    sym, arg_params, aux_params = onnx_mxnet.import_model(model_path)
+
+    metadata = onnx_mxnet.get_model_metadata(model_path)
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
+
+    expected_result= []
+    for input_data, output_data in zip(inputs, outputs):
+        result = forward_pass(sym, arg_params, aux_params, data_names, input_data)
+        expected_result.append(result)
+
+    params = {}
+    params.update(arg_params)
+    params.update(aux_params)
+
+    onnx_file = model_path.rsplit('/', 1)[0] + "/exported_"+model_name+".onnx"
+
+    logging.info("Translating converted model from mxnet to ONNX")
+    converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32,
+                                                   onnx_file)
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model_path)
+
+    metadata = onnx_mxnet.get_model_metadata(converted_model_path)
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
+
+    actual_result = []
+    for input_data, output_data in zip(inputs, outputs):
+        result = forward_pass(sym, arg_params, aux_params, data_names, input_data)
+        actual_result.append(result)
+
+    # verify the results
+    for expected, actual in zip(expected_result, actual_result):
+        npt.assert_equal(expected.shape, actual.shape)
+        npt.assert_almost_equal(expected, actual, decimal=3)
 
 
 if __name__ == '__main__':
     test_models("bvlc_googlenet", (1, 3, 224, 224), (1, 1000))
     test_models("bvlc_reference_caffenet", (1, 3, 224, 224), (1, 1000))
     test_models("bvlc_reference_rcnn_ilsvrc13", (1, 3, 224, 224), (1, 200))
+
+    # Comparing MXNet inference result, since MXNet results don't match
+    # ONNX expected results due to AveragePool issue github issue(#10194)
+    test_model_accuracy("inception_v1", (1, 3, 224, 224))
+    test_model_accuracy("inception_v2", (1, 3, 224, 224))
+
 

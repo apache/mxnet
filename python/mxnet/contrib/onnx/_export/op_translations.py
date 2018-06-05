@@ -180,7 +180,7 @@ def convert_batchnorm(node, **kwargs):
 
     attrs = node["attrs"]
     momentum = float(node.get("attrs", {}).get("momentum", 0.9))
-    eps = float(attrs["eps"])
+    eps = float(attrs.get("eps", 0.001))
 
     data_idx = kwargs["index_lookup"][inputs[0][0]]
     gamma_idx = kwargs["index_lookup"][inputs[1][0]]
