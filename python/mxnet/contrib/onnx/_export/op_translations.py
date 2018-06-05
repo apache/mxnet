@@ -498,7 +498,8 @@ def convert_pooling(node, **kwargs):
     kernel = eval(attrs["kernel"])
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
-    global_pool = attrs.get("global_pool", False)
+    global_pool = True if "global_pool" in attrs and\
+                          attrs.get("global_pool") == "True" else False
     node_inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx]
