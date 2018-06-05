@@ -495,7 +495,6 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     if (num_valid < num_batch * num_elem) {
       slice<0>(sorted_index, num_valid, num_batch * num_elem) = -1;
     }
-    printf("num_valid %d\n", num_valid);
 
     // only sort the valid scores and batch_id
     Shape<1> valid_score_shape = Shape1(num_valid);
@@ -513,15 +512,6 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     for (int b = 0; b < num_batch + 1; b++) {
       slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
     }
-#ifdef __CUDACC__
-    std::vector<float> cpu_batch_start(num_batch + 1);
-    cudaMemcpy(&cpu_batch_start[0], batch_start.dptr_, sizeof(float) * cpu_batch_start.size(), cudaMemcpyDeviceToHost);
-    printf("batch_start ");
-    for (int b = 0; b < num_batch + 1; b++) {
-      printf("%d ", static_cast<int>(cpu_batch_start[b]));
-    }
-    printf("\n");
-#endif
 
     // pre-compute areas of candidates
     areas = 0;
