@@ -430,6 +430,8 @@ The `ndarray` package provides several classes:
     one_hot
     pick
     where
+    ravel_multi_index
+    unravel_index
 ```
 
 ## Mathematical functions

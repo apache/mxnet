@@ -19,15 +19,15 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed
+from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from common import setup_module, with_seed, assertRaises
 import numpy as np
+from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
 import json
 import unittest
-
-
 
 @with_seed()
 def test_parameter():
@@ -39,33 +39,122 @@ def test_parameter():
     assert p.data(mx.cpu(0)).shape == (10, 10)
     assert p.var().name == 'weight'
     assert p.grad(mx.cpu(0)).stype == 'default'
+    assert p.data(mx.cpu(0)).stype == 'default'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
+@raises(AssertionError)
+def test_invalid_parameter_stype():
+    p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
+
+@with_seed()
+@raises(AssertionError)
+def test_invalid_parameter_grad_stype():
+    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
+
+@with_seed()
 def test_sparse_parameter():
-    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='row_sparse')
+    p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
-    assert len(p.list_data()) == 2
+    row_id = mx.nd.arange(0, 10, ctx=mx.cpu(1))
     assert len(p.list_grad()) == 2
-    assert p.data(mx.cpu(1)).context == mx.cpu(1)
-    assert p.data(mx.cpu(0)).shape == (10, 10)
+    # getting row_sparse data without trainer throws an exception
+    assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
+    trainer = mx.gluon.Trainer([p], 'sgd')
+    assert len(p.list_row_sparse_data(row_id)) == 2
+    weight = p.row_sparse_data(row_id)
+    assert weight.context == mx.cpu(1)
+    assert weight.shape == (10, 10)
+    assert weight.stype == 'row_sparse'
     assert p.var().name == 'weight'
+    assert p.var().attr('__storage_type__') == str(_STORAGE_TYPE_STR_TO_ID['row_sparse'])
     assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
     p.reset_ctx(ctx=[mx.cpu(1), mx.cpu(2)])
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
+@with_seed()
+def test_parameter_invalid_access():
+    # cannot call data on row_sparse parameters
+    p0 = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
+    p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    assertRaises(RuntimeError, p0.data)
+    assertRaises(RuntimeError, p0.list_data)
+    row_id = mx.nd.arange(0, 10)
+    # cannot call row_sparse_data on dense parameters
+    p1 = gluon.Parameter('weight', shape=(10, 10))
+    p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
+    assertRaises(RuntimeError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
+    assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
 def test_paramdict():
-    params = gluon.ParameterDict('net_')
-    params.get('weight', shape=(10, 10))
-    assert list(params.keys()) == ['net_weight']
-    params.initialize(ctx=mx.cpu())
-    params.save('test.params')
-    params.load('test.params', mx.cpu())
+    params0 = gluon.ParameterDict('net_')
+    params0.get('w0', shape=(10, 10))
+    params0.get('w1', shape=(10, 10), stype='row_sparse')
+    all_row_ids = mx.nd.arange(0, 10, ctx=mx.cpu())
+    # check param names
+    assert list(params0.keys()) == ['net_w0', 'net_w1']
+    params0.initialize(ctx=mx.cpu())
+    trainer0 = mx.gluon.Trainer(params0, 'sgd')
+    prev_w0 = params0.get('w0').data(mx.cpu())
+    prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
+    # save params
+    params0.save('test_paramdict.params')
+
+    # load params
+    params1 = gluon.ParameterDict('net_')
+    params1.get('w0', shape=(10, 10))
+    params1.get('w1', shape=(10, 10), stype='row_sparse')
+    params1.load('test_paramdict.params', mx.cpu())
+    trainer1 = mx.gluon.Trainer(params1, 'sgd')
+
+    # compare the values before and after save/load
+    cur_w0 = params1.get('w0').data(mx.cpu())
+    cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
+    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
+    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
+    # create a new param dict with dense params, and load from the checkpoint
+    # of sparse & dense params
+    params2 = gluon.ParameterDict('net_')
+    params2.get('w0', shape=(10, 10))
+    params2.get('w1', shape=(10, 10))
+    params2.load('test_paramdict.params', mx.cpu())
+
+    # compare the values before and after save/load
+    cur_w0 = params2.get('w0').data(mx.cpu())
+    cur_w1 = params2.get('w1').data(mx.cpu())
+    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
+    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
+
+
+@with_seed()
+def test_parameter_row_sparse_data():
+    ctx0 = mx.cpu(1)
+    ctx1 = mx.cpu(2)
+    dim0 = 4
+    x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
+    x.initialize(init='xavier', ctx=[ctx0, ctx1])
+    trainer = gluon.Trainer([x], 'sgd')
+    x_param = x._data[0].copy()
+    assert x_param.stype == 'row_sparse'
+    row_id_0 = mx.nd.array([0,1], ctx=ctx0)
+    retained_0 = x.row_sparse_data(row_id_0)
+    retained_target_0 = mx.nd.sparse.retain(x_param, row_id_0.as_in_context(ctx0))
+    mx.test_utils.assert_almost_equal(retained_0.asnumpy(), retained_target_0.asnumpy())
+    assert retained_0.context == ctx0
+    row_id_1 = mx.nd.arange(0, dim0, ctx=ctx1)
+    retained_1 = x.row_sparse_data(row_id_1)
+    retained_target_1 = x_param
+    mx.test_utils.assert_almost_equal(retained_1.asnumpy(), retained_target_1.asnumpy())
+    assert retained_1.context == ctx1
+    row_id_2 = mx.nd.array([0,1,2])
+    retained_2 = x.list_row_sparse_data(row_id_2)
+    retained_target_2 = mx.nd.sparse.retain(x_param, row_id_2.as_in_context(ctx0))
+    mx.test_utils.assert_almost_equal(retained_2[0].asnumpy(), retained_target_2.asnumpy())
 
 
 @with_seed()
@@ -246,7 +335,29 @@ def test_symbol_block():
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
+@with_seed()
+@raises(AssertionError)
+def test_sparse_symbol_block():
+    data = mx.sym.var('data')
+    weight = mx.sym.var('weight', stype='row_sparse')
+    bias = mx.sym.var('bias')
+    out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
+    # an exception is expected when creating a SparseBlock w/ sparse param
+    net = gluon.SymbolBlock(out, data)
 
+@with_seed()
+@raises(RuntimeError)
+def test_sparse_hybrid_block():
+    params = gluon.ParameterDict('net_')
+    params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
+    params.get('bias', shape=(5), dtype='float32')
+    net = gluon.nn.Dense(5, params=params)
+    net.initialize()
+    x = mx.nd.ones((2,5))
+    # an exception is expected when forwarding a HybridBlock w/ sparse param
+    y = net(x)
+
+@with_seed()
 def check_layer_forward(layer, dshape):
     layer.collect_params().initialize()
     x = mx.nd.ones(shape=dshape)
@@ -495,80 +606,6 @@ def test_flatten():
     assert flatten(x).shape == (3, 6)
     x = mx.nd.zeros((3,))
     assert flatten(x).shape == (3, 1)
-
-
-@with_seed()
-def test_trainer():
-    def dict_equ(a, b):
-        assert set(a) == set(b)
-        for k in a:
-            assert (a[k].asnumpy() == b[k].asnumpy()).all()
-    x = gluon.Parameter('x', shape=(10,))
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
-
-    x.lr_mult = 0.5
-
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
-
-    trainer.save_states('test_trainer.states')
-    states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
-             else deepcopy(trainer._updaters[0].states)
-    trainer.load_states('test_trainer.states')
-    if trainer._update_on_kvstore:
-        dict_equ(trainer._kvstore._updater.states, states)
-        assert trainer._optimizer == trainer._kvstore._updater.optimizer
-    else:
-        for updater in trainer._updaters:
-            dict_equ(updater.states, states)
-        assert trainer._optimizer == trainer._updaters[0].optimizer
-    assert_raises(AssertionError, trainer.update, 1)
-    assert_raises(AssertionError, trainer.allreduce_grads)
-
-    x = gluon.Parameter('x', shape=(10,))
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
-                             update_on_kvstore=False)
-    with mx.autograd.record():
-        for i, w in enumerate(x.list_data()):
-            y = i*w
-            y.backward()
-    assert (x.grad(mx.cpu(0)).asnumpy() != x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.allreduce_grads()
-    assert (x.grad(mx.cpu(0)).asnumpy() == x.grad(mx.cpu(1)).asnumpy()).all()
-    trainer2.update(1)
-
-    assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
-
-@with_seed()
-def test_trainer_save_load():
-    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
-    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
-    with mx.autograd.record():
-        for w in x.list_data():
-            y = w + 1
-            y.backward()
-    trainer.step(1)
-    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.1
-    trainer.save_states('test_trainer_save_load.states')
-    trainer.load_states('test_trainer_save_load.states')
-    x.lr_mult = 2.0
-    # check if parameter dict is correctly associated with optimizer after load_state
-    assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
 @with_seed()
 def test_block_attr_hidden():
@@ -900,6 +937,7 @@ def test_inline():
     assert len_1 == len_2 + 2
 
 
+@with_seed()
 def test_activations():
     point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
 
@@ -1013,13 +1051,14 @@ def test_req():
 @with_seed()
 def test_save_load():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_params('test.params')
+    net.save_params('test_save_load.params')
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_params('test.params')
+    net.load_params('test_save_load.params')
 
+@with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
         def __init__(self):
@@ -1042,10 +1081,10 @@ def test_symbol_block_save_load():
     net1.initialize(mx.init.Normal())
     net1.hybridize()
     net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-    net1.save_params('./test.params')
+    net1.save_params('./test_symbol_block_save_load.params')
 
     net2 = Net()
-    net2.load_params('./test.params', ctx=mx.cpu())
+    net2.load_params('./test_symbol_block_save_load.params', ctx=mx.cpu())
 
 
 @with_seed()
@@ -1054,7 +1093,6 @@ def test_hybrid_multi_context():
     net.initialize(ctx=[mx.cpu(0), mx.cpu(1)])
     net.hybridize()
     net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
-
 
 @with_seed()
 def test_zero_grad():
@@ -1068,6 +1106,60 @@ def test_zero_grad():
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
+def check_hybrid_static_memory(**kwargs):
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    x.attach_grad()
+
+    net1 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
+    net2 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
+    net2.hybridize(**kwargs)
+    net1(x)
+    net2(x)
+
+    def test(net, x):
+        with mx.autograd.record():
+            y = net(x) + net(x)
+            y.backward()
+
+        grads = {k: v.grad() for k, v in net.collect_params().items() if v.grad_req != 'null'}
+
+        return y, grads
+
+    y1, grads1 = test(net1, x)
+    y2, grads2 = test(net2, x)
+
+    assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
+    for key in grads1:
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+
+def test_hybrid_static_memory():
+    check_hybrid_static_memory()
+    check_hybrid_static_memory(static_alloc=True)
+    check_hybrid_static_memory(static_alloc=True, static_shape=True)
+
+def check_hybrid_static_memory_switching(**kwargs):
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(**kwargs)
+
+    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+    mx.nd.waitall()
+
+def test_hybrid_static_memory_switching():
+    check_hybrid_static_memory_switching()
+    check_hybrid_static_memory_switching(static_alloc=True)
+    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
