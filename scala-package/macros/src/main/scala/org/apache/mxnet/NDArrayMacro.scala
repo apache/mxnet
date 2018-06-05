@@ -99,6 +99,7 @@ private[mxnet] object NDArrayMacro {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      impl += "val args = scala.collection.mutable.ArrayBuffer.empty[NDArray]"
       ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
@@ -113,16 +114,37 @@ private[mxnet] object NDArrayMacro {
         else {
           argDef += s"${currArgName} : ${ndarrayarg.argType}"
         }
-        var base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
-        if (ndarrayarg.isOptional) {
-          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        // NDArray arg implementation
+        val returnType = "org.apache.mxnet.NDArray"
+        var base = ""
+        // TODO: Currently we do not add place holder for NDArray
+        // Example: an NDArray operator like the following format
+        // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
+        // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
+        // What it should be?
+        if (ndarrayarg.argType.equals(returnType)) {
+          base = s"args.append($currArgName)"
+          if (ndarrayarg.isOptional) {
+            base = s"if (!$currArgName.isEmpty) args.append($currArgName.get)"
+          }
+        } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
+          base = s"$currArgName.foreach(args.append(_))"
+          if (ndarrayarg.isOptional) {
+            base = s"if (!$currArgName.isEmpty) $currArgName.get.foreach(args.append(_))"
+          }
+        } else {
+          base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
+          if (ndarrayarg.isOptional) {
+            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+          }
         }
         impl += base
       })
       // add default out parameter
       argDef += "out : Option[NDArray] = None"
+      impl += "if (!out.isEmpty) map(\"out\") = out.get"
       // scalastyle:off
-      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
+      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.NDArrayFuncReturn"
