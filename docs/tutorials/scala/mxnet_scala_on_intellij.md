@@ -43,7 +43,21 @@ brew install opencv@2
 
 ## Access the Maven Package for MXNet
 
+To view the latest Maven packages, you can check the Maven repository for the `org.apache.mxnet` packages.
 
+*  [MXNet Maven Packages](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
+
+In the tutorial below, you will install the latest package at the time of this writing. You may find a different artifact for your specific operating system, or a newer one by reviewing what is currently available in the Maven repo.
+
+The configuration you should update is in the pom file's dependency for MXNet:
+
+```
+<dependency>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+  <version>1.2.0</version>
+</dependency>
+```
 
 ## Set Up Your Project
 
@@ -256,7 +270,7 @@ The project's `pom.xml` will be open for editing.
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported". If this is not visible, click on the little greed balloon that appears in the lower right corner.
 
-![project 3](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-3.png)
+![import dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-import-changes.gif)
 
 Click "Import Changes" in this prompt.
 
@@ -291,14 +305,20 @@ object App extends App {
 }
 ```
 
-![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet-output.png)
+The result should be this output:
 
-Your result should be similar to this output.
+```
+Testing MXNet by generating an 2x3 NDArray...
+Shape is:
+(2,3)
+
+Process finished with exit code 0
+```
 
 
 ### Troubleshooting
 
-If you get an error, check if it is like this one regarding OpenCV. For example, you might see the following in the middle of the error messages.
+If you get an error, check the dependencies at the beginning of this tutorial. For example, you might see the following in the middle of the error messages.
 
 ```
 ...
@@ -307,6 +327,7 @@ Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
 ```
 
 This can be resolved be installing OpenCV2.
+
 
 ### Command Line Build Option
 
