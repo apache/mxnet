@@ -92,11 +92,11 @@ def test_rnn():
 
 
 def test_lstm():
-    for activation_type in ['', 'relu', 'sigmoid', 'softrelu', 'tanh']:
+    for activation_type in ['', 'relu', 'sigmoid', 'softrelu', 'tanh', 'softsign']:
         if activation_type == '':
-            cell = LSTMCell(100, prefix='rnn_')
+            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_')
         else:
-            cell = LSTMCell(100, prefix='rnn_', activation=activation_type, recurrent_activation=activation_type)
+            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_', activation=activation_type, recurrent_activation=activation_type)
         inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
         outputs, _ = cell.unroll(3, inputs)
         outputs = mx.sym.Group(outputs)

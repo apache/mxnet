@@ -258,6 +258,8 @@ class RecurrentCell(Block):
             return F.sigmoid(inputs, **kwargs)
         elif activation == 'relu':
             return F.relu(inputs, **kwargs)
+        elif activation == 'softsign':
+            return F.softsign(inputs, **kwargs)
         elif isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
