@@ -225,8 +225,8 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
     CHECK_EQ(shm_unlink(filename.c_str()), 0)
         << "Failed to unlink shared memory. shm_unlink failed with error "
         << strerror(errno);
-  }
 #endif  // __linux__
+  }
 #endif  // _WIN32
 }
 
