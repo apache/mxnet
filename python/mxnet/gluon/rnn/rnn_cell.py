@@ -252,7 +252,13 @@ class RecurrentCell(Block):
     #pylint: disable=no-self-use
     def _get_activation(self, F, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
-        if isinstance(activation, string_types):
+        if activation == 'tanh':
+            return F.tanh(inputs, **kwargs)
+        elif activation == 'sigmoid':
+            return F.sigmoid(inputs, **kwargs)
+        elif activation == 'relu':
+            return F.relu(inputs, **kwargs)
+        elif isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
             return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
@@ -509,12 +515,14 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type=self._recurrent_activation, name=prefix+'i')
-        forget_gate = \
-            F.Activation(slice_gates[1], act_type=self._recurrent_activation, name=prefix+'f')
-        in_transform = F.Activation(
-            slice_gates[2], act_type=self._activation, name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type=self._recurrent_activation, name=prefix+'o')
+        in_gate = self._get_activation(
+            F, slice_gates[0], self._recurrent_activation, name=prefix+'i')
+        forget_gate = self._get_activation(
+            F, slice_gates[1], self._recurrent_activation, name=prefix+'f')
+        in_transform = self._get_activation(
+            F, slice_gates[2], self._activation, name=prefix+'c')
+        out_gate = self._get_activation(
+            F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                    name=prefix+'state')
         next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation),
