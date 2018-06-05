@@ -46,6 +46,28 @@ def test_subgraph_op_whole_graph():
     assert (subgraph_exec.outputs[0] - regular_exec.outputs[0]).abs().sum().asscalar() == 0.0
 
 
+def test_input_name_order():
+    def check_input_order(sym, op_names):
+        out = SymbolHandle()
+        check_call(_LIB.MXPartitionGraph(sym.handle, mx_uint(len(op_names)),
+                                         c_str_array(op_names), ctypes.byref(out)))
+
+        new_sym = Symbol(out)
+        print(sym.list_inputs())
+        print(new_sym.list_inputs())
+        assert new_sym.list_inputs() == sym.list_inputs()
+
+    def test_network_structure_1():
+        data1 = mx.sym.var('data1')
+        data2 = mx.sym.var('data2')
+        conv1 = mx.sym.Convolution(data=data1, weight=data2, no_bias=True, kernel=(2, 2), num_filter=1)
+        conv2 = mx.sym.Convolution(data=data2, weight=data1, no_bias=True, kernel=(2, 2), num_filter=1)
+        out = mx.sym.Group([conv1, conv2])
+        check_input_order(out, ['Convolution'])
+
+    test_network_structure_1()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

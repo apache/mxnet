@@ -170,26 +170,30 @@ void FindSubgraphs(const Graph& g,
 /*!
  * \brief Sort entries according to their topological order.
  * Note that entry ids cannot be used to sort entries.
- * \param entry_map mapping from entry pointer to its topological position in the graph
+ * \param entry_top_order_map mapping from entry pointer to its topological position in the graph
  * \param entries Node entries to be sorted
  */
-void SortEntries(const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_map,
+void SortEntries(const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_top_order_map,
                  std::vector<nnvm::NodeEntry*>* entries) {
   auto entry_cmp = [&](const nnvm::NodeEntry* e1, const nnvm::NodeEntry* e2) {
-    const auto it1 = entry_map.find(e1);
-    CHECK(it1 != entry_map.end());
-    const auto it2 = entry_map.find(e2);
-    CHECK(it2 != entry_map.end());
+    const auto it1 = entry_top_order_map.find(e1);
+    CHECK(it1 != entry_top_order_map.end());
+    const auto it2 = entry_top_order_map.find(e2);
+    CHECK(it2 != entry_top_order_map.end());
     return it1->second < it2->second;
   };
   std::sort(entries->begin(), entries->end(), entry_cmp);
 }
 
-// find the input entries of a subgraph
+/*
+ * \brief find the input entries of a subgraph
+ * \param input_entry_map mapping from node entry pointer to the
+ * pair of its dest node and index in the dest node's inputs
+ */
 void FindInputEntries(const Graph& g,
                       const std::vector<SimpleNodePtr>& simple_nodes,
                       const std::vector<SimpleNode*>& subgraph_nodes,
-                      const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_map,
+                      const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_top_order_map,
                       std::vector<nnvm::NodeEntry*>* input_entries) {
   const auto& indexed_graph = g.indexed_graph();
   int label = -1;
@@ -202,21 +206,28 @@ void FindInputEntries(const Graph& g,
     auto& inputs = subgraph_nodes[i]->node->inputs;
     for (size_t j = 0; j < inputs.size(); ++j) {
       auto& e = inputs[j];
-      const auto nid = indexed_graph.node_id(e.node.get());
-      // this is a node not belonging to the subgraph
-      if (simple_nodes[nid]->label != label) {
+      if (indexed_graph.exist(e.node.get())) {
+        // e's source node is not a subgraph node
+        const auto nid = indexed_graph.node_id(e.node.get());
+        // this is a node not belonging to the subgraph
+        if (simple_nodes[nid]->label != label) {
+          input_entries->push_back(&e);
+        }
+      } else {
+        // e's source node is a subgraph node.
+        // In this case, two subgraphs are adjacent.
         input_entries->push_back(&e);
       }
     }
   }
-  SortEntries(entry_map, input_entries);
+  SortEntries(entry_top_order_map, input_entries);
 }
 
 // find the output entries of a subgraph
 void FindOutputEntries(Graph* g,
                        const std::vector<SimpleNodePtr>& simple_nodes,
                        const std::vector<SimpleNode*>& subgraph_nodes,
-                       const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_map,
+                       const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_top_order_map,
                        std::vector<nnvm::NodeEntry*>* output_entries) {
   if (subgraph_nodes.empty()) return;
   const auto& indexed_graph = g->indexed_graph();
@@ -229,13 +240,22 @@ void FindOutputEntries(Graph* g,
     }
     for (auto it = subgraph_nodes[i]->outputs.begin();
          it != subgraph_nodes[i]->outputs.end(); ++it) {
-      const auto nid = indexed_graph.node_id(it->first);
-      // this is a node not belonging to the subgraph
-      if (simple_nodes[nid]->label != label) {
-        // TODO(zhengda) I need to test this.
+      if (indexed_graph.exist(it->first)) {
+        // if the output node is a normal graph node (not a subgraph node)
+        const auto nid = indexed_graph.node_id(it->first);
+        // this is a node not belonging to the current subgraph
+        if (simple_nodes[nid]->label != label) {
+          // TODO(zhengda) I need to test this.
+          for (auto idx : it->second) {
+            auto& e = simple_nodes[nid]->node->inputs[idx];
+            output_entries->push_back(&e);
+          }
+        }
+      } else {
+        // if the output node is a subgraph node
+        // two graphs are adjacent
         for (auto idx : it->second) {
-          auto& e = simple_nodes[nid]->node->inputs[idx];
-          output_entries->push_back(&e);
+          output_entries->push_back(&(it->first->inputs[idx]));
         }
       }
     }
@@ -244,12 +264,18 @@ void FindOutputEntries(Graph* g,
   // of the whole graph. If so, save its corresponding entry as well.
   for (size_t i = 0; i < g->outputs.size(); ++i) {
     auto& entry = g->outputs[i];
-    const auto nid = indexed_graph.node_id(entry.node.get());
-    if (simple_nodes[nid]->label == label) {
-      output_entries->push_back(&entry);
+    // The entry might has been updated as an output of
+    // a subgraph node. In this case, no need
+    // to check its source for the current subgraph. Otherwise,
+    // do the following.
+    if (indexed_graph.exist(entry.node.get())) {
+      const auto nid = indexed_graph.node_id(entry.node.get());
+      if (simple_nodes[nid]->label == label) {
+        output_entries->push_back(&entry);
+      }
     }
   }
-  SortEntries(entry_map, output_entries);
+  SortEntries(entry_top_order_map, output_entries);
 }
 
 void PrintNodeEntry(const nnvm::NodeEntry& entry) {
@@ -265,21 +291,23 @@ void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
 }
 
 /*
- * Given a computation graph and a set of input node entries, this function cuts
+ * \brief Given a computation graph and a set of input node entries, this function cuts
  * the node entries and creates new variable nodes as the input nodes of the
  * subgraph. It returns the nodes that connect to the subgraph directly and
  * the names of the new variable nodes.
  */
-void CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
-                    bool skip_var, std::vector<nnvm::NodeEntry> *orig_entries) {
-  orig_entries->reserve(input_entries.size());
-  for (size_t i = 0; i < input_entries.size(); i++) {
+void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
+                    std::vector<nnvm::NodeEntry> *orig_entries,
+                    const bool skip_var = false) {
+  orig_entries->resize(input_entries.size());
+  for (size_t i = 0; i < input_entries.size(); ++i) {
     nnvm::NodeEntry *e = input_entries[i];
     // If the node is a variable itself, we may want to skip the node.
-    if (e->node->is_variable() && skip_var)
+    if (e->node->is_variable() && skip_var) {
       continue;
+    }
 
-    orig_entries->push_back(*e);
+    orig_entries->at(i) = *e;
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
     const auto output_names = sym.ListOutputNames();
@@ -289,14 +317,73 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
   }
 }
 
+// Replace a set of nodes belonging to the same subgraph with a subgrpah node
+// and keep the subgraph in the subgraph node. The input entries and output entries
+// of the subgraph node are kept in the same order as the subgraph's.
+Graph CreateSubgraphNode(Graph&& g,
+                         const std::vector<SimpleNodePtr>& simple_nodes,
+                         const std::vector<SimpleNode*>& subgraph_nodes,
+                         const size_t subgraph_id,
+                         std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
+  LOG(INFO) << "Searching for input entries...";
+  std::vector<nnvm::NodeEntry*> input_entries;
+  FindInputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
+  std::vector<nnvm::NodeEntry> orig_input_entries;
+  // TODO(junwu): Confirm what value to pass to skip_var
+  CutGraphInputs(input_entries, &orig_input_entries, false);
+  PrintNodeEntries(input_entries);
+
+  LOG(INFO) << "Searching for output entries...";
+  std::vector<nnvm::NodeEntry*> output_entries;
+  FindOutputEntries(&g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
+
+  // Create a subgraph for the subgraph node
+  nnvm::Symbol sym;
+  sym.outputs.resize(output_entries.size());
+  for (size_t i = 0; i < output_entries.size(); ++i) {
+    sym.outputs[i] = *output_entries[i];
+  }
+  const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
+  nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_id);
+
+  // Connect the external nodes to the subgraph node.
+  for (size_t i = 0; i < output_entries.size(); ++i) {
+    *output_entries[i] = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
+  }
+  n->inputs = orig_input_entries;
+  const auto& indexed_graph = g.indexed_graph();
+  for (size_t i = 0; i < n->inputs.size(); ++i) {
+    auto& e = n->inputs[i];
+    // update entry_top_order_map with newly created orig_input_entries
+    auto it = entry_top_order_map->find(input_entries[i]);
+    CHECK(it != entry_top_order_map->end());
+    auto entry_it = entry_top_order_map->find(&e);
+    CHECK(entry_it == entry_top_order_map->end());
+    entry_top_order_map->emplace(&e, it->second);
+    // update input entries' source simple nodes' outputs map
+    nnvm::Node* node = e.node.get();
+    if (indexed_graph.exist(node)) {
+      const auto nid = indexed_graph.node_id(node);
+      SimpleNode* sn = simple_nodes[nid].get();
+      for (SimpleNode* dest_node : subgraph_nodes) {
+        sn->outputs.erase(dest_node->node);
+      }
+      sn->outputs[n.get()].push_back(i);
+    }
+  }
+  PrintNodeEntries(output_entries);
+  return g;
+}
+
 }  // namespace sg
 
-/*! \brief Sort entries of all the nodes' inputs vectors in the topological order.
+/*!
+ * \brief Sort entries of all the nodes' inputs vectors in the topological order.
  * This is going to be used to sort input/output entries of subgraphs to keep
  * the topological order unchanged.
  */
-void TopSortEntries(const Graph& g, std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_map) {
-  CHECK(entry_map != nullptr);
+void TopSortEntries(const Graph& g, std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
+  CHECK(entry_top_order_map != nullptr);
   std::unordered_set<const nnvm::Node*> visited;
   std::stack<std::tuple<nnvm::Node*, size_t, const nnvm::NodeEntry*>> s;
   auto in_degree = [] (const nnvm::Node* node)->size_t {
@@ -316,7 +403,7 @@ void TopSortEntries(const Graph& g, std::unordered_map<const nnvm::NodeEntry*, s
       auto& top = s.top();
       if (std::get<1>(top) == in_degree(std::get<0>(top))) {
         // The node's inputs has been exhausted.
-        entry_map->emplace(std::get<2>(top), entry_map->size());
+        entry_top_order_map->emplace(std::get<2>(top), entry_top_order_map->size());
         s.pop();
       } else {
         // The node still has input entries not visited.
@@ -331,7 +418,7 @@ void TopSortEntries(const Graph& g, std::unordered_map<const nnvm::NodeEntry*, s
         } else {
           // The entry's source node has been visited before.
           // Marking order for it.
-          entry_map->emplace(&entry, entry_map->size());
+          entry_top_order_map->emplace(&entry, entry_top_order_map->size());
         }
       }
     }
@@ -379,8 +466,8 @@ Graph PartitionGraph(Graph&& g) {
     using namespace sg;
     const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
     // top sort NodeEntry of all the nodes' inputs
-    std::unordered_map<const nnvm::NodeEntry*, size_t> entry_map;
-    TopSortEntries(g, &entry_map);
+    std::unordered_map<const nnvm::NodeEntry*, size_t> entry_top_order_map;
+    TopSortEntries(g, &entry_top_order_map);
 
     // Create undirected graph for ease of finding subgraphs
     std::vector<SimpleNodePtr> simple_nodes;
@@ -394,40 +481,14 @@ Graph PartitionGraph(Graph&& g) {
 #endif
     std::vector<std::vector<SimpleNode*>> subgraph_nodes;
     FindSubgraphs(g, *subg_prop, simple_nodes, &subgraph_nodes);
-    std::vector<nnvm::NodeEntry*> entries;
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
+#if 0
+      // TODO(junwu): for debugging purpose, delete the following two lines
       std::set<SimpleNode*> simple_node_set(subgraph_nodes[i].begin(), subgraph_nodes[i].end());
       CHECK_EQ(simple_node_set.size(), subgraph_nodes[i].size());
-
+#endif
       PrintSubgraph(subgraph_nodes[i]);
-
-      // Break the input links.
-      LOG(INFO) << "Searching for input entries...";
-      entries.clear();
-      FindInputEntries(g, simple_nodes, subgraph_nodes[i], entry_map, &entries);
-      std::vector<nnvm::NodeEntry> orig_input_entries;
-      sg::CutGraphInputs(entries, false, &orig_input_entries);
-      PrintNodeEntries(entries);
-
-      LOG(INFO) << "Searching for output entries...";
-      entries.clear();
-      FindOutputEntries(&g, simple_nodes, subgraph_nodes[i], entry_map, &entries);
-
-      // Create a subgraph.
-      nnvm::Symbol sym;
-      sym.outputs.resize(entries.size());
-      for (size_t i = 0; i < entries.size(); ++i) {
-        sym.outputs[i] = *entries[i];
-      }
-      nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, i);
-
-      // Connect the external nodes to the subgraph node.
-      for (size_t i = 0; i < entries.size(); ++i) {
-        *entries[i] = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
-      }
-      // TODO(zhengda) this may not be the right order for input entries of a subgraph?
-      n->inputs = orig_input_entries;
-      PrintNodeEntries(entries);
+      g = CreateSubgraphNode(std::move(g), simple_nodes, subgraph_nodes[i], i, &entry_top_order_map);
     }
     return g;
   }
