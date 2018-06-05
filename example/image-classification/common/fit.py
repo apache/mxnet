@@ -73,7 +73,6 @@ def _save_model(args, rank=0):
         args.model_prefix, rank), period=args.save_period)
 
 
-
 def add_fit_args(parser):
     """
     parser : argparse.ArgumentParser
