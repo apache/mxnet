@@ -116,10 +116,12 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
                   "``[-max_shear_ratio, max_shear_ratio]``");
     DMLC_DECLARE_FIELD(max_crop_size).set_default(-1)
         .describe("Crop both width and height into a random size in "
-                  "``[min_crop_size, max_crop_size]``");
+                  "``[min_crop_size, max_crop_size].``"
+                  "Ignored if ``random_resized_crop`` is True.");
     DMLC_DECLARE_FIELD(min_crop_size).set_default(-1)
         .describe("Crop both width and height into a random size in "
-                  "``[min_crop_size, max_crop_size]``");
+                  "``[min_crop_size, max_crop_size].``"
+                  "Ignored if ``random_resized_crop`` is True.");
     DMLC_DECLARE_FIELD(max_random_scale).set_default(1.0f)
         .describe("Resize into ``[width*s, height*s]`` with ``s`` randomly"
                   " chosen from ``[min_random_scale, max_random_scale]``. "
@@ -259,6 +261,15 @@ class DefaultImageAugmenter : public ImageAugmenter {
 
     if (param_.random_resized_crop) {
       // random resize crop
+      CHECK(param_.min_random_scale == 1.0f &&
+        param_.max_random_scale == 1.0f &&
+        param_.min_crop_size == -1 &&
+        param_.max_crop_size == -1 &&
+        !param_.rand_crop) <<
+        "By setting random_resized_crop to true, "
+        "min_random_scale, max_random_scale"
+        "min_crop_size, max_crop_size"
+        "and rand_crop will be ignored."
       if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
           || param_.max_aspect_ratio > 0.0f) {
             CHECK(param_.max_aspect_ratio < 1.0f);
