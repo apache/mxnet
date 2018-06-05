@@ -440,8 +440,8 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
     DType *top_data = out_data[roialign::kOut].dptr<DType>();
 
     ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, channels,
-                           height, width, pooled_height, pooled_width, param.sample_ratio, bottom_rois,
-                           rois_cols, top_data);
+                           height, width, pooled_height, pooled_width, param.sample_ratio,
+                           bottom_rois, rois_cols, top_data);
   })
 }
 
