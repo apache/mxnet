@@ -58,16 +58,15 @@ struct HistogramFusedKernel {
   }
 };
 
-template<typename gpu>
-void HistogramForwardImpl(mshadow::Stream<gpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
-                          const TBlob& in_data,
-                          const TBlob& bin_bounds,
-                          const TBlob& out_data,
-                          const TBlob& out_bins) {
+template<>
+void HistogramForwardImpl<gpu>(const OpContext& ctx,
+                               const TBlob& in_data,
+                               const TBlob& bin_bounds,
+                               const TBlob& out_data,
+                               const TBlob& out_bins) {
   using namespace mshadow;
   using namespace mxnet_op;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, CType, {
       int bin_cnt = out_bins.Size() - 1;
@@ -81,18 +80,17 @@ void HistogramForwardImpl(mshadow::Stream<gpu>* s,
   });
 }
 
-template<typename gpu>
-void HistogramForwardImpl(mshadow::Stream<gpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
-                          const TBlob& in_data,
-                          const TBlob& out_data,
-                          const TBlob& out_bins,
-                          const int bin_cnt,
-                          const double min,
-                          const double max) {
+template<>
+void HistogramForwardImpl<gpu>(const OpContext& ctx,
+                               const TBlob& in_data,
+                               const TBlob& out_data,
+                               const TBlob& out_bins,
+                               const int bin_cnt,
+                               const double min,
+                               const double max) {
   using namespace mshadow;
   using namespace mxnet_op;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(in_data.type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, CType, {
       Kernel<set_zero, gpu>::Launch(s, bin_cnt, out_data.dptr<CType>());

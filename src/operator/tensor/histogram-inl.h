@@ -112,18 +112,14 @@ inline bool HistogramOpType(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void HistogramForwardImpl(mshadow::Stream<xpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
+void HistogramForwardImpl(const OpContext& ctx,
                           const TBlob& in_data,
                           const TBlob& bin_bounds,
                           const TBlob& out_data,
                           const TBlob& out_bins);
 
 template<typename xpu>
-void HistogramForwardImpl(mshadow::Stream<xpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
+void HistogramForwardImpl(const OpContext& ctx,
                           const TBlob& in_data,
                           const TBlob& out_data,
                           const TBlob& out_bins,
@@ -146,7 +142,6 @@ void HistogramOpForward(const nnvm::NodeAttrs& attrs,
   const bool legal_params = (has_cnt && has_range) || (!has_cnt && !has_range);
   CHECK(legal_params) << "width and range should both or neither be specified";
 
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
   const TBlob& out_bins = outputs[1];
@@ -164,10 +159,10 @@ void HistogramOpForward(const nnvm::NodeAttrs& attrs,
       max += 0.5f;
       LOG(INFO) << min << " " << max;
     }
-    HistogramForwardImpl<xpu>(s, ctx, attrs, in_data, out_data, out_bins, bin_cnt, min, max);
+    HistogramForwardImpl<xpu>(ctx, in_data, out_data, out_bins, bin_cnt, min, max);
   } else {
     const TBlob& bin_bounds = inputs[1];
-    HistogramForwardImpl<xpu>(s, ctx, attrs, in_data, bin_bounds, out_data, out_bins);
+    HistogramForwardImpl<xpu>(ctx, in_data, bin_bounds, out_data, out_bins);
   }
 }
 

@@ -63,16 +63,15 @@ void ComputeHistogram(const int* bin_indices, CType* out_data, size_t input_size
   }
 }
 
-template<typename cpu>
-void HistogramForwardImpl(mshadow::Stream<cpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
-                          const TBlob& in_data,
-                          const TBlob& bin_bounds,
-                          const TBlob& out_data,
-                          const TBlob& out_bins) {
+template<>
+void HistogramForwardImpl<cpu>(const OpContext& ctx,
+                               const TBlob& in_data,
+                               const TBlob& bin_bounds,
+                               const TBlob& out_data,
+                               const TBlob& out_bins) {
   using namespace mshadow;
   using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   Tensor<cpu, 1, int> bin_indices =
     ctx.requested[0].get_space_typed<cpu, 1, int>(Shape1(in_data.Size()), s);
   const int bin_cnt = out_data.Size();
@@ -90,18 +89,17 @@ void HistogramForwardImpl(mshadow::Stream<cpu>* s,
   });
 }
 
-template<typename cpu>
-void HistogramForwardImpl(mshadow::Stream<cpu>* s,
-                          const OpContext& ctx,
-                          const nnvm::NodeAttrs& attrs,
-                          const TBlob& in_data,
-                          const TBlob& out_data,
-                          const TBlob& out_bins,
-                          const int bin_cnt,
-                          const double min,
-                          const double max) {
+template<>
+void HistogramForwardImpl<cpu>(const OpContext& ctx,
+                               const TBlob& in_data,
+                               const TBlob& out_data,
+                               const TBlob& out_bins,
+                               const int bin_cnt,
+                               const double min,
+                               const double max) {
   using namespace mshadow;
   using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   Tensor<cpu, 1, int> bin_indices =
     ctx.requested[0].get_space_typed<cpu, 1, int>(Shape1(in_data.Size()), s);
 
@@ -149,10 +147,6 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", HistogramOpShape)
 .set_attr<nnvm::FInferType>("FInferType", HistogramOpType)
 .set_attr<FCompute>("FCompute<cpu>", HistogramOpForward<cpu>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{};
-  })
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("bins", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(HistogramParam::__FIELDS__());
