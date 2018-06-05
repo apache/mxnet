@@ -6162,7 +6162,7 @@ def test_op_roi_align():
                         out[r, c, ph, pw] = val * 1.0 / count
         return out, [dx, drois]
 
-    def test_roi_align_value():
+    def test_roi_align_value(sampling_ratio=0):
         ctx=default_context()
         dtype = np.float32
 
@@ -6173,7 +6173,6 @@ def test_op_roi_align():
         pooled_size = (3, 4)
 
         spatial_scale = H * 1.0 / dlen
-        sampling_ratio = 0
         data = mx.nd.array(np.arange(N*C*W*H).reshape((N,C,H,W)), ctx=ctx, dtype = dtype)
         # data = mx.nd.random.uniform(0, 1, (N, C, H, W), dtype = dtype)
         center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype = dtype)
@@ -6196,11 +6195,11 @@ def test_op_roi_align():
         assert np.allclose(rois.grad.asnumpy(), drois)
 
     # modified from test_roipooling()
-    def test_roi_align_autograd():
+    def test_roi_align_autograd(sampling_ratio=-1):
         ctx=default_context()
         data = mx.symbol.Variable(name='data')
         rois = mx.symbol.Variable(name='rois')
-        test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1)
+        test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1, sample_ratio=sampling_ratio)
 
         x1 = np.random.rand(4, 1, 12, 12).astype('float64')
         x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2],
@@ -6214,7 +6213,9 @@ def test_op_roi_align():
                                numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
 
     test_roi_align_value()
+    test_roi_align_value(2)
     test_roi_align_autograd()
+    test_roi_align_autograd(2)
 
 
 if __name__ == '__main__':
