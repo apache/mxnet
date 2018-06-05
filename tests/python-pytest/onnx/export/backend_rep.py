@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """backend rep for onnx test infrastructure"""
-from collections import namedtuple
 import numpy as np
 try:
     from onnx.backend.base import BackendRep

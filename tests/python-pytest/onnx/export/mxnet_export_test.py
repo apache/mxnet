@@ -48,9 +48,7 @@ URLS = {
     'inception_v1':
         'https://s3.amazonaws.com/onnx-mxnet/model-zoo/inception_v1.tar.gz',
     'inception_v2':
-        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/inception_v2.tar.gz',
-    'shufflenet':
-        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/shufflenet.tar.gz'
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/inception_v2.tar.gz'
 }
 
 def get_test_files(name):
@@ -186,5 +184,3 @@ if __name__ == '__main__':
     # ONNX expected results due to AveragePool issue github issue(#10194)
     test_model_accuracy("inception_v1", (1, 3, 224, 224))
     test_model_accuracy("inception_v2", (1, 3, 224, 224))
-
-

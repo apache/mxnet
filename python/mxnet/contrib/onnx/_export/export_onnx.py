@@ -35,7 +35,7 @@ from .... import io
 from .... import module as mod
 
 
-class MxNetToONNXConverter:
+class MXNetGraph(object):
     """Class to convert MXNet to ONNX graph"""
     registry_ = {}
     input_output_maps_ = {}
@@ -51,7 +51,7 @@ class MxNetToONNXConverter:
         """Register operator"""
         def wrapper(func):
             """Helper function to map functions"""
-            MxNetToONNXConverter.registry_[op_name] = func
+            MXNetGraph.registry_[op_name] = func
             return func
 
         return wrapper
@@ -60,9 +60,9 @@ class MxNetToONNXConverter:
     def convert_layer(node, **kwargs):
         """Convert MXNet layer to ONNX"""
         op = str(node["op"])
-        if op not in MxNetToONNXConverter.registry_:
+        if op not in MXNetGraph.registry_:
             raise AttributeError("No conversion function registered for op type %s yet." % op)
-        convert_fun = MxNetToONNXConverter.registry_[op]
+        convert_fun = MXNetGraph.registry_[op]
         return convert_fun(node, **kwargs)
 
     @staticmethod
@@ -118,8 +118,8 @@ class MxNetToONNXConverter:
         """Infer output shape by doing a forward pass using dummy inputs """
         #create dummy input
         inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
-        arg, aux = MxNetToONNXConverter.split_params(sym, params)
-        return MxNetToONNXConverter.forward_pass(inputs, sym, arg, aux)
+        arg, aux = MXNetGraph.split_params(sym, params)
+        return MXNetGraph.forward_pass(inputs, sym, arg, aux)
 
 
     @staticmethod
@@ -128,13 +128,13 @@ class MxNetToONNXConverter:
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def convert_mx2onnx_graph(self, sym, params, in_shape, in_type, log=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, log=False):
         """Convert MXNet graph to ONNX graph"""
 
         # Determine output shape
-        output_shape = MxNetToONNXConverter.infer_output_shape(sym, params, in_shape)
+        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape)
 
-        weights = MxNetToONNXConverter.convert_weights_to_numpy(params)
+        weights = MXNetGraph.convert_weights_to_numpy(params)
 
         mx_graph = json.loads(sym.tojson())["nodes"]
 
@@ -153,10 +153,10 @@ class MxNetToONNXConverter:
                 print("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
 
             if op == "null" and name not in params:
-                #Handling graph input
+                # Handling graph input
                 if name == 'softmax_label':
                     continue
-                converted = MxNetToONNXConverter.convert_layer(
+                converted = MXNetGraph.convert_layer(
                     node,
                     is_input=True,
                     mx_graph=mx_graph,
@@ -169,7 +169,7 @@ class MxNetToONNXConverter:
                 graph_input_idx += 1
 
             else:
-                converted = MxNetToONNXConverter.convert_layer(
+                converted = MXNetGraph.convert_layer(
                     node,
                     is_input=False,
                     mx_graph=mx_graph,

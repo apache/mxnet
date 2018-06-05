@@ -27,7 +27,7 @@ import numpy as np
 
 from onnx import helper, mapping
 from six import string_types
-from .export_onnx import MxNetToONNXConverter
+from .export_onnx import MXNetGraph
 from .export_helper import load_module
 
 
@@ -56,19 +56,19 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
     onnx_file_path : str
         Onnx file path
     """
-    converter = MxNetToONNXConverter()
+    converter = MXNetGraph()
 
     data_format = np.dtype(input_type)
     if isinstance(model, string_types) and isinstance(weights, string_types):
         print("Converting json and params file to sym and weights")
         sym, params = load_module(model, weights, input_shape)
-        onnx_graph = converter.convert_mx2onnx_graph(sym, params, input_shape,
-                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                     log=log)
+        onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
+                                                       mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                       log=log)
     else:
-        onnx_graph = converter.convert_mx2onnx_graph(model, weights, input_shape,
-                                                     mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                     log=log)
+        onnx_graph = converter.create_onnx_graph_proto(model, weights, input_shape,
+                                                       mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                       log=log)
     # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
 

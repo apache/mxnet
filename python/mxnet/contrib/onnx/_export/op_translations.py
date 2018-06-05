@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,no-else-return,too-many-lines
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
@@ -29,7 +29,7 @@ import re
 import numpy as np
 
 from onnx import helper, numpy_helper, mapping
-from .export_onnx import MxNetToONNXConverter as mx2onnx
+from .export_onnx import MXNetGraph as mx2onnx
 
 def looks_like_weight(name):
     """Internal helper to figure out if node should be hidden with `hide_weights`.
@@ -805,7 +805,6 @@ def convert_mul_scalar(node, **kwargs):
         )
 
         return [tensor_node, mul_node]
-
     else:
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[new_initializer.dtype]
         dims = np.shape(new_initializer)
@@ -822,7 +821,6 @@ def convert_mul_scalar(node, **kwargs):
                 raw=False,
             )
         )
-
         return [tensor_node]
 
 # Sorting and Searching

@@ -20,7 +20,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.contrib.onnx._import.import_onnx import GraphProto
-from mxnet.contrib.onnx._export.export_onnx import MxNetToONNXConverter
+from mxnet.contrib.onnx._export.export_onnx import MXNetGraph
 try:
     from onnx import helper, TensorProto, mapping
     from onnx.backend.base import Backend
@@ -49,8 +49,8 @@ class MXNetBackend(Backend):
         params.update(arg_params)
         params.update(aux_params)
         # exporting to onnx graph proto format
-        converter = MxNetToONNXConverter()
-        graph_proto = converter.convert_mx2onnx_graph(sym, params, in_shape=input_shape, in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
+        converter = MXNetGraph()
+        graph_proto = converter.create_onnx_graph_proto(sym, params, in_shape=input_shape, in_type=mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('float32')])
 
         # importing back to MXNET for verifying result.
         sym, arg_params, aux_params = graph.from_onnx(graph_proto)
