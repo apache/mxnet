@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
-  <version>1.2.0</version>
+  <version>1.2.0-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
   <description>
@@ -30,12 +30,14 @@
     <connection>scm:git:git@github.com:apache/incubator-mxnet.git</connection>
     <developerConnection>scm:git:git@github.com:apache/incubator-mxnet.git</developerConnection>
     <url>https://github.com/apache/incubator-mxnet</url>
-    <tag>mxnet-parent_2.11-1.2.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
+    <build.platform />
+    <mxnetdir />
   </properties>
 
   <packaging>pom</packaging>
@@ -148,6 +150,14 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <localCheckout>true</localCheckout>
+          <pushChanges>false</pushChanges>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
