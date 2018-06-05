@@ -337,6 +337,7 @@ struct nms_impl {
     int pos = i % k + ref + 1;  // position
     ref = static_cast<int>(batch_start[b]) + ref;
     pos = static_cast<int>(batch_start[b]) + pos;
+    if (ref >= static_cast<int>(batch_start[b + 1])) return;
     if (pos >= static_cast<int>(batch_start[b + 1])) return;
     if (index[ref] < 0) return;  // reference has been suppressed
     if (index[pos] < 0) return;  // self been suppressed
@@ -466,13 +467,18 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     all_scores = reshape(slice<2>(buffer, score_index, score_index + 1), all_scores.shape_);
     all_sorted_index = range<DType>(0, num_batch * num_elem);
 
-    // filter scores but keep original sorted_index
-    // copy to new workspace, return valid size, create new tensor
+    // filter scores but keep original sorted_index value
+    // move valid score and index to the front, return valid size
     int num_valid = mxnet::op::FilterScores(scores, sorted_index, all_scores, all_sorted_index, param.valid_thresh);
+    // if everything is filtered, output -1
     if (num_valid == 0) {
       record = -1;
       out = -1;
       return;
+    }
+    // mark the invalid boxes before nms
+    if (num_valid < num_batch * num_elem) {
+      slice<0>(sorted_index, num_valid, num_batch * num_elem) = -1;
     }
 
     // only sort the valid scores and batch_id
@@ -481,12 +487,13 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> valid_sorted_index(sorted_index.dptr_, valid_score_shape, s);
     Tensor<xpu, 1, DType> valid_batch_id(batch_id.dptr_, valid_score_shape, s);
 
+    // sort index by batch_id then score (stable sort)
     mxnet::op::SortByKey(valid_scores, valid_sorted_index, false);
     valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
     mxnet::op::SortByKey(valid_batch_id, valid_sorted_index, true);
-    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
 
     // calculate batch_start: accumulated sum to denote 1st sorted_index for a given batch_index
+    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
     for (int b = 0; b < num_batch + 1; b++) {
       slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
     }
@@ -496,11 +503,6 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     Kernel<compute_area, xpu>::Launch(s, num_batch * topk,
      areas.dptr_, buffer.dptr_ + coord_start, sorted_index.dptr_, batch_start.dptr_,
      topk, num_elem, width_elem, param.in_format);
-
-    // mark the invalid boxes before nms
-    if (num_valid < num_batch * num_elem) {
-      slice<0>(sorted_index, num_valid, num_batch * num_elem) = -1;
-    }
 
     // apply nms
     // go through each box as reference, suppress if overlap > threshold
