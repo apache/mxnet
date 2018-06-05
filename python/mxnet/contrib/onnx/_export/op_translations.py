@@ -76,8 +76,8 @@ def convert_weights_and_inputs(node, **kwargs):
 
 @mx2onnx.register("Convolution")
 def convert_convolution(node, **kwargs):
-    """Map MXNet's convolution operator attributes to onnx
-    and return "Conv" onnx node
+    """Map MXNet's convolution operator attributes to onnx's Conv operator
+    and return the created node.
     """
     name = node["name"]
     inputs = node["inputs"]
@@ -138,6 +138,9 @@ def convert_convolution(node, **kwargs):
 
 @mx2onnx.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
+    """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
+    and return the created node.
+    """
     name = node["name"]
     inputs = node["inputs"]
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
@@ -168,6 +171,9 @@ def convert_fully_connected(node, **kwargs):
 
 @mx2onnx.register("BatchNorm")
 def convert_batchnorm(node, **kwargs):
+    """Map MXNet's BatchNorm operator attributes to onnx's BatchNormalization operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -209,6 +215,9 @@ def convert_batchnorm(node, **kwargs):
 
 @mx2onnx.register("tanh")
 def convert_tanh(node, **kwargs):
+    """Map MXNet's tanh operator attributes to onnx's Tanh operator
+    and return the created node.
+    """
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -226,6 +235,9 @@ def convert_tanh(node, **kwargs):
 #Basic neural network functions
 @mx2onnx.register("sigmoid")
 def convert_sigmoid(node, **kwargs):
+    """Map MXNet's sigmoid operator attributes to onnx's Sigmoid operator
+    and return the created node.
+    """
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -242,6 +254,9 @@ def convert_sigmoid(node, **kwargs):
 
 @mx2onnx.register("relu")
 def convert_relu(node, **kwargs):
+    """Map MXNet's relu operator attributes to onnx's Relu operator
+    and return the created node.
+    """
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -259,6 +274,9 @@ def convert_relu(node, **kwargs):
 
 @mx2onnx.register("Activation")
 def convert_activation(node, **kwargs):
+    """Map MXNet's Activation operator attributes to onnx's Tanh/Relu operator
+    and return the created node.
+    """
     name = node["name"]
 
     proc_nodes = kwargs["proc_nodes"]
@@ -292,9 +310,9 @@ def convert_activation(node, **kwargs):
     return [node]
 
 def transform_padding(pad_width):
+    """Helper function to convert padding format for pad operator.
+    """
     num_pad_values = len(pad_width)
-    pad_values_middle_index = int(num_pad_values/2)
-
     onnx_pad_width = [0]*num_pad_values
 
     start_index = 0
@@ -311,6 +329,9 @@ def transform_padding(pad_width):
 
 
 def convert_string_to_list(string_val):
+    """Helper function to convert string to list.
+     Used to convert shape attribute string to list format.
+    """
     result_list = []
 
     list_string = string_val.split(',')
@@ -329,6 +350,9 @@ def convert_string_to_list(string_val):
 
 @mx2onnx.register("Pad")
 def convert_pad(node, **kwargs):
+    """Map MXNet's pad operator attributes to onnx's Pad operator
+    and return the created node.
+    """
     name = node["name"]
     attrs = node["attrs"]
     proc_nodes = kwargs["proc_nodes"]
@@ -368,6 +392,11 @@ def convert_pad(node, **kwargs):
 
 @mx2onnx.register("_linalg_gemm2")
 def convert_linalg_gemm2(node, **kwargs):
+    """Map MXNet's _linalg_gemm2 operator attributes to onnx's
+    MatMul and Transpose operators based on the values set for
+    transpose_a, transpose_b attributes.
+    Return multiple nodes created.
+    """
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
     name = node["name"]
@@ -459,6 +488,10 @@ def convert_linalg_gemm2(node, **kwargs):
 
 @mx2onnx.register("Pooling")
 def convert_pooling(node, **kwargs):
+    """Map MXNet's Pooling operator attributes to onnx's
+    MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
+    based on the input node's attributes and return the created node.
+    """
     proc_nodes = kwargs["proc_nodes"]
     attrs = node["attrs"]
     kernel = eval(attrs["kernel"])
@@ -496,6 +529,9 @@ def convert_pooling(node, **kwargs):
 
 @mx2onnx.register("exp")
 def convert_exp(node, **kwargs):
+    """Map MXNet's exp operator attributes to onnx's Exp operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -514,6 +550,9 @@ def convert_exp(node, **kwargs):
 
 @mx2onnx.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
+    """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
+    based on the input node's attributes and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -548,6 +587,9 @@ def convert_leakyrelu(node, **kwargs):
 
 @mx2onnx.register("softmax")
 def convert_softmax(node, **kwargs):
+    """Map MXNet's softmax operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
     inputs = node["inputs"]
     input_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -571,6 +613,9 @@ def convert_softmax(node, **kwargs):
 # just softmax for inference - hence the name convert_softmax_output.
 @mx2onnx.register("SoftmaxOutput")
 def convert_softmax_output(node, **kwargs):
+    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
     inputs = node["inputs"]
     input1_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -590,6 +635,9 @@ def convert_softmax_output(node, **kwargs):
 
 @mx2onnx.register("Concat")
 def convert_concat(node, **kwargs):
+    """Map MXNet's Concat operator attributes to onnx's Concat operator
+    and return the created node.
+    """
     name = node["name"]
     inputs = node["inputs"]
     proc_nodes = kwargs["proc_nodes"]
@@ -607,6 +655,9 @@ def convert_concat(node, **kwargs):
 
 @mx2onnx.register("transpose")
 def convert_transpose(node, **kwargs):
+    """Map MXNet's transpose operator attributes to onnx's Transpose operator
+    and return the created node.
+    """
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -635,6 +686,9 @@ def convert_transpose(node, **kwargs):
 
 @mx2onnx.register("LRN")
 def convert_lrn(node, **kwargs):
+    """Map MXNet's LRN operator attributes to onnx's LRN operator
+    and return the created node.
+    """
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -662,6 +716,9 @@ def convert_lrn(node, **kwargs):
 
 @mx2onnx.register("Dropout")
 def convert_dropout(node, **kwargs):
+    """Map MXNet's Dropout operator attributes to onnx's Dropout operator
+    and return the created node.
+    """
     name = node["name"]
     input_id = kwargs["index_lookup"][node["inputs"][0][0]]
     input_name = kwargs["proc_nodes"][input_id].name
@@ -680,6 +737,9 @@ def convert_dropout(node, **kwargs):
 
 @mx2onnx.register("Flatten")
 def convert_flatten(node, **kwargs):
+    """Map MXNet's Flatten operator attributes to onnx's Flatten operator
+    and return the created node.
+    """
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -697,6 +757,10 @@ def convert_flatten(node, **kwargs):
 # Convert scalar value into node and pass it as input to mul_node
 @mx2onnx.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
+    """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -762,6 +826,9 @@ def convert_mul_scalar(node, **kwargs):
 # Sorting and Searching
 @mx2onnx.register("argmax")
 def convert_argmax(node, **kwargs):
+    """Map MXNet's argmax operator attributes to onnx's ArgMax operator
+    and return the created node.
+    """
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -785,6 +852,9 @@ def convert_argmax(node, **kwargs):
 
 @mx2onnx.register("argmin")
 def convert_argmin(node, **kwargs):
+    """Map MXNet's argmin operator attributes to onnx's ArgMin operator
+    and return the created node.
+    """
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -808,6 +878,9 @@ def convert_argmin(node, **kwargs):
 
 @mx2onnx.register("_maximum")
 def convert_max(node, **kwargs):
+    """Map MXNet's _maximum operator attributes to onnx's Max operator
+    and return the created node.
+    """
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -830,6 +903,9 @@ def convert_max(node, **kwargs):
 
 @mx2onnx.register("_minimum")
 def convert_minimum(node, **kwargs):
+    """Map MXNet's _minimum operator attributes to onnx's Min operator
+    and return the created node.
+    """
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -852,6 +928,9 @@ def convert_minimum(node, **kwargs):
 
 @mx2onnx.register("min")
 def convert_min(node, **kwargs):
+    """Map MXNet's min operator attributes to onnx's ReduceMin operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -889,6 +968,9 @@ def convert_min(node, **kwargs):
 
 @mx2onnx.register("max")
 def convert_max(node, **kwargs):
+    """Map MXNet's max operator attributes to onnx's ReduceMax operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -926,6 +1008,9 @@ def convert_max(node, **kwargs):
 
 @mx2onnx.register("mean")
 def convert_mean(node, **kwargs):
+    """Map MXNet's mean operator attributes to onnx's ReduceMean operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -963,6 +1048,9 @@ def convert_mean(node, **kwargs):
 
 @mx2onnx.register("prod")
 def convert_prod(node, **kwargs):
+    """Map MXNet's prod operator attributes to onnx's ReduceProd operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1001,6 +1089,9 @@ def convert_prod(node, **kwargs):
 # Arithmetic Operations
 @mx2onnx.register("elemwise_add")
 def convert_elementwise_add(node, **kwargs):
+    """Map MXNet's elemwise_add operator attributes to onnx's Add operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1023,6 +1114,9 @@ def convert_elementwise_add(node, **kwargs):
 
 @mx2onnx.register("broadcast_add")
 def covert_broadcast_add(node, **kwargs):
+    """Map MXNet's broadcast_add operator attributes to onnx's Add operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1045,6 +1139,9 @@ def covert_broadcast_add(node, **kwargs):
 
 @mx2onnx.register("elemwise_sub")
 def convert_elementwise_sub(node, **kwargs):
+    """Map MXNet's elemwise_sub operator attributes to onnx's Sub operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1066,6 +1163,9 @@ def convert_elementwise_sub(node, **kwargs):
 
 @mx2onnx.register("broadcast_sub")
 def covert_broadcast_sub(node, **kwargs):
+    """Map MXNet's broadcast_sub operator attributes to onnx's Sub operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1088,6 +1188,9 @@ def covert_broadcast_sub(node, **kwargs):
 
 @mx2onnx.register("elemwise_mul")
 def convert_mul(node, **kwargs):
+    """Map MXNet's elemwise_mul operator attributes to onnx's Mul operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1109,6 +1212,9 @@ def convert_mul(node, **kwargs):
 
 @mx2onnx.register("broadcast_mul")
 def convert_mul(node, **kwargs):
+    """Map MXNet's broadcast_mul operator attributes to onnx's Mul operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1131,6 +1237,9 @@ def convert_mul(node, **kwargs):
 
 @mx2onnx.register("elemwise_div")
 def convert_mul(node, **kwargs):
+    """Map MXNet's elemwise_div operator attributes to onnx's Div operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1153,6 +1262,9 @@ def convert_mul(node, **kwargs):
 
 @mx2onnx.register("broadcast_div")
 def convert_div(node, **kwargs):
+    """Map MXNet's broadcast_div operator attributes to onnx's Div operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1175,6 +1287,9 @@ def convert_div(node, **kwargs):
 
 @mx2onnx.register("negative")
 def convert_negative(node, **kwargs):
+    """Map MXNet's negative operator attributes to onnx's Neg operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1195,6 +1310,9 @@ def convert_negative(node, **kwargs):
 
 @mx2onnx.register("abs")
 def convert_abs(node, **kwargs):
+    """Map MXNet's abs operator attributes to onnx's Abs operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1215,6 +1333,9 @@ def convert_abs(node, **kwargs):
 
 @mx2onnx.register("add_n")
 def convert_addn(node, **kwargs):
+    """Map MXNet's add_n operator attributes to onnx's Sum operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1234,6 +1355,9 @@ def convert_addn(node, **kwargs):
  # Rounding
 @mx2onnx.register("ceil")
 def convert_ceil(node, **kwargs):
+    """Map MXNet's ceil operator attributes to onnx's Ceil operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1251,6 +1375,9 @@ def convert_ceil(node, **kwargs):
 
 @mx2onnx.register("floor")
 def convert_floor(node, **kwargs):
+    """Map MXNet's floor operator attributes to onnx's Floor operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1269,6 +1396,10 @@ def convert_floor(node, **kwargs):
 # Changing shape and type.
 @mx2onnx.register("Reshape")
 def convert_reshape(node, **kwargs):
+    """Map MXNet's Reshape operator attributes to onnx's Reshape operator.
+    Converts output shape attribute to output shape tensor
+    and return multiple created nodes.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1314,6 +1445,9 @@ def convert_reshape(node, **kwargs):
 
 @mx2onnx.register("Cast")
 def convert_cast(node, **kwargs):
+    """Map MXNet's Cast operator attributes to onnx's Cast operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1334,6 +1468,9 @@ def convert_cast(node, **kwargs):
 
 @mx2onnx.register("slice_axis")
 def convert_slice_axis(node, **kwargs):
+    """Map MXNet's slice_axis operator attributes to onnx's Slice operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1360,6 +1497,10 @@ def convert_slice_axis(node, **kwargs):
 # [TODO] Address split with squeeze case
 @mx2onnx.register("SliceChannel")
 def convert_slice_channel(node, **kwargs):
+    """Map MXNet's SliceChannel operator attributes to onnx's Squeeze or Split
+    operator based on squeeze_axis attribute
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1393,6 +1534,9 @@ def convert_slice_channel(node, **kwargs):
 
 @mx2onnx.register("expand_dims")
 def convert_expand_dims(node, **kwargs):
+    """Map MXNet's expand_dims operator attributes to onnx's Unsqueeze operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1413,6 +1557,9 @@ def convert_expand_dims(node, **kwargs):
 
 @mx2onnx.register("log")
 def convert_log(node, **kwargs):
+    """Map MXNet's log operator attributes to onnx's Log operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1431,6 +1578,9 @@ def convert_log(node, **kwargs):
 
 @mx2onnx.register("reciprocal")
 def convert_reciprocal(node, **kwargs):
+    """Map MXNet's reciprocal operator attributes to onnx's Reciprocal operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1449,6 +1599,9 @@ def convert_reciprocal(node, **kwargs):
 
 @mx2onnx.register("_power")
 def convert_power(node, **kwargs):
+    """Map MXNet's _power operator attributes to onnx's Pow operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1469,6 +1622,9 @@ def convert_power(node, **kwargs):
 
 @mx2onnx.register("sqrt")
 def convert_sqrt(node, **kwargs):
+    """Map MXNet's sqrt operator attributes to onnx's Sqrt operator
+    and return the created node.
+    """
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
