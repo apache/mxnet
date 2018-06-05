@@ -431,55 +431,59 @@ def convert_linalg_gemm2(node, **kwargs):
         return [matmul_node]
     elif trans_a == 1 and trans_b == 0:
         op_name = "transpose" + str(kwargs["idx"])
+        node_name = op_name+"_a"
         trans_a_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
             outputs=[op_name+"_a"],
-            name=op_name+"_a"
+            name=node_name
         )
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[trans_a_node.name, input_node_b],
+            inputs=[node_name, input_node_b],
             outputs=[name],
             name=name
         )
         return [trans_a_node, matmul_node]
 
     elif trans_a == 0 and trans_b == 1:
+        node_name = op_name + "_b"
         trans_b_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
             outputs=[op_name+"_b"],
-            name=op_name+"_b"
+            name=node_name
         )
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[input_node_a, trans_b_node.name],
+            inputs=[input_node_a, node_name],
             outputs=[name],
             name=name
         )
 
         return [trans_b_node, matmul_node]
     else:
+        node_name_a = op_name+"_a"
         trans_a_node = helper.make_node(
             'Transpose',
             inputs=[input_node_a],
             outputs=[op_name+"_a"],
-            name=op_name+"_a"
+            name=node_name_a
         )
 
+        node_name_b = op_name + "_b"
         trans_b_node = helper.make_node(
             'Transpose',
             inputs=[input_node_b],
             outputs=[op_name+"_b"],
-            name=op_name+"_b"
+            name=node_name_b
         )
 
         matmul_node = helper.make_node(
             'MatMul',
-            inputs=[trans_a_node.name, trans_b_node.name],
+            inputs=[node_name_a, node_name_b],
             outputs=[name],
             name=name
         )
