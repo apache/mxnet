@@ -216,11 +216,11 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
       << strerror(errno);
 
 #ifdef __linux__
-    if (handle.shared_id != -1) {
-    CHECK_EQ(close(handle.shared_id), 0)
-        << "Failed to close shared memory. close failed with error "
-        << strerror(errno);
-    }
+  if (handle.shared_id != -1) {
+  CHECK_EQ(close(handle.shared_id), 0)
+      << "Failed to close shared memory. close failed with error "
+      << strerror(errno);
+  }
 #else
   if (count == 0) {
     auto filename = SharedHandleToString(handle.shared_pid, handle.shared_id);
