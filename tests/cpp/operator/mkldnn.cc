@@ -685,6 +685,15 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
+  tmp.WaitToRead();
+  verify_fn(in_arrs, tmp);
+}
+
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
