@@ -27,8 +27,10 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
 #include <nnvm/tuple.h>
+#ifdef __CUDACC__
 #include <thrust/copy.h>
 #include <thrust/execution_policy.h>
+#endif
 #include <vector>
 #include <utility>
 #include <string>
