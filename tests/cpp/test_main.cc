@@ -53,19 +53,21 @@ bool csv = false;
 #if MXNET_USE_CUDA
 
 static bool checkForWorkingCuda() {
-  int count = 0;
-  if (cudaSuccess == cudaGetDeviceCount(&count)) {
-    if (count == 0) return -1;
-    for (int device = 0; device < count; ++device) {
+  int device_count = 0;
+  bool workingCuda = false;
+  if (cudaSuccess == cudaGetDeviceCount(&device_count)) {
+    for (int device = 0; device < device_count; ++device) {
       cudaDeviceProp prop;
       if (cudaSuccess == cudaGetDeviceProperties(&prop, device)) {
-        std::printf("%d.%d ", prop.major, prop.minor);
-        return true;
+        std::cout << "Found CUDA Device #: " << device << " properties: " << prop.major
+                  << "." << prop.minor << std::endl;
+        workingCuda = true;
       }
     }
   }
-  std::cerr << "Warning: Could not find working CUDA driver" << std::endl;
-  return false;
+  if (!workingCuda)
+    std::cerr << "Warning: Could not find working CUDA device" << std::endl;
+  return workingCuda;
 }
 #else
 static bool checkForWorkingCuda() {

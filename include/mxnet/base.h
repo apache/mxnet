@@ -102,7 +102,7 @@
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
-#define MXNET_MINOR 2
+#define MXNET_MINOR 3
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */
@@ -218,6 +218,11 @@ struct Context {
    */
   inline static Context GPU(int32_t dev_id = -1);
   /*!
+   * Get the number of GPUs available.
+   * \return The number of GPUs that are available.
+   */
+  inline static int32_t GetGPUCount();
+  /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
    * \return Pinned CPU context. -1 for current GPU.
@@ -307,6 +312,20 @@ inline Context Context::GPU(int32_t dev_id) {
   return Create(kGPU, dev_id);
 }
 
+inline int32_t Context::GetGPUCount() {
+#if MXNET_USE_CUDA
+  int32_t count;
+  cudaError_t e = cudaGetDeviceCount(&count);
+  if (e == cudaErrorNoDevice) {
+    return 0;
+  }
+  CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
+  return count;
+#else
+  return 0;
+#endif
+}
+
 inline Context Context::FromString(const std::string& str) {
   Context ret;
   try {
@@ -361,6 +380,17 @@ constexpr size_t kMKLDNNAlign = 64;
 #endif
 
 }  // namespace mxnet
+
+namespace std {
+template<> struct hash<mxnet::Context> {
+  size_t operator()(const mxnet::Context& ctx) const {
+    size_t res = 0;
+    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_type));
+    res = dmlc::HashCombine(res, static_cast<size_t>(ctx.dev_id));
+    return res;
+  }
+};
+}
 
 #include "./tensor_blob.h"
 //! \endcond

@@ -1,0 +1,6 @@
+RewriteEngine on
+RewriteRule ^get_started/why_mxnet.html$ /faq/why_mxnet.html [R=301,L]
+RewriteRule ^get_started.*$ /install/ [R=301,L]
+RewriteRule ^how_to.*$ /faq/ [R=301,L]
+RewriteRule ^api/python/symbol.html$ /api/python/symbol/symbol.html [R=301,L]
+RewriteRule ^community/index.html$ /community/contribute.html [R=301,L]

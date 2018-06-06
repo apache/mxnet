@@ -132,7 +132,10 @@ endif
 # Settings for power and arm arch
 #----------------------------
 USE_SSE=0
+
+# Turn off F16C instruction set support
 USE_F16C=0
+
 #----------------------------
 # distributed computing
 #----------------------------

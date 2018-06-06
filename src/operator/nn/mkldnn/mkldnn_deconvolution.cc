@@ -32,6 +32,12 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input) {
+  if (params.kernel.ndim() != 2)
+    return false;
+  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
+}
+
 static inline mkldnn::memory::desc GetBiasDesc(mkldnn::memory::desc md) {
   mkldnn::memory::dims dims(1);
   // This is convolution on 4D data. The second dimension is the channel.
@@ -67,31 +73,18 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  } else if (param.stride.ndim() == 1) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[0];
-  } else {
-    LOG(FATAL) << "Unsupported stride dim";
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  } else if (param.pad.ndim() == 1) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[0];
-  } else {
-    LOG(FATAL) << "Unsupported pad dim";
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   mkldnn::memory::dims dilate{0, 0};
-  if (param.dilate.ndim() == 2) {
-    dilate[0] = param.dilate[0] - 1;
-    dilate[1] = param.dilate[1] - 1;
-  }
+  dilate[0] = param.dilate[0] - 1;
+  dilate[1] = param.dilate[1] - 1;
   auto bwd_pd = GetDeconvBwd_(data_md, weight_md, has_bias, out_md, engine,
       strides, padding, dilate);
   mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
@@ -107,31 +100,18 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwdData(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  } else if (param.stride.ndim() == 1) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[0];
-  } else {
-    LOG(FATAL) << "Unsupported stride dim";
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  } else if (param.pad.ndim() == 1) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[0];
-  } else {
-    LOG(FATAL) << "Unsupported pad dim";
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   mkldnn::memory::dims dilate{0, 0};
-  if (param.dilate.ndim() == 2) {
-    dilate[0] = param.dilate[0] - 1;
-    dilate[1] = param.dilate[1] - 1;
-  }
+  dilate[0] = param.dilate[0] - 1;
+  dilate[1] = param.dilate[1] - 1;
   return GetDeconvBwd_(data_md, weight_md, has_bias, out_md, engine,
       strides, padding, dilate);
 }
@@ -144,31 +124,18 @@ static mkldnn::convolution_backward_weights::primitive_desc GetDeconvBwdWeights(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
+  CHECK_GE(param.stride.ndim(), 2U);
+  CHECK_GE(param.pad.ndim(), 2U);
+  CHECK_GE(param.dilate.ndim(), 2U);
   mkldnn::memory::dims strides{0, 0};
-  if (param.stride.ndim() == 2) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[1];
-  } else if (param.stride.ndim() == 1) {
-    strides[0] = param.stride[0];
-    strides[1] = param.stride[0];
-  } else {
-    LOG(FATAL) << "Unsupported stride dim";
-  }
+  strides[0] = param.stride[0];
+  strides[1] = param.stride[1];
   mkldnn::memory::dims padding{0, 0};
-  if (param.pad.ndim() == 2) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[1];
-  } else if (param.pad.ndim() == 1) {
-    padding[0] = param.pad[0];
-    padding[1] = param.pad[0];
-  } else {
-    LOG(FATAL) << "Unsupported pad dim";
-  }
+  padding[0] = param.pad[0];
+  padding[1] = param.pad[1];
   mkldnn::memory::dims dilate{0, 0};
-  if (param.dilate.ndim() == 2) {
-    dilate[0] = param.dilate[0] - 1;
-    dilate[1] = param.dilate[1] - 1;
-  }
+  dilate[0] = param.dilate[0] - 1;
+  dilate[1] = param.dilate[1] - 1;
   if (!has_bias) {
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, data_md, strides, dilate, padding, padding, mkldnn::padding_kind::zero);
@@ -293,8 +260,13 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
     const nnvm::NodeAttrs& attrs, const NDArray &data,
     const NDArray &weights, const NDArray *bias,
     const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
   static thread_local
         std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL
+        std::unordered_map<DeconvSignature, MKLDNNDeconvForward, OpHash> fwds;
+#endif
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
   DeconvSignature key(param);
   // Here we can sign the conv op with NDArray because conv primitive will

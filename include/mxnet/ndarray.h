@@ -155,6 +155,14 @@ class NDArray {
     return byte_offset_ > 0 || shape() != ptr_->storage_shape;
   }
 
+  /* \brief Check whether the two arrays are the same array */
+  inline bool IsSame(const NDArray& other) {
+    return ptr_ == other.ptr_ &&
+        shape_ == other.shape_ &&
+        byte_offset_ == other.byte_offset_ &&
+        dtype_ == other.dtype_;
+  }
+
   /*!
    * \return the shape of current NDArray.
    */
@@ -506,6 +514,9 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
+#if MXNET_USE_MKLDNN == 1
+    ret.InvalidateMKLDNNData();
+#endif
     return ret;
   }
 
@@ -675,10 +686,7 @@ class NDArray {
    */
   NDArray Reorder2Default() const;
 
-  void InvalidateMKLDNNData() {
-    // Removing mkl_mem_ means the NDArray will store data in the default format.
-    ptr_->mkl_mem_ = nullptr;
-  }
+  void InvalidateMKLDNNData();
 
   /*
    * This function is used inside operators to reshape an array.

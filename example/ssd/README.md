@@ -17,6 +17,7 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
+* Added live camera capture and detection display (run with --camera flag)
 * Added multiple trained models.
 * Added a much simpler way to compose network from mainstream classification networks (resnet, inception...) and [Guide](symbol/README.md).
 * Update to the latest version according to caffe version, with 5% mAP increase.
@@ -83,6 +84,13 @@ python demo.py --cpu --network resnet50 --data-shape 512
 # wait for library to load for the first time
 ```
 * Check `python demo.py --help` for more options.
+
+### Live Camera detection
+
+Use `init.sh` to download the trained model.
+You can use `./demo.py --camera` to use a video capture device with opencv such as a webcam. This
+will open a window that will display the camera output together with the detections. You can play
+with the detection threshold to get more or less detections.
 
 ### Train the model
 This example only covers training on Pascal VOC dataset. Other datasets should

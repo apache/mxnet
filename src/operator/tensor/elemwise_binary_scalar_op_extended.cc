@@ -98,7 +98,7 @@ where :math:`x` is an element of the tensor *lhs* and :math:`\sigma` is the scal
 
 Example::
 
-  smooth_l1([1, 2, 3, 4], sigma=1) = [0.5, 1.5, 2.5, 3.5]
+  smooth_l1([1, 2, 3, 4], scalar=1) = [0.5, 1.5, 2.5, 3.5]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<

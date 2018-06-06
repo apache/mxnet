@@ -29,6 +29,8 @@
 namespace mxnet {
 namespace op {
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_add)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_add)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_plus)
 .add_alias("broadcast_plus")
 .describe(R"code(Returns element-wise sum of the input arrays with broadcasting.
 
@@ -48,8 +50,15 @@ Example::
    broadcast_plus(x, y) = [[ 1.,  1.,  1.],
                            [ 2.,  2.,  2.]]
 
+Supported sparse operations:
+
+   broadcast_add(csr, dense(1D)) = dense
+   broadcast_add(dense(1D), csr) = dense
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::plus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::plus>)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
@@ -68,6 +77,8 @@ NNVM_REGISTER_OP(_backward_broadcast_add)
                                                                 mshadow_op::identity>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_sub)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_sub)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_minus)
 .add_alias("broadcast_minus")
 .describe(R"code(Returns element-wise difference of the input arrays with broadcasting.
 
@@ -87,8 +98,15 @@ Example::
    broadcast_minus(x, y) = [[ 1.,  1.,  1.],
                             [ 0.,  0.,  0.]]
 
+Supported sparse operations:
+
+   broadcast_sub/minus(csr, dense(1D)) = dense
+   broadcast_sub/minus(dense(1D), csr) = dense
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeDenseEx<cpu, op::mshadow_op::minus>)
+.set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastAddStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
 
 NNVM_REGISTER_OP(_backward_broadcast_sub)
@@ -107,6 +125,7 @@ NNVM_REGISTER_OP(_backward_broadcast_sub)
                                                                 mshadow_op::negation>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_mul)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_mul)
 .describe(R"code(Returns element-wise product of the input arrays with broadcasting.
 
 Example::
@@ -121,11 +140,12 @@ Example::
                           [ 1.,  1.,  1.]]
 
 Supported sparse operations:
+
    broadcast_mul(csr, dense(1D)) = csr (CPU only)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::mul>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeEx<cpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::mul>)
 .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mul"});
 
@@ -146,6 +166,7 @@ NNVM_REGISTER_OP(_backward_broadcast_mul)
                                                               mshadow_op::left>);
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_div)
+MXNET_ADD_SPARSE_OP_ALIAS(broadcast_div)
 .describe(R"code(Returns element-wise division of the input arrays with broadcasting.
 
 Example::
@@ -160,11 +181,12 @@ Example::
                           [ 2.,  2.,  2.]]
 
 Supported sparse operations:
+
    broadcast_div(csr, dense(1D)) = csr (CPU only)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeEx<cpu, op::mshadow_op::div>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryBroadcastComputeSparseEx<cpu, op::mshadow_op::div>)
 .set_attr<FInferStorageType>("FInferStorageType", BinaryBroadcastMulStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"});
 

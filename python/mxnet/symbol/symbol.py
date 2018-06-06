@@ -37,7 +37,7 @@ from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array
 from ..base import mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
-from ..context import Context
+from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
@@ -102,6 +102,11 @@ class Symbol(SymbolBase):
             return _internal._PlusScalar(self, scalar=other)
         else:
             raise TypeError('type %s not supported' % str(type(other)))
+
+    def __bool__(self):
+        raise NotImplementedForSymbol(self.__bool__, 'bool')
+
+    __nonzero__ = __bool__
 
     def __iadd__(self, other):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
@@ -1254,9 +1259,12 @@ class Symbol(SymbolBase):
             if len(args) != len(arg_names):
                 raise ValueError('Length of %s does not match the number of arguments' % arg_key)
             for narr in args:
-                if not isinstance(narr, NDArray):
+                if narr is None and allow_missing:
+                    arg_handles.append(None)
+                elif not isinstance(narr, NDArray):
                     raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
-                arg_handles.append(narr.handle)
+                else:
+                    arg_handles.append(narr.handle)
             arg_arrays = args
         elif isinstance(args, dict):
             for name in arg_names:
@@ -1762,7 +1770,7 @@ class Symbol(SymbolBase):
         the result will be a list with one element.
         """
         if ctx is None:
-            ctx = Context.default_ctx
+            ctx = current_context()
         return self.bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
@@ -2443,7 +2451,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
-    attr = AttrScope.current.get(attr)
+    attr = AttrScope._current.value.get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
         attr['__shape__'] = str(shape)
@@ -2494,7 +2502,7 @@ def Group(symbols):
     sym : Symbol
         A group symbol.
      """
-    if any(not isinstance(sym, Symbol) for sym in symbols):
+    if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(
@@ -2741,8 +2749,8 @@ def hypot(left, right):
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
 def eye(N, M=0, k=0, dtype=None, **kwargs):
-    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal
-       and zeros elsewhere.
+    """Returns a new symbol of 2-D shpae, filled with ones on the diagonal and zeros elsewhere.
+
     Parameters
     ----------
     N: int
@@ -2755,6 +2763,7 @@ def eye(N, M=0, k=0, dtype=None, **kwargs):
         and a negative value to a lower diagonal.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
+
     Returns
     -------
     out : Symbol

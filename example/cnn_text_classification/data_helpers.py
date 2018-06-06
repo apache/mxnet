@@ -15,12 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import numpy as np
-import re
 import itertools
-from collections import Counter
 import os
+import re
+from collections import Counter
+
+import numpy as np
+
+import word2vec
 # from gensim.models import word2vec
+
 
 def clean_str(string):
     """

@@ -21,26 +21,36 @@ import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
-
 import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.OperatorBuildUtils
+import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
 }
 
+private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typeSafeAPIDefs
+}
+
 private[mxnet] object SymbolImplMacros {
-  case class SymbolFunction(handle: SymbolHandle, keyVarNumArgs: String)
+  case class SymbolArg(argName: String, argType: String, isOptional : Boolean)
+  case class SymbolFunction(name: String, listOfArgs: List[SymbolArg])
 
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    impl(c)(false, annottees: _*)
+    impl(c)(annottees: _*)
   }
-  // scalastyle:off havetype
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+    newAPIImpl(c)(annottees: _*)
+  }
+  // scalastyle:on havetype
 
-  private val symbolFunctions: Map[String, SymbolFunction] = initSymbolModule()
+  private val symbolFunctions: List[SymbolFunction] = initSymbolModule()
 
-  private def impl(c: blackbox.Context)(addSuper: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+  /**
+    * Implementation for fixed input API structure
+    */
+  private def impl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -48,74 +58,106 @@ private[mxnet] object SymbolImplMacros {
     }
 
     val newSymbolFunctions = {
-      if (isContrib) symbolFunctions.filter(_._1.startsWith("_contrib_"))
-      else symbolFunctions.filter(!_._1.startsWith("_contrib_"))
+      if (isContrib) symbolFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else symbolFunctions.filter(!_.name.startsWith("_"))
     }
 
-    val AST_TYPE_MAP_STRING_ANY = AppliedTypeTree(Ident(TypeName("Map")),
-      List(Ident(TypeName("String")), Ident(TypeName("Any"))))
-    val AST_TYPE_MAP_STRING_STRING = AppliedTypeTree(Ident(TypeName("Map")),
-      List(Ident(TypeName("String")), Ident(TypeName("String"))))
-    val AST_TYPE_SYMBOL_VARARG = AppliedTypeTree(
-      Select(
-        Select(Ident(termNames.ROOTPKG), TermName("scala")),
-        TypeName("<repeated>")
-      ),
-      List(Select(Select(Select(
-        Ident(TermName("org")), TermName("apache")), TermName("mxnet")), TypeName("Symbol")))
-    )
 
-    val functionDefs = newSymbolFunctions map { case (funcName, funcProp) =>
-      val functionScope = {
-        if (isContrib) Modifiers()
-        else {
-          if (funcName.startsWith("_")) Modifiers(Flag.PRIVATE) else Modifiers()
+    val functionDefs = newSymbolFunctions map { symbolfunction =>
+        val funcName = symbolfunction.name
+        val tName = TermName(funcName)
+        q"""
+            def $tName(name : String = null, attr : Map[String, String] = null)
+            (args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null)
+             : org.apache.mxnet.Symbol = {
+              createSymbolGeneral($funcName,name,attr,args,kwargs)
+              }
+         """.asInstanceOf[DefDef]
+      }
+
+    structGeneration(c)(functionDefs, annottees : _*)
+  }
+
+  /**
+    * Implementation for Dynamic typed API Symbol.api.<functioname>
+    */
+  private def newAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+    import c.universe._
+
+    val isContrib: Boolean = c.prefix.tree match {
+      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
+    }
+
+    // TODO: Put Symbol.api.foo --> Stable APIs
+    // Symbol.contrib.bar--> Contrib APIs
+    val newSymbolFunctions = {
+      if (isContrib) symbolFunctions.filter(
+        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
+      else symbolFunctions.filter(!_.name.startsWith("_"))
+    }
+
+    val functionDefs = newSymbolFunctions map { symbolfunction =>
+
+      // Construct argument field
+      var argDef = ListBuffer[String]()
+      // Construct Implementation field
+      var impl = ListBuffer[String]()
+      impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      symbolfunction.listOfArgs.foreach({ symbolarg =>
+        // var is a special word used to define variable in Scala,
+        // need to changed to something else in order to make it work
+        val currArgName = symbolarg.argName match {
+          case "var" => "vari"
+          case "type" => "typeOf"
+          case default => symbolarg.argName
         }
-      }
-      val newName = {
-        if (isContrib) funcName.substring(funcName.indexOf("_contrib_") + "_contrib_".length())
-        else funcName
-      }
-
-      // It will generate definition something like,
-      // def Concat(name: String = null, attr: Map[String, String] = null)
-      //           (args: Symbol*)(kwargs: Map[String, Any] = null)
-      DefDef(functionScope, TermName(newName), List(),
-        List(
-          List(
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("name"),
-              Ident(TypeName("String")), Literal(Constant(null))),
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("attr"),
-              AST_TYPE_MAP_STRING_STRING, Literal(Constant(null)))
-          ),
-          List(
-            ValDef(Modifiers(), TermName("args"), AST_TYPE_SYMBOL_VARARG, EmptyTree)
-          ),
-          List(
-            ValDef(Modifiers(Flag.PARAM | Flag.DEFAULTPARAM), TermName("kwargs"),
-              AST_TYPE_MAP_STRING_ANY, Literal(Constant(null)))
-          )
-        ), TypeTree(),
-        Apply(
-          Ident(TermName("createSymbolGeneral")),
-          List(
-            Literal(Constant(funcName)),
-            Ident(TermName("name")),
-            Ident(TermName("attr")),
-            Ident(TermName("args")),
-            Ident(TermName("kwargs"))
-          )
-        )
-      )
+        if (symbolarg.isOptional) {
+          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+        }
+        else {
+          argDef += s"${currArgName} : ${symbolarg.argType}"
+        }
+        var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
+        if (symbolarg.isOptional) {
+          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        }
+        impl += base
+      })
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
+      // scalastyle:off
+      // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
+      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
+      // scalastyle:on
+      // Combine and build the function string
+      val returnType = "org.apache.mxnet.Symbol"
+      var finalStr = s"def ${symbolfunction.name}"
+      finalStr += s" (${argDef.mkString(",")}) : $returnType"
+      finalStr += s" = {${impl.mkString("\n")}}"
+      c.parse(finalStr).asInstanceOf[DefDef]
     }
+    structGeneration(c)(functionDefs, annottees : _*)
+  }
 
+  /**
+    * Generate class structure for all function APIs
+    * @param c
+    * @param funcDef DefDef type of function definitions
+    * @param annottees
+    * @return
+    */
+  private def structGeneration(c: blackbox.Context)
+                              (funcDef : List[c.universe.DefDef], annottees: c.Expr[Any]*)
+  : c.Expr[Any] = {
+    import c.universe._
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
     val modDefs = inputs map {
       case ClassDef(mods, name, something, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ functionDefs)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -123,7 +165,7 @@ private[mxnet] object SymbolImplMacros {
       case ModuleDef(mods, name, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ functionDefs)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -137,19 +179,20 @@ private[mxnet] object SymbolImplMacros {
   }
 
   // List and add all the atomic symbol functions to current module.
-  private def initSymbolModule(): Map[String, SymbolFunction] = {
+  private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
+    // TODO: Add '_linalg_', '_sparse_', '_image_' support
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName)
-    }).toMap
+    }).toList
   }
 
   // Create an atomic symbol function by handle and function name.
   private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String)
-      : (String, SymbolFunction) = {
+      : SymbolFunction = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -174,6 +217,10 @@ private[mxnet] object SymbolImplMacros {
       println("Symbol function definition:\n" + docStr)
     }
     // scalastyle:on println
-    (aliasName, new SymbolFunction(handle, keyVarNumArgs.value))
+    val argList = argNames zip argTypes map { case (argName, argType) =>
+        val typeAndOption = CToScalaUtils.argumentCleaner(argType, "org.apache.mxnet.Symbol")
+        new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
+    }
+    new SymbolFunction(aliasName, argList.toList)
   }
 }

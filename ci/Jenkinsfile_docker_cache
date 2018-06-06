@@ -1,0 +1,81 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// Jenkins pipeline to generate the centralized docker cache
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// timeout in minutes
+total_timeout = 120
+git_timeout = 15
+// assign any caught errors here
+err = null
+
+// initialize source codes
+def init_git() {
+  deleteDir()
+  retry(5) {
+    try {
+      // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
+      // retries as this will increase the amount of requests and worsen the throttling
+      timeout(time: git_timeout, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -x -d -f'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
+    }
+  }
+}
+
+
+try {
+  stage("Docker cache build & publish") {
+    node('restricted-mxnetlinux-cpu') {
+      ws('workspace/docker_cache') {
+        timeout(time: total_timeout, unit: 'MINUTES') {
+          init_git()
+          sh "ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY}"
+        }
+      }
+    }
+  }
+
+  // set build status to success at the end
+  currentBuild.result = "SUCCESS"
+} catch (caughtError) {
+  node("restricted-mxnetlinux-cpu") {
+    sh "echo caught ${caughtError}"
+    err = caughtError
+    currentBuild.result = "FAILURE"
+  }
+} finally {
+  node("restricted-mxnetlinux-cpu") {
+    // Only send email if master failed
+    if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
+      emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
+    }
+    // Remember to rethrow so the build is marked as failing
+    if (err) {
+      throw err
+    }
+  }
+}

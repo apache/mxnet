@@ -26,7 +26,7 @@
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
 #if MXNET_USE_NNPACK == 1
-#include "./nnpack/nnpack_pooling-inl.h"
+#include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_pooling-inl.h"
@@ -92,6 +92,9 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                          std::vector<TShape> *out_shape) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
+  if (param.pool_type == pool_enum::kLpPooling) {
+    CHECK(param.p_value.has_value());
+  }
   const TShape &dshape = (*in_shape)[0];
   CHECK_GE(dshape.ndim(), 3U)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
@@ -344,10 +347,22 @@ Three pooling options are supported by ``pool_type``:
 - **avg**: average pooling
 - **max**: max pooling
 - **sum**: sum pooling
+- **lp**: Lp pooling
 
 For 3-D pooling, an additional *depth* dimension is added before
 *height*. Namely the input data will have shape *(batch_size, channel, depth,
 height, width)*.
+
+Notes on Lp pooling:
+
+Lp pooling was first introduced by this paper: https://arxiv.org/pdf/1204.3968.pdf.
+L-1 pooling is simply sum pooling, while L-inf pooling is simply max pooling.
+We can see that Lp pooling stands between those two, in practice the most common value for p is 2.
+
+For each window ``X``, the mathematical expression for Lp pooling is:
+
+..math::
+  f(X) = \sqrt{p}{\sum\limits_{x \in X} x^p}
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -365,7 +380,11 @@ height, width)*.
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"output"};
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (GetNumOutputs(param) == 2)
+    return std::vector<std::string>{"output", "workspace"};
+  else
+    return std::vector<std::string>{"output"};
 })
 .set_attr_parser(PoolingParamParser)
 .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)

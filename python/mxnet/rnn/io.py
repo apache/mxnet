@@ -120,7 +120,7 @@ class BucketSentenceIter(DataIter):
             buff[:len(sent)] = sent
             self.data[buck].append(buff)
 
-        self.data = [np.asarray(i, dtype=dtype) for i in self.data]
+        self.data = [np.asarray(i, dtype=dtype) for i in self.data if i]
 
         print("WARNING: discarded %d sentences longer than the largest bucket."%ndiscard)
 

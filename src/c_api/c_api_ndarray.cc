@@ -36,6 +36,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
+#include "../imperative/cached_op.h"
 
 using namespace mxnet;
 
@@ -156,26 +157,28 @@ int MXCreateCachedOp(SymbolHandle handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
-  *out = new std::shared_ptr<Imperative::CachedOp>(
-      new Imperative::CachedOp(
-        *sym, std::vector<std::pair<std::string, std::string> >()));
+  auto inputs = sym->ListInputs(nnvm::Symbol::kAll);
+  std::vector<std::string> input_names;
+  input_names.reserve(inputs.size());
+  for (const auto& i : inputs) input_names.push_back(i->attrs.name);
+  *out = new CachedOpPtr(new CachedOp(
+      *sym, std::vector<std::pair<std::string, std::string> >()));
   API_END();
 }
 
 int MXCreateCachedOpEx(SymbolHandle handle,
-                       int num_params,
+                       int num_flags,
                        const char** keys,
                        const char** vals,
                        CachedOpHandle *out) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
 
   API_BEGIN();
-  std::vector<std::pair<std::string, std::string> > kwargs;
-  for (int i = 0; i < num_params; ++i) {
-    kwargs.push_back({keys[i], vals[i]});
+  std::vector<std::pair<std::string, std::string> > flags;
+  for (int i = 0; i < num_flags; ++i) {
+    flags.push_back({keys[i], vals[i]});
   }
-  *out = new std::shared_ptr<Imperative::CachedOp>(
-      new Imperative::CachedOp(*sym, kwargs));
+  *out = new CachedOpPtr(new CachedOp(*sym, flags));
   API_END();
 }
 

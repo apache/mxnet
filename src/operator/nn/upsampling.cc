@@ -132,6 +132,10 @@ NNVM_REGISTER_OP(UpSampling)
     [](const NodeAttrs& attrs) {
   return ListArguments(nnvm::get<UpSamplingParam>(attrs.parsed));
 })
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
 .set_attr<nnvm::FInferShape>("FInferShape", UpSamplingShape)
 .set_attr<nnvm::FInferType>("FInferType", UpSamplingType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
