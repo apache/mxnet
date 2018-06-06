@@ -686,7 +686,7 @@ class F1(EvalMetric):
 class MCC(EvalMetric):
     """Computes the Matthews Correlation Coefficient of a binary classification problem.
 
-    While slower to compute the MCC can give insight that F1 or Accuracy cannot.
+    While slower to compute than F1 the MCC can give insight that F1 or Accuracy cannot.
     For instance, if the network always predicts the same result
     then the MCC will immeadiately show this. The MCC is also symetric with respect
     to positive and negative categorization, however, there needs to be both
