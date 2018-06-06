@@ -20,9 +20,8 @@
 """Base contrib container class."""
 __all__ = ['SparseBlock']
 
-#from .... import nd
+from ... import nd
 from ..block import Block
-#from ...nn import Sequential, HybridSequential
 
 class SparseBlock(Block):
     """`SparseBlock` only supports forwarding with NDArray.
@@ -30,9 +29,9 @@ class SparseBlock(Block):
     def __init__(self, prefix=None, params=None):
         super(SparseBlock, self).__init__(prefix=prefix, params=params)
 
-    def forward(self):
+    def forward(self, x, *args):
         """Defines the forward computation. Arguments has to be :py:class:`NDArray`."""
-        assert isinstance(x, NDArray), \
+        assert isinstance(x, nd.NDArray), \
             "SparseBlock requires the first argument to forward be NDArray, " \
             "but got %s"%type(x)
         with x.context as ctx:
@@ -41,10 +40,10 @@ class SparseBlock(Block):
                 if j._stype == 'default':
                     params[i] = j.data(ctx)
                 else:
-                    params[i] = j
+                    params['%s_param'%i] = j
         return self.sparse_forward(x, *args, **params)
 
-    def sparse_forward(self):
+    def sparse_forward(self, x, *args, **kwargs):
         """Overrides to define sparse forward computation for this `SparseBlock`.
 
         Note that the *args for :py:meth:`SparseBlock.sparse_forward` is a list of
