@@ -57,6 +57,8 @@ else:
 
     def reduce_ndarray(data):
         """Reduce ndarray to shared memory handle"""
+        # keep a local ref before duplicating fd
+        data = data.as_in_context(context.Context('cpu_shared', 0))
         pid, fd, shape, dtype = data._to_shared_mem()
         if sys.version_info[0] == 2:
             fd = multiprocessing.reduction.reduce_handle(fd)

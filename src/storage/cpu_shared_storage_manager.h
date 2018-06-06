@@ -174,8 +174,12 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   }
 
   if (fid == -1) {
-    LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
-               << strerror(errno);
+    if (is_new) {
+      LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
+                 << strerror(errno);
+    } else {
+      LOG(FATAL) << "Invalid file descriptor from shared array.";
+    }
   }
 
   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
@@ -216,9 +220,11 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
       << strerror(errno);
 
 #ifdef __linux__
+  if (handle.shared_id != -1) {
   CHECK_EQ(close(handle.shared_id), 0)
       << "Failed to close shared memory. close failed with error "
       << strerror(errno);
+  }
 #else
   if (count == 0) {
     auto filename = SharedHandleToString(handle.shared_pid, handle.shared_id);
