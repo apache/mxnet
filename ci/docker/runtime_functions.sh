@@ -107,7 +107,7 @@ build_jetson() {
     cp -f make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
-    build_wheel
+    build_wheel /work/mxnet/python /work/mxnet/lib
 
     popd
 }
