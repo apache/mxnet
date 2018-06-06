@@ -1281,7 +1281,7 @@ def test_conv2d_16c():
 @with_seed()
 def test_group_conv2d_16c():
     grp_list = [16, 32, 64, 128, 256, 512, 1024]
-    input_size_list = np.random.randint(low=1, high=225, size=10).tolist()
+    input_size_list = np.random.randint(low=3, high=225, size=10).tolist()
     kernel_list = [1, 3]
     batch_size = 32
     class Net(gluon.HybridBlock):
@@ -1308,7 +1308,7 @@ def test_group_conv2d_16c():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_deconv2d_16c():
     in_chn_list = [1024, 512, 256, 128, 64, 32, 16]
     out_chn_list = [512, 256, 128, 64, 32, 16, 3]
@@ -1332,7 +1332,7 @@ def test_deconv2d_16c():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_batchnorm_16c():
     chn_list = [16, 32, 64, 128, 256, 512, 1024]
     shape = np.random.randint(low=1, high=300, size=10)
@@ -1416,7 +1416,7 @@ def test_reshape_conv():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -1474,7 +1474,7 @@ def test_slice_conv_slice_conv():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -1630,6 +1630,7 @@ def test_slice_dense_reshape_dense():
 
 
 @with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_dense_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
@@ -1653,7 +1654,7 @@ def test_reshape_dense_slice_dense():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2002,7 +2003,7 @@ def test_reshape_pooling2d_slice_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2021,7 +2022,7 @@ def test_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2040,7 +2041,7 @@ def test_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2062,7 +2063,7 @@ def test_reshape_deconv_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2084,7 +2085,7 @@ def test_slice_deconv_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2108,7 +2109,7 @@ def test_reshape_deconv_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by MXNET-519')
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
