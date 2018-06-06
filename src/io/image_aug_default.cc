@@ -272,10 +272,10 @@ class DefaultImageAugmenter : public ImageAugmenter {
         param_.min_crop_size == -1 &&
         param_.max_crop_size == -1 &&
         !param_.rand_crop) <<
-        "By setting random_resized_crop to true, "
-        "min_random_scale, max_random_scale"
-        "min_crop_size, max_crop_size"
-        "and rand_crop will be ignored.";
+        "\nSetting random_resized_crop to true conflicts with "
+        "min_random_scale, max_random_scale, "
+        "min_crop_size, max_crop_size, "
+        "and rand_crop.";
       if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
           || param_.max_aspect_ratio != 1.0f || param_.min_aspect_ratio != 1.0f) {
             CHECK(param_.min_aspect_ratio > 0.0f);
