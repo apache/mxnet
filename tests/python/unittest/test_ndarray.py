@@ -1304,14 +1304,6 @@ def test_norm(ctx=default_context()):
             assert arr1.shape == arr2.shape
             mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
 
-@with_seed()
-def test_cpu_shared_storage():
-    data = mx.nd.array([1, 2, 3], ctx=mx.cpu(0))
-    pid, fd, shape, dtype = data._to_shared_mem()
-    new_data = mx.nd.NDArray(mx.nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
-    b = mx.nd.array([1, 2, 3], ctx=mx.Context('cpu_shared', 0))
-    assert(new_data.context == b.context)
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()

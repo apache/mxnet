@@ -174,8 +174,12 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   }
 
   if (fid == -1) {
-    LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
-               << strerror(errno);
+    if (is_new) {
+      LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
+                 << strerror(errno);
+    } else {
+      LOG(FATAL) << "Invalid file descriptor from shared array.";
+    }
   }
 
   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
