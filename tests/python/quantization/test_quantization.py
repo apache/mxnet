@@ -28,11 +28,11 @@ from mxnet.io import NDArrayIter
 
 def is_test_for_mkldnn():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('USE_MKLDNN') == '1')
+            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == '1')
 
 def is_test_for_naive_cpu():
     return (mx.current_context().device_type == 'cpu'
-            and os.environ.get('USE_MKLDNN') == None)
+            and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == None)
 
 @with_seed()
 def test_quantize_float32_to_int8():
