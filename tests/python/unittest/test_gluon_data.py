@@ -140,6 +140,16 @@ def test_multi_worker_forked_data_loader():
         def __len__(self):
             return 50
 
+        def batchify_list(self, data):
+            """
+            return list of ndarray without stack/concat/pad
+            """
+            if isinstance(data, (tuple, list)):
+                return list(data)
+            if isinstance(data, mx.nd.NDArray):
+                return [data]
+            return data
+
         def batchify(self, data):
             """
             Collate data into batch. Use shared memory for stacking.
@@ -188,6 +198,14 @@ def test_multi_worker_forked_data_loader():
     if platform.system() != 'Windows':
         data = Dummy(True)
         loader = DataLoader(data, batch_size=40, batchify_fn=data.batchify, num_workers=2)
+        for epoch in range(1):
+            for i, data in enumerate(loader):
+                if i % 100 == 0:
+                    print(data)
+                    print('{}:{}'.format(epoch, i))
+
+        data = Dummy(True)
+        loader = DataLoader(data, batch_size=40, batchify_fn=data.batchify_list, num_workers=2)
         for epoch in range(1):
             for i, data in enumerate(loader):
                 if i % 100 == 0:
