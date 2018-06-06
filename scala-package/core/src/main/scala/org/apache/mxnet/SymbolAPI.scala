@@ -22,5 +22,5 @@ package org.apache.mxnet
   * typesafe Symbol API: Symbol.api._
   * Main code will be generated during compile time through Macros
   */
-object SymbolAPI {
+object SymbolAPI extends SymbolAPIBase {
 }

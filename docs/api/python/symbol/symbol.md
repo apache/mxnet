@@ -291,6 +291,8 @@ Composite multiple symbols into a new one by an operator.
     Symbol.take
     Symbol.one_hot
     Symbol.pick
+    Symbol.ravel_multi_index
+    Symbol.unravel_index
 ```
 
 ### Get internal and output symbol

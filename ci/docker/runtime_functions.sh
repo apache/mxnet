@@ -514,8 +514,9 @@ integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
 	python example/onnx/super_resolution.py
-	pytest tests/python-pytest/onnx/onnx_backend_test.py
-	pytest tests/python-pytest/onnx/onnx_test.py
+	pytest tests/python-pytest/onnx/import/mxnet_backend_test.py
+	pytest tests/python-pytest/onnx/import/onnx_import_test.py
+	pytest tests/python-pytest/onnx/import/gluon_backend_test.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -544,6 +545,7 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon
 }
 
 test_ubuntu_cpu_python2() {

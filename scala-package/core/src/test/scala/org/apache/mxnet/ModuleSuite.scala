@@ -18,7 +18,6 @@
 package org.apache.mxnet
 
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
-import org.apache.mxnet.CheckUtils._
 import org.apache.mxnet.module._
 import org.apache.mxnet.optimizer._
 import org.apache.mxnet.io._
@@ -52,8 +51,11 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     import SymbolConversions._
     c = a + 2 * b + 3 * c
 
-    val mod = new Module(c, IndexedSeq("b", "c", "a"), null,
-      contexts = Array(Context.cpu(0), Context.cpu(1)))
+    val mod = new Module.Builder(c)
+      .setDataNames("b", "c", "a")
+      .setLabelNames(null)
+      .setContext(Context.cpu(0), Context.cpu(1))
+      .build()
     mod.bind(dataShapes = IndexedSeq(
       DataDesc("b", Shape(5, 5), layout = "NT"),
       DataDesc("c", Shape(5, 5), layout = "NT"),
@@ -155,7 +157,19 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     assert(mod.getOutputsMerged()(0).shape == dShape)
     assert(mod.getParams._1("fc_bias").toArray.forall(_ == -1f))
 
+    // reshape module
     dShape = Shape(14, 20)
+    mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
+    mod.forward(new DataBatch(
+      data = IndexedSeq(NDArray.ones(dShape)),
+      label = null, index = null, pad = 0))
+    mod.backward(Array(NDArray.ones(dShape)))
+    mod.update()
+    assert(mod.getOutputsMerged()(0).shape == dShape)
+    assert(mod.getParams._1("fc_bias").toArray.forall(x => (x - -3f) < 1e-3))
+
+    // return to original binded shape
+    dShape = Shape(7, 20)
     mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
     mod.forward(new DataBatch(
       data = IndexedSeq(NDArray.ones(dShape)),
@@ -342,11 +356,13 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     dShape1 = Shape(20, 3, 120, 120)
     dShape2 = Shape(20, 3, 32, 64)
     lShape = Shape(20)
-    dataBatch = new DataBatch(
-      data = IndexedSeq(
+    dataBatch = new DataBatch.Builder()
+      .setData(
         NDArray.random_uniform(Map("low" -> 0, "high" -> 9, "shape" -> dShape1.toString()))(),
-        NDArray.random_uniform(Map("low" -> 5, "high" -> 15, "shape" -> dShape2.toString()))()),
-      label = IndexedSeq(NDArray.ones(lShape)), index = null, pad = 0)
+        NDArray.random_uniform(Map("low" -> 5, "high" -> 15, "shape" -> dShape2.toString()))())
+      .setLabel(NDArray.ones(lShape))
+      .setPad(0)
+      .build()
     mod.forward(dataBatch)
     assert(mod.getOutputsMerged()(0).shape == Shape(lShape(0), numClass))
     mod.backward()
@@ -355,11 +371,13 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     dShape1 = Shape(5, 3, 28, 40)
     dShape2 = Shape(5, 3, 24, 16)
     lShape = Shape(5)
-    dataBatch = new DataBatch(
-      data = IndexedSeq(
+    dataBatch = new DataBatch.Builder()
+      .setData(
         NDArray.random_uniform(Map("low" -> 0, "high" -> 9, "shape" -> dShape1.toString()))(),
-        NDArray.random_uniform(Map("low" -> 15, "high" -> 25, "shape" -> dShape2.toString()))()),
-      label = IndexedSeq(NDArray.ones(lShape)), index = null, pad = 0)
+        NDArray.random_uniform(Map("low" -> 15, "high" -> 25, "shape" -> dShape2.toString()))())
+      .setLabel(NDArray.ones(lShape))
+      .setPad(0)
+      .build()
     mod.forward(dataBatch)
     assert(mod.getOutputsMerged()(0).shape == Shape(lShape(0), numClass))
     mod.backward()

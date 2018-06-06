@@ -67,11 +67,8 @@ def _load_model(args, rank=0):
 def _save_model(args, rank=0):
     if args.model_prefix is None:
         return None
-    dst_dir = os.path.dirname(args.model_prefix)
-    if not os.path.isdir(dst_dir):
-        os.mkdir(dst_dir)
     return mx.callback.do_checkpoint(args.model_prefix if rank == 0 else "%s-%d" % (
-        args.model_prefix, rank))
+        args.model_prefix, rank), period=args.save_period)
 
 
 def add_fit_args(parser):
@@ -111,6 +108,7 @@ def add_fit_args(parser):
                        help='show progress for every n batches')
     train.add_argument('--model-prefix', type=str,
                        help='model prefix')
+    train.add_argument('--save-period', type=int, default=1, help='params saving period')
     parser.add_argument('--monitor', dest='monitor', type=int, default=0,
                         help='log network parameters every N iters if larger than 0')
     train.add_argument('--load-epoch', type=int,
