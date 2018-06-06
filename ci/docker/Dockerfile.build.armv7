@@ -30,8 +30,8 @@ WORKDIR /work/deps
 COPY install/ubuntu_arm.sh /work/
 RUN /work/ubuntu_arm.sh
 
-COPY install/install_openblas.sh /work/
-RUN /work/install_openblas.sh
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
 ENV OpenBLAS_DIR=${CROSS_ROOT}
