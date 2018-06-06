@@ -1,16 +1,16 @@
 # Saving and Loading Gluon Models
 
-Training large models take a lot of time and it is a good idea to save the trained models to files to avoid training them again and again. There is a number of reasons to do this. For example, you might want to do inference on a machine that is different from the one where the model was trained. Sometimes model's performance on validation set decreases towards the end of the training because of overfitting. If you saved your model parameters after every epoch, at the end you can decide to use the model that performs best on the validation set.
+Training large models take a lot of time and it is a good idea to save the trained models to files to avoid training them again and again. There are a number of reasons to do this. For example, you might want to do inference on a machine that is different from the one where the model was trained. Sometimes model's performance on validation set decreases towards the end of the training because of overfitting. If you saved your model parameters after every epoch, at the end you can decide to use the model that performs best on the validation set. Another reason would be to train your model using one language (like Python that has a lot of tools for training) and run inference using a different language (like Scala probably because your application is built on Scala).
 
-In this tutorial we will learn ways to save and load Gluon models. There are two ways to save/load Gluon models:
+In this tutorial, we will learn ways to save and load Gluon models. There are two ways to save/load Gluon models:
 
 **1. Save/load model parameters only**
 
-Parameters of any Gluon model can be saved using the `save_params` and `load_params` method. This does not save model architecture. This method is used to save parameters of dynamic (non Hybrid) models. Model architecture cannot be saved for dynamic models because model architecture changes during execution.
+Parameters of any Gluon model can be saved using the `save_params` and `load_params` method. This does not save model architecture. This method is used to save parameters of dynamic (non-hybrid) models. Model architecture cannot be saved for dynamic models because model architecture changes during execution.
 
 **2. Save/load model parameters AND architecture**
 
-Model architecture of `Hybrid` models stays static and don't change during execution. Therefore both model parameters AND architecture can be saved and loaded using `export`, `load_checkpoint` and `load` methods.
+The Model architecture of `Hybrid` models stays static and don't change during execution. Therefore both model parameters AND architecture can be saved and loaded using `export`, `load_checkpoint` and `load` methods.
 
 Let's look at the above methods in more detail. Let's start by importing the modules we'll need.
 
@@ -67,11 +67,11 @@ def build_lenet(net):
 # Train a given model using MNIST data
 def train_model(model):
     # Initialize the parameters with Xavier initializer
-    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    model.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
     # Use cross entropy loss
     softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
     # Use Adam optimizer
-    trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': .001})
+    trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate': .001})
 
     # Train for one epoch
     for epoch in range(1):
@@ -97,7 +97,7 @@ def train_model(model):
                 print("Epoch: %d; Batch %d; Loss %f" % (epoch, batch_num, curr_loss))
 ```
 
-Let's build a model and train it. After training we will save and restore this model from a file.
+Let's build a model and train it. After training, we will save and restore this model from a file.
 
 ```python
 net = build_lenet(gluon.nn.Sequential())
@@ -146,7 +146,7 @@ new_net = build_lenet(gluon.nn.Sequential())
 new_net.load_params(file_name, ctx=ctx)
 ```
 
-Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means, Python code needs to be copied over to any machine where we want to run this network.
+Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means Python code needs to be copied over to any machine where we want to run this network.
 
 If our network is [Hybrid](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html), we can even save the network architecture into files and we won't need the network definition in a Python file to load the network. We'll see how to do it in the next section.
 
@@ -232,7 +232,7 @@ net.export("lenet", epoch=1)
 
 ## Loading model parameters AND architecture from file
 
-### From different frontend
+### From a different frontend
 
 One of the main reasons to serialize model architecture into a JSON file is to load it from a different frontend like C, C++ or Scala. Here is a couple of examples:
 1. [Loading serialized Hybrid networks from C](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/predict-cpp/image-classification-predict.cc)
@@ -264,6 +264,6 @@ verify_loaded_model(deserialized_net)
 
 Model predictions:  [4. 8. 0. 1. 5. 5. 8. 8. 1. 9.] <!--notebook-skip-line-->
 
-That's all! We learnt how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
+That's all! We learned how to save and load Gluon networks from files. Parameters of any Gluon network can be persisted into files. For hybrid networks, both the architecture of the network and the parameters can be saved to and loaded from files.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
