@@ -701,7 +701,7 @@ class MCC(EvalMetric):
 
     .. note::
 
-        This MCC only supports binary classification.
+        This version of MCC only supports binary classification.
 
     Parameters
     ----------
