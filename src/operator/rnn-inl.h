@@ -105,7 +105,7 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
       break;
     case rnn_enum::kLstm:
       size = (seq_length + 1) * batch_size * hidden_size * 4 + batch_size * hidden_size * 2
-             + seq_length * batch_size * hidden_size * direction;
+             + seq_length * batch_size * hidden_size * direction + hidden_size * seq_length * 8;
       break;
     case rnn_enum::kGru:
       size = seq_length * batch_size * hidden_size * direction * 4 + batch_size * hidden_size * 8;
@@ -134,7 +134,7 @@ inline size_t GetRNNReserveSpaceSize(int num_layer,
       break;
     case rnn_enum::kGru:
       size = seq_length * batch_size * hidden_size * direction * num_layer * 8 +
-          batch_size * hidden_size * direction * 9 +
+          batch_size * hidden_size * direction * 9 + hidden_size * seq_length * 6 +
           seq_length * batch_size * 7 * hidden_size * direction;
       break;
     default:
@@ -501,9 +501,6 @@ class RNNOp : public Operator{
     CHECK(dw.CheckContiguous());
     CHECK(dhx.CheckContiguous());
     CHECK(dy.CheckContiguous());
-    if (req[rnn_enum::kParams] != kAddTo) {
-      dw = mshadow::expr::ScalarExp<DType>(0.0f);
-    }
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
