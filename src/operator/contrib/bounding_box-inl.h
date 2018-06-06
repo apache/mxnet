@@ -27,10 +27,6 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
 #include <nnvm/tuple.h>
-#ifdef __CUDACC__
-#include <thrust/copy.h>
-#include <thrust/execution_policy.h>
-#endif
 #include <vector>
 #include <utility>
 #include <string>
@@ -168,33 +164,6 @@ int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
   }
   return j;
 }
-
-#ifdef __CUDACC__
-
-template<typename DType>
-struct valid_score {
-  DType thresh;
-  explicit valid_score(DType _thresh) : thresh(_thresh) {}
-  __host__ __device__ bool operator()(const DType x) {
-    return x > thresh;
-  }
-};
-
-template<typename DType>
-int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores,
-                 mshadow::Tensor<gpu, 1, DType> out_sorted_index,
-                 mshadow::Tensor<gpu, 1, DType> scores,
-                 mshadow::Tensor<gpu, 1, DType> sorted_index,
-                 float valid_thresh) {
-  valid_score<DType> pred(static_cast<DType>(valid_thresh));
-  DType * end_scores = thrust::copy_if(thrust::device, scores.dptr_, scores.dptr_ + scores.MSize(),
-                                       out_scores.dptr_, pred);
-  thrust::copy_if(thrust::device, sorted_index.dptr_, sorted_index.dptr_ + sorted_index.MSize(),
-                  scores.dptr_, out_sorted_index.dptr_, pred);
-  return end_scores - out_scores.dptr_;
-}
-
-#endif  // __CUDACC__
 
 namespace mshadow_op {
 struct less_than : public mxnet_op::tunable {
