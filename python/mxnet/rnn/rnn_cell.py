@@ -39,11 +39,13 @@ def _cells_begin_state(cells, **kwargs):
     return sum([c.begin_state(**kwargs) for c in cells], [])
 
 def _cells_unpack_weights(cells, args):
+    cells = [cells]
     for cell in cells:
         args = cell.unpack_weights(args)
     return args
 
 def _cells_pack_weights(cells, args):
+    cells = [cells]
     for cell in cells:
         args = cell.pack_weights(args)
     return args
