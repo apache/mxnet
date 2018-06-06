@@ -39,107 +39,52 @@ from mxnet.test_utils import download
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
 from common import with_seed
-import backend as mxnet_backend
+import mxnet_backend
 
 
 URLS = {
     'bvlc_googlenet' :
-        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_googlenet.tar.gz',
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/opset7/bvlc_googlenet.tar.gz',
     'bvlc_reference_caffenet' :
-        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_reference_caffenet.tar.gz',
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/opset7/bvlc_reference_caffenet.tar.gz',
     'bvlc_reference_rcnn_ilsvrc13' :
-        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_reference_rcnn_ilsvrc13.tar.gz',
+        'https://s3.amazonaws.com/onnx-mxnet/model-zoo/opset7/bvlc_reference_rcnn_ilsvrc13.tar.gz',
 }
 
 @with_seed()
-def test_reduce_max():
-    """Test for ReduceMax operator"""
-    node_def = helper.make_node("ReduceMax", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-    input1 = np.random.ranf([3, 10]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    numpy_op = np.max(input1, axis=(1, 0), keepdims=True)
-    npt.assert_almost_equal(output, numpy_op)
+def test_broadcast():
+    """Test for broadcasting in onnx operators."""
+    input1 = np.random.rand(1, 3, 4, 5).astype("float32")
+    input2 = np.random.rand(1, 5).astype("float32")
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=(1, 3, 4, 5)),
+              helper.make_tensor_value_info("input2", TensorProto.FLOAT, shape=(1, 5))]
 
-@with_seed()
-def test_reduce_mean():
-    """Test for ReduceMean operator"""
-    node_def = helper.make_node("ReduceMean", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-    input1 = np.random.ranf([3, 10]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    numpy_op = np.mean(input1, axis=(1, 0), keepdims=True)
-    npt.assert_almost_equal(output, numpy_op, decimal=5)
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 3, 4, 5))]
 
-@with_seed()
-def test_reduce_min():
-    """Test for ReduceMin operator"""
-    node_def = helper.make_node("ReduceMin", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-    input1 = np.random.ranf([3, 10]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    numpy_op = np.min(input1, axis=(1, 0), keepdims=True)
-    npt.assert_almost_equal(output, numpy_op)
+    nodes = [helper.make_node("Add", ["input1", "input2"], ["output"])]
 
-@with_seed()
-def test_reduce_sum():
-    """Test for ReduceSum operator"""
-    node_def = helper.make_node("ReduceSum", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-    input1 = np.random.ranf([3, 10]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    numpy_op = np.sum(input1, axis=(1, 0), keepdims=True)
-    npt.assert_almost_equal(output, numpy_op, decimal=5)
+    graph = helper.make_graph(nodes,
+                              "bcast_test",
+                              inputs,
+                              outputs)
 
-@with_seed()
-def test_reduce_prod():
-    """Test for ReduceProd operator"""
-    node_def = helper.make_node("ReduceProd", ["input1"], ["output"], axes=[1, 0], keepdims=1)
-    input1 = np.random.ranf([3, 10]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    numpy_op = np.prod(input1, axis=(1, 0), keepdims=True)
-    npt.assert_almost_equal(output, numpy_op, decimal=5)
-
-@with_seed()
-def test_squeeze():
-    """Test for Squeeze operator"""
-    node_def = helper.make_node("Squeeze", ["input1"], ["output"], axes=[1, 3])
-    input1 = np.random.ranf([3, 1, 2, 1, 4]).astype("float32")
-    output = mxnet_backend.run_node(node_def, [input1])[0]
-    npt.assert_almost_equal(output, np.squeeze(input1, axis=[1, 3]))
+    bcast_model = helper.make_model(graph)
+    
+    bkd_rep = mxnet_backend.prepare(bcast_model)
+    numpy_op = input1 + input2
+    output = bkd_rep.run([input1, input2])
+    npt.assert_almost_equal(output[0], numpy_op)
 
 def test_super_resolution_example():
     """Test the super resolution example in the example/onnx folder"""
-    sys.path.insert(0, os.path.join(CURR_PATH, '../../../example/onnx/'))
+    sys.path.insert(0, os.path.join(CURR_PATH, '../../../../example/onnx/'))
     import super_resolution
 
     sym, arg_params, aux_params = super_resolution.import_onnx()
-    assert sym is not None
-    assert arg_params is not None
-
-    inputs = sym.list_inputs()
-    assert len(inputs) == 9
-    for i, input_param in enumerate(['9', '7', '5', '3', '1', '2', '4', '6', '8']):
-        assert inputs[i] == input_param
-
-    assert len(sym.list_outputs()) == 1
-    assert sym.list_outputs()[0] == 'reshape5_output'
-
-    attrs_keys = sym.attr_dict().keys()
-    assert len(attrs_keys) == 23
-    for i, key_item in enumerate(['reshape4', 'convolution2', 'convolution0',
-                                  'transpose0', '6', 'reshape0', 'reshape2',
-                                  'reshape3', '3', 'reshape1', '5', '4', '7',
-                                  'convolution1', '9', '2', 'convolution3',
-                                  'reshape5', '8', 'pad1', 'pad0', 'pad3',
-                                  'pad2']):
-        assert key_item in attrs_keys
-
-    param_keys = arg_params.keys()
-    assert len(param_keys) == 8
-    for i, param_item in enumerate(['3', '2', '5', '4', '7', '6', '9', '8']):
-        assert param_item in param_keys
 
     logging.info("Asserted the result of the onnx model conversion")
-
     output_img_dim = 672
     input_image, img_cb, img_cr = super_resolution.get_test_image()
     result_img = super_resolution.perform_inference(sym, arg_params, aux_params,
