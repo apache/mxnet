@@ -218,6 +218,8 @@ struct ConcatGrad {
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
 NNVM_REGISTER_OP(Concat)
+MXNET_ADD_SPARSE_OP_ALIAS(concat)
+.add_alias("concat")
 .describe(R"code(Joins input arrays along a given axis.
 
 .. note:: `Concat` is deprecated. Use `concat` instead.
@@ -226,6 +228,11 @@ The dimensions of the input arrays should be the same except the axis along
 which they will be concatenated.
 The dimension of the output array along the concatenated axis will be equal
 to the sum of the corresponding dimensions of the input arrays.
+
+The storage type of ``concat`` output depends on storage types of inputs
+
+- concat(csr, csr, ..., csr, dim=0) = csr
+- otherwise, ``concat`` generates output with default storage
 
 Example::
 
@@ -283,8 +290,6 @@ Example::
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
-
-NNVM_REGISTER_OP(Concat).add_alias("concat");
 
 NNVM_REGISTER_OP(_backward_Concat)
 .set_num_outputs([](const NodeAttrs& attrs) {
