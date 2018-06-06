@@ -204,6 +204,7 @@ def test_multi_worker_forked_data_loader():
                     print(data)
                     print('{}:{}'.format(epoch, i))
 
+        data = Dummy(True)
         loader = DataLoader(data, batch_size=40, batchify_fn=data.batchify_list, num_workers=2)
         for epoch in range(1):
             for i, data in enumerate(loader):
