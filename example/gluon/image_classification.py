@@ -46,14 +46,59 @@ fh.setFormatter(formatter)
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
-parser.add_argument('--dataset', type=str, default='cifar10',
+
+data = parser.add_argument_group('Data', 'the input for training')
+data.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, caltech101, imagenet and dummy.')
-parser.add_argument('--data-dir', type=str, default='',
-                    help='training directory of imagenet images, contains train/val subdirs.')
+data.add_argument('--use-dataloader', action='store_true',
+                    help='Use more flexible Gluon Dataloader for Imagenet dataset. '
+                         'Requires data-dir to be passed in that case'
+                         'If this is not passed, tries to use the faster RecIO pipeline.'
+                         'Uses arguments data-train, data-val, data-train-idx, data-val-idx then')
+data.add_argument('--data-dir', type=str, default='',
+                  help='training directory of imagenet images, contains train/val subdirs.')
+data.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
+                    help='number of workers for dataloader')
+data.add_argument('--data-train', type=str, default='',
+                    help='Path to training rec files for imagenet')
+data.add_argument('--data-train', type=str, default='',
+                    help='Path to idx file for training rec file for imagenet')
+data.add_argument('--data-val', type=str, default='',
+                    help='Path to validation set rec file for imagenet')
+data.add_argument('--data-val-idx', type=str, default='',
+                    help='Path to idx file for validation rec file for imagenet')
+data.add_argument('--rgb-mean', type=str, default='123.68,116.779,103.939',
+                  help='a tuple of size 3 for the mean rgb')
+data.add_argument('--data-nthreads', type=int, default=4,
+                  help='number of threads for data decoding')
+data.add_argument('--pad-size', type=int, default=0,
+                  help='padding the input image')
+
+aug = parser.add_argument_group(
+    'Image augmentations', 'implemented in src/io/image_aug_default.cc')
+aug.add_argument('--random-crop', type=int, default=1,
+                 help='if or not randomly crop the image')
+aug.add_argument('--random-mirror', type=int, default=1,
+                 help='if or not randomly flip horizontally')
+aug.add_argument('--max-random-h', type=int, default=0,
+                 help='max change of hue, whose range is [0, 180]')
+aug.add_argument('--max-random-s', type=int, default=0,
+                 help='max change of saturation, whose range is [0, 255]')
+aug.add_argument('--max-random-l', type=int, default=0,
+                 help='max change of intensity, whose range is [0, 255]')
+aug.add_argument('--max-random-aspect-ratio', type=float, default=0,
+                 help='max change of aspect ratio, whose range is [0, 1]')
+aug.add_argument('--max-random-rotate-angle', type=int, default=0,
+                 help='max angle to rotate, whose range is [0, 360]')
+aug.add_argument('--max-random-shear-ratio', type=float, default=0,
+                 help='max ratio to shear, whose range is [0, 1]')
+aug.add_argument('--max-random-scale', type=float, default=1,
+                 help='max ratio to scale')
+aug.add_argument('--min-random-scale', type=float, default=1,
+                 help='min ratio to scale, should >= img_size/input_shape. otherwise use --pad-size')
+
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
-parser.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
-                    help='number of workers of dataloader.')
 parser.add_argument('--gpus', type=str, default='',
                     help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
 parser.add_argument('--epochs', type=int, default=120,
@@ -90,6 +135,8 @@ parser.add_argument('--dtype', default='float32', type=str,
                     help='data type, float32 or float16 if applicable')
 parser.add_argument('--save-frequency', default=10, type=int,
                     help='epoch frequence to save model, best model will always be saved')
+parser.add_argument('--top-k', default=0, type=int,
+                    help='specify if topk accuracy is to be tracked')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50,
@@ -104,13 +151,16 @@ opt = parser.parse_args()
 logger.info('Starting new image-classification task:, %s',opt)
 mx.random.seed(opt.seed)
 model_name = opt.model
-dataset_classes = {'mnist': 10, 'cifar10': 10, 'imagenet': 1000, 'dummy': 1000}
+dataset_classes = {'mnist': 10, 'cifar10': 10, 'caltech101':101, 'imagenet': 1000, 'dummy': 1000}
 batch_size, dataset, classes = opt.batch_size, opt.dataset, dataset_classes[opt.dataset]
 context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
 num_gpus = len(context)
 batch_size *= max(1, num_gpus)
 lr_steps = [int(x) for x in opt.lr_steps.split(',') if x.strip()]
-metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
+metric = CompositeEvalMetric([Accuracy()])
+if opt.top_k:
+    metric.add(TopKAccuracy(opt.top_k))
+kv = mx.kv.create(opt.kvstore)
 
 def get_model(model, ctx, opt):
     """Model initialization."""
@@ -133,34 +183,39 @@ def get_model(model, ctx, opt):
 
 net = get_model(opt.model, context, opt)
 
-def get_data_iters(dataset, batch_size, num_workers=1, rank=0):
+def get_data_iters(dataset, batch_size, opt):
     """get dataset iterators"""
     if dataset == 'mnist':
         train_data, val_data = get_mnist_iterator(batch_size, (1, 28, 28),
-                                                  num_parts=num_workers, part_index=rank)
+                                                  num_parts=kv.num_workers, part_index=kv.rank)
     elif dataset == 'cifar10':
         train_data, val_data = get_cifar10_iterator(batch_size, (3, 32, 32),
-                                                    num_parts=num_workers, part_index=rank)
+                                                    num_parts=kv.num_workers, part_index=kv.rank)
     elif dataset == 'imagenet':
-        if not opt.data_dir:
-            raise ValueError('Dir containing raw images in train/val is required for imagenet, plz specify "--data-dir"')
-        if model_name == 'inceptionv3':
-            train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 299, opt.dtype)
+        shape_dim = 299 if model_name == 'inceptionv3' else 224
+        if opt.use_dataloader:
+            if not opt.data_dir:
+                raise ValueError('Dir containing raw images in train/val is required for imagenet.'
+                                 'Please specify "--data-dir"')
+
+            train_data, val_data = get_imagenet_dataloader_iterator(opt.data_dir, batch_size,
+                                                                    opt.num_workers, shape_dim, opt.dtype)
         else:
-            train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size, opt.num_workers, 224, opt.dtype)
+            train_data, val_data = get_imagenet_iterator(kv, batch_size, opt,
+                                                         image_shape=(3, shape_dim, shape_dim))
+    elif dataset == 'caltech101':
+        train_data, val_data = get_caltech101_iterator(batch_size, opt.num_workers, opt.dtype)
     elif dataset == 'dummy':
-        if model_name == 'inceptionv3':
-            train_data, val_data = dummy_iterator(batch_size, (3, 299, 299))
-        else:
-            train_data, val_data = dummy_iterator(batch_size, (3, 224, 224))
+        shape_dim = 299 if model_name == 'inceptionv3' else 224
+        train_data, val_data = dummy_iterator(batch_size, (3, shape_dim, shape_dim))
     return train_data, val_data
 
 def test(ctx, val_data):
     metric.reset()
     val_data.reset()
     for batch in val_data:
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
+        data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
         outputs = []
         for x in data:
             outputs.append(net(x))
@@ -187,15 +242,16 @@ def save_checkpoint(epoch, top1, best_acc):
 def train(opt, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    kv = mx.kv.create(opt.kvstore)
+
     train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
     net.collect_params().reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
-                            {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum,
-                             'multi_precision': True},
-                            kvstore = kv)
+                            optimizer_params={'learning_rate': opt.lr,
+                                              'wd': opt.wd,
+                                              'momentum': opt.momentum,
+                                              'multi_precision': True},
+                            kvstore=kv)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
-
 
     total_time = 0
     num_epochs = 0
@@ -256,17 +312,19 @@ def main():
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=context)
-        kv = mx.kv.create(opt.kvstore)
-        train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
+        train_data, val_data = get_data_iters(dataset, batch_size, opt)
         mod.fit(train_data,
-                eval_data = val_data,
+                eval_data=val_data,
                 num_epoch=opt.epochs,
                 kvstore=kv,
                 batch_end_callback = mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
                 epoch_end_callback = mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
-                optimizer = 'sgd',
-                optimizer_params = {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum, 'multi_precision': True},
-                initializer = mx.init.Xavier(magnitude=2))
+                optimizer='sgd',
+                optimizer_params={'learning_rate': opt.lr,
+                                  'wd': opt.wd,
+                                  'momentum': opt.momentum,
+                                  'multi_precision': True},
+                initializer=mx.init.Xavier(magnitude=2))
         mod.save_params('image-classifier-%s-%d-final.params'%(opt.model, opt.epochs))
     else:
         if opt.mode == 'hybrid':
