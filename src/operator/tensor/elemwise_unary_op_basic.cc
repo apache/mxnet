@@ -172,7 +172,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
     std::vector<TBlob> in_blobs {inputs[0].data()};
-    std::vector<TBlob> out_blobs {outputs[0].data()};
+    std::vector<TBlob> out_blobs {outputs[0].Reorder2Default().data()};
     UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
     return;
   }
