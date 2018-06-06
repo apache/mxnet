@@ -70,10 +70,10 @@ build_jetson() {
     set -ex
     pushd .
 
-    mv make/crosscompile.jetson.mk make/config.mk
+    cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
-    build_wheel
+    build_wheel /work/mxnet/python /work/mxnet/lib
 
     popd
 }
@@ -112,6 +112,13 @@ build_armv6() {
 build_armv7() {
     set -ex
     pushd .
+
+    # uncomment for make based build
+    # cp make/crosscompile.armv7.mk ./config.mk
+    # make -j$(nproc)
+
+    # build_wheel /work/mxnet/python /work/mxnet/lib
+    
     cd /work/build
 
     # Lapack functionality will be included and statically linked to openblas.
