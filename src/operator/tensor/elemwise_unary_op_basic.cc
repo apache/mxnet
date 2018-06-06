@@ -173,7 +173,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
     std::vector<TBlob> in_blobs {inputs[0].data()};
-    std::vector<TBlob> out_blobs(1);
+    std::vector<TBlob> out_blobs;
 
     std::vector<NDArray> temp_src, temp_dst;
 
@@ -181,16 +181,14 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
       NDArray temp = outputs[0].Reorder2Default();
       temp_src.emplace_back(temp);
       temp_dst.emplace_back(outputs[0]);
-      out_blobs.push_back(temp.data());
+      out_blobs = {temp.data()};
     } else {
-      out_blobs.push_back(outputs[0].data());
+      out_blobs = {outputs[0].data()};
     }
     UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
 
-    if (req[0] == kAddTo && outputs[0].IsMKLDNNData()) {
+    if (req[0] == kAddTo && outputs[0].IsMKLDNNData())
       mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
-    }
-
 
     return;
   }

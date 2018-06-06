@@ -47,8 +47,10 @@ void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     // We should try and force the output memory has the same format
     // as the input memory. If not, we'll have to reorder memory.
     auto out_mem = out_data.GetMKLDNNData(in_mem->get_primitive_desc());
-    if (out_mem == nullptr)
+    if (out_mem == nullptr) {
       out_mem = out_data.GetMKLDNNData();
+      in_mem = data.GetMKLDNNDataReorder(out_mem->get_primitive_desc());
+    }
     auto sum_res = TmpMemMgr::Get()->Alloc(out_mem->get_primitive_desc());
     MKLDNNSum(*in_mem, *out_mem, *sum_res);
     const_cast<NDArray &>(out_data).CopyFrom(*sum_res);
