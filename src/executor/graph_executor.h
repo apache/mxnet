@@ -65,11 +65,8 @@ class GraphExecutor : public Executor {
   void Backward(const std::vector<NDArray> &head_grads, bool is_train = true) override;
   const std::vector<NDArray>& outputs() const override;
   const std::unordered_map<std::string, NDArray>& in_arg_map() const override;
-  std::unordered_map<std::string, NDArray>& in_arg_map() override;
   const std::unordered_map<std::string, NDArray>& arg_grad_map() const override;
   const std::unordered_map<std::string, NDArray>& aux_state_map() const override;
-  std::unordered_map<std::string, NDArray>& aux_state_map() override;
-  const std::vector<NDArray>& output_arrays() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
   void SetMonitorCallback(const MonitorCallback& callback) override;
   // Initialize the rest of attributes

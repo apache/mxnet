@@ -90,50 +90,6 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
-  // We can create an executor to run this subgraph op
-  if (this->subgraph_executor_.get() == nullptr) {
-    std::vector<NDArray> arg_arrays;
-    std::vector<NDArray> aux_arrays;
-    for (size_t i = 0; i < this->immutable_data_indices_.size(); ++i) {
-      arg_arrays.push_back(inputs[this->immutable_data_indices_[i]]);
-    }
-    for (size_t i = 0; i < this->mutable_data_indices_.size(); ++i) {
-      aux_arrays.push_back(inputs[this->mutable_data_indices_[i]]);
-    }
-    std::vector<NDArray> grad_store(arg_arrays.size());
-    std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-    this->subgraph_executor_.reset(Executor::Bind(subg_sym,
-          ctx.run_ctx.ctx, std::map<std::string, Context>(), arg_arrays, grad_store,
-          grad_req, aux_arrays));
-  }
-  // TODO: replace the hard-coded integer with inputs[i].var().version
-  // If var version is old, need to update ndarray in the executor.
-  const int64_t max_var_version = 12034324324;
-  for (size_t i = 0; i < this->immutable_data_names_.size(); ++i) {
-    if (this->ndarray_var_versions_[this->immutable_data_indices_[i]] < max_var_version) {
-      auto it = this->subgraph_executor_->in_arg_map().find(this->immutable_data_names_[i]);
-      CHECK(it != this->subgraph_executor_->in_arg_map().end());
-      // Commented out because we don't have interface to do it yet
-      it->second = inputs[this->immutable_data_indices_[i]];
-      ++this->ndarray_var_versions_[this->immutable_data_indices_[i]];
-    }
-  }
-  for (size_t i = 0; i < this->mutable_data_names_.size(); ++i) {
-    if (this->ndarray_var_versions_[this->mutable_data_indices_[i]] < max_var_version) {
-      auto it = this->subgraph_executor_->aux_state_map().find(this->mutable_data_names_[i]);
-      CHECK(it != this->subgraph_executor_->aux_state_map().end());
-      // Commented out because we don't have interface to do it yet
-      it->second = inputs[this->mutable_data_indices_[i]];
-      ++this->ndarray_var_versions_[this->mutable_data_indices_[i]];
-    }
-  }
-  this->subgraph_executor_->Forward(false);
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    //NDArray tmp = outputs[i];
-    //this->subgraph_executor_->output_arrays()[i].WaitToRead();
-    CopyFromTo(this->subgraph_executor_->output_arrays()[i], &outputs[i]);
-    //tmp = this->subgraph_executor_->output_arrays()[i];
-  }
 }
 
 OpStatePtr CreateSubgraphOpState(const NodeAttrs& attrs,

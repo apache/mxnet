@@ -93,7 +93,6 @@ class Executor {
    * \return input argument map in the executor.
    */
   virtual const std::unordered_map<std::string, NDArray>& in_arg_map() const = 0;
-  virtual std::unordered_map<std::string, NDArray>& in_arg_map() = 0;
   /*!
    * \brief get input argument graident map, key is arg name, value is gradient's NDArray.
    * \return input argument gradient map in the executor.
@@ -104,9 +103,6 @@ class Executor {
    * \return aux state map in the executor.
    */
   virtual const std::unordered_map<std::string, NDArray>& aux_state_map() const = 0;
-  virtual std::unordered_map<std::string, NDArray>& aux_state_map() = 0;
-
-  virtual const std::vector<NDArray>& output_arrays() const = 0;
   /*!
    * \brief Return a new executor with the same symbol and shared memory,
    *  but different input/output shapes.

@@ -132,24 +132,12 @@ const std::unordered_map<std::string, NDArray>& GraphExecutor::in_arg_map() cons
   return in_arg_map_;
 }
 
-std::unordered_map<std::string, NDArray>& GraphExecutor::in_arg_map() {
-  return in_arg_map_;
-}
-
 const std::unordered_map<std::string, NDArray>& GraphExecutor::arg_grad_map() const {
   return arg_grad_map_;
 }
 
 const std::unordered_map<std::string, NDArray>& GraphExecutor::aux_state_map() const {
   return aux_state_map_;
-}
-
-std::unordered_map<std::string, NDArray>& GraphExecutor::aux_state_map() {
-  return aux_state_map_;
-}
-
-const std::vector<NDArray>& GraphExecutor::output_arrays() const {
-  return output_arrays_;
 }
 
 static nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
