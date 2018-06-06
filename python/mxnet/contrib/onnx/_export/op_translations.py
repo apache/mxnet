@@ -29,22 +29,10 @@ import re
 import numpy as np
 
 from onnx import helper, numpy_helper, mapping
-from .export_onnx import MXNetGraph as mx2onnx
-
-def looks_like_weight(name):
-    """Internal helper to figure out if node should be hidden with `hide_weights`.
-    """
-    if name.endswith("_weight") or name == 'W':
-        return True
-    if name.endswith("_bias") or name == "B":
-        return True
-    if name.endswith("_beta") or name.endswith("_gamma") or \
-            name.endswith("_moving_var") or name.endswith("_moving_mean"):
-        return True
-    return False
+from .export_onnx import MXNetGraph as mx_op
 
 
-@mx2onnx.register("null")
+@mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
     """
@@ -75,7 +63,7 @@ def convert_weights_and_inputs(node, **kwargs):
         return [tval_node]
 
 
-@mx2onnx.register("Convolution")
+@mx_op.register("Convolution")
 def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
     and return the created node.
@@ -138,7 +126,7 @@ def convert_convolution(node, **kwargs):
     return [conv_node]
 
 
-@mx2onnx.register("FullyConnected")
+@mx_op.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
     and return the created node.
@@ -171,7 +159,7 @@ def convert_fully_connected(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("BatchNorm")
+@mx_op.register("BatchNorm")
 def convert_batchnorm(node, **kwargs):
     """Map MXNet's BatchNorm operator attributes to onnx's BatchNormalization operator
     and return the created node.
@@ -215,7 +203,7 @@ def convert_batchnorm(node, **kwargs):
     return [bn_node]
 
 
-@mx2onnx.register("tanh")
+@mx_op.register("tanh")
 def convert_tanh(node, **kwargs):
     """Map MXNet's tanh operator attributes to onnx's Tanh operator
     and return the created node.
@@ -235,7 +223,7 @@ def convert_tanh(node, **kwargs):
     return [node]
 
 #Basic neural network functions
-@mx2onnx.register("sigmoid")
+@mx_op.register("sigmoid")
 def convert_sigmoid(node, **kwargs):
     """Map MXNet's sigmoid operator attributes to onnx's Sigmoid operator
     and return the created node.
@@ -254,7 +242,7 @@ def convert_sigmoid(node, **kwargs):
     )
     return [node]
 
-@mx2onnx.register("relu")
+@mx_op.register("relu")
 def convert_relu(node, **kwargs):
     """Map MXNet's relu operator attributes to onnx's Relu operator
     and return the created node.
@@ -274,7 +262,7 @@ def convert_relu(node, **kwargs):
 
     return [node]
 
-@mx2onnx.register("Activation")
+@mx_op.register("Activation")
 def convert_activation(node, **kwargs):
     """Map MXNet's Activation operator attributes to onnx's Tanh/Relu operator
     and return the created node.
@@ -350,7 +338,7 @@ def convert_string_to_list(string_val):
     return result_list
 
 
-@mx2onnx.register("Pad")
+@mx_op.register("Pad")
 def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
@@ -392,7 +380,7 @@ def convert_pad(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("_linalg_gemm2")
+@mx_op.register("_linalg_gemm2")
 def convert_linalg_gemm2(node, **kwargs):
     """Map MXNet's _linalg_gemm2 operator attributes to onnx's
     MatMul and Transpose operators based on the values set for
@@ -491,7 +479,7 @@ def convert_linalg_gemm2(node, **kwargs):
         return [trans_a_node, trans_b_node, matmul_node]
 
 
-@mx2onnx.register("Pooling")
+@mx_op.register("Pooling")
 def convert_pooling(node, **kwargs):
     """Map MXNet's Pooling operator attributes to onnx's
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
@@ -533,7 +521,7 @@ def convert_pooling(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("exp")
+@mx_op.register("exp")
 def convert_exp(node, **kwargs):
     """Map MXNet's exp operator attributes to onnx's Exp operator
     and return the created node.
@@ -554,7 +542,7 @@ def convert_exp(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("LeakyReLU")
+@mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
     """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
     based on the input node's attributes and return the created node.
@@ -591,7 +579,7 @@ def convert_leakyrelu(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("softmax")
+@mx_op.register("softmax")
 def convert_softmax(node, **kwargs):
     """Map MXNet's softmax operator attributes to onnx's Softmax operator
     and return the created node.
@@ -617,7 +605,7 @@ def convert_softmax(node, **kwargs):
 
 # There's also mx.sym.softmax(), which doesn't do cross-entropy loss,
 # just softmax for inference - hence the name convert_softmax_output.
-@mx2onnx.register("SoftmaxOutput")
+@mx_op.register("SoftmaxOutput")
 def convert_softmax_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
@@ -639,7 +627,7 @@ def convert_softmax_output(node, **kwargs):
     return [softmax_node]
 
 
-@mx2onnx.register("Concat")
+@mx_op.register("Concat")
 def convert_concat(node, **kwargs):
     """Map MXNet's Concat operator attributes to onnx's Concat operator
     and return the created node.
@@ -659,7 +647,7 @@ def convert_concat(node, **kwargs):
     return [concat_node]
 
 
-@mx2onnx.register("transpose")
+@mx_op.register("transpose")
 def convert_transpose(node, **kwargs):
     """Map MXNet's transpose operator attributes to onnx's Transpose operator
     and return the created node.
@@ -690,7 +678,7 @@ def convert_transpose(node, **kwargs):
     return [transpose_node]
 
 
-@mx2onnx.register("LRN")
+@mx_op.register("LRN")
 def convert_lrn(node, **kwargs):
     """Map MXNet's LRN operator attributes to onnx's LRN operator
     and return the created node.
@@ -720,7 +708,7 @@ def convert_lrn(node, **kwargs):
     return [lrn_node]
 
 
-@mx2onnx.register("Dropout")
+@mx_op.register("Dropout")
 def convert_dropout(node, **kwargs):
     """Map MXNet's Dropout operator attributes to onnx's Dropout operator
     and return the created node.
@@ -741,7 +729,7 @@ def convert_dropout(node, **kwargs):
     return [dropout_node]
 
 
-@mx2onnx.register("Flatten")
+@mx_op.register("Flatten")
 def convert_flatten(node, **kwargs):
     """Map MXNet's Flatten operator attributes to onnx's Flatten operator
     and return the created node.
@@ -761,7 +749,7 @@ def convert_flatten(node, **kwargs):
 
 
 # Convert scalar value into node and pass it as input to mul_node
-@mx2onnx.register("_mul_scalar")
+@mx_op.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
     """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
     Creates a new node for the input scalar value, adds it to the initializer
@@ -828,7 +816,7 @@ def convert_mul_scalar(node, **kwargs):
         return [tensor_node]
 
 # Sorting and Searching
-@mx2onnx.register("argmax")
+@mx_op.register("argmax")
 def convert_argmax(node, **kwargs):
     """Map MXNet's argmax operator attributes to onnx's ArgMax operator
     and return the created node.
@@ -854,7 +842,7 @@ def convert_argmax(node, **kwargs):
     )
     return [node]
 
-@mx2onnx.register("argmin")
+@mx_op.register("argmin")
 def convert_argmin(node, **kwargs):
     """Map MXNet's argmin operator attributes to onnx's ArgMin operator
     and return the created node.
@@ -880,7 +868,7 @@ def convert_argmin(node, **kwargs):
     )
     return [node]
 
-@mx2onnx.register("_maximum")
+@mx_op.register("_maximum")
 def convert_maximum(node, **kwargs):
     """Map MXNet's _maximum operator attributes to onnx's Max operator
     and return the created node.
@@ -905,7 +893,7 @@ def convert_maximum(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("_minimum")
+@mx_op.register("_minimum")
 def convert_minimum(node, **kwargs):
     """Map MXNet's _minimum operator attributes to onnx's Min operator
     and return the created node.
@@ -930,7 +918,7 @@ def convert_minimum(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("min")
+@mx_op.register("min")
 def convert_min(node, **kwargs):
     """Map MXNet's min operator attributes to onnx's ReduceMin operator
     and return the created node.
@@ -970,7 +958,7 @@ def convert_min(node, **kwargs):
         return [node]
 
 
-@mx2onnx.register("max")
+@mx_op.register("max")
 def convert_max(node, **kwargs):
     """Map MXNet's max operator attributes to onnx's ReduceMax operator
     and return the created node.
@@ -1010,7 +998,7 @@ def convert_max(node, **kwargs):
         return [node]
 
 
-@mx2onnx.register("mean")
+@mx_op.register("mean")
 def convert_mean(node, **kwargs):
     """Map MXNet's mean operator attributes to onnx's ReduceMean operator
     and return the created node.
@@ -1050,7 +1038,7 @@ def convert_mean(node, **kwargs):
         return [node]
 
 
-@mx2onnx.register("prod")
+@mx_op.register("prod")
 def convert_prod(node, **kwargs):
     """Map MXNet's prod operator attributes to onnx's ReduceProd operator
     and return the created node.
@@ -1091,7 +1079,7 @@ def convert_prod(node, **kwargs):
 
 
 # Arithmetic Operations
-@mx2onnx.register("elemwise_add")
+@mx_op.register("elemwise_add")
 def convert_elementwise_add(node, **kwargs):
     """Map MXNet's elemwise_add operator attributes to onnx's Add operator
     and return the created node.
@@ -1116,7 +1104,7 @@ def convert_elementwise_add(node, **kwargs):
     return [add_node]
 
 
-@mx2onnx.register("broadcast_add")
+@mx_op.register("broadcast_add")
 def covert_broadcast_add(node, **kwargs):
     """Map MXNet's broadcast_add operator attributes to onnx's Add operator
     and return the created node.
@@ -1141,7 +1129,7 @@ def covert_broadcast_add(node, **kwargs):
     return [add_node]
 
 
-@mx2onnx.register("elemwise_sub")
+@mx_op.register("elemwise_sub")
 def convert_elementwise_sub(node, **kwargs):
     """Map MXNet's elemwise_sub operator attributes to onnx's Sub operator
     and return the created node.
@@ -1165,7 +1153,7 @@ def convert_elementwise_sub(node, **kwargs):
 
     return [sub_node]
 
-@mx2onnx.register("broadcast_sub")
+@mx_op.register("broadcast_sub")
 def covert_broadcast_sub(node, **kwargs):
     """Map MXNet's broadcast_sub operator attributes to onnx's Sub operator
     and return the created node.
@@ -1190,7 +1178,7 @@ def covert_broadcast_sub(node, **kwargs):
     return [sub_node]
 
 
-@mx2onnx.register("elemwise_mul")
+@mx_op.register("elemwise_mul")
 def convert_elemwise_mul(node, **kwargs):
     """Map MXNet's elemwise_mul operator attributes to onnx's Mul operator
     and return the created node.
@@ -1214,7 +1202,7 @@ def convert_elemwise_mul(node, **kwargs):
 
     return [mul_node]
 
-@mx2onnx.register("broadcast_mul")
+@mx_op.register("broadcast_mul")
 def convert_broadcast_mul(node, **kwargs):
     """Map MXNet's broadcast_mul operator attributes to onnx's Mul operator
     and return the created node.
@@ -1239,7 +1227,7 @@ def convert_broadcast_mul(node, **kwargs):
     return [mul_node]
 
 
-@mx2onnx.register("elemwise_div")
+@mx_op.register("elemwise_div")
 def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
     and return the created node.
@@ -1264,7 +1252,7 @@ def convert_elemwise_div(node, **kwargs):
     return [div_node]
 
 
-@mx2onnx.register("broadcast_div")
+@mx_op.register("broadcast_div")
 def convert_broadcast_div(node, **kwargs):
     """Map MXNet's broadcast_div operator attributes to onnx's Div operator
     and return the created node.
@@ -1289,7 +1277,7 @@ def convert_broadcast_div(node, **kwargs):
     return [div_node]
 
 
-@mx2onnx.register("negative")
+@mx_op.register("negative")
 def convert_negative(node, **kwargs):
     """Map MXNet's negative operator attributes to onnx's Neg operator
     and return the created node.
@@ -1312,7 +1300,7 @@ def convert_negative(node, **kwargs):
     return [neg_node]
 
 
-@mx2onnx.register("abs")
+@mx_op.register("abs")
 def convert_abs(node, **kwargs):
     """Map MXNet's abs operator attributes to onnx's Abs operator
     and return the created node.
@@ -1335,7 +1323,7 @@ def convert_abs(node, **kwargs):
     return [abs_node]
 
 
-@mx2onnx.register("add_n")
+@mx_op.register("add_n")
 def convert_addn(node, **kwargs):
     """Map MXNet's add_n operator attributes to onnx's Sum operator
     and return the created node.
@@ -1357,7 +1345,7 @@ def convert_addn(node, **kwargs):
     return [sum_node]
 
  # Rounding
-@mx2onnx.register("ceil")
+@mx_op.register("ceil")
 def convert_ceil(node, **kwargs):
     """Map MXNet's ceil operator attributes to onnx's Ceil operator
     and return the created node.
@@ -1377,7 +1365,7 @@ def convert_ceil(node, **kwargs):
     )
     return [node]
 
-@mx2onnx.register("floor")
+@mx_op.register("floor")
 def convert_floor(node, **kwargs):
     """Map MXNet's floor operator attributes to onnx's Floor operator
     and return the created node.
@@ -1398,7 +1386,7 @@ def convert_floor(node, **kwargs):
     return [node]
 
 # Changing shape and type.
-@mx2onnx.register("Reshape")
+@mx_op.register("Reshape")
 def convert_reshape(node, **kwargs):
     """Map MXNet's Reshape operator attributes to onnx's Reshape operator.
     Converts output shape attribute to output shape tensor
@@ -1447,7 +1435,7 @@ def convert_reshape(node, **kwargs):
 
     return [tensor_node, reshape_node]
 
-@mx2onnx.register("Cast")
+@mx_op.register("Cast")
 def convert_cast(node, **kwargs):
     """Map MXNet's Cast operator attributes to onnx's Cast operator
     and return the created node.
@@ -1470,7 +1458,7 @@ def convert_cast(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("slice_axis")
+@mx_op.register("slice_axis")
 def convert_slice_axis(node, **kwargs):
     """Map MXNet's slice_axis operator attributes to onnx's Slice operator
     and return the created node.
@@ -1499,7 +1487,7 @@ def convert_slice_axis(node, **kwargs):
 
 # SliceChannel/split operators will be mapped to onnx's squeeze and split operator.
 # [TODO] Address split with squeeze case
-@mx2onnx.register("SliceChannel")
+@mx_op.register("SliceChannel")
 def convert_slice_channel(node, **kwargs):
     """Map MXNet's SliceChannel operator attributes to onnx's Squeeze or Split
     operator based on squeeze_axis attribute
@@ -1536,7 +1524,7 @@ def convert_slice_channel(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("expand_dims")
+@mx_op.register("expand_dims")
 def convert_expand_dims(node, **kwargs):
     """Map MXNet's expand_dims operator attributes to onnx's Unsqueeze operator
     and return the created node.
@@ -1559,7 +1547,7 @@ def convert_expand_dims(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("log")
+@mx_op.register("log")
 def convert_log(node, **kwargs):
     """Map MXNet's log operator attributes to onnx's Log operator
     and return the created node.
@@ -1580,7 +1568,7 @@ def convert_log(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("reciprocal")
+@mx_op.register("reciprocal")
 def convert_reciprocal(node, **kwargs):
     """Map MXNet's reciprocal operator attributes to onnx's Reciprocal operator
     and return the created node.
@@ -1601,7 +1589,7 @@ def convert_reciprocal(node, **kwargs):
     return [node]
 
 
-@mx2onnx.register("_power")
+@mx_op.register("_power")
 def convert_power(node, **kwargs):
     """Map MXNet's _power operator attributes to onnx's Pow operator
     and return the created node.
@@ -1624,7 +1612,7 @@ def convert_power(node, **kwargs):
     )
     return [node]
 
-@mx2onnx.register("sqrt")
+@mx_op.register("sqrt")
 def convert_sqrt(node, **kwargs):
     """Map MXNet's sqrt operator attributes to onnx's Sqrt operator
     and return the created node.

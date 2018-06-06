@@ -17,6 +17,7 @@
 """export helper functions"""
 # coding: utf-8
 import os
+import logging
 import mxnet as mx
 
 def load_module(json_path, params_path, input_shape):
@@ -46,8 +47,8 @@ def load_module(json_path, params_path, input_shape):
             model_name = json_path.rsplit('.', 1)[0].rsplit('-', 1)[0]
             num_epochs = int(params_path.rsplit('.', 1)[0].rsplit('-', 1)[1])
         except IndexError:
-            print("Model and params name should be in format: "
-                  "prefix-symbol.json, prefix-epoch.params")
+            logging.info("Model and params name should be in format: "
+                         "prefix-symbol.json, prefix-epoch.params")
             raise
 
         sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)

@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import logging
 import numpy as np
 
 from onnx import helper, mapping
@@ -31,7 +32,8 @@ from .export_onnx import MXNetGraph
 from .export_helper import load_module
 
 
-def export_model(model, weights, input_shape, input_type, onnx_file_path, log=False):
+def export_model(model, weights, input_shape, input_type=np.float32,
+                 onnx_file_path='model.onnx', log=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
     Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
@@ -60,7 +62,7 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
 
     data_format = np.dtype(input_type)
     if isinstance(model, string_types) and isinstance(weights, string_types):
-        print("Converting json and params file to sym and weights")
+        logging.info("Converting json and params file to sym and weights")
         sym, params = load_module(model, weights, input_shape)
         onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
@@ -76,6 +78,6 @@ def export_model(model, weights, input_shape, input_type, onnx_file_path, log=Fa
     with open(onnx_file_path, "wb") as file_handle:
         serialized = onnx_model.SerializeToString()
         file_handle.write(serialized)
-        print("\nONNX file %s serialized to disk" % onnx_file_path)
+        logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
 
     return onnx_file_path
