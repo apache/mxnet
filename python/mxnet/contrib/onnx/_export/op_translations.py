@@ -89,6 +89,24 @@ def convert_weights_and_inputs(node, **kwargs):
         return [tval_node]
 
 
+def parse_helper(attrs, attrs_name, alt_value=None):
+    """Helper function to parse operator attributes in required format."""
+    tuple_re = re.compile('\([0-9L|,| ]+\)')
+    if attrs is None:
+        return alt_value
+    attrs_str = str(attrs.get(attrs_name))
+    if attrs_str is None:
+        return alt_value
+    attrs_match = tuple_re.search(attrs_str)
+    if attrs_match is not None:
+        if attrs_match.span() == (0, len(attrs_str)):
+            dims = eval(attrs_str)
+            return dims
+        else:
+            raise AttributeError("Malformed %s dimensions: %s" % (attrs_name, str(attrs_str)))
+    return alt_value
+
+
 @mx_op.register("Convolution")
 def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
@@ -107,29 +125,12 @@ def convert_convolution(node, **kwargs):
         bias_node = proc_nodes[kwargs["index_lookup"][inputs[2][0]]].name
 
     attrs = node.get("attrs")
-    tuple_re = re.compile('\([0-9L|,| ]+\)')
 
-    def parse_helper(attrs_name, alt_value=None):
-        """Helper function to parse operator attributes in required format."""
-        if attrs is None:
-            return alt_value
-        attrs_str = str(attrs.get(attrs_name))
-        if attrs_str is None:
-            return alt_value
-        attrs_match = tuple_re.search(attrs_str)
-        if attrs_match is not None:
-            if attrs_match.span() == (0, len(attrs_str)):
-                dims = eval(attrs_str)
-                return dims
-            else:
-                raise AttributeError("Malformed %s dimensions: %s" % (attrs_name, str(attrs_str)))
-        return alt_value
-
-    kernel_dims = list(parse_helper("kernel"))
-    stride_dims = list(parse_helper("stride", [1, 1]))
-    pad_dims = list(parse_helper("pad", [0, 0]))
+    kernel_dims = list(parse_helper(attrs, "kernel"))
+    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
+    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     num_group = int(attrs.get("num_group", 1))
-    dilations = list(parse_helper("dilate", [1, 1]))
+    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
 
     pad_dims = pad_dims + pad_dims
 
@@ -523,6 +524,8 @@ def convert_pooling(node, **kwargs):
     input_node = proc_nodes[input_node_idx]
     name = node["name"]
 
+    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
+    pad_dims = pad_dims + pad_dims
     pool_types = {"max": "MaxPool", "avg": "AveragePool"}
     global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool"}
 
@@ -539,7 +542,7 @@ def convert_pooling(node, **kwargs):
             [input_node.name],  # input
             [name],
             kernel_shape=kernel,
-            pads=[0, 0],
+            pads=pad_dims,
             strides=stride,
             name=name
         )
