@@ -53,9 +53,11 @@ def test_input_name_order():
                                          c_str_array(op_names), ctypes.byref(out)))
 
         new_sym = Symbol(out)
-        print(sym.list_inputs())
-        print(new_sym.list_inputs())
+        #print(sym.list_inputs())
+        #print(new_sym.list_inputs())
         assert new_sym.list_inputs() == sym.list_inputs()
+        print('original outputs: %s' % sym.list_outputs())
+        print('new sym outputs: %s' % new_sym.list_outputs())
 
     def test_network_structure_1():
         data1 = mx.sym.var('data1')
@@ -65,7 +67,28 @@ def test_input_name_order():
         out = mx.sym.Group([conv1, conv2])
         check_input_order(out, ['Convolution'])
 
+    def test_network_structure_2():
+        data1 = mx.sym.var('data1')
+        data2 = mx.sym.var('data2')
+        conv1 = mx.sym.Convolution(data=data1, weight=data2, no_bias=True, kernel=(2, 2), num_filter=1)
+        conv2 = mx.sym.Convolution(data=data2, weight=data1, no_bias=True, kernel=(2, 2), num_filter=1)
+        out = conv1 + conv2
+        check_input_order(out, ['Convolution'])
+        check_input_order(out, ['Convolution', '_Plus', 'elemwise_add', '_plus'])
+
+    def test_network_structure_3():
+        # this tests whether the partitioning algorithm can deal with cycles
+        data = mx.sym.var('data')
+        ret = mx.sym.exp(data)
+        ret1 = mx.sym.cos(ret)
+        ret2 = mx.sym.sin(ret)
+        ret = ret1 + ret2
+        check_input_order(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
+        check_input_order(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
+
     test_network_structure_1()
+    test_network_structure_2()
+    test_network_structure_3()
 
 
 if __name__ == '__main__':
