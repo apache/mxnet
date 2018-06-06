@@ -66,6 +66,10 @@ struct L1NormalizationParam : public dmlc::Parameter<L1NormalizationParam> {
  */
 template<typename xpu, typename DType>
 class L1NormalizationOp : public Operator {
+public:
+  explicit L1NormalizationOp(L1NormalizationParam p) {
+    this->param_ = p;
+  }
 
   virtual void Forward(const OpContext &ctx,
                        const std::vector<TBlob> &in_data,
@@ -178,7 +182,7 @@ class L1NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> temp = ctx.requested[l1_normalization::kTempSpace]
         .get_space_typed<xpu, 2, DType>(mshadow::Shape2(data.shape_[0], data.shape_[2]), s);
       Assign(grad_in, req[l1_normalization::kData],
-        (grad_out / broadcast_with_axis(norm, 0, orig_shape[1]));
+        (grad_out) / broadcast_with_axis(norm, 0, orig_shape[1]));
     } else if (param_.mode == l1_normalization::kSpatial) {
       CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
@@ -195,7 +199,7 @@ class L1NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> temp = ctx.requested[l1_normalization::kTempSpace]
         .get_space_typed<xpu, 2, DType>(mshadow::Shape2(data.shape_[0], data.shape_[1]), s);
       Assign(grad_in, req[l1_normalization::kData],
-        (grad_out / broadcast_with_axis(norm, 1, dshape[2]));
+        (grad_out) / broadcast_with_axis(norm, 1, dshape[2]));
     } else {
       LOG(FATAL) << "Unexpected mode in l1 normalization";
     }
