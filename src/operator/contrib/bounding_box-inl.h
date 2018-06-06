@@ -27,12 +27,12 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
 #include <nnvm/tuple.h>
+#include <thrust/copy.h>
+#include <thrust/execution_policy.h>
 #include <vector>
 #include <utility>
 #include <string>
 #include <algorithm>
-#include <thrust/copy.h>
-#include <thrust/execution_policy.h>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -151,8 +151,10 @@ inline uint32_t BoxNMSNumVisibleOutputs(const NodeAttrs& attrs) {
 }
 
 template<typename DType>
-int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores, mshadow::Tensor<cpu, 1, DType> out_sorted_index,
-                 mshadow::Tensor<cpu, 1, DType> scores, mshadow::Tensor<cpu, 1, DType> sorted_index,
+int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
+                 mshadow::Tensor<cpu, 1, DType> out_sorted_index,
+                 mshadow::Tensor<cpu, 1, DType> scores,
+                 mshadow::Tensor<cpu, 1, DType> sorted_index,
                  float valid_thresh) {
   index_t j = 0;
   for (index_t i = 0; i < scores.size(0); i++) {
@@ -168,18 +170,19 @@ int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores, mshadow::Tensor<cpu,
 #ifdef __CUDACC__
 
 template<typename DType>
-struct valid_score
-{
+struct valid_score {
   DType thresh;
-  valid_score(DType _thresh) : thresh(_thresh) {}
+  explicit valid_score(DType _thresh) : thresh(_thresh) {}
   __host__ __device__ bool operator()(const DType x) {
     return x > thresh;
   }
 };
 
 template<typename DType>
-int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores, mshadow::Tensor<gpu, 1, DType> out_sorted_index,
-                 mshadow::Tensor<gpu, 1, DType> scores, mshadow::Tensor<gpu, 1, DType> sorted_index,
+int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores,
+                 mshadow::Tensor<gpu, 1, DType> out_sorted_index,
+                 mshadow::Tensor<gpu, 1, DType> scores,
+                 mshadow::Tensor<gpu, 1, DType> sorted_index,
                  float valid_thresh) {
   valid_score<DType> pred(static_cast<DType>(valid_thresh));
   DType * end_scores = thrust::copy_if(thrust::device, scores.dptr_, scores.dptr_ + scores.MSize(),
@@ -192,13 +195,13 @@ int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores, mshadow::Tensor<gpu,
 #endif  // __CUDACC__
 
 namespace mshadow_op {
-  struct less_than : public mxnet_op::tunable {
-    // a is x, b is sigma
-    template<typename DType>
-    MSHADOW_XINLINE static DType Map(DType a, DType b) {
-      return static_cast<DType>(a < b);
-    }
-  };  // struct equal_to
+struct less_than : public mxnet_op::tunable {
+  // a is x, b is sigma
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return static_cast<DType>(a < b);
+  }
+};  // struct equal_to
 }   // namespace mshadow_op
 
 struct corner_to_center {
@@ -484,7 +487,8 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
 
     // filter scores but keep original sorted_index value
     // move valid score and index to the front, return valid size
-    int num_valid = mxnet::op::FilterScores(scores, sorted_index, all_scores, all_sorted_index, param.valid_thresh);
+    int num_valid = mxnet::op::FilterScores(scores, sorted_index, all_scores, all_sorted_index,
+                                            param.valid_thresh);
     // if everything is filtered, output -1
     if (num_valid == 0) {
       record = -1;
@@ -510,7 +514,8 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // calculate batch_start: accumulated sum to denote 1st sorted_index for a given batch_index
     valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
     for (int b = 0; b < num_batch + 1; b++) {
-      slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
+      slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
+        F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
     }
 
     // pre-compute areas of candidates
