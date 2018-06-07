@@ -17,7 +17,7 @@ mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
-mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
+mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
 mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
@@ -38,6 +38,7 @@ mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
+message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
@@ -363,16 +364,16 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+
 # ---[ LAPack
-if(USE_LAPACK AND NOT MSVC)
+if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
-  list(APPEND mxnet_LINKER_LIBS lapack)
-else(USE_LAPACK)
-  # Workaround for Windows until using new Jenkinsfile.
-  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open" OR USE_BLAS STREQUAL "Open" OR USE_BLAS STREQUAL "open")
-    add_definitions(-DMXNET_USE_LAPACK=1)
+  if (NOT MSVC)
+    list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
+
+message("USE LAPACK ${USE_LAPACK}")
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
