@@ -1078,11 +1078,22 @@ class Symbol(SymbolBase):
             keys = c_array(ctypes.c_char_p, [])
             for i, s in enumerate(args):
                 if s is not None:
-                    if not isinstance(s, tuple):
-                        raise TypeError("Arguments need to be shapes (tuple), "
-                                        "but argument %d is %s." % (i, type(s)))
-                    sdata.extend(s)
-                indptr.append(len(sdata))
+                    if isinstance(s, dict):
+                        str_keys = []
+                        for k, v in s.items():
+                            if not isinstance(v, tuple):
+                                raise TypeError("Arguments need to be shapes (tuple), "
+                                                "but '%s' is %s." % (k, type(v)))
+                            str_keys.append(k)
+                            sdata.extend(v)
+                            indptr.append(len(sdata))
+                        keys = c_str_array(str_keys)
+                    else:
+                        if not isinstance(s, tuple):
+                            raise TypeError("Arguments need to be shapes (tuple), "
+                                            "but argument %d is %s." % (i, type(s)))
+                        sdata.extend(s)
+                        indptr.append(len(sdata))
         else:
             str_keys = []
             for k, v in kwargs.items():
