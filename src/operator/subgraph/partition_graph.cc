@@ -111,47 +111,11 @@ void ResetSubgraphNodes(std::vector<SimpleNode*>* subgraph_nodes) {
 /*
  * This function traverses the nodes in a computation graph from a starting
  * node following the input links and output links, and marks all nodes that
- * can be accessed from the starting node.
+ * can be accessed from the starting node. Before the function returns,
+ * it will conduct checking whether there is a loop between the potential subgraph
+ * and the outside nodes. If so, add the node that should break the loop
+ * in excluded_nodes and return false. Otherwise, return true.
  */
-#if 0
-void LabelSubgraph(const Graph&g,
-                   SubgraphSelectorPtr select_func,
-                   const int label,
-                   const size_t snid,  // simple node id, this is a seed
-                   const std::vector<SimpleNodePtr>& simple_nodes,
-                   std::vector<SimpleNode*>* subgraph_nodes) {
-  const auto& indexed_graph = g.indexed_graph();
-  std::queue<SimpleNode*> node_queue;
-  node_queue.push(simple_nodes[snid].get());
-  while (!node_queue.empty()) {
-    SimpleNode* cur_node = node_queue.front();
-    node_queue.pop();
-    cur_node->label = label;
-    subgraph_nodes->push_back(cur_node);
-    // get qualified adjacent input nodes
-    for (auto& e : cur_node->node->inputs) {
-      if (select_func->SelectInput(*cur_node->node, *e.node)) {
-        const auto nid = indexed_graph.node_id(e.node.get());
-        CHECK_LT(nid, simple_nodes.size());
-        // this node has not been visited yet
-        if (simple_nodes[nid]->label == -1)
-          node_queue.push(simple_nodes[nid].get());
-      }
-    }
-    // get qualified output nodes
-    for (auto it = cur_node->outputs.begin(); it != cur_node->outputs.end(); ++it) {
-      if (select_func->SelectOutput(*cur_node->node, *it->first)) {
-        const auto nid = indexed_graph.node_id(it->first);
-        CHECK_LT(nid, simple_nodes.size());
-        // this node has not been visited yet
-        if (simple_nodes[nid]->label == -1)
-          node_queue.push(simple_nodes[nid].get());
-      }
-    }
-  }
-}
-#endif
-
 bool LabelSubgraph(const Graph& g,
                    SubgraphSelectorPtr select_func,
                    const int label,

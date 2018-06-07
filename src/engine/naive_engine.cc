@@ -165,10 +165,6 @@ class NaiveEngine final : public Engine {
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
-    // increment mutable_vars version
-    for (auto var : opr->mutable_vars) {
-      ++var->version_;
-    }
     if (profiling) {
       opr->opr_profile->stop();
     }
