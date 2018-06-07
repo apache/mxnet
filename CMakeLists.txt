@@ -653,14 +653,15 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   if(MSVC)
     target_link_libraries(im2rec mxnet)
   else()
-    target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
+    target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE})
+  endif()
+  target_link_libraries(im2rec
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
     ${nnvm_LINKER_LIBS}
     ${pslite_LINKER_LIBS}
     )
-  endif()
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
     is required for im2rec, im2rec will not be available")
