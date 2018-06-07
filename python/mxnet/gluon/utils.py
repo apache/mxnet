@@ -228,7 +228,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
                 break
             except Exception as e:
                 retries -= 1
-                if (retries <= 0):
+                if retries <= 0:
                     raise e
                 else:
                     print("download failed, retrying, {} attempt{} left"

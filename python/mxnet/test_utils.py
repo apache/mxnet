@@ -1429,7 +1429,7 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                 break
         except Exception as e:
             retries -= 1
-            if (retries <= 0):
+            if retries <= 0:
                 raise e
             else:
                 print("download failed, retrying, {} attempt{} left"
