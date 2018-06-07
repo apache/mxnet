@@ -1068,7 +1068,7 @@ class Symbol(SymbolBase):
 
     def _infer_shape_impl(self, partial, *args, **kwargs):
         """The actual implementation for calling shape inference API."""
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-nested-blocks
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
                     shapes either by positional or kwargs way.')
