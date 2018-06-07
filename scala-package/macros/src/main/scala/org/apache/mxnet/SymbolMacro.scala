@@ -104,6 +104,7 @@ private[mxnet] object SymbolImplMacros {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      impl += s"var args = Seq[org.apache.mxnet.Symbol]()"
       symbolfunction.listOfArgs.foreach({ symbolarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
@@ -118,17 +119,28 @@ private[mxnet] object SymbolImplMacros {
         else {
           argDef += s"${currArgName} : ${symbolarg.argType}"
         }
-        var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
-        if (symbolarg.isOptional) {
-          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        // Symbol arg implementation
+        val returnType = "org.apache.mxnet.Symbol"
+        var base = ""
+        if (symbolarg.argType.equals(s"Array[$returnType]")) {
+          base = s"args = $currArgName.toSeq"
+          if (symbolarg.isOptional) {
+            base = s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
+          }
+        } else {
+          base = "map(\"" + symbolarg.argName + "\") = " + currArgName
+          if (symbolarg.isOptional) {
+            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+          }
         }
+
         impl += base
       })
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
       // scalastyle:off
       // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
-      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
+      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, args, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.Symbol"
