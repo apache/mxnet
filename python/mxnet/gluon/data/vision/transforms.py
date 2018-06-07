@@ -280,8 +280,8 @@ class Resize(Block):
     def forward(self, x):
         if isinstance(self._size, numeric_types):
             if not self._keep:
-                wsize = size
-                hsize = size
+                wsize = self._size
+                hsize = self._size
             else:
                 h, w, _ = x.shape
                 if h > w:
