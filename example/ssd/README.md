@@ -17,7 +17,8 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
-* Added live camera capture and detection display (run with --camera flag)
+* Added live camera capture and detection display (run with --camera flag). Example:
+    `./demo.py --camera --cpu --frame-resize 0.5`
 * Added multiple trained models.
 * Added a much simpler way to compose network from mainstream classification networks (resnet, inception...) and [Guide](symbol/README.md).
 * Update to the latest version according to caffe version, with 5% mAP increase.

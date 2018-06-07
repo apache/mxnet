@@ -221,63 +221,69 @@ def main() -> int:
                         help="go in a shell inside the container",
                         action='store_true')
 
-    parser.add_argument("--docker-registry",
-                        help="Dockerhub registry name to retrieve cache from",
+    parser.add_argument("-d", "--docker-registry",
+                        help="Dockerhub registry name to retrieve cache from. Default is 'mxnetci'",
                         default='mxnetci',
                         type=str)
+
+    parser.add_argument("-c", "--cache", action="store_true",
+                        help="Enable docker registry cache")
 
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
 
     args = parser.parse_args()
-    docker_registry = args.docker_registry
+    def use_cache():
+        return args.cache or 'JOB_NAME' in os.environ # we are in Jenkins
+
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
     shared_memory_size = args.shared_memory_size
 
-    print("into container: {}".format(args.into_container))
     if args.list:
         list_platforms()
     elif args.platform:
         platform = args.platform
-        tag = get_docker_tag(platform=platform, registry=docker_registry)
-        load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform, docker_binary, registry=docker_registry)
+        tag = get_docker_tag(platform=platform, registry=args.docker_registry)
+        if use_cache():
+            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+        build_docker(platform, docker_binary, registry=args.docker_registry)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=command, docker_registry=docker_registry)
+                          command=command, docker_registry=args.docker_registry)
         elif args.print_docker_run:
             print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                                command=[], dry_run=True, docker_registry=docker_registry))
+                                command=[], dry_run=True, docker_registry=args.docker_registry))
         elif args.into_container:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=[], dry_run=False, into_container=True, docker_registry=docker_registry)
+                          command=[], dry_run=False, into_container=True, docker_registry=args.docker_registry)
         else:
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry)
+                          command=cmd, docker_registry=args.docker_registry)
 
     elif args.all:
         platforms = get_platforms()
         logging.info("Building for all architectures: {}".format(platforms))
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
-            tag = get_docker_tag(platform=platform, registry=docker_registry)
-            load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary)
+            tag = get_docker_tag(platform=platform, registry=args.docker_registry)
+            if use_cache():
+                load_docker_cache(tag=tag, docker_registry=args.docker_registry)
+            build_docker(platform, docker_binary, args.docker_registry)
             if args.build_only:
                 continue
             build_platform = "build_{}".format(platform)
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             shutil.rmtree(buildir(), ignore_errors=True)
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=docker_registry)
+                          command=cmd, docker_registry=args.docker_registry)
             plat_buildir = os.path.join(get_mxnet_root(), build_platform)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
