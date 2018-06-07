@@ -1,3 +1,6 @@
+//$('.burger-link').on('click', function(e) { e.stopPropagation() });
+//$('.burger-link').on('touchstart', function(e) { e.stopPropagation() });
+
 $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
