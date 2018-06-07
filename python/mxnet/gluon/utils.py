@@ -224,16 +224,13 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
                                       'The repo may be outdated or download may be incomplete. ' \
                                       'If the "repo_url" is overridden, consider switching to ' \
                                       'the default repo.'.format(fname))
+                break
             except Exception as e:
                 retries -= 1
                 if (retries <= 0):
                     raise e
                 else:
-                    print("Download failed, {} more attempt{}".format(retries, 's' if retries > 1 else ''))
-           
-                
-                    
-           
+                    print("download failed, {} more attempt{}".format(retries, 's' if retries > 1 else ''))
 
     return fname
 
