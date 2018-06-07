@@ -445,6 +445,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('armv7', 'build_armv7', false)
+            archiveArtifacts artifacts: 'build/*.whl,build/libmxnet.*'
           }
         }
       }
