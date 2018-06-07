@@ -230,8 +230,9 @@ class FeedForward private(
       val padded = batch.pad
       val realSize = batchSize - padded
       for ((list, nd) <- outputs zip predExec.outputs) {
-        list += nd.slice(0, realSize).copy()
+        list += nd.slice(0, realSize)
       }
+      batch.dispose()
     }
     // TODO(Yizhi): we can use Symbol.concat to do the same thing. Can it be more efficient?
     val results = outputs.map(NDArray.concatenate(_))
