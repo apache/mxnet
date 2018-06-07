@@ -77,38 +77,66 @@ Add
 #include <Accelerate/Accelerate.h>
 ```
 
-Comment all occurrences of
+Add
+
+```
+#include <execinfo.h>
+#include <shared_mutex>
+```
+
+Comment all occurrences of the two headers
+
 ```
 #include <emmintrin.h>
+#include <x86intrin.h>
 ```
 
 Change
+
 ```
-#if defined(__ANDROID__) || defined(__MXNET_JS__)
-#define MSHADOW_USE_SSE         0
+#ifndef MSHADOW_USE_SSE
+  #define MSHADOW_USE_SSE 1
 #endif
 ```
 
 To
+
 ```
-#define MSHADOW_USE_SSE         0
+#ifndef MSHADOW_USE_SSE
+  #define MSHADOW_USE_SSE 0
+#endif
 ```
 
 Change
+
 ```
-#ifdef __GNUC__
-  #define MX_TREAD_LOCAL __thread
-#elif __STDC_VERSION__ >= 201112L
-  #define  MX_TREAD_LOCAL _Thread_local
-#elif defined(_MSC_VER)
-  #define MX_TREAD_LOCAL __declspec(thread)
+#if defined(_MSC_VER) || defined(__CUDACC__)
+  #define MSHADOW_USE_F16C 0
+#elif defined(__clang__) && \
+        ((__clang_major__ < 8) || ((__clang_major__ == 8) && (__clang_minor__ < 1)))
+  #define MSHADOW_USE_F16C 0
+#else
+  #define MSHADOW_USE_F16C 1
 #endif
 ```
 
 To
+
 ```
-#define MX_TREAD_LOCAL __declspec(thread)
+#define MSHADOW_USE_F16C 0
 ```
+
+Comment all codes between
+
+```
+#if MSHADOW_USE_MKL == 0
+//All codes should be commented
+#endif  // MSHADOW_USE_MKL == 0
+```
+
+Copy mxnet_predict-all.cc and ../include/mxnet/c_predict_api.h to your Xcode project.
+
+In your Xcode project, select *Build Phases*, add Accelerate.framework to *Link Binary with Libraries*.
 
 **To build arm32 compatible version (e.g. iPhone 5):**
 
