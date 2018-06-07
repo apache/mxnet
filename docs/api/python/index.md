@@ -1,5 +1,6 @@
 # MXNet - Python API
 
+<script type="text/javascript" src='../../_static/js/versions_drop_down.js'></script>
 
   <div class="dropdown">
     <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.0
