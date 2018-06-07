@@ -42,7 +42,7 @@ endif
 CORE_INC = $(wildcard $(DMLC_CORE)/include/*/*.h)
 
 ifndef NNVM_PATH
-	NNVM_PATH = $(TPARTYDIR)/nnvm
+	NNVM_PATH = $(TPARTYDIR)/tvm/nnvm
 endif
 
 ifndef DLPACK_PATH
@@ -92,7 +92,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(NNVM_PATH)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -551,7 +551,7 @@ rpkg:
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
-	cp -rf 3rdparty/nnvm/include/* R-package/inst/include
+	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	echo "import(Rcpp)" > R-package/NAMESPACE

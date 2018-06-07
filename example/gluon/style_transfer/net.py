@@ -152,10 +152,6 @@ class UpsampleConvLayer(Block):
             stride, upsample=None):
         super(UpsampleConvLayer, self).__init__()
         self.upsample = upsample
-        """
-        if upsample:
-            self.upsample_layer = torch.nn.UpsamplingNearest2d(scale_factor=upsample)
-        """
         self.reflection_padding = int(np.floor(kernel_size / 2))
         self.conv2d = nn.Conv2D(in_channels=in_channels, 
                                 channels=out_channels, 
@@ -165,10 +161,6 @@ class UpsampleConvLayer(Block):
     def forward(self, x):
         if self.upsample:
             x = F.UpSampling(x, scale=self.upsample, sample_type='nearest')
-        """
-        if self.reflection_padding != 0:
-            x = self.reflection_pad(x)
-        """
         out = self.conv2d(x)
         return out
 
@@ -222,16 +214,16 @@ class Net(Block):
             self.model.add(ConvLayer(16*expansion, output_nc, kernel_size=7, stride=1))
 
 
-    def setTarget(self, Xs):
+    def set_target(self, Xs):
         F = self.model1(Xs)
         G = self.gram(F)
-        self.ins.setTarget(G)
+        self.ins.set_target(G)
 
     def forward(self, input):
         return self.model(input)
 
 
-class Inspiration(HybridBlock):
+class Inspiration(Block):
     """ Inspiration Layer (from MSG-Net paper)
     tuning the featuremap with target Gram Matrix
     ref https://arxiv.org/abs/1703.06953
@@ -243,17 +235,14 @@ class Inspiration(HybridBlock):
         self.weight = self.params.get('weight', shape=(1,C,C),
                                       init=mx.initializer.Uniform(),
                                       allow_deferred_init=True)
-        self.gram = self.params.get('gram', shape=(B,C,C),
-                                    init=mx.initializer.Uniform(),
-                                    allow_deferred_init=True,
-                                    lr_mult=0)
+        self.gram = F.random.uniform(shape=(B, C, C))
 
-    def setTarget(self, target):
-        self.gram.set_data(target)
+    def set_target(self, target):
+        self.gram = target
 
     def forward(self, X):
         # input X is a 3D feature map
-        self.P = F.batch_dot(F.broadcast_to(self.weight.data(), shape=(self.gram.shape)), self.gram.data())
+        self.P = F.batch_dot(F.broadcast_to(self.weight.data(), shape=(self.gram.shape)), self.gram)
         return F.batch_dot(F.SwapAxis(self.P,1,2).broadcast_to((X.shape[0], self.C, self.C)), X.reshape((0,0,X.shape[2]*X.shape[3]))).reshape(X.shape)
 
     def __repr__(self):
@@ -305,26 +294,3 @@ class Vgg16(Block):
         relu4_3 = h
 
         return [relu1_2, relu2_2, relu3_3, relu4_3]
-
-
-def test_InstanceNorm():
-    import torch
-    from torch import nn as nn2
-    from torch.autograd import Variable
-    tx = Variable(torch.Tensor(1, 2, 200, 300).uniform_(0,1))
-    tlayer = nn2.InstanceNorm2d(2)
-    ty = tlayer(tx)
-    
-    mlayer = InstanceNorm(2)
-    ctx = mx.cpu(0)
-    mlayer.initialize(ctx=ctx)
-    mmx = (mx.nd.array(tx.data.numpy())).as_in_context(ctx)
-    my = mlayer(mmx)
-    print('tx',tx)
-    print('mmx',mmx)
-    print('ty',ty)
-    print('my',my)
-
-if __name__ == "__main__":
-    test_InstanceNorm()
-

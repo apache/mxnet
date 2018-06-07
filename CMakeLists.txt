@@ -17,7 +17,7 @@ mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
-mxnet_option(USE_LAPACK           "Build with lapack support" ON IF NOT MSVC)
+mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
 mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
@@ -38,6 +38,7 @@ mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 
+message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
   if(
@@ -193,7 +194,7 @@ if(USE_MKLDNN)
   set(WITH_TEST OFF)
   set(WITH_EXAMPLE OFF)
   add_subdirectory(3rdparty/mkldnn)
-  
+
   include_directories(3rdparty/mkldnn/include)
   add_definitions(-DUSE_MKL=1)
   add_definitions(-DCUB_MKL=1)
@@ -261,8 +262,8 @@ endforeach()
 include_directories("include")
 include_directories("3rdparty/mshadow")
 include_directories("3rdparty/cub")
-include_directories("3rdparty/nnvm/include")
-include_directories("3rdparty/nnvm/tvm/include")
+include_directories("3rdparty/tvm/nnvm/include")
+include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
 
@@ -363,16 +364,16 @@ elseif(UNIX)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
+
 # ---[ LAPack
-if(USE_LAPACK AND NOT MSVC)
+if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
-  list(APPEND mxnet_LINKER_LIBS lapack)
-else(USE_LAPACK)
-  # Workaround for Windows until using new Jenkinsfile.
-  if(BLAS STREQUAL "Open" OR BLAS STREQUAL "open" OR USE_BLAS STREQUAL "Open" OR USE_BLAS STREQUAL "open")
-    add_definitions(-DMXNET_USE_LAPACK=1)
+  if (NOT MSVC)
+    list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
+
+message("USE LAPACK ${USE_LAPACK}")
 
 # ---[ jemalloc
 if(USE_JEMALLOC)
@@ -418,13 +419,13 @@ FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
-  3rdparty/nnvm/src/c_api/*.cc
-  3rdparty/nnvm/src/core/*.cc
-  3rdparty/nnvm/src/pass/*.cc
-  3rdparty/nnvm/src/c_api/*.h
-  3rdparty/nnvm/src/core/*.h
-  3rdparty/nnvm/src/pass/*.h
-  3rdparty/nnvm/include/*.h)
+  3rdparty/tvm/nnvm/src/c_api/*.cc
+  3rdparty/tvm/nnvm/src/core/*.cc
+  3rdparty/tvm/nnvm/src/pass/*.cc
+  3rdparty/tvm/nnvm/src/c_api/*.h
+  3rdparty/tvm/nnvm/src/core/*.h
+  3rdparty/tvm/nnvm/src/pass/*.h
+  3rdparty/tvm/nnvm/include/*.h)
 list(APPEND SOURCE ${NNVMSOURCE})
 
 # add mshadow file
@@ -434,8 +435,8 @@ list(APPEND SOURCE ${MSHADOWSOURCE})
 list(APPEND CUDA ${MSHADOW_CUDASOURCE})
 
 # add source group
-FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/nnvm/*.cc" "plugin/*.cc")
-FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
+FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
+FILE(GLOB_RECURSE GROUP_Include "src/*.h" "3rdparty/tvm/nnvm/*.h" "3rdparty/mshadow/mshadow/*.h" "plugin/*.h")
 FILE(GLOB_RECURSE GROUP_CUDA "src/*.cu" "src/*.cuh" "3rdparty/mshadow/mshadow/*.cuh" "plugin/*.cu"
   "plugin/*.cuh" "3rdparty/cub/cub/*.cuh")
 assign_source_group("Source" ${GROUP_SOURCE})
@@ -574,7 +575,7 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/nnvm/CMakeLists.txt")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/CMakeLists.txt")
   set(nnvm_LINKER_LIBS nnvm)
   list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
 endif()
@@ -593,7 +594,7 @@ else()
   set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /OPT:REF /OPT:ICF")
   set(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL} /OPT:REF /OPT:ICF")
   set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /OPT:REF /OPT:ICF")
-  
+
 endif()
 
 set(MXNET_INSTALL_TARGETS mxnet)
