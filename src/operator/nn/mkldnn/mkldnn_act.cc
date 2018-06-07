@@ -167,15 +167,6 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     in_buffer = in_data.Reorder2Default();
 
   auto input_mem = in_buffer.GetMKLDNNData();
-
-  if (req == kAddTo) {
-    auto out_mem = out_data.GetMKLDNNData();
-    auto input_mem = in_buffer.GetMKLDNNData(out_mem->get_primitive_desc());
-    if (input_mem == nullptr) {
-      input_mem = in_buffer.GetMKLDNNDataReorder(out_mem->get_primitive_desc());
-    }
-  }
-
   MKLDNNActForward &fwd = GetActForward(param, ctx, in_buffer, *input_mem);
   auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_primitive_desc(), req, &in_buffer);
   fwd.SetNewMem(*input_mem, *out_mem_t.second);
