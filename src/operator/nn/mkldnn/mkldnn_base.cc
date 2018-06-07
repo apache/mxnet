@@ -144,8 +144,9 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
 
     auto mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
     if (mem == nullptr) {
-      auto target_mem = arr.GetMKLDNNData();
-      MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *target_mem));
+      auto output_mem = arr.GetMKLDNNData();
+      mkldnn::memory *target_memory = TmpMemMgr::Get()->Alloc(output_mem->get_primitive_desc());
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *target_memory));
     }
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
