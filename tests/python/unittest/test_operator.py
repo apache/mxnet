@@ -6185,7 +6185,7 @@ def test_op_roi_align():
         rois.attach_grad()
         with mx.autograd.record():
             output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
-                    spatial_scale=spatial_scale)
+                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
         dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size, spatial_scale, sampling_ratio, dy.asnumpy())
@@ -6195,7 +6195,7 @@ def test_op_roi_align():
         assert np.allclose(rois.grad.asnumpy(), drois)
 
     # modified from test_roipooling()
-    def test_roi_align_autograd(sampling_ratio=-1):
+    def test_roi_align_autograd(sampling_ratio=0):
         ctx=default_context()
         data = mx.symbol.Variable(name='data')
         rois = mx.symbol.Variable(name='rois')
