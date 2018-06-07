@@ -344,6 +344,10 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
+build_ubuntu_gpu() {
+    build_ubuntu_gpu_cuda91_cudnn7
+}
+
 build_ubuntu_gpu_mkldnn() {
     set -ex
     build_ccache_wrappers

@@ -1304,7 +1304,6 @@ def test_norm(ctx=default_context()):
             assert arr1.shape == arr2.shape
             mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
 
-
 if __name__ == '__main__':
     import nose
     nose.runmodule()
