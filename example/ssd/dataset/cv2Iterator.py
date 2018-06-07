@@ -26,10 +26,19 @@ class CameraIterator():
     """
     def __init__(self, capture=cv2.VideoCapture(0), frame_resize=None):
         self._capture = capture
-        self._frame_resize = frame_resize
+        self._frame_resize = None
         if frame_resize:
-            assert isinstance(frame_resize, tuple) and (len(tuple) == 2), "frame_resize should be a tuple of (x,y)"
-            self._frame_shape = (1, 3, frame_resize[0], frame_resize[1])
+            if isinstance(frame_resize, (tuple, list)) and (len(frame_resize) == 2):
+                self._frame_resize = tuple(map(int, frame_resize))
+                self._frame_shape = (1, 3, self._frame_resize[0], self._frame_resize[1])
+            elif isinstance(frame_resize, float):
+                width = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH)*frame_resize)
+                height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT)*frame_resize)
+                self._frame_shape = (1, 3, width, height)
+                self._frame_resize = (width, height)
+            else:
+                assert False, "frame_resize should be a tuple of (x,y) pixels "
+                "or a float setting the scaling factor"
         else:
             self._frame_shape = (1, 3,
                 int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
