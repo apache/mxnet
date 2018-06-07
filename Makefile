@@ -602,19 +602,19 @@ scalarelease-dryrun:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dmxnetdir=\""$(ROOTDIR)\""\ -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+		-Darguments=""-Dcompile\.backend=true -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scalarelease-prepare:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn release:clean release:prepare -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dmxnetdir=\""$(ROOTDIR)\""\ -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+		-Darguments=""-Dcompile\.backend=true -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scalarelease-perform:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn release:perform -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dmxnetdir=\""$(ROOTDIR)\""\ -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+		-Darguments=""-Dcompile\.backend=true -Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \

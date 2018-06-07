@@ -23,13 +23,14 @@
 set -e
 echo "Compiling MXNet Backend, Hang tight!....."
 
-if [[ ($# -ne 2) || ( $1 == "--help") ||  $1 == "-h" ]]; then
-  echo "Usage: [-h|--help] <osx-x86_64-cpu/linux-x86_64-cpu/linux-x86_64-gpu> <project.basedir>" 1>&2
+if [[ ($# -ne 3) || ( $1 == "--help") ||  $1 == "-h" ]]; then
+  echo "Usage: [-h|--help] <osx-x86_64-cpu/linux-x86_64-cpu/linux-x86_64-gpu> <project.basedir> <compile.backend>" 1>&2
   exit 1
 fi
 
 PLATFORM=$1
 MXNETDIR=$2
+COMPILE_BACKEND=$3
 
 # below routine shamelessly copied from
 # https://github.com/apache/incubator-mxnet/blob/master/setup-utils/install-mxnet-osx-python.sh
@@ -46,6 +47,11 @@ chkret() {
 		exit 1
 	fi
 } # chkret()
+
+if [[$COMPILE_BACKEND == "false"]];
+then
+    exit 0
+fi
 
 UNAME=`uname -s`
 chkret pushd $MXNETDIR
