@@ -325,6 +325,7 @@ class Block(object):
         filename : str
             Path to file.
         """
+        import pdb;pdb.set_trace()
         warnings.warn("save_params is deprecated. Please use save_parameters.")
         self.collect_params().save(filename, strip_prefix=self.prefix)
 
@@ -385,6 +386,7 @@ class Block(object):
             present in this Block.
         """
         warnings.warn("load_params is deprecated. Please use load_parameters.")
+        import pdb;pdb.set_trace()
         self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
                                    self.prefix)
 
@@ -802,7 +804,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0):
         """Export HybridBlock to json format that can be loaded by
-        `SymbolBlock.import_`, `mxnet.mod.Module` or the C++ interface.
+        `SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -917,7 +919,7 @@ class SymbolBlock(HybridBlock):
     >>> print(feat_model(x))
     """
     @staticmethod
-    def import_(symbol_file, input_names, param_file=None, ctx=None):
+    def imports(symbol_file, input_names, param_file=None, ctx=None):
         """Import model previously saved by `HybridBlock.export` or
         `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
 
@@ -946,7 +948,7 @@ class SymbolBlock(HybridBlock):
         >>> out1 = net1(x)
         >>> net1.export('net1', epoch=1)
         >>>
-        >>> net2 = gluon.SymbolBlock.import_(
+        >>> net2 = gluon.SymbolBlock.imports(
         ...     'net1-symbol.json', ['data'], 'net1-0001.params')
         >>> out2 = net2(x)
         """

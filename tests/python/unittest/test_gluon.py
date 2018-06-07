@@ -805,7 +805,7 @@ def test_import():
 
     net1.export('net1', epoch=1)
 
-    net2 = gluon.SymbolBlock.import_(
+    net2 = gluon.SymbolBlock.imports(
         'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
     out2 = net2(data)
 
@@ -1266,6 +1266,22 @@ def test_summary():
 
     net.hybridize()
     assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
+
+
+@with_seed()
+def test_legacy_save_params():
+    net = gluon.nn.HybridSequential(prefix='')
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(10, (3, 3)))
+        net.add(gluon.nn.Dense(50))
+    net.initialize()
+    net(mx.nd.ones((1,1,50,50)))
+    a = net(mx.sym.var('data'))
+    a.save('test.json')
+    net.save_params('test.params')
+    model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
+                                     inputs=mx.sym.var('data'))
+    model.load_params('test.params', ctx=mx.cpu())
 
 
 if __name__ == '__main__':
