@@ -319,6 +319,10 @@ enum OutDataOp {
 
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 
+
+void ReorderMKLDNNMem(const mkldnn::memory &src_mem,
+                      const mkldnn::memory &dst_mem);
+
 /*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.
  * The difference is that the first function can create MKLDNN memory with
