@@ -142,16 +142,16 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     const_cast<NDArray &>(arr).CopyFrom(*res.second);
   } else if (res.first == AddBack) {
 
+    auto res_memory = res.second;
     auto mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
     if (mem == nullptr) {
-      auto output_mem = arr.GetMKLDNNData();
-      mkldnn::memory *target_memory = TmpMemMgr::Get()->Alloc(output_mem->get_primitive_desc());
-      MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *target_memory));
+      res_memory = TmpMemMgr::Get()->Alloc(arr.GetMKLDNNData()->get_primitive_desc());
+      MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*res.second, *res_memory));
     }
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
         res.second->get_primitive_desc());
-    op::MKLDNNSum(*res.second, *mem, *sum_res);
+    op::MKLDNNSum(*res_memory, *mem, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
