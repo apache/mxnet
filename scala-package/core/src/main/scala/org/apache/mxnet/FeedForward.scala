@@ -230,7 +230,9 @@ class FeedForward private(
       val padded = batch.pad
       val realSize = batchSize - padded
       for ((list, nd) <- outputs zip predExec.outputs) {
-        list += nd.slice(0, realSize)
+        val ndSliced = nd.slice(0, realSize)
+        list += ndSliced.copy()
+        ndSliced.dispose()
       }
       batch.dispose()
     }
