@@ -1089,12 +1089,14 @@ class Symbol(SymbolBase):
                                                 % (type(k)))
                             str_keys.append(k)
                             sdata.extend(v)
+                            indptr.append(len(sdata))
                         keys = c_str_array(str_keys)
                     else:
                         if not isinstance(s, tuple):
                             raise TypeError("Arguments need to be shapes (tuple), "
                                             "but argument %d is %s." % (i, type(s)))
                         sdata.extend(s)
+                        indptr.append(len(sdata))
         else:
             str_keys = []
             for k, v in kwargs.items():
@@ -1103,8 +1105,9 @@ class Symbol(SymbolBase):
                                     "but '%s' is %s." % (k, type(v)))
                 str_keys.append(k)
                 sdata.extend(v)
+                indptr.append(len(sdata))
             keys = c_str_array(str_keys)
-        indptr.append(len(sdata))
+
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
         arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
