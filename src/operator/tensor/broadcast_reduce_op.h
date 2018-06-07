@@ -990,18 +990,24 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  CHECK_EQ(param.ord, 2) << "norm only support ord=2";
+  CHECK_LE(param.ord, 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
-
   TShape small;
   if (param.keepdims) {
     small = outputs[0].shape_;
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
+  if (param.ord == 1) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
       ctx, inputs, req, outputs, small);
-  SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+    SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+  }
+  else if (param.ord == 2) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
+      ctx, inputs, req, outputs, small);
+    SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+  }
 }
 
 template<typename xpu>
