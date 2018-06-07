@@ -24,6 +24,7 @@
   * \author Joshua Zhang
   */
 
+#include "./bounding_box-inl.cuh"
 #include "./bounding_box-inl.h"
 #include "../elemwise_op_common.h"
 
