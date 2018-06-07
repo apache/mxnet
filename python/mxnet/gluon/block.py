@@ -307,7 +307,7 @@ class Block(object):
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret
 
-    def save_params(self, filename):
+    def save_parameters(self, filename):
         """Save parameters to file.
 
         filename : str
@@ -317,7 +317,18 @@ class Block(object):
         arg_dict = {key : val._reduce() for key, val in params.items()}
         ndarray.save(filename, arg_dict)
 
-    def load_params(self, filename, ctx=None, allow_missing=False,
+    def save_params(self, filename):
+        """[Deprecated] Please use save_parameters.
+
+        Save parameters to file.
+
+        filename : str
+            Path to file.
+        """
+        warnings.warn("save_params is deprecated. Please use save_parameters.")
+        self.collect_params().save(filename, strip_prefix=self.prefix)
+
+    def load_parameters(self, filename, ctx=None, allow_missing=False,
                     ignore_extra=False):
         """Load parameters from file.
 
@@ -356,6 +367,26 @@ class Block(object):
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, filename, _brief_print_list(self._params.keys())))
             params[name]._load_init(loaded[name], ctx)
+
+    def load_params(self, filename, ctx=None, allow_missing=False,
+                    ignore_extra=False):
+        """[Deprecated] Please use load_parameters.
+
+        Load parameters from file.
+
+        filename : str
+            Path to parameter file.
+        ctx : Context or list of Context, default cpu()
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represents in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this Block.
+        """
+        warnings.warn("load_params is deprecated. Please use load_parameters.")
+        self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
+                                   self.prefix)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
