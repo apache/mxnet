@@ -188,7 +188,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         but doesn't match.
     retries : integer, default 5
         The number of times to attempt the download in case of failure or non 200 return codes
-        
+
     Returns
     -------
     str
@@ -208,7 +208,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        while (retries+1 > 0):
+        while retries+1 > 0:
+            # Disable pyling too broad Exception
+            # pylint: disable=W0703
             try:
                 print('Downloading %s from %s...'%(fname, url))
                 r = requests.get(url, stream=True)
@@ -218,11 +220,10 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
-    
                 if sha1_hash and not check_sha1(fname, sha1_hash):
-                    raise UserWarning('File {} is downloaded but the content hash does not match. ' \
-                                      'The repo may be outdated or download may be incomplete. ' \
-                                      'If the "repo_url" is overridden, consider switching to ' \
+                    raise UserWarning('File {} is downloaded but the content hash does not match.'\
+                                      ' The repo may be outdated or download may be incomplete. '\
+                                      'If the "repo_url" is overridden, consider switching to '\
                                       'the default repo.'.format(fname))
                 break
             except Exception as e:
@@ -230,7 +231,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
                 if (retries <= 0):
                     raise e
                 else:
-                    print("download failed, {} more attempt{}".format(retries, 's' if retries > 1 else ''))
+                    print("download failed, retrying, {} attempt{} left"
+                          .format(retries, 's' if retries > 1 else ''))
 
     return fname
 

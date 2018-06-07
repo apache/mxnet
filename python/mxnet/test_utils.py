@@ -1416,7 +1416,9 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
         logging.info("%s exists, skipping download", fname)
         return fname
 
-    while (retries+1 > 0):
+    while retries+1 > 0:
+        # Disable pyling too broad Exception
+        # pylint: disable=W0703
         try:
             r = requests.get(url, stream=True)
             assert r.status_code == 200, "failed to open %s" % url
@@ -1430,7 +1432,8 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
             if (retries <= 0):
                 raise e
             else:
-                print("download failed, {} more attempt{}".format(retries, 's' if retries > 1 else ''))
+                print("download failed, retrying, {} attempt{} left"
+                      .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 

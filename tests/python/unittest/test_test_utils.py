@@ -27,8 +27,8 @@ def test_download_retries():
     mx.test_utils.download("http://doesnotexist.notfound")
 
 def test_download_successful():
-    tmp = tempfile.gettempdir()
+    tmp = tempfile.mkdtemp()
     tmpfile = os.path.join(tmp, 'README.md')
-    mx.test_utils.download("https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md", fname=tmpfile)
+    mx.test_utils.download("https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
+                           fname=tmpfile)
     assert os.path.getsize(tmpfile) > 100
-
