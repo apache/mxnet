@@ -110,9 +110,11 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
+        TShape gshape = expand_shape(in_data[leakyrelu::kGamma].shape_,
+                                     in_data[leakyrelu::kData].shape_);
         TShape new_lshape, new_rshape, new_oshape;
         const int ndim = op::BinaryBroadcastShapeCompact(in_data[leakyrelu::kData].shape_,
-                                                         in_data[leakyrelu::kGamma].shape_,
+                                                         gshape,
                                                          out_data[leakyrelu::kOut].shape_,
                                                          &new_lshape, &new_rshape, &new_oshape);
         if (!ndim) {
@@ -227,9 +229,11 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
+        TShape gshape = expand_shape(in_grad[leakyrelu::kGamma].shape_,
+                                     in_grad[leakyrelu::kData].shape_);
         TShape new_lshape, new_rshape, new_oshape;
         const bool need_bc = BinaryBroadcastShapeCompact(in_grad[leakyrelu::kData].shape_,
-                                                         in_grad[leakyrelu::kGamma].shape_,
+                                                         gshape,
                                                          out_grad[leakyrelu::kOut].shape_,
                                                          &new_lshape,
                                                          &new_rshape,
@@ -275,6 +279,20 @@ class LeakyReLUOp : public Operator {
   /*! \brief Minimum of three */
   static MSHADOW_XINLINE size_t minthree(const size_t a, const size_t b, const size_t c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
+  }
+  static inline TShape expand_shape(const TShape& src, const TShape& dst) {
+    TShape result(dst.ndim());
+    int s = src.ndim() - 1;
+    for (int i = dst.ndim() - 1; i >= 0; i--) {
+      if (s >= 0 && (dst[i] == src[s] || src[s] == 1)) {
+        result[i] = src[s];
+        s--;
+      } else {
+        result[i] = 1;
+      }
+    }
+    CHECK(s == -1) << "Cannot broadcast gamma to data. gamma: " << src << ", data: " << dst;
+    return result;
   }
   LeakyReLUParam param_;
 };  // class LeakyReLUOp
