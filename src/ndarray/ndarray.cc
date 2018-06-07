@@ -555,7 +555,7 @@ NDArray NDArray::Reorder2Default() const {
   CHECK(ret.ptr_->shandle.size >= def_pd.get_size());
   mkldnn::memory def_mem(def_pd, ret.ptr_->shandle.dptr);
   ptr_->mkl_mem_->ReorderTo(&def_mem);
-  auto tmp = std::shared_ptr<mkldnn::memory>(def_mem, [](mkldnn::memory *mem){});
+  auto tmp = std::shared_ptr<mkldnn::memory>(&def_mem, [](mkldnn::memory *mem){});
   ret.ptr_->mkl_mem_.reset(new MKLDNNMemory(tmp));
   // reshape as needed
   ret.shape_ = shape_;
