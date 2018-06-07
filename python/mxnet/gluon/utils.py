@@ -202,13 +202,13 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
             fname = os.path.join(path, url.split('/')[-1])
         else:
             fname = path
-    assert retries > 0, "Number of retries should be at least 1"
+    assert retries >= 0, "Number of retries should be at least 0"
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        while (retries > 0):
+        while (retries+1 > 0):
             try:
                 print('Downloading %s from %s...'%(fname, url))
                 r = requests.get(url, stream=True)

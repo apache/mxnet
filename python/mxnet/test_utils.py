@@ -1393,6 +1393,9 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     str
         The filename of the downloaded file
     """
+
+    assert retries >= 0, "Number of retries should be at least 0"
+
     if fname is None:
         fname = url.split('/')[-1]
 
@@ -1413,7 +1416,7 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
         logging.info("%s exists, skipping download", fname)
         return fname
 
-    while (retries > 0):
+    while (retries+1 > 0):
         try:
             r = requests.get(url, stream=True)
             assert r.status_code == 200, "failed to open %s" % url
