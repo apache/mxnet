@@ -37,7 +37,6 @@
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
     <build.platform />
-    <compile.backend>false</compile.backend>
   </properties>
 
   <packaging>pom</packaging>
