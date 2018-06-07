@@ -1,4 +1,5 @@
 # MXNet - Perl API
+<script type="text/javascript" src='../../_static/js/versions_drop_down.js'></script>
 
 MXNet supports the Perl programming language. The MXNet Perl package brings flexible and efficient GPU
 computing and state-of-art deep learning to Perl. It enables you to write seamless tensor/matrix computation with multiple GPUs in Perl.

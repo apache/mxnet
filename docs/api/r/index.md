@@ -1,4 +1,18 @@
 # MXNet - R API
+<script type="text/javascript" src='../../_static/js/versions_drop_down.js'></script>
+  <div class="dropdown">
+    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.0
+    <span class="caret"></span></button>
+    <ul class="dropdown-menu opt-group">
+      <li class="opt active versions"><a href="#">v1.2.0</a></li>
+      <li class="opt versions"><a href="#">v1.1.0</a></li>
+      <li class="opt versions"><a href="#">v1.0.0</a></li>
+      <li class="opt versions"><a href="#">v0.12.1</a></li>
+      <li class="opt versions"><a href="#">v0.11.0</a></li>
+      <li class="opt versions"><a href="#">master</a></li>
+    </ul>
+  </div>
+
 
 See the [MXNet R Reference Manual](https://s3.amazonaws.com/mxnet-prod/docs/R/mxnet-r-reference-manual.pdf).
 
