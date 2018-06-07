@@ -869,7 +869,7 @@ struct ReduceGrad {
   }
 };
 
-inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
+inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
@@ -880,30 +880,34 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(0);
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   bool dispatched = false;
-  // l2 norm on a particular axis only supports cpu
-  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-  const auto dispatch_ex =
-      invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
-  if (!dispatched && in_stype == kDefaultStorage) {
-    // dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFCompute);
-  }
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
-  if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
-      axis.ndim() == 0 && param.ord == 2) {
-    // l2 norm: rsp/csr, axis = () -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
-  }
-  if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
-      (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
-    // l2 norm: csr, axis = 0/1 -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     dispatch_ex);
-  }
-  if (!dispatched) {
+  if (param.ord == 1) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  } else if (param.ord == 2) {
+    // l2 norm on a particular axis only supports cpu
+    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+    const auto dispatch_ex =
+      invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+    if (!dispatched && in_stype == kDefaultStorage) {
+      // dns -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFCompute);
+    }
+    const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+    if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
+        axis.ndim() == 0 && param.ord == 2) {
+      // l2 norm: rsp/csr, axis = () -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
+    if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
+        (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
+      // l2 norm: csr, axis = 0/1 -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       dispatch_ex);
+    }
+    if (!dispatched) {
+      dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+    }
   }
   return dispatched;
 }
@@ -984,7 +988,7 @@ void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
 }
 
 template<typename xpu>
-void L2NormCompute(const nnvm::NodeAttrs& attrs,
+void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
@@ -992,6 +996,7 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   CHECK_LE(param.ord, 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
+
   TShape small;
   if (param.keepdims) {
     small = outputs[0].shape_;
@@ -999,19 +1004,17 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
   if (param.ord == 1) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::abs>(
+          ctx, inputs, req, outputs, small);
+  } else if (param.ord == 2) {
     ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
-      ctx, inputs, req, outputs, small);
+        ctx, inputs, req, outputs, small);
     SqRootForL2<xpu>(ctx, req[0], outputs[0]);
-  }
-  else if (param.ord == 2) {
-    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
-      ctx, inputs, req, outputs, small);
-    SqRootForL2<xpu>(ctx, req[0], outputs[0]);
-  }
+  } 
 }
 
 template<typename xpu>
-void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
+void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,

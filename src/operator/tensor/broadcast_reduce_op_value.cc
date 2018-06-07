@@ -284,10 +284,16 @@ array.
 
 Examples::
 
-  x = [[1, 2],
-       [3, 4]]
+  x = [[[1,2],
+        [3,4]],
+       [[2,2],
+        [5,6]]]
 
-  norm(x) = [5.47722578]
+  norm(x, ord=2, axis=1) = [[3.1622777 4.472136 ]
+                            [5.3851647 6.3245554]]
+
+  norm(x, ord=1, axis=1) = [[4., 6.],
+                            [7., 8.]]
 
   rsp = x.cast_storage('row_sparse')
 
@@ -303,13 +309,13 @@ Examples::
 .set_attr_parser(ParamParser<NormParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", NormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(NormParam::__FIELDS__());
@@ -322,7 +328,7 @@ NNVM_REGISTER_OP(_backward_norm)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
 
 
 }  // namespace op
