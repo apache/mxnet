@@ -330,7 +330,7 @@ class Block(object):
         self.collect_params().save(filename, strip_prefix=self.prefix)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
-                    ignore_extra=False):
+                        ignore_extra=False):
         """Load parameters from file.
 
         filename : str

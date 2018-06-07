@@ -387,7 +387,7 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
     if pretrained:
         from ..model_store import get_model_file
         net.load_parameters(get_model_file('resnet%d_v%d'%(num_layers, version),
-                                       root=root), ctx=ctx)
+                                           root=root), ctx=ctx)
     return net
 
 def resnet18_v1(**kwargs):
