@@ -173,13 +173,37 @@ build_arm64() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
+        -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
+    python setup.py bdist_wheel --universal
+    cp dist/*.whl /work/build
+}
+
+build_android_armv7() {
+    set -ex
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF\
+        -DUSE_SSE=OFF\
+        -DSUPPORT_F16C=OFF\
+        -DUSE_LAPACK=OFF\
+        -DUSE_OPENCV=OFF\
+        -DUSE_OPENMP=OFF\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -G Ninja /work/mxnet
+    ninja -v
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
@@ -189,9 +213,15 @@ build_arm64() {
 build_android_arm64() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+# There are other ways for CMake to cross compile android, like setting the following variables
+# below. But right not it doesn't work as expected, we need to find what's the best strategy to 
+# build with CMake in Android.
+#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
+#        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
+#        -DCMAKE_SYSTEM_NAME=Android \
+#
+    cmake\
+        -DANDROID=ON \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DUSE_LAPACK=OFF\
@@ -201,11 +231,7 @@ build_android_arm64() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    ninja -v
 }
 
 build_centos7_cpu() {
