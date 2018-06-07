@@ -325,7 +325,6 @@ class Block(object):
         filename : str
             Path to file.
         """
-        import pdb;pdb.set_trace()
         warnings.warn("save_params is deprecated. Please use save_parameters.")
         self.collect_params().save(filename, strip_prefix=self.prefix)
 
@@ -386,9 +385,7 @@ class Block(object):
             present in this Block.
         """
         warnings.warn("load_params is deprecated. Please use load_parameters.")
-        import pdb;pdb.set_trace()
-        self.collect_params().load(filename, ctx, allow_missing, ignore_extra,
-                                   self.prefix)
+        self.load_parameters(filename, ctx, allow_missing, ignore_extra)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
