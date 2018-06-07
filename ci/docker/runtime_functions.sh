@@ -40,19 +40,24 @@ build_jetson() {
     pushd .
     mv make/crosscompile.jetson.mk make/config.mk
     make -j$(nproc)
-
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
+    build_wheel
+    popd
+}
 
-    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
-    # mxnet folder, then repackage the wheel.
+build_wheel() {
+    set -ex
+    pushd .
+    python setup.py bdist_wheel --universal
     WHEEL=`readlink -f dist/*.whl`
     TMPDIR=`mktemp -d`
     unzip -d $TMPDIR $WHEEL
     rm $WHEEL
     cd $TMPDIR
     mv *.data/data/mxnet/libmxnet.so mxnet
+    cd $TMPDIR
+    #zip -r $WHEEL $TMPDIR
     zip -r $WHEEL .
     cp $WHEEL /work/build
     rm -rf $TMPDIR
@@ -77,7 +82,7 @@ build_armv6() {
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
@@ -86,8 +91,7 @@ build_armv6() {
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
     popd
 }
 
@@ -100,14 +104,13 @@ build_armv7() {
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
     popd
 }
 
@@ -268,6 +271,10 @@ build_ubuntu_cpu_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         -j$(nproc)
+}
+
+build_ubuntu_gpu() {
+    build_ubuntu_gpu_cuda91_cudnn7
 }
 
 build_ubuntu_gpu_mkldnn() {
