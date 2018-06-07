@@ -638,15 +638,15 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
 
   CHECK(mem.get_primitive_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
       << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-  MKLDNNStream *stream = MKLDNNStream::Get();
+//  MKLDNNStream *stream = MKLDNNStream::Get();
   // If this array uses MKLDNN layout, we have to make sure it's not a view.
   // Otherwise, we'll have to change the layout inside the array.
 
   if (IsMKLDNNData() && IsView())
     ptr_->Reorder2Default();
 
-//  auto this_mem = ;
-  ReorderMKLDNNMem(&mem, GetMKLDNNData());
+  const mkldnn::memory* this_mem = GetMKLDNNData();
+  ReorderMKLDNNMem(mem, *this_mem);
 //  mkldnn::memory::primitive_desc from_pd = mem.get_primitive_desc();
 //  mkldnn::memory::desc from_desc = from_pd.desc();
 //  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
