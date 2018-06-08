@@ -1070,7 +1070,7 @@ MXNET_DLL int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *inputs,
  * \param inputs The nodes that connect to the subgraph.
  * \param input_size The number of such nodes.
  */
-MXNET_DLL int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **inputs,
+MXNET_DLL int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle *inputs,
                                   int *input_size);
 
 /*!
