@@ -311,11 +311,11 @@ class Block(object):
         """Save parameters to file.
         This function is to be used only to save parameters of a Gluon model, the
         saved parameters cannot be loaded in a different language binding.
-        Saving parameters using `.save_params()` is different than 
+        Saving parameters using `.save_params()` is different than
         `.collect_params().save()`, which is a deprecated way to save
         parameters of a model and should be avoided.
         If your model is hybridizable and you want to export a serialized version of the
-        structure of the model as well as its parameters please refer to 
+        structure of the model as well as its parameters please refer to
         `HybridBlock.export()`. Such model can then be loaded back in any language binding
         or even in Gluon using a `SymbolBlock`.
         Refer to this tutorial for a complete overview of saving/loading models with
@@ -335,7 +335,7 @@ class Block(object):
         saved using the `.save_params()` function. Any other use is undefined behaviour.
         Refer to this tutorial for a complete overview of saving/loading models with
         MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
-        
+
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
