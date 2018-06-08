@@ -364,7 +364,7 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *inpu
   API_END_HANDLE_ERROR();
 }
 
-int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
+int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle *input_symbols,
                         int *input_size) {
   // Given a graph, we want to fetch the nodes that have been marked as part of
   // a subgraph.
