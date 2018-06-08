@@ -1068,7 +1068,7 @@ class Symbol(SymbolBase):
 
     def _infer_shape_impl(self, partial, *args, **kwargs):
         """The actual implementation for calling shape inference API."""
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-nested-blocks
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
                     shapes either by positional or kwargs way.')
@@ -1078,11 +1078,25 @@ class Symbol(SymbolBase):
             keys = c_array(ctypes.c_char_p, [])
             for i, s in enumerate(args):
                 if s is not None:
-                    if not isinstance(s, tuple):
-                        raise TypeError("Arguments need to be shapes (tuple), "
-                                        "but argument %d is %s." % (i, type(s)))
-                    sdata.extend(s)
-                indptr.append(len(sdata))
+                    if isinstance(s, dict):
+                        str_keys = []
+                        for k, v in s.items():
+                            if not isinstance(v, tuple):
+                                raise TypeError("Arguments need to be shapes (tuple), "
+                                                "but '%s' is %s." % (k, type(v)))
+                            if not isinstance(k, string_types):
+                                raise TypeError("Key should be of string type but is %s"
+                                                % (type(k)))
+                            str_keys.append(k)
+                            sdata.extend(v)
+                            indptr.append(len(sdata))
+                        keys = c_str_array(str_keys)
+                    else:
+                        if not isinstance(s, tuple):
+                            raise TypeError("Arguments need to be shapes (tuple), "
+                                            "but argument %d is %s." % (i, type(s)))
+                        sdata.extend(s)
+                        indptr.append(len(sdata))
         else:
             str_keys = []
             for k, v in kwargs.items():
@@ -1093,6 +1107,7 @@ class Symbol(SymbolBase):
                 sdata.extend(v)
                 indptr.append(len(sdata))
             keys = c_str_array(str_keys)
+
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
         arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
