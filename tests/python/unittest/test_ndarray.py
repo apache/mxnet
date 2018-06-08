@@ -1285,25 +1285,54 @@ def test_norm(ctx=default_context()):
     mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
 
     for i in range(4):
-        for j in [1,2]:
-            arr1 = np.linalg.norm(np_arr, ord=j, axis=i, keepdims=False)
-            arr2 = mx.nd.norm(mx_arr, ord=j, axis=i, keepdims=False)
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=False)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=False)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
+        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=True)
+        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=True)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+        if (i < 3):
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=False)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=False)
             assert arr1.shape == arr2.shape
             mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-    
-            arr1 = np.linalg.norm(np_arr, ord=j, axis=i, keepdims=True)
-            arr2 = mx.nd.norm(mx_arr, ord=j, axis=i, keepdims=True)
+            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=True)
+            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=True)
             assert arr1.shape == arr2.shape
             mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-            if (i < 3):
-                arr1 = np.linalg.norm(np_arr, ord=j, axis=(i, i+1), keepdims=False)
-                arr2 = mx.nd.norm(mx_arr, ord=j, axis=(i, i+1), keepdims=False)
-                assert arr1.shape == arr2.shape
-                mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-                arr1 = np.linalg.norm(np_arr, ord=j, axis=(i, i+1), keepdims=True)
-                arr2 = mx.nd.norm(mx_arr, ord=j, axis=(i, i+1), keepdims=True)
-                assert arr1.shape == arr2.shape
-                mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
+@with_seed()
+def test_l1norm(ctx=default_context()):
+    np_arr = np.random.uniform(size=(3, 3, 3, 3))
+    mx_arr = mx.nd.array(np_arr, ctx=ctx)
+    arr1 = np.sum(abs(np_arr), keepdims=False)
+    arr2 = mx.nd.norm(mx_arr, ord=1, keepdims=False)
+    print(arr1)
+    print(arr2.asnumpy())
+    mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
+
+    for i in range(4):
+        arr1 = np.sum(abs(np_arr), axis=i, keepdims=False)
+        arr2 = mx.nd.norm(mx_arr, ord=1, axis=i, keepdims=False)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+
+        arr1 = np.sum(abs(np_arr), axis=i, keepdims=True)
+        arr2 = mx.nd.norm(mx_arr, ord=1, axis=i, keepdims=True)
+        assert arr1.shape == arr2.shape
+        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+        if (i < 3):
+            arr1 = np.sum(abs(np_arr), axis=(i, i+1), keepdims=False)
+            arr2 = mx.nd.norm(mx_arr, ord=1, axis=(i, i+1), keepdims=False)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+            arr1 = np.sum(abs(np_arr), axis=(i, i+1), keepdims=True)
+            arr2 = mx.nd.norm(mx_arr, ord=1, axis=(i, i+1), keepdims=True)
+            assert arr1.shape == arr2.shape
+            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
 
 if __name__ == '__main__':
     import nose
