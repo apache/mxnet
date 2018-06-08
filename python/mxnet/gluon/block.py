@@ -335,6 +335,7 @@ class Block(object):
         saved using the `.save_params()` function. Any other use is undefined behaviour.
         Refer to this tutorial for a complete overview of saving/loading models with
         MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
+        
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
