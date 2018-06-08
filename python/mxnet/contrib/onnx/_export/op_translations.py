@@ -43,6 +43,9 @@
 #  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+# coding: utf-8
+# pylint: disable=too-many-locals,no-else-return,too-many-lines
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
