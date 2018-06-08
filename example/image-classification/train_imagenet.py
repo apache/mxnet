@@ -30,8 +30,8 @@ if __name__ == '__main__':
     fit.add_fit_args(parser)
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
-    # set to 0 for standard resnet augmentation
-    data.set_data_aug_level(parser, 0)
+    # uncomment to set standard augmentation for resnet training
+    # data.set_resnet_aug(parser)
     parser.set_defaults(
         # network
         network          = 'resnet',

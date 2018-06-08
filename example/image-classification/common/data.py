@@ -43,9 +43,9 @@ def add_data_args(parser):
 def add_data_aug_args(parser):
     aug = parser.add_argument_group(
         'Image augmentations', 'implemented in src/io/image_aug_default.cc')
-    aug.add_argument('--random-crop', type=int, default=1,
+    aug.add_argument('--random-crop', type=int, default=0,
                      help='if or not randomly crop the image')
-    aug.add_argument('--random-mirror', type=int, default=1,
+    aug.add_argument('--random-mirror', type=int, default=0,
                      help='if or not randomly flip horizontally')
     aug.add_argument('--max-random-h', type=int, default=0,
                      help='max change of hue, whose range is [0, 180]')
@@ -77,18 +77,16 @@ def add_data_aug_args(parser):
                      help='saturation jittering, whose range is [0, 1]')
     aug.add_argument('--pca-noise', type=float, default=0,
                      help='pca noise, whose range is [0, 1]')
-    aug.add_argument('--random-resized-crop', action='store_true',
+    aug.add_argument('--random-resized-crop', type=int, default=0,
                      help='whether to use random resized crop')
     return aug
 
-def set_data_aug_level(aug, level):
-    if level >= 1:
-        aug.set_defaults(random_crop=1, random_mirror=1)
-    if level >= 2:
-        aug.set_defaults(max_random_h=36, max_random_s=50, max_random_l=50)
-    if level >= 3:
-        aug.set_defaults(max_random_rotate_angle=10, max_random_shear_ratio=0.1, max_random_aspect_ratio=0.25)
-
+def set_resnet_aug(aug):
+    # standard data augmentation setting for resnet training
+    aug.set_defaults(random_crop=1, random_resized_crop=1)
+    aug.set_defaults(min_random_area=0.08)
+    aug.set_defaults(max_random_aspect_ratio=4./3., min_random_aspect_ratio=3./4.)
+    aug.set_defaults(brightness=0.4, contrast=0.4, saturation=0.4, pca_noise=0.1)
 
 class SyntheticDataIter(DataIter):
     def __init__(self, num_classes, data_shape, max_iter, dtype):
@@ -136,7 +134,6 @@ def get_rec_iter(args, kv=None):
     else:
         (rank, nworker) = (0, 1)
     rgb_mean = [float(i) for i in args.rgb_mean.split(',')]
-    random_resized_crop = args.random_resized_crop is not None
     train = mx.io.ImageRecordIter(
         path_imgrec         = args.data_train,
         path_imgidx         = args.data_train_idx,
