@@ -321,6 +321,10 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
   API_END();
 }
 
+int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals) {
+  MXSetProfilerConfig(num_params, keys, vals, nullptr);
+}
+
 int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
@@ -345,6 +349,10 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
   API_END();
 }
 
+int MXDumpProfile(int finished, int profile_process) {
+  MXDumpProfile(finished, profile_process, nullptr);
+}
+
 int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
@@ -364,6 +372,10 @@ int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle
     warn_not_built_with_profiler_enabled();
 #endif
   API_END()
+}
+
+int MXSetProfilerState(int state, int profile_process) {
+  MXSetProfilerState(state, profile_process, nullptr);
 }
 
 int MXSetProfilerState(int state, int profile_process, KVStoreHandle kvStoreHandle) {
@@ -554,6 +566,10 @@ int MXProfileDurationStop(ProfileHandle duration_handle) {
     warn_not_built_with_profiler_enabled();
 #endif
   API_END();
+}
+
+int MXProfilePause(int paused, int profile_process) {
+  MXProfilePause(paused, profile_process, nullptr);
 }
 
 int MXProfilePause(int paused, int profile_process, KVStoreHandle kvStoreHandle) {
