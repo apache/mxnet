@@ -175,7 +175,7 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
      ConvolutionOp<gpu, DType> op;
      op.Init(param);
-     op.Backward(ctx, inputs, req, outputs);
+     op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
    })
    return;
   }
