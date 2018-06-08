@@ -46,13 +46,11 @@ fh.setFormatter(formatter)
 
 # CLI
 parser = argparse.ArgumentParser(description='Train a model for image classification.')
-
-data = parser.add_argument_group('Data', 'the input for training')
-data.add_argument('--dataset', type=str, default='cifar10',
+parser.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, caltech101, imagenet and dummy.')
-data.add_argument('--data-dir', type=str, default='',
+parser.add_argument('--data-dir', type=str, default='',
                   help='training directory of imagenet images, contains train/val subdirs.')
-data.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
+parser.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
                     help='number of workers for dataloader')
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
@@ -262,7 +260,7 @@ def main():
         if opt.dtype == 'float16':
             data = mx.sym.Cast(data=data, dtype=np.float16)
         out = net(data)
-        if opt.dtype == 'float32':
+        if opt.dtype == 'float16':
             out = mx.sym.Cast(data=out, dtype=np.float32)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=context)
@@ -274,10 +272,7 @@ def main():
                 batch_end_callback=mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
                 epoch_end_callback=mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
                 optimizer='sgd',
-                optimizer_params={'learning_rate': opt.lr,
-                                  'wd': opt.wd,
-                                  'momentum': opt.momentum,
-                                  'multi_precision': True},
+                optimizer_params={'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum, 'multi_precision': True},
                 initializer=mx.init.Xavier(magnitude=2))
         mod.save_params('image-classifier-%s-%d-final.params'%(opt.model, opt.epochs))
     else:
