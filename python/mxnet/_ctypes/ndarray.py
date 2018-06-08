@@ -107,6 +107,7 @@ class CachedOp(object):
     __slots__ = ["handle"]
     def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
+
         check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
             len(flags),

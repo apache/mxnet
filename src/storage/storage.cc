@@ -51,6 +51,7 @@ class StorageImpl : public Storage {
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU:
+      case Context::kCPUPinned:
         break;
       case Context::kCPUShared: {
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -58,8 +59,7 @@ class StorageImpl : public Storage {
 #endif  // defined(ANDROID) || defined(__ANDROID__)
       }
         break;
-      case Context::kGPU:
-      case Context::kCPUPinned: {
+      case Context::kGPU: {
 #if MXNET_USE_CUDA
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
@@ -74,9 +74,7 @@ class StorageImpl : public Storage {
   // internal storage managers
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
-#if MXNET_USE_PROFILER
   storage::DeviceStorageProfiler profiler_;
-#endif  // MXNET_USE_PROFILER
 };  // struct Storage::Impl
 #if MXNET_USE_CUDA
 int StorageImpl::num_gpu_device = 0;
@@ -133,9 +131,7 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 
   this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
-#if MXNET_USE_PROFILER
   profiler_.OnAlloc(*handle);
-#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
@@ -148,9 +144,7 @@ void StorageImpl::Free(Storage::Handle handle) {
       });
   this->ActivateDevice(ctx);
   manager->Free(handle);
-#if MXNET_USE_PROFILER
   profiler_.OnFree(handle);
-#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
@@ -163,9 +157,7 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
       });
   this->ActivateDevice(ctx);
   manager->DirectFree(handle);
-#if MXNET_USE_PROFILER
   profiler_.OnFree(handle);
-#endif  // MXNET_USE_PROFILER
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {

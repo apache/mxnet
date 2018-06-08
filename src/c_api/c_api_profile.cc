@@ -38,7 +38,6 @@ namespace mxnet {
 
 // #define PROFILE_API_INCLUDE_AS_EVENT
 
-#if MXNET_USE_PROFILER
 static profiler::ProfileDomain api_domain("MXNET_C_API");
 static profiler::ProfileCounter api_call_counter("MXNet C API Calls", &api_domain);
 static profiler::ProfileCounter api_concurrency_counter("MXNet C API Concurrency",
@@ -114,11 +113,13 @@ class ProfilingThreadData {
 #endif  // PROFILE_API_INCLUDE_AS_EVENT
 };
 
+#if DMLC_CXX11_THREAD_LOCAL
 static thread_local ProfilingThreadData thread_profiling_data;
-#endif  // MXNET_USE_PROFILER
+#else
+static MX_THREAD_LOCAL ProfilingThreadData thread_profiling_data;
+#endif
 
 extern void on_enter_api(const char *function) {
-#if MXNET_USE_PROFILER
   if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kAPI)) {
     if (!thread_profiling_data.ignore_call_) {
       ++api_call_counter;
@@ -137,10 +138,8 @@ extern void on_enter_api(const char *function) {
 #endif  // PROFILE_API_INCLUDE_AS_EVENT
     }
   }
-#endif  // MXNET_USE_PROFILER
 }
 extern void on_exit_api() {
-#if MXNET_USE_PROFILER
   if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kAPI)) {
     if (!thread_profiling_data.ignore_call_) {
       CHECK(!thread_profiling_data.calls_.empty());
@@ -153,7 +152,6 @@ extern void on_exit_api() {
       --api_concurrency_counter;
     }
   }
-#endif  // MXNET_USE_PROFILER
 }
 
 /*!
@@ -161,16 +159,12 @@ extern void on_exit_api() {
  */
 struct IgnoreProfileCallScope {
   IgnoreProfileCallScope()  {
-#if MXNET_USE_PROFILER
     DCHECK_EQ(thread_profiling_data.ignore_call_, false);
     thread_profiling_data.ignore_call_ = true;
-#endif  // MXNET_USE_PROFILER
   }
   ~IgnoreProfileCallScope() {
-#if MXNET_USE_PROFILER
     DCHECK_EQ(thread_profiling_data.ignore_call_, true);
     thread_profiling_data.ignore_call_ = false;
-#endif  // MXNET_USE_PROFILER
   }
 };
 
@@ -204,20 +198,9 @@ struct PythonProfileObjects {
 };
 static PythonProfileObjects python_profile_objects;
 
-#if !defined(MXNET_USE_PROFILER) || !MXNET_USE_PROFILER
-static void warn_not_built_with_profiler_enabled() {
-  static volatile bool warned_not_built_with_profiler_enabled = false;
-  if (!warned_not_built_with_profiler_enabled) {
-    warned_not_built_with_profiler_enabled = true;
-    LOG(WARNING) << "Need to compile with USE_PROFILER=1 for MXNet Profiling";
-  }
-}
-#endif  // MXNET_USE_PROFILER
-
 enum class ProfileProcess {
   kWorker, kServer
 };
-
 
 struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool profile_all;
@@ -282,7 +265,6 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
                         KVStoreHandle kvstoreHandle) {
     mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     std::vector<std::pair<std::string, std::string>> kwargs;
     kwargs.reserve(num_params);
     for (int i = 0; i < num_params; ++i) {
@@ -315,9 +297,6 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
                                            param.dump_period,
                                            param.aggregate_stats);
     }
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
@@ -329,7 +308,6 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
     CHECK_NOTNULL(out_str);
-#if MXNET_USE_PROFILER
     profiler::Profiler *profiler = profiler::Profiler::Get();
     if (profiler->IsEnableOutput()) {
       // Register stats up until now
@@ -341,10 +319,6 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
       stats->Dump(os, reset != 0);
     }
     ret->ret_str = os.str();
-#else
-    warn_not_built_with_profiler_enabled();
-    ret->ret_str.clear();
-#endif
     *out_str = (ret->ret_str).c_str();
   API_END();
 }
@@ -356,7 +330,6 @@ int MXDumpProfile(int finished, int profile_process) {
 int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
       CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
       static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
@@ -368,9 +341,6 @@ int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle
         << "Profiler hasn't been run. Config and start profiler first";
       profiler->DumpProfile(finished != 0);
     }
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END()
 }
 
@@ -382,7 +352,6 @@ int MXSetProfilerState(int state, int profile_process, KVStoreHandle kvStoreHand
   mxnet::IgnoreProfileCallScope ignore;
   // state, kNotRunning: 0, kRunning: 1
   API_BEGIN();
-#if MXNET_USE_PROFILER
     if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
       CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
       static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
@@ -399,26 +368,18 @@ int MXSetProfilerState(int state, int profile_process, KVStoreHandle kvStoreHand
       }
       profiler::Profiler::Get()->SetState(profiler::Profiler::ProfilerState(state));
     }
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
 int MXProfileCreateDomain(const char *domain, ProfileHandle *out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     auto dom = std::make_shared<profiler::ProfileDomain>(domain);
     {
       std::unique_lock<std::mutex> lock(python_profile_objects.cs_domains_);
       python_profile_objects.domains_.push_back(dom);
     }
     *out = dom.get();
-#else
-    warn_not_built_with_profiler_enabled();
-    *out = nullptr;
-#endif
   API_END();
 }
 
@@ -427,7 +388,6 @@ int MXProfileCreateTask(ProfileHandle domain,
                         ProfileHandle *out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     auto ctr =
       std::make_shared<profiler::ProfileTask>(task_name,
                                                 static_cast<profiler::ProfileDomain *>(domain));
@@ -436,10 +396,6 @@ int MXProfileCreateTask(ProfileHandle domain,
       python_profile_objects.tasks_.emplace(std::make_pair(ctr.get(), ctr));
     }
     *out = ctr.get();
-#else
-    warn_not_built_with_profiler_enabled();
-    *out = nullptr;
-#endif
   API_END();
 }
 
@@ -448,7 +404,6 @@ int MXProfileCreateFrame(ProfileHandle domain,
                          ProfileHandle *out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     auto ctr =
       std::make_shared<profiler::ProfileFrame>(frame_name,
                                               static_cast<profiler::ProfileDomain *>(domain));
@@ -457,17 +412,12 @@ int MXProfileCreateFrame(ProfileHandle domain,
       python_profile_objects.frames_.emplace(std::make_pair(ctr.get(), ctr));
     }
     *out = ctr.get();
-#else
-    warn_not_built_with_profiler_enabled();
-    *out = nullptr;
-#endif
   API_END();
 }
 
 int MXProfileCreateEvent(const char *event_name, ProfileHandle *out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     auto ctr =
       std::make_shared<profiler::ProfileEvent>(event_name);
     {
@@ -475,17 +425,12 @@ int MXProfileCreateEvent(const char *event_name, ProfileHandle *out) {
       python_profile_objects.events_.emplace(std::make_pair(ctr.get(), ctr));
     }
     *out = ctr.get();
-#else
-    warn_not_built_with_profiler_enabled();
-    *out = nullptr;
-#endif
   API_END();
 }
 
 int MXProfileDestroyHandle(ProfileHandle object_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     CHECK_NE(object_handle, static_cast<ProfileHandle>(nullptr))
       << "Invalid NULL handle passed to MXProfileDestroyHandle";
     std::shared_ptr<profiler::ProfileObject> shared_object_ptr(nullptr);
@@ -538,33 +483,22 @@ int MXProfileDestroyHandle(ProfileHandle object_handle) {
       }
     }
     shared_object_ptr.reset();  // Destroy out of lock scope
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
 int MXProfileDurationStart(ProfileHandle duration_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     CHECK_NOTNULL(duration_handle);
     static_cast<profiler::ProfileDuration *>(duration_handle)->start();
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
 int MXProfileDurationStop(ProfileHandle duration_handle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     CHECK_NOTNULL(duration_handle);
     static_cast<profiler::ProfileDuration *>(duration_handle)->stop();
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
@@ -575,7 +509,6 @@ int MXProfilePause(int paused, int profile_process) {
 int MXProfilePause(int paused, int profile_process, KVStoreHandle kvStoreHandle) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     if (static_cast<ProfileProcess>(profile_process) == ProfileProcess::kServer) {
       CHECK(kvStoreHandle) << "Kvstore Handle passed to profiler is null";
       static_cast<KVStore*>(kvStoreHandle)->SetServerProfilerCommand(
@@ -590,9 +523,6 @@ int MXProfilePause(int paused, int profile_process, KVStoreHandle kvStoreHandle)
         profiler::vtune::vtune_resume();
       }
     }
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
@@ -601,7 +531,6 @@ int MXProfileCreateCounter(ProfileHandle domain,
                            ProfileHandle *out) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     auto ctr =
       std::make_shared<profiler::ProfileCounter>(counter_name,
                                                 static_cast<profiler::ProfileDomain *>(domain));
@@ -610,32 +539,20 @@ int MXProfileCreateCounter(ProfileHandle domain,
       python_profile_objects.counters_.emplace(std::make_pair(ctr.get(), ctr));
     }
     *out = ctr.get();
-#else
-    warn_not_built_with_profiler_enabled();
-    *out = nullptr;
-#endif
   API_END();
 }
 
 int MXProfileSetCounter(ProfileHandle counter_handle, uint64_t value) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     static_cast<profiler::ProfileCounter *>(counter_handle)->operator=(value);
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
 int MXProfileAdjustCounter(ProfileHandle counter_handle, int64_t by_value) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     static_cast<profiler::ProfileCounter *>(counter_handle)->operator+=(by_value);
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }
 
@@ -644,7 +561,6 @@ int MXProfileSetMarker(ProfileHandle domain,
                        const char *scope) {
   mxnet::IgnoreProfileCallScope ignore;
   API_BEGIN();
-#if MXNET_USE_PROFILER
     ProfileMarkerScopeParam param;
     std::vector<std::pair<std::string, std::string>> kwargs = {{ "scope", scope }};
     param.Init(kwargs);
@@ -653,8 +569,5 @@ int MXProfileSetMarker(ProfileHandle domain,
                                          static_cast<profiler::ProfileMarker::MarkerScope>(
                                            param.scope));
     marker.mark();
-#else
-    warn_not_built_with_profiler_enabled();
-#endif
   API_END();
 }

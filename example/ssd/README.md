@@ -17,6 +17,8 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
+* Added live camera capture and detection display (run with --camera flag). Example:
+    `./demo.py --camera --cpu --frame-resize 0.5`
 * Added multiple trained models.
 * Added a much simpler way to compose network from mainstream classification networks (resnet, inception...) and [Guide](symbol/README.md).
 * Update to the latest version according to caffe version, with 5% mAP increase.
@@ -69,9 +71,13 @@ insanely slow. Using CUDNN is optional, but highly recommended.
 
 ### Try the demo
 * Download the pretrained model: [`ssd_resnet50_0712.zip`](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.6/resnet50_ssd_512_voc0712_trainval.zip), and extract to `model/` directory.
+
 * Run
 ```
-# cd /path/to/mxnet-ssd
+# cd /path/to/incubator-mxnet/example/ssd
+# download the test images
+python data/demo/download_demo_images.py
+# run the demo
 python demo.py --gpu 0
 # play with examples:
 python demo.py --epoch 0 --images ./data/demo/dog.jpg --thresh 0.5
@@ -79,6 +85,13 @@ python demo.py --cpu --network resnet50 --data-shape 512
 # wait for library to load for the first time
 ```
 * Check `python demo.py --help` for more options.
+
+### Live Camera detection
+
+Use `init.sh` to download the trained model.
+You can use `./demo.py --camera` to use a video capture device with opencv such as a webcam. This
+will open a window that will display the camera output together with the detections. You can play
+with the detection threshold to get more or less detections.
 
 ### Train the model
 This example only covers training on Pascal VOC dataset. Other datasets should
@@ -102,20 +115,20 @@ The suggested directory structure is to store `VOC2007` and `VOC2012` directorie
 in the same `VOCdevkit` folder.
 * Then link `VOCdevkit` folder to `data/VOCdevkit` by default:
 ```
-ln -s /path/to/VOCdevkit /path/to/mxnet/example/ssd/data/VOCdevkit
+ln -s /path/to/VOCdevkit /path/to/incubator-mxnet/example/ssd/data/VOCdevkit
 ```
 Use hard link instead of copy could save us a bit disk space.
 * Create packed binary file for faster training:
 ```
-# cd /path/to/mxnet/example/ssd
+# cd /path/to/incubator-mxnet/example/ssd
 bash tools/prepare_pascal.sh
 # or if you are using windows
 python tools/prepare_dataset.py --dataset pascal --year 2007,2012 --set trainval --target ./data/train.lst
-python tools/prepare_dataset.py --dataset pascal --year 2007 --set test --target ./data/val.lst --shuffle False
+python tools/prepare_dataset.py --dataset pascal --year 2007 --set test --target ./data/val.lst --no-shuffle
 ```
 * Start training:
 ```
-# cd /path/to/mxnet/example/ssd
+# cd /path/to/incubator-mxnet/example/ssd
 python train.py
 ```
 * By default, this example will use `batch-size=32` and `learning_rate=0.002`.
@@ -129,23 +142,23 @@ python train.py --gpus 0,1,2,3 --batch-size 32
 ### Evalute trained model
 Make sure you have val.rec as validation dataset. It's the same one as used in training. Use:
 ```
-# cd /path/to/mxnet/example/ssd
+# cd /path/to/incubator-mxnet/example/ssd
 python evaluate.py --gpus 0,1 --batch-size 128 --epoch 0
 ```
 ### Convert model to deploy mode
 This simply removes all loss layers, and attach a layer for merging results and non-maximum suppression.
 Useful when loading python symbol is not available.
 ```
-# cd /path/to/mxnet/example/ssd
+# cd /path/to/incubator-mxnet/example/ssd
 python deploy.py --num-class 20
 ```
 
 ### Convert caffe model
-Converter from caffe is available at `/path/to/mxnet/example/ssd/tools/caffe_converter`
+Converter from caffe is available at `/path/to/incubator-mxnet/example/ssd/tools/caffe_converter`
 
 This is specifically modified to handle custom layer in caffe-ssd. Usage:
 ```
-cd /path/to/mxnet/example/ssd/tools/caffe_converter
+cd /path/to/incubator-mxnet/example/ssd/tools/caffe_converter
 make
 python convert_model.py deploy.prototxt name_of_pretrained_caffe_model.caffemodel ssd_converted
 # you will use this model in deploy mode without loading from python symbol(layer names inconsistent)

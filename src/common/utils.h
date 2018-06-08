@@ -43,6 +43,7 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
+#include <limits>
 
 #include "../operator/mxnet_op.h"
 
@@ -432,6 +433,7 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "for execution. You're seeing this warning message because the operator above is unable "
     "to process the given ndarrays with specified storage types, context and parameter. "
     "Temporary dense ndarrays are generated in order to execute the operator. "
+    "This does not affect the correctness of the programme. "
     "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
@@ -614,6 +616,21 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
     LOG(FATAL) << "Unknown device mask";
     return nullptr;
   }
+}
+
+/*!
+ * \brief Return the max integer value representable in the type `T` without loss of precision.
+ */
+template <typename T>
+constexpr size_t MaxIntegerValue() {
+  return std::is_integral<T>::value ?
+    std::numeric_limits<T>::max():
+    size_t(2) << (std::numeric_limits<T>::digits - 1);
+}
+
+template <>
+constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
+  return size_t(2) << 10;
 }
 
 }  // namespace common

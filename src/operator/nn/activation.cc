@@ -44,8 +44,13 @@ struct ActivationGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
-#if MXNET_USE_CUDNN == 1
-    heads.push_back(n->inputs[activation::kData]);
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+    const NodeAttrs& attrs = n->attrs;
+    // for ReLU, no need to pass input data. This enables inplace optimization during the
+    // forward pass.
+    if (dmlc::get<ActivationParam>(attrs.parsed).act_type != activation::kReLU) {
+      heads.push_back(n->inputs[activation::kData]);
+    }
 #endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
@@ -57,7 +62,6 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNN(inputs[0])) {
@@ -66,7 +70,7 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  ActivationComputeImpl<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
+  FallBackCompute(ActivationComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -74,21 +78,18 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-#if MXNET_USE_CUDNN == 1
-  CHECK_EQ(inputs.size(), 3U);
-#else
-  CHECK_EQ(inputs.size(), 2U);
-#endif
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  bool relu = param.act_type == activation::kReLU;
+  CHECK_EQ(inputs.size(), relu ? 2U : 3U);
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNActivationBackward(attrs, ctx, inputs[0], inputs[1], req[0],
+    // XXX: for y = relu(x), y is passed as "in_data" to Backward()
+    MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? inputs[1] : inputs[2], req[0],
                              outputs[0]);
-      MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+     MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
-                                 req[0], outputs[0].data());
+  FallBackCompute(ActivationGradComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
 }
 #endif
 
@@ -116,23 +117,29 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           DispatchMode* dispatch_mode,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
-#if MXNET_USE_CUDNN == 1
-  CHECK_EQ(in_attrs->size(), 3U);
+  bool ret = false;
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  if (param.act_type != activation::kReLU) {
+    CHECK_EQ(in_attrs->size(), 3U);
+    ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  } else {
+    // for ReLU activation, the backward pass only needs ograd and output
+    CHECK_EQ(in_attrs->size(), 2U);
+    ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  }
 #else
   CHECK_EQ(in_attrs->size(), 2U);
+  ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+                                                       dispatch_mode,
+                                                       in_attrs, out_attrs);
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
-#if MXNET_USE_CUDNN == 1
-  bool ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
-                                                            dispatch_mode,
-                                                            in_attrs, out_attrs);
-#else
-  bool ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
-                                                            dispatch_mode,
-                                                            in_attrs, out_attrs);
-#endif
 #if MXNET_USE_MKLDNN == 1
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
@@ -154,6 +161,10 @@ The following activation functions are supported:
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ActivationParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ActivationStorageType)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)
@@ -162,7 +173,12 @@ The following activation functions are supported:
 .add_arguments(ActivationParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Activation)
-.set_num_inputs(3)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
+    // for ReLU activation, the backward pass only needs ograd and output
+    if (act_type == activation::kReLU) return 2;
+    return 3;
+  })
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)

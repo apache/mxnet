@@ -23,7 +23,6 @@
 from __future__ import print_function
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ...autograd import is_training
 from ... import ndarray
 from .. import Block
 from . import rnn_cell
@@ -79,6 +78,10 @@ class _RNNLayer(Block):
                                     allow_deferred_init=True))
             ni = nh * self._dir
 
+        for param_list in [self.i2h_weight, self.h2h_weight, self.i2h_bias, self.h2h_bias]:
+            for p in param_list:
+                self._reg_params[p.name] = p
+
         self._unfused = self._unfuse()
 
     def __repr__(self):
@@ -91,7 +94,7 @@ class _RNNLayer(Block):
             s += ', bidirectional'
         s += ')'
         shape = self.i2h_weight[0].shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -187,7 +190,7 @@ class _RNNLayer(Block):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
         if inputs.context.device_type == 'gpu' or \
-            (not is_training() and self._mode == 'lstm'):
+           self._mode in ['lstm', 'gru'] and not self._dropout:
             out = self._forward_kernel(inputs, states)
         else:
             out = self._forward(inputs, states)
@@ -285,7 +288,10 @@ class RNN(_RNNLayer):
 
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
-          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          when `layout` is "TNC". For other layouts, dimensions are permuted accordingly
+          using transpose() operator which adds performance overhead. Consider creating
+          batches in TNC layout during data batching step.
+
         - **states**: initial recurrent state tensor with shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
@@ -385,7 +391,9 @@ class LSTM(_RNNLayer):
 
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
-          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          when `layout` is "TNC". For other layouts, dimensions are permuted accordingly
+          using transpose() operator which adds performance overhead. Consider creating
+          batches in TNC layout during data batching step.
         - **states**: a list of two initial recurrent state tensors. Each has shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If
@@ -482,7 +490,9 @@ class GRU(_RNNLayer):
 
     Inputs:
         - **data**: input tensor with shape `(sequence_length, batch_size, input_size)`
-          when `layout` is "TNC". For other layouts dimensions are permuted accordingly.
+          when `layout` is "TNC". For other layouts, dimensions are permuted accordingly
+          using transpose() operator which adds performance overhead. Consider creating
+          batches in TNC layout during data batching step.
         - **states**: initial recurrent state tensor with shape
           `(num_layers, batch_size, num_hidden)`. If `bidirectional` is True,
           shape will instead be `(2*num_layers, batch_size, num_hidden)`. If

@@ -23,11 +23,14 @@
  * \brief GPU Implementation of unary function.
  */
 #include "./elemwise_binary_op.h"
+#include "./elemwise_binary_op-inl.h"
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::plus>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::plus>);
@@ -39,7 +42,8 @@ NNVM_REGISTER_OP(_backward_add)
 
 NNVM_REGISTER_OP(elemwise_sub)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<
-  gpu, op::mshadow_op::minus>);
+  gpu, op::mshadow_op::minus>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -47,7 +51,9 @@ NNVM_REGISTER_OP(_backward_sub)
                     mshadow_op::negation>);
 
 NNVM_REGISTER_OP(elemwise_mul)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::mul>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::ComputeWithHalf2<gpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<gpu>",
+  ElemwiseBinaryOp::ComputeDnsLRValueEx<gpu, op::mshadow_op::mul, true, true>);
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<gpu>",

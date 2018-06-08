@@ -18,8 +18,15 @@
 # coding: utf-8
 """Context management API of mxnet."""
 from __future__ import absolute_import
+import threading
+import warnings
+import ctypes
+from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
+from .base import _LIB
+from .base import check_call
 
-class Context(object):
+
+class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
     """Constructs a context.
 
     MXNet can run operations on CPU and different GPUs.
@@ -61,7 +68,7 @@ class Context(object):
     gpu(1)
     """
     # static class variable
-    default_ctx = None
+    _default_ctx = threading.local()
     devtype2str = {1: 'cpu', 2: 'gpu', 3: 'cpu_pinned', 5: 'cpu_shared'}
     devstr2type = {'cpu': 1, 'gpu': 2, 'cpu_pinned': 3, 'cpu_shared': 5}
     def __init__(self, device_type, device_id=0):
@@ -109,15 +116,37 @@ class Context(object):
         return self.__str__()
 
     def __enter__(self):
-        self._old_ctx = Context.default_ctx
-        Context.default_ctx = self
+        if not hasattr(Context._default_ctx, "value"):
+            Context._default_ctx.value = Context('cpu', 0)
+        self._old_ctx = Context._default_ctx.value
+        Context._default_ctx.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
-        Context.default_ctx = self._old_ctx
+        Context._default_ctx.value = self._old_ctx
+
+    #pylint: disable=no-self-argument
+    @classproperty
+    def default_ctx(cls):
+        warnings.warn("Context.default_ctx has been deprecated. "
+                      "Please use Context.current_context() instead. "
+                      "Please use test_utils.set_default_context to set a default context",
+                      DeprecationWarning)
+        if not hasattr(Context._default_ctx, "value"):
+            cls._default_ctx.value = Context('cpu', 0)
+        return cls._default_ctx.value
+
+    @default_ctx.setter
+    def default_ctx(cls, val):
+        warnings.warn("Context.default_ctx has been deprecated. "
+                      "Please use Context.current_context() instead. "
+                      "Please use test_utils.set_default_context to set a default context",
+                      DeprecationWarning)
+        cls._default_ctx.value = val
+    #pylint: enable=no-self-argument
 
 # initialize the default context in Context
-Context.default_ctx = Context('cpu', 0)
+Context._default_ctx.value = Context('cpu', 0)
 
 
 def cpu(device_id=0):
@@ -212,6 +241,23 @@ def gpu(device_id=0):
     return Context('gpu', device_id)
 
 
+def num_gpus():
+    """Query CUDA for the number of GPUs present.
+
+    Raises
+    ------
+    Will raise an exception on any CUDA error.
+
+    Returns
+    -------
+    count : int
+        The number of GPUs.
+
+    """
+    count = ctypes.c_int()
+    check_call(_LIB.MXGetGPUCount(ctypes.byref(count)))
+    return count.value
+
 def current_context():
     """Returns the current context.
 
@@ -234,4 +280,6 @@ def current_context():
     -------
     default_ctx : Context
     """
-    return Context.default_ctx
+    if not hasattr(Context._default_ctx, "value"):
+        Context._default_ctx.value = Context('cpu', 0)
+    return Context._default_ctx.value

@@ -17,25 +17,12 @@
 /perl-package/    @sergeykolychev
 /python/          @szha
 
-# C++ base, broken down into components
-/include/         @cjolivier01
-/src/c_api/       @cjolivier01
-/src/common/      @cjolivier01
-/src/engine/      @cjolivier01
-/src/executor/    @cjolivier01
-/src/imperative/  @cjolivier01
-/src/io/          @cjolivier01
-/src/kvstore/     @cjolivier01
-/src/ndarray/     @cjolivier01
-/src/nnvm/        @cjolivier01
-/src/operator/    @cjolivier01
-/src/profiler/    @cjolivier01
-/src/storage/     @cjolivier01
-/tests/cpp/       @cjolivier01
+# C++ base
+/src/kvstore/     @rahul003
 
 # CMake
-CMakeLists.txt    @cjolivier01 @szha
-/cmake/           @cjolivier01 @szha
+CMakeLists.txt    @szha @rahul003
+/cmake/           @szha @rahul003
 
 # MXNet CI
 /tests/ci_build/    @marcoabreu
@@ -61,3 +48,4 @@ prepare_mkl.sh    @szha
 
 # Github templates
 /.github/         @szha
+

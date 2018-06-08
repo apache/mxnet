@@ -126,24 +126,35 @@ class OpStatePtr {
   template<typename T, typename... Args>
   static OpStatePtr Create(Args&&... args) {
     OpStatePtr ret;
-    ret.ptr_ = std::make_shared<OpState>();
-    ret.ptr_->var_ = Engine::Get()->NewVariable();
-    ret.ptr_->state_.construct<T>(std::forward<Args>(args)...);
+    auto state = new T(std::forward<Args>(args)...);
+    auto var = Engine::Get()->NewVariable();
+    ret.ptr_.reset(
+      new OpState(var, state),
+      [](OpState* p) {
+        Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), p->var);
+        delete reinterpret_cast<T*>(p->state);
+        delete p;
+      });
 
     return ret;
   }
   /* \brief Get engine variable associated with this state */
   engine::VarHandle get_var() const {
-    return ptr_->var_;
+    return ptr_->var;
   }
   /* \brief Get state of type T */
   template<typename T>
   T& get_state() const {
-    return dmlc::get<T>(ptr_->state_);
+    return *reinterpret_cast<T*>(ptr_->state);
   }
   /* \brief clear state */
   void reset() {
     ptr_.reset();
+  }
+  /* \brief checks whether the managed object is managed only by the current
+            OpStatePtr instance */
+  bool unique() const {
+    return ptr_.unique();
   }
   /* \brief Whether state is empty */
   explicit operator bool() const {
@@ -153,16 +164,12 @@ class OpStatePtr {
  private:
   /* \brief state structure */
   struct OpState {
-    OpState() {}
+    engine::VarHandle var;
+    void* state;
+
+    OpState(engine::VarHandle var_, void* state_) : var(var_), state(state_) {}
     OpState(const OpState& other) = delete;
     OpState& operator=(const OpState& other) = delete;
-
-    ~OpState() {
-      Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), var_);
-    }
-
-    engine::VarHandle var_;
-    dmlc::any state_;
   };
   /* \brief shared pointer to state */
   std::shared_ptr<OpState> ptr_;
@@ -213,12 +220,23 @@ using FStatefulComputeEx = std::function<void (const OpStatePtr& state,
                                                const std::vector<OpReqType>& req,
                                                const std::vector<NDArray>& outputs)>;
 /*!
- * \brief The resource request from the operator
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
  *
  * \note Register under "FResourceRequest"
  */
 using FResourceRequest = std::function<
   std::vector<ResourceRequest> (const NodeAttrs& n)>;
+/*!
+ * \brief The resource request from the operator.
+ *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
+ *
+ * \note Register under "FResourceRequestEx"
+ */
+using FResourceRequestEx = std::function<
+  std::vector<ResourceRequest> (const NodeAttrs& n,
+                                const int dev_mask,
+                                const DispatchMode dispatch_mode)>;
 /*!
  * \brief Register an operator called as a NDArray function
  *

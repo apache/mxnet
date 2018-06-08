@@ -58,6 +58,8 @@ extern "C" {
 typedef unsigned int mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
+/*! \brief data type to store dim size */
+typedef int64_t dim_t;
 // all the handles are simply void *
 // will be casted internally to specific pointers types
 // these typedefs are mainly used for readablity reasons
@@ -149,7 +151,9 @@ enum CustomOpPropCallbacks {
   kCustomOpPropInferShape,
   kCustomOpPropDeclareBackwardDependency,
   kCustomOpPropCreateOperator,
-  kCustomOpPropInferType
+  kCustomOpPropInferType,
+  kCustomOpPropInferStorageType,
+  kCustomOpPropBackwardInferStorageType
 };
 
 
@@ -160,6 +164,11 @@ typedef int (*CustomOpDelFunc)(void* /*state*/);
 typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
                                       unsigned** /*shapes*/, void* /*state*/);
+typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
+typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
+                                                    int * /*stypes*/,
+                                                    int * /*tags*/,
+                                                    void * /*state*/);
 typedef int (*CustomOpInferTypeFunc)(int /*num_input*/, int* /*types*/, void* /*state*/);
 typedef int (*CustomOpBwdDepFunc)(const int* /*out_grad*/, const int* /*in_data*/,
                                   const int* /*out_data*/, int* /*num_deps*/,
@@ -198,11 +207,18 @@ MXNET_DLL const char *MXGetLastError();
 // Part 0: Global State setups
 //-------------------------------------
 /*!
- * \brief Seed the global random number generators in mxnet.
+ * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXRandomSeed(int seed);
+
+/*!
+ * \brief Seed the global random number generator of the given device.
+ * \param seed the random number seed.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
 
 /*!
  * \brief Notify the engine about a shutdown,
@@ -418,6 +434,13 @@ MXNET_DLL int MXSetNumOMPThreads(int thread_num);
  * \param prev_bulk_size previous bulk_size
  */
 MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
+
+/*!
+ * \brief Get the number of GPUs.
+ * \param pointer to int that will hold the number of GPUs available.
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXGetGPUCount(int* out);
 
 /*!
  * \brief get the MXNet library version as an integer
@@ -687,6 +710,20 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out);
+
+/*!
+ * \brief Reshape the NDArray.
+ * \param handle the handle to the narray
+ * \param ndim number of dimensions of new shape
+ * \param dims new shape
+ * \param out the NDArrayHandle of reshaped NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 bool reverse,
+                                 NDArrayHandle *out);
 /*!
  * \brief get the shape of the array
  * \param handle the handle to the narray
@@ -999,7 +1036,7 @@ MXNET_DLL int MXCreateCachedOp(SymbolHandle handle, CachedOpHandle *out);
  * \brief create cached operator
  */
 MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
-                                 int num_params,
+                                 int num_flags,
                                  const char** keys,
                                  const char** vals,
                                  CachedOpHandle *out);
@@ -1664,6 +1701,47 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    NDArrayHandle** aux_states,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
+
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ *
+ * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+ * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param num_in_args length of in_args
+ * \param in_args in args array
+ * \param arg_grads arg grads handle array
+ * \param num_aux_states length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return a new executor
+ */
+MXNET_DLL int MXExecutorReshape(int partial_shaping,
+                                int allow_up_sizing,
+                                int dev_type,
+                                int dev_id,
+                                mx_uint num_map_keys,
+                                const char** map_keys,
+                                const int* map_dev_types,
+                                const int* map_dev_ids,
+                                const mx_uint num_provided_arg_shapes,
+                                const char** provided_arg_shape_names,
+                                const mx_uint* provided_arg_shape_data,
+                                const mx_uint* provided_arg_shape_idx,
+                                mx_uint* num_in_args,
+                                NDArrayHandle** in_args,
+                                NDArrayHandle** arg_grads,
+                                mx_uint* num_aux_states,
+                                NDArrayHandle** aux_states,
+                                ExecutorHandle shared_exec,
+                                ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
  */

@@ -12,11 +12,9 @@ In this tutorial we will:
 ## Pre-requisite
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet](http://mxnet.incubator.apache.org/install/index.html)
+- [MXNet > 1.1.0](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx](https://github.com/onnx/onnx) (follow the install guide)
-- [onnx-mxnet](https://github.com/onnx/onnx-mxnet)
 - matplotlib
-- wget
 
 
 ```python
@@ -27,8 +25,9 @@ from mxnet import gluon, nd
 %matplotlib inline
 import matplotlib.pyplot as plt
 import tarfile, os
-import wget
 import json
+import logging
+logging.basicConfig(level=logging.INFO)
 ```
 
 ### Downloading supporting files
@@ -39,56 +38,42 @@ These are images and a vizualisation script
 image_folder = "images"
 utils_file = "utils.py" # contain utils function to plot nice visualization
 image_net_labels_file = "image_net_labels.json"
-images = ['apron', 'hammerheadshark', 'dog', 'wrench', 'dolphin', 'lotus']
+images = ['apron.jpg', 'hammerheadshark.jpg', 'dog.jpg', 'wrench.jpg', 'dolphin.jpg', 'lotus.jpg']
 base_url = "https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/{}?raw=true"
 
-if not os.path.isdir(image_folder):
-    os.makedirs(image_folder)
-    for image in images:
-        wget.download(base_url.format("{}/{}.jpg".format(image_folder, image)), image_folder)
-if not os.path.isfile(utils_file):
-    wget.download(base_url.format(utils_file))       
-if not os.path.isfile(image_net_labels_file):
-    wget.download(base_url.format(image_net_labels_file))  
-```
+for image in images:
+    mx.test_utils.download(base_url.format("{}/{}".format(image_folder, image)), fname=image,dirname=image_folder)
+mx.test_utils.download(base_url.format(utils_file), fname=utils_file)
+mx.test_utils.download(base_url.format(image_net_labels_file), fname=image_net_labels_file)
 
-
-```python
-from utils import *
+from utils import * 
 ```
 
 ## Downloading a model from the ONNX model zoo
 
-We download a pre-trained model, in our case the [vgg16](https://arxiv.org/abs/1409.1556) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file and some sample input/output data.
+We download a pre-trained model, in our case the [GoogleNet](https://arxiv.org/abs/1409.4842) model, trained on [ImageNet](http://www.image-net.org/) from the [ONNX model zoo](https://github.com/onnx/models). The model comes packaged in an archive `tar.gz` file containing an `model.onnx` model file.
 
 
 ```python
-base_url = "https://s3.amazonaws.com/download.onnx/models/" 
-current_model = "vgg16"
+base_url = "https://s3.amazonaws.com/download.onnx/models/opset_3/" 
+current_model = "bvlc_googlenet"
 model_folder = "model"
 archive = "{}.tar.gz".format(current_model)
 archive_file = os.path.join(model_folder, archive)
 url = "{}{}".format(base_url, archive)
 ```
 
-Create the model folder and download the zipped model
+Download and extract pre-trained model
 
 
 ```python
-if not os.path.isdir(model_folder):
-    os.makedirs(model_folder)
-if not os.path.isfile(archive_file):  
-    wget.download(url, model_folder)
-```
-
-Extract the model
-
-
-```python
+mx.test_utils.download(url, dirname = model_folder)
 if not os.path.isdir(os.path.join(model_folder, current_model)):
+    print('Extracting model...')
     tar = tarfile.open(archive_file, "r:gz")
     tar.extractall(model_folder)
     tar.close()
+    print('Extracted')
 ```
 
 The models have been pre-trained on ImageNet, let's load the label mapping of the 1000 classes.
@@ -112,18 +97,37 @@ We get the symbol and parameter objects
 sym, arg_params, aux_params = onnx_mxnet.import_model(onnx_path)
 ```
 
-We pick a context, CPU or GPU
+We pick a context, CPU is fine for inference, switch to mx.gpu() if you want to use your GPU.
 
 
 ```python
 ctx = mx.cpu()
 ```
 
-And load them into a MXNet Gluon symbol block. For ONNX models the default input name is `input_0`.
-
+We obtain the data names of the inputs to the model by using the model metadata API: 
 
 ```python
-net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('input_0'))
+model_metadata = onnx_mxnet.get_model_metadata(onnx_path)
+print(model_metadata)
+```
+
+```
+{'output_tensor_data': [(u'gpu_0/softmax_1', (1L, 1000L))],
+ 'input_tensor_data': [(u'gpu_0/data_0', (1L, 3L, 224L, 224L))]}
+```
+
+```python
+data_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
+print(data_names)
+```
+
+
+```[u'data_0']```<!--notebook-skip-line-->
+
+And load them into a MXNet Gluon symbol block. 
+
+```python
+net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
@@ -141,30 +145,6 @@ We can now cache the computational graph through [hybridization](https://mxnet.i
 net.hybridize()
 ```
 
-## Test using sample inputs and outputs
-The model comes with sample input/output we can use to test that whether model is correctly loaded
-
-
-```python
-numpy_path = os.path.join(model_folder, current_model, 'test_data_0.npz')
-sample = np.load(numpy_path, encoding='bytes')
-inputs = sample['inputs']
-outputs = sample['outputs']
-```
-
-
-```python
-print("Input format: {}".format(inputs[0].shape))
-print("Output format: {}".format(outputs[0].shape))
-```
-
-`Input format: (1, 3, 224, 224)` <!--notebook-skip-line-->
-
-
-`Output format: (1, 1000)` <!--notebook-skip-line-->
-    
-
-
 We can visualize the network (requires graphviz installed)
 
 
@@ -173,9 +153,7 @@ mx.visualization.plot_network(sym,  node_attrs={"shape":"oval","fixedsize":"fals
 ```
 
 
-
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network.png?raw=true)<!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/onnx/network2.png?raw=true)<!--notebook-skip-line-->
 
 
 
@@ -190,21 +168,6 @@ def run_batch(net, data):
         results.extend([o for o in outputs.asnumpy()])
     return np.array(results)
 ```
-
-
-```python
-result = run_batch(net, nd.array([inputs[0]], ctx))
-```
-
-
-```python
-print("Loaded model and sample output predict the same class: {}".format(np.argmax(result) == np.argmax(outputs[0])))
-```
-
-Loaded model and sample output predict the same class: True <!--notebook-skip-line-->
-
-
-Good the sample output and our prediction match, now we can run against real data
 
 ## Test using real images
 
@@ -227,8 +190,8 @@ We load two sets of images in memory
 
 
 ```python
-image_net_images = [plt.imread('images/{}.jpg'.format(path)) for path in ['apron', 'hammerheadshark','dog']]
-caltech101_images = [plt.imread('images/{}.jpg'.format(path)) for path in ['wrench', 'dolphin','lotus']]
+image_net_images = [plt.imread('{}/{}.jpg'.format(image_folder, path)) for path in ['apron', 'hammerheadshark','dog']]
+caltech101_images = [plt.imread('{}/{}.jpg'.format(image_folder, path)) for path in ['wrench', 'dolphin','lotus']]
 images = image_net_images + caltech101_images
 ```
 
@@ -265,9 +228,8 @@ plot_predictions(caltech101_images, result[3:7], categories, TOP_P)
 
 Lucky for us, the [Caltech101 dataset](http://www.vision.caltech.edu/Image_Datasets/Caltech101/) has them, let's see how we can fine-tune our network to classify these categories correctly.
 
-We show that in our next tutorials:
+We show that in our next tutorial:
 
-- Fine-tuning a ONNX Model using the modern imperative MXNet/Gluon API(Coming soon)
-- Fine-tuning a ONNX Model using the symbolic MXNet/Module API(Coming soon)
+- [Fine-tuning an ONNX Model using the modern imperative MXNet/Gluon](http://mxnet.incubator.apache.org/tutorials/onnx/fine_tuning_gluon.html)
     
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

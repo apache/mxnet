@@ -55,9 +55,11 @@ def get_test_image():
 
 def perform_inference(sym, arg_params, aux_params, input_img, img_cb, img_cr):
     """Perform inference on image using mxnet"""
+    metadata = onnx_mxnet.get_model_metadata('super_resolution.onnx')
+    data_names = [input_name[0] for input_name in metadata.get('input_tensor_data')]
     # create module
-    mod = mx.mod.Module(symbol=sym, data_names=['input_0'], label_names=None)
-    mod.bind(for_training=False, data_shapes=[('input_0', input_img.shape)])
+    mod = mx.mod.Module(symbol=sym, data_names=data_names, label_names=None)
+    mod.bind(for_training=False, data_shapes=[(data_names[0], input_img.shape)])
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
     # run inference

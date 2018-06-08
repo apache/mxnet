@@ -206,7 +206,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
       ImdecodeImpl(param.flag, param.to_rgb, str_img, len,
                    const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imdecode"));
+    FnProperty::kNormal, 0, "Imdecode");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV
@@ -245,7 +245,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
       ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize,
                    const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
+    FnProperty::kNormal, 0, "Imread");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV

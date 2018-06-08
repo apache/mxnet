@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
          const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(2);
   std::vector<float> scales(2, 1);
@@ -49,23 +49,55 @@ void Sum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                       const std::vector<NDArray> &inputs, const OpReqType &req,
                       const NDArray &out_data) {
+  if (req == kNullOp) {
+    return;
+  }
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   std::vector<mkldnn::primitive::at> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size(), 1);
   in_prims.reserve(inputs.size());
+  bool pd_same = true;
+  std::vector<NDArray> in_bufs(inputs.size());
   for (size_t i = 0; i < inputs.size(); i++) {
-    auto in_mem = inputs[i].GetMKLDNNData();
+    const mkldnn::memory *in_mem;
+    if (inputs[i].IsMKLDNNData() && inputs[i].IsView()) {
+      in_bufs[i] = inputs[i].Reorder2Default();
+      in_mem = in_bufs[i].GetMKLDNNData();
+    } else {
+      in_mem = inputs[i].GetMKLDNNData();
+    }
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
   }
-  mkldnn::sum::primitive_desc pdesc(scales, in_pds);
 
-  auto out_mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
-  MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem.second));
-  CommitOutput(out_data, out_mem);
-  stream->Submit();
+  mkldnn::sum::primitive_desc pdesc(scales, in_pds);
+  pd_same = pd_same && (pdesc.dst_primitive_desc() == in_pds[0]);
+  auto out_mem = const_cast<NDArray&>(out_data).CreateMKLDNNData(pdesc.dst_primitive_desc());
+  bool addr_same = false;
+  const void *first_data_handle;
+  if (in_bufs[0].is_none())
+    first_data_handle = inputs[0].GetMKLDNNData()->get_data_handle();
+  else
+    first_data_handle = in_bufs[0].GetMKLDNNData()->get_data_handle();
+  if (out_mem)
+    addr_same = out_mem->get_data_handle() == first_data_handle;
+  if (((req == kWriteTo) || (req == kWriteInplace && pd_same && addr_same))
+      && out_mem) {
+    // do sum computation directly on output NDArray
+    MKLDNNStream *stream = MKLDNNStream::Get();
+    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *out_mem));
+    stream->Submit();
+  } else {
+    // req == kWriteInplace but cannot be handled by mkldnn and
+    // req == kAddTo will run into this branch
+    auto mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
+    MKLDNNStream *stream = MKLDNNStream::Get();
+    stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *mem.second));
+    CommitOutput(out_data, mem);
+    stream->Submit();
+  }
 }
 
 }  // namespace op

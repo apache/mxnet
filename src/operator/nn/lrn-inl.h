@@ -58,7 +58,34 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
     DMLC_DECLARE_FIELD(nsize)
     .describe("normalization window width in elements.");
   }
+
+  bool operator==(const LRNParam& other) const {
+    return (this->nsize == other.nsize &&
+            fabs(this->alpha - other.alpha) < 1e-6 &&
+            fabs(this->beta  - other.beta)  < 1e-6 &&
+            fabs(this->knorm - other.knorm) < 1e-6);
+  }
 };  // struct LRNParam
+
+}  // namespace op
+}  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::LRNParam> {
+  size_t operator()(const mxnet::op::LRNParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.alpha);
+    ret = dmlc::HashCombine(ret, val.beta);
+    ret = dmlc::HashCombine(ret, val.knorm);
+    ret = dmlc::HashCombine(ret, val.nsize);
+    return ret;
+  }
+};
+}  // namespace std
+
+namespace mxnet {
+namespace op {
 
 template<typename xpu>
 void LRNForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,

@@ -167,7 +167,7 @@ expand.fileCount = 0
 
 # Expand the stages
 expand(sys.argv[2], [], "3rdparty/dmlc-core")
-expand(sys.argv[3], [], "3rdparty/nnvm")
+expand(sys.argv[3], [], "3rdparty/tvm/nnvm")
 expand(sys.argv[4], [], "src")
 
 # Write to amalgamation file
@@ -211,5 +211,3 @@ with open(sys.argv[5], 'wb') as f:
 for src in sources:
     if src not in history and not src.endswith('.o'):
         print('Not processed:', src)
-
-

@@ -31,7 +31,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
-.add_alias("_sparse_cast_storage")
+MXNET_ADD_SPARSE_OP_ALIAS(cast_storage)
 .describe(R"code(Casts tensor storage type to the new type.
 
 When an NDArray with default storage type is cast to csr or row_sparse storage,
@@ -46,6 +46,8 @@ The storage type of ``cast_storage`` output depends on stype parameter:
 - cast_storage(row_sparse, 'default') = default
 - cast_storage(default, 'csr') = csr
 - cast_storage(default, 'row_sparse') = row_sparse
+- cast_storage(csr, 'csr') = csr
+- cast_storage(row_sparse, 'row_sparse') = row_sparse
 
 Example::
 

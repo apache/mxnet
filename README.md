@@ -1,9 +1,12 @@
+<div align="center">
+  <a href="https://mxnet.incubator.apache.org/"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet_logo_2.png"></a><br>
+</div>
+
 Apache MXNet (incubating) for Deep Learning
 =====
-
-[![Build Status](https://builds.apache.org/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
-[![Documentation Status](https://builds.apache.org/job/incubator-mxnet-build-site/badge/icon)](https://mxnet.incubator.apache.org/)
-[![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
+| Master         | Docs          | License  |
+| :-------------:|:-------------:|:--------:|
+| [![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)  | [![Documentation Status](http://jenkins.mxnet-ci.amazon-ml.com/job/restricted-website-build/badge/icon)](https://mxnet.incubator.apache.org/) | [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE) |
 
 ![banner](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/banner.png)
 
@@ -22,6 +25,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 What's New
 ----------
+* [Version 1.2.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.2.0) - MXNet 1.2.0 Release.
 * [Version 1.1.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.1.0) - MXNet 1.1.0 Release.
 * [Version 1.0.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.0.0) - MXNet 1.0.0 Release.
 * [Version 0.12.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/0.12.1) - MXNet 0.12.1 Patch Release.

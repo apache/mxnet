@@ -5,6 +5,9 @@ They also include workflow questions, e.g., how to visualize a neural network co
 These answers are fairly focused. For more didactic, self-contained introductions to neural networks
 and full working examples, visit the [tutorials section](../tutorials/index.md).
 
+## API
+
+* [What's the difference between the Module and Gluon APIs for Python?](http://mxnet.io/api/python/index.html)
 
 ## Modeling
 * [How do I fine-tune pre-trained models to a new dataset?](http://mxnet.io/faq/finetune.html)
@@ -15,9 +18,11 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 
 ## Scale
-* [How can I train with multiple CPU/GPUs with data parallelism?](http://mxnet.io/faq/multi_devices.html)
+* [How can I train with multiple CPU/GPUs on a single machine with data parallelism?](http://mxnet.io/faq/multi_devices.html)
 
-* [How can I train with multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
+* [How can I train using multiple machines with data parallelism?](http://mxnet.io/faq/distributed_training.html)
+
+* [How can I train using multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
 
 
 ## Speed

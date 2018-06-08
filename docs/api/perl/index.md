@@ -60,10 +60,11 @@ pdl> print mx->nd->array(sequence(2,3))->aspdl ## 3 rows, 2 columns
  [2 3]
  [4 5]
 ]
+```
 
 Export/import to/from sparse MXNet tensors are supported via [PDL::CCS](https://metacpan.org/release/PDL-CCS).
 Please check out the examples directory for the examples on how to use the sparse matrices.
-```
+
  ## Perl API Reference
  * [Module API is a flexible high-level interface for training neural networks.](module.md)
  * [Symbolic API performs operations on NDArrays to assemble neural networks from layers.](symbol.md)

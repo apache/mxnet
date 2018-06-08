@@ -94,6 +94,7 @@ class Arg:
         'int or None':'dmlc::optional<int>',\
         'long':'int64_t',\
         'double':'double',\
+        'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&'}
     name = ''
     type = ''

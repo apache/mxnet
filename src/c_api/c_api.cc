@@ -45,6 +45,7 @@
 #include <utility>
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
+#include "../operator/tensor/matrix_op-inl.h"
 
 using namespace mxnet;
 
@@ -90,6 +91,13 @@ int MXRandomSeed(int seed) {
   API_END();
 }
 
+int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  mxnet::RandomSeed(ctx, seed);
+  API_END();
+}
+
 int MXNotifyShutdown() {
   API_BEGIN();
   Engine::Get()->NotifyShutdown();
@@ -105,6 +113,12 @@ int MXSetNumOMPThreads(int thread_num) {
 int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size) {
   API_BEGIN();
   *prev_bulk_size = Engine::Get()->set_bulk_size(bulk_size);
+  API_END();
+}
+
+int MXGetGPUCount(int* out) {
+  API_BEGIN();
+  *out = Context::GetGPUCount();
   API_END();
 }
 
@@ -415,6 +429,21 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   if (pos >= 0) {
     new_shape[pos] = arr->shape().Size() / size;
   }
+  *ptr = arr->ReshapeWithRecord(new_shape);
+  *out = ptr;
+  API_END_HANDLE_ERROR(delete ptr);
+}
+
+MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+                                 int ndim,
+                                 dim_t *dims,
+                                 bool reverse,
+                                 NDArrayHandle *out) {
+  NDArray *ptr = new NDArray();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  nnvm::Tuple<dim_t> shape(dims, dims+ndim);
+  TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);

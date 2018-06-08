@@ -2,43 +2,57 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
+  <div class="dropdown">
+    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.0
+    <span class="caret"></span></button>
+    <ul class="dropdown-menu opt-group">
+      <li class="opt active versions"><a href="#">v1.2.0</a></li>
+      <li class="opt versions"><a href="#">v1.1.0</a></li>
+      <li class="opt versions"><a href="#">v1.0.0</a></li>
+      <li class="opt versions"><a href="#">v0.12.1</a></li>
+      <li class="opt versions"><a href="#">v0.11.0</a></li>
+      <li class="opt versions"><a href="#">master</a></li>
+    </ul>
+  </div>
+
 <script type="text/javascript" src='../_static/js/options.js'></script>
 
 <!-- START - OS Menu -->
 
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Linux</button>
-  <button type="button" class="btn btn-default opt">MacOS</button>
-  <button type="button" class="btn btn-default opt">Windows</button>
-  <button type="button" class="btn btn-default opt">Cloud</button>
-  <button type="button" class="btn btn-default opt">Devices</button>
+  <button type="button" class="btn btn-default opt active Devices">Linux</button>
+  <button type="button" class="btn btn-default opt Devices">MacOS</button>
+  <button type="button" class="btn btn-default opt Devices">Windows</button>
+  <button type="button" class="btn btn-default opt Devices">Cloud</button>
+  <button type="button" class="btn btn-default opt Devices">Devices</button>
 </div>
 
 <!-- START - Language Menu -->
 
 <div class="linux macos windows">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Python</button>
-  <button type="button" class="btn btn-default opt">Scala</button>
-  <button type="button" class="btn btn-default opt">R</button>
-  <button type="button" class="btn btn-default opt">Julia</button>
-  <button type="button" class="btn btn-default opt">Perl</button>
+  <button type="button" class="btn btn-default opt active languages">Python</button>
+  <button type="button" class="btn btn-default opt languages">Scala</button>
+  <button type="button" class="btn btn-default opt languages">R</button>
+  <button type="button" class="btn btn-default opt languages">Julia</button>
+  <button type="button" class="btn btn-default opt languages">Perl</button>
+  <button type="button" class="btn btn-default opt languages">Cpp</button>
 </div>
 </div>
 
 <!-- No CPU GPU for other Devices -->
 <div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">CPU</button>
-  <button type="button" class="btn btn-default opt">GPU</button>
+  <button type="button" class="btn btn-default processors opt active">CPU</button>
+  <button type="button" class="btn btn-default processors opt">GPU</button>
 </div>
 </div>
 
 <!-- other devices -->
 <div class="devices">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Raspberry Pi</button>
-  <button type="button" class="btn btn-default opt">NVIDIA Jetson TX2</button>
+  <button type="button" class="btn btn-default iots opt active">Raspberry Pi</button>
+  <button type="button" class="btn btn-default iots opt">NVIDIA Jetson TX2</button>
 </div>
 </div>
 
@@ -48,10 +62,10 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu gpu">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active">Pip</button>
-  <button type="button" class="btn btn-default opt">Virtualenv</button>
-  <button type="button" class="btn btn-default opt">Docker</button>
-  <button type="button" class="btn btn-default opt">Build from Source</button>
+  <button type="button" class="btn btn-default environs opt active">Pip</button>
+  <button type="button" class="btn btn-default environs opt">Virtualenv</button>
+  <button type="button" class="btn btn-default environs opt">Docker</button>
+  <button type="button" class="btn btn-default environs opt">Build from Source</button>
 </div>
 </div>
 </div>
@@ -81,6 +95,8 @@ $ sudo apt-get install -y wget python gcc
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
+<div class="v1-2-0">
+
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
@@ -99,6 +115,139 @@ pip install graphviz
 ```bash
 $ pip install mxnet-mkl
 ```
+
+</div> <!-- End of v1-2-0 -->
+
+<div class="v1-1-0">
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet-mkl==0.12.0
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+
+**Step 2** Install MXNet with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet --pre
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-mkl --pre
+```
+
+</div> <!-- End of master-->
 
 </div> <!-- End of pip -->
 
@@ -140,11 +289,73 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 $ pip install --upgrade pip
 ```
 
+<div class="v1-2-0">
+
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
 $ pip install mxnet
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+For *MXNet* 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -193,7 +404,6 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 
 </div> <!-- END of docker -->
 
-
 <div class="build-from-source">
 <br/>
 
@@ -229,7 +439,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -253,7 +463,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -302,6 +511,8 @@ $ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0
 
 ```bash
@@ -320,6 +531,117 @@ pip install graphviz
 ```bash
 $ pip install mxnet-cu90mkl
 ```
+
+</div> <!-- End of v1-2-0-->
+
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==1.1.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==1.0.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==0.12.1
+```
+
+For *MXNet* 0.12.0 -
+
+```bash
+$ pip install mxnet-cu90==0.12.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==0.12.1
+```
+
+For *MXNet* 0.12.0 -
+
+```bash
+$ pip install mxnet-cu90mkl==0.12.0
+```
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+
+```bash
+$ pip install mxnet-cu90==0.11.0
+```
+
+**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+```bash
+sudo apt-get install graphviz
+pip install graphviz
+```
+
+**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+
+**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+```bash
+$ pip install mxnet-cu90mkl==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
 
 </div> <!-- END of pip -->
 
@@ -362,11 +684,76 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade pip
 ```
 
+
+<div class="v1-2-0">
+
 Install *MXNet* with GPU support using CUDA 9.0.
 
 ```bash
 (mxnet)$ pip install mxnet-cu90
 ```
+
+</div> <!-- End of v1-2-0-->
+
+
+<div class="v1-1-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.12.1
+```
+
+For *MXNet* 0.12.0 with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.12.0
+``` 
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+(mxnet)$ pip install mxnet-cu90 --pre
+```
+
+</div> <!-- End of master-->
 
 **Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -452,7 +839,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -476,7 +863,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -533,7 +919,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -605,7 +991,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -635,6 +1021,12 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+<div class="cpu gpu">
+<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<br/>
+</div> <!-- End of cpu gpu -->
+</div> <!-- END - C++-->
 </div> <!-- END - Linux -->
 
 
@@ -670,9 +1062,74 @@ $ pip install --upgrade pip
 $ pip install --upgrade setuptools
 ```
 
+<div class="v1-2-0">
+
+Then use pip to install MXNet:
+
 ```bash
 $ pip install mxnet
 ```
+</div> <!-- End of v1-2-0 -->
+
+
+<div class="v1-1-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+
+<div class="v1-0-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+<div class="v0-12-1">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet=0.12.1
+```
+
+For MXNet 0.12.0 -
+
+```bash
+$ pip install mxnet=0.12.0
+```
+
+
+</div> <!-- End of v0-12-1-->
+
+
+<div class="v0-11-0">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Then use pip to install MXNet:
+
+```bash
+$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -734,11 +1191,74 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade setuptools
 ```
 
+<div class="v1-2-0">
+
 Install *MXNet* with OpenBLAS acceleration.
 
 ```bash
 (mxnet)$ pip install mxnet
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==0.12.1
+```
+
+For *MXNet* 0.12.0 -
+
+```bash
+(mxnet)$ pip install mxnet==0.12.0
+```
+
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+Install *MXNet* with OpenBLAS acceleration.
+
+```bash
+(mxnet)$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 **Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -934,6 +1454,10 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+<p>To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.</p>
+<br/>
+</div>
 </div> <!-- END - Mac OS -->
 
 
@@ -955,11 +1479,75 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet*.
 
 ```bash
 $ pip install mxnet
 ```
+
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==0.12.1
+```
+
+For *MXNet* 0.12.0 -
+
+```bash
+$ pip install mxnet==0.12.0
+```
+
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet==0.11.0
+```
+
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+**Step 2**  Install *MXNet*.
+
+```bash
+$ pip install mxnet --pre
+```
+
+</div> <!-- End of master-->
+
 
 </div> <!-- End of pip -->
 
@@ -981,18 +1569,139 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
+
+<div class="v1-2-0">
+
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
 
 ```bash
 $ pip install mxnet-cu90
 ```
 
+</div> <!-- End of v1-2-0-->
+
+<div class="v1-1-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==1.1.0
+```
+
+</div> <!-- End of v1-1-0-->
+
+<div class="v1-0-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==1.0.0
+```
+
+</div> <!-- End of v1-0-0-->
+
+<div class="v0-12-1">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.12.1
+```
+
+Install *MXNet* 0.12.0 with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.12.0
+```
+
+</div> <!-- End of v0-12-1-->
+
+<div class="v0-11-0">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90==0.11.0
+```
+
+</div> <!-- End of v0-11-0-->
+
+<div class="master">
+
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+
+```bash
+$ pip install mxnet-cu90 --pre
+```
+
+</div> <!-- End of master-->
+
 Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
 
 </div>
 <div class="build-from-source">
 <br/>
-To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
+
+We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), and [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
+
+**Option 1** 
+
+To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
+
+1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
+2. Download and install [CMake](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
+3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
+4. Unzip the OpenCV package.
+5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
+6. If you don’t have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
+7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
+8. Download and install CUDA: Install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal), and Download the base installer (e.g., ```cuda_9.1.85_win10.exe```).
+9. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
+10. Download and install [git](https://git-for-windows.github.io/).
+
+After you have installed all of the required dependencies, build the MXNet source code:
+
+1. Start ```cmd``` in windows.
+
+2. Download the MXNet source code from GitHub by using following command:
+
+```r
+cd C:\
+git clone https://github.com/apache/incubator-mxnet.git --recursive
+```
+
+3. Follow [this link](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify ```Individual components```, and check ```VC++ 2017 version 15.4 v14.11 toolset```, and click ```Modify```.
+
+4. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
+
+```r
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
+```
+
+5. Create a build dir using the following command and go to the directory, for example: 
+
+```r
+mkdir C:\build
+cd C:\build
+```
+
+6. CMake the MXNet source code by using following command:
+
+```r
+cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.1,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.1 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
+```
+
+NOTE: make sure the DCUDNN_INCLUDE and DCUDNN_LIBRARY pointing to the “include” and “cudnn.lib” of your CUDA installed location, and the ```C:\incubator-mxnet``` is the location of the source code you just git in the previous step
+
+7. After the CMake successfully completed, compile the the MXNet source code by using following command:
+
+```r
+msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
+```
+
+**Option 2** 
+
+To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition.
 2. Download and install [CMake](https://cmake.org/) if it is not already installed.
@@ -1009,8 +1718,6 @@ After you have installed all of the required dependencies, build the MXNet sourc
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-
-
 
 &nbsp;
 Next, we install the ```graphviz``` library that we use for visualizing network graphs that you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
@@ -1066,6 +1773,12 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala julia perl -->
+<div class="cpp">
+<div class="cpu gpu">
+<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<br/>
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of C++>
 </div> <!-- End of Windows -->
 
 
@@ -1207,10 +1920,7 @@ Clone the MXNet source code repository using the following ```git``` command in 
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
-    cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
-    echo "USE_CUDNN=1" >> config.mk
+    cp make/crosscompile.jetson.mk config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
@@ -1254,6 +1964,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- This # tag restarts the page and allows reuse
  of the div classes for validation sections, etc -->
+
 
 # Validate MXNet Installation
 
@@ -1630,7 +2341,7 @@ b
 
 
 <div class="linux">
-  <div class="scala julia perl">
+  <div class="scala julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -1640,7 +2351,7 @@ Will be available soon.
 </div>
 
 <div class="macos">
-  <div class="scala julia perl">
+  <div class="scala julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -1662,7 +2373,7 @@ Will be available soon.
 </div>
 </div>
 
-<div class="scala julia perl">
+<div class="scala julia perl cpp">
 <div class="cpu gpu">
 
 Will be available soon.
@@ -1685,4 +2396,10 @@ Will be available soon.
 </div>
 </div>
 
-# Download Source Package
+<br/>
+<!-- Download -->
+
+# Source Download
+
+<a href="download.html">Download</a> your required version of MXNet.
+

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -37,14 +37,14 @@ __all__ = ['MXNetError']
 if sys.version_info[0] == 3:
     string_types = str,
     numeric_types = (float, int, np.generic)
-    integer_types = int
+    integer_types = (int, np.int32, np.int64)
     # this function is needed for python3
     # to convert ctypes.char_p .value back to python str
     py_str = lambda x: x.decode('utf-8')
 else:
     string_types = basestring,
     numeric_types = (float, int, long, np.generic)
-    integer_types = (int, long)
+    integer_types = (int, long, np.int32, np.int64)
     py_str = lambda x: x
 
 class _NullType(object):
@@ -97,6 +97,67 @@ class MXCallbackList(ctypes.Structure):
         ('callbacks', ctypes.POINTER(ctypes.CFUNCTYPE(ctypes.c_int))),
         ('contexts', ctypes.POINTER(ctypes.c_void_p))
         ]
+
+# Please see: https://stackoverflow.com/questions/5189699/how-to-make-a-class-property
+class _MXClassPropertyDescriptor(object):
+    def __init__(self, fget, fset=None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj, clas=None):
+        if clas is None:
+            clas = type(obj)
+        return self.fget.__get__(obj, clas)()
+
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise MXNetError("cannot use the setter: %s to set attribute" % obj.__name__)
+        if inspect.isclass(obj):
+            type_ = obj
+            obj = None
+        else:
+            type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+class _MXClassPropertyMetaClass(type):
+    def __setattr__(cls, key, value):
+        if key in cls.__dict__:
+            obj = cls.__dict__.get(key)
+        if obj and isinstance(obj, _MXClassPropertyDescriptor):
+            return obj.__set__(cls, value)
+
+        return super(_MXClassPropertyMetaClass, cls).__setattr__(key, value)
+
+# with_metaclass function obtained from: https://github.com/benjaminp/six/blob/master/six.py
+#pylint: disable=unused-argument
+def with_metaclass(meta, *bases):
+    """Create a base class with a metaclass."""
+    # This requires a bit of explanation: the basic idea is to make a dummy
+    # metaclass for one level of class instantiation that replaces itself with
+    # the actual metaclass.
+    class metaclass(type):
+
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+
+        @classmethod
+        def __prepare__(cls, name, this_bases):
+            return meta.__prepare__(name, bases)
+    return type.__new__(metaclass, 'temporary_class', (), {})
+#pylint: enable=unused-argument
+
+def classproperty(func):
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+
+    return _MXClassPropertyDescriptor(func)
+
 
 
 def _load_lib():
@@ -226,6 +287,7 @@ else:
         arr = (ctypes.c_char_p * len(strings))()
         arr[:] = [s.encode('utf-8') for s in strings]
         return arr
+
 
 def c_array(ctype, values):
     """Create ctypes array from a Python array.

@@ -89,7 +89,7 @@ void NDArrayOp<xpu>::Forward(const OpContext &ctx,
       [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         ctx.async_on_complete();
         on_complete();
-      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, PROFILER_MESSAGE("NDArrayOpForward"));
+      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, "NDArrayOpForward");
 }
 
 template<typename xpu>
@@ -138,7 +138,7 @@ void NDArrayOp<xpu>::Backward(const OpContext &ctx,
       [ndcpy, ctx](RunContext rctx, Engine::CallbackOnComplete on_complete){
         ctx.async_on_complete();
         on_complete();
-      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, PROFILER_MESSAGE("NDArrayOpBackward"));
+      }, ndctx, ndvar, {}, FnProperty::kNormal, 0, "NDArrayOpBackward");
 }
 
 Operator* NDArrayOpProp::CreateOperator(Context ctx) const {

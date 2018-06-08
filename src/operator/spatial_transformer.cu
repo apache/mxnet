@@ -102,7 +102,7 @@ __global__ void BilinearSamplingBackwardKernel(const int i_c, const int i_h,
     DType top_left_x_w = 1.0 - (x_real - top_left_x);
     for (index_t c = 0; c < o_c; ++c) {
       index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
-      index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
+      int data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
       // calc 4 vertex value in input data
       DType top_left_v = 0;
       DType top_right_v = 0;

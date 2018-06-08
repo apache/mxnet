@@ -44,7 +44,7 @@ except ImportError:
     # in rare cases requests may be not installed
     pass
 import mxnet as mx
-from .context import Context
+from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
@@ -54,12 +54,12 @@ def default_context():
     """Get default context for regression test."""
     # _TODO: get context from environment variable to support
     # testing with GPUs
-    return Context.default_ctx
+    return current_context()
 
 
 def set_default_context(ctx):
     """Set default context."""
-    Context.default_ctx = ctx
+    Context._default_ctx.value = ctx
 
 
 def default_dtype():
@@ -1367,7 +1367,7 @@ def list_gpus():
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-def download(url, fname=None, dirname=None, overwrite=False):
+def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     """Download an given URL
 
     Parameters
@@ -1385,12 +1385,17 @@ def download(url, fname=None, dirname=None, overwrite=False):
         Default is false, which means skipping download if the local file
         exists. If true, then download the url to overwrite the local file if
         exists.
+    retries : integer, default 5
+        The number of times to attempt the download in case of failure or non 200 return codes
 
     Returns
     -------
     str
         The filename of the downloaded file
     """
+
+    assert retries >= 0, "Number of retries should be at least 0"
+
     if fname is None:
         fname = url.split('/')[-1]
 
@@ -1411,12 +1416,24 @@ def download(url, fname=None, dirname=None, overwrite=False):
         logging.info("%s exists, skipping download", fname)
         return fname
 
-    r = requests.get(url, stream=True)
-    assert r.status_code == 200, "failed to open %s" % url
-    with open(fname, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
+    while retries+1 > 0:
+        # Disable pyling too broad Exception
+        # pylint: disable=W0703
+        try:
+            r = requests.get(url, stream=True)
+            assert r.status_code == 200, "failed to open %s" % url
+            with open(fname, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk: # filter out keep-alive new chunks
+                        f.write(chunk)
+                break
+        except Exception as e:
+            retries -= 1
+            if retries <= 0:
+                raise e
+            else:
+                print("download failed, retrying, {} attempt{} left"
+                      .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
@@ -1431,10 +1448,10 @@ def get_mnist():
     def read_data(label_url, image_url):
         with gzip.open(mx.test_utils.download(label_url)) as flbl:
             struct.unpack(">II", flbl.read(8))
-            label = np.fromstring(flbl.read(), dtype=np.int8)
+            label = np.frombuffer(flbl.read(), dtype=np.int8)
         with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
-            image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+            image = np.frombuffer(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
         return (label, image)
 
@@ -1731,6 +1748,36 @@ def mean_check(generator, mu, sigma, nsamples=1000000):
     ret = (sample_mean > mu - 3 * sigma / np.sqrt(nsamples)) and\
           (sample_mean < mu + 3 * sigma / np.sqrt(nsamples))
     return ret
+
+def get_im2rec_path(home_env="MXNET_HOME"):
+    """Get path to the im2rec.py tool
+
+    Parameters
+    ----------
+
+    home_env : str
+        Env variable that holds the path to the MXNET folder
+
+    Returns
+    -------
+    str
+        The path to im2rec.py
+    """
+    # Check first if the path to MXNET is passed as an env variable
+    if home_env in os.environ:
+        mxnet_path = os.environ[home_env]
+    else:
+        # Else use currently imported mxnet as reference
+        mxnet_path = os.path.dirname(mx.__file__)
+    # If MXNet was installed through pip, the location of im2rec.py
+    im2rec_path = os.path.join(mxnet_path, 'tools', 'im2rec.py')
+    if os.path.isfile(im2rec_path):
+        return im2rec_path
+    # If MXNet has been built locally
+    im2rec_path = os.path.join(mxnet_path, '..', '..', 'tools', 'im2rec.py')
+    if os.path.isfile(im2rec_path):
+        return im2rec_path
+    raise IOError('Could not find path to tools/im2rec.py')
 
 def var_check(generator, sigma, nsamples=1000000):
     """Test the generator by matching the variance.

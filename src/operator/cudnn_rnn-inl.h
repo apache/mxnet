@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
-class CuDNNRNNOp : public Operator {
+class CuDNNRNNOp : public Operator{
  public:
   explicit CuDNNRNNOp(RNNParam param) {
     this->param_ = param;
@@ -76,9 +76,39 @@ class CuDNNRNNOp : public Operator {
       param_.lstm_q_ = true;
     else
       param_.lstm_q_ = false;
+
+    // Create descriptors
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&hy_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&cy_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&dhx_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&dcx_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&dhy_desc_));
+    CUDNN_CALL(cudnnCreateTensorDescriptor(&dcy_desc_));
+
+    CUDNN_CALL(cudnnCreateFilterDescriptor(&w_desc_));
+    CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
+
+    CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
+    CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
   }
 
   ~CuDNNRNNOp() {
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(hy_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(cy_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(dhx_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(dcx_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(dhy_desc_));
+    CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
+
+    CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
+    CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
+    CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
+
     if (init_cudnn_) {
       for (size_t i = 0; i < x_desc_vec_.size(); ++i) {
         CUDNN_CALL(cudnnDestroyTensorDescriptor(x_desc_vec_[i]));
@@ -86,25 +116,16 @@ class CuDNNRNNOp : public Operator {
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_vec_[i]));
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
       }
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(hy_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(cy_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhx_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcx_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(dhy_desc_));
-      CUDNN_CALL(cudnnDestroyTensorDescriptor(dcy_desc_));
+      init_cudnn_ = false;
 
-      CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
-      CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
-      CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
-      Storage::Get()->Free(dropout_states_);
       Storage::Get()->Free(reserve_space_);
+      if (param_.p > 0) {
+        Storage::Get()->Free(dropout_states_);
+      }
     }
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
+  virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &out_data,
                        const std::vector<TBlob> &aux_args) {
@@ -393,15 +414,6 @@ class CuDNNRNNOp : public Operator {
       strideA[1] = dimA[2];
       strideA[2] = 1;
 
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&hy_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&cy_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhx_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcx_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&dhy_desc_));
-      CUDNN_CALL(cudnnCreateTensorDescriptor(&dcy_desc_));
-
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
@@ -444,20 +456,19 @@ class CuDNNRNNOp : public Operator {
                                             strideA));
 
       // Create Dropout descriptors
-      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
-      CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_,
-                                           &dropout_byte_));
-      dropout_size_ = dropout_byte_ / sizeof(DType);
-      dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
-      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_,
-                                           s->dnn_handle_,
-                                           param_.p,  // keep probability
-                                           dropout_states_.dptr,
-                                           dropout_byte_,
+      if (param_.p > 0) {
+        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_byte_));
+        dropout_size_ = dropout_byte_ / sizeof(DType);
+        dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
+      } else {
+        dropout_states_ = {};
+        dropout_byte_ = 0;
+      }
+      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
+                                           param_.p,  // discard probability
+                                           dropout_states_.dptr, dropout_byte_,
                                            seed_));
       // RNN descriptors
-      CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
-
       #if CUDNN_MAJOR >= 6
         cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
         CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
@@ -512,8 +523,6 @@ class CuDNNRNNOp : public Operator {
       CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
 
       // Set param descriptors
-      CUDNN_CALL(cudnnCreateFilterDescriptor(&w_desc_));
-      CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
       int dim_w[3] = {1, 1, 1};
       dim_w[0] = w.shape_[0];
       CUDNN_CALL(cudnnSetFilterNdDescriptor(w_desc_,

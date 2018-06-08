@@ -37,18 +37,21 @@
 # choice of compiler
 #--------------------
 
+ifndef CC
 export CC = gcc
+endif
+ifndef CXX
 export CXX = g++
+endif
+ifndef NVCC
 export NVCC = nvcc
+endif
 
 # whether compile with options for MXNet developer
 DEV = 0
 
 # whether compile with debug
 DEBUG = 0
-
-# whether compile with profiler
-USE_PROFILER =
 
 # whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
@@ -135,9 +138,18 @@ endif
 ARCH := $(shell uname -a)
 ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
 	USE_SSE=0
+	USE_F16C=0
 else
 	USE_SSE=1
 endif
+
+#----------------------------
+# F16C instruction support for faster arithmetic of fp16 on CPU
+#----------------------------
+# For distributed training with fp16, this helps even if training on GPUs
+# If left empty, checks CPU support and turns it on.
+# For cross compilation, please check support for F16C on target device and turn off if necessary.
+USE_F16C =
 
 #----------------------------
 # distributed computing

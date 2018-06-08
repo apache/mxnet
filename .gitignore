@@ -136,6 +136,7 @@ lib
 #Notebook Automated Test
 !tests/nightly/test_tutorial_config.txt
 !tests/nightly/TestNotebook
+tests/nightly/tmp_notebook
 
 # pip building tools
 tools/pip_package/build
@@ -165,3 +166,7 @@ python/.eggs
 *DartConfiguration.tcl
 tests/Makefile
 tests/mxnet_unit_tests
+
+# generated wrappers for ccache
+cc
+cxx
