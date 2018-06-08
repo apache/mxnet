@@ -469,6 +469,7 @@ static inline mkldnn::memory *GetMKLDNNExact(
 
 const mkldnn::memory *NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
+  CHECK(!IsView());
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
@@ -482,7 +483,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   if (mem->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
-    return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
+    return GetMKLDNNExact(mem, desc);
   } else {
     return nullptr;
   }
