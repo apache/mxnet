@@ -833,6 +833,11 @@ nightly_test_javascript() {
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
+broken_link_checker() {
+    set -ex
+    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
+}
+
 # Deploy
 
 deploy_docs() {
