@@ -94,6 +94,10 @@ def set_state(state='stop', profile_process='worker'):
     state : string, optional
         Indicates whether to run the profiler, can
         be 'stop' or 'run'. Default is `stop`.
+    profile_process : string
+        whether to profile kvstore `server` or `worker`.
+        server can only be profiled when kvstore is of type dist.
+        if this is not passed, defaults to `worker`
     """
     state2int = {'stop': 0, 'run': 1}
     profile_process2int = {'worker': 0, 'server': 1}
@@ -124,6 +128,10 @@ def dump(finished=True, profile_process='worker'):
     finished : boolean
         Indicates whether to stop statistic output (dumping) after this dump.
         Default is True
+    profile_process : string
+        whether to profile kvstore `server` or `worker`.
+        server can only be profiled when kvstore is of type dist.
+        if this is not passed, defaults to `worker`
     """
     fin = 1 if finished is True else 0
     profile_process2int = {'worker': 0, 'server': 1}
@@ -155,7 +163,15 @@ def dumps(reset=False):
 
 
 def pause(profile_process='worker'):
-    """Pause profiling."""
+    """Pause profiling.
+
+    Parameters
+    ----------
+    profile_process : string
+        whether to profile kvstore `server` or `worker`.
+        server can only be profiled when kvstore is of type dist.
+        if this is not passed, defaults to `worker`
+    """
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXProfilePause(int(1),
                                    profile_process2int[profile_process],
@@ -163,7 +179,16 @@ def pause(profile_process='worker'):
 
 
 def resume(profile_process='worker'):
-    """Resume paused profiling."""
+    """
+    Resume paused profiling.
+
+    Parameters
+    ----------
+    profile_process : string
+        whether to profile kvstore `server` or `worker`.
+        server can only be profiled when kvstore is of type dist.
+        if this is not passed, defaults to `worker`
+    """
     profile_process2int = {'worker': 0, 'server': 1}
     check_call(_LIB.MXProfilePause(int(0),
                                    profile_process2int[profile_process],
