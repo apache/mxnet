@@ -24,18 +24,49 @@ set -ex
 
 clean_repo() {
     set -ex
-    git clean -xfd
-    git submodule foreach --recursive git clean -xfd
+    git clean -ffxd
+    git submodule foreach --recursive git clean -ffxd
     git reset --hard
     git submodule foreach --recursive git reset --hard
+    git submodule foreach --recursive git clean -ffxd
     git submodule update --init --recursive
 }
 
-build_wheel() {
+# wrap compiler calls with ccache
+build_ccache_wrappers() {
+    set -ex
 
+    rm -f cc
+    rm -f cxx
+
+    touch cc
+    touch cxx
+
+    if [ -z ${CC+x} ]; then
+        echo "No \$CC set, defaulting to gcc";
+        export CC=gcc
+    fi
+
+    if [ -z ${CXX+x} ]; then
+       echo "No \$CXX set, defaulting to g++";
+       export CXX=g++
+    fi
+
+    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an executable for -ccbin
+
+    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
+    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
+
+    chmod +x cc
+    chmod +x cxx
+
+    export CC=`pwd`/cc
+    export CXX=`pwd`/cxx
+}
+
+build_wheel() {
     set -ex
     pushd .
-
     PYTHON_DIR=${1:-/work/mxnet/python}
     BUILD_DIR=${2:-/work/build}
 
@@ -70,6 +101,7 @@ build_jetson() {
     set -ex
     pushd .
 
+    build_ccache_wrappers
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
@@ -91,6 +123,8 @@ build_armv6() {
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -116,7 +150,7 @@ build_armv7() {
     # make -j$(nproc)
 
     # build_wheel /work/mxnet/python /work/mxnet/lib
-    
+
     cd /work/build
 
     # Lapack functionality will be included and statically linked to openblas.
@@ -145,7 +179,9 @@ build_armv7() {
 
 build_amzn_linux_cpu() {
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -160,7 +196,9 @@ build_amzn_linux_cpu() {
 }
 
 build_arm64() {
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
@@ -178,7 +216,9 @@ build_arm64() {
 build_android_arm64() {
     set -ex
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DUSE_LAPACK=OFF\
@@ -198,6 +238,8 @@ build_android_arm64() {
 build_centos7_cpu() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -210,6 +252,8 @@ build_centos7_cpu() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/mxnet
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -222,6 +266,8 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/mxnet
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -234,8 +280,14 @@ build_centos7_gpu() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu() {
+    build_ubuntu_cpu_openblas
+}
+
 build_ubuntu_cpu_openblas() {
     set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -246,54 +298,71 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
+
+    export CXX=clang++-3.9
+    export CC=clang-3.9
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50() {
     set -ex
-    make \
+
+    export CXX=clang++-5.0
+    export CC=clang-5.0
+
+    build_ccache_wrappers
+
+    make  \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
+
+    export CXX=clang++-3.9
+    export CC=clang-3.9
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
-        CXX=clang++-3.9               \
-        CC=clang-3.9                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
     set -ex
+
+    export CXX=clang++-5.0
+    export CC=clang-5.0
+
+    build_ccache_wrappers
+
     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
-        CXX=clang++-5.0               \
-        CC=clang-5.0                  \
         -j$(nproc)
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
+    build_ccache_wrappers
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -302,8 +371,13 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
+build_ubuntu_gpu() {
+    build_ubuntu_gpu_cuda91_cudnn7
+}
+
 build_ubuntu_gpu_mkldnn() {
     set -ex
+    build_ccache_wrappers
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -317,7 +391,9 @@ build_ubuntu_gpu_mkldnn() {
 
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
-    make  \
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
+    make \
         DEV=1                         \
         USE_BLAS=openblas             \
         USE_CUDA=1                    \
@@ -346,6 +422,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
@@ -364,6 +442,8 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
@@ -413,7 +493,7 @@ unittest_ubuntu_python3_cpu() {
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
