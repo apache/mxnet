@@ -350,7 +350,7 @@ def test_sparse_symbol_block():
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
-    params.get('bias', shape=(5,), dtype='float32')
+    params.get('bias', shape=(5), dtype='float32')
     net = gluon.nn.Dense(5, params=params)
     net.initialize()
     x = mx.nd.ones((2,5))

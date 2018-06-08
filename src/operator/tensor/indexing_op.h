@@ -43,7 +43,6 @@
 #include "../mxnet_op.h"
 #include "./sort_op.h"
 #include "./init_op.h"
-#include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
 
 namespace mxnet {

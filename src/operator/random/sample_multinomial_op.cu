@@ -37,7 +37,8 @@ struct SampleMultinomialBackwardGPUKernel {
                                   DType* ograd, DType* dist, IType* out,
                                   DType* igrad) {
     for (index_t j = 0; j < M; ++j) {
-      atomicAdd(&igrad[i*K + out[i*M + j]], ograd[i*M + j] / dist[i*K + out[i*M + j]]);
+      atomicAdd(&igrad[i*K + static_cast<size_t>(out[i*M + j])],
+        ograd[i*M + j] / dist[i*K + static_cast<size_t>(out[i*M + j])]);
     }
   }
 };

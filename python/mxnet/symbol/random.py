@@ -224,7 +224,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, **kwa
                           [mu, alpha], shape, dtype, kwargs)
 
 
-def multinomial(data, shape=_Null, get_prob=True, **kwargs):
+def multinomial(data, shape=_Null, get_prob=True, dtype='int32', **kwargs):
     """Concurrent sampling from multiple multinomial distributions.
 
     .. note:: The input distribution must be normalized, i.e. `data` must sum to
@@ -245,8 +245,11 @@ def multinomial(data, shape=_Null, get_prob=True, **kwargs):
         samples will also be returned.
         This is usually used for reinforcement learning, where you can provide
         reward as head gradient w.r.t. this array to estimate gradient.
+    dtype : str or numpy.dtype
+        Data type of the sample output array. The default is int32.
+        Note that the data type of the log likelihood array is the same with that of `data`.
     """
-    return _internal._sample_multinomial(data, shape, get_prob, **kwargs)
+    return _internal._sample_multinomial(data, shape, get_prob, dtype=dtype, **kwargs)
 
 
 def shuffle(data, **kwargs):
