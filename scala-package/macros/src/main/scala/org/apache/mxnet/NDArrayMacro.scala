@@ -21,7 +21,7 @@ import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 import scala.annotation.StaticAnnotation
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
@@ -123,20 +123,14 @@ private[mxnet] object NDArrayMacro {
         // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
         // What it should be?
         if (ndarrayarg.argType.equals(returnType)) {
-          base = s"args.append($currArgName)"
-          if (ndarrayarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) args.append($currArgName.get)"
-          }
+          base = s"args += $currArgName"
         } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
-          base = s"$currArgName.foreach(args.append(_))"
-          if (ndarrayarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) $currArgName.get.foreach(args.append(_))"
-          }
+          base = s"args ++= $currArgName"
         } else {
           base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
-          if (ndarrayarg.isOptional) {
-            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-          }
+        }
+        if (ndarrayarg.isOptional) {
+          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
         }
         impl += base
       })
