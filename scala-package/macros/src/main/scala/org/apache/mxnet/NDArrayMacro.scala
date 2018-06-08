@@ -123,20 +123,14 @@ private[mxnet] object NDArrayMacro {
         // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
         // What it should be?
         if (ndarrayarg.argType.equals(returnType)) {
-          base = s"args.append($currArgName)"
-          if (ndarrayarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) args.append($currArgName.get)"
-          }
+          base = s"args += $currArgName"
         } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
           base = s"args ++= $currArgName"
-          if (ndarrayarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) args ++= $currArgName.get"
-          }
         } else {
           base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
-          if (ndarrayarg.isOptional) {
-            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-          }
+        }
+        if (ndarrayarg.isOptional) {
+          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
         }
         impl += base
       })
