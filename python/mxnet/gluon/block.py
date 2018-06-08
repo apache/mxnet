@@ -309,11 +309,11 @@ class Block(object):
 
     def save_params(self, filename):
         """Save parameters to file.
-        This function is to be used only to save parameters of a Gluon model, the
-        saved parameters cannot be loaded in a different language binding.
+        This function is to be used to save parameters of a Gluon model, note that
+        the saved parameters are not meant to be loaded in a different language binding for now.
         Saving parameters using `.save_params()` is different than
-        `.collect_params().save()`, which is a deprecated way to save
-        parameters of a model and should be avoided.
+        `.collect_params().save()`, which is a deprecated way to save parameters of a model
+        and should be avoided.
         If your model is hybridizable and you want to export a serialized version of the
         structure of the model as well as its parameters please refer to
         `HybridBlock.export()`. Such model can then be loaded back in any language binding
@@ -331,7 +331,7 @@ class Block(object):
     def load_params(self, filename, ctx=None, allow_missing=False,
                     ignore_extra=False):
         """Load parameters from file.
-        This function is to be used only to load parameters of a Gluon model that were
+        This function is to be used to load parameters of a Gluon model that were
         saved using the `.save_params()` function. Any other use is undefined behaviour.
         Refer to this tutorial for a complete overview of saving/loading models with
         MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
