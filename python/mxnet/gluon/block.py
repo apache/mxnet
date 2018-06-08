@@ -268,12 +268,12 @@ class Block(object):
         children's Parameters(default), also can returns the select :py:class:`ParameterDict`
         which match some given regular expressions.
 
-        For example, collect the specified parameter in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
         'fc_bias']::
 
             model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
 
-        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
 
             model.collect_params('.*weight|.*bias')
@@ -309,6 +309,17 @@ class Block(object):
 
     def save_params(self, filename):
         """Save parameters to file.
+        This function is to be used only to save parameters of a Gluon model, the
+        saved parameters cannot be loaded in a different language binding.
+        Saving parameters using `.save_params()` is different than 
+        `.collect_params().save()`, which is a deprecated way to save
+        parameters of a model and should be avoided.
+        If your model is hybridizable and you want to export a serialized version of the
+        structure of the model as well as its parameters please refer to 
+        `HybridBlock.export()`. Such model can then be loaded back in any language binding
+        or even in Gluon using a `SymbolBlock`.
+        Refer to this tutorial for a complete overview of saving/loading models with
+        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
 
         filename : str
             Path to file.
@@ -320,7 +331,10 @@ class Block(object):
     def load_params(self, filename, ctx=None, allow_missing=False,
                     ignore_extra=False):
         """Load parameters from file.
-
+        This function is to be used only to load parameters of a Gluon model that were
+        saved using the `.save_params()` function. Any other use is undefined behaviour.
+        Refer to this tutorial for a complete overview of saving/loading models with
+        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
@@ -770,8 +784,8 @@ class HybridBlock(Block):
         self._infer_attrs('infer_type', 'dtype', *args)
 
     def export(self, path, epoch=0):
-        """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
-        or the C++ interface.
+        """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`,
+        `gluon.nn.SymbolBlock` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
