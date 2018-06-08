@@ -467,12 +467,11 @@ def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
                       if not name.startswith('data') and not name.endswith('label')]
+    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
     requantize_op_names = ['requantize_conv', 'requantize_fc']
     th_dict = {'conv_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0)),
                'fc_output': (np.random.uniform(low=100.0, high=200.0), np.random.uniform(low=100.0, high=200.0))}
     op_name_to_th_name = {'requantize_conv': 'conv_output', 'requantize_fc': 'fc_output'}
-
-    qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
     cqsym = mx.contrib.quant._calibrate_quantized_sym(qsym, th_dict)
     attr_dict = cqsym.attr_dict()
     for name in requantize_op_names:
