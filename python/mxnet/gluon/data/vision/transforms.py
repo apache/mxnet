@@ -250,7 +250,7 @@ class Resize(Block):
     ----------
     size : int or tuple of (W, H)
         Size of output image.
-    keep_aspect_ratio : bool
+    keep_ratio : bool
         Whether to resize the short edge or both edges to `size`,
         if size is give as an integer.
     interpolation : int
@@ -271,9 +271,9 @@ class Resize(Block):
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
     """
-    def __init__(self, size, keep_aspect_ratio=True, interpolation=1):
+    def __init__(self, size, keep_ratio=True, interpolation=1):
         super(Resize, self).__init__()
-        self._keep = keep_aspect_ratio
+        self._keep = keep_ratio
         self._size = size
         self._interpolation = interpolation
 
@@ -292,8 +292,7 @@ class Resize(Block):
                     wsize = int(w * hsize / h)
         else:
             wsize, hsize = self._size
-        _args = tuple((wsize, hsize)) + (self._interpolation,)
-        return image.imresize(x, *_args)
+        return image.imresize(x, wsize, hsize, self._interpolation)
 
 
 class RandomFlipLeftRight(HybridBlock):
