@@ -6233,7 +6233,8 @@ def test_op_roi_align():
                     spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
         dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
         output.backward(dy)
-        real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size, spatial_scale, sampling_ratio, dy.asnumpy())
+        real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
+                                                             spatial_scale, sampling_ratio, dy.asnumpy())
         assert np.allclose(output.asnumpy(), real_output)
         # It seems that the precision between Cfloat and Pyfloat is different.
         assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
@@ -6241,10 +6242,11 @@ def test_op_roi_align():
 
     # modified from test_roipooling()
     def test_roi_align_autograd(sampling_ratio=0):
-        ctx=default_context()
+        ctx = default_context()
         data = mx.symbol.Variable(name='data')
         rois = mx.symbol.Variable(name='rois')
-        test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1, sample_ratio=sampling_ratio)
+        test = mx.symbol.contrib.ROIAlign(data=data, rois=rois, pooled_size=(4, 4), spatial_scale=1,
+                                          sample_ratio=sampling_ratio)
 
         x1 = np.random.rand(4, 1, 12, 12).astype('float64')
         x2 = np.array([[0, 1.1, 1.1, 6.2, 6.2], [2, 6.1, 2.1, 8.2, 11.2],
@@ -6260,7 +6262,6 @@ def test_op_roi_align():
     test_roi_align_value()
     test_roi_align_value(2)
     test_roi_align_autograd()
-    test_roi_align_autograd(2)
 
 
 if __name__ == '__main__':
