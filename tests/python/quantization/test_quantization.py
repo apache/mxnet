@@ -133,7 +133,7 @@ def test_requantize_int32_to_int8():
 def test_quantized_conv():
     def check_quantized_conv(data_shape, kernel, num_filter, pad, stride, no_bias, qdtype):
         if is_test_for_native_cpu():
-            print('skipped testing quantized_conv for native cpu since it is not implemented yet')
+            print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
         elif qdtype == 'int8' and is_test_for_mkldnn():
             print('skipped testing quantized_conv for mkldnn cpu int8 since it is not supported yet')
@@ -215,7 +215,7 @@ def test_quantized_conv():
 def test_quantized_pooling():
     def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype):
         if is_test_for_native_cpu():
-            print('skipped testing quantized_pooling for native cpu since it is not implemented yet')
+            print('skipped testing quantized_pooling for native cpu since it is not supported yet')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_pooling for gpu uint8 since it is not supported yet')
