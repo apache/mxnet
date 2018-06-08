@@ -266,6 +266,7 @@ class KVStoreDistServer {
       if (parts[0] == "filename") {
         parts[1] = "rank" + std::to_string(ps::MyRank()) + "_" + parts[1];
       }
+
       char* ckey = new char[parts[0].length() + 1];
       std::snprintf(ckey, parts[0].length() + 1, "%s", parts[0].c_str());
       ckeys.push_back(ckey);
@@ -274,6 +275,7 @@ class KVStoreDistServer {
       std::snprintf(cval, parts[1].length() + 1, "%s", parts[1].c_str());
       cvals.push_back(cval);
     }
+
     MXSetProfilerConfig(elems.size(), &ckeys[0], &cvals[0], nullptr);
     for (size_t i=0; i < ckeys.size(); i++) {
       delete[] ckeys[i];
