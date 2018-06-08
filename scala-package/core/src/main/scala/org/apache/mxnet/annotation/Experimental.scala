@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet
+package org.apache.mxnet.annotation
 
 import java.lang.annotation.{ElementType, Retention, Target, _}
 

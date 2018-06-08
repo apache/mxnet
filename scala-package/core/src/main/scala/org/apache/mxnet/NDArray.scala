@@ -64,7 +64,8 @@ object NDArray extends NDArrayBase {
     val function = functions(funcName)
     val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
-      args.foreach {
+
+    args.foreach {
         case arr: NDArray =>
           ndArgs.append(arr)
         case arrFunRet: NDArrayFuncReturn =>
@@ -72,8 +73,7 @@ object NDArray extends NDArrayBase {
         case arg =>
           posArgs.append(arg.toString)
       }
-
-
+    
     require(posArgs.length <= function.arguments.length,
       s"len(posArgs) = ${posArgs.length}, should be less or equal to len(arguments) " +
       s"= ${function.arguments.length}")
