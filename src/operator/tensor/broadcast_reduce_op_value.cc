@@ -28,6 +28,7 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(ReduceAxesParam);
 DMLC_REGISTER_PARAMETER(NormParam);
+DMLC_REGISTER_PARAMETER(VarParam);
 DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
@@ -324,6 +325,46 @@ NNVM_REGISTER_OP(_backward_norm)
   })
 .set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<cpu>);
 
+NNVM_REGISTER_OP(variance)
+.describe(R"code(Computes the variance on an NDArray.
+
+This operator computes the variance on an NDArray with the specified axis.
+By default, it computes the variance on the entire array.
+
+Examples::
+
+  x = [[1, 2],
+       [3, 4]]
+
+  variance(x) = [1.25]
+
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<VarParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", VarShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs) { return 1; })
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_var"})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", VarCompute<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(VarParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_var)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<VarParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", VarGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

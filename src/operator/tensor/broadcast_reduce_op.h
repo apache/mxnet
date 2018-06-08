@@ -84,6 +84,18 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   }
 };
 
+struct VarParam : public dmlc::Parameter<VarParam> {
+  dmlc::optional<TShape> axis;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(VarParam) {
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<TShape>())
+      .describe("The axis along which to perform the reduction");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If this is set to `True`, the reduced axis is left "
+                "in the result as dimension with size one.");
+  }
+};
+
 struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   dmlc::optional<int> axis;
   bool keepdims;
@@ -292,6 +304,19 @@ inline bool NormShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool VarShape(const nnvm::NodeAttrs& attrs,
+                     std::vector<TShape>* in_attrs,
+                     std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 2U);
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  const TShape oshape = ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                            param.keepdims, false);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
+  return true;
+}
+
 inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
@@ -438,7 +463,7 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename reducer, bool normalize = false,
-         typename OP = op::mshadow_op::identity>
+         typename OP = op::mshadow_op::identity, int output_idx = 0>
 void ReduceAxesComputeImpl(const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
@@ -450,9 +475,9 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(outputs[output_idx].type_flag_, DType, {
     const TBlob in_data = inputs[0].reshape(src_shape);
-    const TBlob out_data = outputs[0].reshape(dst_shape);
+    const TBlob out_data = outputs[output_idx].reshape(dst_shape);
     BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
       size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
           s, out_data.shape_, req[0], in_data.shape_);
@@ -1002,6 +1027,77 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
       ctx, inputs, req, outputs, small);
   SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+}
+
+template <int req>
+struct var_forward {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* output0, const DType* output1) {
+    KERNEL_ASSIGN(output0[i], req, output0[i] - output1[i] * output1[i]);
+  }
+};
+
+struct var_backward {
+  template <typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return 2 * (a - b);
+  }
+};
+
+template <typename xpu>
+void VarCompute(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 2U);
+  CHECK_EQ(req.size(), 2U);
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  if (req[0] == kNullOp) return;
+
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
+  }
+  // Compute mean of squared elements (E[X^2])
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, true, mshadow_op::square, 0>(
+    ctx, inputs, req, outputs, small);
+  // Compute mean of elements (E[X])
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, true, mshadow_op::identity, 1>(
+    ctx, inputs, req, outputs, small);
+  // Compute var = E[X^2] - E[X]^2
+  using namespace mxnet_op;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<var_forward<req_type>, xpu>::Launch(
+        s, outputs[0].Size(), outputs[0].dptr<DType>(), outputs[1].dptr<DType>());
+    });
+  });
+}
+
+template<typename xpu>
+void VarGradCompute(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, var_backward, true>(
+    ctx, small, inputs, req, outputs);
 }
 
 template<typename xpu>
