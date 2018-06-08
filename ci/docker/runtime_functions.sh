@@ -835,6 +835,7 @@ nightly_test_javascript() {
 
 broken_link_checker() {
     set -ex
+    chmod -R 777 tests/nightly/broken_link_checker_test/
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
