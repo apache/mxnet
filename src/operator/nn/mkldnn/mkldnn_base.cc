@@ -22,6 +22,8 @@
 #include <atomic>
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
+#include "../../../common/exec_utils.h"
+
 
 namespace mxnet {
 
@@ -322,18 +324,27 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
   MKLDNNStream::Get()->Submit();
 
   std::vector<TBlob> out_blobs(outputs.size());
+  std::vector<NDArray> temp_src, temp_dst;
   for (size_t i = 0; i < out_blobs.size(); i++) {
     NDArray output = outputs[i];
     // ensure output does not use mkldnn mem.
     // for inplace, we already converted & copied input above.
     if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
-    else if (req[i] == kAddTo)
-      output = outputs[i].Reorder2Default();
+    else if (req[0] == kAddTo && output.IsMKLDNNData()) {
+      NDArray temp = outputs[0].Reorder2Default();
+      temp_src.emplace_back(temp);
+      temp_dst.emplace_back(outputs[0]);
+      out_blobs = {temp.data()};
+      output = temp;
+    }
     CHECK(output.IsDefaultData());
     out_blobs[i] = output.data();
   }
+  
   fn(attrs, ctx, in_blobs, req, out_blobs);
+  if (req[0] == kAddTo && outputs[0].IsMKLDNNData())
+    mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
 }
 
 template<typename DType>
