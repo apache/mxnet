@@ -92,6 +92,20 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
 }
 
+def collect_test_results_unix(original_file_name, new_file_name) {
+    echo 'Saving python test results for ' + new_file_name
+    // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
+    sh 'cp ' + original_file_name + ' ' + new_file_name
+    archiveArtifacts artifacts: new_file_name
+}
+
+def collect_test_results_windows(original_file_name, new_file_name) {
+    echo 'Saving python test results for ' + new_file_name
+    // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
+    bat 'xcopy ' + original_file_name + ' ' + new_file_name
+    archiveArtifacts artifacts: new_file_name
+} 
+
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
@@ -462,301 +476,377 @@ try {
   } // End of stage('Build')
 
   stage('Unit Test') {
-    parallel 'Python2: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python2-cpu') {
-          init_git()
-          unpack_lib('cpu')
-          python2_ut('ubuntu_cpu')
-        }
-      }
-    },
-    'Python3: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python3-cpu') {
-          init_git()
-          unpack_lib('cpu')
-          python3_ut('ubuntu_cpu')
-        }
-      }
-    },
-    'Python2: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python2-gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          python2_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
-    'Python3: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python3-gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          python3_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
-    'Python2: Quantize GPU': {
-      node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python2-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu', mx_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
+    parallel  'Python2: CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-python2-cpu') {
+            try {
+              init_git()
+              unpack_lib('cpu')
+              python2_ut('ubuntu_cpu')
+            } finally {
+              collect_test_results_unix('nosetests1.xml', 'nosetests_python2_cpu1.xml')
+              collect_test_results_unix('nosetests2.xml', 'nosetests_python2_cpu2.xml')
+              collect_test_results_unix('nosetests3.xml', 'nosetests_python2_cpu3.xml')
+            }
           }
         }
-      }
-    },
-    'Python3: Quantize GPU': {
-      node('mxnetlinux-gpu-p3') {
-        ws('workspace/ut-python3-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu', mx_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
+      },
+      'Python3: CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-python3-cpu') {
+            try {
+              init_git()
+              unpack_lib('cpu')
+              python3_ut('ubuntu_cpu')
+            } finally {
+              collect_test_results_unix('nosetests1.xml', 'nosetests_python3_cpu1.xml')
+              collect_test_results_unix('nosetests2.xml', 'nosetests_python3_cpu2.xml')
+            }
           }
         }
-      }
-    },
-    'Python2: MKLDNN-CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python2-mkldnn-cpu') {
-          init_git()
-          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python2_ut('ubuntu_cpu')
-        }
-      }
-    },
-    'Python2: MKLDNN-GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python2-mkldnn-gpu') {
-          init_git()
-          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python2_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
-    'Python3: MKLDNN-CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-python3-mkldnn-cpu') {
-          init_git()
-          unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
-          python3_ut_mkldnn('ubuntu_cpu')
-        }
-      }
-    },
-    'Python3: MKLDNN-GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python3-mkldnn-gpu') {
-          init_git()
-          unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          python3_gpu_ut('ubuntu_gpu')
-        }
-      }
-    },
-    'Python3: CentOS 7 CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/build-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('centos7_cpu')
-            docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
+      },
+      'Python2: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-python2-gpu') {
+            try {
+              init_git()
+              unpack_lib('gpu', mx_lib)
+              python2_gpu_ut('ubuntu_gpu')
+            } finally {
+              collect_test_results_unix('nosetests.xml', 'nosetests_python2_gpu.xml')
+            }
           }
         }
-      }
-    },
-    'Python3: CentOS 7 GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('centos7_gpu')
-            docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
+      },
+      'Python3: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-python3-gpu') {
+            try {
+              init_git()
+              unpack_lib('gpu', mx_lib)
+              python3_gpu_ut('ubuntu_gpu')
+            } finally {
+              collect_test_results_unix('nosetests.xml', 'nosetests_python3_gpu.xml')
+            }
           }
         }
-      }
-    },
-    'Scala: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('cpu', mx_dist_lib)
-            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+      },
+      'Python2: Quantize GPU': {
+        node('mxnetlinux-gpu-p3') {
+          ws('workspace/ut-python2-quantize-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              try {
+                init_git()
+                unpack_lib('gpu', mx_lib)
+                docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
+              } finally {
+                collect_test_results_unix('nosetests.xml', 'nosetests_python2_quantize_gpu.xml')
+              }
+            }
           }
         }
-      }
-    },
-    'Scala: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu', mx_dist_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
+      },
+      'Python3: Quantize GPU': {
+        node('mxnetlinux-gpu-p3') {
+          ws('workspace/ut-python3-quantize-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              try {
+                init_git()
+                unpack_lib('gpu', mx_lib)
+                docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
+              } finally {
+                collect_test_results_unix('nosetests.xml', 'nosetests_python3_quantize_gpu.xml')
+              }
+            }
           }
         }
-      }
-    },
-    'Perl: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-perl-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('cpu')
-            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
+      },
+      'Python2: MKLDNN-CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-python2-mkldnn-cpu') {
+            try {
+              init_git()
+              unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+              python2_ut('ubuntu_cpu')
+            } finally {
+              collect_test_results_unix('nosetests1.xml', 'nosetests_python2_mkldnn_cpu1.xml')
+              collect_test_results_unix('nosetests2.xml', 'nosetests_python2_mkldnn_cpu2.xml')
+              collect_test_results_unix('nosetests3.xml', 'nosetests_python2_mkldnn_cpu3.xml')
+            }
           }
         }
-      }
-    },
-    'Perl: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-perl-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+      },
+      'Python2: MKLDNN-GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-python2-mkldnn-gpu') {
+            try {
+              init_git()
+              unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+              python2_gpu_ut('ubuntu_gpu')
+            } finally {
+              collect_test_results_unix('nosetests.xml', 'nosetests_python2_mkldnn_gpu.xml')
+            }
           }
         }
-      }
-    },
-    'Cpp: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-cpp-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('cmake_gpu', mx_cmake_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+      },
+      'Python3: MKLDNN-CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-python3-mkldnn-cpu') {
+            try {
+              init_git()
+              unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+              python3_ut_mkldnn('ubuntu_cpu')
+            } finally {
+              collect_test_results_unix('nosetests1.xml', 'nosetests_python3_mkldnn_cpu1.xml')
+              collect_test_results_unix('nosetests2.xml', 'nosetests_python3_mkldnn_cpu2.xml')
+              collect_test_results_unix('nosetests3.xml', 'nosetests_python3_mkldnn_cpu3.xml')
+            }
           }
         }
-      }
-    },
-    'Cpp: MKLDNN+GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-cpp-mkldnn-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+      },
+      'Python3: MKLDNN-GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-python3-mkldnn-gpu') {
+            try {
+              init_git()
+              unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+              python3_gpu_ut('ubuntu_gpu')
+            } finally {
+              collect_test_results_unix('nosetests.xml', 'nosetests_python3_mkldnn_gpu.xml')
+            }
           }
         }
-      }
-    },
-    'R: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/ut-r-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('cpu')
-            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+      },
+      'Python3: CentOS 7 CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/build-centos7-cpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              try {
+                init_git()
+                unpack_lib('centos7_cpu')
+                docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
+              } finally {
+                collect_test_results_unix('nosetests1.xml', 'nosetests_python3_centos7_cpu1.xml')
+                collect_test_results_unix('nosetests2.xml', 'nosetests_python3_centos7_cpu2.xml')
+              }
+            }
           }
         }
-      }
-    },
-    'R: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-r-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
+      },
+      'Python3: CentOS 7 GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/build-centos7-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              try {
+                init_git()
+                unpack_lib('centos7_gpu')
+                docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
+              } finally {
+                collect_test_results_unix('nosetests.xml', 'nosetests_python3_centos7_gpu.xml')
+              }
+            }
           }
         }
-      }
-    },
+      },
+      'Scala: CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-scala-cpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('cpu', mx_dist_lib)
+              docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            }
+          }
+        }
+      },
+      'Scala: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-scala-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('gpu', mx_dist_lib)
+              docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
+            }
+          }
+        }
+      },
+      'Perl: CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-perl-cpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('cpu')
+              docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
+            }
+          }
+        }
+      },
+      'Perl: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-perl-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('gpu')
+              docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+            }
+          }
+        }
+      },
+      'Cpp: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-cpp-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('cmake_gpu', mx_cmake_lib)
+              docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            }
+          }
+        }
+      },
+      'Cpp: MKLDNN+GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-cpp-mkldnn-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+              docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            }
+          }
+        }
+      },
+      'R: CPU': {
+        node('mxnetlinux-cpu') {
+          ws('workspace/ut-r-cpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('cpu')
+              docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            }
+          }
+        }
+      },
+      'R: GPU': {
+        node('mxnetlinux-gpu') {
+          ws('workspace/ut-r-gpu') {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              unpack_lib('gpu')
+              docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
+            }
+          }
+        }
+      },
 
-    'Python 2: CPU Win':{
-      node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
-            init_git_win()
-            unstash 'vc14_cpu'
-            bat '''rmdir /s/q pkg_vc14_cpu
-              7z x -y vc14_cpu.7z'''
-            bat """xcopy C:\\mxnet\\data data /E /I /Y
-              xcopy C:\\mxnet\\model model /E /I /Y
-              call activate py2
-              set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-              del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
-              C:\\mxnet\\test_cpu.bat"""
+      'Python 2: CPU Win': {
+        node('mxnetwindows-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            ws('workspace/ut-python-cpu') {
+              try {
+                init_git_win()
+                unstash 'vc14_cpu'
+                bat '''rmdir /s/q pkg_vc14_cpu
+                  7z x -y vc14_cpu.7z'''
+                bat """xcopy C:\\mxnet\\data data /E /I /Y
+                  xcopy C:\\mxnet\\model model /E /I /Y
+                  call activate py2
+                  set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
+                  del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
+                  C:\\mxnet\\test_cpu.bat"""
+              } finally {
+                collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_cpu.xml')
+              }
+            }
+          }
+        }
+      },
+      'Python 3: CPU Win': {
+        node('mxnetwindows-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            ws('workspace/ut-python-cpu') {
+              try {
+                init_git_win()
+                unstash 'vc14_cpu'
+                bat '''rmdir /s/q pkg_vc14_cpu
+                  7z x -y vc14_cpu.7z'''
+                bat """xcopy C:\\mxnet\\data data /E /I /Y
+                  xcopy C:\\mxnet\\model model /E /I /Y
+                  call activate py3
+                  set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
+                  del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
+                  C:\\mxnet\\test_cpu.bat"""
+                } finally {
+                collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_cpu.xml')
+              }
+            }
+          }
+        }
+      },
+      'Python 2: GPU Win': {
+        node('mxnetwindows-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            ws('workspace/ut-python-gpu') {
+              try {
+                init_git_win()
+                unstash 'vc14_gpu'
+                bat '''rmdir /s/q pkg_vc14_gpu
+                  7z x -y vc14_gpu.7z'''
+                bat """xcopy C:\\mxnet\\data data /E /I /Y
+                  xcopy C:\\mxnet\\model model /E /I /Y
+                  call activate py2
+                  set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+                  del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
+                  C:\\mxnet\\test_gpu.bat"""
+              } finally {
+                collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_gpu.xml')
+              }
+            }
+          }
+        }
+      },
+      'Python 3: GPU Win': {
+        node('mxnetwindows-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            ws('workspace/ut-python-gpu') {
+              try {
+                init_git_win()
+                unstash 'vc14_gpu'
+                bat '''rmdir /s/q pkg_vc14_gpu
+                  7z x -y vc14_gpu.7z'''
+                bat """xcopy C:\\mxnet\\data data /E /I /Y
+                  xcopy C:\\mxnet\\model model /E /I /Y
+                  call activate py3
+                  set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
+                  del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
+                  C:\\mxnet\\test_gpu.bat"""
+              } finally {
+                collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_gpu.xml')
+              }
+            }
+          }
+        }
+      },
+      'Python 3: MKLDNN-GPU Win': {
+        node('mxnetwindows-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            ws('workspace/ut-python-gpu') {
+              try {
+                init_git_win()
+                unstash 'vc14_gpu_mkldnn'
+                bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
+                  7z x -y vc14_gpu_mkldnn.7z'''
+                bat """xcopy C:\\mxnet\\data data /E /I /Y
+                  xcopy C:\\mxnet\\model model /E /I /Y
+                  call activate py3
+                  set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
+                  del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
+                  C:\\mxnet\\test_gpu.bat"""
+              } finally {
+                collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
+              }
+            }
           }
         }
       }
-    },
-    'Python 3: CPU Win': {
-      node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
-            init_git_win()
-            unstash 'vc14_cpu'
-            bat '''rmdir /s/q pkg_vc14_cpu
-              7z x -y vc14_cpu.7z'''
-            bat """xcopy C:\\mxnet\\data data /E /I /Y
-              xcopy C:\\mxnet\\model model /E /I /Y
-              call activate py3
-              set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-              del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
-              C:\\mxnet\\test_cpu.bat"""
-          }
-        }
-      }
-    },
-    'Python 2: GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            init_git_win()
-            unstash 'vc14_gpu'
-            bat '''rmdir /s/q pkg_vc14_gpu
-              7z x -y vc14_gpu.7z'''
-            bat """xcopy C:\\mxnet\\data data /E /I /Y
-              xcopy C:\\mxnet\\model model /E /I /Y
-              call activate py2
-              set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-              del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-              C:\\mxnet\\test_gpu.bat"""
-          }
-        }
-      }
-    },
-    'Python 3: GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-          init_git_win()
-          unstash 'vc14_gpu'
-          bat '''rmdir /s/q pkg_vc14_gpu
-            7z x -y vc14_gpu.7z'''
-          bat """xcopy C:\\mxnet\\data data /E /I /Y
-            xcopy C:\\mxnet\\model model /E /I /Y
-            call activate py3
-            set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-            del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-            C:\\mxnet\\test_gpu.bat"""
-          }
-        }
-      }
-    },
-    'Python 3: MKLDNN-GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-          init_git_win()
-          unstash 'vc14_gpu_mkldnn'
-          bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
-            7z x -y vc14_gpu_mkldnn.7z'''
-          bat """xcopy C:\\mxnet\\data data /E /I /Y
-            xcopy C:\\mxnet\\model model /E /I /Y
-            call activate py3
-            set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
-            del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
-            C:\\mxnet\\test_gpu.bat"""
-          }
-        }
-      }
-    }
   }
 
   stage('Integration Test') {
