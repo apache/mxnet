@@ -224,7 +224,7 @@ void FindSubgraph(const Graph& g,
         excluded_node_names += node->attrs.name + ", ";
       }
       LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
-                << ". Excluding nodes " << excluded_node_names << "and retry";
+                << ". Excluding nodes " << excluded_node_names << "and retrying";
     }
     ++count;
   }
@@ -416,14 +416,14 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 // Replace a set of nodes belonging to the same subgraph with a subgrpah node
 // and keep the subgraph in the subgraph node. The input entries and output entries
 // of the subgraph node are kept in the same order as the subgraph's.
-Graph CreateSubgraphNode(Graph&& g,
-                         const std::vector<SimpleNodePtr>& simple_nodes,
-                         const std::vector<SimpleNode*>& subgraph_nodes,
-                         const size_t subgraph_id,
-                         std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
+void CreateSubgraphNode(Graph* g,
+                        const std::vector<SimpleNodePtr>& simple_nodes,
+                        const std::vector<SimpleNode*>& subgraph_nodes,
+                        const size_t subgraph_id,
+                        std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
   LOG(INFO) << "Searching for input entries...";
   std::vector<nnvm::NodeEntry*> input_entries;
-  FindInputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
+  FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
   std::vector<nnvm::NodeEntry> orig_input_entries;
   // TODO(junwu): Confirm what value to pass to skip_var
   CutGraphInputs(input_entries, &orig_input_entries, false);
@@ -431,7 +431,7 @@ Graph CreateSubgraphNode(Graph&& g,
 
   LOG(INFO) << "Searching for output entries...";
   std::vector<nnvm::NodeEntry*> output_entries;
-  FindOutputEntries(&g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
+  FindOutputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
 
   // Create a subgraph for the subgraph node
   nnvm::Symbol sym;
@@ -439,7 +439,7 @@ Graph CreateSubgraphNode(Graph&& g,
   for (size_t i = 0; i < output_entries.size(); ++i) {
     sym.outputs[i] = *output_entries[i];
   }
-  const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
+  const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_id);
 
   // Connect the external nodes to the subgraph node.
@@ -447,7 +447,7 @@ Graph CreateSubgraphNode(Graph&& g,
     *output_entries[i] = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
   }
   n->inputs = orig_input_entries;
-  const auto& indexed_graph = g.indexed_graph();
+  const auto& indexed_graph = g->indexed_graph();
   for (size_t i = 0; i < n->inputs.size(); ++i) {
     auto& e = n->inputs[i];
     // update entry_top_order_map with newly created orig_input_entries
@@ -467,7 +467,6 @@ Graph CreateSubgraphNode(Graph&& g,
     }
   }
   PrintNodeEntries(output_entries);
-  return g;
 }
 
 }  // namespace sg
@@ -584,7 +583,7 @@ Graph PartitionGraph(Graph&& g) {
       CHECK_EQ(simple_node_set.size(), subgraph_nodes[i].size());
 #endif
       PrintSubgraph(subgraph_nodes[i]);
-      g = CreateSubgraphNode(std::move(g), simple_nodes, subgraph_nodes[i], i, &entry_top_order_map);
+      CreateSubgraphNode(&g, simple_nodes, subgraph_nodes[i], i, &entry_top_order_map);
     }
     return g;
   }

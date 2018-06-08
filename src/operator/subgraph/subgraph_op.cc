@@ -35,33 +35,8 @@ namespace op {
 
 class DefaultSubgraphOperator {
  public:
-  DefaultSubgraphOperator(const Symbol& sym) :
-      //subgraph_uuid_("dfasdfadsmxdfw324"),
-      //immutable_data_names_(sym.ListInputNames(Symbol::kReadOnlyArgs)),
-      //mutable_data_names_(sym.ListInputNames(Symbol::kAuxiliaryStates)),
-      subgraph_sym_(sym),
-      input_names_(sym.ListInputNames(Symbol::kAll)),
-      output_names_(sym.ListOutputNames()) {
-    //subgraph_exec_.reset(new CachedOp(sym, {{"static_alloc", "true"}}));
-    subgraph_exec_.reset(new CachedOp(sym, {}));
-    //const std::vector<std::string> input_data_names = sym.ListInputNames(Symbol::kAll);
-    //const std::vector<std::string> immutable_data_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
-    //const std::vector<std::string> mutable_data_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
-    //immutable_data_indices_.resize(immutable_data_names_.size());
-    //mutable_data_indices_.resize(mutable_data_names_.size());
-#if 0
-    for (uint32_t i = 0, j1 = 0, j2 = 0; i < input_data_names.size(); ++i) {
-      if (input_data_names[i] == immutable_data_names_[j1]) {
-        immutable_data_indices_[j1++] = i;
-      } else if (input_data_names[i] == mutable_data_names_[j2]) {
-        mutable_data_indices_[j2++] = i;
-      } else {
-        LOG(FATAL) << "Should not happen";
-      }
-    }
-    // initialize var versions to -1
-    ndarray_var_versions_.resize(input_data_names.size(), -1);
-#endif
+  DefaultSubgraphOperator(const Symbol& sym) : subgraph_sym_(sym) {
+    subgraph_exec_.reset(new CachedOp(sym, {{"static_alloc", "true"}}));
   }
 
   void Forward(const OpContext& ctx,
@@ -77,17 +52,6 @@ class DefaultSubgraphOperator {
 
  private:
   nnvm::Symbol subgraph_sym_;
-  //std::string subgraph_uuid_;
-  // this variable records the NDArrays' var versions of the last run.
-  //std::vector<uint32_t> immutable_data_indices_;
-  //std::vector<uint32_t> mutable_data_indices_;
-  //std::vector<std::string> immutable_data_names_;
-  //std::vector<std::string> mutable_data_names_;
-  //std::vector<std::string> input_data_names_;
-  std::vector<std::string> input_names_;
-  std::vector<std::string> output_names_;
-  //std::vector<int64_t> ndarray_var_versions_;
-  //std::shared_ptr<Executor> subgraph_executor_;
   CachedOpPtr subgraph_exec_;
 };
 
