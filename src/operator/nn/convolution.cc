@@ -384,12 +384,9 @@ struct ConvolutionGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
-    const ConvolutionParam& param = nnvm::get<ConvolutionParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[conv::kData]);
     heads.push_back(n->inputs[conv::kWeight]);
-    if (!param.no_bias)
-      heads.push_back(n->inputs[conv::kBias]);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };

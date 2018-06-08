@@ -89,15 +89,20 @@ void ConvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   int dtype = inputs[conv::kData].type_flag_;
 
-  // If 1D convolution, use MXNet implementation
-  if (param.kernel.ndim() == 1) {
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      ConvolutionOp<gpu, DType> op;
-      op.Init(param);
-      op.Forward(ctx, inputs, req, outputs);
-    })
-    return;
+#if CUDNN_MAJOR < 5
+   if (param_.layout.value() != kNCW &&
+       param_.layout.value() != kNCHW &&
+       param_.layout.value() != kNCDHW)
+   // Need CuDNN > 5.0 for layout support. use MXNet implementation
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     ConvolutionOp<gpu, DType> op;
+     op.Init(param);
+     op.Forward(ctx, inputs, req, outputs);
+   })
+   return;
   }
+#endif
+
 #if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
   if (param.num_filter == param.num_group &&
       param.layout.value() == mshadow::kNCHW &&
@@ -162,15 +167,6 @@ void ConvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   const std::vector<TBlob> &in_grad = outputs;
   int dtype = out_grad.type_flag_;
 
-  // If 1D convolution, use MXNet implementation
-  if (param.kernel.ndim() == 1) {
-    MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      ConvolutionOp<gpu, DType> op;
-      op.Init(param);
-      op.Backward(ctx, std::vector<TBlob>{out_grad}, in_data, req, in_grad);
-    })
-    return;
-  }
 #if MXNET_USE_CUDNN == 0 || CUDNN_MAJOR < 7
   if (param.num_filter == param.num_group &&
       param.layout.value() == mshadow::kNCHW &&
