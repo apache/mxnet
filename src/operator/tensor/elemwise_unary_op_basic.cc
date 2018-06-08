@@ -25,7 +25,6 @@
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../common/exec_utils.h"
 
 namespace mxnet {
 namespace op {
