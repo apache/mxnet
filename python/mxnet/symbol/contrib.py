@@ -21,6 +21,7 @@
 import math
 import ctypes
 import re
+import copy
 
 from .random import uniform
 from .symbol import Symbol
@@ -268,12 +269,11 @@ def foreach(body, data, init_states, name="foreach"):
         elif in_name in cut_var_names:
             ordered_ins.append(cut_var_map[in_name])
         else:
-            # The remaining inputs are the ones cut from the original graph
-            # or the ones created inside the user-defined function. The names
-            # of new created variable nodes should match the ones of
-            # the original nodes.
+            # The remaining inputs are the variable nodes created inside the UDF.
+            # The subgraph can't have nodes shared with the main graph. As such,
+            # we need to make a copy of these variable nodes.
             assert in_name in gin_names
-            ordered_ins.append(input_syms[in_name])
+            ordered_ins.append(copy.deepcopy(input_syms[in_name]))
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
