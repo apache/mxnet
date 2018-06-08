@@ -335,13 +335,12 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
       NDArray temp = outputs[0].Reorder2Default();
       temp_src.emplace_back(temp);
       temp_dst.emplace_back(outputs[0]);
-      out_blobs = {temp.data()};
       output = temp;
     }
     CHECK(output.IsDefaultData());
     out_blobs[i] = output.data();
   }
-  
+
   fn(attrs, ctx, in_blobs, req, out_blobs);
   if (req[0] == kAddTo && outputs[0].IsMKLDNNData())
     mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
