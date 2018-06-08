@@ -61,7 +61,7 @@ data.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
                     help='number of workers for dataloader')
 data.add_argument('--data-train', type=str, default='',
                     help='Path to training rec files for imagenet')
-data.add_argument('--data-train', type=str, default='',
+data.add_argument('--data-train-idx', type=str, default='',
                     help='Path to idx file for training rec file for imagenet')
 data.add_argument('--data-val', type=str, default='',
                     help='Path to validation set rec file for imagenet')
@@ -135,8 +135,6 @@ parser.add_argument('--dtype', default='float32', type=str,
                     help='data type, float32 or float16 if applicable')
 parser.add_argument('--save-frequency', default=10, type=int,
                     help='epoch frequence to save model, best model will always be saved')
-parser.add_argument('--top-k', default=0, type=int,
-                    help='specify if topk accuracy is to be tracked')
 parser.add_argument('--kvstore', type=str, default='device',
                     help='kvstore to use for trainer/module.')
 parser.add_argument('--log-interval', type=int, default=50,
@@ -157,9 +155,7 @@ context = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else
 num_gpus = len(context)
 batch_size *= max(1, num_gpus)
 lr_steps = [int(x) for x in opt.lr_steps.split(',') if x.strip()]
-metric = CompositeEvalMetric([Accuracy()])
-if opt.top_k:
-    metric.add(TopKAccuracy(opt.top_k))
+metric = CompositeEvalMetric([Accuracy(), TopKAccuracy(5)])
 kv = mx.kv.create(opt.kvstore)
 
 def get_model(model, ctx, opt):
@@ -243,7 +239,7 @@ def train(opt, ctx):
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
 
-    train_data, val_data = get_data_iters(dataset, batch_size, kv.num_workers, kv.rank)
+    train_data, val_data = get_data_iters(dataset, batch_size, opt)
     net.collect_params().reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             optimizer_params={'learning_rate': opt.lr,
