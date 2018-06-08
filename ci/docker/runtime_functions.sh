@@ -147,7 +147,7 @@ build_armv7() {
     # make -j$(nproc)
 
     # build_wheel /work/mxnet/python /work/mxnet/lib
-    
+
     cd /work/build
 
     # Lapack functionality will be included and statically linked to openblas.
@@ -448,7 +448,7 @@ unittest_ubuntu_python3_cpu() {
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
