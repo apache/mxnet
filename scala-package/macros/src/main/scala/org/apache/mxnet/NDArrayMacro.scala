@@ -21,7 +21,7 @@ import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 import scala.annotation.StaticAnnotation
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
@@ -128,9 +128,9 @@ private[mxnet] object NDArrayMacro {
             base = s"if (!$currArgName.isEmpty) args.append($currArgName.get)"
           }
         } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
-          base = s"$currArgName.foreach(args.append(_))"
+          base = s"args ++= $currArgName"
           if (ndarrayarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) $currArgName.get.foreach(args.append(_))"
+            base = s"if (!$currArgName.isEmpty) args ++= $currArgName.get"
           }
         } else {
           base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName

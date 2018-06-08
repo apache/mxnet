@@ -104,7 +104,7 @@ private[mxnet] object SymbolImplMacros {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
-      impl += s"var args = Seq[org.apache.mxnet.Symbol]()"
+      impl += "var args = Seq[org.apache.mxnet.Symbol]()"
       symbolfunction.listOfArgs.foreach({ symbolarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
