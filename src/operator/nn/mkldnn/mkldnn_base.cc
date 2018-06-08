@@ -143,7 +143,6 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
   if (res.first == CopyBack) {
     const_cast<NDArray &>(arr).CopyFrom(*res.second);
   } else if (res.first == AddBack) {
-
     auto res_memory = res.second;
     auto mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
     if (mem == nullptr) {
@@ -329,9 +328,9 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     NDArray output = outputs[i];
     // ensure output does not use mkldnn mem.
     // for inplace, we already converted & copied input above.
-    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
+    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
-    else if (req[0] == kAddTo && output.IsMKLDNNData()) {
+    } else if (req[0] == kAddTo && output.IsMKLDNNData()) {
       NDArray temp = outputs[0].Reorder2Default();
       temp_src.emplace_back(temp);
       temp_dst.emplace_back(outputs[0]);
