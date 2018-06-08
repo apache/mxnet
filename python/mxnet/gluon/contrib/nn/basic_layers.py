@@ -21,9 +21,8 @@
 __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding']
 
 from .... import nd
-from ...block import HybridBlock
+from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential
-from ..block import SparseBlock
 
 class Concurrent(Sequential):
     """Lays `Block`s concurrently.
@@ -112,7 +111,7 @@ class Identity(HybridBlock):
     def hybrid_forward(self, F, x):
         return x
 
-class SparseEmbedding(SparseBlock):
+class SparseEmbedding(Block):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
 
@@ -144,8 +143,8 @@ class SparseEmbedding(SparseBlock):
                                       init=weight_initializer, dtype=dtype,
                                       grad_stype='row_sparse', stype='row_sparse')
 
-    def sparse_forward(self, x, weight_param):
-        weight = weight_param.row_sparse_data(x)
+    def forward(self, x):
+        weight = self.weight.row_sparse_data(x)
         return nd.Embedding(x, weight, name='fwd', **self._kwargs)
 
     def __repr__(self):

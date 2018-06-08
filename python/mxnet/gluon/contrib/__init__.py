@@ -23,5 +23,3 @@ from . import nn
 from . import rnn
 
 from . import data
-
-from .block import SparseBlock
