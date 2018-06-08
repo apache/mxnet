@@ -50,53 +50,10 @@ parser = argparse.ArgumentParser(description='Train a model for image classifica
 data = parser.add_argument_group('Data', 'the input for training')
 data.add_argument('--dataset', type=str, default='cifar10',
                     help='dataset to use. options are mnist, cifar10, caltech101, imagenet and dummy.')
-data.add_argument('--use-dataloader', action='store_true',
-                    help='Use more flexible Gluon Dataloader for Imagenet dataset. '
-                         'Requires data-dir to be passed in that case'
-                         'If this is not passed, tries to use the faster RecIO pipeline.'
-                         'Uses arguments data-train, data-val, data-train-idx, data-val-idx then')
 data.add_argument('--data-dir', type=str, default='',
                   help='training directory of imagenet images, contains train/val subdirs.')
 data.add_argument('--num-worker', '-j', dest='num_workers', default=4, type=int,
                     help='number of workers for dataloader')
-data.add_argument('--data-train', type=str, default='',
-                    help='Path to training rec files for imagenet')
-data.add_argument('--data-train-idx', type=str, default='',
-                    help='Path to idx file for training rec file for imagenet')
-data.add_argument('--data-val', type=str, default='',
-                    help='Path to validation set rec file for imagenet')
-data.add_argument('--data-val-idx', type=str, default='',
-                    help='Path to idx file for validation rec file for imagenet')
-data.add_argument('--rgb-mean', type=str, default='123.68,116.779,103.939',
-                  help='a tuple of size 3 for the mean rgb')
-data.add_argument('--data-nthreads', type=int, default=4,
-                  help='number of threads for data decoding')
-data.add_argument('--pad-size', type=int, default=0,
-                  help='padding the input image')
-
-aug = parser.add_argument_group(
-    'Image augmentations', 'implemented in src/io/image_aug_default.cc')
-aug.add_argument('--random-crop', type=int, default=1,
-                 help='if or not randomly crop the image')
-aug.add_argument('--random-mirror', type=int, default=1,
-                 help='if or not randomly flip horizontally')
-aug.add_argument('--max-random-h', type=int, default=0,
-                 help='max change of hue, whose range is [0, 180]')
-aug.add_argument('--max-random-s', type=int, default=0,
-                 help='max change of saturation, whose range is [0, 255]')
-aug.add_argument('--max-random-l', type=int, default=0,
-                 help='max change of intensity, whose range is [0, 255]')
-aug.add_argument('--max-random-aspect-ratio', type=float, default=0,
-                 help='max change of aspect ratio, whose range is [0, 1]')
-aug.add_argument('--max-random-rotate-angle', type=int, default=0,
-                 help='max angle to rotate, whose range is [0, 360]')
-aug.add_argument('--max-random-shear-ratio', type=float, default=0,
-                 help='max ratio to shear, whose range is [0, 1]')
-aug.add_argument('--max-random-scale', type=float, default=1,
-                 help='max ratio to scale')
-aug.add_argument('--min-random-scale', type=float, default=1,
-                 help='min ratio to scale, should >= img_size/input_shape. otherwise use --pad-size')
-
 parser.add_argument('--batch-size', type=int, default=32,
                     help='training batch size per device (CPU/GPU).')
 parser.add_argument('--gpus', type=str, default='',
@@ -189,16 +146,13 @@ def get_data_iters(dataset, batch_size, opt):
                                                     num_parts=kv.num_workers, part_index=kv.rank)
     elif dataset == 'imagenet':
         shape_dim = 299 if model_name == 'inceptionv3' else 224
-        if opt.use_dataloader:
-            if not opt.data_dir:
-                raise ValueError('Dir containing raw images in train/val is required for imagenet.'
-                                 'Please specify "--data-dir"')
 
-            train_data, val_data = get_imagenet_dataloader_iterator(opt.data_dir, batch_size,
-                                                                    opt.num_workers, shape_dim, opt.dtype)
-        else:
-            train_data, val_data = get_imagenet_iterator(kv, batch_size, opt,
-                                                         image_shape=(3, shape_dim, shape_dim))
+        if not opt.data_dir:
+            raise ValueError('Dir containing raw images in train/val is required for imagenet.'
+                             'Please specify "--data-dir"')
+
+        train_data, val_data = get_imagenet_iterator(opt.data_dir, batch_size,
+                                                                opt.num_workers, shape_dim, opt.dtype)
     elif dataset == 'caltech101':
         train_data, val_data = get_caltech101_iterator(batch_size, opt.num_workers, opt.dtype)
     elif dataset == 'dummy':
@@ -210,11 +164,11 @@ def test(ctx, val_data):
     metric.reset()
     val_data.reset()
     for batch in val_data:
-        data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype), ctx_list=ctx, batch_axis=0)
-        outputs = []
-        for x in data:
-            outputs.append(net(x))
+        data = gluon.utils.split_and_load(batch.data[0].astype(opt.dtype, copy=False),
+                                          ctx_list=ctx, batch_axis=0)
+        label = gluon.utils.split_and_load(batch.label[0].astype(opt.dtype, copy=False),
+                                           ctx_list=ctx, batch_axis=0)
+        outputs = [net(X) for X in data]
         metric.update(label, outputs)
     return metric.get()
 
@@ -305,7 +259,11 @@ def main():
         profiler.set_state('run')
     if opt.mode == 'symbolic':
         data = mx.sym.var('data')
+        if opt.dtype == 'float16':
+            data = mx.sym.Cast(data=data, dtype=np.float16)
         out = net(data)
+        if opt.dtype == 'float32':
+            out = mx.sym.Cast(data=out, dtype=np.float32)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         mod = mx.mod.Module(softmax, context=context)
         train_data, val_data = get_data_iters(dataset, batch_size, opt)
@@ -313,8 +271,8 @@ def main():
                 eval_data=val_data,
                 num_epoch=opt.epochs,
                 kvstore=kv,
-                batch_end_callback = mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
-                epoch_end_callback = mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
+                batch_end_callback=mx.callback.Speedometer(batch_size, max(1, opt.log_interval)),
+                epoch_end_callback=mx.callback.do_checkpoint('image-classifier-%s'% opt.model),
                 optimizer='sgd',
                 optimizer_params={'learning_rate': opt.lr,
                                   'wd': opt.wd,

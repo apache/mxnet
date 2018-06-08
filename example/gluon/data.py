@@ -71,7 +71,7 @@ def get_imagenet_transforms(data_shape=224, dtype='float32'):
         return mx.nd.cast(image, dtype), label
     return train_transform, val_transform
 
-def get_imagenet_dataloader_iterator(root, batch_size, num_workers, data_shape=224, dtype='float32'):
+def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='float32'):
     """Dataset loader with preprocessing."""
     train_dir = os.path.join(root, 'train')
     train_transform, val_transform = get_imagenet_transforms(data_shape, dtype)
@@ -87,54 +87,6 @@ def get_imagenet_dataloader_iterator(root, batch_size, num_workers, data_shape=2
     val_dataset = ImageFolderDataset(val_dir, transform=val_transform)
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
     return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
-
-def get_imagenet_iterator(kv, batch_size, opt,image_shape=(3,224,224)):
-    rank, nworker = kv.rank, kv.num_workers
-    rgb_mean = [float(i) for i in opt.rgb_mean.split(',')]
-    train = mx.io.ImageRecordIter(
-        path_imgrec         = opt.data_train,
-        path_imgidx         = opt.data_train_idx,
-        label_width         = 1,
-        mean_r              = rgb_mean[0],
-        mean_g              = rgb_mean[1],
-        mean_b              = rgb_mean[2],
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        data_shape          = image_shape,
-        batch_size          = batch_size,
-        rand_crop           = opt.random_crop,
-        max_random_scale    = opt.max_random_scale,
-        pad                 = opt.pad_size,
-        fill_value          = 127,
-        min_random_scale    = opt.min_random_scale,
-        max_aspect_ratio    = opt.max_random_aspect_ratio,
-        random_h            = opt.max_random_h,
-        random_s            = opt.max_random_s,
-        random_l            = opt.max_random_l,
-        max_rotate_angle    = opt.max_random_rotate_angle,
-        max_shear_ratio     = opt.max_random_shear_ratio,
-        rand_mirror         = opt.random_mirror,
-        preprocess_threads  = opt.data_nthreads,
-        shuffle             = True,
-        num_parts           = nworker,
-        part_index          = rank)
-    val = mx.io.ImageRecordIter(
-        path_imgrec         = opt.data_val,
-        path_imgidx         = opt.data_val_idx,
-        label_width         = 1,
-        mean_r              = rgb_mean[0],
-        mean_g              = rgb_mean[1],
-        mean_b              = rgb_mean[2],
-        data_name           = 'data',
-        label_name          = 'softmax_label',
-        batch_size          = batch_size,
-        data_shape          = image_shape,
-        preprocess_threads  = opt.data_nthreads,
-        rand_crop           = False,
-        rand_mirror         = False,
-        num_parts           = nworker,
-        part_index          = rank)
-    return (train, val)
 
 def get_caltech101_data():
     url = "https://s3.us-east-2.amazonaws.com/mxnet-public/101_ObjectCategories.tar.gz"
