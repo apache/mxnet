@@ -157,7 +157,9 @@
     <script type="text/javascript">
         $('body').css('background', 'white');
     </script>
+    {%- if 'api/' in pagename %}
     <script type="text/javascript" src='/_static/js/versions_drop_down.js'></script>
+    {%- endif %}
     <div class="container">
       <div class="row">
         <div class="sphinxsidebar leftsidebar" role="navigation" aria-label="main navigation">
@@ -181,8 +183,6 @@
                       <li class="opt versions"><a href="#">master</a></li>
                     </ul>
                     </div>
-              {%- else %}
-                    <div>HUNTELAAR</div>
               {%- endif %} <!-- API in -->
           {%- endblock %}
           {% block body %} {% endblock %}
