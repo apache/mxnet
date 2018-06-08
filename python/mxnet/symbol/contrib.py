@@ -265,12 +265,15 @@ def foreach(body, data, init_states, name="foreach"):
         elif in_name in data_names:
             ordered_ins.append(data_map[in_name])
             in_data_locs.append(len(ordered_ins) - 1)
-        else:
-            assert in_name in cut_var_names
-            # The remaining inputs are the ones cut from the original graph.
-            # The names of new created variable nodes should match the ones
-            # of the original nodes.
+        elif in_name in cut_var_names:
             ordered_ins.append(cut_var_map[in_name])
+        else:
+            # The remaining inputs are the ones cut from the original graph
+            # or the ones created inside the user-defined function. The names
+            # of new created variable nodes should match the ones of
+            # the original nodes.
+            assert in_name in gin_names
+            ordered_ins.append(input_syms[in_name])
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
