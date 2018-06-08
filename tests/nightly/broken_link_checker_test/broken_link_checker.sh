@@ -37,6 +37,6 @@ echo `pwd`
 cd ../.
 
 echo "Commit the new urls found"
-#git add ./_urlList/url_list.txt
-#git commit -m "New Urls"
-#git push origin link-checker
+git add ./_urlList/url_list.txt
+git commit -m "New Urls"
+git push origin link-checker
