@@ -1514,8 +1514,6 @@ def convert_slice_axis(node, **kwargs):
     return [node]
 
 
-# SliceChannel/split operators will be mapped to onnx's squeeze and split operator.
-# [TODO] Address split with squeeze case
 @mx_op.register("SliceChannel")
 def convert_slice_channel(node, **kwargs):
     """Map MXNet's SliceChannel operator attributes to onnx's Squeeze or Split
@@ -1532,7 +1530,7 @@ def convert_slice_channel(node, **kwargs):
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_id].name
 
-    if num_outputs == 1 and squeeze_axis == 1:
+    if squeeze_axis == 1 and num_outputs == 1:
         node = helper.make_node(
             "Squeeze",
             [input_node],
@@ -1540,7 +1538,8 @@ def convert_slice_channel(node, **kwargs):
             axes=[axis],
             name=name,
         )
-    else:
+        return [node]
+    elif squeeze_axis == 0 and num_outputs > 1:
         node = helper.make_node(
             "Split",
             [input_node],
@@ -1549,8 +1548,10 @@ def convert_slice_channel(node, **kwargs):
             split=[num_outputs],
             name=name,
         )
-
-    return [node]
+        return [node]
+    else:
+        raise NotImplementedError("SliceChannel operator with num_outputs>1 and"
+                                  "squeeze_axis true is not implemented.")
 
 
 @mx_op.register("expand_dims")
