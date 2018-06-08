@@ -19,7 +19,8 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(almost_equal same);
-use Test::More tests => 17;
+use Test::More tests => 20;
+use PDL;
 
 sub test_ndarray_reshape
 {
@@ -139,8 +140,40 @@ sub test_ndarray_slice
     ok(($a->slice([mx->nd->array([1, 1, 0]), mx->nd->array([0, 1, 0])])->aspdl == mx->nd->array([2, 3, 0])->aspdl)->all);
 }
 
+sub test_linalg_gemm2
+{
+    # Single matrix multiply
+    my $A = mx->nd->array([[1.0, 1.0], [1.0, 1.0]]);
+    my $B = mx->nd->array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]);
+    ok(almost_equal(
+        mx->nd->linalg->gemm2($A, $B, transpose_b=>1, alpha=>2.0)->aspdl,
+        pdl([[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]])
+    ));
+
+    # Batch matrix multiply
+    $A = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    $B = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    ok(almost_equal(
+        mx->nd->linalg->gemm2($A, $B, transpose_b=>1, alpha=>2.0)->aspdl,
+        pdl([[[4.0]], [[0.04]]])
+    ));
+}
+
+sub test_image_to_tensor
+{
+    ok(
+        same(
+            mx->nd->image->to_tensor(mx->nd->zeros([28, 28, 3]))->aspdl,
+            zeros(28, 28, 3)
+        )
+    );
+}
+
 test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
 test_output();
 test_cached();
+test_linalg_gemm2();
+test_image_to_tensor();
+

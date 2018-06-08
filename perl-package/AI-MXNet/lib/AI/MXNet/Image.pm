@@ -21,6 +21,8 @@ use warnings;
 use Scalar::Util qw(blessed);
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
+use AI::MXNet::Image::NDArray;
+use AI::MXNet::Image::Symbol;
 
 =head1 NAME
 
@@ -981,5 +983,11 @@ method next()
     return undef if not $i;
     return AI::MXNet::DataBatch->new(data=>[$batch_data], label=>[$batch_label], pad => $batch_size-$i);
 }
+
+package AI::MXNet::Image;
+sub sym    { 'AI::MXNet::Image::Symbol'  }
+sub symbol { 'AI::MXNet::Image::Symbol'  }
+sub nd     { 'AI::MXNet::Image::NDArray' }
+sub ndarray { 'AI::MXNet::Image::NDArray' }
 
 1;

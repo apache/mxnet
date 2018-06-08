@@ -34,7 +34,7 @@ namespace op {
  * \brief Compute the number of elements of every row.
  */
 struct SliceMarkCsrIndPtr {
-  /*! 
+  /*!
    * \brief
    * \param i           the i-th row of the output csr ndarray
    * \param prefix_sum  indptr array of the output csr ndarray
@@ -167,6 +167,12 @@ NNVM_REGISTER_OP(slice_axis)
 
 NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
+
+NNVM_REGISTER_OP(slice_like)
+.set_attr<FCompute>("FCompute<gpu>", SliceLikeForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_slice_like)
+.set_attr<FCompute>("FCompute<gpu>", SliceLikeBackward<gpu>);
 
 NNVM_REGISTER_OP(clip)
 .set_attr<FCompute>("FCompute<gpu>", Clip<gpu>)

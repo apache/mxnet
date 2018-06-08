@@ -229,7 +229,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -253,7 +253,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -452,7 +451,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -476,7 +475,6 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 
 ```bash
 $ cd python
-$ pip install --upgrade pip
 $ pip install -e .
 ```
 
@@ -533,7 +531,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -605,7 +603,7 @@ $ sudo apt-get install -y libopenblas-dev liblapack-dev
 $ sudo apt-get install -y libopencv-dev
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library.
+**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
 
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
@@ -992,7 +990,67 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 </div>
 <div class="build-from-source">
 <br/>
-To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
+
+We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), and [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
+
+**Option 1** 
+
+To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
+
+1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
+2. Download and install [CMake](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
+3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
+4. Unzip the OpenCV package.
+5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
+6. If you don’t have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
+7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
+8. Download and install CUDA: Install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal), and Download the base installer (e.g., ```cuda_9.1.85_win10.exe```).
+9. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
+10. Download and install [git](https://git-for-windows.github.io/).
+
+After you have installed all of the required dependencies, build the MXNet source code:
+
+1. Start ```cmd``` in windows.
+
+2. Download the MXNet source code from GitHub by using following command:
+
+```r
+cd C:\
+git clone https://github.com/apache/incubator-mxnet.git --recursive
+```
+
+3. Follow [this link](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify ```Individual components```, and check ```VC++ 2017 version 15.4 v14.11 toolset```, and click ```Modify```.
+
+4. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
+
+```r
+"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
+```
+
+5. Create a build dir using the following command and go to the directory, for example: 
+
+```r
+mkdir C:\build
+cd C:\build
+```
+
+6. CMake the MXNet source code by using following command:
+
+```r
+cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.1,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.1 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
+```
+
+NOTE: make sure the DCUDNN_INCLUDE and DCUDNN_LIBRARY pointing to the “include” and “cudnn.lib” of your CUDA installed location, and the ```C:\incubator-mxnet``` is the location of the source code you just git in the previous step
+
+7. After the CMake successfully completed, compile the the MXNet source code by using following command:
+
+```r
+msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
+```
+
+**Option 2** 
+
+To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition.
 2. Download and install [CMake](https://cmake.org/) if it is not already installed.
@@ -1009,8 +1067,6 @@ After you have installed all of the required dependencies, build the MXNet sourc
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-
-
 
 &nbsp;
 Next, we install the ```graphviz``` library that we use for visualizing network graphs that you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
@@ -1207,10 +1263,7 @@ Clone the MXNet source code repository using the following ```git``` command in 
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 ```bash
-    cp make/config.mk .
-    echo "USE_CUDA=1" >> config.mk
-    echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
-    echo "USE_CUDNN=1" >> config.mk
+    cp make/crosscompile.jetson.mk config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
@@ -1254,6 +1307,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- This # tag restarts the page and allows reuse
  of the div classes for validation sections, etc -->
+
 
 # Validate MXNet Installation
 
@@ -1685,4 +1739,10 @@ Will be available soon.
 </div>
 </div>
 
-# Download Source Package
+<br/>
+<!-- Download -->
+
+# Source Download
+
+<a href="download.html">Download</a> your required version of MXNet.
+

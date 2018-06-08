@@ -102,7 +102,7 @@ endfunction()
 
 
 # This list will be used for CUDA_ARCH_NAME = All option
-set(CUDA_KNOWN_GPU_ARCHITECTURES "Fermi" "Kepler" "Maxwell")
+set(CUDA_KNOWN_GPU_ARCHITECTURES "Kepler" "Maxwell")
 
 # This list will be used for CUDA_ARCH_NAME = Common option (enabled by default)
 set(CUDA_COMMON_GPU_ARCHITECTURES "3.0" "3.5" "5.0")
@@ -126,7 +126,7 @@ endif ()
 function(mshadow_select_nvcc_arch_flags out_variable)
 
   set(CUDA_ARCH_LIST "Auto" CACHE STRING "Select target NVIDIA GPU achitecture.")
-  set_property( CACHE CUDA_ARCH_LIST PROPERTY STRINGS "" "All" "Common" ${CUDA_KNOWN_GPU_ARCHITECTURES} )
+  set_property( CACHE CUDA_ARCH_LIST PROPERTY STRINGS "" "Auto" "All" "Common" ${CUDA_KNOWN_GPU_ARCHITECTURES} )
   mark_as_advanced(CUDA_ARCH_NAME)
 
 

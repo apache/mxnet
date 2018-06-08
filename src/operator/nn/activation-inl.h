@@ -83,7 +83,7 @@ struct hash<mxnet::op::ActivationParam> {
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
+template<typename xpu, typename ForwardOp, typename BackwardOp>
 void ActivationForward(const OpContext &ctx, const TBlob &in_data,
                        const OpReqType &req, const TBlob &out_data) {
   using namespace mshadow;
@@ -91,16 +91,16 @@ void ActivationForward(const OpContext &ctx, const TBlob &in_data,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const size_t sz = in_data.shape_.Size();
   if (sz) {
-    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
-        s, sz,
-        out_data.dptr<DType>(),
-        in_data.dptr<DType>());
+    MSHADOW_REAL_TYPE_SWITCH(in_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<ForwardOp, Req>, xpu>::Launch(
+          s, sz, out_data.dptr<DType>(), in_data.dptr<DType>());
+      });
     });
   }
 }
 
-template<typename xpu, typename ForwardOp, typename BackwardOp, typename DType>
+template<typename xpu, typename ForwardOp, typename BackwardOp>
 void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
                         const TBlob &out_data, const OpReqType &req,
                         const TBlob &in_grad) {
@@ -109,107 +109,105 @@ void ActivationBackward(const OpContext &ctx, const TBlob &out_grad,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const size_t sz = out_data.shape_.Size();
   if (sz) {
-    MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-      mxnet_op::Kernel<mxnet_op::op_with_req<
-        mxnet::op::mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
-        s, sz,
-        in_grad.dptr<DType>(),
-        out_grad.dptr<DType>(),
-        out_data.dptr<DType>());
+    MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<
+          mxnet_op::backward_grad_tuned<BackwardOp>, Req>, xpu>::Launch(
+            s, sz, in_grad.dptr<DType>(), out_grad.dptr<DType>(), out_data.dptr<DType>());
+      });
     });
   }
 }
 
 template<typename xpu>
-void ActivationComputeImpl(const ActivationParam &param, const OpContext &ctx,
-                           const TBlob &input, OpReqType req, const TBlob &output) {
-  MSHADOW_REAL_TYPE_SWITCH(input.type_flag_, DType, {
-    switch (param.act_type) {
-      case activation::kReLU:
-        ActivationForward<xpu, mshadow_op::relu, mshadow_op::relu_grad, DType>(
-            ctx, input, req, output);
-        break;
-      case activation::kSigmoid:
-        ActivationForward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>(
-            ctx, input, req, output);
-        break;
-      case activation::kTanh:
-        ActivationForward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>(
-            ctx, input, req, output);
-        break;
-      case activation::kSoftReLU:
-        ActivationForward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
-            ctx, input, req, output);
-        break;
-      case activation::kSoftSign:
-        ActivationForward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>(
-                ctx, input, req, output);
-            break;
-      default:
-        LOG(FATAL) << "unknown activation type";
-    }
-  });
+void ActivationComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                           const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  switch (param.act_type) {
+    case activation::kReLU:
+      ActivationForward<xpu, mshadow_op::relu, mshadow_op::relu_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
+    case activation::kSigmoid:
+      ActivationForward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
+    case activation::kTanh:
+      ActivationForward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
+    case activation::kSoftReLU:
+      ActivationForward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
+    case activation::kSoftSign:
+      ActivationForward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
+          ctx, inputs[0], req[0], outputs[0]);
+      break;
+    default:
+      LOG(FATAL) << "unknown activation type";
+  }
 }
 
 template<typename xpu>
-void ActivationGradComputeImpl(const ActivationParam &param, const OpContext &ctx,
-                               const TBlob &out_grad, const TBlob &out_data,
-                               OpReqType req, const TBlob &output) {
-  MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
-    switch (param.act_type) {
-      case activation::kReLU:
-        ActivationBackward<xpu, mshadow_op::relu, mshadow_op::relu_grad, DType>(
-            ctx, out_grad, out_data, req, output);
-        break;
-      case activation::kSigmoid:
-        ActivationBackward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad, DType>(
-            ctx, out_grad, out_data, req, output);
-        break;
-      case activation::kTanh:
-        ActivationBackward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad, DType>(
-            ctx, out_grad, out_data, req, output);
-        break;
-      case activation::kSoftReLU:
-        ActivationBackward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad, DType>(
-            ctx, out_grad, out_data, req, output);
-        break;
-      case activation::kSoftSign:
-        ActivationBackward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad, DType>(
-                ctx, out_grad, out_data, req, output);
-            break;
-      default:
-        LOG(FATAL) << "unknown activation type";
-    }
-  });
+void ActivationGradComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                           const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  switch (param.act_type) {
+    case activation::kReLU:
+      ActivationBackward<xpu, mshadow_op::relu, mshadow_op::relu_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    case activation::kSigmoid:
+      ActivationBackward<xpu, mshadow_op::sigmoid, mshadow_op::sigmoid_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    case activation::kTanh:
+      ActivationBackward<xpu, mshadow_op::tanh, mshadow_op::tanh_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    case activation::kSoftReLU:
+      ActivationBackward<xpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    case activation::kSoftSign:
+      ActivationBackward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
+          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      break;
+    default:
+      LOG(FATAL) << "unknown activation type";
+  }
 }
 
 template<typename xpu>
 void ActivationCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  ActivationComputeImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+  ActivationComputeImpl<xpu>(attrs, ctx, inputs, req, outputs);
 }
 
 template<typename xpu>
 void ActivationGradCompute(const nnvm::NodeAttrs& attrs,
-    const OpContext& ctx,
-    const std::vector<TBlob>& inputs,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& outputs) {
-#if MXNET_USE_CUDNN == 1
-  CHECK_EQ(inputs.size(), 3U);
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  bool relu = param.act_type == activation::kReLU;
+  CHECK_EQ(inputs.size(), relu ? 2U : 3U);
 #else
   CHECK_EQ(inputs.size(), 2U);
 #endif
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  ActivationGradComputeImpl<xpu>(param, ctx, inputs[0], inputs[1], req[0], outputs[0]);
+  ActivationGradComputeImpl<xpu>(attrs, ctx, inputs, req, outputs);
 }
 
 }  // namespace op

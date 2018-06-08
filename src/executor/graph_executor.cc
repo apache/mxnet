@@ -32,6 +32,7 @@
 #include "./graph_executor.h"
 #include "../profiler/profiler.h"
 #include "../common/utils.h"
+#include "../common/exec_utils.h"
 
 namespace mxnet {
 namespace exec {
@@ -904,7 +905,12 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   }
   g = DetectInplaceAddTo(g);
 
-  g.attrs["saved_states"] = std::make_shared<nnvm::any>(std::move(saved_states_));
+  // log the static memory plan of the graph
+  static bool mem_log_verbose = dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false);
+  if (mem_log_verbose) {
+    common::LogMemoryPlan(g);
+  }
+
   g = AttachOpExecs(g);
   g = AttachOpResources(g);
   graph_ = std::move(g);
@@ -1037,6 +1043,117 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   FinishInitGraph(symbol, g, shared_exec, feed_dict);
 }
 
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ * For runtime reshaping, variable length sequences, etc.
+ * The returned executor shares state with the current one,
+ * and cannot be used in parallel with it.
+ */
+Executor* GraphExecutor::Reshape(const bool partial_shaping,
+                                 const bool allow_up_sizing,
+                                 const Context& default_ctx,
+                                 const std::map<std::string, Context>& ctx_map,
+                                 const std::unordered_map<std::string, TShape>&
+                                   provided_arg_shapes,
+                                 std::vector<NDArray>* in_args,
+                                 std::vector<NDArray>* arg_grads,
+                                 std::vector<NDArray>* aux_states) {
+  nnvm::Graph g;
+  g.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+    graph_.outputs.begin() + num_forward_outputs_);
+  nnvm::Symbol symbol;
+  symbol.outputs = g.outputs;
+  const nnvm::IndexedGraph& idx = g.indexed_graph();
+  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string& name = idx[nid].source->attrs.name;
+    auto it = provided_arg_shapes.find(name);
+    if (provided_arg_shapes.end() != it) {
+      arg_shapes[i] = it->second;
+    }
+  }
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+  if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
+    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
+                          g.GetAttr<nnvm::ShapeVector>("shape"));
+  }
+  const nnvm::ShapeVector& shape_vec = g.GetAttr<nnvm::ShapeVector>("shape");
+  std::vector<OpReqType> grad_req_types;
+  size_t grad_top = 0;
+  const size_t num_args = in_arg_map_.size();
+  const size_t num_aux = aux_state_map_.size();
+  in_args->reserve(num_args);
+  grad_req_types.reserve(num_args);
+  arg_grads->reserve(num_args);
+  aux_states->reserve(num_aux);
+  for (uint32_t nid : idx.input_nodes()) {
+    std::string name = idx[nid].source->attrs.name;
+    const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
+    if (idx.mutable_input_nodes().count(nid) == 0) {
+      NDArray& arr = in_arg_map_.at(name);
+      auto it = arg_grad_map_.find(name);
+      if (partial_shaping || provided_arg_shapes.count(name) || new_shape == arr.shape()) {
+        if (new_shape.Size() > arr.shape().Size()) {
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          in_args->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
+          if (it != arg_grad_map_.end()) {
+            NDArray& darr = it->second;
+            arg_grads->emplace_back(new_shape, darr.ctx(), false, darr.dtype());
+            grad_req_types.push_back(grad_store_.at(grad_top++).first);
+          } else {
+            arg_grads->emplace_back();
+            grad_req_types.push_back(kNullOp);
+          }
+        } else {
+          in_args->push_back(arr.Reshape(new_shape));
+          if (it != arg_grad_map_.end()) {
+            NDArray& darr = it->second;
+            arg_grads->push_back(darr.Reshape(new_shape));
+            grad_req_types.push_back(grad_store_.at(grad_top++).first);
+          } else {
+            arg_grads->emplace_back();
+            grad_req_types.push_back(kNullOp);
+          }
+        }
+      } else {
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
+      }
+    } else {
+      NDArray& arr = aux_state_map_.at(name);
+      if (partial_shaping || new_shape == arr.shape()) {
+        if (new_shape.Size() > arr.shape().Size()) {
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          aux_states->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
+        } else {
+          aux_states->push_back(arr.Reshape(new_shape));
+        }
+      } else {
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
+      }
+    }
+  }
+  auto exec = new GraphExecutor();
+  exec->Init(symbol, default_ctx, ctx_map,
+             *in_args, *arg_grads, grad_req_types, *aux_states,
+             this);
+  return exec;
+}
 /*!
  * \brief This function is triggered by both simple_bind
  * and bind flows.
@@ -1235,11 +1352,7 @@ void GraphExecutor::InitCachedOps() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-#if MXNET_USE_PROFILER
     op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
-#else
-    op_nodes_[nid].opr_name = nullptr;
-#endif
     if (skip_plus_node.at(nid)) {
       op_nodes_[nid].skip_exec_node = true; continue;
     }
@@ -1309,7 +1422,7 @@ void GraphExecutor::InitCachedOps() {
         exec->Setup();
         on_complete();
       }, Context::CPU(), {}, all_vars, FnProperty::kNormal, 0,
-      PROFILER_MESSAGE("SetupExec"));
+      "SetupExec");
     auto exec_fun = [exec, is_async, is_gpu] (
         RunContext ctx, Engine::CallbackOnComplete on_complete) {
       if (is_async) {
@@ -1332,7 +1445,7 @@ void GraphExecutor::InitCachedOps() {
     // setup the vars
     op_nodes_[nid].cached_opr = Engine::Get()->NewOperator(
         exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-        PROFILER_MESSAGE(op_nodes_[nid].opr_name));
+        op_nodes_[nid].opr_name);
     op_nodes_[nid].mutate_vars = mutate_vars;
     op_nodes_[nid].use_vars = use_vars;
   }
@@ -1461,6 +1574,7 @@ void GraphExecutor::ExecuteMonCallback(size_t nid) {
       output_names.emplace_back(std::to_string(i));
     }
   }
+  CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
   for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
     std::string name = inode.source->attrs.name + "_" + output_names[i];
@@ -1484,11 +1598,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
     if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
-#if MXNET_USE_PROFILER
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
-#else
-      bool profiling = false;
-#endif
       Engine::Get()->Push(seg_op.opr, seg_op.ctx, 0, profiling);
       nid = seg_op.topo_end - 1;
       continue;
@@ -1505,11 +1615,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
     } else if (opnode.cached_opr != nullptr) {
-#if MXNET_USE_PROFILER
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
-#else
-      bool profiling = false;
-#endif
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0, profiling);
     } else {
       LOG(FATAL) << "Not accessed";
@@ -1533,11 +1639,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   if (topo_end <= topo_start) {
     return ret;
   }
-#if MXNET_USE_PROFILER
   std::string opr_names = "[";
-#else
-  std::string opr_names = "Bulk Execution";
-#endif
 
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -1559,9 +1661,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
               std::inserter(use_vars, use_vars.end()));
     ret.exec_list.push_back(exec);
-#if MXNET_USE_PROFILER
     opr_names += inode.source->op()->name + ",";
-#endif
   }
 
   if (pctx == nullptr) return ret;
@@ -1585,17 +1685,12 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     on_complete();
   };
-#if MXNET_USE_PROFILER
-    opr_names.pop_back();
-    opr_names += "]";
-    // the lifetime of `opr_names.c_str()` is same with opr_names
-    // you need to copy it out. (potential memory leak risk)
-    char *p_opr_name = new char[opr_names.size() + 1];
-    memcpy(p_opr_name, opr_names.c_str(), opr_names.size() + 1);
-#endif
+  opr_names.pop_back();
+  opr_names += "]";
+  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
-      exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-      PROFILER_MESSAGE(p_opr_name));
+    exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
+    iter->c_str());
   return ret;
 }
 }  // namespace exec

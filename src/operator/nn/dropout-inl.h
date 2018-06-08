@@ -375,7 +375,7 @@ void DropoutCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    static thread_local DropoutOp<xpu, DType> op;
+    DropoutOp<xpu, DType> op;
     op.Init(param);
     op.Forward(ctx, inputs, req, outputs);
   });
@@ -397,7 +397,7 @@ void DropoutGradCompute(const nnvm::NodeAttrs& attrs,
   out_data[dropout::kMask] = inputs[1];
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    static thread_local DropoutOp<xpu, DType> op;
+    DropoutOp<xpu, DType> op;
     op.Init(param);
     op.Backward(ctx, out_grads, out_data, req, outputs);
   });

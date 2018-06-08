@@ -33,8 +33,10 @@ if [ -z "$1" ]
     echo "Please provide a list of version tags you wish to run."
     exit 1
   else
-    tag_list="$1"
-    echo "Using these tags: $1"
+    IFS=$';'
+    tag_list=$1
+    echo "Using these tags: $tag_list"
+    for tag in $tag_list; do echo $tag; done
 fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
@@ -60,14 +62,11 @@ for tag in $tag_list; do
             git checkout master
             git pull
         else
-            git checkout "tags/$tag"
+            git checkout "v$tag"
     fi
-    # this gets around the Python 3 support issue in old versions of mxdoc.py
-    if [ $tag == '0.11.0' ]
-      then
-          git checkout master -- docs/mxdoc.py
-    fi
-    git submodule update || exit 1
+
+    git submodule update --init --recursive || exit 1
+
     make clean
     cd docs
     make clean

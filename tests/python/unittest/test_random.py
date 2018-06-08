@@ -273,32 +273,138 @@ def test_parallel_random_seed_setting():
             assert same(un1.asnumpy(), un2.asnumpy()), \
                 "symbolic seed-setting test: `uniform` should give the same result with the same seed"
 
+# Set seed for the context variously based on `start_seed` and `num_init_seeds`, then set seed finally to `final_seed`
+def set_seed_variously_for_context(ctx, init_seed, num_init_seeds, final_seed):
+    end_seed = init_seed + num_init_seeds
+    for seed in range(init_seed, end_seed):
+        mx.random.seed(seed, ctx=ctx)
+    mx.random.seed(final_seed, ctx=ctx)
+    return end_seed
+
+# Tests that seed setting of std (non-parallel) rng for specific context is synchronous w.r.t. rng use before and after.
+@with_seed()
+def test_random_seed_setting_for_context():
+    seed_to_test = 1234
+    num_temp_seeds = 25
+    probs = [0.125, 0.25, 0.25, 0.0625, 0.125, 0.1875]
+    num_samples = 100000
+    dev_type = mx.context.current_context().device_type
+    for dtype in ['float16', 'float32', 'float64']:
+        samples_imp = []
+        samples_sym = []
+        # Collect random number samples from the generators of all devices, each seeded with the same number.
+        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
+            # Currently python API does not provide a method to get the number of gpu devices.
+            # Waiting for PR #10354, which provides the method, to be merged.
+            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
+            try:
+                with mx.Context(dev_type, dev_id):
+                    ctx = mx.context.current_context()
+                    seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
+
+                    # Check imperative. `multinomial` uses non-parallel rng.
+                    rnds = mx.nd.random.multinomial(data=mx.nd.array(probs, dtype=dtype), shape=num_samples)
+                    samples_imp.append(rnds.asnumpy())
+
+                    # Check symbolic. `multinomial` uses non-parallel rng.
+                    P = mx.sym.Variable("P")
+                    X = mx.sym.random.multinomial(data=P, shape=num_samples, get_prob=False)
+                    exe = X.bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
+                    set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
+                    exe.forward()
+                    samples_sym.append(exe.outputs[0].asnumpy())
+            except mx.MXNetError as e:
+                if str(e).find("invalid device ordinal") != -1:
+                    break
+                else:
+                    raise e
+        # The samples should be identical across different gpu devices.
+        for i in range(1, len(samples_imp)):
+            assert same(samples_imp[i - 1], samples_imp[i])
+        for i in range(1, len(samples_sym)):
+            assert same(samples_sym[i - 1], samples_sym[i])
+
+# Tests that seed setting of parallel rng for specific context is synchronous w.r.t. rng use before and after.
+@with_seed()
+def test_parallel_random_seed_setting_for_context():
+    seed_to_test = 1234
+    dev_type = mx.context.current_context().device_type
+    for dtype in ['float16', 'float32', 'float64']:
+        samples_imp = []
+        samples_sym = []
+        # Collect random number samples from the generators of all devices, each seeded with the same number.
+        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
+            # Currently python API does not provide a method to get the number of gpu devices.
+            # Waiting for PR #10354, which provides the method, to be merged.
+            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
+            try:
+                with mx.Context(dev_type, dev_id):
+                    ctx = mx.context.current_context()
+                    # Avoid excessive test cpu runtimes.
+                    num_temp_seeds = 25 if dev_type == 'gpu' else 1
+                    # To flush out a possible race condition, run multiple times.
+                    for _ in range(20):
+                        # Create enough samples such that we get a meaningful distribution.
+                        shape = (200, 200)
+                        params = { 'low': -1.5, 'high': 3.0 }
+                        params.update(shape=shape, dtype=dtype)
+
+                        # Check imperative. `uniform` uses parallel rng.
+                        seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
+                        rnds = mx.nd.random.uniform(**params)
+                        samples_imp.append(rnds.asnumpy())
+
+                        # Check symbolic. `uniform` uses parallel rng.
+                        X = mx.sym.Variable("X")
+                        Y = mx.sym.random.uniform(**params) + X
+                        x = mx.nd.zeros(shape, dtype=dtype)
+                        xgrad = mx.nd.zeros(shape, dtype=dtype)
+                        yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+                        set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
+                        yexec.forward(is_train=True)
+                        yexec.backward(yexec.outputs[0])
+                        samples_sym.append(yexec.outputs[0].asnumpy())
+            except mx.MXNetError as e:
+                if str(e).find("invalid device ordinal") != -1:
+                    break
+                else:
+                    raise e
+        # The samples should be identical across different gpu devices.
+        for i in range(1, len(samples_imp)):
+            assert same(samples_imp[i - 1], samples_imp[i])
+        for i in range(1, len(samples_sym)):
+            assert same(samples_sym[i - 1], samples_sym[i])
 
 @with_seed()
 def test_sample_multinomial():
-    x = mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0
-    dx = mx.nd.ones_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
-    # Adding rtol and increasing samples needed to pass with seed 2951820647
-    samples = 5000
-    with mx.autograd.record():
-        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
-        r = prob * 5
-        r.backward()
+    for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
+        dx = mx.nd.ones_like(x)
+        mx.contrib.autograd.mark_variables([x], [dx])
+        # Adding rtol and increasing samples needed to pass with seed 2951820647
+        samples = 5000
+        with mx.autograd.record():
+            y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True)
+            r = prob * 5
+            r.backward()
 
-    y = y.asnumpy()
-    x = x.asnumpy()
-    for i in range(x.shape[0]):
+        y = y.asnumpy()
+        x = x.asnumpy()
+        dx = dx.asnumpy()
+        if len(x.shape) is 1:
+            x = x.reshape((1, x.shape[0]))
+            dx = dx.reshape(1, dx.shape[0])
+            y = y.reshape((1, y.shape[0]))
+            prob = prob.reshape((1, prob.shape[0]))
+        for i in range(x.shape[0]):
+            freq = np.bincount(y[i,:], minlength=5)/np.float32(samples)*x[i,:].sum()
+            mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
+            rprob = x[i][y[i]]/x[i].sum()
+            mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
-        freq = np.bincount(y[i], minlength=5)/np.float32(samples)*x[i].sum()
-        mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20)
-        rprob = x[i][y[i]]/x[i].sum()
-        mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i])
-
-        real_dx = np.zeros((5,))
-        for j in range(samples):
-            real_dx[y[i][j]] += 5.0 / rprob[j]
-        mx.test_utils.assert_almost_equal(real_dx, dx.asnumpy()[i], rtol=1e-4)
+            real_dx = np.zeros((5,))
+            for j in range(samples):
+                real_dx[y[i][j]] += 5.0 / rprob[j]
+            mx.test_utils.assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
 
 # Test the generators with the chi-square testing
 @with_seed()

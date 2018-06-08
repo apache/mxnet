@@ -401,7 +401,7 @@ mx.opt.get.updater <- function(optimizer, weights) {
   update <- optimizer$update
 
   update.closure <- function(weight, grad) {
-    ulist <- lapply(seq_along(weights), function(i) {
+    ulist <- lapply(seq_along(weight), function(i) {
       if (!is.null(grad[[i]])) {
         update(i, weight[[i]], grad[[i]], state.list[[i]])
       } else {
