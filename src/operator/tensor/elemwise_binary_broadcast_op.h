@@ -228,10 +228,18 @@ struct binary_broadcast_kernel {
 
 template<int req, typename OP, bool col_vec>
 struct csr_dns_csr_broadcast_kernel {
+  /*!
+   * \brief Map function for broadcast between csr and 1D vector
+   * \param row          global thread id/assigned row id
+   * \param csr_data     ptr to data buffer of csr matrix
+   * \param csr_indices  ptr to indices buffer of csr matrix
+   * \param csr_indptr   ptr to indptr buffer of csr matrix
+   * \param dns          ptr to data buffer of the dense vector
+   * \param out          ptr to the data buffer of the result csr matrix
+   */
   template<typename DType, typename CType, typename RType>
   MSHADOW_XINLINE static void Map(int row, const DType *csr_data, const CType *csr_indices,
-                                  const RType *csr_indptr, const DType *dns,
-                                  DType *out, const nnvm::dim_t row_length) {
+                                  const RType *csr_indptr, const DType *dns, DType *out) {
     const nnvm::dim_t curr_row_i = csr_indptr[row];
     const nnvm::dim_t next_row_i = csr_indptr[row + 1];
     for (nnvm::dim_t iter = curr_row_i; iter < next_row_i; iter++) {
@@ -240,6 +248,14 @@ struct csr_dns_csr_broadcast_kernel {
     }
   }
 
+  /*!
+   * \brief Map function for broadcast between csr and a scalar
+   * \param i           global thread id
+   * \param csr_data    ptr to data buffer of csr matrix
+   * \param scalar_ptr  ptr to data buffer of the scalar tensor, only the 0-th element is used
+   * \param out         ptr to the data buffer of output csr matrix
+   * \param nnz         number of non-zero elements in input csr matrix
+   */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, const DType *csr_data, const DType* scalar_ptr,
                                   DType *out, const nnvm::dim_t nnz) {
@@ -326,22 +342,25 @@ void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), CType, {
         MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIndPtr), RType, {
           MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            // broadcast_mul/div between csr and a scalar case
             if ((dns.shape().ndim() == 2 && dns.shape()[0] == 1 && dns.shape()[1] == 1) ||
                 (dns.shape().ndim() == 1 && dns.shape()[0] == 1)) {
               Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, false>, xpu>::Launch(
                 s, nnz, csr.data().dptr<DType>(), dns.data().dptr<DType>(),
                 output.data().dptr<DType>(), nnz);
             } else {
+              // broadcast_mul/div between csr and column vector
               if (col_vec) {
                 Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, true>, xpu>::Launch(
                   s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
                   csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
-                  output.data().dptr<DType>(), csr.shape()[1]);
+                  output.data().dptr<DType>());
+              // broadcast_mul/div between csr and row vector
               } else {
                 Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, false>, xpu>::Launch(
                   s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
                   csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
-                  output.data().dptr<DType>(), csr.shape()[1]);
+                  output.data().dptr<DType>());
               }
             }
             Copy(output.aux_data(kIdx).FlatTo1D<xpu, CType>(),
