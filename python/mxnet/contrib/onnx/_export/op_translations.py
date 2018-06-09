@@ -46,6 +46,7 @@
 
 # coding: utf-8
 # pylint: disable=too-many-locals,no-else-return,too-many-lines
+# pylint: disable=anomalous-backslash-in-string,eval-used
 """
 Conversion Functions for common layers.
 Add new functions here with a decorator.
