@@ -67,7 +67,7 @@ def test_transformer():
 
     transform = transforms.Compose([
 		transforms.Resize(300),
-		transforms.Resize(300, keep_aspect_ratio=False),
+		transforms.Resize(300, keep_ratio=False),
 		transforms.CenterCrop(256),
 		transforms.RandomResizedCrop(224),
 		transforms.RandomFlipLeftRight(),
