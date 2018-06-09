@@ -362,7 +362,7 @@ def convert_string_to_list(string_val):
         val = val.replace("L", "")
         val = val.replace("[", "")
         val = val.replace("]", "")
-        if val is not "" and val is not "None":
+        if val != "" and val != "None":
             result_list.append(int(val))
 
     return result_list
