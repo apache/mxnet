@@ -24,6 +24,8 @@ WORKDIR /work/deps
 
 COPY install/centos7_core.sh /work/
 RUN /work/centos7_core.sh
+COPY install/centos7_ccache.sh /work/
+RUN /work/centos7_ccache.sh
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
 
