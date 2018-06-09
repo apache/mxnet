@@ -1151,11 +1151,11 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
   const TBlob& data_l = dns;
   const TBlob data_out = ret->data();
 
-  MSHADOW_SGL_DBL_TYPE_SWITCH(data_r.type_flag_, DType, {  // data type
+  MSHADOW_REAL_TYPE_SWITCH(data_r.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_r.type_flag_, IType, {  // indptr type
       MSHADOW_IDX_TYPE_SWITCH(col_idx_r.type_flag_, CType, {  // col idx type
         dim_t num_threads;
-        if (req == kWriteTo) {
+        if (req == kWriteTo || req == kWriteInplace) {
           num_threads = data_out.Size();
           mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
               s, num_threads, data_out.dptr<DType>());
