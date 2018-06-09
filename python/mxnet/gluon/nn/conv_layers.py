@@ -865,6 +865,8 @@ class AvgPool1D(_Pooling):
         respectively. padding is applied on 'W' dimension.
     ceil_mode : bool, default False
         When `True`, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value
 
 
     Inputs:
@@ -909,6 +911,8 @@ class AvgPool2D(_Pooling):
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value
 
 
     Inputs:
@@ -957,6 +961,8 @@ class AvgPool3D(_Pooling):
         dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value
 
 
     Inputs:
