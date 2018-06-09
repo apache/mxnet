@@ -39,7 +39,7 @@ static void ConcatComputeExGPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
   if (common::ContainsOnlyStorage(inputs, kCSRStorage)) {
-    ConcatRspImpl<gpu>(attrs, op_ctx, inputs, req, outputs);
+    ConcatCSRImpl<gpu>(attrs, op_ctx, inputs, req, outputs);
   } else {
     LogUnimplementedOp(attrs, op_ctx, inputs, req, outputs);
   }
