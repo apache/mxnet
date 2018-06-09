@@ -28,6 +28,7 @@ from .base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
 from .base import check_call, string_types, mx_uint, py_str
 from .base import NDArrayHandle, KVStoreHandle
 from . import optimizer as opt
+from .profiler import set_kvstore_handle
 
 def _ctype_key_value(keys, vals):
     """
@@ -88,7 +89,8 @@ def _get_kvstore_server_command_type(command):
                      'kSetMultiPrecision': 1,
                      'kStopServer': 2,
                      'kSyncMode': 3,
-                     'kSetGradientCompression': 4}
+                     'kSetGradientCompression': 4,
+                     'kSetProfilerParams': 5}
     assert (command in command_types), "Unknown command type to send to server"
     return command_types[command]
 
@@ -665,4 +667,6 @@ def create(name='local'):
     handle = KVStoreHandle()
     check_call(_LIB.MXKVStoreCreate(c_str(name),
                                     ctypes.byref(handle)))
-    return KVStore(handle)
+    kv = KVStore(handle)
+    set_kvstore_handle(kv.handle)
+    return kv

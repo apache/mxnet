@@ -234,6 +234,17 @@ MXNET_DLL int MXNotifyShutdown();
  * \param num_params Number of parameters
  * \param keys array of parameter keys
  * \param vals array of parameter values
+ * \param kvstoreHandle handle to kvstore
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals,
+                                  KVStoreHandle kvstoreHandle);
+
+/*!
+ * \brief Set up configuration of profiler
+ * \param num_params Number of parameters
+ * \param keys array of parameter keys
+ * \param vals array of parameter values
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals);
@@ -243,17 +254,47 @@ MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const
  * \param state indicate the working state of profiler,
  *  profiler not running when state == 0,
  *  profiler running when state == 1
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXSetProfilerState(int state);
+MXNET_DLL int MXSetProfilerState(int state, int profile_process, KVStoreHandle kvStoreHandle);
+
+/*!
+ * \brief Set up state of profiler
+ * \param state indicate the working state of profiler,
+ *  profiler not running when state == 0,
+ *  profiler running when state == 1
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerState(int state, int profile_process);
 
 /*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXDumpProfile(int finished);
+MXNET_DLL int MXDumpProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle);
 
+
+/*!
+ * \brief Save profile and stop profiler
+ * \param finished true if stat output should stop after this point
+ * \param profile_process an int,
+ * when 0 command is for worker process,
+ * when 1 command is for server process
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXDumpProfile(int finished, int profile_process);
 
 /*!
  * \brief Print aggregate stats to the a string
@@ -267,10 +308,21 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
 /*!
  * \brief Pause profiler tuning collection
  * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
+ * \param profile_process integer which denotes whether to process worker or server process
+ * \param kvstoreHandle handle to kvstore
  * \return 0 when success, -1 when failure happens.
  * \note pausing and resuming is global and not recursive
  */
-MXNET_DLL int MXProfilePause(int paused);
+MXNET_DLL int MXProfilePause(int paused, int profile_process, KVStoreHandle kvStoreHandle);
+
+/*!
+ * \brief Pause profiler tuning collection
+ * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
+ * \param profile_process integer which denotes whether to process worker or server process
+ * \return 0 when success, -1 when failure happens.
+ * \note pausing and resuming is global and not recursive
+ */
+MXNET_DLL int MXProfilePause(int paused, int profile_process);
 
 /*!
  * \brief Create profiling domain
@@ -2089,8 +2141,7 @@ typedef void (MXKVStoreServerController)(int head,
                                          void *controller_handle);
 
 /**
- * \return Run as server (or scheduler)
- *
+ * \brief Run as server (or scheduler)
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
  * \param controller_handle helper handle for implementing controller
@@ -2101,8 +2152,7 @@ MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
                                  void *controller_handle);
 
 /**
- * \return Send a command to all server nodes
- *
+ * \brief Send a command to all server nodes
  * \param handle handle to the KVStore
  * \param cmd_id the head of the command
  * \param cmd_body the body of the command

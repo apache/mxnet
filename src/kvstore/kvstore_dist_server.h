@@ -24,6 +24,9 @@
  */
 #ifndef MXNET_KVSTORE_KVSTORE_DIST_SERVER_H_
 #define MXNET_KVSTORE_KVSTORE_DIST_SERVER_H_
+#include <mxnet/c_api.h>
+#include <mxnet/kvstore.h>
+#include <ps/ps.h>
 #include <queue>
 #include <string>
 #include <mutex>
@@ -32,8 +35,7 @@
 #include <functional>
 #include <future>
 #include <vector>
-#include "ps/ps.h"
-#include "mxnet/kvstore.h"
+#include "../profiler/profiler.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/init_op.h"
 
@@ -42,7 +44,7 @@ namespace kvstore {
 
 // maintain same order in frontend.
 enum class CommandType {
-  kController, kSetMultiPrecision, kStopServer, kSyncMode, kSetGradientCompression,
+  kController, kSetMultiPrecision, kStopServer, kSyncMode, kSetGradientCompression, kSetProfilerParams
 };
 
 enum class RequestType {
@@ -163,6 +165,7 @@ class KVStoreDistServer {
   }
 
   ~KVStoreDistServer() {
+    profiler::Profiler::Get()->SetState(profiler::Profiler::ProfilerState(0));
     delete ps_server_;
   }
 
@@ -193,29 +196,91 @@ class KVStoreDistServer {
 
   void CommandHandle(const ps::SimpleData& recved, ps::SimpleApp* app) {
     CommandType recved_type = static_cast<CommandType>(recved.head);
-    if (recved_type == CommandType::kStopServer) {
-      exec_.Stop();
-    } else if (recved_type == CommandType::kSyncMode) {
-      sync_mode_ = true;
-    } else if (recved_type == CommandType::kSetGradientCompression) {
-      gradient_compression_->DecodeParams(recved.body);
-    } else if (recved_type == CommandType::kSetMultiPrecision) {
-      // uses value 1 for message id from frontend
-      if (!multi_precision_) {
-        multi_precision_ = true;
-        CreateMultiPrecisionCopies();
-      }
-    } else if (recved_type == CommandType::kController) {
-      // value of 0
-      // let the main thread to execute ctrl, which is necessary for python
-      exec_.Exec([this, recved]() {
-          CHECK(controller_);
-          controller_(recved.head, recved.body);
-        });
-    } else {
-      LOG(FATAL) << "Unknown command type received " << recved.head;
+    switch (recved_type) {
+      case CommandType::kStopServer:
+        exec_.Stop();
+        break;
+      case CommandType::kSyncMode:
+        sync_mode_ = true;
+        break;
+      case CommandType::kSetGradientCompression:
+        gradient_compression_->DecodeParams(recved.body);
+        break;
+      case CommandType::kSetMultiPrecision:
+        if (!multi_precision_) {
+          multi_precision_ = true;
+          CreateMultiPrecisionCopies();
+        }
+      case CommandType::kSetProfilerParams:
+        // last char is the type of profiler command
+        ProcessServerProfilerCommands(static_cast<KVStoreServerProfilerCommand>
+                                                  (recved.body.back() - '0'),
+                                      recved.body);
+        break;
+      case CommandType::kController:
+        // this uses value 0 for message id from frontend
+        // let the main thread to execute ctrl, which is necessary for python
+        exec_.Exec([this, recved]() {
+            CHECK(controller_);
+            controller_(recved.head, recved.body);
+          });
+        break;
+      default:
+        LOG(FATAL) << "Unknown command type received " << recved.head;
+        break;
     }
     app->Response(recved);
+  }
+
+  void ProcessServerProfilerCommands(KVStoreServerProfilerCommand type, const std::string& body) {
+    switch (type) {
+      case KVStoreServerProfilerCommand::kSetConfig:
+        SetProfilerConfig(body.substr(0, body.size() - 1));
+        break;
+      case KVStoreServerProfilerCommand::kState:
+        MXSetProfilerState(static_cast<int>(body.front() - '0'), 0, nullptr);
+        break;
+      case KVStoreServerProfilerCommand::kPause:
+        MXProfilePause(static_cast<int>(body.front() - '0'), 0, nullptr);
+        break;
+      case KVStoreServerProfilerCommand::kDump:
+        MXDumpProfile(static_cast<int>(body.front() - '0'), 0, nullptr);
+        break;
+    }
+  }
+
+  void SetProfilerConfig(std::string params_str) {
+    std::vector<std::string> elems;
+    mxnet::kvstore::split(params_str, ',', std::back_inserter(elems));
+    std::vector<const char*> ckeys;
+    std::vector<const char*> cvals;
+    ckeys.reserve(elems.size());
+    cvals.reserve(elems.size());
+
+    for (size_t i=0; i < elems.size(); i++) {
+      std::vector<std::string> parts;
+      mxnet::kvstore::split(elems[i], ':', std::back_inserter(parts));
+      CHECK_EQ(parts.size(), 2) << "Improper profiler config passed from worker";
+      CHECK(!parts[0].empty()) << "ProfilerConfig parameter is empty";
+      CHECK(!parts[1].empty()) << "ProfilerConfig value is empty for parameter "<< parts[0];
+      if (parts[0] == "filename") {
+        parts[1] = "rank" + std::to_string(ps::MyRank()) + "_" + parts[1];
+      }
+
+      char* ckey = new char[parts[0].length() + 1];
+      std::snprintf(ckey, parts[0].length() + 1, "%s", parts[0].c_str());
+      ckeys.push_back(ckey);
+
+      char* cval = new char[parts[1].length() + 1];
+      std::snprintf(cval, parts[1].length() + 1, "%s", parts[1].c_str());
+      cvals.push_back(cval);
+    }
+
+    MXSetProfilerConfig(elems.size(), &ckeys[0], &cvals[0], nullptr);
+    for (size_t i=0; i < ckeys.size(); i++) {
+      delete[] ckeys[i];
+      delete[] cvals[i];
+    }
   }
 
   /*
