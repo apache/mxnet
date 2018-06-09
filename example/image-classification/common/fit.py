@@ -23,13 +23,13 @@ import re
 import math
 import mxnet as mx
 
+def get_epoch_size(args, kv):
+    return math.ceil(int(args.num_examples / kv.num_workers) / args.batch_size)
 
 def _get_lr_scheduler(args, kv):
     if 'lr_factor' not in args or args.lr_factor >= 1:
         return (args.lr, None)
-    epoch_size = args.num_examples / args.batch_size
-    if 'dist' in args.kv_store:
-        epoch_size /= kv.num_workers
+    epoch_size = get_epoch_size(args, kv)
     begin_epoch = args.load_epoch if args.load_epoch else 0
     if 'pow' in args.lr_step_epochs:
         lr = args.lr
@@ -48,8 +48,10 @@ def _get_lr_scheduler(args, kv):
 
     steps = [epoch_size * (x - begin_epoch)
              for x in step_epochs if x - begin_epoch > 0]
-    return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
-
+    if steps:
+        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
+    else:
+        return (lr, None)
 
 def _load_model(args, rank=0):
     if 'load_epoch' not in args or args.load_epoch is None:
@@ -153,9 +155,17 @@ def fit(args, network, data_loader, **kwargs):
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     logging.info('start with arguments %s', args)
+    
+    epoch_size = get_epoch_size(args, kv)
 
     # data iterators
     (train, val) = data_loader(args, kv)
+    if 'dist' in args.kv_store and not 'async' in args.kv_store:
+        logging.info('Resizing training data to %d batches per machine', epoch_size)
+        # resize train iter to ensure each machine has same number of batches per epoch
+        # if not, dist_sync can hang at the end with one machine waiting for other machines
+        train = mx.io.ResizeIter(train, epoch_size)
+
     if args.test_io:
         tic = time.time()
         for i, batch in enumerate(train):
@@ -211,11 +221,7 @@ def fit(args, network, data_loader, **kwargs):
     # A limited number of optimizers have a warmup period
     has_warmup = {'lbsgd', 'lbnag'}
     if args.optimizer in has_warmup:
-        if 'dist' in args.kv_store:
-            nworkers = kv.num_workers
-        else:
-            nworkers = 1
-        epoch_size = args.num_examples / args.batch_size / nworkers
+        nworkers = kv.num_workers
         if epoch_size < 1:
             epoch_size = 1
         macrobatch_size = args.macrobatch_size
