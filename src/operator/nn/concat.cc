@@ -167,8 +167,9 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  if (common::ContainsOnlyStorage(inputs, kCSRStorage)) {
-    ConcatRspImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
+  if (common::ContainsOnlyStorage(inputs, kCSRStorage) &&
+      outputs[0].storage_type() == kCSRStorage) {
+    ConcatCSRImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
 #if MXNET_USE_MKLDNN == 1
   } else if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
       && inputs[0].dtype() == mshadow::kFloat32) {

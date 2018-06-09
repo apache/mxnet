@@ -186,7 +186,7 @@ struct concat_csr_first_dim {
 };
 
 template<typename xpu>
-void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
+void ConcatCSRImpl(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<NDArray>& inputs,
                    const std::vector<OpReqType>& req,
@@ -200,7 +200,7 @@ void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), num_args);
   CHECK_EQ(outputs.size(), 1);
   int axis = CheckAxis(concat_dim, inputs[0].shape().ndim());
-  CHECK_EQ(axis, 0);
+  CHECK_EQ(axis, 0) << "concat of csr ndarrays on axis 1 is not supported.";
   if (req[0] == kNullOp) return;
   Stream<xpu>* s = ctx.get_stream<xpu>();
   nnvm::dim_t nnz = 0;
@@ -208,6 +208,10 @@ void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
     nnz += inputs[i].aux_shape(kIdx)[0];
   }
   const NDArray& out = outputs[0];
+  if (nnz == 0) {
+    FillZerosCsrImpl(s, out);
+    return;
+  }
   const nnvm::dim_t num_rows = out.shape()[0];
   out.CheckAndAllocAuxData(kIndPtr, Shape1(num_rows+1));
 
@@ -215,11 +219,6 @@ void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
     MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(kIdx), IType, {
       MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
         RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
-        if (nnz == 0) {
-          out.set_aux_shape(kIdx, Shape1(0));
-          Kernel<set_zero, xpu>::Launch(s, num_rows+1, out_indptr);
-          return;
-        }
         out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
         out.CheckAndAllocData(Shape1(nnz));
         IType* out_idx = out.aux_data(kIdx).dptr<IType>();
@@ -227,9 +226,9 @@ void ConcatRspImpl(const nnvm::NodeAttrs& attrs,
         nnvm::dim_t indptr_offset = 0;
         nnvm::dim_t idx_offset = 0;
         for (const auto& in : inputs) {
-          RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
-          IType* in_idx = in.aux_data(kIdx).dptr<IType>();
-          DType* in_data = in.data().dptr<DType>();
+          const RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+          const IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+          const DType* in_data = in.data().dptr<DType>();
           Kernel<concat_csr_first_dim, xpu>::Launch(s, in.shape()[0], req[0], out_data,
             in_data, out_indptr, in_indptr, out_idx, in_idx, indptr_offset, idx_offset);
           indptr_offset += in.shape()[0];
