@@ -193,13 +193,14 @@ build_amzn_linux_cpu() {
 build_arm64() {
     cmake\
         -DUSE_CUDA=OFF\
+        -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
@@ -212,6 +213,7 @@ build_android_armv7() {
     cmake\
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
+        -DSUPPORT_F16C=OFF\
         -DUSE_LAPACK=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
@@ -219,7 +221,7 @@ build_android_armv7() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v -j1
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
