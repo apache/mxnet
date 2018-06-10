@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,27 +16,37 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
 
-FROM centos:7
+# Script to build ccache for ubuntu based images
 
-WORKDIR /work/deps
+set -ex
 
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
+pushd .
 
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh 
+apt update
+apt install -y --no-install-recommends \
+    autoconf \
+    asciidoc \
+    xsltproc
 
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
+mkdir -p /work/deps
+cd /work/deps
 
-COPY runtime_functions.sh /work/
+git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
+
+cd ccache
+
+./autogen.sh
+./configure
+
+# Don't build documentation #11214
+#perl -pi -e 's!\s+\Q$(installcmd) -d $(DESTDIR)$(mandir)/man1\E!!g' Makefile
+#perl -pi -e 's!\s+\Q-$(installcmd) -m 644 ccache.1 $(DESTDIR)$(mandir)/man1/\E!!g' Makefile
+make -j$(nproc)
+make install
+
+cd /work/deps
+rm -rf /work/deps/ccache
+
+popd
+

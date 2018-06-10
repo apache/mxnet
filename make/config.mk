@@ -37,9 +37,15 @@
 # choice of compiler
 #--------------------
 
+ifndef CC
 export CC = gcc
+endif
+ifndef CXX
 export CXX = g++
+endif
+ifndef NVCC
 export NVCC = nvcc
+endif
 
 # whether compile with options for MXNet developer
 DEV = 0
