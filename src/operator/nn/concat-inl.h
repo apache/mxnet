@@ -154,6 +154,91 @@ void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   });
 }
 
+/*!
+ * \brief concat CSRNDArray on the first dimension.
+ */
+struct concat_csr_first_dim {
+  /*!
+   * \param i              the i-th row of the input ndarray
+   * \param out_idx        output csr ndarray column indices
+   * \param out_data       output csr ndarray data
+   * \param out_indptr     output csr ndarray row index pointer
+   * \param in_idx         input csr ndarray column indices
+   * \param in_data        input csr ndarray data
+   * \param in_indptr      input csr ndarray row index pointer
+   * \param indptr_offset  offset for ouput ndarray row index pointer
+   * \param idx_offset     offset for ouput ndarray column indices
+   */
+  template<typename DType, typename RType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, const OpReqType req,
+                                  DType* out_data, const DType* in_data,
+                                  RType* out_indptr, const RType* in_indptr,
+                                  IType* out_idx, const IType* in_idx,
+                                  const nnvm::dim_t indptr_offset,
+                                  const nnvm::dim_t idx_offset) {
+    if (i == 0) out_indptr[0] = 0;
+    out_indptr[i+1+indptr_offset] = in_indptr[i+1] + idx_offset;
+    for (nnvm::dim_t j = in_indptr[i]; j < in_indptr[i+1]; ++j) {
+      KERNEL_ASSIGN(out_idx[j+idx_offset], req, in_idx[j]);
+      KERNEL_ASSIGN(out_data[j+idx_offset], req, in_data[j]);
+    }
+  }
+};
+
+template<typename xpu>
+void ConcatCSRImpl(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<NDArray>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<NDArray>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  using namespace csr;
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
+  int num_args = param.num_args;
+  int concat_dim = param.dim;
+  CHECK_EQ(inputs.size(), num_args);
+  CHECK_EQ(outputs.size(), 1);
+  int axis = CheckAxis(concat_dim, inputs[0].shape().ndim());
+  CHECK_EQ(axis, 0) << "concat of csr ndarrays on axis 1 is not supported.";
+  if (req[0] == kNullOp) return;
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  nnvm::dim_t nnz = 0;
+  for (int i=0; i < num_args; i++) {
+    nnz += inputs[i].aux_shape(kIdx)[0];
+  }
+  const NDArray& out = outputs[0];
+  if (nnz == 0) {
+    FillZerosCsrImpl(s, out);
+    return;
+  }
+  const nnvm::dim_t num_rows = out.shape()[0];
+  out.CheckAndAllocAuxData(kIndPtr, Shape1(num_rows+1));
+
+  MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(kIndPtr), RType, {
+    MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(kIdx), IType, {
+      MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        out.CheckAndAllocAuxData(kIdx, Shape1(nnz));
+        out.CheckAndAllocData(Shape1(nnz));
+        IType* out_idx = out.aux_data(kIdx).dptr<IType>();
+        DType* out_data = out.data().dptr<DType>();
+        nnvm::dim_t indptr_offset = 0;
+        nnvm::dim_t idx_offset = 0;
+        for (const auto& in : inputs) {
+          const RType* in_indptr = in.aux_data(kIndPtr).dptr<RType>();
+          const IType* in_idx = in.aux_data(kIdx).dptr<IType>();
+          const DType* in_data = in.data().dptr<DType>();
+          Kernel<concat_csr_first_dim, xpu>::Launch(s, in.shape()[0], req[0], out_data,
+            in_data, out_indptr, in_indptr, out_idx, in_idx, indptr_offset, idx_offset);
+          indptr_offset += in.shape()[0];
+          idx_offset += in.aux_shape(kIdx)[0];
+        }
+      });
+    });
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 
