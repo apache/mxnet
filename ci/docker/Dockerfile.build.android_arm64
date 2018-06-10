@@ -31,10 +31,7 @@ MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 # extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
-# The cross-compiling emulator
 RUN apt-get update && apt-get install -y \
-  qemu-user \
-  qemu-user-static \
   unzip
 
 ENV CROSS_TRIPLE=aarch64-linux-android
