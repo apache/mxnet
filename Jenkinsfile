@@ -458,6 +458,16 @@ try {
           }
         }
       }
+    },
+    'Android / ARM64':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/android64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('android_arm64', 'build_android_arm64', false)
+          }
+        }
+      }
     }
   } // End of stage('Build')
 
