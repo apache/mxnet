@@ -1091,14 +1091,20 @@ class AdaGrad(Optimizer):
     ----------
     eps: float, optional
         Small value to avoid division by 0.
+    initial_accumulator_value: float, default 0
+        The Adagrad state is initially set to this value.
 
     """
-    def __init__(self, eps=1e-7, **kwargs):
+    def __init__(self, eps=1e-7, initial_accumulator_value=0, **kwargs):
         super(AdaGrad, self).__init__(**kwargs)
         self.float_stable_eps = eps
+        self.initial_accumulator_value = initial_accumulator_value
 
     def create_state(self, index, weight):
-        return zeros(weight.shape, weight.context, stype=weight.stype)  # history
+        history = zeros(weight.shape, weight.context, stype=weight.stype)
+        if self.initial_accumulator_value:
+            history[:] = self.initial_accumulator_value
+        return history
 
     def update(self, index, weight, grad, state):
         assert(isinstance(weight, NDArray))
