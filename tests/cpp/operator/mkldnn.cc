@@ -98,7 +98,7 @@ static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   size_t size = blob.Size();
   for (size_t i = 0; i < size; i++) {
     if (is_rand) {
-      data[i] = std::rand();
+      data[i] = std::rand() % 100;
     } else {
       data[i] = i;
     }
@@ -113,7 +113,7 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
 
   for (int i = 0; i < size; i++)
     if (is_rand) {
-      data[i] = std::rand() - INT_MAX / 2;
+      data[i] = (std::rand() % 100) - 50;
     } else {
       int shift = size >> 1;
       data[i] = i - shift;
