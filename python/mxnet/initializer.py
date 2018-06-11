@@ -161,7 +161,7 @@ class Initializer(object):
         Parameters
         ----------
         name : str
-            Name of corrosponding NDArray.
+            Name of corresponding NDArray.
 
         arr : NDArray
             NDArray to be initialized.
