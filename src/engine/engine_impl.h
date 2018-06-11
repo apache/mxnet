@@ -33,6 +33,7 @@
 namespace mxnet {
 namespace engine {
 
+#if 0
 /*! \brief base class of engine variables, used for type checking */
 struct Var {
   virtual uint32_t version() {
@@ -54,6 +55,7 @@ struct Var {
    */
   uint32_t version_{0};
 };  // struct Var
+#endif
 
 /*! \brief base class of engine operators, used for type checking */
 struct Opr {

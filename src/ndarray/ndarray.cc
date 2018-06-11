@@ -2043,10 +2043,6 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
 }
 
 
-uint32_t NDArray::version() const {
-  return var()->version();
-}
-
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray

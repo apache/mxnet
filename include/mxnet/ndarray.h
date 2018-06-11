@@ -339,7 +339,9 @@ class NDArray {
     return byte_offset_;
   }
   /*! \brief return var version of the NDArray*/
-  inline uint32_t version() const;
+  inline uint32_t version() const {
+    return var()->version();
+  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream

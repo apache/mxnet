@@ -17,12 +17,15 @@
 * under the License.
 */
 
+#include <mxnet/ndarray.h>
 #include "./subgraph_op.h"
 #include "../../imperative/imperative_utils.h"
 #include "../../imperative/cached_op.h"
 
 namespace mxnet {
 namespace op {
+
+#define SUBGRAPH_DEBUG 1
 
 class DefaultSubgraphOperator {
  public:
@@ -61,6 +64,14 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
   for (auto& nd : tmp_outputs) {
     output_ptrs.push_back(&nd);
   }
+#if SUBGRAPH_DEBUG
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    LOG(INFO) << "inputs[" << i << "].version = " << inputs[i].version();
+  }
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    LOG(INFO) << "outputs[" << i << "].version = " << outputs[i].version();
+  }
+#endif
   subgraph_exec_->Forward(subgraph_exec_, input_ptrs, output_ptrs);
 }
 
