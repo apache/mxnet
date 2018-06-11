@@ -426,6 +426,15 @@ OpAttrs GetSumOp() {
   return attrs;
 }
 
+OpAttrs GetSumBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backwards_elemwise_add");
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -647,11 +656,12 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs,
 
 void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs,
                                const std::vector<NDArray *> &out_arrs) {
-  NDArray tmp1 = out_arrs[0]->Reorder2Default();
-  TBlob blob1 = tmp1.data();
-  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
-  for (size_t i = 0; i < tmp1.shape().Size(); i++)
-    ASSERT_EQ(1, d1[i]);
+  NDArray output_grads = in_arrs[0]->Reorder2Default();
+  NDArray input_grads = out_arrs[0]->Reorder2Default();
+  mshadow::default_real_t *og = output_grads.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *ig = input_grads.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < output_grads.shape().Size(); i++)
+    ASSERT_EQ(og[i], ig[i]);
 }
 
 void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs,
@@ -668,6 +678,20 @@ void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs,
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   for (size_t i = 0; i < tmp1.shape().Size(); i++) {
     ASSERT_EQ(d2[i] > 0 ? d1[i] : 0, d3[i]);
+  }
+}
+
+void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                               const std::vector<NDArray *> &out_arrs) {
+  NDArray out_grads = in_arrs[0]->Reorder2Default();  // out grads
+  NDArray input_grads1 = out_arrs[0]->Reorder2Default();  // input grads
+  NDArray input_grads2 = out_arrs[1]->Reorder2Default();  // input grads
+  mshadow::default_real_t *og = out_grads.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *ig1 = input_grads1.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *ig2 = input_grads2.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < out_grads.shape().Size(); i++) {
+    EXPECT_EQ(og[i], ig1[i]);
+    EXPECT_EQ(og[i], ig2[i]);
   }
 }
 
@@ -849,6 +873,57 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   }
 }
 
+void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(3);
+  std::vector<NDArray*> outputs(1);
+  std::vector<OpReqType> req(1);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  for (auto in_arr1 : in_arrs) {
+    for (auto dispatch : dispatches) {
+      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr1.arr.shape(), pds,
+                                                               InitDefaultArray);
+      for (auto out_arr : out_arrs) {
+        req[0] = kWriteTo;
+        inputs[0] = &out_arr.arr;
+        inputs[1] = &out_arr.arr;
+        inputs[2] = &out_arr.arr;
+        outputs[0] = &in_arr1.arr;
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        outputs[0]->WaitToRead();
+        verify_fn(inputs, outputs);
+      }
+    }
+  }
+
+  for (auto dispatch : dispatches) {
+    in_arrs = GetTestInputArrays(InitDefaultArray);
+    for (auto arr : in_arrs) {
+      // If the array is a view, we shouldn't write data to it.
+      if (arr.arr.IsView())
+        continue;
+
+      NDArray orig = arr.arr.Copy(arr.arr.ctx());
+      req[0] = kWriteInplace;
+      inputs[0] = &arr.arr;
+      inputs[1] = &arr.arr;
+      outputs[0] = &arr.arr;
+      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                  dispatch, mxnet::OpStatePtr());
+      arr.arr.WaitToRead();
+      std::vector<NDArray*> orig_inputs(2);
+      orig_inputs[0] = &orig;
+      orig_inputs[1] = &orig;
+      verify_fn({&orig, &orig, &orig}, outputs);
+    }
+  }
+}
+
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
   TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
@@ -872,6 +947,11 @@ TEST(IMPERATIVE, ActBackwardsOp) {
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
   TestBinaryOp(attrs, VerifySumResult);
+}
+
+TEST(IMPERATIVE, BinaryBackwardsOp) {
+  OpAttrs attrs = GetSumBackwardsOp();
+  TestBinaryBackwardsOp(attrs, VerifySumBackwardsResult);
 }
 
 void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
