@@ -428,7 +428,7 @@ OpAttrs GetSumOp() {
 
 OpAttrs GetSumBackwardsOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("_backwards_elemwise_add");
+  attrs.attrs.op = Op::Get("_backward_add");
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -875,7 +875,7 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 
 void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(3);
-  std::vector<NDArray*> outputs(1);
+  std::vector<NDArray*> outputs(2);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
@@ -892,7 +892,10 @@ void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         inputs[0] = &out_arr.arr;
         inputs[1] = &out_arr.arr;
         inputs[2] = &out_arr.arr;
-        outputs[0] = &in_arr1.arr;
+        NDArray tmp1 = in_arr1.arr.Copy(in_arr1.arr.ctx());
+        NDArray tmp2 = in_arr1.arr.Copy(in_arr1.arr.ctx());
+        outputs[0] = &tmp1;
+        outputs[1] = &tmp2;
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         outputs[0]->WaitToRead();
