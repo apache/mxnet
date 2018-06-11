@@ -57,8 +57,12 @@ def test_input_name_order():
         #print(sym.list_inputs())
         #print(new_sym.list_inputs())
         assert new_sym.list_inputs() == sym.list_inputs()
-        print('original outputs: %s' % sym.list_outputs())
-        print('new sym outputs: %s' % new_sym.list_outputs())
+        assert new_sym.list_arguments() == sym.list_arguments()
+        assert new_sym.list_auxiliary_states() == sym.list_auxiliary_states()
+        #print(new_sym.list_arguments())
+        #print(new_sym.list_auxiliary_states())
+        #print('original outputs: %s' % sym.list_outputs())
+        #print('new sym outputs: %s' % new_sym.list_outputs())
 
     def test_network_structure_1():
         data1 = mx.sym.var('data1')
@@ -87,9 +91,26 @@ def test_input_name_order():
         check_input_order(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
         check_input_order(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
 
+    def test_network_structure_4():
+        # this tests whether the partitioned sym can distinguish in_args and aux_states
+        data = mx.sym.var('data')
+        ret = mx.sym.exp(data)
+        ret1 = mx.sym.cos(ret)
+        ret2 = mx.sym.sin(ret)
+        ret = ret1 + ret2
+        ret = mx.sym.BatchNorm(ret)
+        ret = mx.sym.BatchNorm(ret)
+        check_input_order(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus'])
+        check_input_order(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus'])
+        check_input_order(ret, ['exp', 'sin', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
+        check_input_order(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
+        check_input_order(ret, ['exp', 'BatchNorm'])
+        check_input_order(ret, ['BatchNorm'])
+
     test_network_structure_1()
     test_network_structure_2()
     test_network_structure_3()
+    test_network_structure_4()
 
 
 if __name__ == '__main__':
