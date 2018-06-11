@@ -702,7 +702,7 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
-        out_arr.arr.WaitToRead();
+        outputs[0]->WaitToRead();
         verify_fn(inputs, outputs);
       }
     }
