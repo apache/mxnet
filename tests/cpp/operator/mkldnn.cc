@@ -121,7 +121,8 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
 }
 
 using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
-using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs)>;
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs,
+    const std::vector<NDArray *> &out_arrs)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
@@ -604,7 +605,8 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
+void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
+                      const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = out_arrs[0]->Reorder2Default();
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
@@ -614,7 +616,8 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const std::vector<N
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
-void VerifyActResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
+void VerifyActResult(const std::vector<NDArray *> &in_arrs,
+                     const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = out_arrs[0]->Reorder2Default();
   TBlob blob1 = tmp1.data();
@@ -627,7 +630,8 @@ void VerifyActResult(const std::vector<NDArray *> &in_arrs, const std::vector<ND
   }
 }
 
-void VerifySumResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
+void VerifySumResult(const std::vector<NDArray *> &in_arrs,
+                     const std::vector<NDArray *> &out_arrs) {
   NDArray in1 = in_arrs[0]->Reorder2Default();
   NDArray in2 = in_arrs[1]->Reorder2Default();
   NDArray out = out_arrs[0]->Reorder2Default();
@@ -641,7 +645,8 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs, const std::vector<ND
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
+void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                               const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = out_arrs[0]->Reorder2Default();
   TBlob blob1 = tmp1.data();
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
@@ -649,10 +654,11 @@ void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs, const std:
     ASSERT_EQ(1, d1[i]);
 }
 
-void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
-  NDArray tmp1 = in_arrs[0]->Reorder2Default(); // out grads
-  NDArray tmp2 = in_arrs[1]->Reorder2Default(); // input
-  NDArray tmp3 = out_arrs[0]->Reorder2Default(); // input grads
+void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                              const std::vector<NDArray *> &out_arrs) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();  // out grads
+  NDArray tmp2 = in_arrs[1]->Reorder2Default();  // input
+  NDArray tmp3 = out_arrs[0]->Reorder2Default();  // input grads
   TBlob blob1 = tmp1.data();
   TBlob blob2 = tmp2.data();
   TBlob blob3 = tmp3.data();
