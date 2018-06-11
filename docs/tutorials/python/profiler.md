@@ -4,7 +4,7 @@ It is often helpful to understand what operations take how much time while runni
 
 ## The incorrect way to profile
 
-If you have just begun using MXNet, you might be tempted to measure execution time of your model using Python's `time` module like shown below:
+If you have just begun using MXNet, you might be tempted to measure the execution time of your model using Python's `time` module like shown below:
 
 ```python
 from time import time
@@ -34,13 +34,13 @@ Time for printing the output: 0.167693 sec<!--notebook-skip-line-->
 
 From the output above, it seems as if printing the output takes lot more time that multiplying two large matrices. That doesn't feel right. 
 
-This is because in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` in `print(y.asnumpy())` however waits for the result to be computed and hence takes longer time.
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` in `print(y.asnumpy())` however, waits for the result to be computed and hence takes longer time.
 
 ## The correct way to profile
 
 The correct way to measure running time of MXNet models is to use MXNet profiler. In the rest of this tutorial, we will learn how to use the MXNet profiler to measure the running time and memory consumption of MXNet models.
 
-To use the profiler, you need to build MXNet with `USE_PROFILER` enabled. For example this command will build the CPU version of MXNet on Linux,
+To use the profiler, you need to build MXNet with `USE_PROFILER` enabled. For example, this command will build the CPU version of MXNet on Linux,
 
 ```
 make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_PROFILER=1
@@ -125,7 +125,7 @@ def run_training_iteration(data, label):
 
 ### Starting and stopping the profiler
 
-When the first forward pass is run on a network, MXNet does a number of housekeeping tasks including infering the shapes of various parameters, allocating memory for intermediate and final outputs, etc. For these reasons, profiling the first iteration doesn't provide accurate results. We will therefore skip the first iteration.
+When the first forward pass is run on a network, MXNet does a number of housekeeping tasks including inferring the shapes of various parameters, allocating memory for intermediate and final outputs, etc. For these reasons, profiling the first iteration doesn't provide accurate results. We will, therefore skip the first iteration.
 
 ```python
 # Run the first iteration without profiling
@@ -147,11 +147,11 @@ run_training_iteration(*next(itr))
 profiler.set_state('stop')
 ```
 
-Between running and stopping the profiler, you can also pause and resume the profiler using `profiler.pause()` and `profiler.resume()` respectively to profile only parts of code you want to profile.
+Between running and stopping the profiler, you can also pause and resume the profiler using `profiler.pause()` and `profiler.resume()` respectively to profile only parts of the code you want to profile.
 
 ### Viewing profiler output
 
-There are two ways to view the information collected by the profiler. You can either view it in console or you can view a more graphical version in a browser.
+There are two ways to view the information collected by the profiler. You can either view it in the console or you can view a more graphical version in a browser.
 
 #### 1. View in console
 
