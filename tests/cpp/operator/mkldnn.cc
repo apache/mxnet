@@ -632,6 +632,14 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs, const std::vector<ND
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
+void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
+  NDArray tmp1 = out_arrs[0]->Reorder2Default();
+  TBlob blob1 = tmp1.data();
+  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+  for (size_t i = 0; i < tmp1.shape().Size(); i++)
+    ASSERT_EQ(1, d1[i]);
+}
+
 void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default(); // out grads
   NDArray tmp2 = in_arrs[1]->Reorder2Default(); // input
@@ -831,10 +839,10 @@ TEST(IMPERATIVE, UnaryOp) {
   TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
-//TEST(IMPERATIVE, CopyBackwardsOp) {
-//  OpAttrs attrs = GetCopyBackwardsOp();
-//  TestUnaryBackwardsOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
-//}
+TEST(IMPERATIVE, CopyBackwardsOp) {
+  OpAttrs attrs = GetCopyBackwardsOp();
+  TestUnaryBackwardsOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
+}
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
