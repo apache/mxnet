@@ -53,6 +53,26 @@ struct SimpleNode {
 };  // struct SimpleNode
 }  // namespace sg
 
+inline uint32_t DefaultSubgraphOpNumInputs(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  return sym.ListInputNames(nnvm::Symbol::kAll).size();
+}
+
+inline uint32_t DefaultSubgraphOpNumOutputs(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  return sym.ListOutputNames().size();
+}
+
+inline std::vector<std::string> DefaultSubgraphOpListInputs(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  return sym.ListInputNames(nnvm::Symbol::kAll);
+}
+
+inline std::vector<std::string> DefaultSubgraphOpListOutputs(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  return sym.ListOutputNames();
+}
+
 inline bool DefaultSubgraphOpShape(const nnvm::NodeAttrs& attrs,
                                    std::vector<TShape> *in_shapes,
                                    std::vector<TShape> *out_shapes) {
@@ -196,6 +216,50 @@ inline bool DefaultSubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
   // Check if we have inferred the storages correctly.
   return g.GetAttr<size_t>("storage_type_num_unknown_nodes") == 0;
 }
+
+inline ExecType DefaultSubgraphOpExecType(const nnvm::NodeAttrs& attrs) {
+  return ExecType::kSubgraphExec;
+}
+
+inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& subgraph_sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  const std::vector<std::string> input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAll);
+  const std::vector<std::string> immutable_input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+  const std::vector<std::string> mutable_input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+  CHECK_EQ(immutable_input_names.size() + mutable_input_names.size(), input_names.size());
+  std::vector<uint32_t> ret;
+  size_t i1 = 0, i2 = 0;
+  for (size_t i = 0; i < input_names.size(); ++i) {
+    if (input_names[i] == immutable_input_names[i1]) {
+      ++i1;
+    } else {
+      CHECK_EQ(input_names[i], mutable_input_names[i2]);
+      ++i2;
+      ret.push_back(i);
+    }
+  }
+  return ret;
+}
+
+inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm::NodeAttrs& attrs) {
+  const nnvm::Symbol& subgraph_sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
+  static auto& fresource = Op::GetAttr<FResourceRequest>("FResourceRequest");
+  std::set<ResourceRequest::Type> resource_types;
+  DFSVisit(subgraph_sym.outputs, [&](const nnvm::NodePtr& node) {
+    if (!node->is_variable() && fresource.count(node->op())) {
+      for (ResourceRequest& r : fresource[node->op()](node->attrs)){
+        resource_types.insert(r.type);
+      }
+    }
+  });
+  return std::vector<ResourceRequest>(resource_types.begin(), resource_types.end());
+}
+
+#if 0
+// TODO(junwu): add this attribute for visible outputs
+inline uint32_t DefaultSubgraphOpNumVisibleOutputs(const nnvm::NodeAttrs& attrs) {
+}
+#endif
 
 }  // namespace op
 }  // namespace mxnet

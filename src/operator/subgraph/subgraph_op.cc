@@ -94,35 +94,19 @@ void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
 
 NNVM_REGISTER_OP(_default_subgraph_op)
 .describe(R"code(_default_subgraph_op)code" ADD_FILELINE)
-.set_num_inputs(
-  [](const NodeAttrs& attrs) {
-    const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
-    return sym.ListInputNames(Symbol::kAll).size();
-  })
-.set_num_outputs(
-  [](const NodeAttrs& attrs) {
-    const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
-    return sym.ListOutputNames().size();
-  })
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
-    return sym.ListInputNames(Symbol::kAll);
-  })
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-  [](const NodeAttrs& attrs) {
-    const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
-    return sym.ListOutputNames();
-  })
+.set_num_inputs(DefaultSubgraphOpNumInputs)
+.set_num_outputs(DefaultSubgraphOpNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames", DefaultSubgraphOpListInputs)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames", DefaultSubgraphOpListOutputs)
 .set_attr<FCreateOpState>("FCreateOpState", CreateDefaultSubgraphOpState)
 .set_attr<nnvm::FInferShape>("FInferShape", DefaultSubgraphOpShape)
 .set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType)
 .set_attr<FInferStorageType>("FInferStorageType", DefaultSubgraphOpStorageType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", DefaultSubgraphOpForward)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs", DefaultSubgraphOpMutableInputs)
+.set_attr<FResourceRequest>("FResourceRequest", DefaultSubgraphOpResourceRequest)
 .set_attr<std::string>("key_var_num_args", "num_args")
-.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
-    return ExecType::kSubgraphExec;
-  })
+.set_attr<FExecType>("FExecType", DefaultSubgraphOpExecType)
 .add_argument("data", "NDArray-or-Symbol[]", "input data list");
 
 }  // namespace op

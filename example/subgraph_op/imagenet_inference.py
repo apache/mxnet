@@ -40,28 +40,6 @@ def download_model(model_name, logger=None):
     return modelzoo.download_model(args.model, os.path.join(dir_path, 'model'))
 
 
-def load_model(symbol_file, param_file, logger=None):
-    cur_path = os.path.dirname(os.path.realpath(__file__))
-    symbol_file_path = os.path.join(cur_path, symbol_file)
-    if logger is not None:
-        logger.info('Loading symbol from file %s' % symbol_file_path)
-    symbol = mx.sym.load(symbol_file_path)
-
-    param_file_path = os.path.join(cur_path, param_file)
-    if logger is not None:
-        logger.info('Loading params from file %s' % param_file_path)
-    save_dict = nd.load(param_file_path)
-    arg_params = {}
-    aux_params = {}
-    for k, v in save_dict.items():
-        tp, name = k.split(':', 1)
-        if tp == 'arg':
-            arg_params[name] = v
-        if tp == 'aux':
-            aux_params[name] = v
-    return symbol, arg_params, aux_params
-
-
 def advance_data_iter(data_iter, n):
     assert n >= 0
     if n == 0:
@@ -135,11 +113,7 @@ if __name__ == '__main__':
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
-
-    symbol_file = args.symbol_file
-    param_file = args.param_file
     data_nthreads = args.data_nthreads
-
     batch_size = args.batch_size
     logger.info('batch size = %d for inference' % batch_size)
 
@@ -187,6 +161,6 @@ if __name__ == '__main__':
     data = advance_data_iter(data, args.num_skipped_batches)
 
     num_inference_images = args.num_inference_batches * batch_size
-    logger.info('Running model %s for inference' % symbol_file)
+    logger.info('Running model %s for inference' % args.model)
     score(psym, arg_params, aux_params, data, [mx.gpu(0)], label_name,
           max_num_examples=num_inference_images, logger=logger)
