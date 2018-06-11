@@ -51,6 +51,7 @@ class StorageImpl : public Storage {
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU:
+      case Context::kCPUPinned:
         break;
       case Context::kCPUShared: {
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -58,8 +59,7 @@ class StorageImpl : public Storage {
 #endif  // defined(ANDROID) || defined(__ANDROID__)
       }
         break;
-      case Context::kGPU:
-      case Context::kCPUPinned: {
+      case Context::kGPU: {
 #if MXNET_USE_CUDA
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
