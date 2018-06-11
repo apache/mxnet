@@ -46,9 +46,7 @@ struct Var {
   virtual uint32_t version() {
     return version_;
   }
-#if ENGINE_DEBUG
   virtual ~Var() = default;
-#endif  // ENGINE_DEBUG
   /*!
    * \brief cast variable to derived type T
    * \tparam T the type we want to cast into.
