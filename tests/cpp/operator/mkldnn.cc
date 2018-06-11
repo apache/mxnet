@@ -644,7 +644,7 @@ void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs, const std::
   mshadow::default_real_t *d3 = static_cast<mshadow::default_real_t*>(blob3.dptr_);
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   for (size_t i = 0; i < tmp1.shape().Size(); i++) {
-    EXPECT_EQ(int(d2[i] > 0) * d1[i], d3[i]);
+    EXPECT_EQ(d2[i] > 0 ? d1[i] : 0, d3[i]);
   }
 }
 
