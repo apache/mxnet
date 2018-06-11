@@ -2896,33 +2896,18 @@ def test_norml1():
                 exe.arg_dict['data'][:] = in_data
                 npy_out = np.sum(abs(in_data), axis=i, keepdims=keep_dims)
                 out = exe.forward()[0]
-                assert out.asnumpy()==npy_out
-                #assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
+                assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
                 # check gradient
-                # check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+                check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
                 if i < 3:
                     norm_sym = mx.symbol.norm(data=data, ord=1, axis=(i, i+1), keepdims=keep_dims)
                     exe = norm_sym.simple_bind(ctx, data=(4,4,4,4))
                     exe.arg_dict['data'][:] = in_data
                     npy_out = np.sum(abs(in_data), axis=(i, i+1), keepdims=keep_dims)
                     out = exe.forward()[0]
-                    assert out==npy_out
-                    #assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
+                    assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
                     # check gradient
-                    # check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
-
-@with_seed()
-def test_temp():
-    ctx = default_context()
-    data = mx.symbol.Variable('data')
-    in_data = np.random.uniform(-1, 1, (4,4,4,4)).astype(np.float32)
-    norm_sym = mx.symbol.norm(data=data, ord=1, axis=1, keepdims=True)
-    exe = norm_sym.simple_bind(ctx, data=(4,4,4,4))
-    npy_out = np.sum(abs(in_data), axis=1, keepdims=True)
-    exe.arg_dict['data'][:] = in_data
-    out = exe.forward()[0]
-    print(exe.backward())
-    print(npy_out)
+                    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
