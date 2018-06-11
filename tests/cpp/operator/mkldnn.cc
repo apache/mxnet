@@ -376,6 +376,15 @@ OpAttrs GetCopyOp() {
   return attrs;
 }
 
+OpAttrs GetCopyBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_copy");
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 OpAttrs GetReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Activation");
