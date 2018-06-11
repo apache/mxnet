@@ -642,7 +642,7 @@ int MXPartitionGraph(SymbolHandle sym_handle,
   nnvm::Graph g = Symbol2Graph(*s);
   if (!op_name_set.empty()) {
     mxnet::op::SubgraphPropertyPtr property
-        = std::make_shared<mxnet::op::SimpleSubgraphProperty>(op_name_set);
+        = std::make_shared<mxnet::op::DefaultSubgraphProperty>(op_name_set);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
   }
   g = ApplyPass(std::move(g), "PartitionGraph");

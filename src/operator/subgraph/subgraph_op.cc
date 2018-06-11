@@ -17,18 +17,9 @@
 * under the License.
 */
 
-#include <mxnet/io.h>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/operator_util.h>
-#include <dmlc/logging.h>
-#include <dmlc/optional.h>
-#include "../operator_common.h"
-#include "../elemwise_op_common.h"
+#include "./subgraph_op.h"
 #include "../../imperative/imperative_utils.h"
 #include "../../imperative/cached_op.h"
-#include "./subgraph_op.h"
 
 namespace mxnet {
 namespace op {
@@ -73,168 +64,25 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
   subgraph_exec_->Forward(subgraph_exec_, input_ptrs, output_ptrs);
 }
 
-OpStatePtr CreateSubgraphOpState(const NodeAttrs& attrs,
-                                 Context ctx,
-                                 const std::vector<TShape>& in_shapes,
-                                 const std::vector<int>& in_types) {
+OpStatePtr CreateDefaultSubgraphOpState(const NodeAttrs& attrs,
+                                        Context ctx,
+                                        const std::vector<TShape>& in_shapes,
+                                        const std::vector<int>& in_types) {
   const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
   return OpStatePtr::Create<DefaultSubgraphOperator>(subgraph_sym);
 }
 
-bool SubgraphOpShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_shapes,
-                     std::vector<TShape> *out_shapes) {
-  const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  nnvm::Graph g;
-  g.outputs = subgraph_sym.outputs;
-  const auto& idx_g = g.indexed_graph();
-  CHECK_EQ(idx_g.input_nodes().size(), in_shapes->size());
-  CHECK_EQ(idx_g.outputs().size(), out_shapes->size());
-  // TODO: make sure shape inputs matches the order from in_shapes
-
-  // Put the input and output shapes to the shape vector.
-  nnvm::ShapeVector shapes(idx_g.num_node_entries());
-  const auto &input_nids = idx_g.input_nodes();
-  CHECK_EQ(input_nids.size(), in_shapes->size());
-  for (size_t i = 0; i < in_shapes->size(); i++) {
-    auto eid = idx_g.entry_id(input_nids[i], 0);
-    shapes[eid] = in_shapes->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_shapes->size());
-  for (size_t i = 0; i < out_shapes->size(); i++) {
-    auto eid = idx_g.entry_id(g.outputs[i]);
-    shapes[eid] = out_shapes->at(i);
-  }
-
-  // Infer shape of the graph.
-  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
-  g = exec::InferShape(std::move(g));
-
-  // Copy the inferred shape back to the input shapes and the output shapes.
-  shapes = g.GetAttr<nnvm::ShapeVector>("shape");
-  // assign to in_shapes
-  for (size_t i = 0; i < in_shapes->size(); ++i) {
-    const auto eid = idx_g.entry_id(input_nids[i], 0);
-    SHAPE_ASSIGN_CHECK(*in_shapes, i, shapes[eid]);
-  }
-  // assign to out_shapes
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    const auto eid = idx_g.entry_id(g.outputs[i]);
-    SHAPE_ASSIGN_CHECK(*out_shapes, i, shapes[eid]);
-  }
-  // Check if we have inferred the shapes correctly.
-  return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
-}
-
-bool SubgraphOpType(const nnvm::NodeAttrs& attrs,
-                    std::vector<int> *in_types,
-                    std::vector<int> *out_types) {
-  const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  nnvm::Graph g;
-  g.outputs = subgraph_sym.outputs;
-  const auto& idx_g = g.indexed_graph();
-  CHECK_EQ(idx_g.input_nodes().size(), in_types->size());
-  CHECK_EQ(idx_g.outputs().size(), out_types->size());
-  // TODO: make sure type inputs matches the order from in_types
-
-  // Put the input and output data types to the dtype vector.
-  nnvm::DTypeVector types(idx_g.num_node_entries(), -1);
-  const auto &input_nids = idx_g.input_nodes();
-  CHECK_EQ(input_nids.size(), in_types->size());
-  for (size_t i = 0; i < in_types->size(); i++) {
-    auto eid = idx_g.entry_id(input_nids[i], 0);
-    types[eid] = in_types->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_types->size());
-  for (size_t i = 0; i < out_types->size(); i++) {
-    auto eid = idx_g.entry_id(g.outputs[i]);
-    types[eid] = out_types->at(i);
-  }
-
-  // Infer data type of the graph.
-  g.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(types));
-  g = exec::InferType(std::move(g));
-
-  types = g.GetAttr<nnvm::DTypeVector>("dtype");
-  // assign to in_types
-  for (size_t i = 0; i < in_types->size(); ++i) {
-    const auto eid = idx_g.entry_id(input_nids[i], 0);
-    TYPE_ASSIGN_CHECK(*in_types, i, types[eid]);
-  }
-  // assign to out_types
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    const auto eid = idx_g.entry_id(g.outputs[i]);
-    TYPE_ASSIGN_CHECK(*out_types, i, types[eid]);
-  }
-  // Check if we have inferred the dtypes correctly.
-  return g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0;
-}
-
-bool SubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
-                           const int dev_mask,
-                           DispatchMode* dispatch_mode,
-                           std::vector<int>* in_stypes,
-                           std::vector<int>* out_stypes) {
-  const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  nnvm::Graph g;
-  g.outputs = subgraph_sym.outputs;
-  const auto& idx_g = g.indexed_graph();
-  CHECK_EQ(idx_g.input_nodes().size(), in_stypes->size());
-  CHECK_EQ(idx_g.outputs().size(), out_stypes->size());
-  exec::DevMaskVector dev_masks(idx_g.num_node_entries(), dev_mask);
-  // TODO: make sure type inputs matches the order from in_types
-
-  // Put the input and output storages to the storage vector.
-  nnvm::StorageVector stypes(idx_g.num_node_entries(), exec::kBadStorageID);
-  const auto &input_nids = idx_g.input_nodes();
-  CHECK_EQ(input_nids.size(), in_stypes->size());
-  for (size_t i = 0; i < in_stypes->size(); i++) {
-    auto eid = idx_g.entry_id(input_nids[i], 0);
-    stypes[eid] = in_stypes->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_stypes->size());
-  for (size_t i = 0; i < out_stypes->size(); i++) {
-    auto eid = idx_g.entry_id(g.outputs[i]);
-    stypes[eid] = out_stypes->at(i);
-  }
-
-  // Infer storage type of the graph.
-  bool dev_match = g.attrs.count("dev_mask") &&
-                   g.GetAttr<exec::DevMaskVector>("dev_mask") == dev_masks;
-  if (!dev_match) {
-    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(dev_masks));
-  }
-  g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(stypes));
-  g = exec::InferStorageType(std::move(g));
-
-  stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  // assign to in_types
-  for (size_t i = 0; i < in_stypes->size(); ++i) {
-    const auto eid = idx_g.entry_id(input_nids[i], 0);
-    STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, stypes[eid]);
-  }
-
-  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-  // assign to out_types
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    const auto eid = idx_g.entry_id(g.outputs[i]);
-    STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, stypes[eid]);
-  }
-  // Check if we have inferred the storages correctly.
-  return g.GetAttr<size_t>("storage_type_num_unknown_nodes") == 0;
-}
-
-void SubgraphOpForward(const OpStatePtr& state_ptr,
-                       const OpContext& ctx,
-                       const std::vector<NDArray>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<NDArray>& outputs) {
+void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
   DefaultSubgraphOperator& op = state_ptr.get_state<DefaultSubgraphOperator>();
   op.Forward(ctx, inputs, req, outputs);
 }
 
-NNVM_REGISTER_OP(_subgraph_op)
-.describe(R"code(_subgraph_op)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_default_subgraph_op)
+.describe(R"code(_default_subgraph_op)code" ADD_FILELINE)
 .set_num_inputs(
   [](const NodeAttrs& attrs) {
     const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
@@ -255,11 +103,11 @@ NNVM_REGISTER_OP(_subgraph_op)
     const Symbol& sym = nnvm::get<Symbol>(attrs.parsed);
     return sym.ListOutputNames();
   })
-.set_attr<FCreateOpState>("FCreateOpState", CreateSubgraphOpState)
-.set_attr<nnvm::FInferShape>("FInferShape", SubgraphOpShape)
-.set_attr<nnvm::FInferType>("FInferType", SubgraphOpType)
-.set_attr<FInferStorageType>("FInferStorageType", SubgraphOpStorageType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SubgraphOpForward)
+.set_attr<FCreateOpState>("FCreateOpState", CreateDefaultSubgraphOpState)
+.set_attr<nnvm::FInferShape>("FInferShape", DefaultSubgraphOpShape)
+.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType)
+.set_attr<FInferStorageType>("FInferStorageType", DefaultSubgraphOpStorageType)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", DefaultSubgraphOpForward)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
     return ExecType::kSubgraphExec;

@@ -18,33 +18,12 @@
  */
 
 #ifndef MXNET_OPERATOR_SUBGRAPH_SUBGRAPH_OP_H_
+#define MXNET_OPERATOR_SUBGRAPH_SUBGRAPH_OP_H_
 
-#include <nnvm/graph.h>
-#include <nnvm/pass.h>
+#include "./common.h"
 
 namespace mxnet {
-
 namespace op {
-
-namespace sg {  // sg stands for subgraph
-
-struct SimpleNode;
-using SimpleNodePtr = std::shared_ptr<SimpleNode>;
-
-struct SimpleNode {
-  static SimpleNodePtr Create() {
-    return std::make_shared<SimpleNode>();
-  }
-  SimpleNode() : label(-1), node(nullptr) {}
-  int label;
-  nnvm::Node* node;
-  // key is node ptr
-  // value is the index array standing for the entry indices
-  // in key->inputs that use this->node as input node
-  std::unordered_map<nnvm::Node*, std::vector<size_t>> outputs;
-};
-
-}
 
 /*
  * This provides criteria for selecting nodes in a subgraph.
@@ -111,16 +90,17 @@ class ContainOpSelector: public SubgraphSelector {
 
 /*
  * This subgraph property finds a subgraph whose nodes have only operators
- * within a set. The operators in the subgraph will be executed by _subgraph_op.
+ * within a set. The operators in the subgraph will be executed by _default_subgraph_op.
  */
-class SimpleSubgraphProperty: public SubgraphProperty {
+class DefaultSubgraphProperty: public SubgraphProperty {
  public:
-  SimpleSubgraphProperty(const std::unordered_set<std::string> &op_names) :
+  DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names) :
     op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym, const int subgraph_id = 0) const {
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+                                           const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_subgraph_op");
-    n->attrs.name = "_subgraph_op" + std::to_string(subgraph_id);
+    n->attrs.op = Op::Get("_default_subgraph_op");
+    n->attrs.name = "_default_subgraph_op" + std::to_string(subgraph_id);
     n->attrs.parsed = sym;
     return n;
   }
