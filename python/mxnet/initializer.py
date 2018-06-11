@@ -653,7 +653,7 @@ class Bilinear(Initializer):
 
 @register
 class LSTMBias(Initializer):
-    """Initialize all bias of an LSTMCell to 0.0 except for
+    """Initialize all biases of an LSTMCell to 0.0 except for
     the forget gate whose bias is set to custom value.
 
     Parameters
