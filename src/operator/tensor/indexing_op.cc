@@ -396,7 +396,7 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(TakeParamParser<TakeParam>)
+.set_attr_parser(ParamParser<TakeParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "indices"};

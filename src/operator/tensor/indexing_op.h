@@ -311,6 +311,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
  */
+template<bool clip = true>
 struct Take {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
@@ -324,6 +325,43 @@ struct Take {
     if (j <= 0) j = 0;
     else if (j >= K) j = K - 1;
     out_data[i] = in_data[j * M + i % M];
+  }
+
+  /*!
+   * \brief Map function for take operator
+   * \param i           global thread id
+   * \param out_data    ptr to output buffer
+   * \param in_data     ptr to input buffer
+   * \param idx         ptr to indices buffer
+   * \param in_ndims    # of dims of input tensor
+   * \param out_ndims   # of dims of output tensor
+   * \param idx_ndims   # of dims of indices tensor
+   * \param axis_dim    dim size of the axis dimension
+   * \param axis        axis id
+   */
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const IType* idx,
+                                  const mshadow::Shape<10> in_stride,
+                                  const mshadow::Shape<10> out_stride,
+                                  const int in_ndims, const int out_ndims, const int idx_ndims,
+                                  const int axis_dim, const int axis) {
+    // i is the global flattened index in the output
+    const int out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
+    const int out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
+    const int out_mid_index = out_rest_index / in_stride[axis];
+    const int out_tail_index = (axis == in_ndims - 1) ?
+                               0 : (out_rest_index % in_stride[axis]);
+    int idx_index = static_cast<int>(idx[out_mid_index]);
+    if (clip) {
+      idx_index = (idx_index < -axis_dim) ? 0 : idx_index;
+      idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
+    }
+    idx_index %= axis_dim;
+    const int in_tail_index = out_tail_index;
+    const int in_head_index = out_head_index;
+    int in_src_index = in_tail_index + idx_index * in_stride[axis];
+    in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
+    out_data[i] = in_data[in_src_index];
   }
 };
 
@@ -345,7 +383,7 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
       Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<Take, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+      Kernel<Take<true>, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
                                 idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
     });
   });
@@ -728,9 +766,9 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
   int mode;
   DMLC_DECLARE_PARAMETER(TakeParam) {
     DMLC_DECLARE_FIELD(axis)
-    .set_lower_bound(0)
     .set_default(0)
-    .describe("The axis of input array to be taken.");
+    .describe("The axis of input array to be taken."
+              "For input tensor of rank r, it could be in the range of [-r, r-1]");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
@@ -744,37 +782,36 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
   }
 };
 
-template<typename PType>
-inline void TakeParamParser(nnvm::NodeAttrs *attrs) {
-    PType param;
-    param.Init(attrs->dict);
-    if (param.axis != 0) {
-        LOG(FATAL) << "Axis other than 0 currently not supported.";
-    }
-    if (param.mode != take_::kClip) {
-        LOG(FATAL) << "Mode other than clip currently not supported.";
-    }
-}
-
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
-    using namespace mshadow;
-    const TShape &arrshape = (*in_attrs)[take_::kArr];
-    const TShape &idxshape = (*in_attrs)[take_::kIdx];
-    if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  using namespace mshadow;
+  const TShape &arrshape = (*in_attrs)[take_::kArr];
+  const TShape &idxshape = (*in_attrs)[take_::kIdx];
+  if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  if (param.mode == take_::kRaise) {
+    LOG(FATAL) << "Raise is not supported for the time being...";
+  }
+  CHECK(param.axis >= -1 * (int)arrshape.ndim() && param.axis < (int)arrshape.ndim())
+    << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
-    out_attrs->clear();
+  out_attrs->clear();
 
-    TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
-    for (size_t i = 0; i < idxshape.ndim(); ++i) {
-        oshape[i] = idxshape[i];
+  const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+  TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
+  for (int i = 0; i < (int)idxshape.ndim(); ++i) {
+    oshape[i + actual_axis] = idxshape[i];
+  }
+  for (int i = 0; i < (int)arrshape.ndim(); i++) {
+    if (i < actual_axis) {
+      oshape[i] = arrshape[i];
+    } else if (i > actual_axis) {
+      oshape[i + idxshape.ndim() - 1] = arrshape[i];
     }
-    for (size_t i = 0; i < arrshape.ndim() - 1; i++) {
-        oshape[i + idxshape.ndim()] = arrshape[i + 1];
-    }
-    out_attrs->push_back(oshape);
-    return true;
+  }
+  out_attrs->push_back(oshape);
+  return true;
 }
 
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
@@ -797,6 +834,7 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (req[take_::kOut] == kNullOp) return;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
@@ -805,13 +843,35 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
   const TShape& oshape = outputs[take_::kOut].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      Kernel<Take, xpu>::Launch(s, oshape.Size(),
-                                outputs[take_::kOut].dptr<DType>(),
-                                inputs[take_::kArr].dptr<DType>(),
-                                inputs[take_::kIdx].dptr<IType>(),
-                                oshape.Size()/idxshape.Size(), arrshape[0]);
+      mshadow::Shape<10> in_strides;
+      int stride = 1;
+      for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
+        in_strides[i] = stride;
+      }
+      mshadow::Shape<10> out_strides;
+      stride = 1;
+      for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
+        out_strides[i] = stride;
+      }
+      if (param.mode == take_::kClip) {
+        Kernel<Take<true>, xpu>::Launch(s, oshape.Size(),
+                                        outputs[take_::kOut].dptr<DType>(),
+                                        inputs[take_::kArr].dptr<DType>(),
+                                        inputs[take_::kIdx].dptr<IType>(),
+                                        in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                        idxshape.ndim(), arrshape[actual_axis], actual_axis);
+      } else if (param.mode == take_::kWrap) {
+        Kernel<Take<false>, xpu>::Launch(s, oshape.Size(),
+                                         outputs[take_::kOut].dptr<DType>(),
+                                         inputs[take_::kArr].dptr<DType>(),
+                                         inputs[take_::kIdx].dptr<IType>(),
+                                         in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                         idxshape.ndim(), arrshape[actual_axis], actual_axis);
+      }
     });
   });
 }
