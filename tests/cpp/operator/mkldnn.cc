@@ -755,25 +755,25 @@ void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc ver
       }
     }
   }
-//  for (auto dispatch : dispatches) {
-//    in_arrs = GetTestInputArrays(init_fn);
-//    for (auto arr : in_arrs) {
-//      // If the array is a view, we shouldn't write data to it.
-//      if (arr.arr.IsView())
-//        continue;
-//
-//      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-//      req[0] = kWriteInplace;
-//      inputs[0] = &arr.arr;
-//      outputs[0] = &arr.arr;
-//      PrintVerifyMsg(orig, arr);
-//      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-//                                  dispatch, mxnet::OpStatePtr());
-//      arr.arr.WaitToRead();
-//      inputs[0] = &orig.arr;
-//      verify_fn(inputs, *outputs[0]);
-//    }
-//  }
+  for (auto dispatch : dispatches) {
+    in_arrs = GetTestInputArrays(init_fn);
+    for (auto arr : in_arrs) {
+      // If the array is a view, we shouldn't write data to it.
+      if (arr.arr.IsView())
+        continue;
+
+      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+      req[0] = kWriteInplace;
+      inputs[0] = &arr.arr;
+      inputs[1] = &arr.arr;
+      outputs[0] = &arr.arr;
+      PrintVerifyMsg(orig, arr);
+      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                  dispatch, mxnet::OpStatePtr());
+      arr.arr.WaitToRead();
+      verify_fn({&orig.arr, &orig.arr}, *outputs[0]);
+    }
+  }
 }
 
 void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
@@ -830,6 +830,11 @@ TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
   TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
+
+//TEST(IMPERATIVE, CopyBackwardsOp) {
+//  OpAttrs attrs = GetCopyBackwardsOp();
+//  TestUnaryBackwardsOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
+//}
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
