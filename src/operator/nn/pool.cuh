@@ -214,17 +214,17 @@ template <typename DType, int p = 1>
 __global__ void pool_sum_1d_gpu_kernel(const int nthreads, const DType* in_data, const int channels,
                                        const int width, const int pooled_width, const int kernel_w,
                                        const int stride_w, const int pad_w, DType* out_data,
-                                       const bool getAvg = false, const bool count_include_pad = true) {
+                                       const bool get_avg = false, const bool count_include_pad = true) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int pw = index % pooled_width;
     const int c = (index / pooled_width) % channels;
     const int n = index / pooled_width / channels;
     int wstart = pw * stride_w - pad_w;
     int wend = min(wstart + kernel_w, width + pad_w);
-    int pool_size = (getAvg? (wend - wstart) : 1);
+    int pool_size = (get_avg? (wend - wstart) : 1);
     wstart = max(wstart, 0);
     wend = min(wend, width);
-    if (getAvg && !count_include_pad) {
+    if (get_avg && !count_include_pad) {
       pool_size = (wend - wstart);
     }
     DType sum = 0;
@@ -247,7 +247,7 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int kernel_h, const int kernel_w,
                                        const int stride_h, const int stride_w,
                                        const int pad_h, const int pad_w, DType* out_data,
-                                       const bool getAvg = false,
+                                       const bool get_avg = false,
                                        const bool count_include_pad = true) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int pw = index % pooled_width;
@@ -258,12 +258,12 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
     int wstart = pw * stride_w - pad_w;
     int hend = min(hstart + kernel_h, height + pad_h);
     int wend = min(wstart + kernel_w, width + pad_w);
-    int pool_size = (getAvg? (hend - hstart) * (wend - wstart) : 1);
+    int pool_size = (get_avg? (hend - hstart) * (wend - wstart) : 1);
     hstart = max(hstart, 0);
     wstart = max(wstart, 0);
     hend = min(hend, height);
     wend = min(wend, width);
-    if (getAvg && !count_include_pad) {
+    if (get_avg && !count_include_pad) {
       pool_size = (hend - hstart) * (wend - wstart);
     }
     DType sum = 0;
@@ -289,7 +289,7 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int kernel_h, const int kernel_w,
                                        const int stride_d, const int stride_h, const int stride_w,
                                        const int pad_d, const int pad_h, const int pad_w,
-                                       DType* out_data, const bool getAvg = false,
+                                       DType* out_data, const bool get_avg = false,
                                        const bool count_include_pad = true) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     const int pw = index % pooled_width;
@@ -303,14 +303,14 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
     int dend = min(dstart + kernel_d, depth + pad_d);
     int hend = min(hstart + kernel_h, height + pad_h);
     int wend = min(wstart + kernel_w, width + pad_w);
-    int pool_size = (getAvg? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
+    int pool_size = (get_avg? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
     dstart = max(dstart, 0);
     hstart = max(hstart, 0);
     wstart = max(wstart, 0);
     dend = min(dend, depth);
     hend = min(hend, height);
     wend = min(wend, width);
-    if (getAvg && !count_include_pad) {
+    if (get_avg && !count_include_pad) {
       pool_size = (dend - dstart) * (hend - hstart) * (wend - wstart);
     }
     DType sum = 0;
@@ -500,7 +500,7 @@ __global__ void unpool_sum_1d_gpu_kernel(const int nthreads, const DType* out_gr
                                          const int channels, const int width,
                                          const int pooled_width, const int kernel_w,
                                          const int stride_w, const int pad_w, DType* in_grad,
-                                         const bool isAvg = false,
+                                         const bool is_avg = false,
                                          const bool count_include_pad = true) {
   // index is the input image index in NCW
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -520,8 +520,8 @@ __global__ void unpool_sum_1d_gpu_kernel(const int nthreads, const DType* out_gr
       // figure out the pooling size
       int wstart = pw * stride_w - pad_w;
       int wend = min(wstart + kernel_w, width + pad_w);
-      int pool_size = (isAvg? (wend - wstart) : 1);
-      if (isAvg && !count_include_pad) {
+      int pool_size = (is_avg? (wend - wstart) : 1);
+      if (is_avg && !count_include_pad) {
         wstart = max(wstart, 0);
         wend = min(wend, width);
         pool_size = (wend - wstart);
@@ -547,7 +547,7 @@ __global__ void unpool_sum_2d_gpu_kernel(const int nthreads, const DType* out_gr
                                          const int kernel_h, const int kernel_w,
                                          const int stride_h, const int stride_w,
                                          const int pad_h, const int pad_w, DType* in_grad,
-                                         const bool isAvg = false,
+                                         const bool is_avg = false,
                                          const bool count_include_pad = true) {
   // index is the input image index in NCHW
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -573,9 +573,9 @@ __global__ void unpool_sum_2d_gpu_kernel(const int nthreads, const DType* out_gr
         int wstart = pw * stride_w - pad_w;
         int hend = min(hstart + kernel_h, height + pad_h);
         int wend = min(wstart + kernel_w, width + pad_w);
-        int pool_size = (isAvg? (hend - hstart) * (wend - wstart) : 1);
+        int pool_size = (is_avg? (hend - hstart) * (wend - wstart) : 1);
         int out_index = ph * pooled_width + pw;
-        if (isAvg && !count_include_pad) {
+        if (is_avg && !count_include_pad) {
           hstart = max(hstart, 0);
           wstart = max(wstart, 0);
           hend = min(hend, height);
@@ -607,7 +607,7 @@ __global__ void unpool_sum_3d_gpu_kernel(const int nthreads, const DType* out_gr
                                          const int kernel_d, const int kernel_h,
                                          const int kernel_w, const int stride_d, const int stride_h,
                                          const int stride_w, const int pad_d, const int pad_h,
-                                         const int pad_w, DType* in_grad, const bool isAvg = false,
+                                         const int pad_w, DType* in_grad, const bool is_avg = false,
                                          const bool count_include_pad = true) {
   // index is the input image index in NCDHW
   CUDA_KERNEL_LOOP(index, nthreads) {
@@ -639,9 +639,9 @@ __global__ void unpool_sum_3d_gpu_kernel(const int nthreads, const DType* out_gr
           int dend = min(dstart + kernel_d, depth + pad_d);
           int hend = min(hstart + kernel_h, height + pad_h);
           int wend = min(wstart + kernel_w, width + pad_w);
-          int pool_size = (isAvg? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
+          int pool_size = (is_avg? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
           int out_index = (pd * pooled_height + ph) * pooled_width + pw;
-          if (isAvg && !count_include_pad) {
+          if (is_avg && !count_include_pad) {
             dstart = max(dstart, 0);
             hstart = max(hstart, 0);
             wstart = max(wstart, 0);

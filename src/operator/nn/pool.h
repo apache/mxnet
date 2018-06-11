@@ -217,7 +217,7 @@ template<typename DType, int p = 1>
 inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
-                            const bool getAvg = false, const bool count_include_pad = true) {
+                            const bool get_avg = false, const bool count_include_pad = true) {
   const int width = ishape[2];
   const int pooled_width = oshape[2];
   const int kernel_w = kernel[0];
@@ -230,10 +230,10 @@ inline void pool_sum_1d_cpu(const DType* in_data, const TShape& ishape, const TS
       for (int pw = 0; pw < pooled_width; ++pw) {
         int wstart = pw * stride_w - pad_w;
         int wend = std::min(wstart + kernel_w, width + pad_w);
-        int pool_size = (getAvg ? (wend - wstart) : 1);
+        int pool_size = (get_avg ? (wend - wstart) : 1);
         wstart = std::max(wstart, 0);
         wend = std::min(wend, width);
-        if (getAvg && !count_include_pad) {
+        if (get_avg && !count_include_pad) {
           pool_size = (wend - wstart);
         }
         DType sum = 0;
@@ -256,7 +256,7 @@ template<typename DType, int p = 1>
 inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
-                            const bool getAvg = false, const bool count_include_pad = true) {
+                            const bool get_avg = false, const bool count_include_pad = true) {
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -272,12 +272,12 @@ inline void pool_sum_2d_cpu(const DType* in_data, const TShape& ishape, const TS
           int wstart = pw * stride_w - pad_w;
           int hend = std::min(hstart + kernel_h, height + pad_h);
           int wend = std::min(wstart + kernel_w, width + pad_w);
-          int pool_size = (getAvg ? (hend - hstart) * (wend - wstart) : 1);
+          int pool_size = (get_avg ? (hend - hstart) * (wend - wstart) : 1);
           hstart = std::max(hstart, 0);
           wstart = std::max(wstart, 0);
           hend = std::min(hend, height);
           wend = std::min(wend, width);
-          if (getAvg && !count_include_pad) {
+          if (get_avg && !count_include_pad) {
             pool_size = (hend - hstart) * (wend - wstart);
           }
           DType sum = 0;
@@ -303,7 +303,7 @@ template<typename DType, int p = 1>
 inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
-                            const bool getAvg = false, const bool count_include_pad = true) {
+                            const bool get_avg = false, const bool count_include_pad = true) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -322,14 +322,14 @@ inline void pool_sum_3d_cpu(const DType* in_data, const TShape& ishape, const TS
             int dend = std::min(dstart + kernel_d, depth + pad_d);
             int hend = std::min(hstart + kernel_h, height + pad_h);
             int wend = std::min(wstart + kernel_w, width + pad_w);
-            int pool_size = (getAvg ? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
+            int pool_size = (get_avg ? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
             dstart = std::max(dstart, 0);
             hstart = std::max(hstart, 0);
             wstart = std::max(wstart, 0);
             dend = std::min(dend, depth);
             hend = std::min(hend, height);
             wend = std::min(wend, width);
-            if (getAvg && !count_include_pad) {
+            if (get_avg && !count_include_pad) {
               pool_size = (dend - dstart) * (hend - hstart) * (wend - wstart);
             }
             DType sum = 0;
@@ -524,7 +524,7 @@ template<typename DType, int p = 1>
 inline void unpool_sum_1d_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
                               const TShape& ishape, const TShape& oshape, const TShape& kernel,
                               const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool isAvg = false, const bool count_include_pad = true) {
+                              const bool is_avg = false, const bool count_include_pad = true) {
   const int width = ishape[2];
   const int pooled_width = oshape[2];
   const int kernel_w = kernel[0];
@@ -537,10 +537,10 @@ inline void unpool_sum_1d_cpu(const DType* out_grad, const DType* in_data, const
       for (int pw = 0; pw < pooled_width; ++pw) {
         int wstart = pw * stride_w - pad_w;
         int wend = std::min(wstart + kernel_w, width + pad_w);
-        int pool_size = (isAvg ? (wend - wstart) : 1);
+        int pool_size = (is_avg ? (wend - wstart) : 1);
         wstart = std::max(wstart, 0);
         wend = std::min(wend, width);
-        if (isAvg && !count_include_pad) {
+        if (is_avg && !count_include_pad) {
           pool_size = (wend - wstart);
         }
         for (int w = wstart; w < wend; ++w) {
@@ -563,7 +563,7 @@ template<typename DType, int p = 1>
 inline void unpool_sum_2d_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
                               const TShape& ishape, const TShape& oshape, const TShape& kernel,
                               const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool isAvg = false, const bool count_include_pad = true) {
+                              const bool is_avg = false, const bool count_include_pad = true) {
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -579,12 +579,12 @@ inline void unpool_sum_2d_cpu(const DType* out_grad, const DType* in_data, const
           int wstart = pw * stride_w - pad_w;
           int hend = std::min(hstart + kernel_h, height + pad_h);
           int wend = std::min(wstart + kernel_w, width + pad_w);
-          int pool_size = (isAvg ? (hend - hstart) * (wend - wstart) : 1);
+          int pool_size = (is_avg ? (hend - hstart) * (wend - wstart) : 1);
           hstart = std::max(hstart, 0);
           wstart = std::max(wstart, 0);
           hend = std::min(hend, height);
           wend = std::min(wend, width);
-          if (isAvg && !count_include_pad) {
+          if (is_avg && !count_include_pad) {
             pool_size = (hend - hstart) * (wend - wstart);
           }
           const int pool_index = ph * pooled_width + pw;
@@ -614,7 +614,7 @@ template<typename DType, int p = 1>
 inline void unpool_sum_3d_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
                               const TShape& ishape, const TShape& oshape, const TShape& kernel,
                               const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool isAvg = false, const bool count_include_pad = true) {
+                              const bool is_avg = false, const bool count_include_pad = true) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -633,14 +633,14 @@ inline void unpool_sum_3d_cpu(const DType* out_grad, const DType* in_data, const
             int dend = std::min(dstart + kernel_d, depth + pad_d);
             int hend = std::min(hstart + kernel_h, height + pad_h);
             int wend = std::min(wstart + kernel_w, width + pad_w);
-            int pool_size = (isAvg ? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
+            int pool_size = (is_avg ? (dend - dstart) * (hend - hstart) * (wend - wstart) : 1);
             dstart = std::max(dstart, 0);
             hstart = std::max(hstart, 0);
             wstart = std::max(wstart, 0);
             dend = std::min(dend, depth);
             hend = std::min(hend, height);
             wend = std::min(wend, width);
-            if (isAvg && !count_include_pad) {
+            if (is_avg && !count_include_pad) {
               pool_size = (dend - dstart) * (hend - hstart) * (wend - wstart);
             }
             const int pool_index = (pd * pooled_height + ph) * pooled_width + pw;

@@ -88,7 +88,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .describe("Only used for AvgPool, specify whether to count padding elements for average"
               "calculation. For example, with a 5*5 kernel on a 3*3 corner of a image,"
               "the sum of the 9 valid elements will be divided by 25 if this is set to true,"
-              "or it will be divided by 9 if this is set to false");
+              "or it will be divided by 9 if this is set to false. Defaults to true.");
   }
 
   bool operator==(const PoolingParam& other) const {
