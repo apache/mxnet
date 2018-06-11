@@ -730,7 +730,7 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
 }
 
 void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(1);
+  std::vector<NDArray*> inputs(2);
   std::vector<NDArray*> outputs(1);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
@@ -744,9 +744,9 @@ void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc ver
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
-        inputs[0] = &in_arr.arr; // output grads
-        inputs[0] = &in_arr.arr; // input
-        outputs[0] = &out_arr.arr;
+        inputs[0] = &out_arr.arr; // output grads
+        inputs[1] = &out_arr.arr; // input
+        outputs[0] = &in_arr.arr;
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
