@@ -82,7 +82,7 @@ private[mxnet] object SymbolImplMacros {
   /**
     * Implementation for Dynamic typed API Symbol.api.<functioname>
     */
-  private def newAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typedAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -121,17 +121,13 @@ private[mxnet] object SymbolImplMacros {
         }
         // Symbol arg implementation
         val returnType = "org.apache.mxnet.Symbol"
-        var base = ""
+        val base =
         if (symbolarg.argType.equals(s"Array[$returnType]")) {
-          base = s"args = $currArgName.toSeq"
-          if (symbolarg.isOptional) {
-            base = s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
-          }
+          if (symbolarg.isOptional) s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
+          else s"args = $currArgName.toSeq"
         } else {
-          base = "map(\"" + symbolarg.argName + "\") = " + currArgName
-          if (symbolarg.isOptional) {
-            base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-          }
+          if (symbolarg.isOptional) "if (!" + currArgName + ".isEmpty)" + base + ".get"
+          else "map(\"" + symbolarg.argName + "\") = " + currArgName
         }
 
         impl += base

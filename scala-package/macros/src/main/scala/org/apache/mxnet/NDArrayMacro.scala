@@ -116,18 +116,19 @@ private[mxnet] object NDArrayMacro {
         }
         // NDArray arg implementation
         val returnType = "org.apache.mxnet.NDArray"
-        var base = ""
+
         // TODO: Currently we do not add place holder for NDArray
         // Example: an NDArray operator like the following format
         // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
         // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
         // What it should be?
+        var base =
         if (ndarrayarg.argType.equals(returnType)) {
-          base = s"args += $currArgName"
+          s"args += $currArgName"
         } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
-          base = s"args ++= $currArgName"
+          s"args ++= $currArgName"
         } else {
-          base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
+          "map(\"" + ndarrayarg.argName + "\") = " + currArgName
         }
         if (ndarrayarg.isOptional) {
           base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
