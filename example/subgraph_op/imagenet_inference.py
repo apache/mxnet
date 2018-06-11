@@ -20,6 +20,7 @@ import logging
 import os
 import time
 import mxnet as mx
+from common import modelzoo
 from mxnet import nd
 from mxnet.contrib.quantization import *
 from mxnet.base import _LIB
@@ -29,6 +30,14 @@ def download_dataset(dataset_url, dataset_dir, logger=None):
     if logger is not None:
         logger.info('Downloading dataset for inference from %s to %s' % (dataset_url, dataset_dir))
     mx.test_utils.download(dataset_url, dataset_dir)
+
+
+def download_model(model_name, logger=None):
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    model_path = os.path.join(dir_path, 'model')
+    if logger is not None:
+        logger.info('Downloading model %s... into path %s' % (model_name, model_path))
+    return modelzoo.download_model(args.model, os.path.join(dir_path, 'model'))
 
 
 def load_model(symbol_file, param_file, logger=None):
@@ -100,8 +109,8 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Score a model on a dataset')
-    parser.add_argument('--symbol-file', type=str, required=True, help='symbol file path')
-    parser.add_argument('--param-file', type=str, required=True, help='param file path')
+    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
+                        help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--dataset', type=str, required=True, help='dataset path')
@@ -164,8 +173,9 @@ if __name__ == '__main__':
                                  seed=48564309,
                                  **mean_args)
 
-    # loading model
-    sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
+    # download model
+    prefix, epoch = download_model(model_name=args.model, logger=logger)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
     op_names = ['BatchNorm', 'Convolution', 'Pooling', 'Activation']
     out = SymbolHandle()
     check_call(_LIB.MXPartitionGraph(sym.handle, mx_uint(len(op_names)), c_str_array(op_names),

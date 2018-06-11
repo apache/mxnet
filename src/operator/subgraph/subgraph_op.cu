@@ -23,30 +23,19 @@
  * \brief GPU Implementation of subgraph operations
  */
 
-#include <mxnet/io.h>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/operator_util.h>
-#include <dmlc/logging.h>
-#include <dmlc/optional.h>
-#include "../operator_common.h"
-#include "../elemwise_op_common.h"
-#include "../../imperative/imperative_utils.h"
-#include "../../imperative/cached_op.h"
 #include "./subgraph_op.h"
 
 namespace mxnet {
 namespace op {
 
-void SubgraphOpForward(const OpStatePtr& state_ptr,
-                       const OpContext& ctx,
-                       const std::vector<NDArray>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<NDArray>& outputs);
+void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs);
 
-NNVM_REGISTER_OP(_subgraph_op)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", SubgraphOpForward);
+NNVM_REGISTER_OP(_default_subgraph_op)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", DefaultSubgraphOpForward);
 
 }  // namespace op
 }  // namespace mxnet
