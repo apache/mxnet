@@ -271,7 +271,7 @@ class Resize(Block):
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
     """
-    def __init__(self, size, keep_ratio=True, interpolation=1):
+    def __init__(self, size, keep_ratio=False, interpolation=1):
         super(Resize, self).__init__()
         self._keep = keep_ratio
         self._size = size
