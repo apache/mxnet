@@ -113,7 +113,6 @@ def argmax(attrs, inputs, proto_obj):
     """Returns indices of the maximum values along an axis"""
     return 'argmax', attrs, inputs
 
-
 def argmin(attrs, inputs, proto_obj):
     """Returns indices of the minimum values along an axis."""
     return 'argmin', attrs, inputs
@@ -145,6 +144,18 @@ def minimum(attrs, inputs, proto_obj):
     else:
         mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
+
+def lesser(attrs, inputs, proto_obj):
+    """Logical Lesser operator with broadcasting."""
+    return 'broadcast_lesser', attrs, inputs
+
+def greater(attrs, inputs, proto_obj):
+    """Logical Greater operator with broadcasting."""
+    return 'broadcast_greater', attrs, inputs
+
+def equal(attrs, inputs, proto_obj):
+    """Logical Equal operator with broadcasting."""
+    return 'broadcast_equal', attrs, inputs
 
 #Hyperbolic functions
 def tanh(attrs, inputs, proto_obj):
@@ -203,6 +214,11 @@ def batch_norm(attrs, inputs, proto_obj):
     new_attrs['fix_gamma'] = not attrs.get('is_test', 1)
     return 'BatchNorm', new_attrs, inputs
 
+def instance_norm(attrs, inputs, proto_obj):
+    """Instance Normalization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    return 'InstanceNorm', new_attrs, inputs
+
 def leaky_relu(attrs, inputs, proto_obj):
     """Leaky Relu function"""
     if 'alpha' in attrs:
@@ -239,7 +255,7 @@ def log_softmax(attrs, inputs, proto_obj):
 def softplus(attrs, inputs, proto_obj):
     """Applies the sofplus activation function element-wise to the input."""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type' : 'softrelu'})
-    return 'Activation', attrs, inputs
+    return 'Activation', new_attrs, inputs
 
 def conv(attrs, inputs, proto_obj):
     """Compute N-D convolution on (N+2)-D input."""
@@ -419,15 +435,9 @@ def transpose(attrs, inputs, proto_obj):
 
 def squeeze(attrs, inputs, proto_obj):
     """Remove single-dimensional entries from the shape of a tensor."""
-    # MXNet doesnt have a squeeze operator.
-    # Using "split" to perform similar operation.
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'axes' : 'axis'})
-    axes = new_attrs.get('axis')
-    mxnet_op = symbol.split(inputs[0], axis=axes[0], num_outputs=1, squeeze_axis=1)
-    for i in axes[1:]:
-        mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
-    return mxnet_op, new_attrs, inputs
+    return 'squeeze', new_attrs, inputs
 
 def unsqueeze(attrs, inputs, cls):
     """Inserts a new axis of size 1 into the array shape"""
@@ -449,17 +459,17 @@ def flatten(attrs, inputs, proto_obj):
 
 def topk(attrs, inputs, proto_obj):
     """Returns the top k elements in an input array along the given axis."""
-    new_attrs = transaction_utils._add_extra_attributes(attrs, {'ret_typ' : 'both'})
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'ret_typ' : 'both'})
     return 'topk', new_attrs, inputs
 
 def tile(attrs, inputs, proto_obj):
     """Repeats the whole array multiple times."""
-    new_attrs = transaction_utils._fix_attribute_names(attrs, {'repeats' : 'reps'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'repeats' : 'reps'})
     return 'tile', new_attrs, inputs
 
 def clip(attrs, inputs, proto_obj):
     """Clips (limits) the values in an array."""
-    new_attrs = transaction_utils._fix_attribute_names(attrs, {'min' : 'a_min',
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
                                                                'max' : 'a_max'})
     return 'clip', new_attrs, inputs
 
@@ -516,25 +526,30 @@ def reduce_prod(attrs, inputs, proto_obj):
 
 def reduce_log_sum(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by log sum value"""
-    sum_op = symbol.sum(inputs[0], axis = attrs.get('axes'),
-                        keepdims = attrs.get('keepdims'))
+    sum_op = symbol.sum(inputs[0], axis=attrs.get('axes'),
+                        keepdims=attrs.get('keepdims'))
     log_sym = symbol.log(sum_op)
     return log_sym, attrs, inputs
 
 def reduce_log_sum_exp(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by log sum exp value"""
     exp_op = symbol.exp(inputs[0])
-    sum_op = symbol.sum(exp_op, axis = attrs.get('axes'),
-                        keepdims = attrs.get('keepdims'))
+    sum_op = symbol.sum(exp_op, axis=attrs.get('axes'),
+                        keepdims=attrs.get('keepdims'))
     log_sym = symbol.log(sum_op)
     return log_sym, attrs, inputs
 
 def reduce_sum_square(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by sum square value"""
     square_op = symbol.square(inputs[0])
-    sum_op = symbol.sum(exp_op, axis = attrs.get('axes'),
-                        keepdims = attrs.get('keepdims'))
+    sum_op = symbol.sum(square_op, axis=attrs.get('axes'),
+                        keepdims=attrs.get('keepdims'))
     return sum_op, attrs, inputs
+
+def reduce_l2(attrs, inputs, proto_obj):
+    """Reduce input tensor by l2 normalization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
+    return 'norm', new_attrs, inputs
 
 def avg_pooling(attrs, inputs, proto_obj):
     """ Average pooling"""
@@ -565,3 +580,11 @@ def max_pooling(attrs, inputs, proto_obj):
     new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
 
     return new_op, new_attrs, inputs
+
+def max_roi_pooling(attrs, inputs, proto_obj):
+    """Max ROI Pooling."""
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'pooled_shape': 'pooled_size',
+                                                        'spatial_scale': 'spatial_scale'
+                                                       })
+    return 'ROIPooling', new_attrs, inputs

@@ -102,6 +102,7 @@ _convert_map = {
     # Sorting and Searching
     'ArgMax'            : argmax,
     'ArgMin'            : argmin,
-    'Max'               : maximum, #elemwise maximum
-    'Min'               : minimum #elemwise minimum
+    'Max'               : maximum,
+    'Min'               : minimum,
+    'TopK'              : topk
 }
