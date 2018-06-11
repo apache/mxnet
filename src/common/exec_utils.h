@@ -98,9 +98,12 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     is_default = nd.IsDefaultData();
 #endif
     if (!is_default) {
-      NDArray temp = bufs != nullptr ? bufs->at(i) : nd.Reorder2Default();
 #if MXNET_USE_MKLDNN == 1
+      NDArray temp = bufs != nullptr ? bufs->at(i) : nd.Reorder2Default();
       CHECK(temp.IsDefaultData());
+#else
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+          true, nd.dtype());
 #endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
