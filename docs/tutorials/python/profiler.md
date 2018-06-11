@@ -6,7 +6,7 @@ It is often helpful to understand what operations take how much time while runni
 
 If you have just begun using MXNet, you might be tempted to measure execution time of your model using Python's `time` module like shown below:
 
-```
+```python
 from time import time
 from mxnet import autograd, nd
 import mxnet as mx
@@ -21,16 +21,16 @@ print(y.asnumpy())
 print('Time for printing the output: %f sec' % (time() - start))
 ```
 
-Time for matrix multiplication: 0.005051 sec
+Time for matrix multiplication: 0.005051 sec<!--notebook-skip-line-->
 
-[[501.1584  508.29724 495.65237 ... 492.84705 492.69092 490.0481 ]
- [508.81058 507.1822  495.1743  ... 503.10526 497.29315 493.67917]
- [489.56598 499.47015 490.17722 ... 490.99945 488.05008 483.28836]
- ...
- [484.0019  495.7179  479.92142 ... 493.69952 478.89194 487.2074 ]
- [499.64932 507.65094 497.5938  ... 493.0474  500.74512 495.82712]
- [516.0143  519.1715  506.354   ... 510.08878 496.35608 495.42523]]
-Time for printing the output: 0.167693 sec
+[[501.1584  508.29724 495.65237 ... 492.84705 492.69092 490.0481 ]<!--notebook-skip-line-->
+ [508.81058 507.1822  495.1743  ... 503.10526 497.29315 493.67917]<!--notebook-skip-line-->
+ [489.56598 499.47015 490.17722 ... 490.99945 488.05008 483.28836]<!--notebook-skip-line-->
+ ...<!--notebook-skip-line-->
+ [484.0019  495.7179  479.92142 ... 493.69952 478.89194 487.2074 ]<!--notebook-skip-line-->
+ [499.64932 507.65094 497.5938  ... 493.0474  500.74512 495.82712]<!--notebook-skip-line-->
+ [516.0143  519.1715  506.354   ... 510.08878 496.35608 495.42523]]<!--notebook-skip-line-->
+Time for printing the output: 0.167693 sec<!--notebook-skip-line-->
 
 From the output above, it seems as if printing the output takes lot more time that multiplying two large matrices. That doesn't feel right. 
 
@@ -50,7 +50,7 @@ Check [this](http://mxnet.incubator.apache.org/install/index.html?device=Linux&l
 
 After building with `USE_PROFILER=True` and installing, you can import the profiler and configure it from Python code.
 
-```
+```python
 from mxnet import profiler
 profiler.set_config(profile_all=True, aggregate_stats=True, filename='profile_output.json')
 ```
@@ -68,7 +68,7 @@ profiler.set_config(profile_all=True, aggregate_stats=True, filename='profile_ou
 
 Let's build a small convolutional neural network that we can use for profiling.
 
-```
+```python
 from mxnet import gluon
 net = gluon.nn.HybridSequential()
 with net.name_scope():
@@ -83,7 +83,7 @@ with net.name_scope():
 
 We need data that we can run through the network for profiling. We'll use the MNIST dataset.
 
-```
+```python
 from mxnet.gluon.data.vision import transforms
 train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform_first(transforms.ToTensor()),
                                    batch_size=64, shuffle=True)
@@ -91,7 +91,7 @@ train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform
 
 Let's define a method that will run one training iteration given data and label.
 
-```
+```python
 # Use GPU is available
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
@@ -127,7 +127,7 @@ def run_training_iteration(data, label):
 
 When the first forward pass is run on a network, MXNet does a number of housekeeping tasks including infering the shapes of various parameters, allocating memory for intermediate and final outputs, etc. For these reasons, profiling the first iteration doesn't provide accurate results. We will therefore skip the first iteration.
 
-```
+```python
 # Run the first iteration without profiling
 itr = iter(train_data)
 run_training_iteration(*next(itr))
@@ -135,7 +135,7 @@ run_training_iteration(*next(itr))
 
 We'll run the next iteration with the profiler turned on.
 
-```
+```python
 data, label = next(itr)
 
 # Ask the profiler to start recording
@@ -157,27 +157,27 @@ There are two ways to view the information collected by the profiler. You can ei
 
 You can use the `profiler.dumps()` method to view the information collected by the profiler in the console. The collected information contains time taken by each operator, time taken by each C API and memory consumed in both CPU and GPU.
 
-```
+```python
 print(profiler.dumps())
 ```
 
-![Profile Statistics](profile_stats.png)
+![Profile Statistics](https://github.com/dmlc/web-data/blob/master/mxnet/tutorials/python/profiler/profile_stats.png)
 
 #### 2. View in browser
 
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
-```
+```python
 profiler.dump()
 ```
 
 `dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above.
 
-![Tracing Screenshot](profiler_output_chrome.png)
+![Tracing Screenshot](https://github.com/dmlc/web-data/blob/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
 Let's zoom in to check the time taken by operators
 
-![Operator profiling](profile_operators.png)
+![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_operators.png)
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
