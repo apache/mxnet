@@ -122,18 +122,18 @@ private[mxnet] object NDArrayMacro {
         // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
         // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
         // What it should be?
-        var base =
-        if (ndarrayarg.argType.equals(returnType)) {
-          s"args += $currArgName"
-        } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
-          s"args ++= $currArgName"
-        } else {
-          "map(\"" + ndarrayarg.argName + "\") = " + currArgName
-        }
-        if (ndarrayarg.isOptional) {
-          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-        }
-        impl += base
+        val base =
+          if (ndarrayarg.argType.equals(returnType)) {
+            s"args += $currArgName"
+          } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
+            s"args ++= $currArgName"
+          } else {
+            "map(\"" + ndarrayarg.argName + "\") = " + currArgName
+          }
+        impl.append(
+          if (ndarrayarg.isOptional) s"if (!$currArgName.isEmpty) $base.get"
+          else base
+        )
       })
       // add default out parameter
       argDef += "out : Option[NDArray] = None"
