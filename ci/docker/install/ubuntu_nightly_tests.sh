@@ -24,7 +24,7 @@ apt-get update
 
 #Install for Compilation warning Nightly Test
 add-apt-repository ppa:ubuntu-toolchain-r/test
-apt-get -y install time g++-5
+apt-get -y install time
 
 # Install for RAT License Check Nightly Test
 apt-get install -y subversion maven -y #>/dev/null
