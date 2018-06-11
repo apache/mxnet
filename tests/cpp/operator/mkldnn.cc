@@ -771,7 +771,7 @@ void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc ver
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
       arr.arr.WaitToRead();
-      verify_fn({&orig.arr, &orig.arr}, *outputs[0]);
+      verify_fn({&orig.arr, &orig.arr}, outputs);
     }
   }
 }
