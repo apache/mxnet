@@ -20,8 +20,9 @@ import os
 import logging
 import mxnet as mx
 
-def load_module(json_path, params_path, input_shape):
-    """Loads the MXNet model file, retrieves symbol and parameters and returns.
+def load_module(sym_filepath, params_filepath, input_shape):
+    """Loads the MXNet model file, retrieves symbol and parameters and
+    returns MXNet symbol and params (weights).
 
     Parameters
     ----------
@@ -40,12 +41,14 @@ def load_module(json_path, params_path, input_shape):
     params : params object
         Model weights including both arg and aux params.
     """
-    if not (os.path.isfile(json_path) and os.path.isfile(params_path)):
-        raise ValueError("Provide valid path to the json and params file")
+    if not (os.path.isfile(sym_filepath) and os.path.isfile(params_filepath)):
+        raise ValueError("symbol and params files provided are invalid")
     else:
         try:
-            model_name = json_path.rsplit('.', 1)[0].rsplit('-', 1)[0]
-            num_epochs = int(params_path.rsplit('.', 1)[0].rsplit('-', 1)[1])
+            # reads symbol.json file from given path and
+            # retrieves model prefix and number of epochs
+            model_name = sym_filepath.rsplit('.', 1)[0].rsplit('-', 1)[0]
+            num_epochs = int(params_filepath.rsplit('.', 1)[0].rsplit('-', 1)[1])
         except IndexError:
             logging.info("Model and params name should be in format: "
                          "prefix-symbol.json, prefix-epoch.params")

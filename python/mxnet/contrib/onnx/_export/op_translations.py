@@ -57,7 +57,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import re
 import numpy as np
-
 from .export_onnx import MXNetGraph as mx_op
 
 

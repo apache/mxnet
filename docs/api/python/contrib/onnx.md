@@ -24,6 +24,7 @@ This document describes all the ONNX-MXNet APIs.
 
     mxnet.contrib.onnx.import_model
     mxnet.contrib.onnx.get_model_metadata
+    mxnet.contrib.onnx.export_model
 ```
 
 ## ONNX Tutorials
