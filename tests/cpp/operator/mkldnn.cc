@@ -115,13 +115,14 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
     if (is_rand) {
       data[i] = std::rand() - INT_MAX / 2;
     } else {
-      size_t shift = size >> 1;
+      int shift = size >> 1;
       data[i] = i - shift;
     }
 }
 
 using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
 using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const NDArray &arr)>;
+using VerifyBackwardsFunc = std::function<void (const NDArray &out_grads, const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &in_grads)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
@@ -387,6 +388,17 @@ OpAttrs GetReluOp() {
   return attrs;
 }
 
+OpAttrs GetReluBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Activation");
+  attrs.attrs.dict.insert({"act_type", "relu"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 OpAttrs GetLeakyReluOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("LeakyReLU");
@@ -603,7 +615,7 @@ void VerifyActResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) 
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   for (size_t i = 0; i < tmp1.shape().Size(); i++) {
-    EXPECT_EQ(d1[i], std::fmax(d2[i], 0));
+    EXPECT_EQ(std::fmax(d1[i], 0), d2[i]);
   }
 }
 
@@ -619,6 +631,22 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) 
   mshadow::default_real_t *o = out.data().dptr<mshadow::default_real_t>();
   for (size_t i = 0; i < in1.shape().Size(); i++)
     ASSERT_EQ(d1[i] + d2[i], o[i]);
+}
+
+void VerifyActBackwardsResult(const NDArray &out_grads, const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &in_grads) {
+  NDArray tmp1 = out_grads.Reorder2Default();
+  NDArray tmp2 = in_arrs[0]->Reorder2Default();
+  NDArray tmp3 = in_grads[0]->Reorder2Default();
+  TBlob blob1 = tmp1.data();
+  TBlob blob2 = tmp2.data();
+  TBlob blob3 = tmp3.data();
+  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
+  mshadow::default_real_t *d3 = static_cast<mshadow::default_real_t*>(blob3.dptr_);
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  for (size_t i = 0; i < tmp1.shape().Size(); i++) {
+    EXPECT_EQ(int(d2[i] > 0) * d1[i], d3[i]);
+  }
 }
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
@@ -702,6 +730,54 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   }
 }
 
+void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyBackwardsFunc verify_fn) {
+  std::vector<NDArray*> inputs(1);
+  std::vector<NDArray*> outputs(1);
+  std::vector<OpReqType> req(1);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(init_fn);
+  for (auto in_arr : in_arrs) {
+    for (auto dispatch : dispatches) {
+      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
+      for (auto out_arr : out_arrs) {
+        req[0] = kWriteTo;
+        inputs[0] = &in_arr.arr; // output grads
+        inputs[0] = &in_arr.arr; // input
+        outputs[0] = &out_arr.arr;
+        PrintVerifyMsg(in_arr, out_arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        out_arr.arr.WaitToRead();
+        verify_fn(*inputs[0], {inputs[1]}, *outputs[0]);
+      }
+    }
+  }
+
+//  for (auto dispatch : dispatches) {
+//    in_arrs = GetTestInputArrays(init_fn);
+//    for (auto arr : in_arrs) {
+//      // If the array is a view, we shouldn't write data to it.
+//      if (arr.arr.IsView())
+//        continue;
+//
+//      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+//      req[0] = kWriteInplace;
+//      inputs[0] = &arr.arr;
+//      outputs[0] = &arr.arr;
+//      PrintVerifyMsg(orig, arr);
+//      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+//                                  dispatch, mxnet::OpStatePtr());
+//      arr.arr.WaitToRead();
+//      inputs[0] = &orig.arr;
+//      verify_fn(inputs, *outputs[0]);
+//    }
+//  }
+}
+
 void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(2);
   std::vector<NDArray*> outputs(1);
@@ -760,6 +836,11 @@ TEST(IMPERATIVE, UnaryOp) {
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
   TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
+}
+
+TEST(IMPERATIVE, ActBackwardsOp) {
+  OpAttrs attrs = GetReluBackwardsOp();
+  TestUnaryBackwardsOp(attrs, InitNegPosArray, VerifyActBackwardsResult);
 }
 
 TEST(IMPERATIVE, BinaryOp) {
