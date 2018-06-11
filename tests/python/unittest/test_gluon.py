@@ -1397,7 +1397,6 @@ def test_concat():
             net = Net(axis, input_num, chn_list[i], 1)
             check_layer_forward_withinput(net, x)
 
-
 @with_seed()
 def test_reshape_conv():
     class Net(gluon.HybridBlock):
