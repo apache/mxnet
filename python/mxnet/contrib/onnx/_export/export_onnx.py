@@ -55,9 +55,6 @@ from __future__ import unicode_literals
 import json
 import numpy as np
 
-from onnx import (checker, helper, onnx_pb2)
-from onnx.helper import make_tensor_value_info
-
 from .... import context
 from .... import ndarray as nd
 from .... import io
@@ -159,6 +156,12 @@ class MXNetGraph(object):
 
     def create_onnx_graph_proto(self, sym, params, in_shape, in_type, log=False):
         """Convert MXNet graph to ONNX graph"""
+        try:
+            from onnx import (checker, helper, onnx_pb2)
+            from onnx.helper import make_tensor_value_info
+        except ImportError:
+            raise ImportError("Onnx and protobuf need to be installed. "
+                              + "Instructions to install - https://github.com/onnx/onnx")
 
         # Determine output shape
         output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape)

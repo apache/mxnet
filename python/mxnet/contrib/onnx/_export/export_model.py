@@ -26,7 +26,7 @@ from __future__ import unicode_literals
 import logging
 import numpy as np
 
-from onnx import helper, mapping
+
 from six import string_types
 from .export_onnx import MXNetGraph
 from .export_helper import load_module
@@ -58,6 +58,13 @@ def export_model(model, weights, input_shape, input_type=np.float32,
     onnx_file_path : str
         Onnx file path
     """
+
+    try:
+        from onnx import helper, mapping
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+
     converter = MXNetGraph()
 
     data_format = np.dtype(input_type)
