@@ -77,8 +77,52 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 NNVM_REGISTER_OP(reshape_like)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+template<>
+void ShapeCompute<gpu>(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  const TShape& in_shape = in_data.shape_;
+  Shape<10> temp_shape;
+  for (size_t i = 0; i < in_shape.ndim(); ++i) {
+    temp_shape[i] = in_shape[i];
+  }
+
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    mxnet_op::Kernel<mshadow_op::shape_kernel, gpu>::Launch(
+      s, in_data.ndim(), out_data.dptr<DType>(), temp_shape, in_data.ndim());
+  });
+}
+
+
 NNVM_REGISTER_OP(shape_nd)
 .set_attr<FCompute>("FCompute<gpu>", ShapeCompute<gpu>);
+
+template<>
+void SizeCompute<gpu>(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  mxnet_op::Kernel<mshadow_op::size_kernel, gpu>::Launch(
+    s, 1U, out_data.dptr<int64_t>(), in_data.Size());
+}
 
 NNVM_REGISTER_OP(size_nd)
 .set_attr<FCompute>("FCompute<gpu>", SizeCompute<gpu>);

@@ -398,6 +398,25 @@ NNVM_REGISTER_OP(reshape_like)
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
+template<>
+void ShapeCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  const TShape& in_shape = in_data.shape_;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    mxnet_op::Kernel<mshadow_op::identity_with_cast, cpu>::Launch(
+      s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
+  });
+}
+
 NNVM_REGISTER_OP(shape_nd)
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
@@ -409,29 +428,47 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
-    [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
+  [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", ShapeCompute<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape",
-   [](const nnvm::NodeAttrs& attrs,
-      std::vector<TShape> *in_attrs,
-      std::vector<TShape> *out_attrs) {
-       CHECK_EQ(in_attrs->size(), 1U);
-       CHECK_EQ(out_attrs->size(), 1U);
-       TShape target_shape(1);
-       target_shape[0] = in_attrs->at(0).ndim();
-       SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
-       return !shape_is_none(out_attrs->at(0));
-     })
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<TShape> *in_attrs,
+     std::vector<TShape> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    TShape target_shape(1);
+    target_shape[0] = in_attrs->at(0).ndim();
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
+    return !shape_is_none(out_attrs->at(0));
+  })
 .set_attr<nnvm::FInferType>("FInferType",
-   [](const nnvm::NodeAttrs& attrs,
-      std::vector<int>* in_attrs,
-      std::vector<int>* out_attrs) {
-       CHECK_EQ(in_attrs->size(), 1U);
-       CHECK_EQ(out_attrs->size(), 1U);
-       TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
-       return out_attrs->at(0) != -1;
-     })
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<int>* in_attrs,
+     std::vector<int>* out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+    return out_attrs->at(0) != -1;
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
+
+template<>
+void SizeCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  mxnet_op::Kernel<mshadow_op::size_kernel, cpu>::Launch(
+    s, 1U, out_data.dptr<int64_t>(), in_data.Size());
+}
 
 NNVM_REGISTER_OP(size_nd)
 .describe(R"code(Returns a 1D int64 array containing the size of data.
@@ -445,23 +482,23 @@ Example::
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", SizeCompute<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape",
-   [](const nnvm::NodeAttrs& attrs,
-      std::vector<TShape> *in_attrs,
-      std::vector<TShape> *out_attrs) {
-       CHECK_EQ(in_attrs->size(), 1U);
-       CHECK_EQ(out_attrs->size(), 1U);
-       SHAPE_ASSIGN_CHECK(*out_attrs, 0, 1U);
-       return !shape_is_none(out_attrs->at(0));
-      })
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<TShape> *in_attrs,
+     std::vector<TShape> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, 1U);
+    return !shape_is_none(out_attrs->at(0));
+  })
 .set_attr<nnvm::FInferType>("FInferType",
-   [](const nnvm::NodeAttrs& attrs,
-      std::vector<int>* in_attrs,
-      std::vector<int>* out_attrs) {
-       CHECK_EQ(in_attrs->size(), 1U);
-       CHECK_EQ(out_attrs->size(), 1U);
-       TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
-       return out_attrs->at(0) != -1;
-      })
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<int>* in_attrs,
+     std::vector<int>* out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+    return out_attrs->at(0) != -1;
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
 DMLC_REGISTER_PARAMETER(CastParam);

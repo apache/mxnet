@@ -92,12 +92,22 @@ MXNET_UNARY_MATH_OP(identity_grad, 1);
 struct identity_with_cast {
   template<typename DTypeIn, typename DTypeOut>
   MSHADOW_XINLINE static void Map(int i, DTypeOut *out, DTypeIn *in) {
-    out[i] = DTypeOut(in[i]);
+    DTypeIn in_data = in[i];
+    out[i] = DTypeOut(in_data);
+  }
+};
+
+struct shape_kernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, mshadow::Shape<10> shape, uint32_t ndims) {
+    if (i < static_cast<int>(ndims)) {
+      out[i] = shape[i];
+    }
   }
 };
 
 struct size_kernel {
-  MSHADOW_XINLINE static void Map(int i, int64_t *out, unsigned int in) {
+  MSHADOW_XINLINE static void Map(int i, int64_t *out, uint32_t in) {
     out[0] = int64_t(in);
   }
 };
