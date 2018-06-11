@@ -26,8 +26,7 @@ from __future__ import unicode_literals
 import logging
 import numpy as np
 
-
-from six import string_types
+from ....base import string_types
 from .export_onnx import MXNetGraph
 from .export_helper import load_module
 
