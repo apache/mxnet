@@ -121,7 +121,7 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
 }
 
 using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
-using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &in_arrs)>;
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const std::vector<NDArray *> &out_arrs)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
