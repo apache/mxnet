@@ -221,4 +221,3 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXnet-face](https://github.com/tornadomeet/mxnet-face) - Using mxnet for face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model get 97.13%+-0.88% accuracy on LFW, and with only 20MB size.
 * [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator Integration and MXnet as backend for GPU computing
 * [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) - a flexible and easy to use tool for serving Deep Learning models
-* [ONNX-MXNet](https://github.com/onnx/onnx-mxnet) - implements ONNX model format support for Apache MXNet
