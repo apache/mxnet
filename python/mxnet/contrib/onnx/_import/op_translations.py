@@ -23,76 +23,86 @@ from .... import symbol
 
 # Method definitions for the callable objects mapped in the import_helper module
 
-def identity(attrs, inputs, cls):
+def identity(attrs, inputs, proto_obj):
     """Returns the identity function of the the input."""
     return 'identity', attrs, inputs
 
-def random_uniform(attrs, inputs, cls):
+def random_uniform(attrs, inputs, proto_obj):
     """Draw random samples from a uniform distribtuion."""
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
     return 'random_uniform', new_attr, inputs
 
-def random_normal(attrs, inputs, cls):
+def random_normal(attrs, inputs, proto_obj):
     """Draw random samples from a Gaussian distribution."""
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
     new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
     return 'random_uniform', new_attr, inputs
 
 # Arithmetic Operations
-def add(attrs, inputs, cls):
+def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op_value = translation_utils._fix_bias_shape('broadcast_add', inputs, cls)
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
+                                                    broadcast_axis, proto_obj)
         return op_value, new_attr, inputs
-    return 'elemwise_add', new_attr, inputs
+    return 'broadcast_add', new_attr, inputs
 
-def subtract(attrs, inputs, cls):
+def subtract(attrs, inputs, proto_obj):
     """Subtracting two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_sub', new_attr, inputs
-    return 'elemwise_sub', new_attr, inputs
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_sub', new_attr, inputs
 
 
-def multiply(attrs, inputs, cls):
+def multiply(attrs, inputs, proto_obj):
     """Multiply two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        op_value = translation_utils._fix_bias_shape('broadcast_mul', inputs, cls)
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
+                                                    broadcast_axis, proto_obj)
         return op_value, new_attr, inputs
-    return 'elemwise_mul', new_attr, inputs
+    return 'broadcast_mul', new_attr, inputs
 
-def divide(attrs, inputs, cls):
+def divide(attrs, inputs, proto_obj):
     """Divide two tensors"""
     new_attr = {}
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        return 'broadcast_div', new_attr, inputs
-    return 'elemwise_div', new_attr, inputs
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_div', new_attr, inputs
 
-def absolute(attrs, inputs, cls):
+def absolute(attrs, inputs, proto_obj):
     """Returns element-wise absolute value of the input."""
     return 'abs', attrs, inputs
 
-def negative(attrs, inputs, cls):
+def negative(attrs, inputs, proto_obj):
     """Negation of every element in a tensor"""
     return 'negative', attrs, inputs
 
-def add_n(attrs, inputs, cls):
+def add_n(attrs, inputs, proto_obj):
     """Elementwise sum of arrays"""
     return 'add_n', attrs, inputs
 
 # Sorting and Searching
-def argmax(attrs, inputs, cls):
+def argmax(attrs, inputs, proto_obj):
     """Returns indices of the maximum values along an axis"""
     return 'argmax', attrs, inputs
 
 
-def argmin(attrs, inputs, cls):
+def argmin(attrs, inputs, proto_obj):
     """Returns indices of the minimum values along an axis."""
     return 'argmin', attrs, inputs
 
-def maximum(attrs, inputs, cls):
+def maximum(attrs, inputs, proto_obj):
     """
     Elementwise maximum of arrays.
     MXNet maximum compares only two symbols at a time.
@@ -107,7 +117,7 @@ def maximum(attrs, inputs, cls):
         mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
 
-def minimum(attrs, inputs, cls):
+def minimum(attrs, inputs, proto_obj):
     """Elementwise minimum of arrays."""
     # MXNet minimum compares only two symbols at a time.
     # ONNX can send more than two to compare.
@@ -121,36 +131,35 @@ def minimum(attrs, inputs, cls):
     return mxnet_op, attrs, inputs
 
 #Hyperbolic functions
-def tanh(attrs, inputs, cls):
+def tanh(attrs, inputs, proto_obj):
     """Returns the hyperbolic tangent of the input array."""
     return 'tanh', attrs, inputs
 
 # Rounding
-def ceil(attrs, inputs, cls):
+def ceil(attrs, inputs, proto_obj):
     """ Calculate ceil value for input """
     return 'ceil', attrs, inputs
 
-def floor(attrs, inputs, cls):
+def floor(attrs, inputs, proto_obj):
     """ Calculate floor value for input """
     return 'floor', attrs, inputs
 
 # Joining and spliting
-def concat(attrs, inputs, cls):
+def concat(attrs, inputs, proto_obj):
     """ Joins input arrays along a given axis. """
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'dim'})
     return 'concat', new_attrs, inputs
 
-
 # Basic neural network functions
-def sigmoid(attrs, inputs, cls):
+def sigmoid(attrs, inputs, proto_obj):
     """Computes elementwise sigmoid of the input array"""
     return 'sigmoid', attrs, inputs
 
-def relu(attrs, inputs, cls):
+def relu(attrs, inputs, proto_obj):
     """Computes rectified linear function."""
     return 'relu', attrs, inputs
 
-def pad(attrs, inputs, cls):
+def pad(attrs, inputs, proto_obj):
     """ Add padding to input tensor"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
                                                                'value' : 'constant_value'
@@ -158,24 +167,23 @@ def pad(attrs, inputs, cls):
     new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
     return 'pad', new_attrs, inputs
 
-def matrix_multiplication(attrs, inputs, cls):
+def matrix_multiplication(attrs, inputs, proto_obj):
     """Performs general matrix multiplication"""
     return 'linalg_gemm2', attrs, inputs
 
-def batch_norm(attrs, inputs, cls):
+def batch_norm(attrs, inputs, proto_obj):
     """Batch normalization."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps',
-                                                               'is_test':'fix_gamma'})
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon': 'eps',
+                                                               'is_test': 'fix_gamma'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
                                                      ['spatial', 'consumed_inputs'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
 
     # in test mode "fix_gamma" should be unset.
-    new_attrs['fix_gamma'] = 0 if new_attrs['fix_gamma'] == 1 else 1
+    new_attrs['fix_gamma'] = not attrs.get('is_test', 1)
     return 'BatchNorm', new_attrs, inputs
 
-
-def leaky_relu(attrs, inputs, cls):
+def leaky_relu(attrs, inputs, proto_obj):
     """Leaky Relu function"""
     if 'alpha' in attrs:
         new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
@@ -183,7 +191,7 @@ def leaky_relu(attrs, inputs, cls):
         new_attrs = translation_utils._add_extra_attributes(attrs, {'slope': 0.01})
     return 'LeakyReLU', new_attrs, inputs
 
-def _elu(attrs, inputs, cls):
+def _elu(attrs, inputs, proto_obj):
     """Elu function"""
     if 'alpha' in attrs:
         new_attrs = translation_utils._fix_attribute_names(attrs, {'alpha' : 'slope'})
@@ -192,18 +200,18 @@ def _elu(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'act_type': 'elu'})
     return 'LeakyReLU', new_attrs, inputs
 
-def _prelu(attrs, inputs, cls):
+def _prelu(attrs, inputs, proto_obj):
     """PRelu function"""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
     return 'LeakyReLU', new_attrs, inputs
 
-def softmax(attrs, inputs, cls):
+def softmax(attrs, inputs, proto_obj):
     """Softmax function."""
     if 'axis' not in attrs:
         attrs = translation_utils._add_extra_attributes(attrs, {'axis': 1})
     return 'softmax', attrs, inputs
 
-def conv(attrs, inputs, cls):
+def conv(attrs, inputs, proto_obj):
     """Compute N-D convolution on (N+2)-D input."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
                                                                'strides' : 'stride',
@@ -213,7 +221,7 @@ def conv(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'num_group' : 1})
     new_attrs = translation_utils._fix_bias('Convolution', new_attrs, len(inputs))
 
-    new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, cls)
+    new_attrs = translation_utils._fix_channels('Convolution', new_attrs, inputs, proto_obj)
     kernel = new_attrs['kernel']
     stride = new_attrs['stride'] if 'stride' in new_attrs else []
     padding = new_attrs['pad'] if 'pad' in new_attrs else []
@@ -234,7 +242,7 @@ def conv(attrs, inputs, cls):
 
     return conv_op, new_attrs, inputs
 
-def deconv(attrs, inputs, cls):
+def deconv(attrs, inputs, proto_obj):
     """Computes transposed convolution of the input tensor."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
                                                                'strides' : 'stride',
@@ -244,7 +252,7 @@ def deconv(attrs, inputs, cls):
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'num_group' : 1})
     new_attrs = translation_utils._fix_bias('Deconvolution', new_attrs, len(inputs))
 
-    new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, cls)
+    new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, proto_obj)
     kernel = new_attrs['kernel']
     stride = new_attrs['stride'] if 'stride' in new_attrs else []
     padding = new_attrs['pad'] if 'pad' in new_attrs else []
@@ -265,18 +273,18 @@ def deconv(attrs, inputs, cls):
 
     return deconv_op, new_attrs, inputs
 
-def fully_connected(attrs, inputs, cls):
+def fully_connected(attrs, inputs, proto_obj):
     """Applies a linear transformation: Y=XWT+b."""
     new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
 
     new_attrs = translation_utils._fix_bias('FullyConnected', new_attrs, len(inputs))
 
-    new_attrs = translation_utils._fix_channels('FullyConnected', new_attrs, inputs, cls)
+    new_attrs = translation_utils._fix_channels('FullyConnected', new_attrs, inputs, proto_obj)
 
     return 'FullyConnected', new_attrs, inputs
 
 
-def global_maxpooling(attrs, inputs, cls):
+def global_maxpooling(attrs, inputs, proto_obj):
     """Performs max pooling on the input."""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
@@ -284,7 +292,7 @@ def global_maxpooling(attrs, inputs, cls):
     return 'Pooling', new_attrs, inputs
 
 
-def global_avgpooling(attrs, inputs, cls):
+def global_avgpooling(attrs, inputs, proto_obj):
     """Performs avg pooling on the input."""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
@@ -292,7 +300,7 @@ def global_avgpooling(attrs, inputs, cls):
     return 'Pooling', new_attrs, inputs
 
 
-def linalg_gemm(attrs, inputs, cls):
+def linalg_gemm(attrs, inputs, proto_obj):
     """Performs general matrix multiplication and accumulation"""
     trans_a = 0
     trans_b = 0
@@ -316,17 +324,17 @@ def linalg_gemm(attrs, inputs, cls):
     new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
     return gemm_op, new_attrs, inputs
 
-def local_response_norm(attrs, inputs, cls):
+def local_response_norm(attrs, inputs, proto_obj):
     """Local Response Normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'bias': 'knorm',
                                                         'size' : 'nsize'})
     return 'LRN', new_attrs, inputs
 
-def dropout(attrs, inputs, cls):
+def dropout(attrs, inputs, proto_obj):
     """Dropout Regularization."""
     mode = 'training'
-    if attrs['is_test'] == 0:
+    if 'is_test' in attrs and attrs['is_test'] == 0:
         mode = 'always'
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'ratio': 'p'})
@@ -335,23 +343,28 @@ def dropout(attrs, inputs, cls):
     return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
-def reshape(attrs, inputs, cls):
+def reshape(attrs, inputs, proto_obj):
     """Reshape the given array by the shape attribute."""
-    return 'reshape', attrs, inputs
+    if len(inputs) == 1:
+        return 'reshape', attrs, inputs[0]
+    reshape_shape = list(proto_obj._params[inputs[1].name].asnumpy())
+    reshape_shape = [int(i) for i in reshape_shape]
+    new_attrs = {'shape': reshape_shape}
+    return 'reshape', new_attrs, inputs[:1]
 
-def cast(attrs, inputs, cls):
+def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
     new_attrs['dtype'] = new_attrs['dtype'].lower()
     return 'cast', new_attrs, inputs
 
-def split(attrs, inputs, cls):
+def split(attrs, inputs, proto_obj):
     """Splits an array along a particular axis into multiple sub-arrays."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
     return 'split', new_attrs, inputs
 
-def _slice(attrs, inputs, cls):
+def _slice(attrs, inputs, proto_obj):
     """Returns a slice of the input tensor along multiple axes."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'axes' : 'axis',
@@ -368,13 +381,13 @@ def _slice(attrs, inputs, cls):
             slice_op = symbol.slice_axis(slice_op, axis=axis, begin=begin[i], end=end[i])
     return slice_op, new_attrs, inputs
 
-def transpose(attrs, inputs, cls):
+def transpose(attrs, inputs, proto_obj):
     """Transpose the input array."""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'perm' : 'axes'})
     return 'transpose', new_attrs, inputs
 
-def squeeze(attrs, inputs, cls):
+def squeeze(attrs, inputs, proto_obj):
     """Remove single-dimensional entries from the shape of a tensor."""
     # MXNet doesnt have a squeeze operator.
     # Using "split" to perform similar operation.
@@ -386,8 +399,17 @@ def squeeze(attrs, inputs, cls):
         mxnet_op = symbol.split(mxnet_op, axis=i-1, num_outputs=1, squeeze_axis=1)
     return mxnet_op, new_attrs, inputs
 
+def unsqueeze(attrs, inputs, cls):
+    """Inserts a new axis of size 1 into the array shape"""
+    # MXNet can only add one axis at a time.
+    mxnet_op = inputs[0]
+    for axis in attrs["axes"]:
+        mxnet_op = symbol.expand_dims(mxnet_op, axis=axis)
 
-def flatten(attrs, inputs, cls):
+    return mxnet_op, attrs, inputs
+
+
+def flatten(attrs, inputs, proto_obj):
     """Flattens the input array into a 2-D array by collapsing the higher dimensions."""
     #Mxnet does not have axis support. By default uses axis=1
     if 'axis' in attrs and attrs['axis'] != 1:
@@ -396,15 +418,15 @@ def flatten(attrs, inputs, cls):
     return 'Flatten', new_attrs, inputs
 
 #Powers
-def reciprocal(attrs, inputs, cls):
+def reciprocal(attrs, inputs, proto_obj):
     """Returns the reciprocal of the argument, element-wise."""
     return 'reciprocal', attrs, inputs
 
-def squareroot(attrs, inputs, cls):
+def squareroot(attrs, inputs, proto_obj):
     """Returns element-wise square-root value of the input."""
     return 'sqrt', attrs, inputs
 
-def power(attrs, inputs, cls):
+def power(attrs, inputs, proto_obj):
     """Returns element-wise result of base element raised to powers from exp element."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
@@ -412,41 +434,41 @@ def power(attrs, inputs, cls):
         return 'broadcast_power', new_attrs, inputs
     return 'pow', new_attrs, inputs
 
-def exponent(attrs, inputs, cls):
+def exponent(attrs, inputs, proto_obj):
     """Elementwise exponent of input array."""
     return 'exp', attrs, inputs
 
-def _log(attrs, inputs, cls):
+def _log(attrs, inputs, proto_obj):
     """Elementwise log of input array."""
     return 'log', attrs, inputs
 
 # Reduce Functions
-def reduce_max(attrs, inputs, cls):
+def reduce_max(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by maximum value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'max', new_attrs, inputs
 
-def reduce_mean(attrs, inputs, cls):
+def reduce_mean(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'mean', new_attrs, inputs
 
-def reduce_min(attrs, inputs, cls):
+def reduce_min(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'min', new_attrs, inputs
 
-def reduce_sum(attrs, inputs, cls):
+def reduce_sum(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'sum', new_attrs, inputs
 
-def reduce_prod(attrs, inputs, cls):
+def reduce_prod(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by mean value"""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
     return 'prod', new_attrs, inputs
 
-def avg_pooling(attrs, inputs, cls):
+def avg_pooling(attrs, inputs, proto_obj):
     """ Average pooling"""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
@@ -461,7 +483,7 @@ def avg_pooling(attrs, inputs, cls):
     return new_op, new_attrs, inputs
 
 
-def max_pooling(attrs, inputs, cls):
+def max_pooling(attrs, inputs, proto_obj):
     """ Average pooling"""
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',

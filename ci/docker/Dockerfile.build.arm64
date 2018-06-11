@@ -18,9 +18,19 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
+FROM ubuntu:16.04 as ccachebuilder
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+COPY install/ubuntu_ccache.sh /work/
+RUN /work/ubuntu_ccache.sh
+
 # Temporary fix due to https://github.com/apache/incubator-mxnet/issues/10837
 #FROM dockcross/linux-arm64
 FROM mxnetci/dockcross-linux-arm64:05082018
+
+# extract ccache binary into latest context
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 ENV ARCH aarch64
 ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran

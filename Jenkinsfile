@@ -21,13 +21,13 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
+mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -93,7 +93,7 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-  def command = "ci/build.py --download-docker-cache --docker-cache-bucket ${env.DOCKER_CACHE_BUCKET} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -175,7 +175,7 @@ try {
     'GPU: CentOS 7': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') { 
+          timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('centos7_gpu', 'build_centos7_gpu', false)
             pack_lib('centos7_gpu')
@@ -186,7 +186,7 @@ try {
     'CPU: Openblas': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') { 
+          timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
             pack_lib('cpu', mx_dist_lib)
@@ -228,7 +228,7 @@ try {
     'CPU: Clang 5 MKLDNN': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-mkldnn-clang50') {
-          timeout(time: max_time, unit: 'MINUTES') { 
+          timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn', false)
             pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
@@ -254,7 +254,7 @@ try {
             init_git()
             docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
             pack_lib('mkldnn_gpu', mx_mkldnn_lib)
-          }  
+          }
         }
       }
     },
@@ -824,28 +824,6 @@ try {
           }
         }
       }
-    },
-    'tutorial tests Python 2 GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-tutorials-py2') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'tutorialtest_ubuntu_python2_gpu', true, '3g')
-          }
-        }
-      }
-    },
-    'tutorial tests Python 3 GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-tutorials-py3') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'tutorialtest_ubuntu_python3_gpu', true, '3g')
-          }
-        }
-      }
     }
   }
 
@@ -856,7 +834,7 @@ try {
           init_git()
           docker_run('ubuntu_cpu', 'deploy_docs', false)
           sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-        }        
+        }
       }
     }
   }

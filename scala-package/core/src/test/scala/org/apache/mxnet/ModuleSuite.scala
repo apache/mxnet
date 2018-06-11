@@ -157,7 +157,19 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     assert(mod.getOutputsMerged()(0).shape == dShape)
     assert(mod.getParams._1("fc_bias").toArray.forall(_ == -1f))
 
+    // reshape module
     dShape = Shape(14, 20)
+    mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
+    mod.forward(new DataBatch(
+      data = IndexedSeq(NDArray.ones(dShape)),
+      label = null, index = null, pad = 0))
+    mod.backward(Array(NDArray.ones(dShape)))
+    mod.update()
+    assert(mod.getOutputsMerged()(0).shape == dShape)
+    assert(mod.getParams._1("fc_bias").toArray.forall(x => (x - -3f) < 1e-3))
+
+    // return to original binded shape
+    dShape = Shape(7, 20)
     mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
     mod.forward(new DataBatch(
       data = IndexedSeq(NDArray.ones(dShape)),
