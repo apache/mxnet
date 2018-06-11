@@ -41,7 +41,7 @@ private[mxnet] object SymbolImplMacros {
     impl(c)(annottees: _*)
   }
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    newAPIImpl(c)(annottees: _*)
+    typedAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
 
@@ -126,8 +126,12 @@ private[mxnet] object SymbolImplMacros {
           if (symbolarg.isOptional) s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
           else s"args = $currArgName.toSeq"
         } else {
-          if (symbolarg.isOptional) "if (!" + currArgName + ".isEmpty)" + base + ".get"
-          else "map(\"" + symbolarg.argName + "\") = " + currArgName
+          if (symbolarg.isOptional) {
+            // scalastyle:off
+            s"if (!$currArgName.isEmpty) map(" + "\"" + symbolarg.argName + "\"" + s") = $currArgName.get"
+            // scalastyle:on
+          }
+          else "map(\"" + symbolarg.argName + "\"" + s") = $currArgName"
         }
 
         impl += base
