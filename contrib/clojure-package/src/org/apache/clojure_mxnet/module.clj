@@ -17,8 +17,7 @@
 
 (ns org.apache.clojure-mxnet.module
   (:refer-clojure :exclude [update symbol])
-  (:require [clojure.spec.alpha :as spec]
-            [org.apache.clojure-mxnet.callback :as callback]
+  (:require [org.apache.clojure-mxnet.callback :as callback]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]
             [org.apache.clojure-mxnet.initializer :as initializer]
@@ -28,8 +27,7 @@
             [org.apache.clojure-mxnet.util :as util]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [org.apache.clojure-mxnet.ndarray :as ndarray]
-            [org.apache.clojure-mxnet.module :as m])
+            [org.apache.clojure-mxnet.ndarray :as ndarray])
   (:import (org.apache.mxnet.module Module FitParams BaseModule)
            (org.apache.mxnet.io MXDataIter NDArrayIter)
            (org.apache.mxnet Initializer Optimizer NDArray DataBatch

@@ -18,15 +18,13 @@
 (ns org.apache.clojure-mxnet.symbol
   (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
                             min repeat reverse set sort take to-array empty sin
-                            get apply])
+                            get apply shuffle])
   (:require [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.context :as mx-context]
             [org.apache.clojure-mxnet.executor :as ex]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
-            [org.apache.clojure-mxnet.gen.symbol]
             [t6.from-scala.core :refer [$] :as $]
-            [org.apache.clojure-mxnet.symbol :as sym]
             [org.apache.clojure-mxnet.ndarray :as ndarray])
   (:import (org.apache.mxnet Symbol)))
 
@@ -228,7 +226,7 @@
   "Taken from the model save checkpoint"
   [prefix epoch sym arg-params aux-params]
   (do
-    (sym/save sym (str prefix "-symbol.json"))
+    (save sym (str prefix "-symbol.json"))
     (let [save-map (merge (->> arg-params
                                (mapv (fn [[k v]] [(str "arg:" k) v]))
                                (into {}))

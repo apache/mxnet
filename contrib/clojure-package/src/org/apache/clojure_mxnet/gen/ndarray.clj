@@ -1,4 +1,7 @@
-(ns org.apache.clojure-mxnet.gen.ndarray)
+(ns org.apache.clojure-mxnet.ndarray
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
+                            min repeat reverse set sort take to-array empty shuffle])
+  (:import (org.apache.mxnet NDArray Shape)))
 
 ;; Do not edit - this is auto-generated
 
@@ -19,9 +22,6 @@
 ;;
 
 
-(in-ns 'org.apache.clojure-mxnet.ndarray)
-(require '[org.apache.clojure-mxnet.util :as util])
-(import '(org.apache.mxnet NDArray Shape))
 
 
 (defn

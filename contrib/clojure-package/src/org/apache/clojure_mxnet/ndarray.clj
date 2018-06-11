@@ -17,12 +17,11 @@
 
 (ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty])
+                            min repeat reverse set sort take to-array empty shuffle])
   (:require [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.context :as mx-context]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
-            [org.apache.clojure-mxnet.gen.ndarray]
             [clojure.reflect :as r]
             [t6.from-scala.core :refer [$] :as $])
   (:import (org.apache.mxnet NDArray)))

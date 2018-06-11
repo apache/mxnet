@@ -16,6 +16,7 @@
 ;;
 
 (ns org.apache.clojure-mxnet.initializer
+  (:refer-clojure :exclude [apply])
   (:import (org.apache.mxnet Uniform Normal Xavier)))
 
 (defn uniform

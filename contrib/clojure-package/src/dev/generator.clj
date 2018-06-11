@@ -196,7 +196,7 @@
    ";; limitations under the License.\n"
    ";;\n"))
 
-(defn write-to-file [functions ns-gen require-import-writer-fn fname]
+(defn write-to-file [functions ns-gen fname]
   (with-open [w (clojure.java.io/writer fname)]
     (.write w ns-gen)
     (.write w "\n\n")
@@ -204,22 +204,21 @@
     (.write w "\n\n")
     (.write w license)
     (.write w "\n\n")
-    (require-import-writer-fn w)
     (.write w "\n\n")
   (doseq [f functions]
     (clojure.pprint/pprint f w)
     (.write w "\n"))))
 
-(def symbol-gen-ns "(ns org.apache.clojure-mxnet.gen.symbol)")
-
-(defn write-symbol-ns-require-import [w]
-  (.write w "(in-ns 'org.apache.clojure-mxnet.symbol)\n")
-  (.write w "(require '[org.apache.clojure-mxnet.util :as util])\n")
-  (.write w "(import '(org.apache.mxnet Symbol))\n"))
+(def symbol-gen-ns "(ns org.apache.clojure-mxnet.symbol
+    (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                              min repeat reverse set sort take to-array empty sin
+                              get apply shuffle])
+    (:require [org.apache.clojure-mxnet.util :as util])
+    (:import (org.apache.mxnet Symbol)))")
 
 
 (defn generate-symbol-file []
-  (write-to-file all-symbol-functions symbol-gen-ns  write-symbol-ns-require-import "src/org/apache/clojure_mxnet/gen/symbol.clj"))
+  (write-to-file all-symbol-functions symbol-gen-ns "src/org/apache/clojure_mxnet/gen/symbol.clj"))
 
 
 ;;;;;;;;NDARRAY
@@ -302,16 +301,14 @@
      `(~'defn ~function-name
        ~@(remove nil? (gen-ndarray-function-arity op-name op-values))))))
 
-(def ndarray-gen-ns "(ns org.apache.clojure-mxnet.gen.ndarray)")
-
-(defn write-ndarray-ns-require-import [w]
-  (.write w "(in-ns 'org.apache.clojure-mxnet.ndarray)\n")
-  (.write w "(require '[org.apache.clojure-mxnet.util :as util])\n")
-  (.write w "(import '(org.apache.mxnet NDArray Shape))\n"))
+(def ndarray-gen-ns "(ns org.apache.clojure-mxnet.ndarray
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
+                            min repeat reverse set sort take to-array empty shuffle])
+  (:import (org.apache.mxnet NDArray Shape)))")
 
 
 (defn generate-ndarray-file []
-  (write-to-file all-ndarray-functions ndarray-gen-ns  write-ndarray-ns-require-import "src/org/apache/clojure_mxnet/gen/ndarray.clj"))
+  (write-to-file all-ndarray-functions ndarray-gen-ns  "src/org/apache/clojure_mxnet/gen/ndarray.clj"))
 
 (defn -main [& args]
   (do

@@ -151,6 +151,10 @@ To generate api docs, run `lein codox`. The html docs will be generated in the t
 
 _Note: There is an error thrown in the generated code due to some loading issues, but the docs are all still there._
 
+## Code Coverage
+
+To run the Code Coverage tool. Run `lein cloverage`.
+
 ## FAQ
 
 
