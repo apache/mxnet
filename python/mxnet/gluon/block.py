@@ -326,7 +326,11 @@ class Block(object):
             Path to file.
         """
         warnings.warn("save_params is deprecated. Please use save_parameters.")
-        self.collect_params().save(filename, strip_prefix=self.prefix)
+        try:
+            self.collect_params().save(filename, strip_prefix=self.prefix)
+        except ValueError as e:
+            raise ValueError('%s\nsave_params is deprecated. Using ' \
+                              'save_parameters may resolve this error.'%e.message)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False):
