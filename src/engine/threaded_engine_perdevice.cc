@@ -197,7 +197,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   /*! \brief number of concurrent thread each gpu worker uses */
   size_t gpu_worker_nthreads_;
   /*! \brief number of concurrent thread each gpu copy worker uses */
-  int gpu_copy_nthreads_;
+  size_t gpu_copy_nthreads_;
   // cpu worker
   common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > cpu_normal_workers_;
   // cpu priority worker
