@@ -182,7 +182,7 @@ class MXNetGraph(object):
             op = node["op"]
             name = node["name"]
             if verbose:
-                logging.info("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
+                logging.info("Converting idx: %d, op: %s, name: %s", idx, op, name)
 
             if op == "null" and name not in params:
                 # Handling graph input
@@ -240,7 +240,7 @@ class MXNetGraph(object):
                                     )
                                 )
                             if verbose:
-                                logging.info("Output node is: %s" % converted_node.name)
+                                logging.info("Output node is: %s", converted_node.name)
                     elif isinstance(converted_node, onnx_pb2.TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:

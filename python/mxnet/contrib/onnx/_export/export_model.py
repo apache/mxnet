@@ -85,7 +85,7 @@ def export_model(sym, params, input_shape, input_type=np.float32,
     with open(onnx_file_path, "wb") as file_handle:
         serialized = onnx_model.SerializeToString()
         file_handle.write(serialized)
-        logging.info("Input shape of the model %s " % input_shape)
+        logging.info("Input shape of the model %s ", input_shape)
         logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
 
     return onnx_file_path
