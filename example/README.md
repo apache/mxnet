@@ -1,6 +1,6 @@
 # MXNet Examples
 
-This page contains a curated list of awesome MXNet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning).
+This page contains a curated list of awesome MXNet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning). See also [Awesome-MXNet](https://github.com/chinakook/Awesome-MXNet) for a similar list.
 
   - [Contributing](#contributing)
   - [List of examples](#list-of-examples)
