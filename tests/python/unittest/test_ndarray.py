@@ -1334,6 +1334,13 @@ def test_l1norm(ctx=default_context()):
             assert arr1.shape == arr2.shape
             mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
 
+@with_seed()
+def test_ndarray_cpu_shared_ctx():
+    ctx = mx.Context('cpu_shared', 0)
+    res = mx.nd.zeros((1, 2, 3), ctx=ctx)
+    assert(res.context == ctx)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

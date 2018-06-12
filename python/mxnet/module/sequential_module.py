@@ -416,7 +416,7 @@ class SequentialModule(BaseModule):
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._modules[0].get_input_grads(merge_multi_context=merge_multi_context)
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
 
         Parameters
@@ -430,7 +430,7 @@ class SequentialModule(BaseModule):
         for meta, module in zip(self._metas, self._modules):
             if SequentialModule.META_TAKE_LABELS in meta and \
                     meta[SequentialModule.META_TAKE_LABELS]:
-                module.update_metric(eval_metric, labels)
+                module.update_metric(eval_metric, labels, pre_sliced)
 
     def install_monitor(self, mon):
         """Installs monitor on all executors."""
