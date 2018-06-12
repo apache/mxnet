@@ -505,7 +505,7 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  if(param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
+  if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
@@ -683,7 +683,7 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_size, 1);
   CHECK(out_size == 1 || out_size == 2);
   if (out_size > 1) {
-    if(param.ret_typ == topk_enum::kReturnValue) {
+    if (param.ret_typ == topk_enum::kReturnValue) {
       CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
         << "Failed to set the type of ret_indices.";
     } else {
