@@ -98,7 +98,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   TShape data_shape;
   /*! \brief random seed for augmentations */
   int seed_aug;
-  
+
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
     DMLC_DECLARE_FIELD(resize).set_default(-1)
@@ -188,7 +188,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
         .describe("Change size from ``[width, height]`` into "
                   "``[pad + width + pad, pad + height + pad]`` by padding pixes");
     DMLC_DECLARE_FIELD(seed_aug).set_default(-1)
-        .describe("Random seed for augmentations. Default -1 does not set random seed.");                  
+        .describe("Random seed for augmentations. Default -1 does not set random seed.");
   }
 };
 
@@ -250,8 +250,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   }
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
-    if (!seed_init_state && param_.seed_aug > -1)
-    {
+    if (!seed_init_state && param_.seed_aug > -1) {
       prnd->seed(param_.seed_aug);
       seed_init_state = true;
     }
