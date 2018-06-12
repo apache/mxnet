@@ -355,7 +355,8 @@ class Block(object):
                     "Parameter '%s' loaded from file '%s' is not present in ParameterDict, " \
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, filename, _brief_print_list(self._params.keys())))
-            params[name]._load_init(loaded[name], ctx)
+            if name in params:
+                params[name]._load_init(loaded[name], ctx)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
