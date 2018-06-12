@@ -905,7 +905,7 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
     }
   }
   if (!dispatched) {
-        dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
 }
@@ -992,7 +992,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  CHECK_LE(param.ord, 2) << "norm only supports ord=1 and ord=2";
+  CHECK(param.ord==1 || param.ord==2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
 
   TShape small;
