@@ -717,7 +717,7 @@ def test_order():
         assert_almost_equal(nd_ret_sort, gt)
 
         # test for argsort
-        for idtype in [np.int, np.float16, np.float32, np.float64]:
+        for idtype in [np.int32, np.float16, np.float32, np.float64]:
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True, dtype=idtype).asnumpy()
             gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
             assert_almost_equal(nd_ret_argsort, gt)
