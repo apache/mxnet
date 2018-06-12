@@ -18,6 +18,7 @@
 # coding: utf-8
 """ Module for translating ONNX operators into Mxnet operatoes"""
 # pylint: disable=unused-argument,protected-access
+import numpy as np
 from . import translation_utils
 from .... import symbol
 
@@ -457,20 +458,14 @@ def flatten(attrs, inputs, proto_obj):
     new_attrs = translation_utils._remove_attributes(attrs, ['axis'])
     return 'Flatten', new_attrs, inputs
 
-def topk(attrs, inputs, proto_obj):
-    """Returns the top k elements in an input array along the given axis."""
-    new_attrs = translation_utils._add_extra_attributes(attrs, {'ret_typ' : 'both'})
-    return 'topk', new_attrs, inputs
-
-def tile(attrs, inputs, proto_obj):
-    """Repeats the whole array multiple times."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'repeats' : 'reps'})
-    return 'tile', new_attrs, inputs
-
 def clip(attrs, inputs, proto_obj):
     """Clips (limits) the values in an array."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
                                                                'max' : 'a_max'})
+    if 'a_max' not in new_attrs:
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf})
+    if 'a_min' not in new_attrs:
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
     return 'clip', new_attrs, inputs
 
 #Powers
@@ -526,16 +521,18 @@ def reduce_prod(attrs, inputs, proto_obj):
 
 def reduce_log_sum(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by log sum value"""
+    keep_dims = True if 'keepdims' not in attrs else attrs.get('keepdims')
     sum_op = symbol.sum(inputs[0], axis=attrs.get('axes'),
-                        keepdims=attrs.get('keepdims'))
+                        keepdims=keep_dims)
     log_sym = symbol.log(sum_op)
     return log_sym, attrs, inputs
 
 def reduce_log_sum_exp(attrs, inputs, proto_obj):
     """Reduce the array along a given axis by log sum exp value"""
+    keep_dims = True if 'keepdims' not in attrs else attrs.get('keepdims')
     exp_op = symbol.exp(inputs[0])
     sum_op = symbol.sum(exp_op, axis=attrs.get('axes'),
-                        keepdims=attrs.get('keepdims'))
+                        keepdims=keep_dims)
     log_sym = symbol.log(sum_op)
     return log_sym, attrs, inputs
 
