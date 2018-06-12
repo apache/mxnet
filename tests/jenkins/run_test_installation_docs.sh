@@ -319,12 +319,10 @@ set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINE
 
 ubuntu_python_gpu_virtualenv()
 {
-    #$WORDTOREMOVE
     echo
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
     echo
-    #virtualenv_commands=${virtualenv_commands//$WORDTOREMOVE/}
     eval ${virtualenv_commands}
     echo "ubuntu_python_gpu_virtualenv: MXNet Installed Successfully"
 

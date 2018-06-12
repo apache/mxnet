@@ -19,7 +19,7 @@
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
 err = null
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 // pack libraries for later use
 def pack_lib(name, libs=mx_lib) {
