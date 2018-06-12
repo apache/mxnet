@@ -37,6 +37,8 @@ private[mxnet] object APIDocGenerator{
     val FILE_PATH = args(0)
     absClassGen(FILE_PATH, true)
     absClassGen(FILE_PATH, false)
+    oldAPIClassGen(FILE_PATH, true)
+    oldAPIClassGen(FILE_PATH, false)
   }
 
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
@@ -61,8 +63,35 @@ private[mxnet] object APIDocGenerator{
     pw.close()
   }
 
+  def oldAPIClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
+    // scalastyle:off
+    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
+      val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
+      if (isSymbol) {
+        val defBody = s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): org.apache.mxnet.Symbol"
+        s"$scalaDoc\n$defBody"
+      } else {
+        val defBodyWithKwargs = s"def ${absClassFunction.name}(kwargs: Map[String, Any] = null)(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
+        val defBody = s"def ${absClassFunction.name}(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
+        s"$scalaDoc\n$defBodyWithKwargs\n$scalaDoc\n$defBody"
+      }
+    })
+    val packageName = if (isSymbol) "SymbolBase" else "NDArrayBase"
+    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
+    val scalaStyle = "// scalastyle:off"
+    val packageDef = "package org.apache.mxnet"
+    val imports = "import org.apache.mxnet.annotation.Experimental"
+    val absClassDef = s"abstract class $packageName"
+    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
+    import java.io._
+    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
+    pw.write(finalStr)
+    pw.close()
+  }
+
   // Generate ScalaDoc type
-  def generateAPIDocFromBackend(func : absClassFunction) : String = {
+  def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
     val desc = func.desc.split("\n").map({ currStr =>
       s"  * $currStr"
     })
@@ -75,7 +104,11 @@ private[mxnet] object APIDocGenerator{
       s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
     val returnType = s"  * @return ${func.returnType}"
-    s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
+    if (withParam) {
+      s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
+    } else {
+      s"  /**\n${desc.mkString("\n")}\n$returnType\n  */"
+    }
   }
 
   def generateAPISignature(func : absClassFunction, isSymbol : Boolean) : String = {
