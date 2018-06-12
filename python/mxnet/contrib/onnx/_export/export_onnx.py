@@ -112,6 +112,8 @@ class MXNetGraph(object):
         shape : Shape
             Output shape
         """
+        # if label is not provided, MXNet adds label "softmax_label" by default
+        # while running load_checkpoint which is not actually a graph input. So ignoring it here
         data_names = [graph_input for graph_input in sym.list_inputs()
                       if graph_input not in arg_params and graph_input not in aux_params
                       and graph_input != 'softmax_label']
@@ -308,10 +310,12 @@ class MXNetGraph(object):
                     index_lookup.append(prev_index+len(converted))
                 else:
                     index_lookup.append(len(converted) - 1)
+            else:
+                logging.info("Operator converter function should always return a list")
 
         graph = helper.make_graph(
             onnx_processed_nodes,
-            "main",
+            "mxnet_converted_model",
             onnx_processed_inputs,
             onnx_processed_outputs
         )

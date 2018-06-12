@@ -27,6 +27,7 @@ import logging
 import numpy as np
 
 from ....base import string_types
+from .... import symbol
 from .export_onnx import MXNetGraph
 from .export_helper import load_module
 
@@ -70,14 +71,17 @@ def export_model(sym, params, input_shape, input_type=np.float32,
     # if input parameters are strings(file paths), load files and create symbol parameter objects
     if isinstance(sym, string_types) and isinstance(params, string_types):
         logging.info("Converting json and weight file to sym and params")
-        sym_obj, params_obj = load_module(sym, params, input_shape)
+        sym_obj, params_obj = load_module(sym, params)
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
                                                        verbose=verbose)
-    else:
+    elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
                                                        verbose=verbose)
+    else:
+        raise ValueError("Input sym and params should either be files or objects")
+
     # Create the model (ModelProto)
     onnx_model = helper.make_model(onnx_graph)
 
