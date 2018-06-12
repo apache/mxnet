@@ -82,7 +82,7 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
     ctx = default_ctx;
   }
   // Non-default context (pinned, shared) does not propagate
-  if (ctx.dev_mask() != ctx.dev_type) {
+  if (ctx.dev_mask() != ctx.dev_type && inputs.size() != 0U) {
     ctx = Context::Create(ctx.dev_mask(), ctx.dev_id);
   }
 #if !MXNET_USE_CUDA

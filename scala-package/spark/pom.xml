@@ -16,7 +16,44 @@
   <properties>
     <spark.version>1.6.3</spark.version>
   </properties>
-
+  <profiles>
+    <profile>
+      <id>osx-x86_64-cpu</id>
+      <properties>
+        <platform>osx-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-cpu</id>
+      <properties>
+        <platform>linux-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <properties>
+        <platform>linux-x86_64-gpu</platform>
+      </properties>
+    </profile>
+  </profiles>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
+        <configuration>
+          <argLine>
+            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
+            -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
+          </argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.scalastyle</groupId>
+        <artifactId>scalastyle-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
