@@ -58,6 +58,7 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
   int k;
   int ret_typ;
   bool is_ascend;
+  int dtype;
   DMLC_DECLARE_PARAMETER(TopKParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
     .describe("Axis along which to choose the top k indices."
@@ -107,6 +108,7 @@ struct SortParam : public dmlc::Parameter<SortParam> {
 struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
   dmlc::optional<int> axis;
   bool is_ascend;
+  int dtype;
   DMLC_DECLARE_PARAMETER(ArgSortParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
     .describe("Axis along which to sort the input tensor."
