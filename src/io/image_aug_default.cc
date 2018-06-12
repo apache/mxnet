@@ -317,13 +317,13 @@ class DefaultImageAugmenter : public ImageAugmenter {
             }
             if (!attemp) {
               // center crop
+              int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                        param_.data_shape[2],
+                                                        param_.data_shape[1], prnd);
               if (res.rows < param_.data_shape[1]) {
                 index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
                                                         static_cast<float>(res.rows) *
                                                         static_cast<float>(res.cols));
-                int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
-                                                          param_.data_shape[2],
-                                                          param_.data_shape[1], prnd);
                 cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]),
                            0, 0, interpolation_method);
               }
@@ -331,9 +331,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
                 index_t new_rows = static_cast<index_t>(static_cast<float>(param_.data_shape[2]) /
                                                         static_cast<float>(res.cols) *
                                                         static_cast<float>(res.rows));
-                int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
-                                                          param_.data_shape[2],
-                                                          param_.data_shape[1], prnd);
                 cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows),
                            0, 0, interpolation_method);
               }
@@ -437,13 +434,13 @@ class DefaultImageAugmenter : public ImageAugmenter {
       cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
                 , 0, 0, interpolation_method);
     } else if (!random_resized_crop_exec) {
+      int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
+                                                param_.data_shape[2],
+                                                param_.data_shape[1], prnd);
       if (res.rows < param_.data_shape[1]) {
         index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
                                                 static_cast<float>(res.rows) *
                                                 static_cast<float>(res.cols));
-        int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
-                                                  param_.data_shape[2],
-                                                  param_.data_shape[1], prnd);
         cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]),
                    0, 0, interpolation_method);
       }
@@ -451,9 +448,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
         index_t new_rows = static_cast<index_t>(static_cast<float>(param_.data_shape[2]) /
                                                 static_cast<float>(res.cols) *
                                                 static_cast<float>(res.rows));
-        int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
-                                                  param_.data_shape[2],
-                                                  param_.data_shape[1], prnd);
         cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows),
                    0, 0, interpolation_method);
       }
