@@ -28,7 +28,7 @@ Example applications or scripts should be submitted in this `example` folder.
 
 ### Tutorials
 
-If you have a tutorial idea for the website, download the [ Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
+If you have a tutorial idea for the website, download the [Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 #### Tutorial location
 
