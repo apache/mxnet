@@ -67,11 +67,20 @@ inline void* CPUDeviceStorage::Alloc(size_t size) {
   void* ptr;
 #if _MSC_VER
   ptr = _aligned_malloc(size, alignment_);
-  if (ptr == NULL) LOG(FATAL) << "Failed to allocate CPU Memory";
+  if (ptr == NULL)
 #else
   int ret = posix_memalign(&ptr, alignment_, size);
-  if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
+  if (ret != 0)
 #endif
+    LOG(FATAL)
+      << "Failed to allocate CPU Memory. The most likely cause is "
+      << "out-of-memory. Things you can try to resolve this include:\n"
+      << "    1. Reduce batch size.\n"
+      << "    2. If you are using Gluon, you need to synchronize at each "
+      << "iteration. Otherwise you will keep allocating memory without "
+      << "waiting for compute to finish. You can use .asnumpy() to synchronize. "
+      << "Normally, it's loss.asnumpy(). You can also add mx.nd.waitall() after "
+      << "each iteration, but this may hurt performance.";
   return ptr;
 }
 
