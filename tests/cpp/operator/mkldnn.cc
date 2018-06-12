@@ -899,6 +899,7 @@ void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         outputs[0]->WaitToRead();
+        outputs[1]->WaitToRead();
         verify_fn(inputs, outputs);
       }
     }
