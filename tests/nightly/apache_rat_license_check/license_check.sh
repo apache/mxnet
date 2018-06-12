@@ -20,17 +20,17 @@
 
 #mvn and svn are installed in the docker container via the nghtly test script
 
-echo "download RAT"
-svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/ #>/dev/null
+#echo "download RAT"
+#svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/ #>/dev/null
 
-echo "cd into directory"
-cd trunk
+#echo "cd into directory"
+#cd trunk
 
-echo "mvn install"
-mvn -Dmaven.test.skip=true install #>/dev/null
+#echo "mvn install"
+#mvn -Dmaven.test.skip=true install #>/dev/null
 
 echo "build success, cd into target"
-cd apache-rat/target
+cd trunk/apache-rat/target
 
 
 echo "-------Run Apache RAT check on MXNet-------"
