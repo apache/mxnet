@@ -791,9 +791,9 @@ void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc ver
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
-        inputs[0] = &out_arr.arr; // output grads
-        inputs[1] = &out_arr.arr; // input
-        outputs[0] = &in_arr.arr;
+        inputs[0] = &in_arr.arr; // output grads
+        inputs[1] = &in_arr.arr; // input
+        outputs[0] = &out_arr.arr;
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -889,11 +889,11 @@ void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
                                                                InitDefaultArray);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
-        inputs[0] = &out_arr.arr;
-        inputs[1] = &out_arr.arr;
-        inputs[2] = &out_arr.arr;
-        NDArray tmp1 = in_arr1.arr.Copy(in_arr1.arr.ctx());
-        NDArray tmp2 = in_arr1.arr.Copy(in_arr1.arr.ctx());
+        inputs[0] = &in_arr1.arr;
+        inputs[1] = &in_arr1.arr;
+        inputs[2] = &in_arr1.arr;
+        NDArray tmp1 = out_arr.arr.Copy(in_arr1.arr.ctx());
+        NDArray tmp2 = out_arr.arr.Copy(in_arr1.arr.ctx());
         outputs[0] = &tmp1;
         outputs[1] = &tmp2;
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
@@ -904,27 +904,27 @@ void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
     }
   }
 
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(InitDefaultArray);
-    for (auto arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-
-      NDArray orig = arr.arr.Copy(arr.arr.ctx());
-      req[0] = kWriteInplace;
-      inputs[0] = &arr.arr;
-      inputs[1] = &arr.arr;
-      outputs[0] = &arr.arr;
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      std::vector<NDArray*> orig_inputs(2);
-      orig_inputs[0] = &orig;
-      orig_inputs[1] = &orig;
-      verify_fn({&orig, &orig, &orig}, outputs);
-    }
-  }
+//  for (auto dispatch : dispatches) {
+//    in_arrs = GetTestInputArrays(InitDefaultArray);
+//    for (auto arr : in_arrs) {
+//      // If the array is a view, we shouldn't write data to it.
+//      if (arr.arr.IsView())
+//        continue;
+//
+//      NDArray orig = arr.arr.Copy(arr.arr.ctx());
+//      req[0] = kWriteInplace;
+//      inputs[0] = &arr.arr;
+//      inputs[1] = &arr.arr;
+//      outputs[0] = &arr.arr;
+//      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+//                                  dispatch, mxnet::OpStatePtr());
+//      arr.arr.WaitToRead();
+//      std::vector<NDArray*> orig_inputs(2);
+//      orig_inputs[0] = &orig;
+//      orig_inputs[1] = &orig;
+//      verify_fn({&orig, &orig, &orig}, outputs);
+//    }
+//  }
 }
 
 TEST(IMPERATIVE, UnaryOp) {
