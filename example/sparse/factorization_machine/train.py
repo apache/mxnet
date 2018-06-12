@@ -58,6 +58,7 @@ parser.add_argument('--log-interval', type=int, default=100,
 parser.add_argument('--kvstore', type=str, default='local',
                     help='what kvstore to use', choices=["dist_async", "local"])
 
+
 if __name__ == '__main__':
     import logging
     head = '%(asctime)-15s %(message)s'
@@ -74,6 +75,16 @@ if __name__ == '__main__':
     log_interval = args.log_interval
     assert(args.data_train is not None and args.data_test is not None), \
           "dataset for training or test is missing"
+
+    def batch_row_ids(data_batch):
+        """ Generate row ids based on the current mini-batch """
+        idx = data_batch.data[0].indices
+        return {'w': idx, 'v': idx}
+
+    def all_row_ids(data_batch):
+        """ Generate row ids for all rows """
+        all_rows = mx.nd.arange(0, num_features, dtype='int64')
+        return {'w': all_rows, 'v': all_rows}
 
     # create kvstore
     kv = mx.kvstore.create(kvstore)
@@ -102,12 +113,6 @@ if __name__ == '__main__':
     metric = mx.metric.create(['log_loss'])
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
-    # get the sparse weight parameter
-    w_index = mod._exec_group.param_names.index('w')
-    w_param = mod._exec_group.param_arrays[w_index]
-    v_index = mod._exec_group.param_names.index('v')
-    v_param = mod._exec_group.param_arrays[v_index]
-
     logging.info('Training started ...')
     train_iter = iter(train_data)
     eval_iter = iter(eval_data)
@@ -118,9 +123,7 @@ if __name__ == '__main__':
             nbatch += 1
             # manually pull sparse weights from kvstore so that _square_sum
             # only computes the rows necessary
-            row_ids = batch.data[0].indices
-            kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
-            kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
+            mod.prepare(batch, sparse_row_id_fn=batch_row_ids)
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -131,8 +134,7 @@ if __name__ == '__main__':
             speedometer(speedometer_param)
 
         # pull all updated rows before validation
-        kv.row_sparse_pull('w', w_param, row_ids=[row_ids], priority=-w_index)
-        kv.row_sparse_pull('v', v_param, row_ids=[row_ids], priority=-v_index)
+        mod.prepare(None, all_row_ids)
         # evaluate metric on validation dataset
         score = mod.score(eval_iter, ['log_loss'])
         logging.info("epoch %d, eval log loss = %s" % (epoch, score[0][1]))

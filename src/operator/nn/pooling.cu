@@ -66,6 +66,9 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
         case pool_enum::kSumPooling:
           LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
           break;
+        case pool_enum::kLpPooling:
+          LOG(WARNING) << "Lp pooling is not supported by cudnn, MXNet lp pooling is applied.";
+          break;
       }
     });
   }
@@ -74,7 +77,8 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type) {
+        || pool_enum::kSumPooling == param.pool_type
+        || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<gpu, DType> op;
       op.Init(param);
       op.Forward(ctx, inputs[0], req[0], outputs[0]);
@@ -119,6 +123,9 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
         case pool_enum::kSumPooling:
           LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
           break;
+        case pool_enum::kLpPooling:
+          LOG(WARNING) << "Lp pooling is not supported by cudnn, MXNet Lp pooling is applied.";
+          break;
       }
     });
   }
@@ -127,7 +134,8 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
-        || pool_enum::kSumPooling == param.pool_type) {
+        || pool_enum::kSumPooling == param.pool_type
+        || pool_enum::kLpPooling == param.pool_type) {
       PoolingOp<gpu, DType> op;
       op.Init(param);
       op.Backward(ctx, inputs[ograd_idx], inputs[in_data_idx],

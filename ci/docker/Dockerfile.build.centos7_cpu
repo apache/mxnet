@@ -20,16 +20,18 @@
 
 FROM centos:7
 
-ARG USER_ID=0
-
 WORKDIR /work/deps
 
 COPY install/centos7_core.sh /work/
 RUN /work/centos7_core.sh
+COPY install/centos7_ccache.sh /work/
+RUN /work/centos7_ccache.sh
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
+
+ARG USER_ID=0
 COPY install/centos7_adduser.sh /work/
 RUN /work/centos7_adduser.sh 
 

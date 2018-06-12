@@ -18,8 +18,18 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
+FROM ubuntu:16.04 as ccachebuilder
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+COPY install/ubuntu_ccache.sh /work/
+RUN /work/ubuntu_ccache.sh
+
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
+
+# extract ccache binary into latest context
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 # The cross-compiling emulator
 RUN apt-get update && apt-get install -y \
@@ -84,13 +94,6 @@ ENV CC /usr/arm-linux-androideabi/bin/arm-linux-androideabi-clang
 ENV CXX /usr/arm-linux-androideabi/bin/arm-linux-androideabi-clang++
 ENV BUILD_OPTS "USE_BLAS=openblas USE_SSE=0 DMLC_LOG_STACK_TRACE=0 USE_OPENCV=0 USE_LAPACK=0"
 
-# Build MXNet
-ADD mxnet mxnet
-ADD arm.crosscompile.android.mk /work/mxnet/make/config.mk
-RUN cd mxnet && \
-    make -j$(nproc) $BUILD_OPTS
+WORKDIR /work/mxnet
 
-WORKDIR /work/build/
-RUN cp /work/mxnet/lib/* .
-
-# TODO: Bring this into the new format
+COPY runtime_functions.sh /work/

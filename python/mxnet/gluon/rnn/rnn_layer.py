@@ -78,6 +78,10 @@ class _RNNLayer(Block):
                                     allow_deferred_init=True))
             ni = nh * self._dir
 
+        for param_list in [self.i2h_weight, self.h2h_weight, self.i2h_bias, self.h2h_bias]:
+            for p in param_list:
+                self._reg_params[p.name] = p
+
         self._unfused = self._unfuse()
 
     def __repr__(self):
@@ -185,7 +189,8 @@ class _RNNLayer(Block):
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
-        if inputs.context.device_type == 'gpu' or self._mode == 'lstm':
+        if inputs.context.device_type == 'gpu' or \
+           self._mode in ['lstm', 'gru'] and not self._dropout:
             out = self._forward_kernel(inputs, states)
         else:
             out = self._forward(inputs, states)

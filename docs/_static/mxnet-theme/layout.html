@@ -102,11 +102,12 @@
        must come *after* these tags. #}
     {{ metatags }}
     {%- block htmltitle %}
-    {%- if pagename != 'index' %}
-
+    {%- if pagename != 'index' and 'no title' not in title%}
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
-    {%- else %}
+    {%- elif pagename == 'index' %}
     <title>MXNet: A Scalable Deep Learning Framework</title>
+    {%- else %}
+    <title>{{ pagename.split('/')[0]|capitalize }}{{ titlesuffix }}</title>
     {%- endif %}
     {%- endblock %}
     {{ css() }}

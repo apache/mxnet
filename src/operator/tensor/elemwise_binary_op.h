@@ -165,12 +165,11 @@ class ElemwiseBinaryOp : public OpBase {
     typename xpu,
     typename LOP,
     typename ROP,
-    typename DType,
     bool in0_ok_dense = false,
     bool in1_ok_dense = false,
     bool in2_ok_dense = false,
     typename BackupCompute>
-  static inline void BackwardUseInEx_(const nnvm::NodeAttrs &attrs,
+  static inline void RspRspOpBackward(const nnvm::NodeAttrs &attrs,
                                       const OpContext &ctx,
                                       const std::vector<NDArray> &inputs,
                                       const std::vector<OpReqType> &req,
@@ -197,6 +196,33 @@ class ElemwiseBinaryOp : public OpBase {
       RspRspOp<op::mshadow_op::mul>(
         s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
         false, false, true, false);
+    }
+  }
+
+  template<typename xpu, typename LOP, typename ROP>
+  static inline void DnsCsrCsrOpBackward(const nnvm::NodeAttrs &attrs,
+                                         const OpContext &ctx,
+                                         const std::vector<NDArray> &inputs,
+                                         const std::vector<OpReqType> &req,
+                                         const std::vector<NDArray> &outputs) {
+    const bool supported_ops = std::is_same<mshadow_op::right, LOP>::value &&
+                                std::is_same<mshadow_op::left, ROP>::value;
+    CHECK(supported_ops)
+      << "Only backward for mul is supported (LOP should be right, ROP should be left)";
+    const NDArray& out_grad = inputs[0];
+    const NDArray& lhs_in = inputs[1];
+    const NDArray& rhs_in = inputs[2];
+    const NDArray& lhs_grad = outputs[0];
+    const NDArray& rhs_grad = outputs[1];
+    const bool reverse = (outputs[0].storage_type() == kCSRStorage);
+    if (reverse) {
+      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, rhs_in, req[0], lhs_grad, false);
+      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), lhs_in.data()}, {req[1]},
+                                    {rhs_grad.data()});
+    } else {
+      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, lhs_in, req[1], rhs_grad, false);
+      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), rhs_in.data()}, {req[0]},
+                                    {lhs_grad.data()});
     }
   }
 
@@ -232,44 +258,54 @@ class ElemwiseBinaryOp : public OpBase {
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename OP>
   static void CsrCsrOp(mshadow::Stream<cpu> *s,
-                              const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const NDArray &lhs,
-                              const NDArray &rhs,
-                              OpReqType req,
-                              const NDArray &output);
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       OpReqType req,
+                       const NDArray &output);
 
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
   template<typename OP>
   static void CsrCsrOp(mshadow::Stream<gpu> *s,
-                              const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const NDArray &lhs,
-                              const NDArray &rhs,
-                              OpReqType req,
-                              const NDArray &output);
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       OpReqType req,
+                       const NDArray &output);
 
   /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
   template<typename xpu, typename OP>
   static void DnsCsrDnsOp(mshadow::Stream<xpu> *s,
-                                 const nnvm::NodeAttrs &attrs,
-                                 const OpContext &ctx,
-                                 const NDArray &lhs,
-                                 const NDArray &rhs,
-                                 OpReqType req,
-                                 const NDArray &output,
-                                 const bool reverse);
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
+
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename xpu, typename OP>
+  static void DnsCsrCsrOp(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
 
   /*! \brief DNS -op- RSP binary operator for non-canonical NDArray */
   template<typename xpu, typename OP>
   static void DnsRspDnsOp(mshadow::Stream<xpu> *s,
-                                 const nnvm::NodeAttrs &attrs,
-                                 const OpContext &ctx,
-                                 const NDArray &lhs,
-                                 const NDArray &rhs,
-                                 OpReqType req,
-                                 const NDArray &output,
-                                 const bool reverse);
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
 
  public:
   /*!
@@ -335,6 +371,14 @@ class ElemwiseBinaryOp : public OpBase {
         // dns, rsp -> rsp
         dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                          dispatch_mode, dispatch_ex);
+    }
+    if (!dispatched &&
+        ((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+         (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage))) {
+        // csr, dns -> csr
+        // dns, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, DispatchMode::kFComputeEx);
     }
     if (!dispatched) {
       dispatched = dispatch_fallback(out_attrs, dispatch_mode);
@@ -540,6 +584,14 @@ class ElemwiseBinaryOp : public OpBase {
             req[0], outputs[0], lhs_may_be_dense, rhs_may_be_dense, false, false);
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
       ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    } else if (((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage)) &&
+                out_stype == kCSRStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const NDArray& csr = (lhs_stype == kCSRStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kCSRStorage);
+
+      DnsCsrCsrOp<xpu, OP>(attrs, ctx, dns, csr, req[0], outputs[0], reverse);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
@@ -635,16 +687,21 @@ class ElemwiseBinaryOp : public OpBase {
     using namespace common;
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
+    const auto out_grad_stype = inputs[0].storage_type();
     const auto lhs_grad_stype = outputs[0].storage_type();
     const auto rhs_grad_stype = outputs[1].storage_type();
     if (ContainsOnlyStorage(inputs, kRowSparseStorage) &&
         (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
       // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-      MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-        BackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
-          attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-      });
+      RspRspOpBackward<xpu, LOP, ROP, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+        attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
+    }
+    if (((lhs_grad_stype == kDefaultStorage && rhs_grad_stype == kCSRStorage) ||
+         (lhs_grad_stype == kCSRStorage && rhs_grad_stype == kDefaultStorage)) &&
+        out_grad_stype == kDefaultStorage) {
+      // dns, csr, dns -> [csr, dns] / csr, dns, dns -> [dns, csr]
+      DnsCsrCsrOpBackward<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
     }
   }
 };  // class ElemwiseBinaryOp
