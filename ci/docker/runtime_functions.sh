@@ -24,8 +24,8 @@ set -ex
 
 clean_repo() {
     set -ex
-    git clean -xfd
-    git submodule foreach --recursive git clean -xfd
+    git clean -ffdx
+    git submodule foreach --recursive git clean -ffdx
     git reset --hard
     git submodule foreach --recursive git reset --hard
     git submodule update --init --recursive
@@ -219,6 +219,7 @@ build_centos7_cpu() {
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -233,6 +234,7 @@ build_centos7_mkldnn() {
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -250,6 +252,7 @@ build_centos7_gpu() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1 \
         USE_DIST_KVSTORE=1 \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -266,6 +269,7 @@ build_ubuntu_cpu_openblas() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -282,6 +286,7 @@ build_ubuntu_cpu_clang39() {
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -298,6 +303,9 @@ build_ubuntu_cpu_clang50() {
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
+        CXX=clang++-5.0               \
+        CC=clang-5.0                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -314,6 +322,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -330,6 +339,7 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -341,6 +351,7 @@ build_ubuntu_cpu_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -359,6 +370,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -374,6 +386,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CUDNN=1                   \
         USE_CPP_PACKAGE=1             \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -401,6 +414,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
         -DUSE_MKLDNN=1             \
+        -DUSE_SIGNAL_HANDLER=ON    \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
@@ -422,6 +436,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_MKLML_MKL=0          \
         -DUSE_MKLDNN=0             \
         -DUSE_DIST_KVSTORE=1       \
+        -DUSE_SIGNAL_HANDLER=ON    \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
