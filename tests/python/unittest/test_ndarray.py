@@ -1310,8 +1310,6 @@ def test_l1norm(ctx=default_context()):
     mx_arr = mx.nd.array(np_arr, ctx=ctx)
     arr1 = np.sum(abs(np_arr), keepdims=False)
     arr2 = mx.nd.norm(mx_arr, ord=1, keepdims=False)
-    print(arr1)
-    print(arr2.asnumpy())
     mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
 
     for i in range(4):

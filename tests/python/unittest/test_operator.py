@@ -2880,32 +2880,30 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
                                numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 @with_seed()
-def test_norml1():
+def test_l1_norm():
     def npy_l1norm(data, axis):
         np.sum(abs(np_arr), axis=i, keepdims=True)
     ctx = default_context()
     data = mx.symbol.Variable('data')
-
+    in_data_dim = test_utils.random_sample([4,5,6], 1)[0]
+    in_shape = test_utils.rand_shape_nd(in_data_dim)
     for dtype in [np.float16, np.float32, np.float64]:
-        dtype = np.float32
-        in_data = np.random.uniform(-1, 1, (4,4,4,4)).astype(dtype)
-        for i in range(4):
+        in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
+        for i in range(in_data_dim):
             for keep_dims in [True, False]:
                 norm_sym = mx.symbol.norm(data=data, ord=1, axis=i, keepdims=keep_dims)
-                exe = norm_sym.simple_bind(ctx, data=(4,4,4,4))
-                exe.arg_dict['data'][:] = in_data
                 npy_out = np.sum(abs(in_data), axis=i, keepdims=keep_dims)
-                out = exe.forward()[0]
-                assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
+                check_symbolic_forward(norm_sym, [in_data], [npy_out],
+                                       rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                       atol=1e-5, ctx=ctx)
                 # check gradient
                 check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
-                if i < 3:
+                if i < in_data_dim-1:
                     norm_sym = mx.symbol.norm(data=data, ord=1, axis=(i, i+1), keepdims=keep_dims)
-                    exe = norm_sym.simple_bind(ctx, data=(4,4,4,4))
-                    exe.arg_dict['data'][:] = in_data
                     npy_out = np.sum(abs(in_data), axis=(i, i+1), keepdims=keep_dims)
-                    out = exe.forward()[0]
-                    assert_almost_equal(out, npy_out, rtol=1e-2, atol=1e-5)
+                    check_symbolic_forward(norm_sym, [in_data], [npy_out],
+                                       rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                       atol=1e-5, ctx=ctx)
                     # check gradient
                     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 

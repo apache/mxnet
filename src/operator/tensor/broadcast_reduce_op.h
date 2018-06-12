@@ -880,9 +880,7 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(0);
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   bool dispatched = false;
-  if (param.ord == 1) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-  } else if (param.ord == 2) {
+  if (param.ord == 2) {
     // l2 norm on a particular axis only supports cpu
     const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
     const auto dispatch_ex =
@@ -905,9 +903,9 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
       dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                        dispatch_ex);
     }
-    if (!dispatched) {
-      dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-    }
+  }
+  if (!dispatched) {
+        dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
 }
