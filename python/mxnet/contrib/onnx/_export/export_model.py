@@ -31,7 +31,7 @@ from .export_onnx import MXNetGraph
 from .export_helper import load_module
 
 
-def export_model(model, weights, input_shape, input_type=np.float32,
+def export_model(sym, params, input_shape, input_type=np.float32,
                  onnx_file_path='model.onnx', verbose=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
@@ -39,10 +39,10 @@ def export_model(model, weights, input_shape, input_type=np.float32,
 
     Parameters
     ----------
-    model : str or symbol object
+    sym : str or symbol object
         Path to the json file or Symbol object
-    weights : str or symbol object
-        Path to the params file or Params object. (Including both arg_params and aux_params)
+    params : str or symbol object
+        Path to the params file or params dictionary. (Including both arg_params and aux_params)
     input_shape : List of tuple
         Input shape of the model e.g [(1,3,224,224)]
     input_type :
@@ -68,14 +68,14 @@ def export_model(model, weights, input_shape, input_type=np.float32,
 
     data_format = np.dtype(input_type)
     # if input parameters are strings(file paths), load files and create symbol parameter objects
-    if isinstance(model, string_types) and isinstance(weights, string_types):
-        logging.info("Converting json and params file to sym and weights")
-        sym, params = load_module(model, weights, input_shape)
-        onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
+    if isinstance(sym, string_types) and isinstance(params, string_types):
+        logging.info("Converting json and weight file to sym and params")
+        sym_obj, params_obj = load_module(sym, params, input_shape)
+        onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
                                                        verbose=verbose)
     else:
-        onnx_graph = converter.create_onnx_graph_proto(model, weights, input_shape,
+        onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
                                                        verbose=verbose)
     # Create the model (ModelProto)
@@ -85,7 +85,7 @@ def export_model(model, weights, input_shape, input_type=np.float32,
     with open(onnx_file_path, "wb") as file_handle:
         serialized = onnx_model.SerializeToString()
         file_handle.write(serialized)
-        logging.info("Input shape of the model", input_shape)
+        logging.info("Input shape of the model %s " % input_shape)
         logging.info("Exported ONNX file %s saved to disk", onnx_file_path)
 
     return onnx_file_path
