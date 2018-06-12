@@ -24,6 +24,12 @@ set -ex
 pushd .
 
 apt update
+apt install -y \
+    libxslt1-dev \
+    docbook-xsl \
+    xsltproc \
+    libxml2-utils
+
 apt install -y --no-install-recommends \
     autoconf \
     asciidoc \
@@ -45,7 +51,6 @@ cd ccache
 make -j$(nproc)
 make install
 
-cd /work/deps
 rm -rf /work/deps/ccache
 
 popd
