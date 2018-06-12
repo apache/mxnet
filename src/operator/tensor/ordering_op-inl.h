@@ -79,6 +79,16 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
     DMLC_DECLARE_FIELD(is_ascend).set_default(false)
       .describe("Whether to choose k largest or k smallest elements."
                 " Top K largest elements will be chosen if set to false.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .set_default(mshadow::kFloat32)
+    .describe("DType of the output indices when ret_typ is \"indices\" or \"both\". "
+              "An error will be raised if the selected data type cannot precisely represent the "
+              "indices.");
   }
 };
 
@@ -103,6 +113,16 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
               " If not given, the flattened array is used. Default is -1.");
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
       .describe("Whether to sort in ascending or descending order.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("uint8", mshadow::kUint8)
+    .add_enum("int32", mshadow::kInt32)
+    .add_enum("float16", mshadow::kFloat16)
+    .add_enum("float32", mshadow::kFloat32)
+    .add_enum("float64", mshadow::kFloat64)
+    .set_default(mshadow::kFloat32)
+    .describe("DType of the output indices. It is only valid when ret_typ is \"indices\" or"
+              " \"both\". An error will be raised if the selected data type cannot precisely "
+              "represent the indices.");
   }
 };
 
@@ -324,10 +344,12 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
    * \param k the K elements to keep
    * \param param the topk parameters
    * \tparam xpu the device type.
+   * \tparam DType type of the output value/mask.
+   * \tparam IDType type of the output indices.
    */
-template<typename xpu, typename DType>
-void TopKImpl(RunContext ctx,
-              Resource resource,
+template<typename xpu, typename DType, typename IDType>
+void TopKImpl(const RunContext &ctx,
+              const Resource &resource,
               const std::vector<OpReqType>& req,
               const TBlob& src,
               const std::vector<TBlob>& ret,
@@ -349,6 +371,10 @@ void TopKImpl(RunContext ctx,
   TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
+  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDType>())
+    << "'IDType' does not have a sufficient precision to represent the indices of the input array. "
+    << "The total element_num is " << element_num << ", but the selected IDType can only represent "
+    << mxnet::common::MaxIntegerValue<IDType>() << " elements";
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   size_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
@@ -426,46 +452,46 @@ void TopKImpl(RunContext ctx,
   } else if (param.ret_typ == topk_enum::kReturnIndices) {
     indices = F<mshadow_op::mod>(indices, element_num);
     if (do_transpose) {
-      Tensor<xpu, 3, int> ret_indices = ret[0].FlatTo3D<xpu, int>(axis, axis, s);
-      Assign(ret_indices, req[0], transpose(
+      Tensor<xpu, 3, IDType> ret_indices = ret[0].FlatTo3D<xpu, IDType>(axis, axis, s);
+      Assign(ret_indices, req[0], tcast<IDType>(transpose(
                       slice<2>(inplace_reshape(indices,
                                                Shape3(ret_indices.shape_[0],
                                                       ret_indices.shape_[2],
                                                       element_num)),
                                0, k),
-                      Shape3(0, 2, 1)));
+                      Shape3(0, 2, 1))));
     } else {
       Tensor<xpu, 2, int> ret_indices =
         ret[0].get_with_shape<xpu, 2, int>(Shape2(batch_size, k), s);
-      Assign(ret_indices, req[0], slice<1>(
-                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+      Assign(ret_indices, req[0], tcast<IDType>(slice<1>(
+                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k)));
     }
   } else {
     indices = F<mshadow_op::mod>(indices, element_num);
     if (do_transpose) {
       Tensor<xpu, 3, DType> ret_value = ret[0].FlatTo3D<xpu, DType>(axis, axis, s);
-      Tensor<xpu, 3, int> ret_indices = ret[1].FlatTo3D<xpu, int>(axis, axis, s);
+      Tensor<xpu, 3, IDType> ret_indices = ret[1].FlatTo3D<xpu, IDType>(axis, axis, s);
       Assign(ret_value, req[0], transpose(
                    slice<2>(inplace_reshape(sorted_dat,
                                     Shape3(ret_value.shape_[0], ret_value.shape_[2], element_num)),
                             0, k),
                    Shape3(0, 2, 1)));
-      Assign(ret_indices, req[1], transpose(
+      Assign(ret_indices, req[1], tcast<IDType>(transpose(
                       slice<2>(inplace_reshape(indices,
                                                Shape3(ret_indices.shape_[0],
                                                       ret_indices.shape_[2],
                                                       element_num)),
                                0, k),
-                      Shape3(0, 2, 1)));
+                      Shape3(0, 2, 1))));
     } else {
       Tensor<xpu, 2, DType> ret_value =
         ret[0].get_with_shape<xpu, 2, DType>(Shape2(batch_size, k), s);
-      Tensor<xpu, 2, int> ret_indices =
-        ret[1].get_with_shape<xpu, 2, int>(Shape2(batch_size, k), s);
+      Tensor<xpu, 2, IDType> ret_indices =
+        ret[1].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
       Assign(ret_value, req[0],
              slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k));
-      Assign(ret_indices, req[1], slice<1>(
-                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
+      Assign(ret_indices, req[1], tcast<IDType>(slice<1>(
+                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k)));
     }
   }
 }
@@ -477,9 +503,17 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
-  });
+  if(param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
+    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+        TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
+      })
+    });
+  } else {
+    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      TopKImpl<xpu, DType, int>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
+    });
+  }
 }
 
 template<typename xpu>
@@ -495,7 +529,7 @@ void Sort(const nnvm::NodeAttrs& attrs,
   topk_param.k = 0;
   topk_param.ret_typ = topk_enum::kReturnValue;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
+    TopKImpl<xpu, DType, int>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
   });
 }
 
@@ -510,23 +544,26 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
   topk_param.axis = param.axis;
   topk_param.is_ascend = param.is_ascend;
   topk_param.k = 0;
+  topk_param.dtype = param.dtype;
   topk_param.ret_typ = topk_enum::kReturnIndices;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
+    MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+      TopKImpl<xpu, DType, IDType>(ctx.run_ctx,
+                                   ctx.requested[0], req, inputs[0], outputs, topk_param);
+    });
   });
 }
 
-template<typename xpu>
-void TopKBackward_(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
+template<typename xpu, typename DType, typename IDType>
+void TopKBackwardImpl(const OpContext &ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs,
+                      const TopKParam& param) {
   CHECK_NE(req[0], kWriteInplace);
   using namespace mshadow;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.run_ctx.get_stream<xpu>();
-  const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   CHECK(param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth);
   int batch_size, element_num;  // number of batches + the size of each batch
   int axis = 0;
@@ -536,6 +573,10 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   TShape target_shape;
   ParseTopKParam(outputs[0].shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
+  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDType>())
+    << "'IDType' does not have a sufficient precision to represent the indices of the input array. "
+    << "The total element_num is " << element_num << ", but the selected IDType can only represent "
+    << mxnet::common::MaxIntegerValue<IDType>() << " elements";
   Tensor<xpu, 1, int> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(batch_size * k * 2 + batch_size), s);
   Tensor<xpu, 1, int> sel_indices =
@@ -545,49 +586,70 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, int> dummy_index =
     Tensor<xpu, 1, int>(workspace.dptr_ + batch_size * k + batch_size,
                            Shape1(batch_size * k), s);
-  MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> out_grad =
-      inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
-    Tensor<xpu, 2, DType> in_grad =
-      outputs[0].get_with_shape<xpu, 2, DType>(Shape2(outputs[0].shape_.Size(), 1), s);
-    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0, element_num, kWriteTo,
-                                             batch_shift.dptr_);
-    if (do_transpose) {
-      Tensor<xpu, 1, int> indices = inputs[2].FlatTo1D<xpu, int>(s);
-      TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
-      sel_indices = reshape(transpose(
-                              broadcast_to(inplace_reshape(batch_shift,
-                                                           Shape3(src_shape[0], src_shape[2], 1)),
-                                           TShape(Shape3(src_shape[0], src_shape[2], k))),
-                              Shape3(0, 2, 1)),
-                            Shape1(batch_size * k));
-      sel_indices += indices;
-      sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
-                                      Shape3(0, 2, 1));
-    } else {
-      Tensor<xpu, 2, int> indices =
-        inputs[2].get_with_shape<xpu, 2, int>(Shape2(batch_size, k), s);
-      sel_indices = reshape(indices +
-                            broadcast_to(inplace_reshape(batch_shift, Shape2(batch_size, 1)),
-                                         TShape(Shape2(batch_size, k))),
-                            Shape1(batch_size * k));
-    }
-    CHECK_EQ(sel_indices.CheckContiguous(), true);
-    if (kWriteTo == req[0]) {
-      in_grad = scalar<DType>(0);
-      IndexFill(in_grad, sel_indices, out_grad);
-    } else if (kAddTo == req[0]) {
-      // TODO(sxjscience) We can use AddTakeGrad in the future.
-      // However, the current implementation of AddTakeGrad is not so efficient.
-      mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0, 1, kWriteTo,
-                                               dummy_index.dptr_);
-      mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
-    } else if (kNullOp == req[0]) {
-      return;
-    } else {
-      LOG(FATAL) << "Not Implemented!";
-    }
-  });
+
+  Tensor<xpu, 2, DType> out_grad =
+    inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
+  Tensor<xpu, 2, DType> in_grad =
+    outputs[0].get_with_shape<xpu, 2, DType>(Shape2(outputs[0].shape_.Size(), 1), s);
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0, element_num, kWriteTo,
+                                           batch_shift.dptr_);
+  if (do_transpose) {
+    Tensor<xpu, 1, IDType> indices = inputs[2].FlatTo1D<xpu, IDType>(s);
+    TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
+    sel_indices = reshape(transpose(
+                            broadcast_to(inplace_reshape(batch_shift,
+                                                         Shape3(src_shape[0], src_shape[2], 1)),
+                                         TShape(Shape3(src_shape[0], src_shape[2], k))),
+                            Shape3(0, 2, 1)),
+                          Shape1(batch_size * k));
+    sel_indices += tcast<int>(indices);
+    sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
+                                    Shape3(0, 2, 1));
+  } else {
+    Tensor<xpu, 2, IDType> indices =
+      inputs[2].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
+    sel_indices = reshape(tcast<int>(indices) +
+                          broadcast_to(inplace_reshape(batch_shift, Shape2(batch_size, 1)),
+                                       TShape(Shape2(batch_size, k))),
+                          Shape1(batch_size * k));
+  }
+  CHECK_EQ(sel_indices.CheckContiguous(), true);
+  if (kWriteTo == req[0]) {
+    in_grad = scalar<DType>(0);
+    IndexFill(in_grad, sel_indices, out_grad);
+  } else if (kAddTo == req[0]) {
+    // TODO(sxjscience) We can use AddTakeGrad in the future.
+    // However, the current implementation of AddTakeGrad is not so efficient.
+    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0, 1, kWriteTo,
+                                             dummy_index.dptr_);
+    mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
+  } else if (kNullOp == req[0]) {
+    return;
+  } else {
+    LOG(FATAL) << "Not Implemented!";
+  }
+}
+
+template<typename xpu>
+void TopKBackward_(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
+  if (param.ret_typ == topk_enum::kReturnBoth) {
+    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+        TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
+      });
+    });
+  } else if (param.ret_typ == topk_enum::kReturnValue) {
+    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      TopKBackwardImpl<xpu, DType, int>(ctx, inputs, req, outputs, param);
+    });
+  } else {
+    LOG(FATAL) << "Not Implemented";
+  }
 }
 
 inline uint32_t TopKNumOutputs(const NodeAttrs& attrs) {
@@ -619,12 +681,17 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_size, 1);
   CHECK(out_size == 1 || out_size == 2);
   if (out_size > 1) {
-    CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
-            << "Failed to set the type of ret_indices to int32.";
+    if(param.ret_typ == topk_enum::kReturnValue) {
+      CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
+        << "Failed to set the type of ret_indices.";
+    } else {
+      CHECK(type_assign(&(*out_attrs)[1], param.dtype))
+        << "Failed to set the type of ret_indices.";
+    }
   }
   if (param.ret_typ == topk_enum::kReturnIndices) {
-    CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32))
-            << "Failed to set the type of ret_indices to int32.";
+    CHECK(type_assign(&(*out_attrs)[0], param.dtype))
+            << "Failed to set the type of ret_indices.";
   } else {
     CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]="
                                                    << (*in_attrs)[0];
@@ -712,7 +779,8 @@ inline bool SortShape(const nnvm::NodeAttrs& attrs,
 inline bool ArgSortType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
-  CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt32))
+  const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
+  CHECK(type_assign(&(*out_attrs)[0], param.dtype))
           << "Failed to set the type of ret_indices to int32.";
   return true;
 }
