@@ -42,7 +42,7 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
     Process("wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci" +
       "/mnist/mnist.zip " + "-P " + tempDirPath + "/mnist/ -q") !
 
-    Process("unzip" + tempDirPath + "/mnist/mnist.zip -d "
+    Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
       + tempDirPath + "/mnist/") !
 
     var context = Context.cpu()
