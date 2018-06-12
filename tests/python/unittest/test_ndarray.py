@@ -717,13 +717,14 @@ def test_order():
         assert_almost_equal(nd_ret_sort, gt)
 
         # test for argsort
-        nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True).asnumpy()
-        gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
-        assert_almost_equal(nd_ret_argsort, gt)
-        nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False).asnumpy()
-        gt = gt_topk(a_npy, axis=None, ret_typ="indices",
-                     k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
-        assert_almost_equal(nd_ret_argsort, gt)
+        for idtype in [np.int, np.float16, np.float32, np.float64]:
+            nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True, dtype=idtype).asnumpy()
+            gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
+            assert_almost_equal(nd_ret_argsort, gt)
+            nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False, dtype=idtype).asnumpy()
+            gt = gt_topk(a_npy, axis=None, ret_typ="indices",
+                         k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
+            assert_almost_equal(nd_ret_argsort, gt)
 
     # test topk with a big shape
     a = mx.nd.arange(0, 54686454, step=1, repeat=1, dtype=np.int32)
