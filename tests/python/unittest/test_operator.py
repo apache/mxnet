@@ -5702,6 +5702,26 @@ def test_softmax():
     check_softmax_grad(default_context())
     check_smoothed_softmax_grad(default_context())
 
+def test_variance():
+  def f(x):
+    if len(x.shape) == 1:
+      return np.var(x, keepdims=True)
+    else:
+      return np.var(x)
+
+  for ndim in range(1, 6):
+    # check forward
+    shape = rand_shape_nd(ndim, 5)
+    data = rand_ndarray(shape=shape, stype='default')
+    data_np = data.asnumpy()
+    expected = f(data_np)
+    output = mx.nd.variance(data)
+    assert_almost_equal(output.asnumpy(), expected, rtol=0, atol=1e-6)
+
+    # check backward
+    data = mx.sym.Variable('data')
+    var_sym = mx.sym.variance(data=data)
+    check_numeric_gradient(var_sym, [data_np], rtol=0, atol=1e-3)
 
 @with_seed()
 def test_slice():

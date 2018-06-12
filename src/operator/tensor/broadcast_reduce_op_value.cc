@@ -346,7 +346,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
   [](const NodeAttrs& attrs) { return 1; })
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_var"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_var"})
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -356,14 +356,9 @@ Examples::
 .add_arguments(VarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_var)
-.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<VarParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
 .set_attr<FCompute>("FCompute<cpu>", VarGradCompute<cpu>);
 
 }  // namespace op
