@@ -361,5 +361,41 @@ NNVM_REGISTER_OP(_backward_var)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", VarGradCompute<cpu>);
 
+NNVM_REGISTER_OP(std)
+.describe(R"code(Computes the standard deviation on an NDArray.
+
+This operator computes the standard deviation on an NDArray with the specified
+axis. By default, it computes the standard deviation on the entire array.
+
+Examples::
+
+  x = [[1, 2],
+       [3, 4]]
+
+  std(x) = [1.118]
+
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(3)
+.set_attr_parser(ParamParser<VarParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", StdShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 3>)
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs) { return 1; })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_std"})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", StdCompute<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(VarParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_std)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<VarParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", StdGradCompute<cpu>);
+
 }  // namespace op
 }  // namespace mxnet

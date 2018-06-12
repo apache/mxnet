@@ -317,6 +317,20 @@ inline bool VarShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool StdShape(const nnvm::NodeAttrs& attrs,
+                     std::vector<TShape>* in_attrs,
+                     std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 3U);
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  const TShape oshape = ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                            param.keepdims, false);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, oshape);
+  return true;
+}
+
 inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                std::vector<TShape> *in_attrs,
                                std::vector<TShape> *out_attrs) {
@@ -834,6 +848,56 @@ void VarBackwardImpl(const OpContext& ctx,
   });
 }
 
+template<typename xpu, typename OP1, typename OP2>
+void StdBackwardImpl(const OpContext& ctx,
+                     const TShape& small,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  TShape src_shape, dst_shape;
+  BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (dst_shape.ndim() == 2) {
+      Tensor<xpu, 2, DType> igrad =
+        outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+      Tensor<xpu, 2, DType> ograd =
+        inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      Tensor<xpu, 2, DType> data =
+        inputs[3].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+      Tensor<xpu, 2, DType> hidden_mean =
+        inputs[5].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      Tensor<xpu, 2, DType> hidden_var =
+        inputs[6].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+        broadcast_to(ograd, src_shape)
+          * F<OP1>(F<OP2>(data, broadcast_to(hidden_mean, src_shape)),
+                   broadcast_to(hidden_var, src_shape)));
+      igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+    } else {
+      const int ndim = MXNET_SPECIAL_MAX_NDIM;
+      Tensor<xpu, ndim, DType> igrad =
+        outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+      Tensor<xpu, ndim, DType> ograd =
+        inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      Tensor<xpu, ndim, DType> data =
+        inputs[3].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+      Tensor<xpu, ndim, DType> hidden_mean =
+        inputs[5].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      Tensor<xpu, ndim, DType> hidden_var =
+        inputs[6].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+      ASSIGN_DISPATCH(igrad, req[0],
+        broadcast_to(ograd, src_shape)
+          * F<OP1>(F<OP2>(data, broadcast_to(hidden_mean, src_shape)),
+                   broadcast_to(hidden_var, src_shape)));
+      igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+    }
+  });
+}
+
 // works when shape inference of output is given
 template<typename xpu, typename OP, bool normalize = false>
 void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
@@ -1121,6 +1185,58 @@ void VarCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template <int req>
+struct std_forward {
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* output2,
+                                  const DType* output0, const DType* output1) {
+    KERNEL_ASSIGN(output2[i], req, output0[i] - output1[i] * output1[i]);
+  }
+};
+
+template <typename xpu>
+void StdCompute(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 3U);
+  CHECK_EQ(req.size(), 3U);
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  if (req[0] == kNullOp) return;
+
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
+  }
+  // Compute mean of squared elements (E[X^2])
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, true, mshadow_op::square, 0>(
+    ctx, inputs, req, outputs, small);
+  // Compute mean of elements (E[X])
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, true, mshadow_op::identity, 1>(
+    ctx, inputs, req, outputs, small);
+  // Compute var = E[X^2] - E[X]^2
+  using namespace mxnet_op;
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<std_forward<req_type>, xpu>::Launch(
+        s, outputs[2].Size(), outputs[2].dptr<DType>(),
+        outputs[0].dptr<DType>(), outputs[1].dptr<DType>());
+    });
+  });
+  // Compute std = sqrt(var)
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<op_with_req<mshadow_op::square_root, req_type>, xpu>::Launch(
+        s, outputs[0].Size(), outputs[0].dptr<DType>(), outputs[2].dptr<DType>());
+    });
+  });
+}
+
 template<typename xpu>
 void VarGradCompute(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -1139,6 +1255,34 @@ void VarGradCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
   }
   VarBackwardImpl<xpu, var_backward>(ctx, small, inputs, req, outputs);
+}
+
+struct std_backward {
+  template <typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a / math::sqrt(b);
+  }
+};
+
+template<typename xpu>
+void StdGradCompute(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 7U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  const VarParam& param = nnvm::get<VarParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
+  }
+  StdBackwardImpl<xpu, std_backward, mshadow_op::minus>(
+    ctx, small, inputs, req, outputs);
 }
 
 template<typename xpu>

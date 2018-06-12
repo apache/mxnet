@@ -113,5 +113,11 @@ NNVM_REGISTER_OP(variance)
 NNVM_REGISTER_OP(_backward_var)
 .set_attr<FCompute>("FCompute<gpu>", VarGradCompute<gpu>);
 
+NNVM_REGISTER_OP(std)
+.set_attr<FCompute>("FCompute<gpu>", StdCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_std)
+.set_attr<FCompute>("FCompute<gpu>", StdGradCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

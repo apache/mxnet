@@ -5723,6 +5723,27 @@ def test_variance():
     var_sym = mx.sym.variance(data=data)
     check_numeric_gradient(var_sym, [data_np], rtol=0, atol=1e-3)
 
+def test_std():
+  def f(x):
+    if len(x.shape) == 1:
+      return np.std(x, keepdims=True)
+    else:
+      return np.std(x)
+
+  for ndim in range(1, 6):
+    # check forward
+    shape = rand_shape_nd(ndim, 5)
+    data = rand_ndarray(shape=shape, stype='default')
+    data_np = data.asnumpy()
+    expected = f(data_np)
+    output = mx.nd.std(data)
+    assert_almost_equal(output.asnumpy(), expected, rtol=0, atol=1e-6)
+
+    # check backward
+    data = mx.sym.Variable('data')
+    std_sym = mx.sym.std(data=data)
+    check_numeric_gradient(std_sym, [data_np], rtol=0, atol=1e-3)
+
 @with_seed()
 def test_slice():
     def test_slice_forward_backward(a, index):
