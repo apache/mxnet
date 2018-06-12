@@ -10,7 +10,7 @@ Parameters of any Gluon model can be saved using the `save_params` and `load_par
 
 **2. Save/load model parameters AND architecture**
 
-The Model architecture of `Hybrid` models stays static and don't change during execution. Therefore both model parameters AND architecture can be saved and loaded using `export`, `load_checkpoint` and `load` methods.
+The Model architecture of `Hybrid` models stays static and don't change during execution. Therefore both model parameters AND architecture can be saved and loaded using `export`, `imports` methods.
 
 Let's look at the above methods in more detail. Let's start by importing the modules we'll need.
 
