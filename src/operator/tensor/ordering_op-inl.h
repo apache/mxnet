@@ -463,8 +463,8 @@ void TopKImpl(const RunContext &ctx,
                                0, k),
                       Shape3(0, 2, 1))));
     } else {
-      Tensor<xpu, 2, int> ret_indices =
-        ret[0].get_with_shape<xpu, 2, int>(Shape2(batch_size, k), s);
+      Tensor<xpu, 2, IDType> ret_indices =
+        ret[0].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
       Assign(ret_indices, req[0], tcast<IDType>(slice<1>(
                       inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k)));
     }
@@ -604,7 +604,7 @@ void TopKBackwardImpl(const OpContext &ctx,
                                          TShape(Shape3(src_shape[0], src_shape[2], k))),
                             Shape3(0, 2, 1)),
                           Shape1(batch_size * k));
-    sel_indices = sel_indices + tcast<int>(indices);
+    sel_indices += tcast<int>(indices);
     sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
                                     Shape3(0, 2, 1));
   } else {
