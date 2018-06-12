@@ -211,7 +211,7 @@ class MXNetGraph(object):
             ONNX graph
         """
         try:
-            from onnx import (checker, helper, onnx_pb2)
+            from onnx import (checker, helper, NodeProto, ValueInfoProto, TensorProto)
             from onnx.helper import make_tensor_value_info
         except ImportError:
             raise ImportError("Onnx and protobuf need to be installed. "
@@ -270,9 +270,9 @@ class MXNetGraph(object):
 
             if isinstance(converted, list):
                 for converted_node in converted:
-                    if isinstance(converted_node, onnx_pb2.ValueInfoProto):
+                    if isinstance(converted_node, ValueInfoProto):
                         onnx_processed_inputs.append(converted_node)
-                    elif isinstance(converted_node, onnx_pb2.NodeProto):
+                    elif isinstance(converted_node, NodeProto):
                         if idx < (len(mx_graph) - 1):
                             onnx_processed_nodes.append(converted_node)
                         else:
@@ -295,7 +295,7 @@ class MXNetGraph(object):
                                 )
                             if verbose:
                                 logging.info("Output node is: %s", converted_node.name)
-                    elif isinstance(converted_node, onnx_pb2.TensorProto):
+                    elif isinstance(converted_node, TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:
                         raise ValueError("node is of an unrecognized type: %s" % type(node))
