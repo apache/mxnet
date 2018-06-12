@@ -33,25 +33,28 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[MNISTExampleSuite])
 
   test("Example CI: Test MNIST Training") {
-    logger.info("Downloading mnist model")
+    // This test is CPU only
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      logger.info("CPU test only, skipped...")
+    } else {
+      logger.info("Downloading mnist model")
+      val tempDirPath = System.getProperty("java.io.tmpdir")
+      val modelDirPath = tempDirPath + File.separator + "mnist/"
+      logger.info("tempDirPath: %s".format(tempDirPath))
+      Process("wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci" +
+        "/mnist/mnist.zip " + "-P " + tempDirPath + "/mnist/ -q") !
 
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    val modelDirPath = tempDirPath + File.separator + "mnist/"
-    logger.info("tempDirPath: %s".format(tempDirPath))
+      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+        + tempDirPath + "/mnist/") !
 
-    Process("wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci" +
-      "/mnist/mnist.zip " + "-P " + tempDirPath + "/mnist/ -q") !
+      var context = Context.cpu()
 
-    Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-      + tempDirPath + "/mnist/") !
+      val output = TrainMnist.test(modelDirPath)
+      Process("rm -rf " + modelDirPath) !
 
-    var context = Context.cpu()
-
-    val output = TrainMnist.test(modelDirPath)
-
-    Process("rm -rf " + modelDirPath) !
-
-    assert(output >= 0.95f)
+      assert(output >= 0.95f)
+    }
 
   }
 }
