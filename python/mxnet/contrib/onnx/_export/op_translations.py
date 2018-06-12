@@ -368,7 +368,10 @@ def convert_activation(node, **kwargs):
     # mxnet_name.title()
     act_types = {
         "tanh": "Tanh",
-        "relu": "Relu"
+        "relu": "Relu",
+        "sigmoid": "Sigmoid",
+        "softrelu": "Softplus",
+        "softsign": "Softsign"
     }
 
     act_name = act_types.get(act_type)
