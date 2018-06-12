@@ -51,7 +51,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
+import logging
 import json
 import numpy as np
 
@@ -154,7 +154,7 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, log=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False):
         """Convert MXNet graph to ONNX graph"""
         try:
             from onnx import (checker, helper, onnx_pb2)
@@ -181,8 +181,8 @@ class MXNetGraph(object):
         for idx, node in enumerate(mx_graph):
             op = node["op"]
             name = node["name"]
-            if log:
-                print("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
+            if verbose:
+                logging.info("Converting idx: %d, op: %s, name: %s" % (idx, op, name))
 
             if op == "null" and name not in params:
                 # Handling graph input
@@ -239,8 +239,8 @@ class MXNetGraph(object):
                                         shape=output_shape
                                     )
                                 )
-                            if log:
-                                print("Output node is: %s" % converted_node.name)
+                            if verbose:
+                                logging.info("Output node is: %s" % converted_node.name)
                     elif isinstance(converted_node, onnx_pb2.TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:

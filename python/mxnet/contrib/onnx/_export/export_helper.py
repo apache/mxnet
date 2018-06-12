@@ -30,8 +30,8 @@ def load_module(sym_filepath, params_filepath, input_shape):
         Path to the json file
     params_path : str
         Path to the params file
-    input_shape :
-        Input shape of the model e.g (1,3,224,224)
+    input_shape : List of tuple
+        Input shape of the model e.g [(1,3,224,224)]
 
     Returns
     -------
@@ -55,9 +55,19 @@ def load_module(sym_filepath, params_filepath, input_shape):
             raise
 
         sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
-        trained_model = mx.mod.Module(symbol=sym, label_names=None)
-        trained_model.bind(data_shapes=[('data', input_shape[0])],
-                           label_shapes=None, for_training=False)
+
+        # To fetch the data names of the input to the model we list the inputs of the symbol graph
+        # and exclude the argument and auxiliary parameters from the list
+        data_names = [graph_input for graph_input in sym.list_inputs()
+                      if graph_input not in arg_params and graph_input not in aux_params]
+
+        # Creating data_shapes list having data name and data shape tuples
+        data_shapes = []
+        for idx, input_name in enumerate(data_names):
+            data_shapes.append((input_name, input_shape[idx]))
+
+        trained_model = mx.mod.Module(symbol=sym, data_names=data_names, label_names=None)
+        trained_model.bind(data_shapes=data_shapes, label_shapes=None, for_training=False)
 
         # Merging arg and aux parameters
         params = {}
