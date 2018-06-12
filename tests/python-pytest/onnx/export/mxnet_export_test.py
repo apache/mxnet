@@ -37,7 +37,8 @@ from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
-
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 URLS = {
     'bvlc_googlenet':
         'https://s3.amazonaws.com/onnx-mxnet/model-zoo/bvlc_googlenet.tar.gz',
@@ -108,7 +109,9 @@ def test_models(model_name, input_shape, output_shape):
     params.update(arg_params)
     params.update(aux_params)
 
-    onnx_file = model_path.rsplit('/', 1)[0] + "/exported_"+model_name+".onnx"
+    dir_path = os.path.dirname(model_path)
+    new_model_name = "exported_" + model_name + ".onnx"
+    onnx_file = os.path.join(dir_path, new_model_name)
 
     logging.info("Translating converted model from mxnet to ONNX")
     converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
@@ -153,7 +156,9 @@ def test_model_accuracy(model_name, input_shape):
     params.update(arg_params)
     params.update(aux_params)
 
-    onnx_file = model_path.rsplit('/', 1)[0] + "/exported_"+model_name+".onnx"
+    dir_path = os.path.dirname(model_path)
+    new_model_name = "exported_" + model_name + ".onnx"
+    onnx_file = os.path.join(dir_path, new_model_name)
 
     logging.info("Translating converted model from mxnet to ONNX")
     converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32,
