@@ -45,7 +45,7 @@ def export_model(sym, params, input_shape, input_type=np.float32,
         Path to the params file or params dictionary. (Including both arg_params and aux_params)
     input_shape : List of tuple
         Input shape of the model e.g [(1,3,224,224)]
-    input_type :
+    input_type : data type
         Input data type e.g. np.float32
     onnx_file_path : str
         Path where to save the generated onnx file

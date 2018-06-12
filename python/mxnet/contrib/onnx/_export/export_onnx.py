@@ -74,7 +74,7 @@ class MXNetGraph(object):
 
     @staticmethod
     def register(op_name):
-        """Register operator"""
+        """Register operators"""
         def wrapper(func):
             """Helper function to map functions"""
             MXNetGraph.registry_[op_name] = func
@@ -88,12 +88,30 @@ class MXNetGraph(object):
         op = str(node["op"])
         if op not in MXNetGraph.registry_:
             raise AttributeError("No conversion function registered for op type %s yet." % op)
-        convert_fun = MXNetGraph.registry_[op]
-        return convert_fun(node, **kwargs)
+        convert_func = MXNetGraph.registry_[op]
+        return convert_func(node, **kwargs)
 
     @staticmethod
     def forward_pass(inputs, sym, arg_params, aux_params):
-        """ Do a forward pass based on the sym and params"""
+        """Do a forward pass based on the sym and params to get the shape
+        of the output using dummy data
+
+        Parameters
+        ----------
+        inputs   : json string
+
+        sym : :class:`~mxnet.symbol.Symbol`
+            MXNet symbol object
+        arg_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+        aux_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+
+        Returns
+        -------
+        shape : Shape
+            Output shape
+        """
         data_names = [graph_input for graph_input in sym.list_inputs()
                       if graph_input not in arg_params and graph_input not in aux_params
                       and graph_input != 'softmax_label']
@@ -127,7 +145,22 @@ class MXNetGraph(object):
 
     @staticmethod
     def split_params(sym, params):
-        """splitting params into args and aux params"""
+        """Helper function to split params dictionary into args and aux params
+
+        Parameters
+        ----------
+        sym : :class:`~mxnet.symbol.Symbol`
+            MXNet symbol object
+        params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+
+        Returns
+        -------
+        arg_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+        aux_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+        """
         arg_params = {}
         aux_params = {}
         for args in sym.list_arguments():
@@ -142,7 +175,7 @@ class MXNetGraph(object):
     @staticmethod
     def infer_output_shape(sym, params, in_shape):
         """Infer output shape by doing a forward pass using dummy inputs """
-        #create dummy input
+        # create dummy input
         inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
         arg, aux = MXNetGraph.split_params(sym, params)
         return MXNetGraph.forward_pass(inputs, sym, arg, aux)
@@ -155,7 +188,26 @@ class MXNetGraph(object):
                      for k, v in weights_dict.items()])
 
     def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False):
-        """Convert MXNet graph to ONNX graph"""
+        """Convert MXNet graph to ONNX graph
+
+        Parameters
+        ----------
+        sym : :class:`~mxnet.symbol.Symbol`
+            MXNet symbol object
+        params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
+            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+        in_shape : List of tuple
+            Input shape of the model e.g [(1,3,224,224)]
+        in_type : data type
+            Input data type e.g. np.float32
+        verbose : Boolean
+            If true will print logs of the model conversion
+
+        Returns
+        -------
+        graph : GraphProto
+            ONNX graph
+        """
         try:
             from onnx import (checker, helper, onnx_pb2)
             from onnx.helper import make_tensor_value_info
