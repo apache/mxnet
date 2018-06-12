@@ -87,7 +87,7 @@ class Adam(val learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float =
     var resdGrad = grad * rescaleGrad
     if (clipGradient != 0f) {
       val oldResdGrad = resdGrad
-      resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      resdGrad = NDArray.api.clip(resdGrad, -clipGradient, clipGradient)
       oldResdGrad.dispose()
     }
 
@@ -96,7 +96,7 @@ class Adam(val learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float =
     val varianceT = (beta2 * variance + (1.0f - beta2) * resdGrad * resdGrad)
       .disposeDepsExcept(variance, resdGrad)
 
-    val step = (learningRate * meanT / (NDArray.sqrt(varianceT) + epsilon))
+    val step = (learningRate * meanT / (NDArray.api.sqrt(varianceT) + epsilon))
       .disposeDepsExcept(meanT, varianceT)
 
     val wd = this.getWd(index, this.wd)

@@ -53,7 +53,7 @@ class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
     var resdGrad = grad * this.rescaleGrad
     if (clipGradient != 0f) {
       val oldResdGrad = resdGrad
-      resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      resdGrad = NDArray.api.clip(resdGrad, -clipGradient, clipGradient)
       oldResdGrad.dispose()
     }
 
@@ -68,7 +68,7 @@ class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
     gUpdated.dispose()
 
     val deltaUpdated =
-      (this.gamma2 * delta - lr * (resdGrad / NDArray.sqrt(n - g * g + 1e-4f) + wd * weight))
+      (this.gamma2 * delta - lr * (resdGrad / NDArray.api.sqrt(n - g * g + 1e-4f) + wd * weight))
       .disposeDepsExcept(delta, resdGrad, n, g, weight)
     delta.set(deltaUpdated)
     deltaUpdated.dispose()

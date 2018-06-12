@@ -108,9 +108,9 @@ class Accuracy extends EvalMetric("accuracy") {
 
     for ((pred, label) <- preds zip labels) {
       val predLabel = if (pred.shape == label.shape) {
-        NDArray.argmax(Map("axis" -> 1, "keepdims" -> true))(pred)
+        NDArray.api.argmax(pred, Some(1), Some(true))
       } else {
-        NDArray.argmax_channel(pred)
+        NDArray.api.argmax_channel(pred)
       }
       require(label.shape == predLabel.shape,
         s"label ${label.shape} and prediction ${predLabel.shape}" +
@@ -172,7 +172,7 @@ class F1 extends EvalMetric("f1") {
       "labels and predictions should have the same length.")
 
     for ((pred, label) <- preds zip labels) {
-      val predLabel = NDArray.argmax_channel(pred)
+      val predLabel = NDArray.api.argmax_channel(pred)
       require(label.shape == predLabel.shape,
         s"label ${label.shape} and prediction ${predLabel.shape}" +
         s"should have the same length.")
@@ -232,7 +232,7 @@ class Perplexity(ignoreLabel: Option[Int] = None, axis: Int = -1) extends EvalMe
       require(label.size == pred.size / pred.shape.toArray.reverse.head,
         s"shape mismatch: ${label.shape} vs. ${pred.shape}")
       val l = label.asInContext(pred.context).asType(DType.Int32).reshape(Shape(label.size))
-      val p = NDArray.pick(Map("axis" -> this.axis))(pred, label)
+      val p = NDArray.api.pick(pred, label, Some(this.axis))
       probs += p.head
     }
 

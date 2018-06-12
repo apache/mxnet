@@ -51,7 +51,7 @@ class AdaGrad(val learningRate: Float = 0.05f, rescaleGradient: Float = 1.0f,
     history += gradSquared
     gradSquared.dispose()
 
-    val newWeight = (-lr * (resdGrad / NDArray.sqrt(history + this.epsilon) + this.wd * weight))
+    val newWeight = (-lr * (resdGrad / NDArray.api.sqrt(history + this.epsilon) + this.wd * weight))
       .disposeDepsExcept(resdGrad, history, weight)
     weight += newWeight
     newWeight.dispose()

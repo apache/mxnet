@@ -49,7 +49,7 @@ class AdaDelta(rho: Float = 0.05f, rescaleGradient: Float = 1.0f,
 
     if (clipGradient != 0f) {
       val oldResdGrad = resdGrad
-      resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      resdGrad = NDArray.api.clip(resdGrad, -clipGradient, clipGradient)
       oldResdGrad.dispose()
     }
 
@@ -59,8 +59,8 @@ class AdaDelta(rho: Float = 0.05f, rescaleGradient: Float = 1.0f,
       resdGrad * resdGrad).disposeDepsExcept(accG, resdGrad)
     accG.set(newAccG)
     val currentDelta = (
-      NDArray.sqrt(accDelta + this.epsilon) /
-      NDArray.sqrt(accG + this.epsilon) * resdGrad).disposeDepsExcept(accDelta, accG, resdGrad)
+      NDArray.api.sqrt(accDelta + this.epsilon) /
+      NDArray.api.sqrt(accG + this.epsilon) * resdGrad).disposeDepsExcept(accDelta, accG, resdGrad)
     val newAccDelta = (this.rho * accDelta +
       (1.0f - this.rho) * currentDelta * currentDelta).disposeDepsExcept(accDelta, currentDelta)
     accDelta.set(newAccDelta)
