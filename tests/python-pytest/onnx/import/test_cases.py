@@ -58,6 +58,16 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_min',
+    'test_logical_and',
+    'test_logical_xor',
+    'test_logical_not',
+    'test_logical_or',
+    'test_clip',
+    'test_softsign',
+    'test_reduce_l2',
+    'test_reduce_log_sum',
+    'test_reduce_log_sum_exp',
+    'test_reduce_sum_square'
     #pytorch operator tests
     'test_operator_exp',
     'test_operator_maxpool',
