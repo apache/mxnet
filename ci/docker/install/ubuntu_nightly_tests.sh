@@ -31,4 +31,5 @@ apt-get install -y subversion maven -y #>/dev/null
 svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/ #>/dev/null
 cd trunk
 mvn -Dmaven.test.skip=true install #>/dev/null
+cp -r trunk/ /work/mxnet
 cd ..
