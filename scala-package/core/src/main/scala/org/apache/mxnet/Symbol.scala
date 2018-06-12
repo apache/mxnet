@@ -823,7 +823,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
 }
 
 @AddSymbolFunctions(false)
-object Symbol {
+object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()

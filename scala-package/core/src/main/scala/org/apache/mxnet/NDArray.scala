@@ -31,7 +31,7 @@ import scala.ref.WeakReference
  * NDArray API of mxnet
  */
 @AddNDArrayFunctions(false)
-object NDArray {
+object NDArray extends NDArrayBase {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
@@ -64,15 +64,16 @@ object NDArray {
     val function = functions(funcName)
     val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
-    args.foreach {
-      case arr: NDArray =>
-        ndArgs.append(arr)
-      case arrFunRet: NDArrayFuncReturn =>
-        arrFunRet.arr.foreach(ndArgs.append(_))
-      case arg =>
-        posArgs.append(arg.toString)
-    }
 
+    args.foreach {
+        case arr: NDArray =>
+          ndArgs.append(arr)
+        case arrFunRet: NDArrayFuncReturn =>
+          arrFunRet.arr.foreach(ndArgs.append(_))
+        case arg =>
+          posArgs.append(arg.toString)
+      }
+    
     require(posArgs.length <= function.arguments.length,
       s"len(posArgs) = ${posArgs.length}, should be less or equal to len(arguments) " +
       s"= ${function.arguments.length}")
@@ -80,6 +81,7 @@ object NDArray {
       (Option(kwargs).getOrElse(Map.empty[String, String])
         ++ function.arguments.slice(0, posArgs.length).zip(posArgs) - "out"
       ).map { case (k, v) => k -> v.toString }
+
 
     val (oriOutputs, outputVars) =
       if (kwargs != null && kwargs.contains("out")) {
@@ -535,6 +537,10 @@ object NDArray {
     val handleRef = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
     new NDArray(handleRef.value)
+  }
+
+  private def _crop_assign(kwargs: Map[String, Any] = null)(args: Any*) : NDArrayFuncReturn = {
+    genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
   // TODO: imdecode
