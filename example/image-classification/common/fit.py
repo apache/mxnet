@@ -169,8 +169,13 @@ def fit(args, network, data_loader, **kwargs):
     if args.test_io:
         tic = time.time()
         for i, batch in enumerate(train):
-            for j in batch.data:
-                j.wait_to_read()
+            if isinstance(batch, list):
+                for b in batch:
+                    for j in b.data:
+                        j.wait_to_read()
+            else:
+                for j in batch.data:
+                    j.wait_to_read()
             if (i + 1) % args.disp_batches == 0:
                 logging.info('Batch [%d]\tSpeed: %.2f samples/sec', i,
                              args.disp_batches * args.batch_size / (time.time() - tic))
