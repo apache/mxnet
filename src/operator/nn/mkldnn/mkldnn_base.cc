@@ -330,10 +330,10 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
     // for inplace, we already converted & copied input above.
     if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
-    } else if (req[0] == kAddTo && output.IsMKLDNNData()) {
-      NDArray temp = outputs[0].Reorder2Default();
+    } else if (req[i] == kAddTo && output.IsMKLDNNData()) {
+      NDArray temp = outputs[i].Reorder2Default();
       temp_src.emplace_back(temp);
-      temp_dst.emplace_back(outputs[0]);
+      temp_dst.emplace_back(outputs[i]);
       output = temp;
     }
     CHECK(output.IsDefaultData());
@@ -341,8 +341,10 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
   }
 
   fn(attrs, ctx, in_blobs, req, out_blobs);
-  if (req[0] == kAddTo && outputs[0].IsMKLDNNData())
-    mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
+  for (size_t i = 0; i < out_blobs.size(); i++) {
+    if (req[i] == kAddTo && outputs[i].IsMKLDNNData())
+      mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
+  }
 }
 
 template<typename DType>
