@@ -2881,8 +2881,6 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
 
 @with_seed()
 def test_l1_norm():
-    def npy_l1norm(data, axis):
-        np.sum(abs(np_arr), axis=i, keepdims=True)
     ctx = default_context()
     data = mx.symbol.Variable('data')
     in_data_dim = test_utils.random_sample([4,5,6], 1)[0]
