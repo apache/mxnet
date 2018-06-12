@@ -316,7 +316,7 @@ class Block(object):
         and should be avoided.
         If your model is hybridizable and you want to export a serialized version of the
         structure of the model as well as its parameters please refer to
-        `HybridBlock.export()`. Such model can then be loaded back in any language binding
+        :py:meth:`HybridBlock.export`. Such model can then be loaded back in any language binding
         or even in Gluon using a `SymbolBlock`.
         Refer to this tutorial for a complete overview of saving/loading models with
         MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
