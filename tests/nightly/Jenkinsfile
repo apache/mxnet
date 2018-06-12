@@ -64,7 +64,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-RATTest') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_rat_check"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_rat_check"
         }
       }
     },
@@ -72,7 +72,7 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/nt-compilationTest') {
           init_git()
-          sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh nightly_test_compilation_warning"
+          sh "ci/build.py --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_compilation_warning"
         }
       }
     },
@@ -104,7 +104,7 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/nt-pipTest') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh nightly_test_pip_test"
+          //sh "ci/build.py --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_pip_test"
         }
       }
     },
@@ -112,7 +112,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation1') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas"
         }
       }
     },
@@ -120,7 +120,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation2') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MIN=1"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MIN=1"
         }
       }
     },
@@ -128,7 +128,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation3') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1"
         }
       }
     },
@@ -136,7 +136,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation4') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1"
         }
       }
     },
@@ -144,7 +144,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation5') {
           init_git()
-          sh "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0"
+          sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0"
         }
       }
     },
