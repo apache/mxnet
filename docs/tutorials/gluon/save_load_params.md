@@ -61,7 +61,7 @@ def build_lenet(net):
         net.add(gluon.nn.Dense(512, activation="relu"))
         # Second fully connected layer with as many neurons as the number of classes
         net.add(gluon.nn.Dense(num_outputs))
-        
+
         return net
 
 # Train a given model using MNIST data
@@ -243,15 +243,7 @@ One of the main reasons to serialize model architecture into a JSON file is to l
 Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and used inside Python frontend using `mx.model.load_checkpoint` and `gluon.nn.SymbolBlock`. To demonstrate that, let's load the network we serialized above.
 
 ```python
-# Load the network architecture and parameters
-sym = mx.sym.load('lenet-symbol.json')
-# Create a Gluon Block using the loaded network architecture.
-# 'inputs' parameter specifies the name of the symbol in the computation graph
-# that should be treated as input. 'data' is the default name used for input when
-# a model architecture is saved to a file.
-deserialized_net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data'))
-# Load the parameters
-deserialized_net.collect_params().load('lenet-0001.params', ctx=ctx)
+deserialized_net = gluon.nn.SymbolBlock.imports("lenet-symbol.json", ['data'], "lenet-0001.params")
 ```
 
 `deserialized_net` now contains the network we deserialized from files. Let's test the deserialized network to make sure it works.
