@@ -157,12 +157,6 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     }
 
     state.Forward(subg_inputs, req, *subg_out_curr, ctx.need_grad);
-    // We need to wait for the iteration to complete before executing
-    // the next one or return from the loop. In this way, we can reuse
-    // the memory in the subgraph.
-    for (size_t j = 0; j < subg_out_curr->size(); j++) {
-      (*subg_out_curr)[j].WaitToRead();
-    }
   }
 }
 
@@ -233,13 +227,6 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
     }
 
     state.Backward(iter_num, ograds, iter_req, igrads);
-
-    // We need to wait for the iteration to complete before executing
-    // the next one or return from the loop. In this way, we can reuse
-    // the memory in the subgraph.
-    for (size_t i = 0; i < igrads.size(); i++) {
-      igrads[i].WaitToRead();
-    }
 
     size_t num_states = ograds.size() - num_output_data;
     for (size_t i = 0; i < num_states; i++) {
