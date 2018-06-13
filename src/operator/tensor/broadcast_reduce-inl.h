@@ -206,26 +206,25 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>
-struct seq_reduce_kernel {
-  MSHADOW_XINLINE static void Map(int start, int end, int M, const bool addto,
+void seq_reduce_compute_extra_mem(const int N, const int M, const bool addto,
                                   const DType* big, DType* small,
                                   const Shape<ndim> bshape,
                                   const Shape<ndim> sshape,
                                   const Shape<ndim> rshape,
-                                  const Shape<ndim> rstride, index_t* ws_dptr) {
-    for (int idx = start; idx < end; ++idx) {
-      Shape<ndim> coord = unravel(idx, sshape);
-      index_t j = ravel(coord, bshape);
-      DType val, residual;
-      Reducer::SetInitValue(val, residual);
-      #pragma unroll
-      for (int k = 0; k < M; k++) {
-        Reducer::Reduce(val, OP::Map(big[j + static_cast<index_t>(ws_dptr[k])]), residual);
-      }
-      assign(&small[idx], addto, val);
+                                  const Shape<ndim> rstride,
+                                  const index_t* ws_dptr) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int idx = 0; idx < N; ++idx) {
+    Shape<ndim> coord = unravel(idx, sshape);
+    int j = ravel(coord, bshape);
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
+    for (int k = 0; k < M; ++k) {
+      Reducer::Reduce(val, OP::Map(big[j + ws_dptr[k]]), residual);
     }
+    assign(&small[idx], addto, val);
   }
-};
+}
 
 template <typename Reducer, int ndim, typename DType, typename OP>
 void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
@@ -254,8 +253,8 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
     ws_dptr[k] = dot(coord, rstride);
   }
 
-  mxnet_op::Kernel<seq_reduce_kernel<Reducer, ndim, DType, OP>, cpu>::template LaunchEx(
-    s, N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
+  seq_reduce_compute_extra_mem<Reducer, ndim, DType, OP>(
+    N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
     small.shape_.get<ndim>(), rshape, rstride, ws_dptr);
 }
 
