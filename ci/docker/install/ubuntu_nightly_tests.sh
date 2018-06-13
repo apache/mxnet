@@ -32,6 +32,4 @@ svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/ #>/dev/null
 cd trunk
 mvn -Dmaven.test.skip=true install #>/dev/null
 cd ..
-pwd
-ls
-#cp -r trunk/ /mxnet
+cp -r trunk/ /work/mxnet
