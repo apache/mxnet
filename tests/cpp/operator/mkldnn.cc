@@ -740,10 +740,10 @@ TEST(IMPERATIVE, BinaryOp) {
 
 void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
   float *in1 = static_cast<float*>(in_mem1.get_data_handle());
-  float *in2 = static_cast<float*>(in_mem1.get_data_handle());
-  float *out = static_cast<float*>(in_mem1.get_data_handle());
+  float *in2 = static_cast<float*>(in_mem2.get_data_handle());
+  float *out = static_cast<float*>(out_mem.get_data_handle());
   for (size_t i = 0; i < in_mem1.get_primitive_desc().get_size(); i++) {
-    ASSERT_EQ(in1[i] + in2[i], out);
+    ASSERT_EQ(in1[i] + in2[i], out[i]);
   }
 }
 
