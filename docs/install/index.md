@@ -659,7 +659,7 @@ pip install graphviz
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
-**Experimental Choice** If You would like to xinstall MXNet with Intel MKL, try the experimental pip package with MKL:
+**Experimental Choice** If You would like to install MXNet with Intel MKL, try the experimental pip package with MKL:
 ```bash
 $ pip install mxnet-cu80mkl==0.11.0
 ```
