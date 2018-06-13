@@ -104,7 +104,7 @@ python fine-tune.py --network resnet --num-layers 50 --pretrained-model imagenet
 ## Example training results
 Here is a plot to compare the training curves of a Resnet50 v1 network on the Imagenet 2012 dataset. These training jobs ran for 95 epochs with a batch size of 1024 using a learning rate of 0.4 decayed by a factor of 1 at epochs 30,60,90 and used Gluon. The only changes made for the float16 job when compared to the float32 job were that the network and data were cast to float16, and the multi-precision mode was used for optimizer. The final accuracies at 95th epoch were **76.598% for float16** and **76.486% for float32**. The difference is within what's normal random variation, and there is no reason to expect float16 to have better accuracy than float32 in general. This run was approximately **65% faster** to train with float16.
 
-![Training curves of Resnet50 v1 on Imagenet 2012](https://raw.githubusercontent.com/rahul003/web-data/8e3ce5fb2a9f7514eec92c51bf19b062714067f9/mxnet/tutorials/mixed-precision/resnet50v1b_imagenet_fp16_fp32_training.png)
+![Training curves of Resnet50 v1 on Imagenet 2012](https://raw.githubusercontent.com/rahul003/web-data/03929a8beb8ac574f2392ed34cc6d4b2f052826a/mxnet/tutorials/mixed-precision/resnet50v1b_imagenet_fp16_fp32_training.png)
 
 ## Things to keep in mind
 
