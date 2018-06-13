@@ -78,6 +78,27 @@ class MKLDNNPoolingFwd {
             const int padding_l, const int padding_r);
 };
 
+class MKLDNNPoolingBwd {
+  std::shared_ptr<const mkldnn::pooling_backward> bwd;
+  std::shared_ptr<mkldnn::memory> diff_dst;
+  std::shared_ptr<mkldnn::memory> diff_src;
+  std::shared_ptr<mkldnn::memory> ws;
+  bool with_workspace;
+
+ public:
+  const mkldnn::pooling_backward::primitive_desc pd;
+
+  MKLDNNPoolingBwd(const pooling_backward::primitive_desc &pdesc,
+                   bool with_ws);
+
+  ~MKLDNNPoolingBwd() {}
+  void SetDataHandle(const mxnet::NDArray *workspace,
+                     const mxnet::NDArray &out_grad,
+                     const mkldnn::memory *diff_src_mem);
+  const mkldnn::pooling_backward &GetBwd();
+  const mkldnn::pooling_backward::primitive_desc &GetPd();
+};
+
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
