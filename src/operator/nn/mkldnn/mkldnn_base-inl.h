@@ -490,6 +490,9 @@ class OpCheck {
            const std::vector<mxnet::NDArray> &inputs_,
            const std::vector<mxnet::OpReqType> &req,
            const std::vector<mxnet::NDArray> &outputs_);
+
+  void CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                  const std::vector<size_t>& indice);
 };
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
@@ -499,6 +502,8 @@ class OpCheck {
 
 #define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs)    \
     if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
+#define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
+    if (debug) check.CopyResult(outputs, indice);
 
 }  // namespace mxnet
 #endif

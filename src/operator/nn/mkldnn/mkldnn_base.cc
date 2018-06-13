@@ -506,6 +506,17 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   }
 }
 
+void OpCheck::CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                         const std::vector<size_t> &indice) {
+  CHECK(!MKLDNNStream::Get()->HasOps());
+  auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray> &>(outputs_);
+  for (auto i = indice.begin(); i != indice.end(); ++i) {
+    auto mem = outputs[*i].GetMKLDNNData();
+    non_const_outputs_[*i].CopyFrom(*mem);
+  }
+  MKLDNNStream::Get()->Submit();
+}
+
 }  // namespace mxnet
 
 #endif

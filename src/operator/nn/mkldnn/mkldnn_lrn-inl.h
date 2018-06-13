@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file mkldnn_lrn-inl.h 
+ * \file mkldnn_lrn-inl.h
  * \brief
  * \Author: Patric Zhao, patric.zhao@intel.com
 */
@@ -40,9 +40,8 @@ inline algorithm GetMKLDNNLRNAlgo(const LRNParam &param) {
   return algorithm::lrn_across_channels;
 }
 
-inline lrn_forward::primitive_desc GetLRNFwdDesc(const LRNParam &param,
-                                                 const bool is_train,
-                                                 const memory::desc &src_md) {
+inline mkldnn::lrn_forward::primitive_desc GetLRNFwdDesc(
+    const LRNParam &param, const bool is_train, const memory::desc &src_md) {
   mkldnn::engine &engine = CpuEngine::Get()->get_engine();
   const algorithm  alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
@@ -59,11 +58,10 @@ inline lrn_forward::primitive_desc GetLRNFwdDesc(const LRNParam &param,
   return mkldnn::lrn_forward::primitive_desc(fwd_desc, engine);
 }
 
-inline mkldnn::lrn_backward::primitive_desc
-GetLRNBwd(const LRNParam &param,
-          const mkldnn::memory::desc &diff_in_md,
-          const mkldnn::memory::desc &diff_md,
-          const lrn_forward::primitive_desc &lrnFwd_desc) {
+inline mkldnn::lrn_backward::primitive_desc GetLRNBwdDesc(
+    const LRNParam &param, const mkldnn::memory::desc &diff_in_md,
+    const mkldnn::memory::desc &diff_md,
+    const mkldnn::lrn_forward::primitive_desc &lrnFwd_desc) {
   mkldnn::engine &engine = CpuEngine::Get()->get_engine();
   const algorithm alg = GetMKLDNNLRNAlgo(param);
   const float alpha = param.alpha;
@@ -92,9 +90,10 @@ class MKLDNNLRNFwd {
 
   ~MKLDNNLRNFwd() {}
 
-  void SetDataHandle(const NDArray &data,
-                     const NDArray &output);
-
+  void SetDataHandle(const NDArray &data, const NDArray &output);
+  void SetDataHandle(const NDArray &data, const mkldnn::memory *output_mem);
+  const mkldnn::memory *GetWs();
+  mkldnn::lrn_forward &GetFwd();
   void Execute();
 
  private:
@@ -111,15 +110,17 @@ class MKLDNNLRNFwd {
 void MKLDNNLRNFwd::_Init(const LRNParam &param,
                          bool is_train,
                          const NDArray &in_data) {
-  mkldnn::memory::desc in_data_md = in_data.GetMKLDNNData()->get_primitive_desc().desc();
-  lrn_forward::primitive_desc fwd_pd = GetLRNFwdDesc(param, is_train, in_data_md);
+  mkldnn::memory::desc in_data_md =
+      in_data.GetMKLDNNData()->get_primitive_desc().desc();
+  mkldnn::lrn_forward::primitive_desc fwd_pd =
+      GetLRNFwdDesc(param, is_train, in_data_md);
 
   this->in_mem.reset(new mkldnn::memory(in_data.GetMKLDNNData()
                      ->get_primitive_desc()));
   this->out_mem.reset(new mkldnn::memory(fwd_pd.dst_primitive_desc()));
   if (is_train) {
-    // If it's training, we have to create a workspace memory. Otherwise, MKLDNN
-    // will have segmentation fault.
+    // If it's training, we have to create a workspace memory. Otherwise,
+    // MKLDNN will have segmentation fault.
     ws_mem.reset(new mkldnn::memory(fwd_pd.workspace_primitive_desc()));
     this->fwd = std::shared_ptr<mkldnn::lrn_forward>(
         new mkldnn::lrn_forward(fwd_pd, mkldnn::primitive::at(*this->in_mem),
@@ -133,12 +134,22 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
 
 void MKLDNNLRNFwd::SetDataHandle(const NDArray &in_data,
                                  const NDArray &out_data) {
-  const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
-  mkldnn::memory *out_data_mem  = const_cast<NDArray&>(out_data).CreateMKLDNNData(
-                       this->out_mem->get_primitive_desc());
+  mkldnn::memory *out_data_mem =
+      const_cast<NDArray &>(out_data).CreateMKLDNNData(
+          this->out_mem->get_primitive_desc());
+  this->SetDataHandle(in_data, out_data_mem);
+}
+
+void MKLDNNLRNFwd::SetDataHandle(const NDArray &in_data,
+                                 const mkldnn::memory *out_data_mem) {
+  mkldnn::memory *in_data_mem = const_cast<NDArray &>(in_data).CreateMKLDNNData(
+      this->in_mem->get_primitive_desc());
   this->in_mem->set_data_handle(in_data_mem->get_data_handle());
   this->out_mem->set_data_handle(out_data_mem->get_data_handle());
 }
+
+const mkldnn::memory *MKLDNNLRNFwd::GetWs() { return this->ws_mem.get(); }
+mkldnn::lrn_forward &MKLDNNLRNFwd::GetFwd() { return *this->fwd; }
 
 void MKLDNNLRNFwd::Execute() {
   MKLDNNStream::Get()->RegisterPrim(*(this->fwd));
@@ -158,16 +169,10 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
                                             MKLDNNLRNFwd,
                                             OpHash> lrn_fwds;
 #endif
-  auto alg_ = algorithm::lrn_across_channels;
-  auto kind_ = prop_kind::forward_training;
-  if (ctx.is_train) {
-    kind_ = prop_kind::forward_training;
-  } else {
-    kind_ = prop_kind::forward_scoring;
-  }
+  auto kind_ =
+      ctx.is_train ? prop_kind::forward_training : prop_kind::forward_scoring;
 
   MKLDNNLRNSignature key(param);
-  key.AddSign(alg_);
   key.AddSign(kind_);
   key.AddSign(in_data);
 
@@ -182,14 +187,96 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
   return it->second;
 }
 
-void MKLDNNLRNForward(const OpContext &ctx,
-                      const LRNParam &param,
-                      const NDArray &in_data,
-                      const OpReqType req,
+void MKLDNNLRNForward(const OpContext &ctx, const LRNParam &param,
+                      const NDArray &in_data, const OpReqType req,
                       const NDArray &out_data) {
-  MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_data);
+  MKLDNNLRNFwd &fwd = GetLRNFwd(param, ctx, in_data);
   fwd.SetDataHandle(in_data, out_data);
   fwd.Execute();
+}
+
+// LRN Backward Class
+class MKLDNNLRNBwd {
+  std::shared_ptr<mkldnn::lrn_backward> bwd;
+  std::shared_ptr<mkldnn::memory> in_data_mem;
+  std::shared_ptr<mkldnn::memory> diff_dst_mem;
+  std::shared_ptr<mkldnn::memory> ws_mem;
+  std::shared_ptr<mkldnn::memory> diff_src_mem;
+
+ public:
+  const mkldnn::lrn_forward::primitive_desc fwd_pd;
+  const mkldnn::lrn_backward::primitive_desc bwd_pd;
+
+  ~MKLDNNLRNBwd() {}
+
+  MKLDNNLRNBwd(const LRNParam &param, const mkldnn::memory::desc in_data_md,
+               const mkldnn::memory::desc diff_md)
+      : fwd_pd(GetLRNFwdDesc(param, true, in_data_md)),
+        bwd_pd(GetLRNBwdDesc(param, in_data_md, diff_md, this->fwd_pd)) {}
+
+  void SetDataHandle(const NDArray &in_data, const NDArray &out_grad,
+                     const mkldnn::memory *ws,
+                     const mkldnn::memory *diff_src_mem) {
+    if (bwd == nullptr) {
+      this->in_data_mem.reset(
+          new mkldnn::memory(this->fwd_pd.src_primitive_desc(),
+                             in_data.GetMKLDNNData()->get_data_handle()));
+      this->diff_dst_mem.reset(
+          new mkldnn::memory(this->fwd_pd.dst_primitive_desc(),
+                             out_grad.GetMKLDNNData()->get_data_handle()));
+      this->ws_mem.reset(
+          new mkldnn::memory(this->fwd_pd.workspace_primitive_desc(),
+                             ws->get_data_handle()));
+      this->diff_src_mem.reset(
+          new mkldnn::memory(this->bwd_pd.diff_src_primitive_desc(),
+                             diff_src_mem->get_data_handle()));
+      this->bwd.reset(new mkldnn::lrn_backward(
+          this->bwd_pd, mkldnn::primitive::at(*this->in_data_mem),
+          mkldnn::primitive::at(*this->diff_dst_mem), *this->ws_mem,
+          *this->diff_src_mem));
+    } else {
+      this->in_data_mem->set_data_handle(
+          in_data.GetMKLDNNData()->get_data_handle());
+      this->diff_dst_mem->set_data_handle(
+          out_grad.GetMKLDNNData()->get_data_handle());
+      this->ws_mem->set_data_handle(ws->get_data_handle());
+      this->diff_src_mem->set_data_handle(diff_src_mem->get_data_handle());
+    }
+  }
+
+  void Execute() {
+    MKLDNNStream::Get()->RegisterPrim(*(this->bwd));
+    MKLDNNStream::Get()->Submit();
+  }
+};  // End of LRN Class
+
+static MKLDNNLRNBwd &GetLRNBwd(const LRNParam &param, const NDArray &in_data,
+                               const NDArray &in_grad, const NDArray &out_grad) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local
+      std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
+#else
+  static MX_THREAD_LOCAL
+      std::unordered_map<MKLDNNLRNSignature, MKLDNNLRNBwd, OpHash> lrn_bwds;
+#endif
+  MKLDNNLRNSignature key(param);
+  key.AddSign(in_data);
+  key.AddSign(in_grad);
+  key.AddSign(out_grad);
+
+  auto it = lrn_bwds.find(key);
+  if (it == lrn_bwds.end()) {
+    const mkldnn::memory::desc in_data_md =
+        in_data.GetMKLDNNData()->get_primitive_desc().desc();
+    const mkldnn::memory::desc diff_md =
+        out_grad.GetMKLDNNData()->get_primitive_desc().desc();
+    MKLDNNLRNBwd bwd(param, in_data_md, diff_md);
+    auto ins_ret =
+        lrn_bwds.insert(std::pair<MKLDNNLRNSignature, MKLDNNLRNBwd>(key, bwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
 }
 
 void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
@@ -200,36 +287,22 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
   if (req == kNullOp) {
     return;
   }
+  MKLDNNLRNBwd &bwd = GetLRNBwd(param, in_data, in_grad, out_grad);
   // Repeat FW for getting workspace
-  const mkldnn::memory *data_mem = in_data.GetMKLDNNData();
-  const mkldnn::memory::desc data_md = data_mem->get_primitive_desc().desc();
-  const lrn_forward::primitive_desc pdesc_fwd = GetLRNFwdDesc(param, ctx.is_train,
-                                                              data_md);
-
   // TODO(Patric): To keep the function stateless, we can't pass workspace
   //               from LRN forward to backward. We have to re-compute
   //               LRN forward to get the workspace.
   //               Will refine this code later.
-  std::shared_ptr<const mkldnn::memory> ws_mem(
-          new mkldnn::memory(pdesc_fwd.workspace_primitive_desc()));
+  MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_data);
   std::shared_ptr<const mkldnn::memory> dst_temp(
-          new mkldnn::memory(pdesc_fwd.dst_primitive_desc()));
-  MKLDNNStream::Get()->RegisterPrim(
-          lrn_forward(pdesc_fwd, mkldnn::primitive::at(*data_mem),
-          *ws_mem, *dst_temp));
+      new mkldnn::memory(bwd.fwd_pd.dst_primitive_desc()));
+  fwd.SetDataHandle(in_data, dst_temp.get());
+  MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
 
-  const mkldnn::memory::desc data_in_md = pdesc_fwd.src_primitive_desc().desc();
-  const mkldnn::memory *diff_mem = out_grad.GetMKLDNNData();
-  const mkldnn::memory::desc diff_md = diff_mem->get_primitive_desc().desc();
-  const mkldnn::lrn_backward::primitive_desc pdesc_bwd = GetLRNBwd(param, data_in_md,
-                                                                   diff_md, pdesc_fwd);
-  mkldnn_output_t diff_src_mem = CreateMKLDNNMem(in_grad,
-                                                 pdesc_bwd.diff_src_primitive_desc(), req);
-
-  MKLDNNStream::Get()->RegisterPrim(
-        lrn_backward(pdesc_bwd, mkldnn::primitive::at(*data_mem),
-        mkldnn::primitive::at(*diff_mem), *ws_mem, *diff_src_mem.second));
-  MKLDNNStream::Get()->Submit();
+  mkldnn_output_t diff_src_mem =
+      CreateMKLDNNMem(in_grad, bwd.bwd_pd.diff_src_primitive_desc(), req);
+  bwd.SetDataHandle(in_data, out_grad, fwd.GetWs(), diff_src_mem.second);
+  bwd.Execute();
 }
 }  // namespace op
 }  // namespace mxnet
