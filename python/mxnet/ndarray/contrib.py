@@ -171,7 +171,6 @@ def foreach(body, data, init_states):
             "init_states should be an NDArray or a list of NDArrays")
 
     not_data_list = isinstance(data, ndarray.NDArray)
-    not_state_list = isinstance(init_states, ndarray.NDArray)
     num_iters = data.shape[0] if not_data_list else data[0].shape[0]
     states = init_states
     outputs = []

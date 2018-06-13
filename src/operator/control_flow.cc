@@ -34,7 +34,6 @@ namespace op {
 
 struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_args;
-  int dim;
   int num_outputs;
   int num_out_data;
   nnvm::Tuple<dim_t> in_state_locs;
@@ -42,8 +41,6 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   DMLC_DECLARE_PARAMETER(ForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
-    DMLC_DECLARE_FIELD(dim).set_default(1)
-    .describe("the dimension of the input array to iterate.");
     DMLC_DECLARE_FIELD(num_outputs)
     .describe("The number of outputs of the subgraph.");
     DMLC_DECLARE_FIELD(num_out_data)
@@ -73,7 +70,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
                                 const std::vector<NDArray>& outputs) {
   ForeachState &state = state_ptr.get_state<ForeachState>();
   const ForeachParam& params = state.params;
-  size_t iter_dim = 0;
+  const size_t iter_dim = 0;
   CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
   CHECK_GT(params.in_data_locs.ndim(), 0);
   size_t loc0 = params.in_data_locs[0];

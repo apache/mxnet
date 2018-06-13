@@ -191,9 +191,9 @@ def foreach(body, data, init_states, name="foreach"):
             is_NDArray_or_list = isinstance(inputs, in_type)
         assert is_NDArray_or_list, msg
 
-    check_data(data, symbol.Symbol, "data should be an NDArray or a list of NDArrays")
+    check_data(data, symbol.Symbol, "data should be a symbol or a list of symbols")
     check_data(init_states, symbol.Symbol,
-            "init_states should be an NDArray or a list of NDArrays")
+            "init_states should be a symbol or a list of symbols")
     not_state_list = isinstance(init_states, symbol.Symbol)
 
     # TODO(zhengda) If the input python function references to the symbols outside
