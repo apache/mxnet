@@ -755,7 +755,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 
   for (auto in_arr : in_arrs) {
 //    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
+//                                                             InitDefaultArray);
 //    for (auto out_arr: out_arrs) {
 //      if (!SupportMKLDNN(in_arr.arr))
 //        continue;
