@@ -21,16 +21,25 @@ print(y.asnumpy())
 print('Time for printing the output: %f sec' % (time() - start))
 ```
 
-Time for matrix multiplication: 0.005051 sec<!--notebook-skip-line-->
+
+**Time for matrix multiplication: 0.005051 sec**<!--notebook-skip-line-->
 
 [[501.1584  508.29724 495.65237 ... 492.84705 492.69092 490.0481 ]<!--notebook-skip-line-->
+
  [508.81058 507.1822  495.1743  ... 503.10526 497.29315 493.67917]<!--notebook-skip-line-->
+
  [489.56598 499.47015 490.17722 ... 490.99945 488.05008 483.28836]<!--notebook-skip-line-->
+
  ...<!--notebook-skip-line-->
+
  [484.0019  495.7179  479.92142 ... 493.69952 478.89194 487.2074 ]<!--notebook-skip-line-->
+
  [499.64932 507.65094 497.5938  ... 493.0474  500.74512 495.82712]<!--notebook-skip-line-->
+
  [516.0143  519.1715  506.354   ... 510.08878 496.35608 495.42523]]<!--notebook-skip-line-->
-Time for printing the output: 0.167693 sec<!--notebook-skip-line-->
+
+**Time for printing the output: 0.167693 sec**<!--notebook-skip-line-->
+
 
 From the output above, it seems as if printing the output takes lot more time that multiplying two large matrices. That doesn't feel right. 
 
@@ -161,7 +170,7 @@ You can use the `profiler.dumps()` method to view the information collected by t
 print(profiler.dumps())
 ```
 
-![Profile Statistics](https://github.com/dmlc/web-data/blob/master/mxnet/tutorials/python/profiler/profile_stats.png)
+![Profile Statistics](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_stats.png)
 
 #### 2. View in browser
 
@@ -173,7 +182,7 @@ profiler.dump()
 
 `dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above.
 
-![Tracing Screenshot](https://github.com/dmlc/web-data/blob/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
+![Tracing Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
 Let's zoom in to check the time taken by operators
 
