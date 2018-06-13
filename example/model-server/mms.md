@@ -9,8 +9,9 @@ MMS supports both *symbolic* MXNet and *imperative* Gluon models. While the name
 
 To find out more about MXNet's support for ONNX models and using ONNX with MMS, refer to the following resources:
 
-* [MXNet-ONNX Docs](../api/python/contrib/onnx.md)
+* [MXNet-ONNX Docs](https://mxnet.incubator.apache.org/api/python/contrib/onnx.md)
 * [Export an ONNX Model to Serve with MMS](https://github.com/awslabs/mxnet-model-server/docs/export_from_onnx.md)
+
 
 ## Getting Started
 
