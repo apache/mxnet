@@ -41,9 +41,18 @@ void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   CHECK(input_pds[0] == input_pds[1]);
   inputs.push_back(arr1);
   inputs.push_back(arr2);
-  // TODO(zhengda) I need to reorder memory here.
+  bool pd_same = true;
+  bool addr_same = false;
+  auto first_data_handle = arr1.get_data_handle();
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
+  if (pd_same && addr_same) {
+    // do sum computation directly on output NDArray
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
+  } else {
+    auto sum_res = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, *sum_res));
+    CopyMKLDNNMem(*sum_res, &out);
+  }
 }
 
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
