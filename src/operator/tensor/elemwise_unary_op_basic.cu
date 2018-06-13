@@ -103,7 +103,7 @@ void ShapeCompute<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 
-NNVM_REGISTER_OP(shape_nd)
+NNVM_REGISTER_OP(shape_array)
 .set_attr<FCompute>("FCompute<gpu>", ShapeCompute<gpu>);
 
 template<>
@@ -124,7 +124,7 @@ void SizeCompute<gpu>(const nnvm::NodeAttrs& attrs,
     s, 1U, out_data.dptr<int64_t>(), in_data.Size());
 }
 
-NNVM_REGISTER_OP(size_nd)
+NNVM_REGISTER_OP(size_array)
 .set_attr<FCompute>("FCompute<gpu>", SizeCompute<gpu>);
 
 NNVM_REGISTER_OP(Cast)

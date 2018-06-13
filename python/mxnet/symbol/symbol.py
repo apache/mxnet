@@ -1981,21 +1981,21 @@ class Symbol(SymbolBase):
         """
         return op.flatten(self, *args, **kwargs)
 
-    def shape_nd(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`shape_op`.
+    def shape_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`shape_array`.
 
         The arguments are the same as for :py:func:`shape_op`, with
         this array as data.
         """
-        return op.shape_nd(self, *args, **kwargs)
+        return op.shape_array(self, *args, **kwargs)
 
-    def size_nd(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`size_op`.
+    def size_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`size_array`.
 
-        The arguments are the same as for :py:func:`size_op`, with
+        The arguments are the same as for :py:func:`size_array`, with
         this array as data.
         """
-        return op.size_nd(self, *args, **kwargs)
+        return op.size_array(self, *args, **kwargs)
 
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.

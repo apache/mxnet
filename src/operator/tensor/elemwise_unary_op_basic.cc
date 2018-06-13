@@ -417,7 +417,7 @@ void ShapeCompute<cpu>(const nnvm::NodeAttrs& attrs,
   });
 }
 
-NNVM_REGISTER_OP(shape_nd)
+NNVM_REGISTER_OP(shape_array)
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::
@@ -468,7 +468,7 @@ void SizeCompute<cpu>(const nnvm::NodeAttrs& attrs,
     s, 1U, out_data.dptr<int64_t>(), in_data.Size());
 }
 
-NNVM_REGISTER_OP(size_nd)
+NNVM_REGISTER_OP(size_array)
 .describe(R"code(Returns a 1D int64 array containing the size of data.
 
 Example::
