@@ -45,28 +45,30 @@ Operator *RNNProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(RNNParam);
 
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
-.describe(R"code(Applies recurrent layers to input.
-Currently, vanilla RNN, LSTM and GRU are implemented, with
- both multi-layer and bidirectional support.
+.describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are 
+implemented, with both multi-layer and bidirectional support.
+
 **Vanilla RNN**
-Applies a single-gate recurrent layer to input X. Two kinds of
- activation function are supported: ReLU and tanh.
 
-ReLU activation function:
+Applies a single-gate recurrent layer to input X. Two kinds of activation function are supported: 
+ReLU and Tanh.
 
-.. math::
-    $h_t = relu(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})$
-
-Tanh activtion function:
+With ReLU activation function:
 
 .. math::
-   $h_t = \tanh(w_{ih} * x_t + b_{ih}  +  w_{hh} * h_{(t-1)} + b_{hh})$
+    h_t = relu(W_{ih} * x_t + b_{ih}  +  W_{hh} * h_{(t-1)} + b_{hh})
 
-Reference paper: Finding structure in time - Elman, 1988.
- https://crl.ucsd.edu/~elman/Papers/fsit.pdf
+With Tanh activtion function:
+
+.. math::
+    h_t = \tanh(W_{ih} * x_t + b_{ih}  +  W_{hh} * h_{(t-1)} + b_{hh})
+
+Reference paper: Finding structure in time - Elman, 1988. 
+https://crl.ucsd.edu/~elman/Papers/fsit.pdf
 
 **LSTM**
-Long Short-Term Memory - Hochreiter, 1997.
+
+Long Short-Term Memory - Hochreiter, 1997. http://www.bioinf.jku.at/publications/older/2604.pdf
 
 .. math::
   \begin{array}{ll}
@@ -79,11 +81,13 @@ Long Short-Term Memory - Hochreiter, 1997.
             \end{array}
 
 **GRU**
-Gated Recurrent Unit - Cho et al. 2014.
-http://arxiv.org/abs/1406.1078
+
+Gated Recurrent Unit - Cho et al. 2014. http://arxiv.org/abs/1406.1078
+
+The definition of GRU here is slightly different from paper but compatible with CUDNN.
 
 .. math::
-\begin{array}{ll}
+  \begin{array}{ll}
             r_t = \mathrm{sigmoid}(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
             z_t = \mathrm{sigmoid}(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
             n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\

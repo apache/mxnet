@@ -200,6 +200,7 @@ NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
     ret.ptr_->delay_alloc = false;
     ret.ptr_->static_data = true;
     ret.byte_offset_ = byte_offset_;
+    ret.reuse_ = false;
     return ret;
   }
 }
@@ -217,6 +218,7 @@ NDArray NDArray::Reshape(const TShape &shape) const {
   // Otherwise, reshape only works on the default layout.
   CHECK_EQ(storage_type(), kDefaultStorage);
   ret.shape_ = shape;
+  ret.reuse_ = false;
   return ret;
 }
 
@@ -249,6 +251,7 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
   MSHADOW_TYPE_SWITCH(ret.dtype(), DType, {
     ret.byte_offset_ += begin * length * sizeof(DType);
   });
+  ret.reuse_ = false;
   ret.shape_[0] = end - begin;
   return ret;
 }
@@ -555,6 +558,7 @@ NDArray NDArray::Reorder2Default() const {
   // reshape as needed
   ret.shape_ = shape_;
   ret.byte_offset_ = byte_offset_;
+  ret.reuse_ = false;
   return ret;
 }
 
@@ -584,39 +588,39 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc)
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {
   CHECK(storage_type() == kDefaultStorage);
+  bool is_view = IsView();
   if (IsMKLDNNData()) {
     // If this array uses MKLDNN layout, we have to make sure it's not a view.
     // Otherwise, we'll have to change the layout inside the array.
-    CHECK(!IsView());
+    CHECK(!is_view);
     MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
     // If this array uses MKLDNN format, we should return now. Otherwise,
     // SetMKLMem may mess up mkl_mem_.
     return ptr_->mkl_mem_->GetRaw();
-  }
-  ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_, dtype_);
-  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
-  if (IsView()) {
-    mkldnn::memory::primitive_desc pd = ptr_->mkl_mem_->GetPrimitiveDesc();
-    // Sliced array must use the default layout.
-    CHECK_EQ(GetDefaultFormat(pd.desc()), pd.desc().data.format);
-    void *off_addr = static_cast<char *>(ptr_->mkl_mem_->GetDataHandle())
-        + byte_offset_;
-
+  } else if (is_view) {
+    // If this is a view, we can't create a MKLDNN memory for the chunk
+    // because we don't have the complete data type and shape information for
+    // the chunk.
+    void *off_addr = static_cast<char *>(ptr_->shandle.dptr) + byte_offset_;
     // Create the primitive desc for the new mkldnn memory.
     mkldnn::memory::dims dims(shape().ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape()[i];
     mkldnn::memory::format cpp_format = static_cast<mkldnn::memory::format>(
         GetDefaultFormat(shape().ndim()));
-    mkldnn::memory::data_type cpp_type = static_cast<mkldnn::memory::data_type>(
-        pd.desc().data.data_type);
+    mkldnn::memory::data_type cpp_type = get_mkldnn_type(dtype_);
     mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
-    mkldnn::memory::primitive_desc new_pd(data_md, pd.get_engine());
+    mkldnn::memory::primitive_desc new_pd(data_md,
+                                          CpuEngine::Get()->get_engine());
 
     std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(new_pd, off_addr));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
   } else {
+    // If this isn't a view, we can create a MKLDNN memory and store it in the
+    // chunk.
+    ptr_->SetMKLMem(shape_, dtype_);
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
     return ptr_->mkl_mem_->GetRaw();
   }
 }
@@ -637,20 +641,23 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
   // If this array uses MKLDNN layout, we have to make sure it's not a view.
   // Otherwise, we'll have to change the layout inside the array.
-  if (IsMKLDNNData())
-    CHECK(!IsView());
-  ptr_->SetMKLMem(IsView() ? ptr_->storage_shape : shape_,
-                  dtype_);
-  stream->RegisterMem(ptr_->mkl_mem_->GetMem());
-  mkldnn::memory::desc from_desc = mem.get_primitive_desc().desc();
-  mkldnn::memory::desc this_desc = ptr_->mkl_mem_->GetPrimitiveDesc().desc();
+
+  if (IsMKLDNNData() && IsView())
+    ptr_->Reorder2Default();
+
+  const mkldnn::memory *this_mem = GetMKLDNNData();
+  mkldnn::memory::primitive_desc from_pd = mem.get_primitive_desc();
+  mkldnn::memory::desc from_desc = from_pd.desc();
+  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
+  mkldnn::memory::desc this_desc = this_pd.desc();
   mkldnn_memory_format_t from_def_format = GetDefaultFormat(from_desc);
+  mkldnn_memory_format_t this_def_format = GetDefaultFormat(this_desc);
   if (IsView()) {
     // Sliced array must use the default layout.
     CHECK_EQ(GetDefaultFormat(this_desc), this_desc.data.format);
   }
   // It's possible that the memory and the NDArray don't have the same shape.
-  if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)
+  if (!same_shape(this_desc, from_desc)
       // If the source memory uses the default layout, we can reshape directly.
       && from_def_format == from_desc.data.format) {
     // In this case, we can simply create a new MKLDNN memory for the required
@@ -660,15 +667,14 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
     auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
     mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-    mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
+    mkldnn::memory::primitive_desc pd(data_md, from_pd.get_engine());
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
     stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
-  } else if (!same_shape(shape_, from_desc.data.dims, from_desc.data.ndims)) {
+    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
+  } else if (!same_shape(this_desc, from_desc)) {
     // In this case, the source memory stores data in a customized layout. We
     // need to reorganize the data in memory before we can reshape.
-    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(mem.get_primitive_desc(),
-                                                             from_def_format);
+    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(from_pd, from_def_format);
     mkldnn::memory *def_mem = TmpMemMgr::Get()->Alloc(def_pd);
     stream->RegisterPrim(mkldnn::reorder(mem, *def_mem));
     // Now we can reshape it
@@ -677,45 +683,40 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
     auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
     mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-    mkldnn::memory::primitive_desc pd(data_md, mem.get_primitive_desc().get_engine());
+    mkldnn::memory::primitive_desc pd(data_md, from_pd.get_engine());
     mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
     stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
-  } else if (mem.get_primitive_desc() == ptr_->mkl_mem_->GetPrimitiveDesc()) {
+    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
+  } else if (from_pd == this_pd) {
     // If the layout is the same, we can just copy data.
-    stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_->GetRaw()));
+    stream->RegisterPrim(mkldnn::reorder(mem, *this_mem));
   } else {
-    mkldnn_memory_format_t src_def = GetDefaultFormat(mem.get_primitive_desc().desc());
-    mkldnn_memory_format_t dst_def = ptr_->mkl_mem_->GetDefaultFormat();
     // If both are not using the default layouts. There isn't much we can do,
     // other than reorder data layout directly.
-    if (dst_def != ptr_->mkl_mem_->GetFormat()
-        && src_def != mem.get_primitive_desc().desc().data.format) {
-      stream->RegisterPrim(mkldnn::reorder(mem, *ptr_->mkl_mem_->GetRaw()));
-    } else if (dst_def == ptr_->mkl_mem_->GetFormat()) {
+    if (this_def_format != this_desc.data.format
+        && from_def_format != from_desc.data.format) {
+      stream->RegisterPrim(mkldnn::reorder(mem, *this_mem));
+    } else if (this_def_format == this_desc.data.format) {
       // If the dest mem uses the default memory layout, we can simply use
       // the default format of the source memory to improve perf of reorder.
-      mkldnn::memory::primitive_desc pd = ptr_->mkl_mem_->GetPrimitiveDesc(src_def);
-      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, ptr_->mkl_mem_->GetDataHandle()));
+      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(from_pd,
+                                                           from_def_format);
+      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, this_mem->get_data_handle()));
       stream->RegisterMem(tmp_mem);
       stream->RegisterPrim(mkldnn::reorder(mem, *tmp_mem));
     } else {
       // If the src mem uses the default memory layout, we can use
       // the default format of the source memory to improve perf.
-      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(mem.get_primitive_desc(), dst_def);
+      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(this_pd,
+                                                           this_def_format);
       mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
       stream->RegisterMem(tmp_mem);
-      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *ptr_->mkl_mem_->GetRaw()));
+      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
     }
   }
 }
-mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
-                                                mkldnn_memory_format_t format);
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &desc) {
-  // This array shouldn't be a view.
-  CHECK(!IsView());
-
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
     LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
     return nullptr;
@@ -726,10 +727,26 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   mkldnn_memory_format_t def_format = GetDefaultFormat(_desc.desc());
   // If the required format is a default format, we don't need to worry about the shape.
   // If the shape isn't the same, it actually implicitly reshapes data.
-  if (required_format == def_format) {
+  if (required_format == def_format && !IsView()) {
     ptr_->SetMKLMem(shape_, dtype_);
     MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
     return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
+  } else if (required_format == def_format) {
+    ptr_->CheckAndAlloc();
+    CHECK(ptr_->shandle.dptr);
+    // When this is a view and a user wants the default layout, we can simply
+    // create a new mkldnn memory that points to the right memory.
+    std::shared_ptr<mkldnn::memory> mem(new mkldnn::memory(
+            desc, static_cast<char *>(ptr_->shandle.dptr) + byte_offset_));
+    MKLDNNStream::Get()->RegisterMem(mem);
+    return mem.get();
+  } else if (IsView()) {
+    // If this is a view and a user wants to write data to it with special
+    // a MKLDNN format, we should reorder the data in the array and return NULL.
+    // In this way, the user will create a new NDArray for the special format
+    // and copy data back.
+    ptr_->Reorder2Default();
+    return nullptr;
   }
 
   if (ptr_->mkl_mem_)

@@ -43,7 +43,6 @@
 #include "../mxnet_op.h"
 #include "./sort_op.h"
 #include "./init_op.h"
-#include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
 
 namespace mxnet {
@@ -269,6 +268,12 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
         type_assign(&weight_grad_stype, target_stype)) {
       dispatched = dispatch_mode_assign(dispatch_mode, target_mode);
     }
+  }
+  // Print user friendly error message to notify misuses of sparse_grad
+  if (weight_grad_stype != target_stype) {
+    LOG(FATAL) << "Cannot use sparse_grad = " << sparse_grad
+               << ", while stype of gradients w.r.t embedding weight is "
+               << common::stype_string(weight_grad_stype);
   }
   return dispatched;
 }

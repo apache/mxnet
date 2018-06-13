@@ -53,6 +53,7 @@ function download_demo_images() {
     popd
 }
 
-download_pascal_voc
+# Uncomment to download training dataset
+#download_pascal_voc
 download_model
 download_demo_images

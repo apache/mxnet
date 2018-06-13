@@ -145,7 +145,7 @@ The project's `pom.xml` will be open for editing.
 
   - Specify project profiles and platforms in `pom.xml` by pasting the following content below the closing `properties` tag:
 
-```xml
+```
 <profiles>
     <profile>
         <id>osx-x86_64-cpu</id>
@@ -172,7 +172,7 @@ The project's `pom.xml` will be open for editing.
 
   - Specify project dependencies in `pom.xml` adding the dependencies listed below. Place them inside the `dependencies` tag:
 
-```xml
+```
 <dependencies>
   <!-- Begin deps for MXNet -->
   <dependency>
@@ -306,5 +306,5 @@ The build generates a new jar file in the `target` folder called `scalaInference
 For more information about MXNet Scala resources, see the following:
 
 * [Scala API](http://mxnet.io/api/scala/)
-* [More Scala Examples](https://github.com/incubator-mxnet/tree/master/scala-package/examples/)
+* [More Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 * [MXNet tutorials index](http://mxnet.io/tutorials/index.html)
