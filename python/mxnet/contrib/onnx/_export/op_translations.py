@@ -1640,6 +1640,29 @@ def convert_expand_dims(node, **kwargs):
     )
     return [node]
 
+@mx_op.register("squeeze")
+def convert_squeeze(node, **kwargs):
+    """Map MXNet's expand_dims operator attributes to onnx's Unsqueeze operator
+    and return the created node.
+    """
+    helper, _, _ = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    axis = int(node["attrs"]["axis"])
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    node = helper.make_node(
+        "Squeeze",
+        [input_node],
+        [name],
+        axes=[axis],
+        name=name,
+    )
+    return [node]
+
 
 @mx_op.register("log")
 def convert_log(node, **kwargs):
