@@ -31,21 +31,25 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-         const mkldnn::memory &out) {
-  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
-  std::vector<float> scales(2, 1);
+void MKLDNNSum(const std::vector<mkldnn::memory*> arrs,
+               const mkldnn::memory &out) {
+  std::vector<mkldnn::memory::primitive_desc> input_pds(arrs.size());
+  std::vector<float> scales(arrs.size(), 1);
   std::vector<mkldnn::primitive::at> inputs;
-  input_pds[0] = arr1.get_primitive_desc();
-  input_pds[1] = arr2.get_primitive_desc();
-  CHECK(input_pds[0] == input_pds[1]);
-  inputs.push_back(arr1);
-  inputs.push_back(arr2);
+
+  mkldnn::memory::primitive_desc prev_pd;
+  mkldnn::memory::primitive_desc tmp_pd;
+  for (size_t i = 0; i < arrs.size(); i++)
+    input_pds[i] = arrs[i]->get_primitive_desc();
+
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
-  bool pd_same = sum_pd.dst_primitive_desc() == input_pds[0];
-  auto first_data_handle = arr1.get_data_handle();
-  bool addr_same = out.get_data_handle() == first_data_handle;
-  if (pd_same && addr_same) {
+  // check if inplace sum is possible
+  auto in_place = false;
+  for (size_t i = 0; i < arrs.size(); i++) {
+    if (input_pds[i] == sum_pd.dst_primitive_desc() && arrs[i]->get_data_handle() == out.get_data_handle())
+      in_place = true;
+  }
+  if (in_place) {
     // do sum computation directly on output NDArray
     MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
   } else {
