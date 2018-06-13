@@ -340,10 +340,10 @@ Examples::
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
-.set_num_outputs(2)
+.set_num_outputs(3)
 .set_attr_parser(ParamParser<VarParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", VarShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 3>)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
   [](const NodeAttrs& attrs) { return 1; })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_var"})
@@ -378,7 +378,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(3)
 .set_attr_parser(ParamParser<VarParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", StdShape)
+.set_attr<nnvm::FInferShape>("FInferShape", VarShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 3>)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
   [](const NodeAttrs& attrs) { return 1; })

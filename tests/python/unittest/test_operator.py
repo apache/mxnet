@@ -5703,46 +5703,58 @@ def test_softmax():
     check_smoothed_softmax_grad(default_context())
 
 def test_variance():
-  def f(x):
+  def true_var(x):
     if len(x.shape) == 1:
       return np.var(x, keepdims=True)
     else:
       return np.var(x)
+  def true_var_grad(x, ograd):
+    return 2 * (x - np.mean(x)) * ograd / np.prod(x.shape)
 
   for ndim in range(1, 6):
     # check forward
     shape = rand_shape_nd(ndim, 5)
     data = rand_ndarray(shape=shape, stype='default')
     data_np = data.asnumpy()
-    expected = f(data_np)
+    expected = true_var(data_np)
     output = mx.nd.variance(data)
-    assert_almost_equal(output.asnumpy(), expected, rtol=0, atol=1e-6)
+    assert_almost_equal(output.asnumpy(), expected)
 
     # check backward
     data = mx.sym.Variable('data')
     var_sym = mx.sym.variance(data=data)
-    check_numeric_gradient(var_sym, [data_np], rtol=0, atol=1e-3)
+    check_numeric_gradient(var_sym, [data_np], atol=1e-3)
+    ograd = np.random.random(size=output.shape)
+    check_symbolic_backward(var_sym, [data_np], [ograd],
+      [true_var_grad(data_np, ograd)], atol=1e-8)
 
 def test_std():
-  def f(x):
+  def true_std(x):
     if len(x.shape) == 1:
       return np.std(x, keepdims=True)
     else:
       return np.std(x)
+  def true_std_grad(x, ograd):
+    return (x - np.mean(x)) * ograd / true_std(x) / np.prod(x.shape)
 
   for ndim in range(1, 6):
     # check forward
     shape = rand_shape_nd(ndim, 5)
+    while np.prod(shape[0]) == 1:  # avoid length-1 array
+      shape = rand_shape_nd(ndim, 5)
     data = rand_ndarray(shape=shape, stype='default')
     data_np = data.asnumpy()
-    expected = f(data_np)
+    expected = true_std(data_np)
     output = mx.nd.std(data)
-    assert_almost_equal(output.asnumpy(), expected, rtol=0, atol=1e-6)
+    assert_almost_equal(output.asnumpy(), expected)
 
     # check backward
     data = mx.sym.Variable('data')
     std_sym = mx.sym.std(data=data)
-    check_numeric_gradient(std_sym, [data_np], rtol=0, atol=1e-3)
+    check_numeric_gradient(std_sym, [data_np], atol=1e-3)
+    ograd = np.random.random(size=output.shape)
+    check_symbolic_backward(std_sym, [data_np], [ograd],
+      [true_std_grad(data_np, ograd)], atol=1e-8)
 
 @with_seed()
 def test_slice():
