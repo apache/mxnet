@@ -27,6 +27,7 @@ from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
+from mxnet.test_utils import random_sample, rand_shape_nd
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
@@ -1276,14 +1277,15 @@ def test_ndarray_astype():
 
 @with_seed()
 def test_norm(ctx=default_context()):
-    def l1norm(input_data, axis=0, keepdims):
+    def l1norm(input_data, axis=0, keepdims=False):
         return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
-    def l2norm(input_data, axis=0, keepdims): 
+    def l2norm(input_data, axis=0, keepdims=False): 
         return np.linalg.norm(input_data, axis=axis, keepdims=keepdims)
 
-    in_data_dim = test_utils.random_sample([4,5,6], 1)[0]
-    in_data_shape = test_utils.rand_shape_nd(in_data_dim)
+    in_data_dim = random_sample([4,5,6], 1)[0]
+    in_data_shape = rand_shape_nd(in_data_dim)
     np_arr = np.random.uniform(-1, 1, in_data_shape).astype(np.float32)
+    mx_arr = mx.nd.array(np_arr, ctx=ctx)
     for ord in [1,2]:
         for keep_dims in [True, False]:
             for i in range(4):
