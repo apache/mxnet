@@ -173,8 +173,6 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
 
   std::vector<std::pair<std::string, std::string> > kwargs;
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  // Get input names.
-  const auto& idx = subgraph.indexed_graph();
   // We don't have parameters for the cached op.
   CachedOpPtr op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
   // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
