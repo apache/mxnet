@@ -20,7 +20,6 @@
 """Contrib Symbol API of MXNet."""
 import math
 import ctypes
-import re
 import copy
 
 from .random import uniform
@@ -192,8 +191,7 @@ def foreach(body, data, init_states, name="foreach"):
         assert is_NDArray_or_list, msg
 
     check_data(data, symbol.Symbol, "data should be a symbol or a list of symbols")
-    check_data(init_states, symbol.Symbol,
-            "init_states should be a symbol or a list of symbols")
+    check_data(init_states, symbol.Symbol, "init_states should be a symbol or a list of symbols")
     not_state_list = isinstance(init_states, symbol.Symbol)
 
     # TODO(zhengda) If the input python function references to the symbols outside
@@ -212,9 +210,9 @@ def foreach(body, data, init_states, name="foreach"):
         sym_out, sym_states = body(in_eles, states)
 
         check_data(sym_out, symbol.Symbol,
-                "the output should be an NDArray or a list of NDArrays")
+                   "the output should be an NDArray or a list of NDArrays")
         check_data(sym_states, symbol.Symbol,
-                "the output states should be an NDArray or a list of NDArrays")
+                   "the output states should be an NDArray or a list of NDArrays")
         if isinstance(sym_states, list):
             assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
                     "the number of output states (%d) should be the same as input states (%d)" \

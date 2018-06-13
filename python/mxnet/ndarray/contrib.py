@@ -169,7 +169,7 @@ def foreach(body, data, init_states):
 
     check_input(data, ndarray.NDArray, "data should be an NDArray or a list of NDArrays")
     check_input(init_states, ndarray.NDArray,
-            "init_states should be an NDArray or a list of NDArrays")
+                "init_states should be an NDArray or a list of NDArrays")
 
     not_data_list = isinstance(data, ndarray.NDArray)
     num_iters = data.shape[0] if not_data_list else data[0].shape[0]
@@ -184,8 +184,10 @@ def foreach(body, data, init_states):
         outs = _as_list(outs)
         outputs.append(outs)
     outputs = zip(*outputs)
-    for j, out in enumerate(outputs):
-        outputs[j] = ndarray.op.stack(*out)
+    tmp_outputs = []
+    for out in outputs:
+        tmp_outputs.append(ndarray.op.stack(*out))
+    outputs = tmp_outputs
 
     if not_data_list:
         outputs = outputs[0]
