@@ -27,9 +27,11 @@
 
 #include <cmath>
 #include <climits>
+#include <operator/nn/mkldnn/mkldnn_ops-inl.h>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
 
 using namespace mxnet;
 
@@ -734,6 +736,45 @@ TEST(IMPERATIVE, ActOp) {
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
   TestBinaryOp(attrs, VerifySumResult);
+}
+
+void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
+  float *in1 = static_cast<float*>(in_mem1.get_data_handle());
+  float *in2 = static_cast<float*>(in_mem1.get_data_handle());
+  float *out = static_cast<float*>(in_mem1.get_data_handle());
+  for (size_t i = 0; i < in_mem1.get_primitive_desc().get_size(); i++) {
+    ASSERT_EQ(in1[i] + in2[i], out);
+  }
+}
+
+TEST(MKLDNN_BASE, MKLDNNSum) {
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+
+  for (auto in_arr : in_arrs) {
+//    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                                             InitDefaultArray);
+//    for (auto out_arr: out_arrs) {
+//      if (!SupportMKLDNN(in_arr.arr))
+//        continue;
+
+      auto in_mem1 = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr.arr.GetMKLDNNData();
+      NDArray arr = in_arr.arr.Copy(in_arr.arr.ctx());
+      auto out_mem = arr.GetMKLDNNData();
+
+      op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
+      MKLDNNStream::Get()->Submit();
+      VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
+
+//    }
+
+
+  }
+
+
 }
 
 #endif
