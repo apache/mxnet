@@ -34,6 +34,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import platform
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -121,11 +122,16 @@ def buildir() -> str:
 
 
 def default_ccache_dir() -> str:
+    # Share ccache across containers
     if 'CCACHE_DIR' in os.environ:
         ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
         os.makedirs(ccache_dir, exist_ok=True)
-        return ccache_dirpython
-    # Share ccache across containers
+        return ccache_dir
+    # In osx tmpdir is not mountable by default
+    if platform.system() == 'Darwin':
+        ccache_dir = "/tmp/_mxnet_ccache"
+        os.makedirs(ccache_dir, exist_ok=True)
+        return ccache_dir
     return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 
