@@ -56,6 +56,15 @@ def init_git() {
   }
 }
 
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
+  command = command.replaceAll('%PLATFORM%', platform)
+  command = command.replaceAll('%FUNCTION_NAME%', function_name)
+  command = command.replaceAll('%SHARED_MEM%', shared_mem)
+
+  sh command
+}
 
 try {
   stage('Build') {
@@ -63,7 +72,8 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu') {
           init_git()
-          sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
+          //sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
+          docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
           pack_lib('gpu', mx_lib)
         }
       }
@@ -76,7 +86,8 @@ try {
         ws('workspace/nt-ImageClassificationTest') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_image_classification"
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
+          //sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_image_classification"
         }
       }
     },
@@ -87,6 +98,7 @@ try {
           unpack_lib('gpu', mx_lib)
           //Note: This test is commented for now since it needs a p2/p3 instance
           //sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_KVStore_singleNode"
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
         }
       }
     }
