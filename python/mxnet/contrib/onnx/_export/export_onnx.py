@@ -255,6 +255,7 @@ class MXNetGraph(object):
                 graph_input_idx += 1
 
             else:
+                # Handling graph operators
                 converted = MXNetGraph.convert_layer(
                     node,
                     is_input=False,
@@ -269,14 +270,16 @@ class MXNetGraph(object):
                 )
 
             if isinstance(converted, list):
+                # Iterate for all converted nodes
                 for converted_node in converted:
+                    # If converted node is ValueInfoProto, add it in inputs
                     if isinstance(converted_node, ValueInfoProto):
                         onnx_processed_inputs.append(converted_node)
+                    # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
-                        if idx < (len(mx_graph) - 1):
-                            onnx_processed_nodes.append(converted_node)
-                        else:
-                            onnx_processed_nodes.append(converted_node)
+                        onnx_processed_nodes.append(converted_node)
+                        if idx == (len(mx_graph) - 1):
+                            # If converted node doesnt have name, use it from output field
                             if not converted_node.name:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
