@@ -92,7 +92,7 @@ class MXNetGraph(object):
         return convert_func(node, **kwargs)
 
     @staticmethod
-    def forward_pass(inputs, sym, arg_params, aux_params):
+    def forward_pass(inputs, sym, arg_params, aux_params, output_label):
         """Do a forward pass based on the sym and params to get the shape
         of the output using dummy data
 
@@ -116,7 +116,7 @@ class MXNetGraph(object):
         # while running load_checkpoint which is not actually a graph input. So ignoring it here
         data_names = [graph_input for graph_input in sym.list_inputs()
                       if graph_input not in arg_params and graph_input not in aux_params
-                      and graph_input != 'softmax_label']
+                      and graph_input != output_label]
 
         data_shapes = []
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
@@ -175,12 +175,12 @@ class MXNetGraph(object):
 
 
     @staticmethod
-    def infer_output_shape(sym, params, in_shape):
+    def infer_output_shape(sym, params, in_shape, output_label):
         """Infer output shape by doing a forward pass using dummy inputs """
         # create dummy input
         inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
         arg, aux = MXNetGraph.split_params(sym, params)
-        return MXNetGraph.forward_pass(inputs, sym, arg, aux)
+        return MXNetGraph.forward_pass(inputs, sym, arg, aux, output_label)
 
 
     @staticmethod
@@ -217,8 +217,15 @@ class MXNetGraph(object):
             raise ImportError("Onnx and protobuf need to be installed. "
                               + "Instructions to install - https://github.com/onnx/onnx")
 
+        # When MXNet model is saved to json file , MXNet adds a node for label.
+        # The name of this node is, name of the last node + "_label" ( i.e if last node
+        # name is "Softmax", this node will have a name "Softmax_label". Also, the new node
+        # will always be second last node in the json graph.
+        # Deriving the output_label name.
+        output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
+
         # Determine output shape
-        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape)
+        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape, output_label)
 
         weights = MXNetGraph.convert_weights_to_numpy(params)
 
@@ -238,9 +245,14 @@ class MXNetGraph(object):
             if verbose:
                 logging.info("Converting idx: %d, op: %s, name: %s", idx, op, name)
 
+            # A node is an input node if its op_name is "null" and is not
+            # in params dict
             if op == "null" and name not in params:
                 # Handling graph input
-                if name == 'softmax_label':
+
+                # Skipping output_label node, as this node is not part of graph
+                # Refer "output_label" assignment above for more details.
+                if name == output_label:
                     continue
                 converted = MXNetGraph.convert_layer(
                     node,
@@ -255,7 +267,7 @@ class MXNetGraph(object):
                 graph_input_idx += 1
 
             else:
-                # Handling graph operators
+                # Handling graph layers
                 converted = MXNetGraph.convert_layer(
                     node,
                     is_input=False,
@@ -306,10 +318,16 @@ class MXNetGraph(object):
                     all_processed_nodes.append(converted_node)
 
                 if idx > 0:
-                    if name != 'softmax':
-                        prev_index = index_lookup[idx-1]
-                    else:
+                    # Handling extra node added to the graph if the MXNet model was
+                    # saved to json file,
+                    # refer "output_label" initialization above for more details.
+                    # if extra node was added then prev_index to the last node is adjusted.
+                    if idx == (len(mx_graph) - 1) and \
+                            mx_graph[len(mx_graph)-2]["name"] == output_label:
                         prev_index = index_lookup[idx - 2]
+                    else:
+                        prev_index = index_lookup[idx - 1]
+
                     index_lookup.append(prev_index+len(converted))
                 else:
                     index_lookup.append(len(converted) - 1)
