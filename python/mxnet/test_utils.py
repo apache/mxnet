@@ -1645,13 +1645,18 @@ def discard_stderr():
         ...
     """
     with open(os.devnull, 'w') as bit_bucket:
-        stderr_fileno = sys.stderr.fileno()
-        old_stderr = os.dup(stderr_fileno)
         try:
-            os.dup2(bit_bucket.fileno(), stderr_fileno)
+            stderr_fileno = sys.stderr.fileno()
+            old_stderr = os.dup(stderr_fileno)
+            try:
+                os.dup2(bit_bucket.fileno(), stderr_fileno)
+                yield
+            finally:
+                os.dup2(old_stderr, stderr_fileno)
+        except AttributeError:
+            # On some systems is stderr not a file descriptor but actually a virtual pipeline
+            # that can not be copied
             yield
-        finally:
-            os.dup2(old_stderr, stderr_fileno)
 
 
 class DummyIter(mx.io.DataIter):

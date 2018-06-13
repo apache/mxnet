@@ -484,9 +484,9 @@ try {
             unpack_lib('cpu')
             python2_ut('ubuntu_cpu')
           } finally {
-            collect_test_results_unix('nosetests1.xml', 'nosetests_python2_cpu1.xml')
-            collect_test_results_unix('nosetests2.xml', 'nosetests_python2_cpu2.xml')
-            collect_test_results_unix('nosetests3.xml', 'nosetests_python2_cpu3.xml')
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
+            collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_cpu_train.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_cpu_quantization.xml')
           }
         }
       }
@@ -499,8 +499,8 @@ try {
             unpack_lib('cpu')
             python3_ut('ubuntu_cpu')
           } finally {
-            collect_test_results_unix('nosetests1.xml', 'nosetests_python3_cpu1.xml')
-            collect_test_results_unix('nosetests2.xml', 'nosetests_python3_cpu2.xml')
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
           }
         }
       }
@@ -513,7 +513,7 @@ try {
             unpack_lib('gpu', mx_lib)
             python2_gpu_ut('ubuntu_gpu')
           } finally {
-            collect_test_results_unix('nosetests.xml', 'nosetests_python2_gpu.xml')
+            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
           }
         }
       }
@@ -526,7 +526,7 @@ try {
             unpack_lib('gpu', mx_lib)
             python3_gpu_ut('ubuntu_gpu')
           } finally {
-            collect_test_results_unix('nosetests.xml', 'nosetests_python3_gpu.xml')
+            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
           }
         }
       }
@@ -540,7 +540,7 @@ try {
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
             } finally {
-              collect_test_results_unix('nosetests.xml', 'nosetests_python2_quantize_gpu.xml')
+              collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python2_quantize_gpu.xml')
             }
           }
         }
@@ -555,7 +555,7 @@ try {
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
             } finally {
-              collect_test_results_unix('nosetests.xml', 'nosetests_python3_quantize_gpu.xml')
+              collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
             }
           }
         }
@@ -569,9 +569,9 @@ try {
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python2_ut('ubuntu_cpu')
           } finally {
-            collect_test_results_unix('nosetests1.xml', 'nosetests_python2_mkldnn_cpu1.xml')
-            collect_test_results_unix('nosetests2.xml', 'nosetests_python2_mkldnn_cpu2.xml')
-            collect_test_results_unix('nosetests3.xml', 'nosetests_python2_mkldnn_cpu3.xml')
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
+            collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_mkldnn_cpu_quantization.xml')
           }
         }
       }
@@ -584,7 +584,7 @@ try {
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python2_gpu_ut('ubuntu_gpu')
           } finally {
-            collect_test_results_unix('nosetests.xml', 'nosetests_python2_mkldnn_gpu.xml')
+            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_mkldnn_gpu.xml')
           }
         }
       }
@@ -597,9 +597,9 @@ try {
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python3_ut_mkldnn('ubuntu_cpu')
           } finally {
-            collect_test_results_unix('nosetests1.xml', 'nosetests_python3_mkldnn_cpu1.xml')
-            collect_test_results_unix('nosetests2.xml', 'nosetests_python3_mkldnn_cpu2.xml')
-            collect_test_results_unix('nosetests3.xml', 'nosetests_python3_mkldnn_cpu3.xml')
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_mkldnn_cpu_quantization.xml')
+            collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
           }
         }
       }
@@ -612,7 +612,7 @@ try {
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python3_gpu_ut('ubuntu_gpu')
           } finally {
-            collect_test_results_unix('nosetests.xml', 'nosetests_python3_mkldnn_gpu.xml')
+            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu.xml')
           }
         }
       }
@@ -626,8 +626,8 @@ try {
               unpack_lib('centos7_cpu')
               docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
             } finally {
-              collect_test_results_unix('nosetests1.xml', 'nosetests_python3_centos7_cpu1.xml')
-              collect_test_results_unix('nosetests2.xml', 'nosetests_python3_centos7_cpu2.xml')
+              collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
+              collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_train.xml')
             }
           }
         }
@@ -642,7 +642,7 @@ try {
               unpack_lib('centos7_gpu')
               docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
             } finally {
-              collect_test_results_unix('nosetests.xml', 'nosetests_python3_centos7_gpu.xml')
+              collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
             }
           }
         }
@@ -846,7 +846,7 @@ try {
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
               // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // ollect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
+              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
             }
           }
         }
