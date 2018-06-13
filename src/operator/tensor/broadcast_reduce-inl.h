@@ -212,15 +212,15 @@ struct seq_reduce_kernel {
                                   const Shape<ndim> bshape,
                                   const Shape<ndim> sshape,
                                   const Shape<ndim> rshape,
-                                  const Shape<ndim> rstride, DType* ws_dptr) {
+                                  const Shape<ndim> rstride, index_t* ws_dptr) {
     for (int idx = start; idx < end; ++idx) {
       Shape<ndim> coord = unravel(idx, sshape);
-      int j = ravel(coord, bshape);
+      index_t j = ravel(coord, bshape);
       DType val, residual;
       Reducer::SetInitValue(val, residual);
       #pragma unroll
       for (int k = 0; k < M; k++) {
-        Reducer::Reduce(val, OP::Map(big[j + static_cast<int>(ws_dptr[k])]), residual);
+        Reducer::Reduce(val, OP::Map(big[j + static_cast<index_t>(ws_dptr[k])]), residual);
       }
       assign(&small[idx], addto, val);
     }
@@ -230,11 +230,23 @@ struct seq_reduce_kernel {
 template <typename Reducer, int ndim, typename DType, typename OP>
 void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
             const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
+  if (req == kNullOp) return;
+  Shape<ndim> rshape, rstride;
+  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
+  int N = small.shape_.Size(), M = rshape.Size();
+  seq_reduce_compute<Reducer, ndim, DType, OP>(
+      N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
+      big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+}
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
+                        const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
   using namespace mxnet_op;
   if (req == kNullOp) return;
   Shape<ndim> rshape, rstride;
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
-  DType* ws_dptr = reinterpret_cast<DType*>(workspace.dptr_);
+  index_t* ws_dptr = reinterpret_cast<index_t*>(workspace.dptr_);
   int N = small.shape_.Size(), M = rshape.Size();
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int k = 0; k < M; k++) {

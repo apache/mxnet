@@ -546,9 +546,9 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
         // Request temporary storage
         size_t workspace_size = new_oshape.Size();
         Tensor<xpu, 1, char> workspace =
-          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size * sizeof(DType)), s);
-        Reduce<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
-        Reduce<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size * sizeof(index_t)), s);
+        ReduceWithExtraMem<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
+        ReduceWithExtraMem<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
       });
     });
   }
