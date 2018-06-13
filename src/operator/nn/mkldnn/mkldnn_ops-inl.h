@@ -104,7 +104,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
                               const NDArray &out_grad, const NDArray &in_data,
                               const OpReqType &req, const NDArray &in_grad);
 
-void MKLDNNSum(const std::vector<const mkldnn::memory*> arrs,
+void MKLDNNSum(const std::vector<mkldnn::memory const*> arrs,
                const mkldnn::memory &out);
 
 }  // namespace op

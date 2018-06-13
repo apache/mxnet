@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNSum(const std::vector<mkldnn::memory*> arrs,
+void MKLDNNSum(const std::vector<const mkldnn::memory*> arrs,
                const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(arrs.size());
   std::vector<float> scales(arrs.size(), 1);
@@ -39,8 +39,11 @@ void MKLDNNSum(const std::vector<mkldnn::memory*> arrs,
 
   mkldnn::memory::primitive_desc prev_pd;
   mkldnn::memory::primitive_desc tmp_pd;
-  for (size_t i = 0; i < arrs.size(); i++)
+  for (size_t i = 0; i < arrs.size(); i++) {
     input_pds[i] = arrs[i]->get_primitive_desc();
+    inputs.push_back(*arrs[i]);
+  }
+
 
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
   // check if inplace sum is possible
