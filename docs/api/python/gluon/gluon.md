@@ -18,7 +18,7 @@ Based on the the [Gluon API specification](https://github.com/gluon-api/gluon-ap
 1. Simple, Easy-to-Understand Code: Gluon offers a full set of plug-and-play neural network building blocks, including predefined layers, optimizers, and initializers.
 2. Flexible, Imperative Structure: Gluon does not require the neural network model to be rigidly defined, but rather brings the training algorithm and model closer together to provide flexibility in the development process.
 3. Dynamic Graphs: Gluon enables developers to define neural network models that are dynamic, meaning they can be built on the fly, with any structure, and using any of Python’s native control flow.
-4. High Performance: Gluon provides all of the above benefits without impacting the training speed that the underlying engine provides. 
+4. High Performance: Gluon provides all of the above benefits without impacting the training speed that the underlying engine provides.
 
 **Examples**
 
@@ -28,8 +28,8 @@ Use plug-and-play neural network building blocks, including predefined layers, o
 
 ```
 net = gluon.nn.Sequential()
-# When instantiated, Sequential stores a chain of neural network layers. 
-# Once presented with data, Sequential executes each layer in turn, using 
+# When instantiated, Sequential stores a chain of neural network layers.
+# Once presented with data, Sequential executes each layer in turn, using
 # the output of one layer as the input for the next
 with net.name_scope():
     net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
@@ -76,7 +76,7 @@ with net.name_scope():
     net.add(nn.Dense(256, activation="relu"))
     net.add(nn.Dense(128, activation="relu"))
     net.add(nn.Dense(2))
-    
+
 net.hybridize()
 ```
 
@@ -116,6 +116,8 @@ net.hybridize()
 
     Block
     HybridBlock
+    BlockList
+    HybridBlockList
     SymbolBlock
     nn.Sequential
     nn.HybridSequential

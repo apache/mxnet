@@ -1252,6 +1252,41 @@ def test_summary():
     assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
 
 
+def test_block_list():
+    class MyBlock(gluon.Block):
+        def __init__(self):
+            super(MyBlock, self).__init__()
+            self.blocks = gluon.BlockList([gluon.nn.Dense(10) for i in range(5)])
+            self.blocks.append(gluon.nn.Dense(10))
+            self.blocks.extend([gluon.nn.Dense(10) for i in range(4)])
+
+        def forward(self, x):
+            # BlockList can act as an iterable, or be indexed using ints
+            for i, l in enumerate(self.blocks):
+                x = self.blocks[i // 2](x) + l(x)
+            return x
+
+    block = MyBlock()
+    block.initialize()
+    block(mx.nd.zeros((10, 10))).asnumpy()
+
+    class MyHybridBlock(gluon.HybridBlock):
+        def __init__(self):
+            super(MyHybridBlock, self).__init__()
+            self.blocks = gluon.HybridBlockList([nn.Dense(10) for i in range(10)])
+
+        def hybrid_forward(self, F, x):
+            # HybridBlockList can act as an iterable, or be indexed using ints
+            for i, l in enumerate(self.blocks):
+                x = self.blocks[i // 2](x) + l(x)
+            return x
+
+    block = MyHybridBlock()
+    block.initialize()
+    block(mx.nd.zeros((10, 10))).asnumpy()
+    block.hybridize()
+    block(mx.nd.zeros((10, 10))).asnumpy()
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
