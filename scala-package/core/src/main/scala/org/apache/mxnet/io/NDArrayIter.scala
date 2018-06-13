@@ -23,13 +23,12 @@ import org.apache.mxnet.Base._
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 
-import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 
 /**
  * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
  *
- * @param data NDArrayIter supports single or multiple data and label.
+ * @param data Specify the data as well as the name. NDArrayIter supports single or multiple data and label.
  * @param label Same as data, but is not fed to the model during testing.
  * @param dataBatchSize Batch Size
  * @param shuffle Whether to shuffle the data
@@ -44,6 +43,18 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   private val dataBatchSize: Int, shuffle: Boolean,
                   lastBatchHandle: String) extends DataIter {
 
+  /**
+   * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
+   * @param label Same as data, but is not fed to the model during testing.
+   *              Label names will be label_0, label_1, ..., etc.
+   * @param dataBatchSize Batch Size
+   * @param shuffle Whether to shuffle the data
+   * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
+   *
+   * This iterator will pad, discard or roll over the last batch if
+   * the size of data does not match batch_size. Roll over is intended
+   * for training and can cause problems if used for prediction.
+   */
   def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
@@ -220,32 +231,62 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
 }
 
 object NDArrayIter {
+
+  /**
+   * Builder class for NDArrayIter.
+   */
   class Builder() {
     private var data: IndexedSeq[(String, NDArray)] = IndexedSeq.empty
     private var label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty
     private var dataBatchSize: Int = 1
     private var lastBatchHandle: String = "pad"
 
+    /**
+     * Add one data input with its name.
+     * @param name Data name.
+     * @param data Data nd-array.
+     * @return The builder object itself.
+     */
     def addData(name: String, data: NDArray): Builder = {
       this.data = this.data ++ IndexedSeq((name, data))
       this
     }
 
+    /**
+     * Add one label input with its name.
+     * @param name Label name.
+     * @param label Label nd-array.
+     * @return The builder object itself.
+     */
     def addLabel(name: String, label: NDArray): Builder = {
       this.label = this.label ++ IndexedSeq((name, label))
       this
     }
 
+    /**
+     * Set the batch size of the iterator.
+     * @param batchSize batch size.
+     * @return The builder object itself.
+     */
     def setBatchSize(batchSize: Int): Builder = {
       this.dataBatchSize = batchSize
       this
     }
 
+    /**
+     * How to handle the last batch.
+     * @param lastBatchHandle Can be "pad", "discard" or "roll_over".
+     * @return The builder object itself.
+     */
     def setLastBatchHandle(lastBatchHandle: String): Builder = {
       this.lastBatchHandle = lastBatchHandle
       this
     }
 
+    /**
+     * Build the NDArrayIter object.
+     * @return the built object.
+     */
     def build(): NDArrayIter = {
       new NDArrayIter(data, label, dataBatchSize, false, lastBatchHandle)
     }
