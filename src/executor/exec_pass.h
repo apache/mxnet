@@ -64,7 +64,6 @@ class OpExecutor {
   OpContext op_ctx;
   /*! \brief virtual destructor */
   virtual ~OpExecutor() {}
-  virtual bool HasSubgraph() const = 0;
   /*!
    * \brief Setup the executor for given NDArray member
    * this can be called multiple times if NDArray changed during reshape.
