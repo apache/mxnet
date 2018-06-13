@@ -75,7 +75,7 @@ def parse_helper(attrs, attrs_name, alt_value=None):
     tuple_re = re.compile('\([0-9L|,| ]+\)')
     if attrs is None:
         return alt_value
-    attrs_str = str(attrs.get(attrs_name))
+    attrs_str = None if attrs.get(attrs_name) is None else str(attrs.get(attrs_name))
     if attrs_str is None:
         return alt_value
     attrs_match = tuple_re.search(attrs_str)
@@ -600,6 +600,28 @@ def convert_exp(node, **kwargs):
     return [node]
 
 
+@mx_op.register("_copy")
+def convert_identity(node, **kwargs):
+    """Map MXNet's _copy operator attributes to onnx's Identity operator
+    and return the created node.
+    """
+    helper, _, _ = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    node = helper.make_node(
+        "Identity",
+        [input_node],
+        [name],
+        name=name,
+    )
+    return [node]
+
+
 @mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
     """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
@@ -832,12 +854,15 @@ def convert_mul_scalar(node, **kwargs):
 
     initializer = kwargs["initializer"]
     flag = True
+    # If the input value is in initializer, just multiply with scalar input
+    # and create a new initializer
     for i in initializer:
         if i.name == input_node:
-            new_initializer = scalar_mul_value[0]*numpy_helper.to_array(i)
+            new_initializer = scalar_mul_value[0] * numpy_helper.to_array(i)
             flag = False
             break
 
+    # else create a new tensor of the scalar value, add it in initializer
     if flag is True:
         np_arr = np.array(scalar_mul_value)
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
