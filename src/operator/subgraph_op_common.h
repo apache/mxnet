@@ -72,7 +72,7 @@ class LoopState {
   nnvm::Graph subgraph;
 
  public:
-  LoopState(const Symbol &g) {
+  explicit LoopState(const Symbol &g) {
     this->subgraph_sym = g;
     this->subgraph.outputs = g.outputs;
   }
