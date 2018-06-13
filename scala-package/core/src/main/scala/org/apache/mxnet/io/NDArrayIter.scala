@@ -28,7 +28,8 @@ import scala.collection.immutable.ListMap
 /**
  * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
  *
- * @param data Specify the data as well as the name. NDArrayIter supports single or multiple data and label.
+ * @param data Specify the data as well as the name.
+ *             NDArrayIter supports single or multiple data and label.
  * @param label Same as data, but is not fed to the model during testing.
  * @param dataBatchSize Batch Size
  * @param shuffle Whether to shuffle the data
