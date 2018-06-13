@@ -88,9 +88,8 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
       return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-    } else {
-      return mkldnn_output_t(OutDataOp::Noop, mem);
     }
+    return mkldnn_output_t(OutDataOp::Noop, mem);
   }
 }
 
