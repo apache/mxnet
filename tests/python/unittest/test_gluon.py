@@ -91,15 +91,16 @@ def test_parameter_invalid_access():
 
 @with_seed()
 def test_paramdict():
+    ctx = mx.cpu(1)
     params0 = gluon.ParameterDict('net_')
     params0.get('w0', shape=(10, 10))
     params0.get('w1', shape=(10, 10), stype='row_sparse')
-    all_row_ids = mx.nd.arange(0, 10, ctx=mx.cpu())
+    all_row_ids = mx.nd.arange(0, 10, ctx=ctx)
     # check param names
     assert list(params0.keys()) == ['net_w0', 'net_w1']
-    params0.initialize(ctx=mx.cpu())
+    params0.initialize(ctx=ctx)
     trainer0 = mx.gluon.Trainer(params0, 'sgd')
-    prev_w0 = params0.get('w0').data(mx.cpu())
+    prev_w0 = params0.get('w0').data(ctx)
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     # save params
     params0.save('test_paramdict.params')
@@ -108,11 +109,11 @@ def test_paramdict():
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
     params1.get('w1', shape=(10, 10), stype='row_sparse')
-    params1.load('test_paramdict.params', mx.cpu())
+    params1.load('test_paramdict.params', ctx)
     trainer1 = mx.gluon.Trainer(params1, 'sgd')
 
     # compare the values before and after save/load
-    cur_w0 = params1.get('w0').data(mx.cpu())
+    cur_w0 = params1.get('w0').data(ctx)
     cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
@@ -122,11 +123,11 @@ def test_paramdict():
     params2 = gluon.ParameterDict('net_')
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
-    params2.load('test_paramdict.params', mx.cpu())
+    params2.load('test_paramdict.params', ctx)
 
     # compare the values before and after save/load
-    cur_w0 = params2.get('w0').data(mx.cpu())
-    cur_w1 = params2.get('w1').data(mx.cpu())
+    cur_w0 = params2.get('w0').data(ctx)
+    cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
@@ -728,19 +729,23 @@ def test_sequential_warning():
 
 @with_seed()
 def test_global_norm_clip():
-    x1 = mx.nd.ones((3,3))
-    x2 = mx.nd.ones((4,4))
-    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
-    assert norm == 5.0
-    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
-    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
+    stypes = ['default', 'row_sparse']
+    def check_global_norm_clip(stype):
+        x1 = mx.nd.ones((3,3)).tostype(stype)
+        x2 = mx.nd.ones((4,4)).tostype(stype)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+        assert norm == 5.0
+        assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+        assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
 
-    x3 = mx.nd.array([1.0, 2.0, float('nan')])
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        gluon.utils.clip_global_norm([x1, x3], 2.0)
-        assert len(w) == 1
+        x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            gluon.utils.clip_global_norm([x1, x3], 2.0)
+            assert len(w) == 1
 
+    for stype in stypes:
+        check_global_norm_clip(stype)
 
 @with_seed()
 def test_embedding():
