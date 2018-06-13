@@ -781,7 +781,7 @@ build_docs() {
 nightly_test_rat_check() {
     set -ex
     #This Test fails without changing permissions
-    chmod -R 777 tests/nightly/
+    chmod -R 0755 tests/nightly/
     ./tests/nightly/apache_rat_license_check/license_check.sh
 }
 
