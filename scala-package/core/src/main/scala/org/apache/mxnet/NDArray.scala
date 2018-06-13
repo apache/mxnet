@@ -72,7 +72,6 @@ object NDArray {
         case arg =>
           posArgs.append(arg.toString)
     }
-
     require(posArgs.length <= function.arguments.length,
       s"len(posArgs) = ${posArgs.length}, should be less or equal to len(arguments) " +
       s"= ${function.arguments.length}")
