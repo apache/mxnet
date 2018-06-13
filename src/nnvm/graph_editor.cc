@@ -81,4 +81,4 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
   return true;
 }
 
-}
+}  // namespace mxnet
