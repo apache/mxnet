@@ -86,7 +86,7 @@ try {
           init_git()
           unpack_lib('gpu', mx_lib)
           //Note: This test is commented for now since it needs a p2/p3 instance
-          sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_KVStore_singleNode"
+          //sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_KVStore_singleNode"
         }
       }
     }
