@@ -171,22 +171,6 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
   for (size_t i = 0; i < outputs.size(); i++)
     outputs[i] = &coutputs[i];
 
-  if (is_recording) {
-    all_inputs.push_back(cinputs);
-    std::vector<NDArray> gradients(cinputs.size());
-    std::vector<NDArray *> input_ptrs(cinputs.size());
-    std::vector<NDArray *> gradient_ptrs(cinputs.size());
-    std::vector<mx_uint> grad_reqs(cinputs.size());
-    for (size_t i = 0; i < gradients.size(); i++) {
-      gradients[i] = NDArray(cinputs[i].shape(), cinputs[i].ctx(),
-                             true, cinputs[i].dtype());
-      input_ptrs[i] = &cinputs[i];
-      gradient_ptrs[i] = &gradients[i];
-      grad_reqs[i] = kWriteTo;
-    }
-    Imperative::Get()->MarkVariables(input_ptrs, grad_reqs, gradient_ptrs);;
-  }
-
   std::vector<std::pair<std::string, std::string> > kwargs;
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
   // Get input names.
@@ -197,11 +181,13 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
   // called. Currently, CachedOp allocates memory each time Forward is called.
   // I need to fix this once the PR for static memory allocation in CachedOp is
   // merged. https://github.com/apache/incubator-mxnet/pull/10817
-  op->Forward(nullptr, inputs, outputs);
+  OpStatePtr state = op->Forward(nullptr, inputs, outputs);
 
   if (is_recording) {
+    all_inputs.push_back(cinputs);
     all_outputs.push_back(coutputs);
     iter_ops.push_back(op);
+    all_states.push_back(state);
   }
 
   Imperative::Get()->set_is_recording(orig_is_record);
@@ -240,10 +226,7 @@ void LoopState::Backward(int iter_no,
   for (size_t i = 0; i < igrads.size(); i++)
     outputs.push_back(&igrads[i]);
   CHECK_EQ(outputs.size(), op->num_inputs());
-
-  CHECK(!Imperative::AGInfo::IsNone(all_outputs[iter_no][0]));
-  const nnvm::NodeEntry &node_entry = all_outputs[iter_no][0].entry();
-  OpStatePtr state = Imperative::AGInfo::Get(node_entry.node).state;
+  auto state = all_states[iter_no];
   op->Backward(false, state, inputs, req, outputs);
 }
 

@@ -66,8 +66,8 @@ class LoopState {
   // They also contain the Op state for each CachedOp.
   std::vector<std::vector<NDArray> > all_outputs;
   std::vector<std::vector<NDArray> > all_inputs;
-  std::vector<std::vector<NDArray> > all_gradients;
   std::vector<CachedOpPtr> iter_ops;
+  std::vector<OpStatePtr> all_states;
   Symbol subgraph_sym;
   nnvm::Graph subgraph;
 
@@ -88,7 +88,7 @@ class LoopState {
   void Cleanup() {
     all_outputs.clear();
     all_inputs.clear();
-    all_gradients.clear();
+    all_states.clear();
     iter_ops.clear();
   }
 };
