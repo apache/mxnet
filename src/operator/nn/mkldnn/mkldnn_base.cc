@@ -83,12 +83,7 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
-  } else if (kWriteInplace == req) {
-    // MKLDNN ops may not support the case that the input and the output uses
-    // the same memory. Let's use an extra copy to make sure it always works.
-    auto tmp = TmpMemMgr::Get()->Alloc(desc);
-    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-  } else {
+  } else if (kWriteInplace == req || req == kWriteTo) {
     mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
