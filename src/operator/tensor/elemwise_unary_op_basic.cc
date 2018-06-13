@@ -427,8 +427,6 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
-  [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", ShapeCompute<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
