@@ -21,7 +21,7 @@ import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 import scala.annotation.StaticAnnotation
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
@@ -57,14 +57,13 @@ private[mxnet] object NDArrayMacro {
 
     val newNDArrayFunctions = {
       if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filter(!_.name.startsWith("_contrib_"))
+      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
      val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
         val funcName = NDArrayfunction.name
         val termName = TermName(funcName)
-        if (!NDArrayfunction.name.startsWith("_") || NDArrayfunction.name.startsWith("_contrib_")) {
-          Seq(
+       Seq(
             // scalastyle:off
             // (yizhi) We are investigating a way to make these functions type-safe
             // and waiting to see the new approach is stable enough.
@@ -75,16 +74,7 @@ private[mxnet] object NDArrayMacro {
             q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
             // scalastyle:on
           )
-        } else {
-          // Default private
-          Seq(
-            // scalastyle:off
-            q"private def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
-            q"private def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
-            // scalastyle:on
-          )
         }
-      }
 
     structGeneration(c)(functionDefs, annottees : _*)
   }
@@ -109,6 +99,7 @@ private[mxnet] object NDArrayMacro {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      impl += "val args = scala.collection.mutable.ArrayBuffer.empty[NDArray]"
       ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
@@ -123,14 +114,32 @@ private[mxnet] object NDArrayMacro {
         else {
           argDef += s"${currArgName} : ${ndarrayarg.argType}"
         }
-        var base = "map(\"" + ndarrayarg.argName + "\") = " + currArgName
-        if (ndarrayarg.isOptional) {
-          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
-        }
-        impl += base
+        // NDArray arg implementation
+        val returnType = "org.apache.mxnet.NDArray"
+
+        // TODO: Currently we do not add place holder for NDArray
+        // Example: an NDArray operator like the following format
+        // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
+        // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
+        // What it should be?
+        val base =
+          if (ndarrayarg.argType.equals(returnType)) {
+            s"args += $currArgName"
+          } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
+            s"args ++= $currArgName"
+          } else {
+            "map(\"" + ndarrayarg.argName + "\") = " + currArgName
+          }
+        impl.append(
+          if (ndarrayarg.isOptional) s"if (!$currArgName.isEmpty) $base.get"
+          else base
+        )
       })
+      // add default out parameter
+      argDef += "out : Option[NDArray] = None"
+      impl += "if (!out.isEmpty) map(\"out\") = out.get"
       // scalastyle:off
-      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", null, map.toMap)"
+      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.NDArrayFuncReturn"
