@@ -100,7 +100,12 @@ enum class ExecType {
    *  In current implementation, copy operator is specially handled by executor.
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
-  kCrossDeviceCopy
+  kCrossDeviceCopy,
+  /*!
+   * \brief A subgraph execution should happen in the main thread, instead of
+   *  in the execution engine.
+   */
+  kSubgraphExec,
 };
 
 /*! \brief the dispatch mode of the operator */

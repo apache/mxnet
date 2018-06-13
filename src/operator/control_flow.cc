@@ -390,6 +390,9 @@ NNVM_REGISTER_OP(_foreach)
 // Foreach operator works like an executor. Its code will always run on CPU.
 // So the same code can be registered for both CPU and GPU.
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", ForeachComputeExCPU)
+.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
+  return ExecType::kSubgraphExec;
+})
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("fn", "Symbol", "Input graph.")
 .add_argument("data", "NDArray-or-Symbol[]",
@@ -405,6 +408,9 @@ NNVM_REGISTER_OP(_backward_foreach)
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   return params.num_args - 1;
   })
+.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
+  return ExecType::kSubgraphExec;
+})
 .set_attr<FInferStorageType>("FInferStorageType", BackwardForeachStorageType)
 .set_attr_parser(ParamParser<ForeachParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
