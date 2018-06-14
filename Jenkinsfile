@@ -598,7 +598,6 @@ try {
             python3_ut_mkldnn('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
-            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_mkldnn_cpu_quantization.xml')
             collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
           }
         }

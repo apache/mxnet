@@ -471,8 +471,8 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    nosetests-3.4 --verbose --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
+    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
 
 unittest_ubuntu_python2_gpu() {
