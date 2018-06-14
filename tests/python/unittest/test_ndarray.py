@@ -21,7 +21,7 @@ import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
-from common import setup_module, with_seed, assertRaises, TemporaryDirectory
+from common import setup_module, with_seed, assertRaises, TemporaryDirectory, teardown
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context

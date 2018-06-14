@@ -21,7 +21,7 @@ from mxnet.gluon import contrib
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import Concurrent, HybridConcurrent, Identity, SparseEmbedding
 from mxnet.test_utils import almost_equal
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import numpy as np
 from numpy.testing import assert_allclose
 

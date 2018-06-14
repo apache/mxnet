@@ -99,6 +99,7 @@ Graph QuantizeGraph(Graph &&src) {
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   auto excluded_nodes = src.GetAttr<std::unordered_set<NodePtr>>("excluded_nodes");
+  auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
 
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
@@ -129,7 +130,7 @@ Graph QuantizeGraph(Graph &&src) {
              mirror_node->op()->name != "_contrib_quantize")) {
           NodePtr quantize_node = InsertNode("_contrib_quantize",
             e.node->attrs.name + "_quantize", new_node, mirror_entry);
-          quantize_node->attrs.dict["out_type"] = "int8";
+          quantize_node->attrs.dict["out_type"] = quantized_dtype;
           quantize_node->op()->attr_parser(&(quantize_node->attrs));
 
           NodePtr min_node = InsertNode("min",
@@ -159,7 +160,11 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (quantized_op_map.count(e.node->op())) {
-          size_t  num_outputs = e.node->num_outputs();
+          // here we calculate the output number (exclude min/max, in order to
+          // calculate min/max index from mirror node) based on assumption that
+          // there is only 1min and 1max output from mirror node (which is
+          // currently true)
+          size_t  num_outputs = mirror_node->num_outputs() - 2;
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
         } else {
@@ -198,12 +203,15 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
-        size_t num_outputs = e.node->num_outputs();
-        uint32_t min_index = num_outputs + 2 * e.index;
-        uint32_t max_index = num_outputs + 2 * e.index + 1;
-
         // if input node is quantized operator, add dequantize node
         if (NeedQuantize(e.node, excluded_nodes)) {
+          // here we calculate the output number (exclude min/max, in order to
+          // calculate min/max index from mirror node) based on assumption that
+          // there is only 1min and 1max output from mirror node (which is
+          // currently true)
+          size_t num_outputs = mirror_node->num_outputs() - 2;
+          uint32_t min_index = num_outputs + 2 * e.index;
+          uint32_t max_index = num_outputs + 2 * e.index + 1;
           NodePtr dequantize_node = CreateNode("_contrib_dequantize",
             e.node->attrs.name + "_dequantize");
           dequantize_node->inputs.emplace_back(mirror_entry);
