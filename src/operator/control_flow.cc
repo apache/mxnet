@@ -235,7 +235,6 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
       ograds[i + num_output_data] = igrads[loc];
     }
   }
-  state.Cleanup();
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
