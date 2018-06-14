@@ -41,6 +41,8 @@
 namespace mxnet {
 namespace op {
 
+void PoolingParamParser(nnvm::NodeAttrs *attrs);
+
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   TShape kernel;
   TShape stride;
