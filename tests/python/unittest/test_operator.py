@@ -5958,7 +5958,7 @@ def test_foreach():
 
     def verify_foreach(step, in_syms, state_syms, free_syms,
             in_arrs, init_states, frees, out_grads, is_train=True,
-            free_vars_func=None):
+            free_vars_func=None, num_iters=1):
         step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
         res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
         out = _as_list(res)
@@ -6002,12 +6002,15 @@ def test_foreach():
             e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
             e = out.bind(ctx=default_context(), args=arg_dict)
-        e.forward(is_train=is_train)
-        if (is_train):
-            # backward
-            tmp_grads = out_grads[0][:]
-            tmp_grads.extend(out_grads[1])
-            e.backward(tmp_grads)
+        # the inputs to forward and backward are the same so forward and backward
+        # should always return the same outputs.
+        for i in range(num_iters):
+            e.forward(is_train=is_train)
+            if (is_train):
+                # backward
+                tmp_grads = out_grads[0][:]
+                tmp_grads.extend(out_grads[1])
+                e.backward(tmp_grads)
 
         # Below we use imperative to reimplement foreach and compute its gradients.
         res = []
@@ -6079,6 +6082,10 @@ def test_foreach():
             lambda frees : [frees[0] + frees[1]])
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
             lambda frees : [frees[0] + frees[1]])
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
+            lambda frees : [frees[0] + frees[1]], 5)
+    verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
+            lambda frees : [frees[0] + frees[1]], 5)
 
     frees = [mx.nd.random.uniform(shape=(2))]
     arrs = mx.nd.random.uniform(shape=(2, 2))
