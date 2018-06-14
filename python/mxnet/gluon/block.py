@@ -314,7 +314,7 @@ class Block(object):
         Saving parameters using `.save_parameters()` is different than
         `.collect_params().save()` and `.save_params()`, which are deprecated ways
         to save the parameters of a model and should be avoided.
-        
+
         If your model is hybridizable and you want to export a serialized version of the
         structure of the model as well as its parameters please refer to
         :py:meth:`HybridBlock.export`. Such model can then be loaded back in any language binding
