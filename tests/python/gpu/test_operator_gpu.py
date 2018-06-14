@@ -32,7 +32,7 @@ from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 from test_operator import *
 from test_optimizer import *
 from test_random import *
