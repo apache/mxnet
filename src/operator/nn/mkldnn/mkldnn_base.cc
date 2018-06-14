@@ -77,7 +77,7 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   }
 }
 
-void CopyMKLDNNMem(const mkldnn::memory &mem, const mkldnn::memory* this_mem) {
+void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   mkldnn::memory::primitive_desc from_pd = mem.get_primitive_desc();

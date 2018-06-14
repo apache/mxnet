@@ -646,7 +646,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     ptr_->Reorder2Default();
 
   const mkldnn::memory *this_mem = GetMKLDNNData();
-  CopyMKLDNNMem(mem, this_mem);
+  MKLDNNCopy(mem, this_mem);
 }
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &desc) {
