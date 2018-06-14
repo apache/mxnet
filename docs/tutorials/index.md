@@ -42,6 +42,7 @@ Select API:&nbsp;
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
+    * [Profiling MXNet Models](/tutorials/python/profiler.html)
 * API Guides
     * Core APIs
         * NDArray
