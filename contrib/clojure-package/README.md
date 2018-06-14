@@ -193,3 +193,4 @@ Special thanks to people that provided testing and feedback to make this possibl
 - Ben Kamphaus
 - Sivaram Konanki
 - Rustam Gilaztdinov
+- Kamil Hryniewicz
