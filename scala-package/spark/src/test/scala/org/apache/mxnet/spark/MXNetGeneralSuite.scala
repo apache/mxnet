@@ -46,26 +46,23 @@ class MXNetGeneralSuite extends SharedSparkContext {
       "/dataset/mxnet-spark-test/train.txt" + " -P " + testDataDir + " -q") !
   }
 
-//  override def beforeAll(): Unit = {
-//  val tempDirFile = Files.createTempDirectory(s"mxnet-spark-test-${System.currentTimeMillis()}").
-//      toFile
-//    testDataDir = tempDirFile.getPath
-//    tempDirFile.deleteOnExit()
-//    downloadTestData()
-//  }
-
-  test("Dummy test on Spark") {
-
+  override def beforeAll(): Unit = {
+  val tempDirFile = Files.createTempDirectory(s"mxnet-spark-test-${System.currentTimeMillis()}").
+      toFile
+    testDataDir = tempDirFile.getPath
+    tempDirFile.deleteOnExit()
+    downloadTestData()
   }
-//  test("run spark with MLP") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
-//    val model = buildMlp().fit(trainData)
-//    assert(model != null)
-//  }
-//
-//  test("run spark with LeNet") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
-//    val model = buildLeNet().fit(trainData)
-//    assert(model != null)
-//  }
+
+  test("run spark with MLP") {
+    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+    val model = buildMlp().fit(trainData)
+    assert(model != null)
+  }
+
+  test("run spark with LeNet") {
+    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+    val model = buildLeNet().fit(trainData)
+    assert(model != null)
+  }
 }
