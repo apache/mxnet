@@ -770,8 +770,14 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       MKLDNNStream::Get()->Submit();
       VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
     }
-  }
 
+    // in place
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto old_mem = new mkldnn::memory(input_mem->get_primitive_desc(), input_mem->get_data_handle());
+    op::MKLDNNSum(*input_mem, *input_mem, *input_mem);
+    MKLDNNStream::Get()->Submit();
+    VerifySumMemory(*old_mem, *old_mem, *input_mem);
+  }
 }
 
 #endif
