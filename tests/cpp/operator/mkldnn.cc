@@ -760,25 +760,17 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       continue;
 
     for (auto out_arr: out_arrs) {
-
-      PrintVerifyMsg(in_arr, in_arr);
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr.arr.GetMKLDNNData();
-
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
-
       if (out_mem == nullptr)
         continue;
-
+      PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
       VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
-
     }
-
-
   }
-
 
 }
 
