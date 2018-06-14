@@ -269,12 +269,12 @@ class Block(object):
         children's Parameters(default), also can returns the select :py:class:`ParameterDict`
         which match some given regular expressions.
 
-        For example, collect the specified parameter in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
         'fc_bias']::
 
             model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
 
-        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
 
             model.collect_params('.*weight|.*bias')
@@ -310,6 +310,18 @@ class Block(object):
 
     def save_parameters(self, filename):
         """Save parameters to file.
+        This function is to be used to save parameters of a Gluon model, note that
+        the saved parameters are not meant to be loaded in a different language binding for now.
+        Saving parameters using `.save_parameters()` is different than
+        `.collect_params().save()` and `.save_params()`, which are deprecated ways
+        to save the parameters of a model and should be avoided.
+
+        If your model is hybridizable and you want to export a serialized version of the
+        structure of the model as well as its parameters please refer to
+        :py:meth:`HybridBlock.export`. Such model can then be loaded back in any language binding
+        or even in Gluon using a :py:class:`SymbolBlock`.
+        Refer to this tutorial for a complete overview of saving/loading models with
+        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
 
         Parameters
         ----------
@@ -338,13 +350,17 @@ class Block(object):
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False):
         """Load parameters from file.
+        This function is to be used to load parameters of a Gluon model that were
+        saved using the `.save_parameters()` function. Any other use is undefined behaviour.
+        Refer to this tutorial for a complete overview of saving/loading models with
+        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
 
         Parameters
         ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
@@ -387,7 +403,7 @@ class Block(object):
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
