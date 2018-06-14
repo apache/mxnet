@@ -618,7 +618,7 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) 
   mshadow::default_real_t *d2 = in2.data().dptr<mshadow::default_real_t>();
   mshadow::default_real_t *o = out.data().dptr<mshadow::default_real_t>();
   for (size_t i = 0; i < in1.shape().Size(); i++)
-    EXPECT_EQ(d1[i] + d2[i], o[i]);
+    ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
@@ -847,7 +847,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
     VerifySumResult({&orig_arr.arr, &orig_arr.arr}, in_arr.arr);
-    
+
   }
 }
 
