@@ -773,9 +773,8 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 
     // in place
     auto input_mem = in_arr.arr.GetMKLDNNData();
-    NDArray arr = in_arr.arr.Copy(in_arr.arr.ctx());
-    arr.CopyFrom(*input_mem);
-    auto old_mem = arr.GetMKLDNNData();
+    auto old_mem = TmpMemMgr::Get()->Alloc(input_mem->get_primitive_desc());
+    CopyMKLDNNMem(*input_mem, old_mem);
     op::MKLDNNSum(*input_mem, *input_mem, *input_mem);
     MKLDNNStream::Get()->Submit();
     VerifySumMemory(*old_mem, *old_mem, *input_mem);
