@@ -831,11 +831,23 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
-      CopyMKLDNNMem(*in_mem, output_mem_t.second);
+      op::MKLDNNSum(*in_mem, *in_mem, *out_mem);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
-      VerifyCopyResult({&in_arr.arr}, out_arr.arr);
+      VerifySumResult({&in_arr.arr, &in_arr.arr}, out_arr.arr);
     }
+
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kWriteInplace);
+    op::MKLDNNSum(*input_mem, *input_mem, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    VerifySumResult({&orig_arr.arr, &orig_arr.arr}, in_arr.arr);
+    
   }
 }
 
