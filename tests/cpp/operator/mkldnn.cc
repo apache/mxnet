@@ -807,7 +807,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, in_mem->get_primitive_desc(), kWriteTo);
-      const_cast<NDArray &>(out_arr.arr).CopyFrom(*in_mem);
+      CopyMKLDNNMem(*in_mem, output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifyCopyMemory(*in_mem, *out_arr.arr.GetMKLDNNData());
