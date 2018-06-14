@@ -66,6 +66,11 @@ class LoopState {
   // They also contain the Op state for each CachedOp.
   std::vector<std::vector<NDArray> > all_outputs;
   std::vector<std::vector<NDArray> > all_inputs;
+  // For inference, there should be only one cached op because we
+  // want to share the memory in iterations.
+  // For training, each iteration has a cached op because each iteration
+  // needs to maintain a set of memory buffers for all computation states,
+  // which will be used in the backward.
   std::vector<CachedOpPtr> iter_ops;
   std::vector<OpStatePtr> all_states;
   Symbol subgraph_sym;
