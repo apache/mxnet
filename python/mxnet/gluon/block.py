@@ -312,8 +312,8 @@ class Block(object):
         This function is to be used to save parameters of a Gluon model, note that
         the saved parameters are not meant to be loaded in a different language binding for now.
         Saving parameters using `.save_parameters()` is different than
-        `.collect_params().save()` and `.save_params()`, which are a deprecated ways
-        to save parameters of a model and should be avoided.
+        `.collect_params().save()` and `.save_params()`, which are deprecated ways
+        to save the parameters of a model and should be avoided.
         
         If your model is hybridizable and you want to export a serialized version of the
         structure of the model as well as its parameters please refer to
