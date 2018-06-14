@@ -634,27 +634,6 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   printf(")\n");
 }
 
-TEST(MKLDNN_NDArray, CopyFrom) {
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-        InitDefaultArray);
-    for (auto out_arr : out_arrs) {
-      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
-        in_arr.arr = in_arr.arr.Reorder2Default();
-      const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
-      out_arr.arr.CopyFrom(*mem);
-      MKLDNNStream::Get()->Submit();
-      std::vector<NDArray *> inputs(1);
-      inputs[0] = &in_arr.arr;
-      VerifyCopyResult(inputs, out_arr.arr);
-    }
-  }
-}
-
 void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(1);
   std::vector<NDArray*> outputs(1);
@@ -752,6 +731,27 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   }
 }
 
+TEST(MKLDNN_NDArray, CopyFrom) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  for (auto in_arr : in_arrs) {
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                                             InitDefaultArray);
+    for (auto out_arr : out_arrs) {
+      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+        in_arr.arr = in_arr.arr.Reorder2Default();
+      const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
+      out_arr.arr.CopyFrom(*mem);
+      MKLDNNStream::Get()->Submit();
+      std::vector<NDArray *> inputs(1);
+      inputs[0] = &in_arr.arr;
+      VerifyCopyResult(inputs, out_arr.arr);
+    }
+  }
+}
+
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
   TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
@@ -816,7 +816,7 @@ void VerifyCopyMemory(mkldnn::memory in_mem1, mkldnn::memory out_mem) {
   float *in1 = static_cast<float*>(in_mem1.get_data_handle());
   float *out = static_cast<float*>(out_mem.get_data_handle());
   EXPECT_EQ(in_mem1.get_primitive_desc().get_size(), out_mem.get_primitive_desc().get_size());
-  EXPECT_EQ(memcmp(in1, out, in_mem1.get_primitive_desc().get_size()),0);
+  EXPECT_EQ(memcmp(in1, out, in_mem1.get_primitive_desc().get_size()), 0);
 }
 
 
@@ -828,20 +828,18 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   for (auto in_arr : in_arrs) {
-
     if (!SupportMKLDNN(in_arr.arr) || in_arr.arr.IsView())
       continue;
 
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
     for (auto out_arr : out_arrs) {
-
-
       PrintVerifyMsg(in_arr, out_arr);
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
       CopyMKLDNNMem(*in_mem, output_mem_t.second);
+      out_arr.arr.CopyFrom(*in_mem);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifyCopyMemory(*in_mem, *out_arr.arr.GetMKLDNNData());
