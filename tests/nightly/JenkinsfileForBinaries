@@ -87,7 +87,6 @@ try {
           init_git()
           unpack_lib('gpu', mx_lib)
           docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
-          //sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_image_classification"
         }
       }
     },
@@ -96,8 +95,7 @@ try {
         ws('workspace/nt-KVStoreTest') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          //Note: This test is commented for now since it needs a p2/p3 instance
-          //sh "ci/build.py --nvidiadocker --platform ubuntu_nightly_gpu /work/runtime_functions.sh nightly_test_KVStore_singleNode"
+          //https://github.com/apache/incubator-mxnet/issues/11289
           //docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
         }
       }
