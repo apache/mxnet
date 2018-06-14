@@ -842,7 +842,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   for (auto in_arr : in_arrs) {
-    if (!SupportMKLDNN(in_arr.arr) || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
       continue;
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
