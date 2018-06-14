@@ -757,13 +757,14 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 //    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
 //                                                             InitDefaultArray);
 //    for (auto out_arr: out_arrs) {
-      if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData())
+      if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
         continue;
 
+      PrintVerifyMsg(in_arr, in_arr);
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr.arr.GetMKLDNNData();
       NDArray arr = in_arr.arr.Copy(in_arr.arr.ctx());
-      PrintVerifyMsg(in_arr, in_arr);
+
       auto out_mem = arr.GetMKLDNNData();
 
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
