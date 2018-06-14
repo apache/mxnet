@@ -751,7 +751,6 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-
   for (auto in_arr : in_arrs) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
