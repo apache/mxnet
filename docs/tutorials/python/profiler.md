@@ -170,7 +170,7 @@ You can use the `profiler.dumps()` method to view the information collected by t
 print(profiler.dumps())
 ```
 
-![Profile Statistics](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_stats.png)
+![Profile Statistics](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_stats.png)<!--notebook-skip-line-->
 
 #### 2. View in browser
 
@@ -191,4 +191,6 @@ Let's zoom in to check the time taken by operators
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
 If you would like to learn more about the profiler, there are more examples available [here](https://github.com/apache/incubator-mxnet/tree/master/example/profiler).
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
 
