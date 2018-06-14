@@ -792,7 +792,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       auto in_mem2 = in_arr.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
 
-      // TODO: remove this noop when by reordering in MKLDNNSum
+      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
       if (out_mem == nullptr)
         continue;
       PrintVerifyMsg(in_arr, in_arr);
@@ -830,7 +830,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData();
 
-      // TODO: remove this noop when by reordering in MKLDNNSum
+      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
       if (out_mem == nullptr)
         continue;
 
