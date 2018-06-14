@@ -757,7 +757,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
       continue;
 
-    for (auto out_arr: out_arrs) {
+    for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
