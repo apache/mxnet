@@ -86,7 +86,7 @@ try {
       }
     },
     'InstallationGuide: CPU': {
-      node('mxnetlinux-gpu') {
+      node('mxnetlinux-cpu') {
         ws('workspace/nt-Installation-cpu') {
           init_git()
           docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
