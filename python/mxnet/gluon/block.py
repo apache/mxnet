@@ -149,7 +149,8 @@ class Block(object):
 
 
     Child :py:class:`Block` assigned this way will be registered and :py:meth:`collect_params`
-    will collect their Parameters recursively.
+    will collect their Parameters recursively. You can also manually register
+    child blocks with :py:meth:`register_child`.
 
     Parameters
     ----------
@@ -310,6 +311,8 @@ class Block(object):
     def save_parameters(self, filename):
         """Save parameters to file.
 
+        Parameters
+        ----------
         filename : str
             Path to file.
         """
@@ -336,6 +339,8 @@ class Block(object):
                         ignore_extra=False):
         """Load parameters from file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
@@ -635,9 +640,31 @@ class Block(object):
 class HybridBlock(Block):
     """`HybridBlock` supports forwarding with both Symbol and NDArray.
 
+    `HybridBlock` is similar to `Block`, with a few differences::
+
+        import mxnet as mx
+        from mxnet.gluon import HybridBlock, nn
+
+        class Model(HybridBlock):
+            def __init__(self, **kwargs):
+                super(Model, self).__init__(**kwargs)
+                # use name_scope to give child Blocks appropriate names.
+                with self.name_scope():
+                    self.dense0 = nn.Dense(20)
+                    self.dense1 = nn.Dense(20)
+
+            def hybrid_forward(self, F, x):
+                x = F.relu(self.dense0(x))
+                return F.relu(self.dense1(x))
+
+        model = Model()
+        model.initialize(ctx=mx.cpu(0))
+        model.hybridize()
+        model(mx.nd.zeros((10, 10), ctx=mx.cpu(0)))
+
     Forward computation in :py:class:`HybridBlock` must be static to work with :py:class:`Symbol` s,
     i.e. you cannot call :py:meth:`NDArray.asnumpy`, :py:attr:`NDArray.shape`,
-    :py:attr:`NDArray.dtype`, etc on tensors.
+    :py:attr:`NDArray.dtype`, `NDArray` indexing (`x[i]`) etc on tensors.
     Also, you cannot use branching or loop logic that bases on non-constant
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.
@@ -647,9 +674,12 @@ class HybridBlock(Block):
     representing the forward computation and cache it. On subsequent forwards,
     the cached graph will be used instead of :py:meth:`hybrid_forward`.
 
-    Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
-    the end-to-end usage.
+    Please see references for detailed tutorial.
 
+    References
+    ----------
+        `Hybrid - Faster training and easy deployment
+        <http://mxnet.io/tutorials/gluon/hybrid.html>`_
     """
     def __init__(self, prefix=None, params=None):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
