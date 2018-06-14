@@ -790,26 +790,26 @@ nightly_test_compilation_warning() {
     set -ex
     export PYTHONPATH=./python/
     #This test fails without changing permissions
-    chmod -R 777 tests/nightly/
+    chmod -R 0755 tests/nightly/
     ./tests/nightly/compilation_warnings/compilation_warnings.sh
 }
 
 #Checks the MXNet Installation Guide - currently checks pip, build from source and virtual env on cpu and gpu
 nightly_test_installation() {
     set -ex
-    #chmod -R 777 ./tests/jenkins
+    #chmod -R 0755 ./tests/jenkins
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
 #Runs a simple MNIST training example
 nightly_test_image_classification() {
-    #chmod -R 777 tests/nightly/
+    #chmod -R 0755 tests/nightly/
     ./tests/nightly/test_image_classification.sh
 }
 
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
-    #chmod -R 777 tests/nightly/
+    #chmod -R 0755 tests/nightly/
     export PYTHONPATH=./python/
     python tests/nightly/test_kvstore.py
 }
@@ -831,12 +831,6 @@ nightly_test_javascript() {
     ./emcc
     touch ~/.emscripten
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
-}
-
-broken_link_checker() {
-    set -ex
-    chmod -R 777 tests/nightly/broken_link_checker_test/
-    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
 # Deploy
