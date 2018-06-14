@@ -432,6 +432,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs;
+  std::string desc;
   for (auto shape : shapes) {
     // Type 1.
     NDArray arr(shape, Context());
@@ -443,13 +444,27 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
 
       // Type 2, 3.
       arr = NDArray(shape, Context());
-      in_arrs.emplace_back(arr, "MKLDNN NDArray");
+      desc = "MKLDNN NDArray";
+      if (shape.ndim() != pd.desc().data.ndims) {
+        std::stringstream ss;
+        ss << "MKLDNN NDArray with different memory layout " <<
+           shape.ndim() << "/" << pd.desc().data.ndims;
+        desc = ss.str();
+      }
+      in_arrs.emplace_back(arr, desc);
       InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn);
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());
+      desc = "Reshaped MKLDNN NDArray";
+      if (shape.ndim() != pd.desc().data.ndims) {
+        std::stringstream ss;
+        ss << "Reshaped MKLDNN NDArray with different memory layout "
+           << shape.ndim() << "/" << pd.desc().data.ndims;
+        desc = ss.str();
+      }
       InitMKLDNNArray(&arr, pd, init_fn);
-      in_arrs.emplace_back(arr.Slice(1, arr.shape()[0] - 1), "Reshaped MKLDNN NDArray");
+      in_arrs.emplace_back(arr.Slice(1, arr.shape()[0] - 1), desc);
     }
   }
   return in_arrs;
@@ -496,6 +511,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds,
                                          const InitFunc init_fn) {
   std::vector<NDArrayAttrs> in_arrs;
+  std::string desc;
   // Type 1.
   NDArray arr(shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
@@ -539,7 +555,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
 
     // Type 2, 3.
     arr = NDArray(shape, Context());
-    in_arrs.emplace_back(arr, "MKLDNN NDArray");
+    desc = "MKLDNN NDArray";
+    if (shape.ndim() != pd.desc().data.ndims) {
+      std::stringstream ss;
+      ss << "MKLDNN NDArray with different memory layout "
+         << shape.ndim() << "/" << pd.desc().data.ndims;
+      desc = ss.str();
+    }
+    in_arrs.emplace_back(arr, desc);
     InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn, true);
 
     // Type 8, 9.
@@ -549,7 +572,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
     InitMKLDNNArray(&arr, pd, init_fn, true);
-    in_arrs.emplace_back(arr, "Reused MKLDNN NDArray");
+    desc = "Reused MKLDNN NDArray";
+    if (shape.ndim() != pd.desc().data.ndims) {
+      std::stringstream ss;
+      ss << "Reused MKLDNN NDArray with different memory layout "
+         << shape.ndim() << "/" << pd.desc().data.ndims;
+      desc = ss.str();
+    }
+    in_arrs.emplace_back(arr, desc);
   }
   return in_arrs;
 }
