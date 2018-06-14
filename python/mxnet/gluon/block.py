@@ -266,12 +266,12 @@ class Block(object):
         children's Parameters(default), also can returns the select :py:class:`ParameterDict`
         which match some given regular expressions.
 
-        For example, collect the specified parameter in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
         'fc_bias']::
 
             model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
 
-        or collect all paramters which their name ends with 'weight' or 'bias', this can be done
+        or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
 
             model.collect_params('.*weight|.*bias')
@@ -308,10 +308,19 @@ class Block(object):
     def save_parameters(self, filename):
         """Save parameters to file.
 
+        Saved parameters can only be loaded with `load_parameters`. Note that this method
+        only saves parameters, not model structure. If you want to save model structures,
+        please use :py:meth:`HybridBlock.export`.
+
         Parameters
         ----------
         filename : str
             Path to file.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
@@ -334,19 +343,24 @@ class Block(object):
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False):
-        """Load parameters from file.
+        """Load parameters from file previously saved by `save_parameters`.
 
         Parameters
         ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this Block.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
@@ -384,7 +398,7 @@ class Block(object):
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
