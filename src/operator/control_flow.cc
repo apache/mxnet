@@ -156,7 +156,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
       }
     }
 
-    state.Forward(subg_inputs, req, *subg_out_curr, ctx.need_grad);
+    state.Forward(i, subg_inputs, req, *subg_out_curr, ctx.need_grad);
   }
 }
 
@@ -235,6 +235,7 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
       ograds[i + num_output_data] = igrads[loc];
     }
   }
+  state.Cleanup();
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
