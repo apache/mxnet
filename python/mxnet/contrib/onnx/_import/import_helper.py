@@ -89,6 +89,7 @@ _convert_map = {
     'Squeeze'           : squeeze,
     'Unsqueeze'         : unsqueeze,
     'Flatten'           : flatten,
+    'Identity'          : identity,
     #Powers
     'Reciprocal'        : reciprocal,
     'Sqrt'              : squareroot,

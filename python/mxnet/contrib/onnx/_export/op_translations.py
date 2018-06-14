@@ -836,18 +836,13 @@ def convert_flatten(node, **kwargs):
     return [flatten_node]
 
 
-# Convert scalar value into node and pass it as input to mul_node
-@mx_op.register("_mul_scalar")
-def convert_mul_scalar(node, **kwargs):
-    """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
-    Creates a new node for the input scalar value, adds it to the initializer
-    and return multiple created nodes.
-    """
+def scalar_op_helper(node, op_name, **kwargs):
+    """Helper function for scalar arithmetic operations"""
     helper, numpy_helper, mapping = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
-    scalar_mul_value = [int(node.get("attrs", {}).get("scalar", 1))]
+    scalar_value = [float(node.get("attrs", {}).get("scalar", 1))]
 
     input_name_id = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_name_id].name
@@ -858,13 +853,20 @@ def convert_mul_scalar(node, **kwargs):
     # and create a new initializer
     for i in initializer:
         if i.name == input_node:
-            new_initializer = scalar_mul_value[0] * numpy_helper.to_array(i)
+            if op_name == 'Mul':
+                new_initializer = numpy_helper.to_array(i) * scalar_value[0]
+            elif op_name == 'Sub':
+                new_initializer = numpy_helper.to_array(i) - scalar_value[0]
+            elif op_name == 'Add':
+                new_initializer = numpy_helper.to_array(i) + scalar_value[0]
+            elif op_name == 'Div':
+                new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             flag = False
             break
 
     # else create a new tensor of the scalar value, add it in initializer
     if flag is True:
-        np_arr = np.array(scalar_mul_value)
+        np_arr = np.array(scalar_value)
         data_type = mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
         dims = np.shape(np_arr)
 
@@ -876,13 +878,13 @@ def convert_mul_scalar(node, **kwargs):
                 name=scalar_op_name,
                 data_type=data_type,
                 dims=dims,
-                vals=scalar_mul_value,
+                vals=scalar_value,
                 raw=False,
             )
         )
 
         mul_node = helper.make_node(
-            "Mul",
+            op_name,
             [input_node, scalar_op_name],
             [name],
             name=name
@@ -906,6 +908,45 @@ def convert_mul_scalar(node, **kwargs):
             )
         )
         return [tensor_node]
+
+# Convert scalar value into node and pass it as input to mul_node
+@mx_op.register("_mul_scalar")
+def convert_mul_scalar(node, **kwargs):
+    """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Mul', **kwargs)
+
+
+# Convert scalar value into node and pass it as input to mul_node
+@mx_op.register("_minus_scalar")
+def convert_minus_scalar(node, **kwargs):
+    """Map MXNet's _minus_scalar operator attributes to onnx's Minus operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Sub', **kwargs)
+
+
+# Convert scalar value into node and pass it as input to mul_node
+@mx_op.register("_plus_scalar")
+def convert_add_scalar(node, **kwargs):
+    """Map MXNet's _plus_scalar operator attributes to onnx's Add operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Add', **kwargs)
+
+# Convert scalar value into node and pass it as input to mul_node
+@mx_op.register("_div_scalar")
+def convert_div_scalar(node, **kwargs):
+    """Map MXNet's _div_scalar operator attributes to onnx's Div operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Div', **kwargs)
+
 
 # Sorting and Searching
 @mx_op.register("argmax")
