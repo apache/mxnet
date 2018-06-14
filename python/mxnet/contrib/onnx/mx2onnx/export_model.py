@@ -29,7 +29,7 @@ import numpy as np
 from ....base import string_types
 from .... import symbol
 from .export_onnx import MXNetGraph
-from .export_helper import load_module
+from ._export_helper import load_module
 
 
 def export_model(sym, params, input_shape, input_type=np.float32,

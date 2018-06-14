@@ -19,7 +19,7 @@
 """ Module for translating ONNX operators into Mxnet operatoes"""
 # pylint: disable=unused-argument,protected-access
 import numpy as np
-from . import translation_utils
+from . import _translation_utils as translation_utils
 from .... import symbol
 
 # Method definitions for the callable objects mapped in the import_helper module
