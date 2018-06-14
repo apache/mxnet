@@ -326,6 +326,27 @@ bool CachedOp::SetForwardGraph(
   return false;
 }
 
+// Utility function to set backward input eids
+void SetBackwardInputEid(const std::vector<uint32_t>& bwd_in_dep,
+                         const std::vector<uint32_t>& bwd_out_dep,
+                         const std::vector<uint32_t>& bwd_ograd_dep,
+                         const std::vector<nnvm::NodeEntry>& ograd_entries,
+                         const nnvm::IndexedGraph& idx,
+                         std::vector<uint32_t> *bwd_input_eid) {
+  for (const auto& i : bwd_ograd_dep) {
+    auto eid = idx.entry_id(ograd_entries[i]);
+    bwd_input_eid->push_back(eid);
+  }
+  for (const auto& i : bwd_in_dep) {
+    auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+    bwd_input_eid->push_back(eid);
+  }
+  for (const auto& i : bwd_out_dep) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    bwd_input_eid->push_back(eid);
+  }
+}
+
 bool CachedOp::SetBackwardGraph(
     GraphInfo* info,
     const std::vector<OpReqType>& reqs,
@@ -354,18 +375,8 @@ bool CachedOp::SetBackwardGraph(
 
   if (info->bwd_input_eid.size() != inputs.size()) {
     info->bwd_input_eid.clear();
-    for (const auto& i : bwd_ograd_dep_) {
-      auto eid = idx.entry_id(ograd_entries_[i]);
-      info->bwd_input_eid.push_back(eid);
-    }
-    for (const auto& i : bwd_in_dep_) {
-      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      info->bwd_input_eid.push_back(eid);
-    }
-    for (const auto& i : bwd_out_dep_) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      info->bwd_input_eid.push_back(eid);
-    }
+    SetBackwardInputEid(bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_,
+                        ograd_entries_, idx, &info->bwd_input_eid);
     CHECK_EQ(inputs.size(), info->bwd_input_eid.size());
   }
 
@@ -1018,70 +1029,48 @@ void CachedOp::Backward(
 }
 
 bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
-                                   //const nnvm::Symbol &subgraph,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
                                    std::vector<int> *in_attrs,
                                    std::vector<int> *out_attrs) {
-  using namespace nnvm;
-  // construct backward graph
-  nnvm::Graph grad_graph;
-  nnvm::Graph fwd_graph;
-  std::vector<Node *> potential_nodes;
-  {
-    fwd_graph.outputs = subgraph.outputs;
-    std::vector<nnvm::NodeEntry> ograd_entries;
-    ograd_entries.reserve(fwd_graph.outputs.size());
-    for (size_t i = 0; i < fwd_graph.outputs.size(); ++i) {
-      ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
-    }
-
-    // TODO what happens when some arguments are mutable.
-    std::vector<NodeEntry> xs;
-    std::vector<NodePtr> args = subgraph.ListInputs(nnvm::Symbol::kReadOnlyArgs);
-    xs.reserve(args.size());
-    for (const auto& i : args)
-      xs.emplace_back(NodeEntry{i, 0, 0});
-    CHECK_GT(xs.size(), 0)
-        << "There are no inputs in computation graph that require gradients.";
-
-    static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
-    grad_graph = pass::Gradient(
-        fwd_graph, fwd_graph.outputs, xs, ograd_entries,
-        exec::AggregateGradient, nullptr, nullptr,
-        zero_ops, "_copy");
-    potential_nodes.reserve(fwd_graph.outputs.size() + xs.size() + ograd_entries.size());
-    for (auto e : ograd_entries)
-      potential_nodes.push_back(e.node.get());
-    for (auto e : xs)
-      potential_nodes.push_back(e.node.get());
-    for (auto e : fwd_graph.outputs)
-      potential_nodes.push_back(e.node.get());
+  using namespace imperative;
+  std::lock_guard<std::mutex> lock(mutex_);
+  nnvm::Graph g = full_graph_;
+  const auto& idx = g.indexed_graph();
+  // Construct bwd_input_eid
+  std::vector<uint32_t> bwd_input_eid;
+  SetBackwardInputEid(bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_,
+                      ograd_entries_, idx, &bwd_input_eid);
+  CHECK_EQ(in_attrs->size(), bwd_input_eid.size());
+  // Prepare node and entry ranges
+  const size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
+  const size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
+  const size_t num_forward_outputs = fwd_graph_.outputs.size();
+  std::pair<uint32_t, uint32_t> node_range, entry_range;
+  node_range = {num_forward_nodes, idx.num_nodes()};
+  entry_range = {num_forward_entries, idx.num_node_entries()};
+  g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
+  g.attrs["entry_range"] = std::make_shared<dmlc::any>(entry_range);
+  // Prepare stypes based on inputs
+  StorageTypeVector stypes(idx.num_node_entries(), -1);
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    stypes[bwd_input_eid[i]] = in_attrs->at(i);
   }
-
-  const auto& idx = grad_graph.indexed_graph();
-  auto input_nodes = idx.input_nodes();
-  StorageTypeVector storage_type_inputs(input_nodes.size());
-  for (size_t i = 0; i < input_nodes.size(); i++) {
-    auto node_id = input_nodes[i];
-    const nnvm::IndexedGraph::Node &n = idx[node_id];
-    auto it = std::find(potential_nodes.begin(), potential_nodes.end(), n.source);
-    CHECK(it != potential_nodes.end());
-    size_t idx = it - potential_nodes.begin();
-    CHECK_LT(idx, in_attrs->size());
-    storage_type_inputs[i] = in_attrs->at(idx);
-  }
-  CHECK_EQ(idx.outputs().size(), out_attrs->size());
-  exec::DevMaskVector dev_masks(idx.num_node_entries(), dev_mask);
-  imperative::CheckAndInferStorageType(&grad_graph, std::move(dev_masks),
-                                       std::move(storage_type_inputs), true);
-
-  const auto& stypes = grad_graph.GetAttr<StorageTypeVector>("storage_type");
+  // Prepare contexts
+  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
+  // Subgraph storage type inference
+  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(stypes),
+                           false, node_range, entry_range);
+  // Retrieve result and set outputs
+  const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   auto &outputs = idx.outputs();
-  CHECK(outputs.size() == out_attrs->size());
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, stypes[idx.entry_id(outputs[i])]);
+  CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
+  // Assign output stypes
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
+  }
   return true;
 }
 

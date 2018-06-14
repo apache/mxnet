@@ -1285,6 +1285,33 @@ def test_legacy_save_params():
     model.load_params('test.params', ctx=mx.cpu())
 
 
+def test_sparse_hybrid():
+    class Embedding(mx.gluon.HybridBlock):
+        def __init__(self, num_tokens, embedding_size):
+            super(Embedding, self).__init__()
+            self.num_tokens = num_tokens
+
+            with self.name_scope():
+                self.embedding = mx.gluon.nn.Embedding(
+                    num_tokens, embedding_size, sparse_grad=True)
+
+        def hybrid_forward(self, F, words):
+            emb = self.embedding(words)
+            return emb + F.ones_like(emb)
+
+    ctx = mx.cpu()
+    embedding = Embedding(1000, 300)
+    embedding.initialize(ctx=ctx)
+    embedding.hybridize()
+
+    loss_function = mx.gluon.loss.SigmoidBinaryCrossEntropyLoss()
+    with mx.autograd.record():
+        emb_in = embedding(mx.nd.arange(10, ctx=ctx))
+        emb_in_2 = embedding(mx.nd.arange(10, ctx=ctx))
+        loss = emb_in.sum() + emb_in_2.sum()
+    loss.backward()
+    print(embedding.embedding.weight.grad().data)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
