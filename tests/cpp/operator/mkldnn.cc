@@ -790,7 +790,7 @@ TEST(MKLDNN_BASE, MKLDNNCopy) {
   for (auto in_arr : in_arrs) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
-    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr) || in_arr.arr.IsView())
       continue;
 
     for (auto out_arr : out_arrs) {
