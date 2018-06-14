@@ -115,6 +115,8 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
+
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11219")
 @with_seed()
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
