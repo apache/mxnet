@@ -355,7 +355,7 @@ class Block(object):
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
@@ -398,7 +398,7 @@ class Block(object):
         filename : str
             Path to parameter file.
         ctx : Context or list of Context, default cpu()
-            Context(s) initialize loaded parameters on.
+            Context(s) to initialize loaded parameters on.
         allow_missing : bool, default False
             Whether to silently skip loading parameters not represents in the file.
         ignore_extra : bool, default False
