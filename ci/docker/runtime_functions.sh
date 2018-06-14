@@ -31,6 +31,37 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
+build_wheel() {
+
+    set -ex
+    pushd .
+
+    PYTHON_DIR=${1:-/work/mxnet/python}
+    BUILD_DIR=${2:-/work/build}
+
+    # build
+
+    export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
+
+    cd ${PYTHON_DIR}
+    python setup.py bdist_wheel --universal
+
+    # repackage
+
+    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
+    # mxnet folder, then repackage the wheel.
+    WHEEL=`readlink -f dist/*.whl`
+    TMPDIR=`mktemp -d`
+    unzip -d ${TMPDIR} ${WHEEL}
+    rm ${WHEEL}
+    cd ${TMPDIR}
+    mv *.data/data/mxnet/libmxnet.so mxnet
+    zip -r ${WHEEL} .
+    cp ${WHEEL} ${BUILD_DIR}
+    rm -rf ${TMPDIR}
+
+    popd
+}
 
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
@@ -38,24 +69,12 @@ clean_repo() {
 build_jetson() {
     set -ex
     pushd .
-    mv make/crosscompile.jetson.mk make/config.mk
+
+    cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
+    build_wheel /work/mxnet/python /work/mxnet/lib
 
-    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
-    # mxnet folder, then repackage the wheel.
-    WHEEL=`readlink -f dist/*.whl`
-    TMPDIR=`mktemp -d`
-    unzip -d $TMPDIR $WHEEL
-    rm $WHEEL
-    cd $TMPDIR
-    mv *.data/data/mxnet/libmxnet.so mxnet
-    zip -r $WHEEL .
-    cp $WHEEL /work/build
-    rm -rf $TMPDIR
     popd
 }
 
@@ -72,7 +91,8 @@ build_armv6() {
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
     cmake \
-        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+	-DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -83,31 +103,41 @@ build_armv6() {
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
+
     ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
+
     popd
 }
 
 build_armv7() {
     set -ex
     pushd .
+    
     cd /work/build
-    cmake\
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
+
     ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
+
     popd
 }
 

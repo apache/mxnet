@@ -31,13 +31,16 @@ ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
 ENV TARGET ARMV8
 
-WORKDIR /work
+WORKDIR /work/deps
 
-# Build OpenBLAS
-RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
-    cd OpenBLAS && \
-    make -j$(nproc) && \
-    PREFIX=${CROSS_ROOT} make install
+COPY install/ubuntu_arm.sh /work/
+RUN /work/ubuntu_arm.sh
+
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
+
+ENV OpenBLAS_HOME=${CROSS_ROOT}
+ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 # Setup CUDA build env (including configuring and copying nvcc)
 COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
