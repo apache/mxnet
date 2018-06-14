@@ -124,9 +124,12 @@ def buildir() -> str:
 def default_ccache_dir() -> str:
     # Share ccache across containers
     if 'CCACHE_DIR' in os.environ:
-        ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
-        os.makedirs(ccache_dir, exist_ok=True)
-        return ccache_dir
+        try:
+            ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
+            os.makedirs(ccache_dir, exist_ok=True)
+            return ccache_dir
+        except PermissionError:
+            logging.info('Unable to make dirs at %s, falling back to local temp dir', ccache_dir)
     # In osx tmpdir is not mountable by default
     if platform.system() == 'Darwin':
         ccache_dir = "/tmp/_mxnet_ccache"
