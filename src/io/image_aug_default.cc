@@ -53,7 +53,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   /*! \brief max aspect ratio */
   float max_aspect_ratio;
   /*! \brief min aspect ratio */
-  float min_aspect_ratio;
+  dmlc::optional<float> min_aspect_ratio;
   /*! \brief random shear the image [-max_shear_ratio, max_shear_ratio] */
   float max_shear_ratio;
   /*! \brief max crop size */
@@ -110,9 +110,11 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
         .describe("Rotate by a random degree in ``[-v, v]``");
     DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(1.0f)
-        .describe("Change the aspect (namely width/height) to a random value "
-                  "in ``[min_aspect_ratio, max_aspect_ratio]``");
-    DMLC_DECLARE_FIELD(min_aspect_ratio).set_default(1.0f)
+        .describe("Change the aspect (namely width/height) to a random value. "
+                  "If min_aspect_ratio is None then the aspect ratio ins sampled from "
+                  "[1 - max_aspect_ratio, 1 + max_aspect_ratio], "
+                  "else it is in ``[min_aspect_ratio, max_aspect_ratio]``");
+    DMLC_DECLARE_FIELD(min_aspect_ratio).set_default(dmlc::optional<float>())
         .describe("Change the aspect (namely width/height) to a random value "
                   "in ``[min_aspect_ratio, max_aspect_ratio]``");
     DMLC_DECLARE_FIELD(max_shear_ratio).set_default(0.0f)
@@ -243,7 +245,18 @@ class DefaultImageAugmenter : public ImageAugmenter {
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
     using mshadow::index_t;
-    bool random_resized_crop_exec = false;
+    bool is_cropped = false;
+
+    float max_aspect_ratio = 1.0f;
+    float min_aspect_ratio = 1.0f;
+    if (param_.min_aspect_ratio.has_value()) {
+      max_aspect_ratio = param_.max_aspect_ratio;
+      min_aspect_ratio = param_.min_aspect_ratio;
+    } else {
+      max_aspect_ratio = 1 + param_.max_aspect_ratio;
+      min_aspect_ratio = 1 - param_.max_aspect_ratio;
+    }
+
     cv::Mat res;
     if (param_.resize != -1) {
       int new_height, new_width;
@@ -265,93 +278,11 @@ class DefaultImageAugmenter : public ImageAugmenter {
       res = src;
     }
 
-    if (param_.random_resized_crop) {
-      // random resize crop
-      CHECK(param_.min_random_scale == 1.0f &&
-        param_.max_random_scale == 1.0f &&
-        param_.min_crop_size == -1 &&
-        param_.max_crop_size == -1 &&
-        !param_.rand_crop) <<
-        "\nSetting random_resized_crop to true conflicts with "
-        "min_random_scale, max_random_scale, "
-        "min_crop_size, max_crop_size, "
-        "and rand_crop.";
-      if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
-          || param_.max_aspect_ratio != 1.0f || param_.min_aspect_ratio != 1.0f) {
-            CHECK(param_.min_aspect_ratio > 0.0f);
-            CHECK(param_.min_random_area <= param_.max_random_area);
-            CHECK(param_.min_aspect_ratio <= param_.max_aspect_ratio);
-            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_area,
-                                                                    param_.max_random_area);
-            std::uniform_real_distribution<float> rand_uniform_ratio(param_.min_aspect_ratio,
-                                                                     param_.max_aspect_ratio);
-            std::uniform_real_distribution<float> rand_uniform(0, 1);
-            float area = res.rows * res.cols;
-            bool attemp = false;
-            for (int i = 0; i < 10; ++i) {
-              float rand_area = rand_uniform_area(*prnd);
-              float ratio = rand_uniform_ratio(*prnd);
-              float target_area = area * rand_area;
-              int y_area = std::round(std::sqrt(target_area / ratio));
-              int x_area = std::round(std::sqrt(target_area * ratio));
-              if (rand_uniform(*prnd) > 0.5) {
-                float temp_y_area = y_area;
-                y_area = x_area;
-                x_area = temp_y_area;
-              }
-              if (y_area <= res.rows && x_area <= res.cols) {
-                // random crop
-                index_t rand_y_area =
-                    std::uniform_int_distribution<index_t>(0, res.rows - y_area)(*prnd);
-                index_t rand_x_area =
-                    std::uniform_int_distribution<index_t>(0, res.cols - x_area)(*prnd);
-                cv::Rect roi(rand_x_area, rand_y_area, x_area, y_area);
-                int interpolation_method = GetInterMethod(param_.inter_method, x_area, y_area,
-                                                          param_.data_shape[2],
-                                                          param_.data_shape[1], prnd);
-                cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1]),
-                           0, 0, interpolation_method);
-                attemp = true;
-                break;
-              }
-            }
-            if (!attemp) {
-              // center crop
-              int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
-                                                        param_.data_shape[2],
-                                                        param_.data_shape[1], prnd);
-              if (res.rows < param_.data_shape[1]) {
-                index_t new_cols = static_cast<index_t>(static_cast<float>(param_.data_shape[1]) /
-                                                        static_cast<float>(res.rows) *
-                                                        static_cast<float>(res.cols));
-                cv::resize(res, res, cv::Size(new_cols, param_.data_shape[1]),
-                           0, 0, interpolation_method);
-              }
-              if (res.cols < param_.data_shape[2]) {
-                index_t new_rows = static_cast<index_t>(static_cast<float>(param_.data_shape[2]) /
-                                                        static_cast<float>(res.cols) *
-                                                        static_cast<float>(res.rows));
-                cv::resize(res, res, cv::Size(param_.data_shape[2], new_rows),
-                           0, 0, interpolation_method);
-              }
-              CHECK(static_cast<index_t>(res.rows) >= param_.data_shape[1]
-                    && static_cast<index_t>(res.cols) >= param_.data_shape[2])
-                    << "input image size smaller than input shape";
-              index_t center_y = res.rows - param_.data_shape[1];
-              index_t center_x = res.cols - param_.data_shape[2];
-              center_y /= 2;
-              center_x /= 2;
-              cv::Rect roi(center_x, center_y, param_.data_shape[2], param_.data_shape[1]);
-              res = res(roi);
-            }
-            random_resized_crop_exec = true;
-      }
-    }
     // normal augmentation by affine transformation.
     if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
         || param_.rotate > 0 || rotate_list_.size() > 0
         || param_.max_random_scale != 1.0f || param_.min_random_scale != 1.0
-        || param_.min_aspect_ratio != 1.0f || param_.max_aspect_ratio != 1.0f
+        || min_aspect_ratio != 1.0f || max_aspect_ratio != 1.0f
         || param_.max_img_size != 1e10f || param_.min_img_size != 0.0f) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       // shear
@@ -375,7 +306,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float ratio = 1.0f;
       if (!param_.random_resized_crop) {
         ratio = rand_uniform(*prnd) *
-            (param_.max_aspect_ratio - param_.min_aspect_ratio) + param_.min_aspect_ratio;
+            (max_aspect_ratio - min_aspect_ratio) + min_aspect_ratio;
       }
       float hs = 2 * scale / (1 + ratio);
       float ws = ratio * hs;
@@ -412,9 +343,59 @@ class DefaultImageAugmenter : public ImageAugmenter {
                          cv::Scalar(param_.fill_value, param_.fill_value, param_.fill_value));
     }
 
-    // crop logic
-    if (!param_.random_resized_crop &&
+    if (param_.random_resized_crop) {
+      // random resize crop
+      CHECK(param_.min_random_scale == 1.0f &&
+        param_.max_random_scale == 1.0f &&
+        param_.min_crop_size == -1 &&
+        param_.max_crop_size == -1 &&
+        !param_.rand_crop) <<
+        "\nSetting random_resized_crop to true conflicts with "
+        "min_random_scale, max_random_scale, "
+        "min_crop_size, max_crop_size, "
+        "and rand_crop.";
+
+      if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
+          || max_aspect_ratio != 1.0f || min_aspect_ratio != 1.0f) {
+            CHECK(param_.min_aspect_ratio > 0.0f);
+            CHECK(param_.min_random_area <= param_.max_random_area);
+            CHECK(min_aspect_ratio <= max_aspect_ratio);
+            std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_area,
+                                                                    param_.max_random_area);
+            std::uniform_real_distribution<float> rand_uniform_ratio(min_aspect_ratio,
+                                                                     max_aspect_ratio);
+            std::uniform_real_distribution<float> rand_uniform(0, 1);
+            float area = res.rows * res.cols;
+            for (int i = 0; i < 10; ++i) {
+              float rand_area = rand_uniform_area(*prnd);
+              float ratio = rand_uniform_ratio(*prnd);
+              float target_area = area * rand_area;
+              int y_area = std::round(std::sqrt(target_area / ratio));
+              int x_area = std::round(std::sqrt(target_area * ratio));
+              if (rand_uniform(*prnd) > 0.5) {
+                float temp_y_area = y_area;
+                y_area = x_area;
+                x_area = temp_y_area;
+              }
+              if (y_area <= res.rows && x_area <= res.cols) {
+                index_t rand_y_area =
+                    std::uniform_int_distribution<index_t>(0, res.rows - y_area)(*prnd);
+                index_t rand_x_area =
+                    std::uniform_int_distribution<index_t>(0, res.cols - x_area)(*prnd);
+                cv::Rect roi(rand_x_area, rand_y_area, x_area, y_area);
+                int interpolation_method = GetInterMethod(param_.inter_method, x_area, y_area,
+                                                          param_.data_shape[2],
+                                                          param_.data_shape[1], prnd);
+                cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1]),
+                           0, 0, interpolation_method);
+                is_cropped = true;
+                break;
+              }
+            }
+      }
+    } else if (!param_.random_resized_crop &&
         (param_.max_crop_size != -1 || param_.min_crop_size != -1)) {
+      // random_crop
       CHECK(res.cols >= param_.max_crop_size && res.rows >= \
               param_.max_crop_size && param_.max_crop_size >= param_.min_crop_size)
           << "input image size smaller than max_crop_size";
@@ -433,7 +414,11 @@ class DefaultImageAugmenter : public ImageAugmenter {
                                                 param_.data_shape[2], param_.data_shape[1], prnd);
       cv::resize(res(roi), res, cv::Size(param_.data_shape[2], param_.data_shape[1])
                 , 0, 0, interpolation_method);
-    } else if (!random_resized_crop_exec) {
+      is_cropped = true;
+    }
+
+    if (!is_cropped) {
+      // center crop
       int interpolation_method = GetInterMethod(param_.inter_method, res.cols, res.rows,
                                                 param_.data_shape[2],
                                                 param_.data_shape[1], prnd);
@@ -465,7 +450,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
       cv::Rect roi(x, y, param_.data_shape[2], param_.data_shape[1]);
       res = res(roi);
     }
-
 
     // color jitter
     if (param_.brightness > 0.0f || param_.contrast > 0.0f || param_.saturation > 0.0f) {
