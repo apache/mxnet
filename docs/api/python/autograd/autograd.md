@@ -63,7 +63,7 @@ Detailed tutorials are available in Part 1 of
 
 
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ## Autograd
 
@@ -86,7 +86,7 @@ Detailed tutorials are available in Part 1 of
 
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automodule:: mxnet.autograd
