@@ -805,6 +805,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
     for (auto out_arr : out_arrs) {
+      PrintVerifyMsg(in_arr, out_arr)
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, in_mem->get_primitive_desc(), kWriteTo);
       CopyMKLDNNMem(*in_mem, output_mem_t.second);
@@ -812,12 +813,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       stream->Submit();
       VerifyCopyMemory(*in_mem, *out_arr.arr.GetMKLDNNData());
     }
-
-    // in place
-
   }
-
-
 }
 
 #endif
