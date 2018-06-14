@@ -89,11 +89,11 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/nt-Installation-cpu') {
           init_git()
-          sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_virtualenv"
-          sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_pip"
+          docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
+          docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
           //Docker installation test is commented out since this would lead to docker within a docker
-          //sh "ci/build.py --platform ubuntu_base_cpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_docker"
-          sh "ci/build.py --platform ubuntu_base_gpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_cpu_source"
+          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_docker', false)
+          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
         }
       }
     },
@@ -101,11 +101,11 @@ try {
       node('mxnetlinux-gpu') {
         ws('workspace/nt-Installation-gpu') {
           init_git()
-          sh "ci/build.py --platform ubuntu_base_gpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_virtualenv"
-          sh "ci/build.py --platform ubuntu_base_gpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_pip"
+          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
+          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
           //Docker installation test is commented out since this would lead to docker within a docker
-          //sh "ci/build.py --platform ubuntu_base_gpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_docker"
-          sh "ci/build.py --platform ubuntu_base_gpu /work/runtime_functions.sh nightly_test_installation ubuntu_python_gpu_source"
+          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
+          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
         }
       }
     },

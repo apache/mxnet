@@ -264,6 +264,7 @@ set_instruction_set ${LINUX_PYTHON_CPU_START_LINENO} ${LINUX_PYTHON_CPU_END_LINE
 
 ubuntu_python_cpu_virtualenv()
 {
+    set -e
     echo
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}" #> "$filewithcommands"
@@ -274,6 +275,7 @@ ubuntu_python_cpu_virtualenv()
 
 ubuntu_python_cpu_pip()
 {
+    set -e
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
@@ -284,6 +286,7 @@ ubuntu_python_cpu_pip()
 
 ubuntu_python_cpu_docker()
 {
+    set -e
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
@@ -295,6 +298,7 @@ ubuntu_python_cpu_docker()
 
 ubuntu_python_cpu_source()
 {
+    set -e
     echo
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
@@ -319,6 +323,7 @@ set_instruction_set ${LINUX_PYTHON_GPU_START_LINENO} ${LINUX_PYTHON_GPU_END_LINE
 
 ubuntu_python_gpu_virtualenv()
 {
+    set -e
     echo
     echo "### Testing Virtualenv ###"
     echo "${virtualenv_commands}"
@@ -330,6 +335,7 @@ ubuntu_python_gpu_virtualenv()
 
 ubuntu_python_gpu_pip()
 {
+    set -e
     echo
     echo "### Testing Pip ###"
     echo "${pip_commands}"
@@ -341,6 +347,7 @@ ubuntu_python_gpu_pip()
 
 ubuntu_python_gpu_docker()
 {
+    set -e
     echo
     echo "### Testing Docker ###"
     echo "${docker_commands}"
@@ -352,6 +359,7 @@ ubuntu_python_gpu_docker()
 
 ubuntu_python_gpu_source()
 {
+    set -e
     echo
     echo "### Testing Build From Source ###"
     echo "${buildfromsource_commands}"
