@@ -5934,7 +5934,10 @@ def test_foreach():
             name = name[1:]
             gin_order.append(int(name))
 
-        e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+        if is_train:
+            e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+        else:
+            e = out.bind(ctx=default_context(), args=arg_dict)
         e.forward(is_train=is_train)
         if (is_train):
             # backward

@@ -173,8 +173,21 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
 
   std::vector<std::pair<std::string, std::string> > kwargs;
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  // We don't have parameters for the cached op.
-  CachedOpPtr op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+  kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
+  CachedOpPtr op;
+  // If we need to run backward, we need to keep all computation results
+  // for backward.
+  if (is_recording) {
+    op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+  } else if (iter_ops.empty()) {
+    // If we don't need to run backward and this is the first time of
+    // running the iteration, we need to create a new cached op.
+    op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+    iter_ops.push_back(op);
+  } else {
+    // If we already have a cached op, we can just reuse it.
+    op = iter_ops[0];
+  }
   // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
   // called. Currently, CachedOp allocates memory each time Forward is called.
   // I need to fix this once the PR for static memory allocation in CachedOp is
