@@ -37,8 +37,8 @@ private[mxnet] object APIDocGenerator{
     val FILE_PATH = args(0)
     absClassGen(FILE_PATH, true)
     absClassGen(FILE_PATH, false)
-    oldAPIClassGen(FILE_PATH, true)
-    oldAPIClassGen(FILE_PATH, false)
+    nonTypeSafeClassGen(FILE_PATH, true)
+    nonTypeSafeClassGen(FILE_PATH, false)
   }
 
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
@@ -63,7 +63,7 @@ private[mxnet] object APIDocGenerator{
     pw.close()
   }
 
-  def oldAPIClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
+  def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {

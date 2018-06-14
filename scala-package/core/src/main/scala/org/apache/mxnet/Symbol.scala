@@ -822,6 +822,10 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
   }
 }
 
+/**
+  * Symbol Object extends from SymbolBase for abstract function signatures
+  * Main code will be generated during compile time through Macros
+  */
 @AddSymbolFunctions(false)
 object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
