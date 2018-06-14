@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,26 +16,15 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build MXNet for ARMv7 (Android & RPi)
 
-FROM dockcross/linux-armv7
+set -ex
 
-ENV ARCH armv7l
-ENV HOSTCC gcc
-ENV TARGET ARMV7
-ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
+git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git
 
-WORKDIR /work/deps
+cd OpenBLAS
+make -j$(nproc)
+PREFIX=${CROSS_ROOT} make install
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
+cd ..
 
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+rm -rf OpenBLAS
