@@ -842,8 +842,12 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   for (auto in_arr : in_arrs) {
-    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr))
       continue;
+
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+      in_arr.arr = in_arr.arr.Reorder2Default();
+
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
     for (auto out_arr : out_arrs) {
@@ -856,7 +860,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
 
       PrintVerifyMsg(in_arr, out_arr);
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
-      op::MKLDNNSum(*in_mem, *in_mem, *out_mem);
+      op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifySumResult({&in_arr.arr, &in_arr.arr}, out_arr.arr);
