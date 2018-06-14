@@ -24,10 +24,30 @@
  */
 #include "./requantize-inl.h"
 #include "./quantize-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_requantize-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(RequantizeParam);
+
+bool RequantizeStorageType(const nnvm::NodeAttrs& attrs,
+                         const int dev_mask,
+                         DispatchMode* dispatch_mode,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  (*out_attrs)[0] = kDefaultStorage;
+  (*out_attrs)[1] = kDefaultStorage;
+  (*out_attrs)[2] = kDefaultStorage;
+  return true;
+}
 
 NNVM_REGISTER_OP(_contrib_requantize)
 .describe(R"code(Given data that is quantized in int32 and the corresponding thresholds,
@@ -43,7 +63,12 @@ inference accuracy.
 .set_num_outputs(3)
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", RequantizeType)
+.set_attr<FInferStorageType>("FInferStorageType", RequantizeStorageType)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNRequantizeForward)
+#else
 .set_attr<FCompute>("FCompute<cpu>", RequantizeForward<cpu>)
+#endif
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
     const RequantizeParam& param =
       nnvm::get<RequantizeParam>(attrs.parsed);
