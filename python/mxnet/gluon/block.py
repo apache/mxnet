@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable= arguments-differ
+# pylint: disable= arguments-differ, too-many-lines
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
@@ -304,7 +304,7 @@ class Block(object):
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret
 
-    def save_params(self, filename):
+    def save_parameters(self, filename):
         """Save parameters to file.
 
         filename : str
@@ -314,8 +314,23 @@ class Block(object):
         arg_dict = {key : val._reduce() for key, val in params.items()}
         ndarray.save(filename, arg_dict)
 
-    def load_params(self, filename, ctx=None, allow_missing=False,
-                    ignore_extra=False):
+    def save_params(self, filename):
+        """[Deprecated] Please use save_parameters.
+
+        Save parameters to file.
+
+        filename : str
+            Path to file.
+        """
+        warnings.warn("save_params is deprecated. Please use save_parameters.")
+        try:
+            self.collect_params().save(filename, strip_prefix=self.prefix)
+        except ValueError as e:
+            raise ValueError('%s\nsave_params is deprecated. Using ' \
+                              'save_parameters may resolve this error.'%e.message)
+
+    def load_parameters(self, filename, ctx=None, allow_missing=False,
+                        ignore_extra=False):
         """Load parameters from file.
 
         filename : str
@@ -354,6 +369,25 @@ class Block(object):
                         name, filename, _brief_print_list(self._params.keys())))
             params[name]._load_init(loaded[name], ctx)
 
+
+    def load_params(self, filename, ctx=None, allow_missing=False,
+                    ignore_extra=False):
+        """[Deprecated] Please use load_parameters.
+
+        Load parameters from file.
+
+        filename : str
+            Path to parameter file.
+        ctx : Context or list of Context, default cpu()
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represents in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this Block.
+        """
+        warnings.warn("load_params is deprecated. Please use load_parameters.")
+        self.load_parameters(filename, ctx, allow_missing, ignore_extra)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -579,8 +613,8 @@ class HybridBlock(Block):
         self._infer_attrs('infer_type', 'dtype', *args)
 
     def export(self, path, epoch=0):
-        """Export HybridBlock to json format that can be loaded by `mxnet.mod.Module`
-        or the C++ interface.
+        """Export HybridBlock to json format that can be loaded by
+        `SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -681,6 +715,50 @@ class SymbolBlock(HybridBlock):
     >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> print(feat_model(x))
     """
+    @staticmethod
+    def imports(symbol_file, input_names, param_file=None, ctx=None):
+        """Import model previously saved by `HybridBlock.export` or
+        `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
+
+        Parameters
+        ----------
+        symbol_file : str
+            Path to symbol file.
+        input_names : list of str
+            List of input variable names
+        param_file : str, optional
+            Path to parameter file.
+        ctx : Context, default None
+            The context to initialize SymbolBlock on.
+
+        Returns
+        -------
+        SymbolBlock
+            SymbolBlock loaded from symbol and parameter files.
+
+        Examples
+        --------
+        >>> net1 = gluon.model_zoo.vision.resnet18_v1(
+        ...     prefix='resnet', pretrained=True)
+        >>> net1.hybridize()
+        >>> x = mx.nd.random.normal(shape=(1, 3, 32, 32))
+        >>> out1 = net1(x)
+        >>> net1.export('net1', epoch=1)
+        >>>
+        >>> net2 = gluon.SymbolBlock.imports(
+        ...     'net1-symbol.json', ['data'], 'net1-0001.params')
+        >>> out2 = net2(x)
+        """
+        sym = symbol.load(symbol_file)
+        if isinstance(input_names, str):
+            input_names = [input_names]
+        inputs = [symbol.var(i) for i in input_names]
+        ret = SymbolBlock(sym, inputs)
+        if param_file is not None:
+            ret.collect_params().load(param_file, ctx=ctx)
+        return ret
+
+
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__(prefix=None, params=None)
         self._prefix = ''
