@@ -246,7 +246,7 @@ def train(epochs, ctx):
         if val_accs[0] > best_val:
             best_val = val_accs[0]
             logging.info('Saving %s.' % opt.save_model_prefix)
-            net.save_params('%s.params' % opt.save_model_prefix)
+            net.save_parameters('%s.params' % opt.save_model_prefix)
     return best_val
 
 
