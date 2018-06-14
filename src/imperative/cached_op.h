@@ -102,6 +102,13 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  // backward storage type inference
+  bool BackwardStorageType(
+      const nnvm::NodeAttrs& attrs,
+      const int dev_mask,
+      DispatchMode* dispatch_mode,
+      std::vector<int> *in_attrs,
+      std::vector<int> *out_attrs);
 
  private:
   struct GraphInfo;
@@ -166,6 +173,7 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+  nnvm::Symbol sym_;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;
