@@ -812,13 +812,6 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   }
 }
 
-void VerifyCopyMemory(mkldnn::memory in_mem1, mkldnn::memory out_mem) {
-  float *in1 = static_cast<float*>(in_mem1.get_data_handle());
-  float *out = static_cast<float*>(out_mem.get_data_handle());
-  EXPECT_EQ(in_mem1.get_primitive_desc().get_size(), out_mem.get_primitive_desc().get_size());
-  EXPECT_EQ(memcmp(in1, out, in_mem1.get_primitive_desc().get_size()), 0);
-}
-
 
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
@@ -839,10 +832,9 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
       CopyMKLDNNMem(*in_mem, output_mem_t.second);
-      out_arr.arr.CopyFrom(*in_mem);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
-      VerifyCopyMemory(*in_mem, *out_arr.arr.GetMKLDNNData());
+      VerifyCopyResult({&in_arr.arr}, out_arr.arr);
     }
   }
 }
