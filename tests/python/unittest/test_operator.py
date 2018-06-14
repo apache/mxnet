@@ -6202,6 +6202,7 @@ def test_foreach_lstm():
         ret.extend(out[1])
         return mx.sym.Group(ret)
 
+    # Inputs
     data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
     h_arr = mx.nd.random.uniform(shape=(2, 4))
     c_arr = mx.nd.random.uniform(shape=(2, 4))
@@ -6209,7 +6210,14 @@ def test_foreach_lstm():
     h2h_warr = mx.nd.random.uniform(shape=(16, 4))
     i2h_barr = mx.nd.random.uniform(shape=(16))
     h2h_barr = mx.nd.random.uniform(shape=(16))
+    args1 = {'data': data_arr, 'h': h_arr, 'c': c_arr,
+            'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
+            'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr}
+    args2 = {'data': data_arr, 'h': h_arr, 'c': c_arr,
+            'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
+            'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr}
 
+    # gradients for the backward of the foreach symbol
     data_arr_grad1 = mx.nd.empty(data_arr.shape)
     h_arr_grad1 = mx.nd.empty(h_arr.shape)
     c_arr_grad1 = mx.nd.empty(c_arr.shape)
@@ -6217,28 +6225,11 @@ def test_foreach_lstm():
     h2h_warr_grad1 = mx.nd.empty(h2h_warr.shape)
     i2h_barr_grad1 = mx.nd.empty(i2h_barr.shape)
     h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
-    out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
-    out = sym_group(out)
-    js_1 = out.tojson()
-    out = mx.sym.load_json(js_1)
-    js_2 = out.tojson()
-    assert js_1 == js_2
+    args_grad1 = {'data': data_arr_grad1, 'h': h_arr_grad1, 'c': c_arr_grad1,
+            'i2h_weight': i2h_warr_grad1, 'h2h_weight': h2h_warr_grad1,
+            'i2h_bias': i2h_barr_grad1, 'h2h_bias': h2h_barr_grad1}
 
-    e1 = out.bind(ctx=default_context(),
-                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
-                        'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
-                        'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr},
-                  args_grad={'data': data_arr_grad1, 'h': h_arr_grad1, 'c': c_arr_grad1,
-                             'i2h_weight': i2h_warr_grad1, 'h2h_weight': h2h_warr_grad1,
-                             'i2h_bias': i2h_barr_grad1, 'h2h_bias': h2h_barr_grad1})
-    e1.forward(is_train=True)
-    outputs1 = e1.outputs
-    # backward
-    out_grads = []
-    for arr in e1.outputs:
-        out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
-    e1.backward(out_grads)
-
+    # gradients for the backward of the unrolled symbol.
     data_arr_grad2 = mx.nd.empty(data_arr.shape)
     h_arr_grad2 = mx.nd.empty(h_arr.shape)
     c_arr_grad2 = mx.nd.empty(c_arr.shape)
@@ -6246,6 +6237,20 @@ def test_foreach_lstm():
     h2h_warr_grad2 = mx.nd.empty(h2h_warr.shape)
     i2h_barr_grad2 = mx.nd.empty(i2h_barr.shape)
     h2h_barr_grad2 = mx.nd.empty(h2h_barr.shape)
+    args_grad2 = {'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
+            'mylstm_i2h_weight': i2h_warr_grad2, 'mylstm_h2h_weight': h2h_warr_grad2,
+            'mylstm_i2h_bias': i2h_barr_grad2, 'mylstm_h2h_bias': h2h_barr_grad2}
+
+    # Symbol of running LSTM with foreach.
+    out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
+    out = sym_group(out)
+    js_1 = out.tojson()
+    out = mx.sym.load_json(js_1)
+    js_2 = out.tojson()
+    assert js_1 == js_2
+    e1 = out.bind(ctx=default_context(), args=args1, args_grad=args_grad1)
+
+    # Symbol of running unrolled LSTM.
     lstm = mx.rnn.LSTMCell(4, prefix='mylstm_')
     h = init_h
     c = init_c
@@ -6259,22 +6264,38 @@ def test_foreach_lstm():
     out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
+    e2 = out.bind(ctx=default_context(), args=args2, args_grad=args_grad2)
 
-    e2 = out.bind(ctx=default_context(),
-                  args={'data': data_arr, 'h': h_arr, 'c': c_arr,
-                        'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
-                        'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr},
-                  args_grad={'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
-                             'mylstm_i2h_weight': i2h_warr_grad2, 'mylstm_h2h_weight': h2h_warr_grad2,
-                             'mylstm_i2h_bias': i2h_barr_grad2, 'mylstm_h2h_bias': h2h_barr_grad2})
-    e2.forward(is_train=True)
-    outputs2 = e2.outputs
-    e2.backward(out_grads)
+    for i in range(5):
+        out_grads = []
+        for arr in e1.outputs:
+            out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
 
-    for i in range(len(outputs2)):
-        assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(), rtol=0.001, atol=0.0001)
-    for i in range(len(e1.grad_arrays)):
-        assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
+        data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
+        h_arr = mx.nd.random.uniform(shape=(2, 4))
+        c_arr = mx.nd.random.uniform(shape=(2, 4))
+        i2h_warr = mx.nd.random.uniform(shape=(16, 4))
+        h2h_warr = mx.nd.random.uniform(shape=(16, 4))
+        i2h_barr = mx.nd.random.uniform(shape=(16))
+        h2h_barr = mx.nd.random.uniform(shape=(16))
+
+        e1.forward(is_train=True, data = data_arr, h = h_arr, c = c_arr,
+            i2h_weight = i2h_warr, h2h_weight = h2h_warr,
+            i2h_bias = i2h_barr, h2h_bias = h2h_barr)
+        outputs1 = e1.outputs
+        e1.backward(out_grads)
+
+        e2.forward(is_train=True, data = data_arr, h = h_arr, c = c_arr,
+            mylstm_i2h_weight = i2h_warr, mylstm_h2h_weight = h2h_warr,
+            mylstm_i2h_bias = i2h_barr, mylstm_h2h_bias = h2h_barr)
+        outputs2 = e2.outputs
+        e2.backward(out_grads)
+
+        for i in range(len(outputs2)):
+            assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(),
+                    rtol=0.001, atol=0.0001)
+        for i in range(len(e1.grad_arrays)):
+            assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
 
 
 @with_seed()
