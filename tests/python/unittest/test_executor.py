@@ -17,7 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 
 def reldiff(a, b):

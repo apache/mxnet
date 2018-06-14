@@ -22,7 +22,7 @@ from mxnet import gluon
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 
 @with_seed()
