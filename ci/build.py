@@ -34,6 +34,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import platform
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
@@ -121,11 +122,16 @@ def buildir() -> str:
 
 
 def default_ccache_dir() -> str:
+    # Share ccache across containers
     if 'CCACHE_DIR' in os.environ:
         ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
         os.makedirs(ccache_dir, exist_ok=True)
-        return ccache_dirpython
-    # Share ccache across containers
+        return ccache_dir
+    # In osx tmpdir is not mountable by default
+    if platform.system() == 'Darwin':
+        ccache_dir = "/tmp/_mxnet_ccache"
+        os.makedirs(ccache_dir, exist_ok=True)
+        return ccache_dir
     return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 
@@ -183,7 +189,7 @@ def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         try:
             import docker_cache
-            logging.info('Docker cache download is enabled')
+            logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
         except Exception:
             logging.exception('Unable to retrieve Docker cache. Continue without...')

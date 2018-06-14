@@ -25,7 +25,7 @@ import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
@@ -5821,7 +5821,7 @@ def test_bilinear_resize_op():
         batch, channel, inputHeight, inputWidth = x.shape
         if outputHeight == inputHeight and outputWidth == inputWidth:
             return x
-        y = np.empty([batch, channel, outputHeight, outputWidth]) 
+        y = np.empty([batch, channel, outputHeight, outputWidth])
         rheight = 1.0 * (inputHeight - 1) / (outputHeight - 1) if outputHeight > 1 else 0.0
         rwidth = 1.0 * (inputWidth - 1) / (outputWidth - 1) if outputWidth > 1 else 0.0
         for h2 in range(outputHeight):
