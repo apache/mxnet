@@ -876,6 +876,45 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<bool clip = true>
+inline void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
+                               const OpContext& ctx,
+                               const TBlob& arr,
+                               const TBlob& idx,
+                               const TBlob& ograd,
+                               const int axis) {
+  return;
+  // CHECK(axis != 0) << "axis == 0 case should be dispatched to the legacy implementation";
+  // const TShape& arrshape = arr.shape_;
+  // const TShape& idxshape = idx.shape_;
+  // const TShape& oshape = ograd.shape_;
+  // // get size of temporary storage for sort
+  // size_t temp_storage_bytes = SortByKeyWorkspaceSize<IType, IType, cpu>(idxshape.Size());
+  // size_t original_idx_bytes = idxshape.Size() * sizeof(IType);
+  // size_t src_indices_bytes = arrshape[actual_axis] * sizeof(IType);
+  // size_t workspace_bytes = src_indices_bytes + 2 * original_idx_bytes + temp_storage_bytes;
+  // Tensor<xpu, 1, char> workspace =
+  //   ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_bytes), s);
+  // IType* sorted_idx_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+  // IType* original_idx_ptr = reinterpret_cast<IType*>(workspace.dptr_ + original_idx_bytes);
+  // IType* src_indptr_ptr = reinterpret_cast<IType*>(workspace.dptr_ + 2 * original_idx_bytes);
+  // char* temp_storage_ptr = workspace.dptr_ + 2 * original_idx_bytes + src_indices_bytes;
+  // // Reset indptr to zero
+  // mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, arrshape[actual_axis], src_indptr_ptr);
+  // // Fill original_idx
+  // mxnet_op::Kernel<range_fwd, xpu>::Launch(
+  //   s, idxshape.Size(), 1, IType(0), IType(1), kWriteTo, original_idx_ptr);
+  // // Fill sorted_idx_ptr with unsorted copy of idx
+  // mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
+  //   s, idxshape.Size(), sorted_idx_ptr, idx.dptr<IType>());
+  // Tensor<xpu, 1, IType> original_idx(original_idx_ptr, Shape1(idxshape.Size()), s);
+  // Tensor<xpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
+  // int num_bits = ilog2(static_cast<unsigned int>(idxshape.Size()) - 1);
+  // SortByKey(idx.dptr<IType>, original_idx, true, &temp_storage, 0, num_bits);
+  // Tensor<xpu, 1, IType> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
+  // Tensor<xpu, 1, IType> src_indptr(src_indptr_ptr, Shape1(arrshape[actual_axis]), s);
+}
+
 template<typename xpu>
 void TakeOpBackward(const nnvm::NodeAttrs& attrs,
                     const OpContext& ctx,
@@ -889,20 +928,24 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[take_::kIdx], kNullOp)
     << "take layer doesn't support gradient into index";
 
-  // inputs are specified in the .cc file, which are the gradients from
-  // the upper layer and the input index
-  // outputs are the gradients of inputs in the feed-forward pass
-  const TShape& idxshape = inputs[1].shape_;
-  const TShape& arrshape = outputs[0].shape_;
-  const TShape& oshape = inputs[0].shape_;
-
-  int idxndim = idxshape.ndim();
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
 
   // grad_out is the gradient of the outputs in the feed-forward
   // grad_in is the gradient of the inputs in the feed-forward
   Stream<xpu> *s = ctx.get_stream<xpu>();
+
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+      // inputs are specified in the .cc file, which are the gradients from
+      // the upper layer and the input index
+      // outputs are the gradients of inputs in the feed-forward pass
+      const TShape& idxshape = inputs[1].shape_;
+      const TShape& arrshape = outputs[0].shape_;
+      const TShape& oshape = inputs[0].shape_;
+
+      const int actual_axis = param.axis + ((param.axis < 0) ? oshape.ndim() : 0);
+
+      int idxndim = idxshape.ndim();
       Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
           Shape1(idxshape.ProdShape(0, idxndim)), s);
       Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
@@ -910,27 +953,41 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
-      if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-        if (req[take_::kArr] == kWriteTo) {
-          grad_in = scalar<DType>(0.0f);
-        }
-        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
-        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
-        // When the number of elements processed is low, use AddTakeGrad.
-        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-        uint64_t shape_in_prod =
-          static_cast<uint64_t>(grad_in.shape_[0])*
-          static_cast<uint64_t>(grad_in.shape_[1]);
-        uint64_t shape_out_prod =
-          static_cast<uint64_t>(grad_out.shape_[0])*
-          static_cast<uint64_t>(grad_out.shape_[1]);
-        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
-          AddTakeGrad(grad_in, idx, grad_out);
+      // re-using the previous code for axis = 0 case
+      if (actual_axis == 0) {
+        if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
+          if (req[take_::kArr] == kWriteTo) {
+            grad_in = scalar<DType>(0.0f);
+          }
+          // shape_out_prod ~= the number of elements loaded in AddTakeGrad
+          // shape_in_prod  ~= the number of elements stored in AddTakeGrad
+          // When the number of elements processed is low, use AddTakeGrad.
+          // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
+          uint64_t shape_in_prod =
+            static_cast<uint64_t>(grad_in.shape_[0])*
+            static_cast<uint64_t>(grad_in.shape_[1]);
+          uint64_t shape_out_prod =
+            static_cast<uint64_t>(grad_out.shape_[0])*
+            static_cast<uint64_t>(grad_out.shape_[1]);
+          if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+            AddTakeGrad(grad_in, idx, grad_out);
+          } else {
+            AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+          }
         } else {
-          AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+          LOG(FATAL) << "wrong req";
         }
+      // for all other cases
       } else {
-        LOG(FATAL) << "wrong req";
+        const TBlob& idx = inputs[1];
+        const TBlob& arr = outputs[0];
+        const TBlob& ograd = inputs[0];
+
+        if (param.mode == take_::kClip) {
+          TakeOpBackwardImpl<true>(s, ctx, arr, idx, ograd, actual_axis);
+        } else {
+          TakeOpBackwardImpl<false>(s, ctx, arr, idx, ograd, actual_axis);
+        }
       }
     });
   });
