@@ -640,7 +640,7 @@ class Block(object):
 class HybridBlock(Block):
     """`HybridBlock` supports forwarding with both Symbol and NDArray.
 
-    `HybridBlock` is similar to `Block`, with a few differencies::
+    `HybridBlock` is similar to `Block`, with a few differences::
 
         import mxnet as mx
         from mxnet.gluon import HybridBlock, nn
@@ -664,7 +664,7 @@ class HybridBlock(Block):
 
     Forward computation in :py:class:`HybridBlock` must be static to work with :py:class:`Symbol` s,
     i.e. you cannot call :py:meth:`NDArray.asnumpy`, :py:attr:`NDArray.shape`,
-    :py:attr:`NDArray.dtype`, etc on tensors.
+    :py:attr:`NDArray.dtype`, `NDArray` indexing (`x[i]`) etc on tensors.
     Also, you cannot use branching or loop logic that bases on non-constant
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.

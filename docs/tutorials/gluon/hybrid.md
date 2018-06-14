@@ -105,7 +105,7 @@ Hybridize will speed up execution and save memory. If the top level layer is
 not a `HybridBlock`, you can still call `.hybridize()` on it and Gluon will try
 to hybridize its children layers instead.
 
-`hybridize` also accepts many options for performance tuning. For example, you
+`hybridize` also accepts several options for performance tuning. For example, you
 can do
 
 ```python
@@ -114,7 +114,7 @@ net.hybridize(static_alloc=True)
 net.hybridize(static_alloc=True, static_shape=True)
 ```
 
-Please refer to [API manual](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=hybridize#mxnet.gluon.Block.hybridize)
+Please refer to the [API manual](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=hybridize#mxnet.gluon.Block.hybridize)
 for details.
 
 ## Serializing trained model for deployment
