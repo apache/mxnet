@@ -117,7 +117,7 @@ x = mx.sym.var('data')
 y = net(x)
 print(y)
 y.save('model.json')
-net.save_params('model.params')
+net.save_parameters('model.params')
 ```
 
 If your network outputs more than one value, you can use `mx.sym.Group` to
