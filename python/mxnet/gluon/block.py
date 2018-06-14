@@ -18,13 +18,14 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Base container class for all neural network models."""
-__all__ = ['Block', 'HybridBlock', 'SymbolBlock']
+__all__ = ['Block', 'HybridBlock', 'BlockList', 'HybridBlockList', 'SymbolBlock']
 
 import threading
 import copy
 import warnings
 import re
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
+
 
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -180,7 +181,7 @@ class Block(object):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in self.__dict__.items() if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __setattr__(self, name, value):
@@ -409,7 +410,7 @@ class Block(object):
         Parameters
         ----------
         fn : callable
-            Function to be applied to each submodule, of form `fn(block)`.
+            Function to be applied to each sub-block, of form `fn(block)`.
 
         Returns
         -------
@@ -840,6 +841,140 @@ class HybridBlock(Block):
         """
         # pylint: disable= invalid-name
         raise NotImplementedError
+
+
+class BlockList(Block):
+    r"""Holds sub-blocks in a list.
+
+    BlockList can be indexed like a regular Python list, but blocks it
+    contains are properly registered, and will be visible by all Block methods::
+
+        class MyBlock(gluon.Block):
+            def __init__(self):
+                super(MyBlock, self).__init__()
+                self.blocks = gluon.BlockList([nn.Dense(10) for i in range(10)])
+
+            def forward(self, x):
+                # BlockList can act as an iterable, or be indexed using ints
+                for i, l in enumerate(self.blocks):
+                    x = self.blocks[i // 2](x) + l(x)
+                return x
+
+    Parameters
+    ----------
+    blocks : iterable, optional
+        an iterable of blocks to add
+    """
+    def __init__(self, blocks=None, **kwargs):
+        super(BlockList, self).__init__(**kwargs)
+        if blocks is not None:
+            self += blocks
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return BlockList(list(self._children.values())[idx])
+        else:
+            return self._children.values()[idx]
+
+    def __setitem__(self, idx, block):
+        self.register_child(block, str(idx))
+
+    def __len__(self):
+        return len(self._children)
+
+    def __iter__(self):
+        return iter(self._children.values())
+
+    def __iadd__(self, blocks):
+        return self.extend(blocks)
+
+    def append(self, block):
+        r"""Appends a given block to the end of the list.
+        Arguments:
+            block (nn.Module): block to append
+        """
+        self.register_child(block, str(len(self)))
+        return self
+
+    def extend(self, blocks):
+        r"""Appends blocks from a Python iterable to the end of the list.
+        Arguments:
+            blocks (iterable): iterable of blocks to append
+        """
+        if not isinstance(blocks, Iterable):
+            raise TypeError("BlockList.extend should be called with an "
+                            "iterable, but got " + type(blocks).__name__)
+        offset = len(self)
+        for i, block in enumerate(blocks):
+            self.register_child(block, str(offset + i))
+        return self
+
+
+class HybridBlockList(HybridBlock):
+    r"""Holds hybrid sub-blocks in a list.
+
+    HybridBlockList can be indexed like a regular Python list, but blocks it
+    contains are properly registered, and will be visible by all Block methods::
+
+        class MyBlock(gluon.HybridBlock):
+            def __init__(self):
+                super(MyBlock, self).__init__()
+                self.blocks = gluon.HybridBlockList([nn.Dense(10) for i in range(10)])
+
+            def hybrid_forward(self, F, x):
+                # HybridBlockList can act as an iterable, or be indexed using ints
+                for i, l in enumerate(self.blocks):
+                    x = self.blocks[i // 2](x) + l(x)
+                return x
+
+    Parameters
+    ----------
+    blocks : iterable, optional
+        an iterable of hybrid blocks to add
+    """
+    def __init__(self, blocks=None, **kwargs):
+        super(HybridBlockList, self).__init__(**kwargs)
+        if blocks is not None:
+            self += blocks
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return HybridBlockList(list(self._children.values())[idx])
+        else:
+            return self._children.values()[idx]
+
+    def __setitem__(self, idx, block):
+        self.register_child(block, str(idx))
+
+    def __len__(self):
+        return len(self._children)
+
+    def __iter__(self):
+        return iter(self._children.values())
+
+    def __iadd__(self, blocks):
+        return self.extend(blocks)
+
+    def append(self, block):
+        r"""Appends a given block to the end of the list.
+        Arguments:
+            block (nn.Module): block to append
+        """
+        self.register_child(block, str(len(self)))
+        return self
+
+    def extend(self, blocks):
+        r"""Appends blocks from a Python iterable to the end of the list.
+        Arguments:
+            blocks (iterable): iterable of blocks to append
+        """
+        if not isinstance(blocks, Iterable):
+            raise TypeError("HybridBlockList.extend should be called with an "
+                            "iterable, but got " + type(blocks).__name__)
+        offset = len(self)
+        for i, block in enumerate(blocks):
+            self.register_child(block, str(offset + i))
+        return self
 
 def _common_prefix(names):
     """Get the common prefix for all names"""
