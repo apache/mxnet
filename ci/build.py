@@ -40,7 +40,7 @@ from itertools import chain
 from subprocess import call, check_call
 from typing import *
 
-CCACHE_MAXSIZE = '10G'
+CCACHE_MAXSIZE = '500G'
 
 def get_platforms(path: Optional[str] = "docker"):
     """Get a list of architectures given our dockerfiles"""
@@ -124,9 +124,12 @@ def buildir() -> str:
 def default_ccache_dir() -> str:
     # Share ccache across containers
     if 'CCACHE_DIR' in os.environ:
-        ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
-        os.makedirs(ccache_dir, exist_ok=True)
-        return ccache_dir
+        try:
+            ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
+            os.makedirs(ccache_dir, exist_ok=True)
+            return ccache_dir
+        except PermissionError:
+            logging.info('Unable to make dirs at %s, falling back to local temp dir', ccache_dir)
     # In osx tmpdir is not mountable by default
     if platform.system() == 'Darwin':
         ccache_dir = "/tmp/_mxnet_ccache"
@@ -157,6 +160,7 @@ def container_run(platform: str,
                '-v', "{}:/work/ccache".format(local_ccache_dir),
                '-u', '{}:{}'.format(os.getuid(), os.getgid()),
                '-e', 'CCACHE_MAXSIZE={}'.format(CCACHE_MAXSIZE),
+               '-e', 'CCACHE_TEMPDIR=/tmp/ccache',  # temp dir should be local and not shared
                '-e', "CCACHE_DIR=/work/ccache",  # this path is inside the container as /work/ccache is mounted
                tag]
     runlist.extend(command)
