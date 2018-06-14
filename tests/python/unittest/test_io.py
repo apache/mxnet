@@ -359,10 +359,26 @@ def test_ImageRecordIter_seed_augmentation():
         seed_aug=seed_aug)
     batch = dataiter.next()
     data = batch.data[0].asnumpy().astype(np.uint8)
-    assert(np.sum(data[0]) == 251546)
-    assert(np.sum(data[1]) == 285441)
-    assert(np.sum(data[2]) == 306015)
-    assert(np.sum(data) == 843002)
+
+    dataiter = mx.io.ImageRecordIter(
+        path_imgrec="data/cifar/train.rec",
+        mean_img="data/cifar/cifar10_mean.bin",
+        shuffle=False,
+        data_shape=(3, 28, 28),
+        batch_size=3,
+        rand_crop=True,
+        rand_mirror=True,
+        max_random_scale=1.3,
+        max_random_illumination=3,
+        max_rotate_angle=10,
+        random_l=50,
+        random_s=40,
+        random_h=10,
+        max_shear_ratio=2,
+        seed_aug=seed_aug)
+    batch = dataiter.next()
+    data2 = batch.data[0].asnumpy().astype(np.uint8)
+    assert(np.array_equal(data,data2))
 
     # check whether to get different images after change seed_aug
     dataiter = mx.io.ImageRecordIter(
@@ -382,11 +398,8 @@ def test_ImageRecordIter_seed_augmentation():
         max_shear_ratio=2,
         seed_aug=seed_aug+1)
     batch = dataiter.next()
-    data = batch.data[0].asnumpy().astype(np.uint8)
-    assert(np.sum(data[0]) != 251546)
-    assert(np.sum(data[1]) != 285441)
-    assert(np.sum(data[2]) != 306015)
-    assert(np.sum(data) != 843002)
+    data2 = batch.data[0].asnumpy().astype(np.uint8)
+    assert(not np.array_equal(data,data2))
 
     # check whether seed_aug changes the iterator behavior
     dataiter = mx.io.ImageRecordIter(
@@ -397,10 +410,6 @@ def test_ImageRecordIter_seed_augmentation():
         batch_size=3)
     batch = dataiter.next()
     data = batch.data[0].asnumpy().astype(np.uint8)
-    image0_sum_no_aug = np.sum(data[0])
-    image1_sum_no_aug = np.sum(data[1])
-    image2_sum_no_aug = np.sum(data[2])
-    image_all_sum_no_aug = np.sum(data)
 
     dataiter = mx.io.ImageRecordIter(
         path_imgrec="data/cifar/train.rec",
@@ -410,12 +419,8 @@ def test_ImageRecordIter_seed_augmentation():
         batch_size=3,
         seed_aug=seed_aug)
     batch = dataiter.next()
-    data = batch.data[0].asnumpy().astype(np.uint8)
-    assert(np.sum(data[0]) == image0_sum_no_aug)
-    assert(np.sum(data[1]) == image1_sum_no_aug)
-    assert(np.sum(data[2]) == image2_sum_no_aug)
-    assert(np.sum(data) == image_all_sum_no_aug)
-
+    data2 = batch.data[0].asnumpy().astype(np.uint8)
+    assert(np.array_equal(data,data2))
 
 if __name__ == "__main__":
     test_NDArrayIter()
@@ -427,4 +432,3 @@ if __name__ == "__main__":
     test_NDArrayIter_csr()
     test_CSVIter()
     test_ImageRecordIter_seed_augmentation()
-
