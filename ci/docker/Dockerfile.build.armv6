@@ -27,11 +27,14 @@ ENV TARGET ARMV6
 
 WORKDIR /work/deps
 
-# Build OpenBLAS
-RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
-    cd OpenBLAS && \
-    make -j$(nproc) && \
-    make PREFIX=$CROSS_ROOT install
+COPY install/ubuntu_arm.sh /work/
+RUN /work/ubuntu_arm.sh
+
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
+
+ENV OpenBLAS_HOME=${CROSS_ROOT}
+ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet
