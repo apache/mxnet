@@ -782,26 +782,4 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   }
 }
 
-TEST(MKLDNN_BASE, MKLDNNCopy) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
-  for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
-    if (!SupportMKLDNN(in_arr.arr) || in_arr.arr.IsView())
-      continue;
-
-    for (auto out_arr : out_arrs) {
-      auto in_mem1 = in_arr.arr.GetMKLDNNData();
-      auto out_mem = out_arr.arr.GetMKLDNNData();
-      PrintVerifyMsg(in_arr, in_arr);
-      MKLDNNCopy(*in_mem1, out_mem);
-      MKLDNNStream::Get()->Submit();
-      VerifyCopyResult({&in_arr.arr}, out_arr.arr);
-    }
-  }
-}
-
 #endif
