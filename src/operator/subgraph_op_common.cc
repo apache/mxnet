@@ -151,7 +151,8 @@ bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
   return true;
 }
 
-void LoopState::Forward(std::vector<NDArray> cinputs,
+void LoopState::Forward(int iter_no,
+                        std::vector<NDArray> cinputs,
                         const std::vector<OpReqType>& req,
                         std::vector<NDArray> coutputs,
                         bool is_recording) {
@@ -175,18 +176,23 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
   kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
   kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
   CachedOpPtr op;
-  // If we need to run backward, we need to keep all computation results
-  // for backward.
-  if (is_recording) {
+  if (is_recording && iter_ops.size() > (size_t) iter_no)
+    op = iter_ops[iter_no];
+  else if (!is_recording && iter_ops.size() == 1)
+    op = iter_ops[0];
+
+  // If we need to run backward and we don't have a cached op for this iteration,
+  // we create one for this iteration.
+  if (is_recording && op == nullptr) {
     op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
-  } else if (iter_ops.empty()) {
+    CHECK_EQ(iter_ops.size(), iter_no);
+    iter_ops.push_back(op);
+  } else if (op == nullptr) {
     // If we don't need to run backward and this is the first time of
     // running the iteration, we need to create a new cached op.
     op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+    CHECK(iter_ops.empty());
     iter_ops.push_back(op);
-  } else {
-    // If we already have a cached op, we can just reuse it.
-    op = iter_ops[0];
   }
   // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
   // called. Currently, CachedOp allocates memory each time Forward is called.
@@ -197,7 +203,6 @@ void LoopState::Forward(std::vector<NDArray> cinputs,
   if (is_recording) {
     all_inputs.push_back(cinputs);
     all_outputs.push_back(coutputs);
-    iter_ops.push_back(op);
     all_states.push_back(state);
   }
 

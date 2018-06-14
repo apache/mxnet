@@ -82,7 +82,8 @@ class LoopState {
     this->subgraph.outputs = g.outputs;
   }
 
-  void Forward(std::vector<NDArray> cinputs,
+  void Forward(int iter_no,
+               std::vector<NDArray> cinputs,
                const std::vector<OpReqType>& req,
                std::vector<NDArray> coutputs,
                bool is_recording);
@@ -94,7 +95,6 @@ class LoopState {
     all_outputs.clear();
     all_inputs.clear();
     all_states.clear();
-    iter_ops.clear();
   }
 };
 
