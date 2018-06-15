@@ -426,7 +426,7 @@ OpAttrs GetSumOp() {
  *    reordered to 5 dimensions.
  *
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
+std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -437,7 +437,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn) {
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
-    init_fn(&in_arrs.back().arr, false);
+    init_fn(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
@@ -778,10 +778,13 @@ void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::mem
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(InitDefaultArray, true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  for (auto in_arr : in_arrs) {
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
     if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
@@ -803,14 +806,15 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 
     // in place
     auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     PrintVerifyMsg(orig_arr, in_arr);
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
     orig_arr.arr.CopyFrom(*input_mem);
     auto old_mem = orig_arr.arr.GetMKLDNNData();
-    op::MKLDNNSum(*input_mem, *input_mem, *input_mem);
+    op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
-    VerifySumMemory(*old_mem, *old_mem, *input_mem);
+    VerifySumMemory(*old_mem, *input_mem2, *input_mem);
   }
 }
 
