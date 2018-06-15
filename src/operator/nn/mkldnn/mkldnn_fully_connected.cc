@@ -117,7 +117,7 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       param.no_bias ? nullptr : &in_data[fullc::kBias], out_md, ctx.is_train);
   auto data_mem = data.GetMKLDNNDataReorder(ipFwd_pd.src_primitive_desc());
   auto weight_mem = weight.GetMKLDNNDataReorder(ipFwd_pd.weights_primitive_desc());
-  auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
+  auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], in_data,
       ipFwd_pd.dst_primitive_desc(), req[fullc::kOut]);
   if (param.no_bias) {
     MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_forward(
@@ -167,7 +167,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     auto out_grad_mem = out_grad.GetMKLDNNDataReorder(
         ipBwdData_pd.diff_dst_primitive_desc());
     auto weight_mem = weight.GetMKLDNNDataReorder(ipBwdData_pd.weights_primitive_desc());
-    auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData],
+    auto in_grad_mem = CreateMKLDNNMem(in_grad[fullc::kData], inputs,
                                        ipBwdData_pd.diff_src_primitive_desc(),
                                        req[fullc::kData]);
     MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_data(
@@ -189,7 +189,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(
             ipBwdWeights_pd, *data_mem, *out_grad_mem, *in_grad_weight.second));
     } else {
-      in_grad_bias = CreateMKLDNNMem(in_grad[fullc::kBias],
+      in_grad_bias = CreateMKLDNNMem(in_grad[fullc::kBias], inputs,
                                      ipBwdWeights_pd.diff_bias_primitive_desc(),
                                      req[fullc::kBias]);
       MKLDNNStream::Get()->RegisterPrim(mkldnn::inner_product_backward_weights(

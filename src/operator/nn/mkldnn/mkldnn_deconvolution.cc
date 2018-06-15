@@ -223,7 +223,7 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
       CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
     }
   }
-  auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut],
+  auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut], in_data,
       fwd_pd.diff_src_primitive_desc(), req[deconv::kOut]);
   auto output = out_mem.second;
   this->data->set_data_handle(data_mem->get_data_handle());
@@ -325,7 +325,7 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &
     auto weight_mem = GetWeights(inputs[deconv::kWeight + 1],
                                  bwdData_pd.weights_primitive_desc(),
                                  param.num_group);
-    auto in_grad_mem = CreateMKLDNNMem(in_grad[deconv::kData],
+    auto in_grad_mem = CreateMKLDNNMem(in_grad[deconv::kData], inputs,
                                        bwdData_pd.dst_primitive_desc(),
                                        req[deconv::kData]);
     MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_forward(bwdData_pd,

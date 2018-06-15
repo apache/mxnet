@@ -92,7 +92,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   } else {
     // req == kWriteInplace but cannot be handled by mkldnn and
     // req == kAddTo will run into this branch
-    auto mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req);
+    auto mem = CreateMKLDNNMem(out_data, inputs, pdesc.dst_primitive_desc(), req);
     MKLDNNStream *stream = MKLDNNStream::Get();
     stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *mem.second));
     CommitOutput(out_data, mem);

@@ -327,13 +327,10 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
  * If these two functions are used, we have to call CommitOutput to write
  * the output back to the output NDArray.
  */
-mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
+mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
+                                const std::vector<NDArray> &in_arrs,
                                 const mkldnn::memory::primitive_desc &desc,
                                 OpReqType req);
-mkldnn_output_t CreateMKLDNNMemory(const NDArray &out_arr,
-                                   const NDArray &in_arr,
-                                   const mkldnn::memory::primitive_desc &desc,
-                                   OpReqType req);
 mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req);

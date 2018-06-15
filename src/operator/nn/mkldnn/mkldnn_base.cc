@@ -77,36 +77,16 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   }
 }
 
-mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
+mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
+                                 const std::vector<NDArray> &in_arrs,
                                  const mkldnn::memory::primitive_desc &desc,
                                  OpReqType req) {
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else if (req == kWriteInplace) {
-    auto tmp = TmpMemMgr::Get()->Alloc(desc);
-    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-  }
-  mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
-  if (mem == nullptr) {
-    auto tmp = TmpMemMgr::Get()->Alloc(desc);
-    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-  }
-  return mkldnn_output_t(OutDataOp::Noop, mem);
-}
-
-mkldnn_output_t CreateMKLDNNMemory(const NDArray &out_arr,
-                                   const NDArray &in_arr,
-                                   const mkldnn::memory::primitive_desc &desc,
-                                   OpReqType req) {
-  if (kAddTo == req) {
-    auto tmp = TmpMemMgr::Get()->Alloc(desc);
-    return mkldnn_output_t(OutDataOp::AddBack, tmp);
-  } else if (req == kWriteInplace) {
-    // can only WriteInPlace if data_handle and pdesc are the same
-    // we assume arr is both input and output
     if (out_arr.GetMKLDNNData()->get_primitive_desc() == desc &&
-        in_arr.GetMKLDNNData()->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle()) {
+        in_arrs[0].GetMKLDNNData()->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle()) {
       mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
       return mkldnn_output_t(OutDataOp::Noop, mem);
     }

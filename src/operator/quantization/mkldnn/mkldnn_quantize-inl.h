@@ -85,7 +85,7 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
                                     i_fmt);
   auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
   auto reorder_pd  = reorder::primitive_desc(i_mpd, o_mpd, attr);
-  auto o_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
+  auto o_mem = CreateMKLDNNMem(outputs[0], inputs, o_mpd, req[0]);
   MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *i_mem, *o_mem.second));
   CommitOutput(outputs[0], o_mem);
   MKLDNNStream::Get()->Submit();
