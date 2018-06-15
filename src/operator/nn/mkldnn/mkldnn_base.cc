@@ -219,7 +219,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
       res_memory = tmp_memory;
       mem = arr.GetMKLDNNData();
     }
-    op::MKLDNNSum(*res_memory, *mem, *mem);
+    op::MKLDNNSum(*mem, *res_memory, *mem);
   }
 }
 
