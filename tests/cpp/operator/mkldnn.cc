@@ -884,7 +884,7 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs != 0 ? attrs.num_inputs : 3);
   std::vector<NDArray*> outputs(attrs.num_outputs != 0 ? attrs.num_outputs : 2);
-  std::vector<OpReqType> req(1);
+  std::vector<OpReqType> req(2);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
@@ -897,6 +897,7 @@ void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
                                                                InitDefaultArray);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
+        req[1] = kWriteTo;
         inputs[0] = &in_arr1.arr;
         inputs[1] = &in_arr1.arr;
         inputs[2] = &in_arr1.arr;
