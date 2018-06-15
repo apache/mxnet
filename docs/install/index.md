@@ -1865,7 +1865,7 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
 <br/>
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of C++>
+</div> <!-- End of C++ -->
 </div> <!-- End of Windows -->
 
 
