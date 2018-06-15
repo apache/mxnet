@@ -785,8 +785,8 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
 }
 
 void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(attrs.num_inputs || 2);
-  std::vector<NDArray*> outputs(attrs.num_outputs || 1);
+  std::vector<NDArray*> inputs(attrs.num_inputs != 0 ? attrs.num_inputs : 2);
+  std::vector<NDArray*> outputs(attrs.num_outputs != 0 ? attrs.num_outputs : 1);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
@@ -882,8 +882,8 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 }
 
 void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(attrs.num_inputs || 3);
-  std::vector<NDArray*> outputs(attrs.num_inputs || 2);
+  std::vector<NDArray*> inputs(attrs.num_inputs != 0 ? attrs.num_inputs : 3);
+  std::vector<NDArray*> outputs(attrs.num_outputs != 0 ? attrs.num_outputs : 2);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
