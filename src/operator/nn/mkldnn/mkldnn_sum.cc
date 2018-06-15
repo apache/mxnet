@@ -54,7 +54,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  std::vector<mkldnn::primitive::at> in_prims;
+  std::vector<mkldnn::memory> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size(), 1);
   in_prims.reserve(inputs.size());
@@ -70,7 +70,6 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
   }
-
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
   auto mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req, &inputs[0]);
   MKLDNNStream *stream = MKLDNNStream::Get();
