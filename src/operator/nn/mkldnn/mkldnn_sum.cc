@@ -72,7 +72,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
 
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
-  auto mem = CreateMKLDNNMem(out_data, inputs, pdesc.dst_primitive_desc(), req);
+  auto mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req, &inputs[0]);
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *mem.second));
   CommitOutput(out_data, mem);
