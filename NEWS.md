@@ -1,5 +1,20 @@
 MXNet Change Log
 ================
+## 1.2.1
+### Deprecations
+- An incorrect [usage](https://github.com/apache/incubator-mxnet/issues/11091) of `save_params` was advertised in the gluon book which led to MXNet users depending on the incorrect usage and developing a hack around it. A change was made to the internal structure of the `.params` file saved by `save_params` to resolve a bug. This led to user scripts with the above mentioned hack to break. To fix this, `save_params` and `load_params` APIs have been reverted to previous format and marked as deprecated. New APIs: `save_parameters` and `load_parameters` have been added for the new format. All scripts to save and load parameters for a Gluon model should now use the new API for `save_parameters` and `load_parameters`. If your model is hybridizable and you want to export a serialized structure of the model as well as parameters you need to use the `export` API and the newly added `imports` API instead of `save_params` and `load_params` API. For more details, Please see: [issue](https://github.com/apache/incubator-mxnet/issues/11091), [PR](https://github.com/apache/incubator-mxnet/pull/11127).
+
+### Bug Fixes
+- Fixed MKLDNN bugs (#10613, #10021, #10616, #10764, #10591, #10731, #10918, #10706, #10651, #10979).
+- Fixed Scala Inference Memory leak (#11216).
+- Fixed Cross Compilation for armv7 (#11054).
+
+### Performance Improvements
+- Reduced memory consumption from inplace operation for ReLU activation (#10847).
+- Improved `slice` operator performance by 20x (#11124).
+- Improved performance of depthwise convolution by using cudnnv7 if available (#11076).
+- Improved performance and memory usage of Conv1D, by adding back cuDNN support for Conv1D (#11270). This adds a known issue: The cuDNN convolution operator may throw `CUDNN_STATUS_EXECUTION_FAILED` when `req == "add"` and `cudnn_tune != off` with large inputs(e.g. 64k channels). If you encounter this issue, please consider setting `MXNET_CUDNN_AUTOTUNE_DEFAULT` to 0.
+
 ## 1.2.0
 ### New Features - Added Scala Inference APIs
 - Implemented new [Scala Inference APIs](https://cwiki.apache.org/confluence/display/MXNET/MXNetScalaInferenceAPI) which offer an easy-to-use, Scala Idiomatic and thread-safe high level APIs for performing predictions with deep learning models trained with MXNet (#9678). Implemented a new ImageClassifier class which provides APIs for classification tasks on a Java BufferedImage using a pre-trained model you provide (#10054). Implemented a new ObjectDetector class which provides APIs for object and boundary detections on a Java BufferedImage using a pre-trained model you provide (#10229).
