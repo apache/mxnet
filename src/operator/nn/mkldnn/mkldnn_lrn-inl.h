@@ -26,7 +26,6 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_LRN_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
-#include <vector>
 #include <utility>
 #include <mkldnn.hpp>
 #include "../lrn-inl.h"
