@@ -375,6 +375,8 @@ OpAttrs GetCopyOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_copy");
   attrs.dispatches.resize(2);
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -396,6 +398,8 @@ OpAttrs GetReluOp() {
   attrs.attrs.op = Op::Get("Activation");
   attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -408,25 +412,19 @@ OpAttrs GetReluBackwardsOp() {
   attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.num_inputs = 2;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
 
-OpAttrs GetLeakyReluOp() {
-  OpAttrs attrs;
-  attrs.attrs.op = Op::Get("LeakyReLU");
-  attrs.dispatches.resize(1);
-  attrs.dispatches[0] = DispatchMode::kFCompute;
-  return attrs;
-}
-
-
 OpAttrs GetSumOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("elemwise_add");
   attrs.dispatches.resize(2);
+  attrs.num_inputs = 2;
+  attrs.num_outputs = 1;
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -737,9 +735,9 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn, const int num_inputs) {
-  std::vector<NDArray*> inputs(num_inputs);
-  std::vector<NDArray*> outputs(1);
+void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(attrs.num_inputs);
+  std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
@@ -752,7 +750,7 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn, const 
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
         req[0] = kWriteTo;
-        for (int i = 0; i < num_inputs; i++)
+        for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
         outputs[0] = &out_arr.arr;
         PrintVerifyMsg(in_arr, out_arr);
@@ -773,7 +771,7 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn, const 
 
       NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
       req[0] = kWriteInplace;
-      for (int i = 0; i < num_inputs; i++)
+      for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &arr.arr;
       outputs[0] = &arr.arr;
       PrintVerifyMsg(orig, arr);
@@ -781,147 +779,42 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn, const 
                                   dispatch, mxnet::OpStatePtr());
       arr.arr.WaitToRead();
       inputs[0] = &orig.arr;
-      std::vector<NDArray *> orig_inputs(num_inputs);
-      for (int i = 0; i < num_inputs; i++)
+      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+      for (int i = 0; i < attrs.num_inputs; i++)
         orig_inputs[i] = &orig.arr;
       verify_fn(orig_inputs, outputs);
     }
   }
 }
 
-void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(attrs.num_inputs != 0 ? attrs.num_inputs : 2);
-  std::vector<NDArray*> outputs(attrs.num_outputs != 0 ? attrs.num_outputs : 1);
-  std::vector<OpReqType> req(1);
-  std::vector<DispatchMode> dispatches = attrs.dispatches;
-
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(init_fn);
-  for (auto in_arr : in_arrs) {
-    for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
-      for (auto out_arr : out_arrs) {
-        req[0] = kWriteTo;
-        inputs[0] = &in_arr.arr; // output grads
-        inputs[1] = &in_arr.arr; // input
-        outputs[0] = &out_arr.arr;
-        PrintVerifyMsg(in_arr, out_arr);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        out_arr.arr.WaitToRead();
-        verify_fn(inputs, outputs);
-      }
-    }
-  }
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(init_fn);
-    for (auto arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      req[0] = kWriteInplace;
-      req[1] = kWriteInplace;
-      inputs[0] = &arr.arr;
-      inputs[1] = &arr.arr;
-      inputs[2] = &arr.arr;
-      outputs[0] = &arr.arr;
-      outputs[1] = &arr.arr;
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      verify_fn({&orig.arr, &orig.arr}, outputs);
-    }
-  }
-}
-
-void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(attrs.num_inputs != 0 ? attrs.num_inputs : 3);
-  std::vector<NDArray*> outputs(attrs.num_outputs != 0 ? attrs.num_outputs : 2);
-  std::vector<OpReqType> req(2);
-  std::vector<DispatchMode> dispatches = attrs.dispatches;
-
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  for (auto in_arr1 : in_arrs) {
-    for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr1.arr.shape(), pds,
-                                                               InitDefaultArray);
-      for (auto out_arr : out_arrs) {
-        req[0] = kWriteTo;
-        req[1] = kWriteTo;
-        inputs[0] = &in_arr1.arr;
-        inputs[1] = &in_arr1.arr;
-        inputs[2] = &in_arr1.arr;
-        NDArray tmp1 = out_arr.arr.Copy(in_arr1.arr.ctx());
-        NDArray tmp2 = out_arr.arr.Copy(in_arr1.arr.ctx());
-        outputs[0] = &tmp1;
-        outputs[1] = &tmp2;
-        PrintVerifyMsg(in_arr1, out_arr);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        outputs[0]->WaitToRead();
-        outputs[1]->WaitToRead();
-        verify_fn(inputs, outputs);
-      }
-    }
-  }
-
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(InitDefaultArray);
-    for (auto arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      req[0] = kWriteInplace;
-      inputs[0] = &arr.arr;
-      inputs[1] = &arr.arr;
-      outputs[0] = &arr.arr;
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      verify_fn({&orig.arr, &orig.arr}, outputs);
-    }
-  }
-}
-
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-  TestOp(attrs, InitDefaultArray, VerifyCopyResult, 1);
+  TestOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, CopyBackwardsOp) {
   OpAttrs attrs = GetCopyBackwardsOp();
-  TestUnaryBackwardsOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
+  TestOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
-  TestOp(attrs, InitNegPosArray, VerifyActResult, 1);
+  TestOp(attrs, InitNegPosArray, VerifyActResult);
 }
 
 TEST(IMPERATIVE, ActBackwardsOp) {
   OpAttrs attrs = GetReluBackwardsOp();
-  TestUnaryBackwardsOp(attrs, InitNegPosArray, VerifyActBackwardsResult);
+  TestOp(attrs, InitNegPosArray, VerifyActBackwardsResult);
 }
 
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
-  TestOp(attrs, InitDefaultArray, VerifySumResult, 2);
+  TestOp(attrs, InitDefaultArray, VerifySumResult);
 }
 
 TEST(IMPERATIVE, BinaryBackwardsOp) {
   OpAttrs attrs = GetSumBackwardsOp();
-  TestBinaryBackwardsOp(attrs, VerifySumBackwardsResult);
+  TestOp(attrs, InitDefaultArray, VerifySumBackwardsResult);
 }
 
 void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
