@@ -173,8 +173,7 @@ steps_iterations = [s*iterations_per_epoch for s in steps_epochs]
 print("Step at iterations: {}".format(steps_iterations))
 ```
 
-    Step at iterations: [3752, 6566, 8442] <!--notebook-skip-line-->
-
+Step at iterations: [3752, 6566, 8442] <!--notebook-skip-line-->
 
 
 ```python
@@ -221,16 +220,25 @@ for epoch in range(10):
             print("Epoch: %d; Batch %d; Loss %f; LR %f" % (epoch, batch_num, curr_loss, curr_lr))
 ```
 
-    Epoch: 0; Batch 0; Loss 2.304634; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 1; Batch 0; Loss 0.251240; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 2; Batch 0; Loss 0.168092; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 3; Batch 0; Loss 0.045231; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 4; Batch 0; Loss 0.094022; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 5; Batch 0; Loss 0.031173; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 6; Batch 0; Loss 0.004187; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 7; Batch 0; Loss 0.015699; LR 0.000300 <!--notebook-skip-line-->
-    Epoch: 8; Batch 0; Loss 0.159275; LR 0.000300 <!--notebook-skip-line-->
-    Epoch: 9; Batch 0; Loss 0.105180; LR 0.000030 <!--notebook-skip-line-->
+Epoch: 0; Batch 0; Loss 2.304634; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 1; Batch 0; Loss 0.251240; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 2; Batch 0; Loss 0.168092; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 3; Batch 0; Loss 0.045231; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 4; Batch 0; Loss 0.094022; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 5; Batch 0; Loss 0.031173; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 6; Batch 0; Loss 0.004187; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 7; Batch 0; Loss 0.015699; LR 0.000300 <!--notebook-skip-line-->
+
+Epoch: 8; Batch 0; Loss 0.159275; LR 0.000300 <!--notebook-skip-line-->
+
+Epoch: 9; Batch 0; Loss 0.105180; LR 0.000030 <!--notebook-skip-line-->
 
 
 We see that the learning rate starts at 0.03, and falls to 0.00003 by the end of training as per the schedule we defined.
@@ -279,16 +287,25 @@ for epoch in range(10):
         iteration_idx += 1
 ```
 
-    Epoch: 0; Batch 0; Loss 2.304286; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 1; Batch 0; Loss 0.113910; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 2; Batch 0; Loss 0.041778; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 3; Batch 0; Loss 0.066455; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 4; Batch 0; Loss 0.091915; LR 0.030000 <!--notebook-skip-line-->
-    Epoch: 5; Batch 0; Loss 0.035965; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 6; Batch 0; Loss 0.005169; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 7; Batch 0; Loss 0.017087; LR 0.003000 <!--notebook-skip-line-->
-    Epoch: 8; Batch 0; Loss 0.039928; LR 0.000300 <!--notebook-skip-line-->
-    Epoch: 9; Batch 0; Loss 0.003349; LR 0.000300 <!--notebook-skip-line-->
+Epoch: 0; Batch 0; Loss 2.304286; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 1; Batch 0; Loss 0.113910; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 2; Batch 0; Loss 0.041778; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 3; Batch 0; Loss 0.066455; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 4; Batch 0; Loss 0.091915; LR 0.030000 <!--notebook-skip-line-->
+
+Epoch: 5; Batch 0; Loss 0.035965; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 6; Batch 0; Loss 0.005169; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 7; Batch 0; Loss 0.017087; LR 0.003000 <!--notebook-skip-line-->
+
+Epoch: 8; Batch 0; Loss 0.039928; LR 0.000300 <!--notebook-skip-line-->
+
+Epoch: 9; Batch 0; Loss 0.003349; LR 0.000300 <!--notebook-skip-line-->
 
 
 Once again, we see the learning rate start at 0.03, and fall to 0.00003 by the end of training as per the schedule we defined.
