@@ -40,6 +40,7 @@ void MKLDNNSum(std::vector<mkldnn::memory> &in_mems,
   for (int i = 0; i < in_mems.size(); i++) {
     input_pds[i] = in_mems[i].get_primitive_desc();
     inputs.push_back(in_mems[i]);
+    if (i > 0) CHECK(input_pds[i] == input_pds[i-1]);
   }
   // TODO(zhengda) I need to reorder memory here.
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
