@@ -446,16 +446,8 @@ class Block(object):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
-        static_alloc : bool, default False
-            Statically allocate memory to improve speed. Memory usage may increase.
-        static_shape : bool, default False
-            Optimize for invariant input shapes between iterations. Must also
-            set static_alloc to True. Change of input shapes is still allowed
-            but slower.
-        forward_bulk_size : int, default 15
-            Segment size of bulk execution during forward pass.
-        backward_bulk_size : int, default 15
-            Segment size of bulk execution during backward pass.
+        **kwargs : string
+            Additional flags for hybridized operator.
         """
         for cld in self._children.values():
             cld.hybridize(active, **kwargs)
@@ -623,7 +615,7 @@ class HybridBlock(Block):
         self._out_format = None
         self._in_format = None
         self._active = False
-        self._flags = []
+        self._flags = {}
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -650,43 +642,39 @@ class HybridBlock(Block):
         return self._cached_graph
 
     def _build_cache(self, *args):
-        data, out = self._get_graph(*args)
-        data_names = {data.name : i for i, data in enumerate(data)}
-        params = self.collect_params()
-        input_names = out.list_inputs()
+        inputs, out = self._get_graph(*args)
+        input_names = [i.name for i in inputs]
 
+        params = self.collect_params()
         param_names = set(params.keys())
-        expected_names = set(input_names)
+        expected_names = set(out.list_inputs())
         for name in expected_names:
-            assert name in param_names or name in data_names, \
+            assert name in param_names or name in input_names, \
                 "Unknown input to HybridBlock: %s"%name
 
-        used_data_names = [i for i in data_names if i in expected_names]
-        if len(used_data_names) != len(data_names):
-            unused = ', '.join(['%d-th'%i for name, i in data_names.items()
+        used_input_names = [i for i in input_names if i in expected_names]
+        if len(used_input_names) != len(input_names):
+            unused = ', '.join(['%d-th'%i for i, name in enumerate(input_names)
                                 if name not in expected_names])
             warnings.warn("The %s input to HybridBlock is not used by any "
                           "computation. Is this intended?"%unused, stacklevel=4)
 
-        used_param_names = [i for i in param_names if i in expected_names]
+        used_param_names = set(i for i in param_names if i in expected_names)
         if len(used_param_names) != len(param_names):
-            unused = ', '.join(list(param_names - set(used_param_names)))
+            unused = ', '.join(list(param_names - used_param_names))
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
 
-        data_indices = []
-        param_indices = []
-        self._cached_op_args = []
-        for i, name in enumerate(input_names):
-            if name in data_names:
-                data_indices.append(i)
-                self._cached_op_args.append((True, data_names[name]))
-            else:
-                param_indices.append(i)
-                self._cached_op_args.append((False, params[name]))
-        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
-                self._flags
-        self._cached_op = ndarray.CachedOp(out, flags)
+        used_params = {k: params[k] for k in used_param_names}
+        try:
+            param_dict = {k: v.list_data() for k, v in used_params.items()}
+        except DeferredInitializationError:
+            self._deferred_infer_shape(*args)
+            for i in used_params.values():
+                i._finish_deferred_init()
+            param_dict = {k: v.list_data() for k, v in used_params.items()}
+
+        self._cached_op = ndarray.CachedOp(out, self._flags, input_names, param_dict)
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -702,19 +690,7 @@ class HybridBlock(Block):
 
         args, fmt = _flatten(args, "input")
         assert fmt == self._in_format, "Invalid input format"
-        try:
-            cargs = [args[i] if is_arg else i.data()
-                     for is_arg, i in self._cached_op_args]
-        except DeferredInitializationError:
-            self._deferred_infer_shape(*args)
-            cargs = []
-            for is_arg, i in self._cached_op_args:
-                if is_arg:
-                    cargs.append(args[i])
-                else:
-                    i._finish_deferred_init()
-                    cargs.append(i.data())
-        out = self._cached_op(*cargs)
+        out = self._cached_op(*args)
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)[0]
@@ -735,7 +711,7 @@ class HybridBlock(Block):
 
     def hybridize(self, active=True, **kwargs):
         self._active = active
-        self._flags = list(kwargs.items())
+        self._flags = kwargs.items()
         self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{}" is being hybridized while still having forward hook/pre-hook. '
