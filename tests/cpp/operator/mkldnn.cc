@@ -634,6 +634,27 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   printf(")\n");
 }
 
+TEST(MKLDNN_NDArray, CopyFrom) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  for (auto in_arr : in_arrs) {
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                                             InitDefaultArray);
+    for (auto out_arr : out_arrs) {
+      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+        in_arr.arr = in_arr.arr.Reorder2Default();
+      const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
+      out_arr.arr.CopyFrom(*mem);
+      MKLDNNStream::Get()->Submit();
+      std::vector<NDArray *> inputs(1);
+      inputs[0] = &in_arr.arr;
+      VerifyCopyResult(inputs, out_arr.arr);
+    }
+  }
+}
+
 void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(1);
   std::vector<NDArray*> outputs(1);
@@ -727,27 +748,6 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
       orig_inputs[0] = &orig;
       orig_inputs[1] = &orig;
       verify_fn(orig_inputs, arr.arr);
-    }
-  }
-}
-
-TEST(MKLDNN_NDArray, CopyFrom) {
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
-    for (auto out_arr : out_arrs) {
-      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
-        in_arr.arr = in_arr.arr.Reorder2Default();
-      const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
-      out_arr.arr.CopyFrom(*mem);
-      MKLDNNStream::Get()->Submit();
-      std::vector<NDArray *> inputs(1);
-      inputs[0] = &in_arr.arr;
-      VerifyCopyResult(inputs, out_arr.arr);
     }
   }
 }
