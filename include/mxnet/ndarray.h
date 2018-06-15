@@ -155,6 +155,14 @@ class NDArray {
     return byte_offset_ > 0 || shape() != ptr_->storage_shape;
   }
 
+  /* \brief Check whether the two arrays are the same array */
+  inline bool IsSame(const NDArray& other) {
+    return ptr_ == other.ptr_ &&
+        shape_ == other.shape_ &&
+        byte_offset_ == other.byte_offset_ &&
+        dtype_ == other.dtype_;
+  }
+
   /*!
    * \return the shape of current NDArray.
    */
