@@ -83,10 +83,10 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
-  } else if (kWriteInplace == req) {
-    // cannot only WriteInPlace if data_handle and pdesc are the same
+  } else if (req == kWriteInplace) {
+    // can only WriteInPlace if data_handle and pdesc are the same
     // we assume arr is both input and output
-    if (arr.GetMKLDNNData()->get_data_handle() == desc.get()) {
+    if (arr.GetMKLDNNData()->get_primitive_desc() == desc) {
       mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
       return mkldnn_output_t(OutDataOp::Noop, mem);
     }
