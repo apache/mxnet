@@ -200,26 +200,17 @@ CachedOp::CachedOp(
     size_t num_forward_outputs = num_outputs();
     for (uint32_t i = 0; i < ograd_entries_.size(); ++i) {
       if (!idx.exist(ograd_entries_[i].node.get())) continue;
-      auto eid = idx.entry_id(ograd_entries_[i]);
-      if (ref_count[eid] > 0) {
-        bwd_ograd_dep_.push_back(i);
-      }
+      bwd_ograd_dep_.push_back(i);
     }
     save_inputs_.resize(num_forward_inputs, false);
     for (uint32_t i = 0; i < num_forward_inputs; ++i) {
-      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      if (ref_count[eid] > 0) {
-        save_inputs_[i] = true;
-        bwd_in_dep_.push_back(i);
-      }
+      save_inputs_[i] = true;
+      bwd_in_dep_.push_back(i);
     }
     save_outputs_.resize(idx.outputs().size(), false);
     for (uint32_t i = 0; i < num_forward_outputs; ++i) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      if (ref_count[eid] > 0) {
-        save_outputs_[i] = true;
-        bwd_out_dep_.push_back(i);
-      }
+      save_outputs_[i] = true;
+      bwd_out_dep_.push_back(i);
     }
   }
 }
@@ -1042,14 +1033,7 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), bwd_input_eid.size());
 
   // Prepare node and entry ranges
-  const size_t num_forward_nodes = fwd_graph_.indexed_graph().num_nodes();
-  const size_t num_forward_entries = fwd_graph_.indexed_graph().num_node_entries();
   const size_t num_forward_outputs = fwd_graph_.outputs.size();
-  std::pair<uint32_t, uint32_t> node_range, entry_range;
-  node_range = {num_forward_nodes, idx.num_nodes()};
-  entry_range = {num_forward_entries, idx.num_node_entries()};
-  g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
-  g.attrs["entry_range"] = std::make_shared<dmlc::any>(entry_range);
 
   // Prepare stypes and contexts based on inputs
   StorageTypeVector stypes(idx.num_node_entries(), -1);
@@ -1058,14 +1042,12 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   }
   exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
 
-  // Subgraph storage type inference
-  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(stypes),
-                           false, node_range, entry_range);
+  // Full graph storage type inference
+  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(stypes), false);
   // Retrieve result and set outputs
   const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
   const auto &outputs = idx.outputs();
   CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
-  // Assign output stypes
   for (size_t i = 0; i < out_attrs->size(); i++) {
     const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
