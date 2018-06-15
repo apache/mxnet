@@ -35,7 +35,9 @@ echo "Copying the broken link checker scripts from incubator-mxnet repo."
 cp /work/mxnet/tests/nightly/broken_link_checker_test/find_broken_link.sh .
 cp /work/mxnet/tests/nightly/broken_link_checker_test/check_regression.sh .
 echo `pwd`
+echo "Running find_broken_link.sh"
 ./find_broken_link.sh
+echo "Running check_regression.sh"
 ./check_regression.sh
 cd ../.
 
