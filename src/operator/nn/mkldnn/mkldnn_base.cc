@@ -146,7 +146,8 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     // We have to allocate new memory for the sum result.
     auto sum_res = TmpMemMgr::Get()->Alloc(
         res.second->get_primitive_desc());
-    op::MKLDNNSum(*res.second, *mem, *sum_res);
+    std::vector<mkldnn::memory> in_mems = {*res.second, *mem};
+    op::MKLDNNSum(in_mems, *sum_res);
     const_cast<NDArray &>(arr).CopyFrom(*sum_res);
   }
 }
