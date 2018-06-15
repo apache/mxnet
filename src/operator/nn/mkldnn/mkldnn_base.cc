@@ -83,14 +83,22 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
+  } else if (kWriteInplace == req) {
+    // cannot only WriteInPlace if data_handle and pdesc are the same
+    // we assume arr is both input and output
+    if (arr.GetMKLDNNData()->get_data_handle() == desc.get()) {
+      mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
+      return mkldnn_output_t(OutDataOp::Noop, mem);
+    }
+    auto tmp = TmpMemMgr::Get()->Alloc(desc);
+    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
   }
   mkldnn::memory *mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
-  if (kWriteInplace == req || mem != nullptr)
-    return mkldnn_output_t(OutDataOp::Noop, mem);
-
-  auto tmp = TmpMemMgr::Get()->Alloc(desc);
-  return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-
+  if (mem == nullptr) {
+    auto tmp = TmpMemMgr::Get()->Alloc(desc);
+    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
+  }
+  return mkldnn_output_t(OutDataOp::Noop, mem);
 }
 
 mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
