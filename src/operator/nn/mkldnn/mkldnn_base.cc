@@ -77,6 +77,12 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   }
 }
 
+bool CanWriteTo(const NDArray &out_arr, const NDArray &in_arr, const mkldnn::memory::primitive_desc &desc) {
+  bool add_same = in_arr.GetMKLDNNData()->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle();
+  bool pdesc_same = out_arr.GetMKLDNNData()->get_primitive_desc() == desc;
+  return add_same && pdesc_same;
+}
+
 mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
                                  const std::vector<NDArray> &in_arrs,
                                  const mkldnn::memory::primitive_desc &desc,
@@ -85,8 +91,7 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else if (req == kWriteInplace) {
-    if (out_arr.GetMKLDNNData()->get_primitive_desc() == desc &&
-        in_arrs[0].GetMKLDNNData()->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle()) {
+    if (CanWriteTo(out_arr, in_arrs[0], desc)) {
       mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
       return mkldnn_output_t(OutDataOp::Noop, mem);
     }
