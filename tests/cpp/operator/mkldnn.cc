@@ -863,6 +863,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem->get_primitive_desc());
 
       // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
@@ -879,6 +880,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
 
     auto input_mem = in_arr.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
     orig_arr.arr.CopyFrom(*input_mem);
