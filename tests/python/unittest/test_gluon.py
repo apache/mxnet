@@ -1285,6 +1285,17 @@ def test_legacy_save_params():
     model.load_params('test.params', ctx=mx.cpu())
 
 
+def test_hybrid_static_memory_recording():
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(static_alloc=True)
+
+    x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
+    with mx.autograd.record(True):
+        net(x)
+    net(x)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
