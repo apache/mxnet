@@ -251,7 +251,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
     float min_aspect_ratio = 1.0f;
     if (param_.min_aspect_ratio.has_value()) {
       max_aspect_ratio = param_.max_aspect_ratio;
-      min_aspect_ratio = param_.min_aspect_ratio;
+      min_aspect_ratio = param_.min_aspect_ratio.value();
     } else {
       max_aspect_ratio = 1 + param_.max_aspect_ratio;
       min_aspect_ratio = 1 - param_.max_aspect_ratio;
@@ -357,7 +357,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
 
       if (param_.max_random_area != 1.0f || param_.min_random_area != 1.0f
           || max_aspect_ratio != 1.0f || min_aspect_ratio != 1.0f) {
-            CHECK(param_.min_aspect_ratio > 0.0f);
+            CHECK(min_aspect_ratio > 0.0f);
             CHECK(param_.min_random_area <= param_.max_random_area);
             CHECK(min_aspect_ratio <= max_aspect_ratio);
             std::uniform_real_distribution<float> rand_uniform_area(param_.min_random_area,
