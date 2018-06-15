@@ -330,6 +330,10 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
                                 const mkldnn::memory::primitive_desc &desc,
                                 OpReqType req);
+mkldnn_output_t CreateMKLDNNMemory(const NDArray &out_arr,
+                                   const NDArray &in_arr,
+                                   const mkldnn::memory::primitive_desc &desc,
+                                   OpReqType req);
 mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req);
