@@ -142,6 +142,7 @@ void LstmForwardTraining(DType* ws,
   const int y_offset = T * N * H * 5;
   const int cell_size = N * H;
   int idx = 0;  // state & cell state's idx;
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < L; ++i) {
     const int input_size = i ? H * D : I;
     const int w_size = (input_size + H) * H * 4;
@@ -172,7 +173,10 @@ void LstmForwardTraining(DType* ws,
       }
     }
   }
-  memcpy(y_ptr, rs + y_offset, T * N * H * D * sizeof(DType));
+  #pragma omp parallel for num_threads(omp_threads)
+  for (int i = 0; i < T * N * H * D; ++i) {
+    y_ptr[i] = (rs + y_offset)[i];
+  }
 }
 
 template<typename DType>
@@ -334,9 +338,18 @@ void LstmBackwardSingleLayer(DType* ws,
   DType *c_ptr = bid ? rs + T * N * H * 7 : rs;
   const Tensor<cpu, 3, DType> c(c_ptr, Shape3(T, N, H));
   const Tensor<cpu, 4, DType> ifgo(c_ptr + T * N * H, Shape4(T, N, H, 4));
-  memset(dwh.dptr_, 0, H * H * 4 * sizeof(DType));
-  memset(dbx.dptr_, 0, H * 4 * sizeof(DType));
-  memset(dbh.dptr_, 0, H * 4 * sizeof(DType));
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  if (req_params != kNullOp && req_params != kAddTo) {
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < H * 4 * H; ++i) {
+      dwh.dptr_[i] = 0;
+    }
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < 4 * H; ++i) {
+      dbx.dptr_[i] = 0;
+      dbh.dptr_[i] = 0;
+    }
+  }
   Tensor<cpu, 4, DType> difgo(ws, Shape4(T, N, 4, H));
   Tensor<cpu, 2, DType> dh(ws + T * N * H * 4, Shape2(N, H));
   Tensor<cpu, 2, DType> dc(dh.dptr_ + N * H, Shape2(N, H));
@@ -348,13 +361,28 @@ void LstmBackwardSingleLayer(DType* ws,
   const DType beta2 = 2.0;
   const int cell_size = N * H;
   if (dhy_ptr != NULL) {
-    memcpy(dh.dptr_, dhy_ptr, cell_size * sizeof(DType));
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < cell_size; ++i) {
+      dh.dptr_[i] = dhy_ptr[i];
+    }
+  } else {
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < cell_size; ++i) {
+      dh.dptr_[i] = 0;
+    }
   }
   if (dcy_ptr != NULL) {
-    memcpy(dc.dptr_, dcy_ptr, cell_size * sizeof(DType));
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < cell_size; ++i) {
+      dc.dptr_[i] = dcy_ptr[i];
+    }
+  } else {
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < cell_size; ++i) {
+      dc.dptr_[i] = 0;
+    }
   }
 
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = T - 1; i >= 0; --i) {
     int t = bid ? T - 1 - i : i;
     int tnext = bid ? t + 1 : t - 1;
@@ -422,8 +450,11 @@ void LstmBackwardSingleLayer(DType* ws,
     } else {
       const Tensor<cpu, 2, DType> tmp_dbx(tmp_buf, Shape2(col, T));
       const Tensor<cpu, 2, DType> tmp_dbh(tmp_buf + col * T, Shape2(col, T));
-      memset(tmp_dbx.dptr_, 0, col * T * sizeof(DType));
-      memset(tmp_dbh.dptr_, 0, col * T * sizeof(DType));
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < col * T; ++i) {
+        tmp_dbx.dptr_[i] = 0;
+        tmp_dbh.dptr_[i] = 0;
+      }
       for (int t = T - 1; t >= 0; --t) {
         #pragma omp parallel for num_threads(omp_threads)
         for (int j = 0; j < col; ++j) {
@@ -949,7 +980,11 @@ void GruForwardTraining(DType* ws,
     }
     wh_l = wx_l + I * 3 * H;
   }
-  memcpy(y_ptr, y_l, T * N * H * D * sizeof(DType));
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  #pragma omp parallel for num_threads(omp_threads)
+  for (int i = 0; i < T * N * H * D; ++i) {
+    y_ptr[i] = y_l[i];
+  }
 }
 
 template <typename DType>
@@ -1012,6 +1047,17 @@ void GruBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wx(back_wx_ptr, Shape2(H * 3, I));
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  if (req_params != kNullOp && req_params != kAddTo) {
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < D * H * 3 * H; ++i) {
+      dwh[i] = 0;
+    }
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < D * 3 * H; ++i) {
+      dbx[i] = 0;
+      dbh[i] = 0;
+    }
+  }
   #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < N * H; ++i) {
     if (dhy_ptr) {
@@ -1121,8 +1167,11 @@ void GruBackwardSingleLayer(DType* ws,
     } else {
       const Tensor<cpu, 2, DType> tmp_dbx(tmp_buf + T * N * D * H, Shape2(H * 3, T));
       const Tensor<cpu, 2, DType> tmp_dbh(tmp_buf + T * N * D * H + 3 * H * T, Shape2(H * 3, T));
-      memset(tmp_dbx.dptr_, 0, H * T * 3 * sizeof(DType));
-      memset(tmp_dbh.dptr_, 0, H * T * 3 * sizeof(DType));
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < H * T * 3; ++i) {
+        tmp_dbx.dptr_[i] = 0;
+        tmp_dbh.dptr_[i] = 0;
+      }
 
       for (int t = T - 1; t >= 0; --t) {
         #pragma omp parallel for num_threads(omp_threads)
@@ -1236,9 +1285,11 @@ void GruBackwardSingleLayer(DType* ws,
       } else {
         const Tensor<cpu, 2, DType> tmp_dbx(tmp_buf + T * N * D * H, Shape2(H * 3, T));
         const Tensor<cpu, 2, DType> tmp_dbh(tmp_buf + T * N * D * H + 3 * H * T, Shape2(H * 3, T));
-        memset(tmp_dbx.dptr_, 0, H * T * 3 * sizeof(DType));
-        memset(tmp_dbh.dptr_, 0, H * T * 3 * sizeof(DType));
-
+        #pragma omp parallel for num_threads(omp_threads)
+        for (int i = 0; i < H * T * 3; ++i) {
+          tmp_dbx.dptr_[i] = 0;
+          tmp_dbh.dptr_[i] = 0;
+        }
         for (int t = T - 1; t >= 0; --t) {
           #pragma omp parallel for num_threads(omp_threads)
           for (int i = 0; i < 3 * H; ++i) {
@@ -1272,7 +1323,10 @@ void GruBackwardSingleLayer(DType* ws,
     }
   }
   if (req_state != kNullOp) {
-    memcpy(dhx, dht1, N * H * D * sizeof(DType));
+    #pragma omp parallel for num_threads(omp_threads)
+    for (int i = 0; i < N * H * D; ++i) {
+      dhx[i] = dht1[i];
+    }
   }
 }
 
@@ -1335,6 +1389,7 @@ void GruBackward(DType* ws,
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int l = L - 1; l >= 0; --l) {
     if (l == 0) {
       I = inputsize;
@@ -1349,7 +1404,10 @@ void GruBackward(DType* ws,
                                   dhy_l, gateR_l, gateZ_l, gateN_l, Mnh_l, dx_l, dhx_l,
                                   dwx_l, dwh_l, dbx_l, dbh_l, req_data, req_params, req_state);
     if (l > 0) {
-      memcpy(dy_l, dx_l, T * N * H * D * sizeof(DType));
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < T * N * H * D; ++i) {
+        dy_l[i] = dx_l[i];
+      }
       gateR_l = gateR_l - T * D * N * H;
       gateZ_l = gateZ_l - T * D * N * H;
       gateN_l = gateN_l - T * D * N * H;
