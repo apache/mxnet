@@ -93,7 +93,7 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
   } else if (req == kWriteInplace) {
-    if (CanWriteTo(out_arr, in_arr, desc)) {
+    if (in_arr != nullptr && CanWriteTo(out_arr, in_arr, desc)) {
       mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
       return mkldnn_output_t(OutDataOp::Noop, mem);
     }
