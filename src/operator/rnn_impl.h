@@ -649,11 +649,11 @@ void GruForwardInferenceSingleLayer(DType* ws,
     //  perform the second direction
     if (D == 2) {
       gemmC1_t = back_gemmC1 + (T - 1 - t) * N * 3 * H;
-      Tensor<cpu, 2, DType> dback_ht_1(back_ht_1, Shape2(N, D * H));
+      Tensor<cpu, 2, DType> dback_ht_1(back_ht_1 - H, Shape2(N, D * H));
       Tensor<cpu, 3, DType> dback_ht_1_tmp = Tensor<cpu, 3, DType>
           (reinterpret_cast<DType*>(tmp_buf), Shape3(D, H, N));
       dback_ht_1_tmp = reshape(dback_ht_1.T(), Shape3(D, H, N));
-      linalg_gemm(dback_ht_1_tmp[0], back_wh, dgemmC2, alpha, beta, true, true);
+      linalg_gemm(dback_ht_1_tmp[1], back_wh, dgemmC2, alpha, beta, true, true);
 
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
@@ -870,11 +870,11 @@ void GruForwardTrainingSingleLayer(DType* ws,
       zt = back_gateZ + (T - 1 - t) * N * H;
       nt = back_gateN + (T - 1 - t) * N * H;
       gemmC1_t = back_gemmC1 + (T - 1 - t) * N * 3 * H;
-      Tensor<cpu, 2, DType> dback_ht_1(back_ht_1, Shape2(N, D * H));
+      Tensor<cpu, 2, DType> dback_ht_1(back_ht_1 - H, Shape2(N, D * H));
       Tensor<cpu, 3, DType> dback_ht_1_tmp = Tensor<cpu, 3, DType>
           (reinterpret_cast<DType*>(tmp_buf), Shape3(D, H, N));
       dback_ht_1_tmp = reshape(dback_ht_1.T(), Shape3(D, H, N));
-      linalg_gemm(dback_ht_1_tmp[0], back_wh, dgemmC2, alpha, beta, true, true);
+      linalg_gemm(dback_ht_1_tmp[1], back_wh, dgemmC2, alpha, beta, true, true);
 
       DType* back_Mnht = back_Mnh + (T - 1 - t) * N * H;
       #pragma omp parallel for num_threads(omp_threads)
