@@ -566,7 +566,6 @@ int GenerateBinaryTree( std::vector<T>&                  W,
     }
 
     new_topo[parent] = child;
-    int num_rows = P.size();
   }
 
   int depth = scan_row.size();
@@ -579,7 +578,7 @@ int GenerateBinaryTree( std::vector<T>&                  W,
 
     // If not first, check previous level whether or not we are encountering 
     // this root for the first time in this level of the tree
-    if (i != start && parent == topo_row[i-1])
+    if (i != start && parent == static_cast<int>(topo_row[i-1]))
       child = parent;
     else
       child = new_topo[parent];
@@ -601,6 +600,7 @@ int ComputeDepth( int n ) {
     if (n <= num)
       return depth+1;
   }
+  return 0;
 }
 
 template <typename T>
@@ -612,7 +612,7 @@ bool IsValid( const std::vector<T>&   W,
 
   for (int i = 0; i < depth; ++i) {
     int stride = 1 << i;
-    for (unsigned j = 0; j+stride < row; j += 2*stride) {
+    for (int j = 0; j+stride < row; j += 2*stride) {
       int from   = state[j];
       int dest   = state[j+stride];
       //std::cout << "Comparing " << j << " and " << j+stride << " in row " << row << std::endl;
@@ -646,7 +646,7 @@ bool IsValid( const std::vector<T>&   W,
       //std::cout << "Not valid: " << found.size() << " rows found but expected between " << row << " and " << row - modifier << std::endl;
       return false;
     }
-  } else if (row == state.size())
+  } else if (row == static_cast<int>(state.size()))
     for (int i = 0; i < num_elements; ++i)
       if (found_vec[i] == 0)
         return false;
@@ -681,7 +681,7 @@ void Postprocess( std::vector<int>& result, int num_elements, int depth) {
 }
 
 template <typename T>
-T GetTreeWeight( const std::vector<T>&   W, 
+T ComputeTreeWeight( const std::vector<T>&   W, 
                  const std::vector<int>& result, 
                  int                     num_elements,
                  int                     depth) {
@@ -737,6 +737,7 @@ void FormTopology( const std::vector<int>& result,
 
   // Insert at the end, result vector
   topo_row.insert(topo_row.end(), result.begin(), result.end());
+  scan_row.push_back(topo_row.size());
 }
 
 template <typename T>
@@ -747,10 +748,10 @@ void Backtrack( const std::vector<T>& W,
                 int                   row,
                 int                   num_elements,
                 int                   depth ) {
-  if (row == state.size()) {
+  if (row == static_cast<int>(state.size())) {
     std::vector<int> result = state;
     Postprocess(result, num_elements, depth);
-    T weight = GetTreeWeight(W, result, num_elements, depth);
+    T weight = ComputeTreeWeight(W, result, num_elements, depth);
     if (weight > best_result_weight) {
       std::swap(best_result_weight, weight);
       best_result        = result;
@@ -763,7 +764,7 @@ void Backtrack( const std::vector<T>& W,
     return;
   }
 
-  for (unsigned j = 0; j < num_elements; ++j) {
+  for (int j = 0; j < num_elements; ++j) {
     state[row] = j;
     //PrintVector("Trying state", state);
     if (IsValid(W, state, num_elements, row+1, depth)) {

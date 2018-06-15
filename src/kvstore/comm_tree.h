@@ -18,7 +18,7 @@
  */
 
 /**
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2018 by Contributors
  */
 #ifndef MXNET_KVSTORE_COMM_TREE_H_
 #define MXNET_KVSTORE_COMM_TREE_H_
@@ -67,7 +67,7 @@ class CommDeviceTree : public Comm {
       for (const auto& a : src) {
         devs_.push_back(a.ctx());
       }
-      GetTopology();
+      QueryTopology();
       InitMergeBuffer();
       if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
         EnableP2P();
@@ -368,9 +368,11 @@ class CommDeviceTree : public Comm {
         for (unsigned gpu_id = 0; gpu_id < dst.size(); ++gpu_id) {
           BufferEntry& buf = merge_buf_[gpu_id][key];
           for (unsigned i = 0; i < devs_.size(); ++i) {
-            NDArray curr_slice = dst[gpu_id]->Slice(slice_scan[i], slice_scan[i+1]);
-            CopyFromTo(buf.merged[i], &curr_slice, priority);
+            if ( devs_[gpu_id] == dst[gpu_id]->ctx() ) {
+              NDArray curr_slice = dst[gpu_id]->Slice(slice_scan[i], slice_scan[i+1]);
+              CopyFromTo(buf.merged[i], &curr_slice, priority);
               //LOG(WARNING) << "Bcast return copy from " << buf.merged[i].ctx() << " to " << curr_slice.ctx();
+            }
           }
         }
       } else {
@@ -482,7 +484,7 @@ class CommDeviceTree : public Comm {
 #endif
   }
 
-  void GetTopology() {
+  void QueryTopology() {
 #if MXNET_USE_CUDA
 
     std::vector<float> link_matrix(devs_.size()*devs_.size());
@@ -491,7 +493,7 @@ class CommDeviceTree : public Comm {
     PartitionGraph( link_matrix, devs_.size(), zero_dev_id, topology_, scan_,
         link_usage_penalty_ );
 
-    depth_         = ComputeDepth(devs_.size());
+    depth_ = ComputeDepth(devs_.size());
 #endif
   }
 
