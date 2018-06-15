@@ -126,35 +126,24 @@ class OpStatePtr {
   template<typename T, typename... Args>
   static OpStatePtr Create(Args&&... args) {
     OpStatePtr ret;
-    auto state = new T(std::forward<Args>(args)...);
-    auto var = Engine::Get()->NewVariable();
-    ret.ptr_.reset(
-      new OpState(var, state),
-      [](OpState* p) {
-        Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), p->var);
-        delete reinterpret_cast<T*>(p->state);
-        delete p;
-      });
+    ret.ptr_ = std::make_shared<OpState>();
+    ret.ptr_->var_ = Engine::Get()->NewVariable();
+    ret.ptr_->state_.construct<T>(std::forward<Args>(args)...);
 
     return ret;
   }
   /* \brief Get engine variable associated with this state */
   engine::VarHandle get_var() const {
-    return ptr_->var;
+    return ptr_->var_;
   }
   /* \brief Get state of type T */
   template<typename T>
   T& get_state() const {
-    return *reinterpret_cast<T*>(ptr_->state);
+    return dmlc::get<T>(ptr_->state_);
   }
   /* \brief clear state */
   void reset() {
     ptr_.reset();
-  }
-  /* \brief checks whether the managed object is managed only by the current
-            OpStatePtr instance */
-  bool unique() const {
-    return ptr_.unique();
   }
   /* \brief Whether state is empty */
   explicit operator bool() const {
@@ -164,12 +153,16 @@ class OpStatePtr {
  private:
   /* \brief state structure */
   struct OpState {
-    engine::VarHandle var;
-    void* state;
-
-    OpState(engine::VarHandle var_, void* state_) : var(var_), state(state_) {}
+    OpState() {}
     OpState(const OpState& other) = delete;
     OpState& operator=(const OpState& other) = delete;
+
+    ~OpState() {
+      Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), var_);
+    }
+
+    engine::VarHandle var_;
+    dmlc::any state_;
   };
   /* \brief shared pointer to state */
   std::shared_ptr<OpState> ptr_;
