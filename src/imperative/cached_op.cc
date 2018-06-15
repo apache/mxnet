@@ -676,6 +676,7 @@ OpStatePtr CachedOp::StaticForward(
   bool match = SetForwardGraph(&state.info, recording, inputs);
   match = match && state.recording == recording;
 
+
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
   if (!state.fwd_alloc || !match)  {
