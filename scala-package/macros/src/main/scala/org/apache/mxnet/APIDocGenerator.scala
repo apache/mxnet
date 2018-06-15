@@ -19,6 +19,8 @@ package org.apache.mxnet
 
 import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.CToScalaUtils
+import java.io._
+import java.security.MessageDigest
 
 import scala.collection.mutable.ListBuffer
 
@@ -35,13 +37,24 @@ private[mxnet] object APIDocGenerator{
 
   def main(args: Array[String]) : Unit = {
     val FILE_PATH = args(0)
-    absClassGen(FILE_PATH, true)
-    absClassGen(FILE_PATH, false)
-    nonTypeSafeClassGen(FILE_PATH, true)
-    nonTypeSafeClassGen(FILE_PATH, false)
+    val hashCollector = ListBuffer[String]()
+    hashCollector += absClassGen(FILE_PATH, true)
+    hashCollector += absClassGen(FILE_PATH, false)
+    hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
+    hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
+    val pw = new PrintWriter(new File(FILE_PATH + s"FILEHASH"))
+    pw.write(hashCollector.mkString)
+    pw.close()
   }
 
-  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
+  def MD5Generator(input : String) : String = {
+    val md = MessageDigest.getInstance("MD5")
+    md.update(input.getBytes())
+    val digest = md.digest()
+    digest.map(b => (b & 0xff).toHexString).mkString
+  }
+
+  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     // TODO: Add Filter to the same location in case of refactor
@@ -57,13 +70,13 @@ private[mxnet] object APIDocGenerator{
     val imports = "import org.apache.mxnet.annotation.Experimental"
     val absClassDef = s"abstract class $packageName"
     val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
-    import java.io._
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
     pw.close()
+    MD5Generator(finalStr)
   }
 
-  def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
+  def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
@@ -88,6 +101,7 @@ private[mxnet] object APIDocGenerator{
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
     pw.close()
+    MD5Generator(finalStr)
   }
 
   // Generate ScalaDoc type
