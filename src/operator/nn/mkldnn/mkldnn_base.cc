@@ -77,8 +77,11 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   }
 }
 
-bool CanWriteTo(const NDArray &out_arr, const NDArray &in_arr, const mkldnn::memory::primitive_desc &desc) {
-  bool add_same = in_arr.GetMKLDNNData()->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle();
+bool CanWriteTo(const NDArray &out_arr,
+                const NDArray &in_arr,
+                const mkldnn::memory::primitive_desc &desc) {
+  bool add_same = in_arr.GetMKLDNNData()->get_data_handle() ==
+      out_arr.GetMKLDNNData()->get_data_handle();
   bool pdesc_same = out_arr.GetMKLDNNData()->get_primitive_desc() == desc;
   return add_same && pdesc_same;
 }
