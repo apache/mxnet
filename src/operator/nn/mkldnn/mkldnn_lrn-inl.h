@@ -201,7 +201,6 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
   if (req == kNullOp) {
     return;
   }
-  std::vector<NDArray> inputs = {in_data};
   // Repeat FW for getting workspace
   const mkldnn::memory *data_mem = in_data.GetMKLDNNData();
   const mkldnn::memory::desc data_md = data_mem->get_primitive_desc().desc();
@@ -225,7 +224,7 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
   const mkldnn::memory::desc diff_md = diff_mem->get_primitive_desc().desc();
   const mkldnn::lrn_backward::primitive_desc pdesc_bwd = GetLRNBwd(param, data_in_md,
                                                                    diff_md, pdesc_fwd);
-  mkldnn_output_t diff_src_mem = CreateMKLDNNMem(in_grad, inputs,
+  mkldnn_output_t diff_src_mem = CreateMKLDNNMem(in_grad,
                                                  pdesc_bwd.diff_src_primitive_desc(), req);
 
   MKLDNNStream::Get()->RegisterPrim(

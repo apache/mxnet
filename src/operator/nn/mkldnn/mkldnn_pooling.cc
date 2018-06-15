@@ -262,7 +262,7 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
   if (req == kNullOp) {
     return;
   }
-  std::vector<NDArray> inputs = {out_grad, in_data};
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   // mkldnn::memory
   auto diff_dst_mem = out_grad.GetMKLDNNData();
@@ -312,7 +312,7 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
   const pooling_backward::primitive_desc pdesc(desc, cpu_engine, pdesc_fwd);
 
   auto diff_src_mem =
-      CreateMKLDNNMem(in_grad, inputs, pdesc.diff_src_primitive_desc(), req);
+      CreateMKLDNNMem(in_grad, pdesc.diff_src_primitive_desc(), req);
 
   if (MKLDNNRequireWorkspace(param)) {
     CHECK(workspace != nullptr);

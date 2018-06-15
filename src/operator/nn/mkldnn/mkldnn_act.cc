@@ -160,15 +160,15 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                              const NDArray &out_data) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 
-  std::vector<NDArray> in_buffer = {in_data};
+  NDArray in_buffer = in_data;
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   if (in_data.IsView() && in_data.IsMKLDNNData())
-    in_buffer[0] = in_data.Reorder2Default();
+    in_buffer = in_data.Reorder2Default();
 
-  auto input_mem = in_buffer[0].GetMKLDNNData();
-  MKLDNNActForward &fwd = GetActForward(param, ctx, in_buffer[0], *input_mem);
-  auto out_mem = CreateMKLDNNMem(out_data, in_buffer, fwd.fwd_pd.dst_primitive_desc(), req);
+  auto input_mem = in_buffer.GetMKLDNNData();
+  MKLDNNActForward &fwd = GetActForward(param, ctx, in_buffer, *input_mem);
+  auto out_mem = CreateMKLDNNMemory(out_data, in_buffer, fwd.fwd_pd.dst_primitive_desc(), req);
   fwd.SetNewMem(*input_mem, *out_mem.second);
   stream->RegisterPrim(fwd.GetFwd());
   CommitOutput(out_data, out_mem);
@@ -210,7 +210,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
     mkldnn::eltwise_backward::primitive_desc bw_pdesc(bw_desc, cpu_engine,
                                                       fw_pdesc);
 
-    diff_src_memory = CreateMKLDNNMem(in_grad, {out_grad, in_data},
+    diff_src_memory = CreateMKLDNNMem(in_grad,
                                       bw_pdesc.diff_src_primitive_desc(), req);
     stream->RegisterPrim(mkldnn::eltwise_backward(bw_pdesc, *input_mem,
                                                   *diff_dst_memory,

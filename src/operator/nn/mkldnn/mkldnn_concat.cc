@@ -115,7 +115,6 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
   MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
-                                                   in_data,
                                                    fwd.fwd_pd.dst_primitive_desc(),
                                                    req[concat_enum::kOut]);
   fwd.SetNewMem(data_mem, *out_mem.second);
@@ -125,7 +124,7 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 }
 
 void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                          const std::vector<NDArray> &inputs,
+                          const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
@@ -144,7 +143,7 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
           static_cast<int>(inputs[i+1].shape()[2]),
           static_cast<int>(inputs[i+1].shape()[3])};
     auto diff_src_mpd = inputs[i+1].GetMKLDNNData()->get_primitive_desc();
-    auto gradi_mem_ = CreateMKLDNNMem(outputs[i], inputs, diff_src_mpd, req[i]);
+    auto gradi_mem_ = CreateMKLDNNMem(outputs[i], diff_src_mpd, req[i]);
     // create view from gy to gxs[i]
     std::shared_ptr<mkldnn::view::primitive_desc> view_pd;
     view_pd.reset(new mkldnn::view::primitive_desc(gz_pd, diff_src_tz, offsets));

@@ -60,7 +60,7 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
     weight_mem = weight.GetMKLDNNData();
     CHECK(weight_mem->get_primitive_desc() == fwd.fwd_pd.weights_primitive_desc());
   }
-  auto out_mem = CreateMKLDNNMem(out_data[conv::kOut], in_data, fwd.fwd_pd.dst_primitive_desc(),
+  auto out_mem = CreateMKLDNNMem(out_data[conv::kOut], fwd.fwd_pd.dst_primitive_desc(),
                                  req[conv::kOut]);
   const mkldnn::memory *bias_mem = nullptr;
   if (!param.no_bias)
