@@ -122,7 +122,7 @@ def get_model(model, ctx, opt):
 
     net = models.get_model(model, **kwargs)
     if opt.resume:
-        net.load_params(opt.resume)
+        net.load_parameters(opt.resume)
     elif not opt.use_pretrained:
         if model in ['alexnet']:
             net.initialize(mx.init.Normal())
@@ -176,12 +176,12 @@ def update_learning_rate(lr, trainer, epoch, ratio, steps):
 def save_checkpoint(epoch, top1, best_acc):
     if opt.save_frequency and (epoch + 1) % opt.save_frequency == 0:
         fname = os.path.join(opt.prefix, '%s_%d_acc_%.4f.params' % (opt.model, epoch, top1))
-        net.save_params(fname)
+        net.save_parameters(fname)
         logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
     if top1 > best_acc[0]:
         best_acc[0] = top1
         fname = os.path.join(opt.prefix, '%s_best.params' % (opt.model))
-        net.save_params(fname)
+        net.save_parameters(fname)
         logger.info('[Epoch %d] Saving checkpoint to %s with Accuracy: %.4f', epoch, fname, top1)
 
 def train(opt, ctx):
@@ -267,7 +267,7 @@ def main():
                 optimizer = 'sgd',
                 optimizer_params = {'learning_rate': opt.lr, 'wd': opt.wd, 'momentum': opt.momentum, 'multi_precision': True},
                 initializer = mx.init.Xavier(magnitude=2))
-        mod.save_params('image-classifier-%s-%d-final.params'%(opt.model, opt.epochs))
+        mod.save_parameters('image-classifier-%s-%d-final.params'%(opt.model, opt.epochs))
     else:
         if opt.mode == 'hybrid':
             net.hybridize()

@@ -168,13 +168,13 @@ def train(epoch, ctx):
         print('training mse at epoch %d: %s=%f'%(i, name, acc))
         test(ctx)
 
-    net.save_params('superres.params')
+    net.save_parameters('superres.params')
 
 def resolve(ctx):
     from PIL import Image
     if isinstance(ctx, list):
         ctx = [ctx[0]]
-    net.load_params('superres.params', ctx=ctx)
+    net.load_parameters('superres.params', ctx=ctx)
     img = Image.open(opt.resolve_img).convert('YCbCr')
     y, cb, cr = img.split()
     data = mx.nd.expand_dims(mx.nd.expand_dims(mx.nd.array(y), axis=0), axis=0)
