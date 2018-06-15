@@ -95,7 +95,7 @@ train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform
 Let's define a method that will run one training iteration given data and label.
 
 ```python
-# Use GPU is available
+# Use GPU if available
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
 # Initialize the parameters with random weights
