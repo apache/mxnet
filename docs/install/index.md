@@ -20,11 +20,11 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- START - OS Menu -->
 
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active Devices">Linux</button>
-  <button type="button" class="btn btn-default opt Devices">MacOS</button>
-  <button type="button" class="btn btn-default opt Devices">Windows</button>
-  <button type="button" class="btn btn-default opt Devices">Cloud</button>
-  <button type="button" class="btn btn-default opt Devices">Devices</button>
+  <button type="button" class="btn btn-default opt active platforms">Linux</button>
+  <button type="button" class="btn btn-default opt platforms">MacOS</button>
+  <button type="button" class="btn btn-default opt platforms">Windows</button>
+  <button type="button" class="btn btn-default opt platforms">Cloud</button>
+  <button type="button" class="btn btn-default opt platforms">Devices</button>
 </div>
 
 <!-- START - Language Menu -->
