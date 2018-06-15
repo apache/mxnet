@@ -366,6 +366,9 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
+  // for backward operators
+  int num_inputs;
+  int num_outputs;
 };
 
 OpAttrs GetCopyOp() {
@@ -380,6 +383,7 @@ OpAttrs GetCopyOp() {
 OpAttrs GetCopyBackwardsOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_copy");
+  attrs.num_inputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -777,8 +781,8 @@ void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
 }
 
 void TestUnaryBackwardsOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(2);
-  std::vector<NDArray*> outputs(1);
+  std::vector<NDArray*> inputs(attrs.num_inputs || 2);
+  std::vector<NDArray*> outputs(attrs.num_outputs || 1);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
@@ -874,8 +878,8 @@ void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
 }
 
 void TestBinaryBackwardsOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(3);
-  std::vector<NDArray*> outputs(2);
+  std::vector<NDArray*> inputs(attrs.num_inputs || 3);
+  std::vector<NDArray*> outputs(attrs.num_inputs || 2);
   std::vector<OpReqType> req(1);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
