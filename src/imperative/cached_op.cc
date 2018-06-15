@@ -674,7 +674,8 @@ OpStatePtr CachedOp::StaticForward(
   std::lock_guard<std::mutex> lock(state.mutex);
 
   bool match = SetForwardGraph(&state.info, recording, inputs);
-  match = match && state.recording != recording;
+  match = match && state.recording == recording;
+
 
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
