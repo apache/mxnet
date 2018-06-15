@@ -738,7 +738,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
 void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
-  std::vector<OpReqType> req(1);
+  std::vector<OpReqType> req(attrs.num_inputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
@@ -749,9 +749,11 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
     for (auto dispatch : dispatches) {
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
       for (auto out_arr : out_arrs) {
-        req[0] = kWriteTo;
         for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
+        for (int i = 0; i < attrs.num_outputs; i++)
+          req[i] = kWriteTo;
+
         outputs[0] = &out_arr.arr;
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
@@ -768,11 +770,11 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       // If the array is a view, we shouldn't write data to it.
       if (arr.arr.IsView())
         continue;
-
       NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      req[0] = kWriteInplace;
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &arr.arr;
+      for (int i = 0; i < attrs.num_outputs; i++)
+        req[i] = kWriteInplace;
       outputs[0] = &arr.arr;
       PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
