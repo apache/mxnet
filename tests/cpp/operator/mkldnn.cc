@@ -574,6 +574,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
       continue;
 
     // Type 2, 3.
+
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
