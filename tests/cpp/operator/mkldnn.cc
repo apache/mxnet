@@ -903,7 +903,6 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
         continue;
 
       PrintVerifyMsg(in_arr, out_arr);
-
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
