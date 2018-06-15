@@ -1032,8 +1032,6 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
                       ograd_entries_, idx, &bwd_input_eid);
   CHECK_EQ(in_attrs->size(), bwd_input_eid.size());
 
-  // Prepare node and entry ranges
-  const size_t num_forward_outputs = fwd_graph_.outputs.size();
 
   // Prepare stypes and contexts based on inputs
   StorageTypeVector stypes(idx.num_node_entries(), -1);
@@ -1047,6 +1045,7 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   // Retrieve result and set outputs
   const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
   const auto &outputs = idx.outputs();
+  const size_t num_forward_outputs = fwd_graph_.outputs.size();
   CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
   for (size_t i = 0; i < out_attrs->size(); i++) {
     const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);

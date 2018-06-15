@@ -173,7 +173,6 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
-  nnvm::Symbol sym_;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

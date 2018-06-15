@@ -1285,7 +1285,8 @@ def test_legacy_save_params():
     model.load_params('test.params', ctx=mx.cpu())
 
 
-def test_sparse_hybrid():
+@with_seed()
+def test_sparse_hybrid_block_grad():
     class Embedding(mx.gluon.HybridBlock):
         def __init__(self, num_tokens, embedding_size):
             super(Embedding, self).__init__()
@@ -1299,18 +1300,47 @@ def test_sparse_hybrid():
             emb = self.embedding(words)
             return emb + F.ones_like(emb)
 
-    ctx = mx.cpu()
-    embedding = Embedding(1000, 300)
-    embedding.initialize(ctx=ctx)
+    embedding = Embedding(20, 3)
+    embedding.initialize()
     embedding.hybridize()
 
-    loss_function = mx.gluon.loss.SigmoidBinaryCrossEntropyLoss()
     with mx.autograd.record():
-        emb_in = embedding(mx.nd.arange(10, ctx=ctx))
-        emb_in_2 = embedding(mx.nd.arange(10, ctx=ctx))
-        loss = emb_in.sum() + emb_in_2.sum()
+        emb0 = embedding(mx.nd.arange(10)).sum()
+        emb1 = embedding(mx.nd.arange(10)).sum()
+        loss = emb0 + emb1
     loss.backward()
-    print(embedding.embedding.weight.grad().data)
+    grad = embedding.embedding.weight.grad().asnumpy()
+    assert (grad[:10] == 2).all()
+    assert (grad[10:] == 0).all()
+
+@with_seed()
+def test_sparse_hybrid_block():
+    class Linear(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(Linear, self).__init__()
+            with self.name_scope():
+                self.w = self.params.get('w', shape=(units, units), grad_stype='row_sparse')
+
+        def hybrid_forward(self, F, x, w):
+            return F.dot(x, w)
+
+    class SparseBlock(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(SparseBlock, self).__init__()
+            with self.name_scope():
+                self.net = Linear(units)
+
+        def hybrid_forward(self, F, x):
+            return self.net(x) + 1
+
+    block = SparseBlock(2)
+    block.initialize()
+    block.hybridize()
+    x = mx.nd.ones((2,2)).tostype('csr')
+    with mx.autograd.record():
+        z = block(x) + block(x)
+    z.backward()
+    assert (block.net.w.grad().asnumpy() == 4).all()
 
 if __name__ == '__main__':
     import nose
