@@ -54,9 +54,9 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
         "/scala-example-ci/CNN/" + w2vModelName
         + " -P " + tempDirPath + "/CNN/ -q") !
 
-      val modelDirPath = tempDirPath + File.separator + "CNN/"
+      val modelDirPath = tempDirPath + File.separator + "CNN"
 
-      val output = CNNTextClassification.test(modelDirPath + w2vModelName,
+      val output = CNNTextClassification.test(modelDirPath + File.separator + w2vModelName,
         modelDirPath, context, modelDirPath)
 
       Process("rm -rf " + modelDirPath) !
@@ -65,6 +65,5 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     } else {
       logger.info("Skip this test as it intended for GPU only")
     }
-    
   }
 }

@@ -71,8 +71,8 @@ object CNNTextClassification {
   }
 
   def setupCnnModel(ctx: Context, batchSize: Int, sentenceSize: Int, numEmbed: Int,
-                    numLabel: Int = 2, numFilter: Int = 100, filterList: Array[Int ] = Array(3, 4, 5),
-                    dropout: Float = 0.5f): CNNModel = {
+      numLabel: Int = 2, numFilter: Int = 100, filterList: Array[Int ] = Array(3, 4, 5),
+      dropout: Float = 0.5f): CNNModel = {
 
     val cnn = makeTextCNN(sentenceSize, numEmbed, batchSize,
       numLabel, filterList, numFilter, dropout)
