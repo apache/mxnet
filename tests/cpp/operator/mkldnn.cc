@@ -848,13 +848,11 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-
   MKLDNNStream *stream = MKLDNNStream::Get();
 
   for (auto in_arr : in_arrs) {
     if (!SupportMKLDNN(in_arr.arr))
       continue;
-
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
       in_arr.arr = in_arr.arr.Reorder2Default();
 
@@ -865,11 +863,9 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       orig_output.WaitToRead();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem->get_primitive_desc());
-
       // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
       if (out_mem == nullptr)
         continue;
-
       PrintVerifyMsg(in_arr, out_arr);
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
@@ -877,7 +873,6 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       stream->Submit();
       VerifySumResult({&in_arr.arr, &in_arr.arr}, out_arr.arr);
     }
-
     auto input_mem = in_arr.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     orig_arr.arr.WaitToRead();
@@ -894,10 +889,8 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   for (auto in_arr : in_arrs) {
     if (!SupportMKLDNN(in_arr.arr))
       continue;
-
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
       in_arr.arr = in_arr.arr.Reorder2Default();
-
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
                                                              InitDefaultArray);
     for (auto out_arr : out_arrs) {
