@@ -23,6 +23,7 @@ import java.io._
 import java.security.MessageDigest
 
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 
 /**
   * This object will generate the Scala documentation of the new Scala API
@@ -42,8 +43,13 @@ private[mxnet] object APIDocGenerator{
     hashCollector += absClassGen(FILE_PATH, false)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
+    val finalHash = hashCollector.mkString("\n")
+    val prevHash = Source.fromFile(FILE_PATH + s"FILEHASH")
+      .getLines().mkString("\n")
+    require(prevHash.equals(finalHash),
+      "Detect Operator changes, comment on this line and update the hashfile")
     val pw = new PrintWriter(new File(FILE_PATH + s"FILEHASH"))
-    pw.write(hashCollector.mkString)
+    pw.write(finalHash)
     pw.close()
   }
 
