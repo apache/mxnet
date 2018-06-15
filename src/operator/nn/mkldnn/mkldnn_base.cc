@@ -215,7 +215,7 @@ void CommitOutput(const NDArray &arr, const mkldnn_output_t &res) {
     auto mem = arr.GetMKLDNNData(res.second->get_primitive_desc());
     if (mem == nullptr) {
       auto tmp_memory = TmpMemMgr::Get()->Alloc(target_pd);
-//      CopyMKLDNNMem(*res_memory, tmp_memory);
+      MKLDNNCopy(*res_memory, tmp_memory);
       res_memory = tmp_memory;
       mem = arr.GetMKLDNNData();
     }
