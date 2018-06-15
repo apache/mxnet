@@ -31,7 +31,6 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
-# wrap compiler calls with ccache
 build_ccache_wrappers() {
     set -ex
 
@@ -63,6 +62,38 @@ build_ccache_wrappers() {
     export CXX=`pwd`/cxx
 }
 
+build_wheel() {
+
+    set -ex
+    pushd .
+
+    PYTHON_DIR=${1:-/work/mxnet/python}
+    BUILD_DIR=${2:-/work/build}
+
+    # build
+
+    export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
+
+    cd ${PYTHON_DIR}
+    python setup.py bdist_wheel --universal
+
+    # repackage
+
+    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
+    # mxnet folder, then repackage the wheel.
+    WHEEL=`readlink -f dist/*.whl`
+    TMPDIR=`mktemp -d`
+    unzip -d ${TMPDIR} ${WHEEL}
+    rm ${WHEEL}
+    cd ${TMPDIR}
+    mv *.data/data/mxnet/libmxnet.so mxnet
+    zip -r ${WHEEL} .
+    cp ${WHEEL} ${BUILD_DIR}
+    rm -rf ${TMPDIR}
+
+    popd
+}
+
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
 
@@ -70,27 +101,10 @@ build_jetson() {
     set -ex
     pushd .
 
-    build_ccache_wrappers
-
-    cp -f make/crosscompile.jetson.mk ./config.mk
-
+    cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-
-    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
-    # mxnet folder, then repackage the wheel.
-    WHEEL=`readlink -f dist/*.whl`
-    TMPDIR=`mktemp -d`
-    unzip -d $TMPDIR $WHEEL
-    rm $WHEEL
-    cd $TMPDIR
-    mv *.data/data/mxnet/libmxnet.so mxnet
-    zip -r $WHEEL .
-    cp $WHEEL /work/build
-    rm -rf $TMPDIR
+    build_wheel /work/mxnet/python /work/mxnet/lib
     popd
 }
 
@@ -107,7 +121,7 @@ build_armv6() {
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
     cmake \
-        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
@@ -120,11 +134,9 @@ build_armv6() {
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+
+    ninja -v
+    build_wheel
     popd
 }
 
@@ -132,21 +144,30 @@ build_armv7() {
     set -ex
     pushd .
     cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
     cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+
+    ninja -v
+    build_wheel
     popd
 }
 
@@ -164,7 +185,7 @@ build_amzn_linux_cpu() {
         -DUSE_LAPACK=OFF\
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
 }
 
@@ -173,13 +194,14 @@ build_arm64() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
+        -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
@@ -194,6 +216,7 @@ build_android_arm64() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
+        -DSUPPORT_F16C=OFF\
         -DUSE_LAPACK=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
@@ -201,7 +224,7 @@ build_android_arm64() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
@@ -466,13 +489,12 @@ unittest_ubuntu_python3_cpu() {
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 --verbose tests/python/unittest
-    nosetests-3.4 --verbose tests/python/quantization
     nosetests-3.4 --verbose tests/python/mkl
 }
 

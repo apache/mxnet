@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, random_seed
+from common import setup_module, with_seed, random_seed, teardown
 import scipy.stats as ss
 
 def same(a, b):

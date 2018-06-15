@@ -23,7 +23,7 @@ import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 @with_seed()
 def test_learning_rate():
@@ -420,7 +420,7 @@ class PyNAG(PySGD):
               grad += wd * weight
               mom[:] += grad
               grad[:] += self.momentum * mom
-              weight[:] += -lr * grad 
+              weight[:] += -lr * grad
         else:
             grad32 = array(grad, ctx=grad.context, dtype=np.float32)
             grad32 = grad32 * self.rescale_grad
