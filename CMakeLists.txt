@@ -580,11 +580,6 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/CMakeLists.txt")
-  set(nnvm_LINKER_LIBS nnvm)
-  list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
-endif()
-
 if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
@@ -664,7 +659,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
-    ${nnvm_LINKER_LIBS}
     ${pslite_LINKER_LIBS}
     )
 else()
