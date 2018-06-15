@@ -109,7 +109,7 @@ plot_schedule(schedule)
 ```
 
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_triangular.png) <!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_schedules/adv_cosine.png) <!--notebook-skip-line-->
 
 
 ## Custom Schedule Modifiers
