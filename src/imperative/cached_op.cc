@@ -1025,6 +1025,9 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   using namespace imperative;
   nnvm::Graph g(full_graph_);
   const auto& idx = g.indexed_graph();
+  const auto &outputs = idx.outputs();
+  const size_t num_forward_outputs = fwd_graph_.outputs.size();
+  CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
 
   // Construct bwd_input_eid
   std::vector<uint32_t> bwd_input_eid;
@@ -1037,15 +1040,18 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < in_attrs->size(); ++i) {
     stypes[bwd_input_eid[i]] = in_attrs->at(i);
   }
+  // Some out_attr is known ahead of time (e.g. the grad stype is given by users).
+  // Prepare these to before invoking infer storage on the subgraph
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
+    stypes[eid] = out_attrs->at(i);
+  }
   exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
 
   // Full graph storage type inference
   CheckAndInferStorageType(&g, std::move(dev_masks), std::move(stypes), false);
   // Retrieve result and set outputs
   const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto &outputs = idx.outputs();
-  const size_t num_forward_outputs = fwd_graph_.outputs.size();
-  CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
   for (size_t i = 0; i < out_attrs->size(); i++) {
     const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
