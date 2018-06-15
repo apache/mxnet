@@ -26,13 +26,14 @@
 
 git config --global user.email \"$APACHE_USERNAME@gl.com\" && git config --global user.name \"$APACHE_USERNAME\"
 echo `pwd`
-echo "clone the repo and checkout the correct branch"
+echo "Clone the incubator-mxnet-site repo and checkout the correct branch"
 git clone https://$APACHE_USERNAME:$APACHE_PASSWORD@github.com/leleamol/incubator-mxnet-site.git
-cp tests/nightly/broken_link_checker_test/find_broken_link.sh incubator-mxnet-site/_urlList/.
-cp tests/nightly/broken_link_checker_test/check_regression.sh incubator-mxnet-site/_urlList/.
 cd incubator-mxnet-site
 git checkout link-checker
 cd _urlList
+echo "Copying the broken link checker scripts from incubator-mxnet repo."
+cp /work/mxnet/tests/nightly/broken_link_checker_test/find_broken_link.sh .
+cp /work/mxnet/tests/nightly/broken_link_checker_test/check_regression.sh .
 echo `pwd`
 ./find_broken_link.sh
 ./check_regression.sh
