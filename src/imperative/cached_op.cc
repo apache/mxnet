@@ -1032,7 +1032,6 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
                       ograd_entries_, idx, &bwd_input_eid);
   CHECK_EQ(in_attrs->size(), bwd_input_eid.size());
 
-
   // Prepare stypes and contexts based on inputs
   StorageTypeVector stypes(idx.num_node_entries(), -1);
   for (size_t i = 0; i < in_attrs->size(); ++i) {

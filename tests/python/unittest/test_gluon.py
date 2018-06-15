@@ -1322,7 +1322,7 @@ def test_sparse_hybrid_block():
                 self.w = self.params.get('w', shape=(units, units), grad_stype='row_sparse')
 
         def hybrid_forward(self, F, x, w):
-            return F.dot(x, w)
+            return F.dot(x * 2, w)
 
     class SparseBlock(mx.gluon.HybridBlock):
         def __init__(self, units):
@@ -1340,7 +1340,7 @@ def test_sparse_hybrid_block():
     with mx.autograd.record():
         z = block(x) + block(x)
     z.backward()
-    assert (block.net.w.grad().asnumpy() == 4).all()
+    assert (block.net.w.grad().asnumpy() == 8).all()
 
 if __name__ == '__main__':
     import nose
