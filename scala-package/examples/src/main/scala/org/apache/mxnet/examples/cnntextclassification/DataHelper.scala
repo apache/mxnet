@@ -18,10 +18,11 @@
 package org.apache.mxnet.examples.cnntextclassification
 
 import java.io.{BufferedInputStream, DataInputStream, FileInputStream, InputStream}
+import java.nio.charset.CodingErrorAction
 
 import org.apache.mxnet.{Context, Random, Shape}
 
-import scala.io.Source
+import scala.io.{Codec, Source}
 
 /**
  * @author Depeng Liang
@@ -49,6 +50,9 @@ object DataHelper {
   // Returns split sentences and labels.
   def loadMRDataAndLabels(dataPath: String): (Array[Array[String]], Array[Float]) = {
     // load data from file
+    implicit val codec = Codec("UTF-8")
+    codec.onMalformedInput(CodingErrorAction.REPLACE)
+    codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
     val positiveExamples = {
       val lines = Source.fromFile(s"$dataPath/rt-polarity.pos").mkString.split("\n")
       lines.map(_.trim())
