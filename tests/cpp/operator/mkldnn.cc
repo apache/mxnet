@@ -384,6 +384,7 @@ OpAttrs GetCopyBackwardsOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_copy");
   attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -406,6 +407,7 @@ OpAttrs GetReluBackwardsOp() {
   attrs.attrs.op = Op::Get("_backward_Activation");
   attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.num_inputs = 2;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -433,6 +435,8 @@ OpAttrs GetSumOp() {
 OpAttrs GetSumBackwardsOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_add");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 2;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
