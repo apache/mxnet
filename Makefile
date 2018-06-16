@@ -528,7 +528,7 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace --with-cython
+	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
 
 cython2:
 	cd python; python2 setup.py build_ext --inplace --with-cython

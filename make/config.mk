@@ -196,6 +196,9 @@ EXTRA_OPERATORS =
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
 
+# Python executable. Needed for cython target
+PYTHON = python
+
 #----------------------------
 # plugins
 #----------------------------
