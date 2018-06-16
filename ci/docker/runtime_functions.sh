@@ -267,7 +267,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-    make cython3 PYTHON=python3.6
+    make cython PYTHON=python3.6
 }
 
 build_centos7_mkldnn() {
