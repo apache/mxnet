@@ -161,10 +161,11 @@ void GetP2PWeight( std::vector<T>&             matrix,
 
 // Dense matrix-vector multiplication
 // Assume: matrix is square
+//   y = A*x (no accumulate)
 template <typename T>
-void gemv( const std::vector<T>& A,
+void gemv( const std::vector<T>&   A,
            const std::vector<int>& x,
-           std::vector<T>&       y ) {
+           std::vector<T>&         y ) {
   int nrows = x.size();
   int count = 0;
   for (int row=0; row<nrows; ++row) {
@@ -236,6 +237,8 @@ void FindBestMove( const std::vector<T>&          W,
 // more than 4 elements in it
 // @output: stop returns true if no partitions with >=4 elements found
 //               returns false otherwise
+//          cluster_pairs stores the mapping that tells us which 2 clusters are
+//               the output of partitioning one large cluster
 template <typename T>
 bool KernighanLin( const std::vector<T>&            W,
                    std::vector<int>&                P,
@@ -427,20 +430,23 @@ int GetRoot( const std::vector<int>&        P,
 int GetChild( const std::vector<int>&        P, 
               int                            color, 
               int                            parent ) {
-  int size = P.size();
-  for (int i = 0; i < size; ++i) {
+  for (unsigned i = 0; i < P.size(); ++i) {
     //std::cout << "Child " << i << ": " << P[i] << std::endl;
-    if (P[i] == color && i != parent)
+    if (P[i] == color && static_cast<int>(i) != parent)
       return i;
   }
   return -1;
 }
 
-// Computes best 2 nodes a,b to swap given objective function:
-//   g = max_{a \in A, b \in B} 2*W(a,b)
+// Computes highest weighted edge a-b
 //
-// Optimization: Only need to look at upper triangular since weight matrix is
-//   symmetric
+// Contraints:
+//  -vertex a must be parent
+//  -vertex b must be in dest_cluster
+//
+// @output: b is vector of candidates if a tie happens
+//          g is weight of edge
+// Optimization: Only need to look at row a in matrix
 template <typename T>
 void FindBestEdge( const std::vector<T>&   W,
                    const std::vector<int>& P,
