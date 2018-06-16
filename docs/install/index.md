@@ -459,7 +459,16 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 ```
 
-**Step 2** Install the MXNet Python binding.
+**Step 2** Build cython modules (optional).
+
+```bash
+$ sudo apt-get install -y cython
+$ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
+```
+
+Note that you can control the use of the cython modules at runtime via the environment variables `MXNET_ENABLE_CYTHON` and `MXNET_ENFORCE_CYTHON`. See [here](/faq/env_var.html) for details.
+
+**Step 3** Install the MXNet Python binding.
 
 ```bash
 $ cd python
@@ -468,13 +477,13 @@ $ pip install -e .
 
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
+**Step 4**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
 sudo apt-get install graphviz
 pip install graphviz
 ```
 
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 5** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div><!-- END of build from source -->
 </div><!-- END of CPU -->
