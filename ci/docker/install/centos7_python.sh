@@ -24,7 +24,7 @@ set -ex
 
  # Python 2.7 is installed by default, install 3.6 on top
 yum -y install https://centos7.iuscommunity.org/ius-release.rpm
-yum -y install python36u
+yum -y install python36u python36u-devel python27-devel
 
 # Install PIP
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"

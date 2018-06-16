@@ -267,7 +267,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-    make cython
+    make cython3
 }
 
 build_centos7_mkldnn() {
@@ -299,7 +299,7 @@ build_centos7_gpu() {
         USE_CUDNN=1 \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-    make cython
+    make cython3
 }
 
 build_ubuntu_cpu() {
