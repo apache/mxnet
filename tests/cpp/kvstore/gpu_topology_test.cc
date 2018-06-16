@@ -346,6 +346,11 @@ TEST(GpuTopology, TestFindBestEdge) {
 }
 
 // GenerateBinaryTreeTest
+TEST(GpuTopology, TestGenerateBinaryTree) {
+
+  mxnet::kvstore::GenerateBinaryTree();
+}
+
 // Backtrack
 // UpdateWeight
 // BacktrackingGenerateBinaryTree

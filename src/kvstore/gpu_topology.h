@@ -473,6 +473,13 @@ void FindBestEdge( const std::vector<T>&   W,
 }
 
 // Given a vector of color pairs, appends to binary tree matrix topo
+// @input:  cluster_pairs gives pairing between clusters, an edge is found 
+//                        between each pairing
+//          roots         gives source vertex 
+//          gen gives     random number generation to break ties
+// @output: cluster_pairs
+//          topo_row says where new edges are appended to
+//          scan_row says  where we should start looking for topo_row
 template <typename T>
 int GenerateBinaryTree( std::vector<T>&                  W,
                         const std::vector<int>&          P,
@@ -521,35 +528,6 @@ int GenerateBinaryTree( std::vector<T>&                  W,
 
       // If no candidates
       if (candidates[0]!=-1) {
-      /*if (candidates[0] == -1) {
-        std::cout << "Appending candidates\n";
-        candidates.clear();
-        for (unsigned col = 0; col < P.size(); ++col) {
-          if (W[parent*P.size()+col] > 0)
-            for (
-            candidates.push_back(col);
-          reset = 2;
-        }
-      }*/
-        // Look for candidate that has not been used at this level or previous
-        // levels
-        /*for (unsigned i = 0; i < candidates.size(); ++i) {
-          bool exit = true;
-          int last = scan_row.size()-1;
-          for (auto it = new_topo.begin(); it != new_topo.end(); ++it) {
-            std::cout << "Testing " << candidates[i] << " " << it->second << std::endl;
-            if (candidates[i] == it->second) {
-              std::cout << candidates[i] << " has been encountered before\n";
-              exit = false;
-              break;
-            }
-          }
-          if (exit) {
-            child = candidates[i];
-            std::cout << "GPU " << child << " not found before!\n";
-            break;
-          }
-        }*/
         std::shuffle(candidates.begin(), candidates.end(), gen);
         child = candidates[0];
       }
@@ -560,10 +538,6 @@ int GenerateBinaryTree( std::vector<T>&                  W,
 
         //child = parent;
         return 1;
-        /*else {
-          child = parent;
-          std::cout << "Best link (case 4): " << parent << " -> " << child << ": " << std::endl;
-        }*/
       } else {
         //std::cout << "Best link (case 3): " << parent << " -> " << child << ": " << weight << std::endl;
         new_roots.insert(parent);
