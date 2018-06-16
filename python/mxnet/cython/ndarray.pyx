@@ -195,8 +195,8 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
     cdef int num_output
     cdef const int* p_output_stypes
 
-    #for i in ndargs:
-    #    ndvars.push_back((<NDArrayBase>i).chandle)
+    for i in ndargs:
+        ndvars.push_back((<NDArrayBase>i).chandle)
     for i in keys:
         ckeys.push_back(c_str(i))
     for i in vals:
