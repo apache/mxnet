@@ -23,6 +23,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <map>
 #include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
@@ -38,9 +39,22 @@ namespace mxnet {
 namespace imperative {
 
 struct MemoryPlanInfo {
-  uint32_t sid;
+  int storage_id;
+  uint32_t root;
   size_t size;
   bool inplace;
+};
+
+struct EngineOprDeleter {
+  void operator()(engine::Opr* handle) {
+    Engine::Get()->DeleteOperator(handle);
+  }
+};
+
+struct EngineOprSeg {
+  bool skip;
+  size_t next_nid;
+  std::unique_ptr<engine::Opr, EngineOprDeleter> opr;
 };
 
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
@@ -715,10 +729,12 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 
 
 inline MemoryPlanVector PlanMemory(
-    nnvm::Graph* p_g, nnvm::StorageVector&& storage,
+    nnvm::Graph* p_g,
+    nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,
     const std::pair<uint32_t, uint32_t>& node_range = {0, 0},
-    const std::pair<uint32_t, uint32_t>& entry_range = {0, 0}) {
+    const std::pair<uint32_t, uint32_t>& entry_range = {0, 0},
+    bool detect_inplace_addto = false) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
   const auto& idx = g.indexed_graph();
@@ -728,31 +744,31 @@ inline MemoryPlanVector PlanMemory(
   g.attrs["ref_count"] = std::make_shared<dmlc::any>(ref_count);
   g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(storage));
   g = nnvm::ApplyPass(g, "PlanMemory");
+  if (detect_inplace_addto) g = exec::DetectInplaceAddTo(g);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  auto storage_ids = g.MoveCopyAttr<StorageVector>("storage_id");
-  auto storage_inplace = g.MoveCopyAttr<std::vector<int> >("storage_inplace_index");
+  const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
+  const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
   uint32_t entry_end =
       entry_range.second > entry_start ? entry_range.second : idx.num_node_entries();
   MemoryPlanVector mem_plan(idx.num_node_entries());
-  std::unordered_map<int, uint32_t> sid_to_loc;
+  std::unordered_map<int, uint32_t> sid_to_root;
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
-    if (stypes[i] != kDefaultStorage) continue;
     if (storage_ids[i] < 0) {
-      mem_plan[i] = {i, mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size(), false};
-    } else if (!sid_to_loc.count(storage_ids[i])) {
+      mem_plan[i] = {storage_ids[i], i, 0, false};
+    } else if (!sid_to_root.count(storage_ids[i])) {
       CHECK_LT(storage_inplace[i], 0);
-      sid_to_loc[storage_ids[i]] = i;
-      mem_plan[i].sid = i;
-      mem_plan[i].size = mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size();
+      sid_to_root[storage_ids[i]] = i;
+      mem_plan[i] = {storage_ids[i], i,
+                     mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size(),
+                     false};
     } else {
-      uint32_t loc = sid_to_loc[storage_ids[i]];
-      mem_plan[i] = {loc, 0, storage_inplace[i] >= 0};
-      mem_plan[loc].size = std::max(mem_plan[loc].size,
+      uint32_t root = sid_to_root[storage_ids[i]];
+      mem_plan[i] = {storage_ids[i], root, 0, storage_inplace[i] >= 0};
+      mem_plan[root].size = std::max(mem_plan[root].size,
           mshadow::mshadow_sizeof(dtypes[i]) * shapes[i].Size());
     }
   }
@@ -761,38 +777,212 @@ inline MemoryPlanVector PlanMemory(
 }
 
 
-inline void AllocateMemory(const nnvm::Graph& g,
-                    const nnvm::IndexedGraph& idx,
-                    const Context& default_ctx,
-                    const uint32_t entry_start, const uint32_t entry_end,
-                    const MemoryPlanVector& mem_plan,
-                    const std::vector<NDArray*>& arrays,
-                    std::vector<OpReqType> *array_reqs) {
+inline std::multimap<size_t, NDArray> AllocateMemory(
+    const nnvm::Graph& g,
+    const nnvm::IndexedGraph& idx,
+    const Context& default_ctx,
+    const uint32_t entry_start, const uint32_t entry_end,
+    const MemoryPlanVector& mem_plan,
+    const std::vector<NDArray*>& arrays,
+    std::vector<OpReqType> *array_reqs,
+    std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
+  std::multimap<size_t, NDArray> new_pool;
+
   for (uint32_t i = entry_start; i < entry_end; ++i) {
-    if (!arrays[i]->is_none()) continue;
-    if (stypes[i] == kDefaultStorage) {
-      if (mem_plan[i].sid == i) {
-        CHECK_GT(mem_plan[i].size, 0);
+    if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
+    CHECK(arrays[i]->is_none());
+    if (mem_plan[i].storage_id == exec::kDynamicStorageID) {
+      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
+                           shapes[i], default_ctx, true, dtypes[i]);
+      continue;
+    }
+    CHECK_EQ(stypes[i], kDefaultStorage);
+    if (mem_plan[i].root == i) {
+      CHECK_GT(mem_plan[i].size, 0);
+      auto iter = pool.lower_bound(mem_plan[i].size);
+      if (iter != pool.end()) {
+        *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
+        new_pool.insert(*iter);
+        pool.erase(iter);
+      } else {
         NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
-      } else {
-        *arrays[i] = arrays[mem_plan[i].sid]->AsArray(shapes[i], dtypes[i]);
-        if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
-          array_reqs->at(i) = kWriteInplace;
-        }
+        new_pool.insert({mem_plan[i].size, buff});
       }
     } else {
-      *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
+      CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
+      *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);
+      if (mem_plan[i].inplace && array_reqs->at(i) == kWriteTo) {
+        array_reqs->at(i) = kWriteInplace;
+      }
+    }
+  }
+
+  return new_pool;
+}
+
+inline void SetupOpExec(
+    const nnvm::Graph& g,
+    size_t nid,
+    const std::shared_ptr<exec::OpExecutor>& exec,
+    const std::vector<NDArray*> arrays,
+    const std::vector<OpReqType> array_reqs) {
+  const auto& idx = g.indexed_graph();
+  const auto& inode = idx[nid];
+  CHECK_EQ(exec->in_array.size(), 0U);
+  CHECK_EQ(exec->out_array.size(), 0U);
+  for (const auto& e : inode.inputs) {
+    CHECK(!arrays[idx.entry_id(e)]->is_none()) << inode.source->attrs.name;
+    exec->in_array.push_back(*arrays[idx.entry_id(e)]);
+  }
+  for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
+    uint32_t eid = idx.entry_id(nid, index);
+    CHECK(!arrays[eid]->is_none()) << inode.source->attrs.name;
+    exec->out_array.push_back(*arrays[eid]);
+    exec->req.push_back(array_reqs[eid]);
+  }
+
+  exec->Setup();
+}
+
+inline Engine::OprHandle CreateEngineOp(
+    const Context& default_ctx,
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs) {
+  CHECK_GT(execs.size(), 0);
+  std::vector<Engine::VarHandle> use_vars, mutate_vars;
+
+  for (const auto& exec : execs) {
+    CHECK_GT(exec->out_array.size(), 0);
+    CHECK(execs.size() == 1 || exec->exec_type() == ExecType::kSync);
+
+    // the variables
+    for (const auto& nd : exec->in_array) {
+      use_vars.push_back(nd.var());
+    }
+    for (auto& r : exec->op_ctx.requested) {
+      mutate_vars.push_back(r.var);
+    }
+    for (auto& nd : exec->out_array) {
+      mutate_vars.push_back(nd.var());
+    }
+    if (exec->var() != nullptr) {
+      mutate_vars.push_back(exec->var());
+    }
+  }
+
+  // dedup vars
+  Engine::Get()->DeduplicateVarHandle(&use_vars, &mutate_vars);
+  bool is_gpu = default_ctx.dev_mask() == gpu::kDevMask;
+  bool is_async = execs.size() > 1 ? false : execs[0]->exec_type() == ExecType::kAsync;
+
+  auto exec_fun = [execs, is_async, is_gpu] (
+      RunContext ctx, Engine::CallbackOnComplete on_complete) {
+    if (is_async) {
+      execs[0]->op_ctx.async_on_complete = on_complete;
+    }
+    for (const auto& exec : execs) exec->Run(ctx, is_gpu);
+    // call on complete only if it is async op
+    if (!is_async) {
+      if (is_gpu) {
+      #if MXNET_USE_CUDA
+        // Wait GPU kernel to finish.
+        ctx.get_stream<gpu>()->Wait();
+      #else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+      #endif
+      }
+      on_complete();
+    }
+  };
+
+  return Engine::Get()->NewOperator(
+      exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
+}
+
+inline void CreateEngineOpSeg(
+    const nnvm::IndexedGraph& idx,
+    const Context default_ctx,
+    const size_t start_nid,
+    const size_t end_nid,
+    const size_t bulk_size,
+    const std::unordered_set<uint32_t>& excludes,
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
+    const std::vector<int> skip_plus_node,
+    std::vector<EngineOprSeg> *opr_segs) {
+  size_t seg_start = start_nid;
+  std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
+  for (size_t nid = start_nid; nid < end_nid; ++nid) {
+    const auto& node = idx[nid];
+    if (node.source->is_variable()) continue;
+    if (skip_plus_node.size() && skip_plus_node[nid]) continue;
+    auto& exec = execs[nid];
+    bool is_async = exec->exec_type() != ExecType::kSync;
+    bool valid = exec->out_array.size() > 0;
+
+    // Stop at async nodes and invalid node (due to input/output is not allocated)
+    bool stop = is_async || !valid || seg_execs.size() >= bulk_size;
+    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
+      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
+    }
+    auto num_outputs = node.source->num_outputs();
+    for (size_t i = 0; i < num_outputs && !stop; ++i) {
+      if (excludes.count(idx.entry_id(nid, i))) stop = true;
+    }
+
+    // Create opr segment for previous nodes.
+    if (stop && nid > seg_start) {
+      auto& seg = (*opr_segs)[seg_start];
+      if (seg_execs.size()) {
+        seg = EngineOprSeg{false, nid};
+        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      } else {
+        seg = EngineOprSeg{true, nid, nullptr};
+      }
+      seg_start = nid;
+      seg_execs.clear();
+    }
+
+    seg_execs.push_back(exec);
+
+    auto& seg = (*opr_segs)[nid];
+    if (is_async) {
+      seg = EngineOprSeg{false, nid + 1};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg_execs.clear();
+      seg_start = nid + 1;
+    } else if (!valid) {
+      seg = EngineOprSeg{false, nid + 1, nullptr};
+      seg_execs.clear();
+      seg_start = nid + 1;
+    }
+  }
+  // The last segment
+  if (end_nid > seg_start) {
+    auto& seg = (*opr_segs)[seg_start];
+    if (seg_execs.size()) {
+      seg = EngineOprSeg{false, end_nid};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+    } else {
+      seg = EngineOprSeg{true, end_nid, nullptr};
     }
   }
 }
+
+
+void RunGraph(const bool retain_graph,
+              const nnvm::IndexedGraph& idx,
+              const std::vector<NDArray*> arrays,
+              size_t node_start, size_t node_end,
+              std::vector<OpReqType>&& array_reqs,
+              std::vector<uint32_t>&& ref_count,
+              std::vector<OpStatePtr> *p_states,
+              const DispatchModeVector &dispatch_modes);
 
 }  // namespace imperative
 }  // namespace mxnet
