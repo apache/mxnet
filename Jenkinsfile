@@ -22,6 +22,8 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+// mxnet libraries with cython
+mx_cython_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
@@ -170,7 +172,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            pack_lib('centos7_cpu')
+            pack_lib('centos7_cpu', mx_cython_lib)
           }
         }
       }
@@ -192,7 +194,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            pack_lib('centos7_gpu')
+            pack_lib('centos7_gpu', mx_cython_lib)
           }
         }
       }
@@ -632,7 +634,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               init_git()
-              unpack_lib('centos7_cpu')
+              unpack_lib('centos7_cpu', mx_cython_lib)
               docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
             } finally {
               collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
@@ -648,7 +650,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               init_git()
-              unpack_lib('centos7_gpu')
+              unpack_lib('centos7_gpu', mx_cython_lib)
               docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
             } finally {
               collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')

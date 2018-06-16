@@ -267,6 +267,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
+    make cython
 }
 
 build_centos7_mkldnn() {
@@ -298,6 +299,7 @@ build_centos7_gpu() {
         USE_CUDNN=1 \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
+    make cython
 }
 
 build_ubuntu_cpu() {
@@ -633,6 +635,7 @@ unittest_ubuntu_gpu_R() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
+    export MXNET_ENFORCE_CYTHON=1
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
@@ -640,6 +643,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
+    export MXNET_ENFORCE_CYTHON=1
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
