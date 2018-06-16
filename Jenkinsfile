@@ -80,7 +80,7 @@ def init_git_win() {
 def pack_lib(name, libs=mx_lib) {
   sh """
 echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in $(echo ${libs} | sed -e 's/,/ /g'); do md5sum $i; done
 """
   stash includes: libs, name: name
 }
@@ -90,7 +90,7 @@ def unpack_lib(name, libs=mx_lib) {
   unstash name
   sh """
 echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in $(echo ${libs} | sed -e 's/,/ /g'); do md5sum $i; done
 """
 }
 
