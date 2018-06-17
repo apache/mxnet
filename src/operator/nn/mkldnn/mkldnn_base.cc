@@ -108,7 +108,7 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
   return mkldnn_output_t(OutDataOp::Noop, mem);
 }
 
-mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
+mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req) {
   if (kAddTo == req) {
