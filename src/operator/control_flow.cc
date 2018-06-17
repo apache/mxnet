@@ -243,39 +243,55 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *out_shape) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
-  nnvm::ShapeVector shape_inputs = *in_shape;
-  // foreach iterates over the first input NDArray over the first dimension.
-  size_t loc0 = params.in_data_locs[0];
-  size_t len = in_shape->at(loc0)[0];
-  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
-    size_t loc = params.in_data_locs[i];
-    CHECK_EQ(len, in_shape->at(loc)[0]);
-    shape_inputs[loc] = TShape(in_shape->at(loc).begin() + 1, in_shape->at(loc).end());
-  }
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   nnvm::Graph g;
   g.outputs = attrs.subgraphs[0]->outputs;
   const auto& idx = g.indexed_graph();
   CHECK_EQ(idx.input_nodes().size(), in_shape->size());
   CHECK_EQ(idx.outputs().size(), out_shape->size());
-  imperative::CheckAndInferShape(&g, std::move(shape_inputs), true);
 
-  const auto& shapes = g.GetAttr<nnvm::ShapeVector>("shape");
+  // Put the input and output shapes to the shape vector.
+  nnvm::ShapeVector shapes(idx.num_node_entries());
+  const auto &input_nids = idx.input_nodes();
+  CHECK_EQ(input_nids.size(), in_shape->size());
+  for (size_t i = 0; i < in_shape->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    shapes[eid] = in_shape->at(i);
+  }
+  CHECK_EQ(g.outputs.size(), out_shape->size());
+  for (size_t i = 0; i < out_shape->size(); i++) {
+    auto eid = idx.entry_id(g.outputs[i]);
+    shapes[eid] = out_shape->at(i);
+  }
+  // foreach iterates over the first input NDArray over the first dimension.
+  size_t loc0 = params.in_data_locs[0];
+  size_t len = in_shape->at(loc0)[0];
+  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    auto eid = idx.entry_id(input_nids[loc], 0);
+    CHECK_EQ(len, in_shape->at(loc)[0]);
+    shapes[eid] = TShape(in_shape->at(loc).begin() + 1, in_shape->at(loc).end());
+  }
+
+  // Infer shape of the graph.
+  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
+  g = exec::InferShape(std::move(g));
+
+  const auto& shapes1 = g.GetAttr<nnvm::ShapeVector>("shape");
   // Inferring the shape in the subgraph may infer the shape of the inputs.
   // We need to copy the inferred input shapes back.
-  const auto &input_nids = idx.input_nodes();
   CHECK_EQ(input_nids.size(), in_shape->size());
   for (size_t i = 0; i < in_shape->size(); i++) {
     auto eid = idx.entry_id(input_nids[i], 0);
     // If the input shape is none, we should update them.
     if ((*in_shape)[i].ndim() == 0 || (*in_shape)[i].Size() == 0)
-      SHAPE_ASSIGN_CHECK(*in_shape, i, shapes[eid]);
+      SHAPE_ASSIGN_CHECK(*in_shape, i, shapes1[eid]);
   }
 
   // For the shape of output data.
   for (int i = 0; i < params.num_out_data; i++) {
     uint32_t eid = idx.entry_id(g.outputs[i]);
-    const auto& g_out_shape = shapes[eid];
+    const auto& g_out_shape = shapes1[eid];
     auto out = TShape(g_out_shape.ndim() + 1);
     out[0] = len;
     for (size_t i = 1; i < out.ndim(); i++)
@@ -286,14 +302,15 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   // For the remaining shapes.
   for (size_t i = params.num_out_data; i < g.outputs.size(); i++) {
     uint32_t eid = idx.entry_id(g.outputs[i]);
-    SHAPE_ASSIGN_CHECK(*out_shape, i, shapes[eid]);
+    SHAPE_ASSIGN_CHECK(*out_shape, i, shapes1[eid]);
   }
   size_t num_states = g.outputs.size() - params.num_out_data;
   for (size_t i = 0; i < num_states; i++) {
     size_t loc = params.in_state_locs[i];
     CHECK((*out_shape)[i + params.num_out_data] == (*in_shape)[loc]);
   }
-  return true;
+  // Check if we have inferred the shapes correctly.
+  return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
 }
 
 static bool ForeachType(const nnvm::NodeAttrs& attrs,

@@ -25,64 +25,97 @@ namespace mxnet {
 namespace op {
 
 bool InferSubgraphDataType(const nnvm::Symbol &subgraph,
-                           std::vector<int> *in_type,
-                           std::vector<int> *out_type) {
-  nnvm::DTypeVector dtype_inputs = *in_type;
+                           std::vector<int> *in_types,
+                           std::vector<int> *out_types) {
   nnvm::Graph g;
   g.outputs = subgraph.outputs;
-  const auto& idx = g.indexed_graph();
-  CHECK_EQ(idx.input_nodes().size(), in_type->size());
-  CHECK_EQ(idx.outputs().size(), out_type->size());
-  imperative::CheckAndInferType(&g, std::move(dtype_inputs), true);
+  const auto& idx_g = g.indexed_graph();
+  CHECK_EQ(idx_g.input_nodes().size(), in_types->size());
+  CHECK_EQ(idx_g.outputs().size(), out_types->size());
 
-  const auto &dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
-
-  // Inferring the data type in the subgraph may infer the data type of the inputs.
-  // We need to copy the inferred input data types back.
-  const auto &input_nids = idx.input_nodes();
-  CHECK_EQ(input_nids.size(), in_type->size());
-  for (size_t i = 0; i < in_type->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    TYPE_ASSIGN_CHECK(*in_type, i, dtypes[eid]);
+  // Put the input and output data types to the dtype vector.
+  nnvm::DTypeVector types(idx_g.num_node_entries(), -1);
+  const auto &input_nids = idx_g.input_nodes();
+  CHECK_EQ(input_nids.size(), in_types->size());
+  for (size_t i = 0; i < in_types->size(); i++) {
+    auto eid = idx_g.entry_id(input_nids[i], 0);
+    types[eid] = in_types->at(i);
+  }
+  CHECK_EQ(g.outputs.size(), out_types->size());
+  for (size_t i = 0; i < out_types->size(); i++) {
+    auto eid = idx_g.entry_id(g.outputs[i]);
+    types[eid] = out_types->at(i);
   }
 
-  for (size_t i = 0; i < g.outputs.size(); i++)
-    TYPE_ASSIGN_CHECK(*out_type, i, dtypes[idx.entry_id(g.outputs[i])]);
-  return true;
+  // Infer data type of the graph.
+  g.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(types));
+  g = exec::InferType(std::move(g));
+
+  const auto& types1 = g.GetAttr<nnvm::DTypeVector>("dtype");
+  // assign to in_types
+  for (size_t i = 0; i < in_types->size(); ++i) {
+    const auto eid = idx_g.entry_id(input_nids[i], 0);
+    TYPE_ASSIGN_CHECK(*in_types, i, types1[eid]);
+  }
+  // assign to out_types
+  for (size_t i = 0; i < g.outputs.size(); ++i) {
+    const auto eid = idx_g.entry_id(g.outputs[i]);
+    TYPE_ASSIGN_CHECK(*out_types, i, types1[eid]);
+  }
+  // Check if we have inferred the dtypes correctly.
+  return g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0;
 }
 
 bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
                           const int dev_mask,
                           DispatchMode* dispatch_mode,
-                          std::vector<int> *in_attrs,
-                          std::vector<int> *out_attrs) {
+                          std::vector<int> *in_stypes,
+                          std::vector<int> *out_stypes) {
   nnvm::Graph g;
   g.outputs = subgraph.outputs;
-  const auto& idx = g.indexed_graph();
-  CHECK_EQ(idx.input_nodes().size(), in_attrs->size());
-  CHECK_EQ(idx.outputs().size(), out_attrs->size());
-  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
-  StorageTypeVector storage_type_inputs = *in_attrs;
-  imperative::CheckAndInferStorageType(&g, std::move(dev_masks),
-                                       std::move(storage_type_inputs), true);
+  const auto& idx_g = g.indexed_graph();
+  CHECK_EQ(idx_g.input_nodes().size(), in_stypes->size());
+  CHECK_EQ(idx_g.outputs().size(), out_stypes->size());
+  exec::DevMaskVector dev_masks(idx_g.num_node_entries(), dev_mask);
 
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  // Put the input and output storages to the storage vector.
+  nnvm::StorageVector stypes(idx_g.num_node_entries(), exec::kBadStorageID);
+  const auto &input_nids = idx_g.input_nodes();
+  CHECK_EQ(input_nids.size(), in_stypes->size());
+  for (size_t i = 0; i < in_stypes->size(); i++) {
+    auto eid = idx_g.entry_id(input_nids[i], 0);
+    stypes[eid] = in_stypes->at(i);
+  }
+  CHECK_EQ(g.outputs.size(), out_stypes->size());
+  for (size_t i = 0; i < out_stypes->size(); i++) {
+    auto eid = idx_g.entry_id(g.outputs[i]);
+    stypes[eid] = out_stypes->at(i);
+  }
 
-  // Inferring the storage in the subgraph may infer the storage of the inputs.
-  // We need to copy the inferred input storage back.
-  const auto &input_nids = idx.input_nodes();
-  CHECK_EQ(input_nids.size(), in_attrs->size());
-  for (size_t i = 0; i < in_attrs->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, stypes[eid]);
+  // Infer storage type of the graph.
+  bool dev_match = g.attrs.count("dev_mask") &&
+                   g.GetAttr<exec::DevMaskVector>("dev_mask") == dev_masks;
+  if (!dev_match) {
+    g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(dev_masks));
+  }
+  g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(stypes));
+  g = exec::InferStorageType(std::move(g));
+
+  const auto& stypes1 = g.GetAttr<StorageTypeVector>("storage_type");
+  // assign to in_types
+  for (size_t i = 0; i < in_stypes->size(); ++i) {
+    const auto eid = idx_g.entry_id(input_nids[i], 0);
+    STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, stypes1[eid]);
   }
 
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-  auto &outputs = idx.outputs();
-  CHECK(outputs.size() == out_attrs->size());
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, stypes[idx.entry_id(outputs[i])]);
-  return true;
+  // assign to out_types
+  for (size_t i = 0; i < g.outputs.size(); ++i) {
+    const auto eid = idx_g.entry_id(g.outputs[i]);
+    STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, stypes1[eid]);
+  }
+  // Check if we have inferred the storages correctly.
+  return g.GetAttr<size_t>("storage_type_num_unknown_nodes") == 0;
 }
 
 bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
