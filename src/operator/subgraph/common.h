@@ -230,9 +230,10 @@ inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttr
   std::vector<uint32_t> ret;
   size_t i1 = 0, i2 = 0;
   for (size_t i = 0; i < input_names.size(); ++i) {
-    if (input_names[i] == immutable_input_names[i1]) {
+    if (i1 < immutable_input_names.size() && input_names[i] == immutable_input_names[i1]) {
       ++i1;
     } else {
+      CHECK(i2 < mutable_input_names.size());
       CHECK_EQ(input_names[i], mutable_input_names[i2]);
       ++i2;
       ret.push_back(i);
