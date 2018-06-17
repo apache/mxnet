@@ -80,9 +80,10 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
 bool CanWriteTo(const NDArray &out_arr,
                 const NDArray &in_arr,
                 const mkldnn::memory::primitive_desc &desc) {
-  bool add_same = in_arr.GetMKLDNNData()->get_data_handle() ==
-      out_arr.GetMKLDNNData()->get_data_handle();
-  bool pdesc_same = out_arr.GetMKLDNNData()->get_primitive_desc() == desc;
+  auto in_mem = in_arr.GetMKLDNNData();
+  bool add_same = in_mem->get_data_handle() == out_arr.GetMKLDNNData()->get_data_handle();
+  bool pdesc_same = out_arr.GetMKLDNNData()->get_primitive_desc() == desc &&
+      in_mem->get_primitive_desc() == desc;
   return add_same && pdesc_same;
 }
 
@@ -122,7 +123,7 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,
     auto def_format = GetDefaultFormat(_desc.desc());
     mkldnn::memory *mem = nullptr;
     if (def_format == _desc.desc().data.format) {
-      mem = const_cast<NDArray &>(arr).CreateMKLDNNData(desc);
+      mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
     }
     if (mem == nullptr) {
       auto tmp = TmpMemMgr::Get()->Alloc(desc);
