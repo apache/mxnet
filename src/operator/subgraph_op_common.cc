@@ -194,10 +194,6 @@ void LoopState::Forward(int iter_no,
     CHECK(iter_ops.empty());
     iter_ops.push_back(op);
   }
-  // TODO(zhengda) we need to avoid shape inference and memory plan whenever the op is
-  // called. Currently, CachedOp allocates memory each time Forward is called.
-  // I need to fix this once the PR for static memory allocation in CachedOp is
-  // merged. https://github.com/apache/incubator-mxnet/pull/10817
   OpStatePtr state = op->Forward(nullptr, inputs, outputs);
 
   if (is_recording) {
