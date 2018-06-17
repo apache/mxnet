@@ -1017,6 +1017,36 @@ void CachedOp::Backward(
   Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
+bool CachedOp::ForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                  const int dev_mask,
+                                  DispatchMode* dispatch_mode,
+                                  std::vector<int> *in_attrs,
+                                  std::vector<int> *out_attrs) {
+  using namespace imperative;
+  nnvm::Graph g(fwd_graph_);
+  const auto& idx = g.indexed_graph();
+  const auto &outputs = idx.outputs();
+
+  // Prepare stypes and contexts based on inputs
+  StorageTypeVector storage_type_inputs;
+  storage_type_inputs.reserve(in_attrs->size());
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    storage_type_inputs.emplace_back(in_attrs->at(i));
+  }
+  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
+
+  // Forward graph storage type inference
+  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(storage_type_inputs), true);
+  // Retrieve result and set outputs
+  const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i]);
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
 bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
@@ -1070,6 +1100,14 @@ NNVM_REGISTER_OP(_CachedOp)
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op->num_outputs();
   })
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->ForwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
+  })
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
@@ -1090,9 +1128,9 @@ NNVM_REGISTER_OP(_backward_CachedOp)
                                                      DispatchMode* dispatch_mode,
                                                      std::vector<int> *in_attrs,
                                                      std::vector<int> *out_attrs) {
-  const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-  return op->BackwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
-})
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->BackwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
+  })
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
 
