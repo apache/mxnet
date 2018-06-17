@@ -34,7 +34,7 @@ from ..base import _LIB, c_array, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian"]
+__all__ = ["rand_zipfian", "foreach"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.

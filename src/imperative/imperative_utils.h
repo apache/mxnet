@@ -486,7 +486,7 @@ inline void PushOperator(const OpStatePtr& state,
 
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
-    if (!attrs.subgraphs.empty()) {
+    if (exec_type == ExecType::kSubgraphExec) {
       RunContext rctx{ctx, nullptr};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -534,7 +534,7 @@ inline void PushOperator(const OpStatePtr& state,
         }
       };
 
-    if (!attrs.subgraphs.empty()) {
+    if (exec_type == ExecType::kSubgraphExec) {
       RunContext rctx{ctx, nullptr};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
