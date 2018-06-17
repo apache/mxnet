@@ -41,8 +41,8 @@ class TestRNNLayer(gluon.HybridBlock):
         return out
 
 def test_contrib_rnn(batch_size, input_size, hidden_size, seq_len, ctx):
-    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
-    states = mx.nd.normal(loc=0, scale=1, shape=(batch_size, hidden_size))
+    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size), ctx=ctx)
+    states = mx.nd.normal(loc=0, scale=1, shape=(batch_size, hidden_size), ctx=ctx)
     num_batches = 20
 
     # Imperative
@@ -96,7 +96,7 @@ def test_contrib_rnn(batch_size, input_size, hidden_size, seq_len, ctx):
     # gradients for the backward of the foreach symbol
     args_grad1 = {}
     for key in args1.keys():
-        args_grad1[key] = mx.nd.empty(args1[key].shape)
+        args_grad1[key] = mx.nd.empty(args1[key].shape, ctx=ctx)
     exe = symnet.bind(ctx=ctx, args=args1, args_grad=args_grad1)
     tic = time.time()
     for i in range(num_batches):
