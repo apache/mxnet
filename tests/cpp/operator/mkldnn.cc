@@ -820,7 +820,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
-      
+
       if (out_arr.arr.IsView())
         continue;
 
@@ -866,10 +866,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       orig_output.WaitToRead();
-      auto out_mem = out_arr.arr.GetMKLDNNData(in_mem->get_primitive_desc());
-      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
-      if (out_mem == nullptr)
-        continue;
+      auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, out_arr);
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
@@ -900,13 +897,8 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
-      auto out_mem = out_arr.arr.GetMKLDNNData(in_mem->get_primitive_desc());
-
-      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
-      if (out_mem == nullptr)
-        continue;
-
       PrintVerifyMsg(in_arr, out_arr);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
