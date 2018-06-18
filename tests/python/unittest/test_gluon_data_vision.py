@@ -22,7 +22,7 @@ from mxnet import gluon
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 
 @with_seed()
@@ -66,18 +66,19 @@ def test_transformer():
     from mxnet.gluon.data.vision import transforms
 
     transform = transforms.Compose([
-		transforms.Resize(300),
-		transforms.CenterCrop(256),
-		transforms.RandomResizedCrop(224),
-		transforms.RandomFlipLeftRight(),
-		transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
-		transforms.RandomBrightness(0.1),
-		transforms.RandomContrast(0.1),
-		transforms.RandomSaturation(0.1),
-		transforms.RandomHue(0.1),
-		transforms.RandomLighting(0.1),
-		transforms.ToTensor(),
-		transforms.Normalize([0, 0, 0], [1, 1, 1])])
+        transforms.Resize(300),
+        transforms.Resize(300, keep_ratio=True),
+        transforms.CenterCrop(256),
+        transforms.RandomResizedCrop(224),
+        transforms.RandomFlipLeftRight(),
+        transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
+        transforms.RandomBrightness(0.1),
+        transforms.RandomContrast(0.1),
+        transforms.RandomSaturation(0.1),
+        transforms.RandomHue(0.1),
+        transforms.RandomLighting(0.1),
+        transforms.ToTensor(),
+        transforms.Normalize([0, 0, 0], [1, 1, 1])])
 
     transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 

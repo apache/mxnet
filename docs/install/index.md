@@ -20,11 +20,11 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- START - OS Menu -->
 
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default opt active Devices">Linux</button>
-  <button type="button" class="btn btn-default opt Devices">MacOS</button>
-  <button type="button" class="btn btn-default opt Devices">Windows</button>
-  <button type="button" class="btn btn-default opt Devices">Cloud</button>
-  <button type="button" class="btn btn-default opt Devices">Devices</button>
+  <button type="button" class="btn btn-default opt active platforms">Linux</button>
+  <button type="button" class="btn btn-default opt platforms">MacOS</button>
+  <button type="button" class="btn btn-default opt platforms">Windows</button>
+  <button type="button" class="btn btn-default opt platforms">Cloud</button>
+  <button type="button" class="btn btn-default opt platforms">Devices</button>
 </div>
 
 <!-- START - Language Menu -->
@@ -513,11 +513,22 @@ $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 
 <div class="v1-2-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.2
+
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-$ pip install mxnet-cu90
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+```bash
+$ pip install mxnet-cu92
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -537,11 +548,22 @@ $ pip install mxnet-cu90mkl
 
 <div class="v1-1-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.1
+
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-$ pip install mxnet-cu90==1.1.0
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+```bash
+$ pip install mxnet-cu91==1.1.0
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
 ```bash
@@ -551,10 +573,12 @@ pip install graphviz
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
-**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+**Experimental Choice** If You would like to install MXNet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-cu90mkl==1.1.0
+$ pip install mxnet-cu91mkl==1.1.0
 ```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-1-0-->
 
@@ -621,10 +645,10 @@ $ pip install mxnet-cu90mkl==0.12.0
 
 <div class="v0-11-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0
+**Step 2**  Install *MXNet* with GPU support using CUDA 8.0
 
 ```bash
-$ pip install mxnet-cu90==0.11.0
+$ pip install mxnet-cu80==0.11.0
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -635,9 +659,9 @@ pip install graphviz
 
 **Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
-**Experimental Choice** If You would like to install mxnet with Intel MKL, try the experimental pip package with MKL:
+**Experimental Choice** If You would like to install MXNet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ pip install mxnet-cu90mkl==0.11.0
+$ pip install mxnet-cu80mkl==0.11.0
 ```
 
 </div> <!-- End of v0-11-0-->
@@ -687,22 +711,44 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 
 <div class="v1-2-0">
 
-Install *MXNet* with GPU support using CUDA 9.0.
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-(mxnet)$ pip install mxnet-cu90
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+Install *MXNet* with GPU support using CUDA 9.2:
+
+```bash
+(mxnet)$ pip install mxnet-cu92
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-2-0-->
 
 
 <div class="v1-1-0">
 
-Install *MXNet* with GPU support using CUDA 9.0.
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-(mxnet)$ pip install mxnet-cu90==1.1.0
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+Install *MXNet* with GPU support using CUDA 9.1:
+
+```bash
+(mxnet)$ pip install mxnet-cu91==1.1.0
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-1-0-->
 
@@ -714,6 +760,7 @@ Install *MXNet* with GPU support using CUDA 9.0.
 ```bash
 (mxnet)$ pip install mxnet-cu90==1.0.0
 ```
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-0-0-->
 
@@ -726,32 +773,39 @@ Install *MXNet* with GPU support using CUDA 9.0.
 (mxnet)$ pip install mxnet-cu90==0.12.1
 ```
 
-For *MXNet* 0.12.0 with GPU support using CUDA 9.0.
-
-```bash
-(mxnet)$ pip install mxnet-cu90==0.12.0
-``` 
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v0-12-1-->
 
 
 <div class="v0-11-0">
 
-Install *MXNet* with GPU support using CUDA 9.0.
+Install *MXNet* with GPU support using CUDA 8.0.
 
 ```bash
-(mxnet)$ pip install mxnet-cu90==0.11.0
+(mxnet)$ pip install mxnet-cu80==0.11.0
 ```
 
 </div> <!-- End of v0-11-0-->
 
 <div class="master">
 
-Install *MXNet* with GPU support using CUDA 9.0.
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-(mxnet)$ pip install mxnet-cu90 --pre
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+Install *MXNet* with GPU support using CUDA 9.2.
+
+```bash
+(mxnet)$ pip install mxnet-cu92 --pre
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of master-->
 
@@ -1572,21 +1626,43 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 <div class="v1-2-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
+
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-$ pip install mxnet-cu90
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+```bash
+$ pip install mxnet-cu92
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-2-0-->
 
 <div class="v1-1-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.1.
+
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-$ pip install mxnet-cu90==1.1.0
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+```bash
+$ pip install mxnet-cu91==1.1.0
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of v1-1-0-->
 
@@ -1618,21 +1694,32 @@ $ pip install mxnet-cu90==0.12.0
 
 <div class="v0-11-0">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+**Step 2**  Install *MXNet* with GPU support using CUDA 8.0.
 
 ```bash
-$ pip install mxnet-cu90==0.11.0
+$ pip install mxnet-cu80==0.11.0
 ```
 
 </div> <!-- End of v0-11-0-->
 
 <div class="master">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
+**Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
+
+**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
+Check your CUDA version with the following command:
 
 ```bash
-$ pip install mxnet-cu90 --pre
+nvcc --version
 ```
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
+
+```bash
+$ pip install mxnet-cu92 --pre
+```
+
+Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of master-->
 
@@ -1644,7 +1731,7 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 
 We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), and [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 
-**Option 1** 
+**Option 1**
 
 To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
 
@@ -1678,7 +1765,7 @@ git clone https://github.com/apache/incubator-mxnet.git --recursive
 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
 ```
 
-5. Create a build dir using the following command and go to the directory, for example: 
+5. Create a build dir using the following command and go to the directory, for example:
 
 ```r
 mkdir C:\build
@@ -1699,11 +1786,11 @@ NOTE: make sure the DCUDNN_INCLUDE and DCUDNN_LIBRARY pointing to the “include
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
 
-**Option 2** 
+**Option 2**
 
 To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. Install the required dependencies:
 
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition.
+1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition. At least Update 3 of Microsoft Visual Studio 2015 is required to build MXNet from source. Upgrade via it's ```Tools -> Extensions and Updates... | Product Updates``` menu.
 2. Download and install [CMake](https://cmake.org/) if it is not already installed.
 3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
 4. Unzip the OpenCV package.
@@ -1711,10 +1798,12 @@ To build and install MXNet yourself using [Microsoft Visual Studio 2015](https:/
 6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
 7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
 8. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) and [cuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
+9. Set the environment variable ```CUDACXX``` to point to the ```CUDA Compiler```(```C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\bin\nvcc.exe``` for example).
+10. Set the environment variable ```CUDNN_ROOT``` to point to the ```cuDNN``` directory that contains the ```include```,  ```lib``` and ```bin``` directories (```C:\Downloads\cudnn-9.1-windows7-x64-v7\cuda``` for example).
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet).
+1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) (make sure you also download third parties submodules e.g. ```git clone --recurse-submodules```).
 2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
 3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
@@ -1778,7 +1867,7 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
 <br/>
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of C++>
+</div> <!-- End of C++ -->
 </div> <!-- End of Windows -->
 
 
@@ -2402,4 +2491,3 @@ Will be available soon.
 # Source Download
 
 <a href="download.html">Download</a> your required version of MXNet.
-
