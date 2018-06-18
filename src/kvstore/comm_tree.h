@@ -51,6 +51,7 @@ class CommDeviceTree : public Comm {
   CommDeviceTree() {
     inited_ = false;
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000000);
+    backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 1);
     link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_LINK_USAGE_PENALTY", 0.7);
     stream_ = dmlc::GetEnv("MXNET_KVSTORE_STREAM", 1);
   }
@@ -486,12 +487,14 @@ class CommDeviceTree : public Comm {
 
   void QueryTopology() {
 #if MXNET_USE_CUDA
-
     std::vector<float> link_matrix(devs_.size()*devs_.size());
-    std::vector<int> zero_dev_id(devs_.size(), -1);
-    GetP2PWeight( link_matrix, devs_, zero_dev_id );
-    PartitionGraph( link_matrix, devs_.size(), zero_dev_id, topology_, scan_,
-        link_usage_penalty_ );
+    GetP2PWeight( devs_, link_matrix );
+    if (backtrack_)
+      LOG(WARNING) << "Using Backtracking to generate trees";
+    else
+      LOG(WARNING) << "Using Kernighan-Lin to generate trees";
+    ComputeTrees( link_matrix, devs_.size(), link_usage_penalty_, backtrack_,
+        topology_, scan_ );
 
     depth_ = ComputeDepth(devs_.size());
 #endif
@@ -644,6 +647,7 @@ class CommDeviceTree : public Comm {
   int   bigarray_bound_;
   bool  inited_;
   bool  stream_;
+  bool  backtrack_;
   float link_usage_penalty_;
 
   /// \brief constant for maximum size of recv buffer per GPU

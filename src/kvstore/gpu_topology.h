@@ -58,8 +58,32 @@ void PrettyPrintTopology(const std::vector<std::vector<size_t>> topo) {
   }
 }
 
+template <typename T>
+void PrintVector( const std::string& str, const std::vector<T>& vec ) {
+  std::cout << str << ":\n";
+  for (unsigned i = 0; i < vec.size(); ++i)
+    std::cout << vec[i] << " ";
+  std::cout << std::endl;
+}
+
+template <typename T>
+void PrintMatrix( const std::string& str, const std::vector<T>& matrix, 
+    int num_rows, int num_cols ) {
+  PrintVector("Matrix vector", matrix);  
+  std::cout << str << ":\n";
+  int count = 0;
+  for (int row = 0; row < num_rows; ++row) {
+    for (int col = 0; col < num_cols; ++col) {
+      std::cout << matrix[count++] << " ";
+    }
+    std::cout << std::endl;
+  }
+}
+
 void PrintTopo( const std::string& str, const std::vector<size_t>& topo_row, 
     std::vector<size_t> scan_row ) {
+  PrintVector("Topo vector", topo_row);
+  PrintVector("Scan vector", scan_row);
   std::cout << str << ":\n";
   int depth = scan_row.size()-1;
   for (int row = 0; row < depth; ++row) {
@@ -76,47 +100,20 @@ void PrintTopo( const std::string& str, const std::vector<size_t>& topo_row,
   }
 }
 
+// Generate adjacency matrix with row/col numbering from 0, 1, ..., n_gpu
+// @input:  devs is a vector of GPU contexts
+// @output: matrix is adjacency matrix of link topology graph
+//          where edge weight represents relative performance of NVIDIA GPUs
+//            0: Self-connection
+//            1: PCI-E
+//            2: 1 NVLink connection
+//            3: 2 NVLink connections
 template <typename T>
-void PrintMatrix( const std::string& str, const std::vector<T>& matrix, 
-    int num_rows, int num_cols ) {
-  
-  std::cout << str << ":\n";
-  int count = 0;
-  for (int row = 0; row < num_rows; ++row) {
-    for (int col = 0; col < num_cols; ++col) {
-      std::cout << matrix[count++] << " ";
-    }
-    std::cout << std::endl;
-  }
-}
-
-template <typename T>
-void PrintVector( const std::string& str, const std::vector<T>& vec ) {
-  std::cout << str << ":\n";
-  for (unsigned i = 0; i < vec.size(); ++i)
-    std::cout << vec[i] << " ";
-  std::cout << std::endl;
-}
-
-// Get relative performance of NVIDIA GPUs
-// 0: Self-connection
-// 1: PCI-E
-// 2: 1 NVLink connection
-// 3: 2 NVLink connections
-//
-// Generate 2 things:
-// 1) adjacency matrix with row/col numbering from 0, 1, ..., n_gpu
-// 2) mapping from 0, 1, ..., n_gpu to dev_id
-//   -used to map from 0, 1, ..., n_gpu back to dev_id for topology, which will
-//    be used by kvstore to do communication
-//   -used to build adjacency matrix with 0, 1, ..., n_gpu numbering
-template <typename T>
-void GetP2PWeight( std::vector<T>&             matrix, 
-                   const std::vector<Context>& devs,
-                   std::vector<int>&           zero_dev_id,
-                   bool                        print=false ) {
+void GetP2PWeight( const std::vector<Context>& devs,
+                   std::vector<T>&             matrix ) {
   int num_gpus = devs.size();
   int count    = 0;
+  std::vector<int> zero_dev_id(num_gpus, -1);
   for (auto d : devs) {
     zero_dev_id[count] = d.dev_id;
     count++;
@@ -475,19 +472,19 @@ void FindBestEdge( const std::vector<T>&   W,
 // Given a vector of color pairs, appends to binary tree matrix topo
 // @input:  cluster_pairs gives pairing between clusters, an edge is found 
 //                        between each pairing
-//          roots         gives source vertex 
-//          gen gives     random number generation to break ties
+//          roots gives source vertex 
+//          gen gives random number generation to break ties
 // @output: cluster_pairs
 //          topo_row says where new edges are appended to
-//          scan_row says  where we should start looking for topo_row
+//          scan_row says where we should start looking for topo_row
 template <typename T>
-int GenerateBinaryTree( std::vector<T>&                  W,
-                        const std::vector<int>&          P,
-                        std::vector<std::pair<int,int>>& cluster_pairs, 
-                        std::unordered_set<int>&         roots,
-                        std::vector<size_t>&             topo_row,
-                        std::vector<size_t>&             scan_row,
-                        std::mt19937&                    gen ) {
+int KLGenerateBinaryTree( std::vector<T>&                  W,
+                          const std::vector<int>&          P,
+                          std::vector<std::pair<int,int>>& cluster_pairs, 
+                          std::unordered_set<int>&         roots,
+                          std::vector<size_t>&             topo_row,
+                          std::vector<size_t>&             scan_row,
+                          std::mt19937&                    gen ) {
   std::unordered_set<int>     new_roots;
   std::unordered_map<int,int> new_topo;
   int reset = 0;
@@ -499,7 +496,7 @@ int GenerateBinaryTree( std::vector<T>&                  W,
     //std::cout << "Pair " << i << ": " << cluster_pairs[i].first << " " << cluster_pairs[i].second << std::endl;
     int parent, child = -1;
     if (cluster_pairs[i].second==-2) {
-      // Root must exist in first element of pair
+      // Root must be color of pair.first
       int color  = cluster_pairs[i].first;
       parent     = GetRoot( P, color, roots );
       if (parent == -1) return 1;
@@ -606,8 +603,8 @@ bool IsValid( const std::vector<T>&   W,
       int from   = state[j];
       int dest   = state[j+stride];
       //std::cout << "Comparing " << j << " and " << j+stride << " in row " << row << std::endl;
-      if (W[from*num_elements + dest] <= static_cast<T>(0) && from != dest) {
-        //std::cout << "Not valid: no edge from " << from << " to " << dest << std::endl;
+      if (W[from*num_elements + dest] == static_cast<T>(0) && from != dest) {
+        //std::cout << "Not valid: no edge from " << from << " to " << dest << " at index " << from*num_elements+dest << std::endl;
         return false;
       }
     }
@@ -650,8 +647,10 @@ bool IsValid( const std::vector<T>&   W,
   //   -if some GPU is not found, then we are in invalid state
   } else if (row == static_cast<int>(state.size()))
     for (int i = 0; i < num_elements; ++i)
-      if (found_vec[i] == 0)
+      if (found_vec[i] == 0) {
+        //std::cout << "Not valid: " << i << " not found" << std::endl;
         return false;
+      }
 
   return true;
 }
@@ -791,6 +790,8 @@ void Backtrack( const std::vector<T>& W,
     std::vector<int> result = state;
     Postprocess(result, num_elements, depth);
     T weight = ComputeTreeWeight(W, result, num_elements, depth);
+
+    // Save this spanning tree if it is highest weight tree found sofar
     if (weight > best_result_weight) {
       std::swap(best_result_weight, weight);
       best_result        = result;
@@ -803,6 +804,7 @@ void Backtrack( const std::vector<T>& W,
     return;
   }
 
+  // If not last recursive level, try to find valid tree for next level
   for (int j = 0; j < num_elements; ++j) {
     state[row] = j;
     //PrintVector("Trying state", state);
@@ -827,8 +829,9 @@ void UpdateWeight( std::vector<T>&            W,
     unsigned child  = topo_row[i+1];
     if (parent >= num_elements*num_elements || 
         child >= num_elements*num_elements)
-      std::cout << "W array out of bounds\n";
+      LOG(WARNING) << "W array out of bounds\n";
     else if (parent != child) {
+      //std::cout << W[child*num_elements+parent] << " " << alpha << std::endl;
       W[parent*num_elements+child] *= alpha;
       W[child*num_elements+parent] *= alpha;
     }
@@ -843,11 +846,11 @@ void UpdateWeight( std::vector<T>&            W,
 // 2) maximize edge weight
 // 3) tree is binary
 template <typename T>
-void BacktrackingGenerateBinaryTree( std::vector<T>&      W, 
-                                     int                  num_elements,
-                                     int                  root,
-                                     std::vector<size_t>& topo_row, 
-                                     std::vector<size_t>& scan_row ) {
+void BacktrackGenerateBinaryTree( std::vector<T>&      W, 
+                                  int                  num_elements,
+                                  int                  root,
+                                  std::vector<size_t>& topo_row, 
+                                  std::vector<size_t>& scan_row ) {
 
   // Clear before starting
   topo_row.clear();
@@ -870,19 +873,22 @@ void BacktrackingGenerateBinaryTree( std::vector<T>&      W,
 
   // Place root and try all combinations
   state[0] = root;
-  //PrintVector("state", state);
 
   Backtrack( W, state, result, result_weight, 1, num_elements, depth );
+  //PrintVector("result", result);
   FormTopology( result, topo_row, scan_row, depth );
 }
 
+// ComputeTreesFromRoot does the same thing as ComputeTrees, with the only
+// exception being it will do it from a fixed GPU as root
 template <typename T>
-void PartitionGraphFromRoot( std::vector<T>&                   W, 
-                             int                               num_elements,
-                             int                               root,
-                             std::vector<std::vector<size_t>>& topo, 
-                             std::vector<std::vector<size_t>>& scan,
-                             float                             alpha ) {
+void ComputeTreesFromRoot( std::vector<T>&      W, 
+                           int                  num_elements,
+                           int                  root,
+                           float                alpha,
+                           bool                 backtrack,
+                           std::vector<size_t>& topo, 
+                           std::vector<size_t>& scan ) {
 
   int num_partitions = 1;
 
@@ -918,15 +924,14 @@ void PartitionGraphFromRoot( std::vector<T>&                   W,
   int reset = 1;
   int level = 0;
 
-  bool backtrack = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 1);
   while (!backtrack && (!stop || reset)) {
     if (reset == 1) {
       cluster_pairs.clear();
       P_temp              = P;
       num_partitions_temp = num_partitions;
       roots_temp          = roots;
-      topo_temp           = topo[root];
-      scan_temp           = scan[root];
+      topo_temp           = topo;
+      scan_temp           = scan;
     }
 
     // Run Kernighan-Lin to generate partition
@@ -935,7 +940,7 @@ void PartitionGraphFromRoot( std::vector<T>&                   W,
 
     // Use partitions found and a given root to find best inter-cluster edge for    // each pair of clusters, and returns them as roots of next cluster
     // If reset is true, then rewind back to previous clustering
-    reset = GenerateBinaryTree(W, P_temp, cluster_pairs, roots_temp, 
+    reset = KLGenerateBinaryTree(W, P_temp, cluster_pairs, roots_temp, 
         topo_temp, scan_temp, gen);
 
     if (reset)
@@ -947,24 +952,30 @@ void PartitionGraphFromRoot( std::vector<T>&                   W,
     if (!backtrack)
       std::cout << "No valid binary tree found from root " << root << ", try backtracking\n";
     //std::cout << "Trying backtracking\n";
-    BacktrackingGenerateBinaryTree(W, num_elements, root, topo[root], 
-        scan[root]);
+    BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
-    topo[root]     = topo_temp;
-    scan[root]     = scan_temp;
+    topo = topo_temp;
+    scan = scan_temp;
+    scan.push_back(topo.size());
   }
-  UpdateWeight( W, topo[root], num_elements, alpha );
+  UpdateWeight( W, topo, num_elements, alpha );
 }
 
-// Generalization from num_elements to list of devices done using zero_dev_id
-// mapping, which gets us from 0, 1, ..., n_gpus to dev_id
+// ComputeTrees computes balanced binary spanning trees of maximum edge weight
+// given a link topology graph stored in adjacency matrix format
+// @input:  W is the link topology matrix
+//          num_elements is the number of GPUs
+//          alpha is the link usage penalty
+//          backtrack is whether or not we use backtracking to generate trees
+// @output: topo stores the trees generated
+//          scan stores the start of each level of each tree
 template <typename T>
-void PartitionGraph( const std::vector<T>&             W, 
-                     int                               num_elements,
-                     const std::vector<int>&           zero_dev_id,
-                     std::vector<std::vector<size_t>>& topo, 
-                     std::vector<std::vector<size_t>>& scan,
-                     float                             alpha=0.7 ) {
+void ComputeTrees( const std::vector<T>&             W, 
+                   int                               num_elements,
+                   float                             alpha,
+                   bool                              backtrack,
+                   std::vector<std::vector<size_t>>& topo, 
+                   std::vector<std::vector<size_t>>& scan ) {
   std::vector<T> W_copy = W;
 
   topo.clear();
@@ -974,8 +985,8 @@ void PartitionGraph( const std::vector<T>&             W,
     scan.push_back(std::vector<size_t>());
     topo[i].push_back(i);
     scan[i].push_back(0);
-    PartitionGraphFromRoot(W_copy, num_elements, i, topo, scan, alpha);
-    scan[i].push_back(topo[i].size());
+    ComputeTreesFromRoot(W_copy, num_elements, i, alpha, backtrack, topo[i], 
+        scan[i]);
   }
 
   // Note: must sum up adj matrix to show link usage before we readjust topo
@@ -994,20 +1005,10 @@ void PartitionGraph( const std::vector<T>&             W,
 
   std::vector<std::vector<size_t>> topo_temp(num_elements,
       std::vector<size_t>());
-  for (int i = 0; i < num_elements; ++i) {
-    for (unsigned j = 0; j < topo[i].size(); ++j) {
-      int val = topo[i][j];
-      topo_temp[i].push_back( zero_dev_id[val] );
-    }
-    PrintTopo("Topo_temp", topo_temp[i], scan[i]);
-  }
+  for (int i = 0; i < num_elements; ++i)
+    PrintTopo("Topo", topo[i], scan[i]);
 
   PrintMatrix("Links", adj, num_elements, num_elements);
-  bool backtrack = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 1);
-  if (backtrack)
-    LOG(WARNING) << "Using Backtracking to generate trees";
-  else
-    LOG(WARNING) << "Using Kernighan-Lin to generate trees";
 }
 
 }  // namespace kvstore
