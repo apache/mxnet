@@ -55,7 +55,7 @@ private[mxnet] object APIDocGenerator{
 
   def MD5Generator(input : String) : String = {
     val md = MessageDigest.getInstance("MD5")
-    md.update(input.getBytes())
+    md.update(input.getBytes("UTF-8"))
     val digest = md.digest()
     digest.map(b => (b & 0xff).toHexString).mkString
   }
