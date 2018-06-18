@@ -23,7 +23,7 @@
 set -e
 echo "Compiling MXNet Backend, Hang tight!....."
 
-if [[ ($# -ne 3) || ( $1 == "--help") ||  $1 == "-h" ]]; then
+if [[ ($# -ne 2) || ( $1 == "--help") ||  $1 == "-h" ]]; then
   echo "Usage: [-h|--help]  <osx-x86_64-cpu/linux-x86_64-cpu/linux-x86_64-gpu> <project.basedir>" 1>&2
   exit 1
 fi
@@ -57,9 +57,9 @@ cp make/config.mk ./config.mk
 if [[ $PLATFORM == "osx-x86_64-cpu" ]];
 then
     echo "Building MXNet Backend on MAC OS"
-    echo "ADD_CFLAGS += -I/usr/local/opt/opencv@2/include" >> ./config.mk
+    echo "ADD_CFLAGS += -I/usr/local/opt/opencv/include" >> ./config.mk
     echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-    echo "ADD_LDFLAGS += -L/usr/local/opt/opencv@2/lib" >> ./config.mk
+    echo "ADD_LDFLAGS += -L/usr/local/opt/opencv/lib" >> ./config.mk
     echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
     echo "USE_OPENMP = 0" >> ./config.mk
     echo "USE_LAPACK_PATH = /usr/local/opt/lapack/lib" >> ./config.mk
