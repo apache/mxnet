@@ -46,7 +46,7 @@ try {
         ws('workspace/brokenLinkChecker') {
           init_git()
           withCredentials([usernamePassword(credentialsId: 'github-leleamol', passwordVariable: 'APACHE_PASSWORD', usernameVariable: 'APACHE_USERNAME')]) {
-          sh "ci/build.py --platform ubuntu_npm_blc /work/runtime_functions.sh broken_link_checker"
+          sh "ci/build.py --platform ubuntu_blc /work/runtime_functions.sh broken_link_checker"
           }
         }
       }
