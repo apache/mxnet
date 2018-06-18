@@ -602,8 +602,7 @@ struct clip : public mxnet_op::tunable {
     }
   }
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType x, DType upper_bound, DType lower_bound) {
-    DType ret = x;
+  MSHADOW_XINLINE static DType Map(DType x, DType lower_bound, DType upper_bound) {
     if (x > upper_bound) {
       return upper_bound;
     } else if (x < lower_bound) {
