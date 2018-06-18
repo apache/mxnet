@@ -47,7 +47,7 @@ private[mxnet] object APIDocGenerator{
     val prevHash = Source.fromFile(FILE_PATH + s"FILEHASH")
       .getLines().mkString("\n")
     // TODO: GPU test seemed to generate different files
-    if (!System.getenv().containsKey("SCALA_TEST_ON_GPU")) {
+    if (!System.getenv().containsKey("SCALA_ON_GPU")) {
       require(prevHash.equals(finalHash),
         "Detect Operator changes, comment on this line and update the hashfile")
     }
