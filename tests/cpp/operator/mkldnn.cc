@@ -123,8 +123,9 @@ static void VerifyDefMem(const mkldnn::memory &mem) {
       = static_cast<mshadow::default_real_t *>(mem.get_data_handle());
   size_t size = pd.get_size() / sizeof(mshadow::default_real_t);
   size_t num_same = 0;
-  for (size_t i = 0; i < size; i++)
-    num_same += data[i] == static_cast<mshadow::default_real_t>(i);
+  int shift = size >> 1;
+  for (int i = 0; i < size; i++)
+    num_same += data[i] == static_cast<mshadow::default_real_t>(i - shift);
   EXPECT_EQ(num_same, size);
 }
 
@@ -803,7 +804,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   }
 }
 
-TEST(IMPERATIVE, UnaryOp) {
+TEST(IMPERATIVE, CopyOp) {
   OpAttrs attrs = GetCopyOp();
   TestOp(attrs, VerifyCopyResult);
 }
@@ -823,12 +824,12 @@ TEST(IMPERATIVE, ActBackwardsOp) {
   TestOp(attrs, VerifyActBackwardsResult);
 }
 
-TEST(IMPERATIVE, BinaryOp) {
+TEST(IMPERATIVE, SumOp) {
   OpAttrs attrs = GetSumOp();
   TestOp(attrs, VerifySumResult);
 }
 
-TEST(IMPERATIVE, BinaryBackwardsOp) {
+TEST(IMPERATIVE, SumBackwardsOp) {
   OpAttrs attrs = GetSumBackwardsOp();
   TestOp(attrs, VerifySumBackwardsResult);
 }
