@@ -508,10 +508,6 @@ class Block(object):
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
-        forward_bulk_size : int, default 15
-            Segment size of bulk execution during forward pass.
-        backward_bulk_size : int, default 15
-            Segment size of bulk execution during backward pass.
         """
         for cld in self._children.values():
             cld.hybridize(active, **kwargs)

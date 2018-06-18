@@ -98,6 +98,10 @@ CachedOp::CachedOp(
 
   config_.Init(flags);
 
+  if (config_.static_shape) {
+    CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
+  }
+
   // construct forward graph
   {
     NodeEntryMap<int> dedup_out;
