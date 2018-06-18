@@ -51,7 +51,7 @@ class CommDeviceTree : public Comm {
   CommDeviceTree() {
     inited_ = false;
     bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000000);
-    backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 1);
+    backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 0);
     link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_LINK_USAGE_PENALTY", 0.7);
     stream_ = dmlc::GetEnv("MXNET_KVSTORE_STREAM", 1);
   }

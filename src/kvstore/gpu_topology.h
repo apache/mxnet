@@ -38,26 +38,6 @@
 namespace mxnet {
 namespace kvstore {
 
-void PrettyPrintTopology(const std::vector<std::vector<size_t>> topo) {
-  std::cout << "    ={";
-  for (unsigned row = 0; row < topo.size(); ++row) {
-    if (row != 0)
-      std::cout << "      ";
-    std::cout << "{";
-    for (unsigned col = 0; col < topo[0].size(); ++col) {
-      std::cout << topo[row][col];
-      if( col != topo[0].size()-1 )
-        std::cout << ", ";
-    }
-    std::cout << "}";
-    if ( row == topo.size()-1 )
-      std::cout << "};";
-    else
-      std::cout << ",";
-    std::cout << std::endl;
-  }
-}
-
 template <typename T>
 void PrintVector( const std::string& str, const std::vector<T>& vec ) {
   std::cout << str << ":\n";
