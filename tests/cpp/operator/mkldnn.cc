@@ -820,8 +820,10 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      
       if (out_arr.arr.IsView())
-        out_arr.arr = out_arr.arr.Reorder2Default();
+        continue;
+
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
 
       // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
