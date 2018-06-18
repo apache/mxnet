@@ -112,7 +112,9 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
     MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
     return;
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
-    FallBackCompute(ElemwiseBinaryOp::BackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>, attrs, ctx, inputs, req, outputs);
+    FallBackCompute(
+        ElemwiseBinaryOp::BackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>,
+            attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
