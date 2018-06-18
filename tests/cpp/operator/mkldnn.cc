@@ -659,16 +659,6 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs,
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-void VerifyCopyBackwardsResult(const std::vector<NDArray *> &in_arrs,
-                               const std::vector<NDArray *> &out_arrs) {
-  NDArray output_grads = in_arrs[0]->Reorder2Default();
-  NDArray input_grads = out_arrs[0]->Reorder2Default();
-  mshadow::default_real_t *og = output_grads.data().dptr<mshadow::default_real_t>();
-  mshadow::default_real_t *ig = input_grads.data().dptr<mshadow::default_real_t>();
-  for (size_t i = 0; i < output_grads.shape().Size(); i++)
-    ASSERT_EQ(og[i], ig[i]);
-}
-
 void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs,
                               const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();  // out grads
@@ -797,7 +787,7 @@ TEST(IMPERATIVE, UnaryOp) {
 
 TEST(IMPERATIVE, CopyBackwardsOp) {
   OpAttrs attrs = GetCopyBackwardsOp();
-  TestOp(attrs, InitDefaultArray, VerifyCopyBackwardsResult);
+  TestOp(attrs, InitDefaultArray, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
