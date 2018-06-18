@@ -6128,48 +6128,51 @@ def test_foreach_nested():
         out = in1 * 2 + states[0]
         return (out, [out])
 
-    def step(in1, states):
+    def step_sym(in1, states):
         out1 = mx.sym.contrib.foreach(step_in, in1, states)
         out = mx.sym.broadcast_add(out1[0], states[0])
         return (out, [mx.sym.squeeze(mx.sym.slice(out, begin=(0, 0), end=(1, 2)))])
+    def step_nd(in1, states):
+        out1 = mx.nd.contrib.foreach(step_in, in1, states)
+        out = mx.nd.broadcast_add(out1[0], states[0])
+        return (out, [mx.nd.squeeze(mx.nd.slice(out, begin=(0, 0), end=(1, 2)))])
 
     data_sym = mx.sym.var("v1")
     state_sym = mx.sym.var("v2")
-    out = mx.sym.contrib.foreach(step, data_sym, [state_sym])
+    out, states = mx.sym.contrib.foreach(step_sym, data_sym, [state_sym])
+    assert isinstance(states, list)
+    assert len(states) == 1
+    out = mx.sym.broadcast_add(out, states[0])
 
-    out1 = _as_list(out[0])
-    for i in range(len(out1)):
-        out1[i] = out1[i]
-    out1.extend(out[1])
-    out = mx.sym.Group(out1)
     js_1 = out.tojson()
     out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
     assert js_1 == js_2
 
-    data = mx.nd.arange(4).reshape((1, 2, 2))
+    data = mx.nd.arange(8).reshape((2, 2, 2))
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
     e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
-    out = mx.nd.zeros_like(data)
-    for i in range(data.shape[0]):
-        data1 = data[i]
-        out1 = mx.nd.zeros_like(data1)
-        for j in range(data1.shape[0]):
-            if (j > 0):
-                out1[j] = out1[j-1] + data1[j] * 2
-            else:
-                out1[j] = data1[j] * 2  + state
-        if (i > 0):
-            state = mx.nd.squeeze(mx.nd.slice(out[i-1], begin=(0, 0), end=(1, 2)))
-            out[i] = mx.nd.broadcast_add(out1, state)
-        else:
-            out[i] = mx.nd.broadcast_add(out1, state)
-    out = out
-    assert_almost_equal(out.asnumpy(), e.outputs[0].asnumpy(), rtol=0.001, atol=0.0001)
+    out_grads = []
+    for out in e.outputs:
+        out_grads.append(mx.nd.random.uniform(shape=out.shape))
+    e.backward(out_grads)
+
+    data.attach_grad()
+    state.attach_grad()
+    with mx.autograd.record():
+        out, states = mx.nd.contrib.foreach(step_nd, data, [state])
+        assert isinstance(states, list)
+        assert len(states) == 1
+        res = mx.nd.broadcast_add(out, states[0])
+    assert_almost_equal(res.asnumpy(), e.outputs[0].asnumpy(), rtol=0.001, atol=0.0001)
+
+    res.backward(out_grads[0])
+    assert_almost_equal(data.grad.asnumpy(), data_grad.asnumpy())
+    assert_almost_equal(state.grad.asnumpy(), state_grad.asnumpy())
 
 
 @with_seed()
