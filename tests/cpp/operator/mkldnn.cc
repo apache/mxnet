@@ -810,15 +810,6 @@ TEST(IMPERATIVE, BinaryBackwardsOp) {
   TestOp(attrs, InitDefaultArray, VerifySumBackwardsResult);
 }
 
-void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
-  float *in1 = static_cast<float*>(in_mem1.get_data_handle());
-  float *in2 = static_cast<float*>(in_mem2.get_data_handle());
-  float *out = static_cast<float*>(out_mem.get_data_handle());
-  for (size_t i = 0; i < in_mem1.get_primitive_desc().get_size() / sizeof(float); i++) {
-    ASSERT_EQ(in1[i] + in2[i], out[i]);
-  }
-}
-
 TEST(MKLDNN_BASE, MKLDNNSum) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
   std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(InitDefaultArray, true);
@@ -835,7 +826,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 
     for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
-      auto in_mem2 = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
 
       // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
@@ -844,7 +835,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
-      VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
+      VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
     }
 
     // in place
@@ -857,7 +848,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     auto old_mem = orig_arr.arr.GetMKLDNNData();
     op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
-    VerifySumMemory(*old_mem, *input_mem2, *input_mem);
+    VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
 }
 
