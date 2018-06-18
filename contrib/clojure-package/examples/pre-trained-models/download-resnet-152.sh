@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
 
 mkdir -p model
 cd model

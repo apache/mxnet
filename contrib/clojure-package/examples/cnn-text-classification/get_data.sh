@@ -17,6 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 mkdir -p data/mr-data
 cd data/mr-data
 wget https://raw.githubusercontent.com/yoonkim/CNN_sentence/master/rt-polarity.neg
