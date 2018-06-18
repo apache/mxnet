@@ -76,8 +76,8 @@ void TestComputeTreesRandomized( int num_gpus, float alpha, int backtrack,
     std::fill(W.begin(), W.end(), 0.f);
     GenerateMatrix(W, num_gpus, k, gen);
     satisfied = IsSatisfactory(W, num_gpus, depth);
-    if (!satisfied)
-      LOG(WARNING) << k << " is not satisfactory";
+    //if (!satisfied)
+    //  LOG(WARNING) << k << " is not satisfactory";
   }
 
   std::vector<std::vector<size_t>> topo;
@@ -159,10 +159,10 @@ TEST(GpuTopology, TestComputeTreeWeight) {
                         0, 0, 2, 0, 2, 3, 0};
 
   std::vector<int> state0 = {3, 2, 1, 5, 0, 0, 4, 6};
-  ASSERT_EQ(mxnet::kvstore::ComputeTreeWeight(W, state0, 7, 3), 16);
+  ASSERT_EQ(mxnet::kvstore::ComputeTreeWeight(W, state0, 7, 3, false), 16);
 
   std::vector<int> state1 = {3, 2, 0, 4, 1, 1, 5, 6};
-  ASSERT_EQ(mxnet::kvstore::ComputeTreeWeight(W, state1, 7, 3), 17);
+  ASSERT_EQ(mxnet::kvstore::ComputeTreeWeight(W, state1, 7, 3, false), 17);
 }
 
 TEST(GpuTopology, TestPostprocess) {
@@ -179,10 +179,16 @@ TEST(GpuTopology, TestPostprocess) {
     ASSERT_EQ(result1[i], correct1[i]);
 
   std::vector<int> result2 = {5, 4, 1, 3, 1, 0, 2, 0};
-  std::vector<int> correct2= {5, 4, 1, 3, 1, 0, 2, 2};
+  std::vector<int> correct2= {5, 4, 5, 3, 1, 0, 2, 2};
   mxnet::kvstore::Postprocess( result2, 6, 3 );
   for (unsigned i = 0; i < correct2.size(); ++i)
     ASSERT_EQ(result2[i], correct2[i]);
+
+  std::vector<int> result3 = {10,10, 0, 0, 0, 0, 0, 1, 2, 3, 6, 4, 7, 5, 8, 9};
+  std::vector<int> correct3= {10,10,10,10, 0, 0, 0, 1, 2, 3, 6, 4, 7, 5, 8, 9};
+  mxnet::kvstore::Postprocess( result3, 11, 4 );
+  for (unsigned i = 0; i < correct3.size(); ++i)
+    ASSERT_EQ(result3[i], correct3[i]);
 }
 
 TEST(GpuTopology, TestDepth) {
@@ -529,7 +535,7 @@ TEST(GpuTopology, TestComputeTrees1) {
   float alpha = 0.7;
   bool backtrack = true;
   // Do 100 randomized tests per GPU count from 2 to 16
-  for (int num_gpus = 2; num_gpus <= 8; ++num_gpus) {
+  for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized( num_gpus, alpha, backtrack, gen );
     }
@@ -543,7 +549,7 @@ TEST(GpuTopology, TestComputeTrees2) {
   bool backtrack = false;
   // Do 100 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized( num_gpus, alpha, backtrack, gen );
     }
   }

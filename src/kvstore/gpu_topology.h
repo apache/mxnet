@@ -645,12 +645,14 @@ bool IsValid( const std::vector<T>&   W,
 
   // If we are at last recursive level, we can apply a more stringent check:
   //   -if some GPU is not found, then we are in invalid state
-  } else if (row == static_cast<int>(state.size()))
-    for (int i = 0; i < num_elements; ++i)
+  } else if (row == static_cast<int>(state.size())) {
+    for (int i = 0; i < num_elements; ++i) {
       if (found_vec[i] == 0) {
         //std::cout << "Not valid: " << i << " not found" << std::endl;
         return false;
       }
+    }
+  }
 
   return true;
 }
@@ -674,36 +676,47 @@ bool IsValid( const std::vector<T>&   W,
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6    // GPU3 knows not to make redundant send to itself
 void Postprocess( std::vector<int>& result, int num_elements, int depth) {
+  for (int level = depth - 1; level >= 0; --level) {
+    int stride = 1 << level;
+    std::vector<int> histogram_above(num_elements,0);
+    for (unsigned i = 0; i < result.size(); i += 2*stride) {
+      int val = result[i];
+      histogram_above[val]++;
+    }
+    std::vector<int> histogram(num_elements, 0);
+    for (unsigned i = 0; i < result.size(); i += stride) {
+      int val = result[i];
+      histogram[val]++;
+    }
+    //PrintVector("above histo", histogram_above);
 
-  std::vector<int> histogram(num_elements, 0);
-  for (unsigned i = 0; i < result.size(); ++i) {
-    int val = result[i];
-    histogram[val]++;
-  }
-
-  int stride = 1;
-  for (int j = result.size()-1; j-stride >= 0; j -= 2*stride) {
-    //std::cout << "Comparing " << j << " and " << j-stride << std::endl;
-    int from = result[j];
-    int dest = result[j-stride];
-    if (histogram[from] > 1 && from != dest) {
-      //PrintVector("Old histogram", histogram);
-      //std::cout << "Swapping from " << from << " to " << dest << " on indices " << j << " and " << j-stride << std::endl;
-      result[j] = dest;
-      histogram[from]--;
-      //PrintVector("New histogram", histogram);
-      //PrintVector("New result", result);
+    for (int i = result.size()-stride; i-stride >= 0; i -= 2*stride) {
+      //std::cout << "Comparing " << i << " and " << i-stride << std::endl;
+      int from = result[i];
+      int dest = result[i-stride];
+      if ((histogram[from] > 1 || histogram_above[from] >= 1) && from != dest) {
+        //PrintVector("Old histogram", histogram);
+        //std::cout << "Swapping from " << from << " to " << dest << " on indices " << i << " and " << i-stride << std::endl;
+        result[i] = dest;
+        histogram[from]--;
+        //PrintVector("New histogram", histogram);
+        //PrintVector("New result", result);
       }
     }
+  }
 }
 
 // Given a spanning tree encoded as a state (result) and weight of each edge
 // in the link topology graph, compute its weight.
+// @input: penalty controls whether or not penalties are applied to tree
+//         -usually turned on when backtracking to get better solutions
+//         -usually turned off when outside the penalty to get weight of tree
 template <typename T>
 T ComputeTreeWeight( const std::vector<T>&   W, 
                      const std::vector<int>& result, 
                      int                     num_elements,
-                     int                     depth) {
+                     int                     depth,
+                     bool                    penalty ) {
   T weight = 0.f;
   std::unordered_set<int> links_used;
 
@@ -719,7 +732,8 @@ T ComputeTreeWeight( const std::vector<T>&   W,
         // Penalize: (1) use of redundant edges in a single tree
         //           (2) repeated use of a GPU in a single tree at the same 
         //               level above the leaf level
-        if (links_used.find(from*num_elements+dest) != links_used.end()) {
+        if (links_used.find(from*num_elements+dest) != links_used.end() 
+            && penalty) {
           weight -= 100;
           //std::cout << "Penalty 1: " << from << " to " << dest << std::endl;
         }
@@ -729,7 +743,7 @@ T ComputeTreeWeight( const std::vector<T>&   W,
       }
 
       nodes_used[from] = true;
-      if (i > 0 && nodes_used[dest]) {
+      if (i > 0 && nodes_used[dest] && penalty) {
         weight -= 10;
         //std::cout << "Penalty 2: " << from << " and " <<  dest << " seen before\n";
       }
@@ -779,17 +793,18 @@ void FormTopology( const std::vector<int>& result,
 //   -binary
 //   -maximum weight 
 template <typename T>
-void Backtrack( const std::vector<T>& W,
+bool Backtrack( const std::vector<T>& W,
                 std::vector<int>&     state,
                 std::vector<int>&     best_result,
                 T&                    best_result_weight,
                 int                   row,
                 int                   num_elements,
-                int                   depth ) {
+                int                   depth,
+                bool                  optimal ) {
   if (row == static_cast<int>(state.size())) {
     std::vector<int> result = state;
     Postprocess(result, num_elements, depth);
-    T weight = ComputeTreeWeight(W, result, num_elements, depth);
+    T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
 
     // Save this spanning tree if it is highest weight tree found sofar
     if (weight > best_result_weight) {
@@ -801,20 +816,24 @@ void Backtrack( const std::vector<T>& W,
       //std::cout << "Not best weight: " << weight << " < " << best_result_weight << std::endl;
       //PrintVector("Not best", result);
     }
-    return;
+    return !optimal;
   }
 
   // If not last recursive level, try to find valid tree for next level
+  bool stop = false;
   for (int j = 0; j < num_elements; ++j) {
     state[row] = j;
     //PrintVector("Trying state", state);
     if (IsValid(W, state, num_elements, row+1, depth)) {
-      Backtrack( W, state, best_result, best_result_weight, row+1, num_elements,
-          depth );
+      stop = Backtrack( W, state, best_result, best_result_weight, row+1, 
+          num_elements, depth, optimal );
       state[row] = -1;
     } else
       state[row] = -1;
+    if (stop)
+      return stop;
   }
+  return stop;
 }
 
 // Apply penalty factor alpha to each link in link topology graph that is used
@@ -857,6 +876,7 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
   scan_row.clear();
 
   // Compute depth
+  // num_elements: depth
   // 5: 3
   // 6: 3
   // 7: 3
@@ -874,8 +894,14 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
   // Place root and try all combinations
   state[0] = root;
 
-  Backtrack( W, state, result, result_weight, 1, num_elements, depth );
+  Backtrack( W, state, result, result_weight, 1, num_elements, depth, false );
+  //result_weight = ComputeTreeWeight(W, result, num_elements, depth, false);
+  //Backtrack( W, state, result, result_weight, 1, num_elements, depth, true  );
+  //T result_weight2 = ComputeTreeWeight(W, result, num_elements, depth, false);
   //PrintVector("result", result);
+  //std::cout << "First solution reached " << 
+  //    (result_weight2-result_weight)/result_weight2 << " of optimal " <<
+  //    result_weight << " " << result_weight2 << "\n";
   FormTopology( result, topo_row, scan_row, depth );
 }
 
@@ -1008,6 +1034,7 @@ void ComputeTrees( const std::vector<T>&             W,
   for (int i = 0; i < num_elements; ++i)
     PrintTopo("Topo", topo[i], scan[i]);
 
+  PrintMatrix("W", W, num_elements, num_elements);
   PrintMatrix("Links", adj, num_elements, num_elements);
 }
 
