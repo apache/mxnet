@@ -366,7 +366,6 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
-  // for backward operators
   int num_inputs;
   int num_outputs;
 };
