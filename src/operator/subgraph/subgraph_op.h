@@ -41,12 +41,15 @@ class SubgraphSelector {
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
   // Determine if the output node should be selected for a subgraph.
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  // Post processes pre-selected subgraph nodes. Remove un-qualified nodes
+  // from the candidate list.
+  virtual void Filter(nnvm::Graph* g, std::vector<nnvm::Node*>* candidates) {}
 };
 
 using SubgraphSelectorPtr = std::shared_ptr<SubgraphSelector>;
 
-/*
- * This provides a set of properties for partitioning a graph into subgraphs,
+/*!
+ * \brief This provides a set of properties for partitioning a graph into subgraphs,
  * reconstructing a new graph from the subgraphs and creating a subgraph
  * operator to execute the subgraph.
  */
