@@ -103,6 +103,7 @@ object ClassificationExample {
       sc.stop()
     } catch {
       case e: Throwable =>
+        e.printStackTrace()
         logger.error(e.getMessage, e)
         sys.exit(-1)
     }

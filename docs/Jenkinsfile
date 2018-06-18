@@ -47,13 +47,13 @@ def init_git() {
 
 try {
   stage('Build Docs') {
-    node('mxnetlinux-cpu') {
+    node('restricted-mxnetlinux-cpu') {
       ws('workspace/docs') {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
             archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
-            build 'website build - test publish'
+            build 'restricted-website-publish'
         }
       }
     }
@@ -62,13 +62,13 @@ try {
   // set build status to success at the end
   currentBuild.result = "SUCCESS"
 } catch (caughtError) {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     sh "echo caught ${caughtError}"
     err = caughtError
     currentBuild.result = "FAILURE"
   }
 } finally {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     // Only send email if master failed
     if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
       emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'

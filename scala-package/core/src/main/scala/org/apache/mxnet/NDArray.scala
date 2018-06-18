@@ -65,12 +65,12 @@ object NDArray {
     val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
     args.foreach {
-      case arr: NDArray =>
-        ndArgs.append(arr)
-      case arrFunRet: NDArrayFuncReturn =>
-        arrFunRet.arr.foreach(ndArgs.append(_))
-      case arg =>
-        posArgs.append(arg.toString)
+        case arr: NDArray =>
+          ndArgs.append(arr)
+        case arrFunRet: NDArrayFuncReturn =>
+          arrFunRet.arr.foreach(ndArgs.append(_))
+        case arg =>
+          posArgs.append(arg.toString)
     }
 
     require(posArgs.length <= function.arguments.length,
@@ -80,6 +80,7 @@ object NDArray {
       (Option(kwargs).getOrElse(Map.empty[String, String])
         ++ function.arguments.slice(0, posArgs.length).zip(posArgs) - "out"
       ).map { case (k, v) => k -> v.toString }
+
 
     val (oriOutputs, outputVars) =
       if (kwargs != null && kwargs.contains("out")) {
@@ -535,6 +536,10 @@ object NDArray {
     val handleRef = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
     new NDArray(handleRef.value)
+  }
+
+  private def _crop_assign(kwargs: Map[String, Any] = null)(args: Any*) : NDArrayFuncReturn = {
+    genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
   // TODO: imdecode
