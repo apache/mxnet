@@ -177,6 +177,23 @@ Gluon support will come later and may or may not be built on the Scala gluon api
 
 See the Confluence page: https://cwiki.apache.org/confluence/display/MXNET/MXNet+Clojure
 
+## Building and Deploying Jars
+The process to build and deploy the jars currently is a manual process using the `lein` build tool and `Clojars`, the Clojure dependency hosting platform.
+
+There is one jar for every system supported.
+
+- Comment out the line in the `project.clj` for the system that you are targeting, (example OSX cpu you would uncomment out ` [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.0"]` but leave the linux deps commented)
+- Change the `defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "0.1.1-SNAPSHOT"` in the project to reference the correct version number and jar description. For example changing the line to be `org.apache.mxnet.contrib.clojure/mxnet-osx-cpu "0.1.2"` would create a jar with the group id of `org.apache.mxnet.contrib.clojure` and the artifact name of `mxnet-osx-cpu` and the version of `0.1.2`
+- Run `lein clean`
+- Run `lein jar` to create the jar
+- Check that the jar looks alright in the `/target` directory.
+
+To deploy the jar to Clojars, you do `lein deploy clojars` and it will prompt you for your username and password.
+
+_Note: Integration with deployment to Nexus can be enabled too for the future [https://help.sonatype.com/repomanager2/maven-and-other-build-tools/leiningen](https://help.sonatype.com/repomanager2/maven-and-other-build-tools/leiningen)_
+
+You would repeat this process out on the AWS Deep Learning AMI, once for the linux cpu and once for the linux gpu.
+
 
 ### Deferred
 * Feed Forward API
