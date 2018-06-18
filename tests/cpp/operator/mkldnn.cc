@@ -95,20 +95,6 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
 static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-  size_t size = blob.Size();
-  for (size_t i = 0; i < size; i++) {
-    if (is_rand) {
-      data[i] = std::rand() % 100;
-    } else {
-      data[i] = i;
-    }
-  }
-}
-
-// Init arrays with negative and positive values
-static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
-  const TBlob &blob = arr->data();
-  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   int size = blob.Size();
 
   for (int i = 0; i < size; i++)
@@ -120,14 +106,13 @@ static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
     }
 }
 
-using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
 using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs,
     const std::vector<NDArray *> &out_arrs)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
-                            InitFunc init_fn, bool is_rand = false) {
-    init_fn(arr, is_rand);
+                            bool is_rand = false) {
+    InitDefaultArray(arr, is_rand);
     arr->MKLDNNDataReorderAsync(pd);
     arr->WaitToRead();
 }
@@ -335,7 +320,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
         for (int i = 0; i < from_pd.desc().data.ndims; i++)
           printf("%d, ", from_pd.desc().data.dims[i]);
         printf("), format: %d\n", from_pd.desc().data.format);
-        InitMKLDNNArray(&arr, from_pd, InitDefaultArray);
+        InitMKLDNNArray(&arr, from_pd);
         for (auto to_pd : pds) {
           if (to_pd.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
             const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(to_pd);
@@ -461,7 +446,7 @@ OpAttrs GetSumBackwardsOp() {
  *    reordered to 5 dimensions.
  *
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -472,7 +457,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
-    init_fn(&in_arrs.back().arr, rand);
+    InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
@@ -487,7 +472,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
         desc = ss.str();
       }
       in_arrs.emplace_back(arr, desc);
-      InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn);
+      InitMKLDNNArray(&in_arrs.back().arr, pd);
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());
@@ -498,7 +483,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
            << shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd, init_fn);
+      InitMKLDNNArray(&arr, pd);
       in_arrs.emplace_back(arr.Slice(1, arr.shape()[0] - 1), desc);
     }
   }
@@ -506,7 +491,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
 }
 
 TEST(MKLDNN_NDArray, GetTestInputArrays) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   int mkldnn_count = 0, mkldnn_view_count = 0;
   for (auto arr : in_arrs) {
     if (arr.arr.IsView() && arr.arr.IsMKLDNNData()) {
@@ -543,20 +528,19 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
  * 9. Reused NDArray with MKLDNN layout of different dimensions.
  */
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
-                                         const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                         const InitFunc init_fn) {
+                                         const std::vector<mkldnn::memory::primitive_desc> &pds) {
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
   // Type 1.
   NDArray arr(shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
-  init_fn(&in_arrs.back().arr, true);
+  InitDefaultArray(&in_arrs.back().arr, true);
 
   // Type 4.
   TShape tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  init_fn(&arr0, true);
+  InitDefaultArray(&arr0, true);
   in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
@@ -565,14 +549,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   s[0] = shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
-  init_fn(&arr1, true);
+  InitDefaultArray(&arr1, true);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-  init_fn(&arr2, true);
+  InitDefaultArray(&arr2, true);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
@@ -580,7 +564,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  init_fn(&arr3, true);
+  InitDefaultArray(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
 
 
@@ -598,7 +582,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn, true);
+    InitMKLDNNArray(&in_arrs.back().arr, pd, true);
 
     // Type 8, 9.
     // Get a reused version.
@@ -606,7 +590,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, pd, init_fn, true);
+    InitMKLDNNArray(&arr, pd, true);
     desc = "Reused MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
       std::stringstream ss;
@@ -707,10 +691,9 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-        InitDefaultArray);
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
         in_arr.arr = in_arr.arr.Reorder2Default();
@@ -724,7 +707,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
+void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
@@ -733,10 +716,10 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(init_fn);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
+      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
@@ -755,7 +738,7 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   }
 
   for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(init_fn);
+    in_arrs = GetTestInputArrays();
     for (auto arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
       if (arr.arr.IsView())
@@ -782,45 +765,44 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
 
 TEST(IMPERATIVE, UnaryOp) {
   OpAttrs attrs = GetCopyOp();
-  TestOp(attrs, InitDefaultArray, VerifyCopyResult);
+  TestOp(attrs, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, CopyBackwardsOp) {
   OpAttrs attrs = GetCopyBackwardsOp();
-  TestOp(attrs, InitDefaultArray, VerifyCopyResult);
+  TestOp(attrs, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
-  TestOp(attrs, InitNegPosArray, VerifyActResult);
+  TestOp(attrs, VerifyActResult);
 }
 
 TEST(IMPERATIVE, ActBackwardsOp) {
   OpAttrs attrs = GetReluBackwardsOp();
-  TestOp(attrs, InitNegPosArray, VerifyActBackwardsResult);
+  TestOp(attrs, VerifyActBackwardsResult);
 }
 
 TEST(IMPERATIVE, BinaryOp) {
   OpAttrs attrs = GetSumOp();
-  TestOp(attrs, InitDefaultArray, VerifySumResult);
+  TestOp(attrs, VerifySumResult);
 }
 
 TEST(IMPERATIVE, BinaryBackwardsOp) {
   OpAttrs attrs = GetSumBackwardsOp();
-  TestOp(attrs, InitDefaultArray, VerifySumBackwardsResult);
+  TestOp(attrs, VerifySumBackwardsResult);
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(InitDefaultArray, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
       continue;
 
@@ -843,7 +825,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     auto input_mem2 = in_arr2.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     PrintVerifyMsg(orig_arr, in_arr);
-    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
