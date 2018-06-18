@@ -599,9 +599,8 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
           static_cast<uint64_t>(grad_out.shape_[0])*
           static_cast<uint64_t>(grad_out.shape_[1]);
 
-        const char *type = getenv("MXNET_FORCE_ADDTAKEGRAD");
-        const bool default_addtakegrad = (type == nullptr);
-
+        static bool default_addtakegrad =
+            dmlc::GetEnv("MXNET_FORCE_ADDTAKEGRAD", false);
         if (!default_addtakegrad || (shape_out_prod < (uint64_t)16384 &&
                                      shape_in_prod < (uint64_t)16384)) {
           AddTakeGrad(grad_in, data, grad_out);
