@@ -866,7 +866,6 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       orig_output.WaitToRead();
-      auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, out_arr);
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, in_mem->get_primitive_desc(), kWriteTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
@@ -898,7 +897,6 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       PrintVerifyMsg(in_arr, out_arr);
-      auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, in_mem->get_primitive_desc(), kAddTo);
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
