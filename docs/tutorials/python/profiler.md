@@ -196,7 +196,10 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
-If you would like to learn more about the profiler, there are more examples available [here](https://github.com/apache/incubator-mxnet/tree/master/example/profiler).
+### Further reading
+
+- [Examples using MXNet profiler.](https://github.com/apache/incubator-mxnet/tree/master/example/profiler)
+- [Some tips for improving MXNet performance.](https://mxnet.incubator.apache.org/faq/perf.html)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
 
