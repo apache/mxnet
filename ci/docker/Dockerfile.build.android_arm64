@@ -18,13 +18,20 @@
 #
 # Dockerfile to build MXNet for Android ARM64/ARMv8
 
+FROM ubuntu:16.04 as ccachebuilder
+
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+COPY install/ubuntu_ccache.sh /work/
+RUN /work/ubuntu_ccache.sh
+
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
-# The cross-compiling emulator
+# extract ccache binary into latest context
+COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
+
 RUN apt-get update && apt-get install -y \
-  qemu-user \
-  qemu-user-static \
   unzip
 
 ENV CROSS_TRIPLE=aarch64-linux-android
@@ -51,6 +58,7 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.schema-version="1.0"
 
 ENV ARCH aarch64
+ENV ANDROID_NDK_REVISION 15c
 
 ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
 ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++

@@ -65,6 +65,8 @@ parser.add_argument('--stack-rnn', default=False,
                     help='stack fused RNN cells to reduce communication overhead')
 parser.add_argument('--dropout', type=float, default='0.0',
                     help='dropout probability (1.0 - keep probability)')
+parser.add_argument('--rnntype', type=str, default='lstm',
+                    help='rnn type: gru and lstm are supported')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -97,13 +99,13 @@ def train(args):
         cell = mx.rnn.SequentialRNNCell()
         for i in range(args.num_layers):
             cell.add(mx.rnn.FusedRNNCell(args.num_hidden, num_layers=1,
-                                         mode='lstm', prefix='lstm_l%d'%i,
+                                         mode=args.rnntype, prefix='%s_l%d'%(args.rnntype,i),
                                          bidirectional=args.bidirectional))
-            if args.dropout > 0 and i < args.num_layers - 1:
-                cell.add(mx.rnn.DropoutCell(args.dropout, prefix='lstm_d%d'%i))
+            if args.dropout > 0 and i < args.num_layers - 1 and args.rnntype == 'lstm':
+                cell.add(mx.rnn.DropoutCell(args.dropout, prefix='%s_d%d'%(args.rnntype,i)))
     else:
         cell = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers, dropout=args.dropout,
-                                   mode='lstm', bidirectional=args.bidirectional)
+                                   mode=args.rnntype, bidirectional=args.bidirectional)
 
     def sym_gen(seq_len):
         data = mx.sym.Variable('data')
@@ -168,16 +170,25 @@ def test(args):
 
     if not args.stack_rnn:
         stack = mx.rnn.FusedRNNCell(args.num_hidden, num_layers=args.num_layers,
-                mode='lstm', bidirectional=args.bidirectional).unfuse()
+                mode=args.rnntype, bidirectional=args.bidirectional).unfuse()
     else:
         stack = mx.rnn.SequentialRNNCell()
         for i in range(args.num_layers):
-            cell = mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dl0_'%i)
-            if args.bidirectional:
-                cell = mx.rnn.BidirectionalCell(
-                        cell,
-                        mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_%dr0_'%i),
-                        output_prefix='bi_lstm_%d'%i)
+            if args.rnntype == 'lstm':
+                cell = mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='%s_%dl0_'%(args.rnntype,i))
+                if args.bidirectional:
+                    cell = mx.rnn.BidirectionalCell(
+                            cell,
+                            mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='%s_%dr0_'%(args.rnntype,i)),
+                            output_prefix='bi_%s_%d'%(args.rnntype,i))
+            elif args.rnntype == 'gru':
+                cell = mx.rnn.GRUCell(num_hidden=args.num_hidden, prefix='%s_%dl0_'%(args.rnntype,i))
+                if args.bidirectional:
+                    cell = mx.rnn.BidirectionalCell(
+                            cell,
+                            mx.rnn.GRUCell(num_hidden=args.num_hidden, prefix='%s_%dr0_'%(args.rnntype,i)),
+                            output_prefix='bi_%s_%d'%(args.rnntype,i))
+
             stack.add(cell)
 
     def sym_gen(seq_len):

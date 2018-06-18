@@ -61,7 +61,11 @@ private[mxnet] class MXNetParams extends Serializable {
   // jars on executors for running mxnet application
   var jars: Array[String] = null
   def runtimeClasspath: String = {
-    jars.map(jar => SparkFiles.get(new File(jar).getName)).mkString(":")
+    if (jars != null) {
+      jars.map(jar => SparkFiles.get(new File(jar).getName)).mkString(":")
+    } else {
+      ""
+    }
   }
 
   // java binary

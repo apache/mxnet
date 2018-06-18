@@ -188,7 +188,8 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   // estimate unique temp space
   IType* data_ptr = data.dptr<IType>();
   size_t *null_ptr = nullptr;
-  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, data_ptr, data_ptr,
+  // unique operations will be applied on sorted data
+  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, sorted_data, sorted_data,
     null_ptr, data_size, Stream<gpu>::GetStream(s));
   // One more space reserved for unique count
   size_t temp_workspace_bytes = std::max(unique_workspace_bytes,

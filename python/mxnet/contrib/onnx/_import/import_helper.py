@@ -32,6 +32,10 @@ from .op_translations import reciprocal, squareroot, power, exponent, _log, unsq
 from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
 from .op_translations import reduce_prod, avg_pooling, max_pooling
 from .op_translations import argmax, argmin, maximum, minimum
+from .op_translations import clip, reduce_log_sum, reduce_log_sum_exp
+from .op_translations import reduce_sum_square, reduce_l2, max_roi_pooling, instance_norm
+from .op_translations import log_softmax, softsign, lesser, greater, equal
+from .op_translations import logical_and, logical_or, logical_xor, logical_not
 
 # convert_map defines maps of ONNX operator names to converter functor(callable)
 # defined in the op_translations module.
@@ -102,6 +106,22 @@ _convert_map = {
     # Sorting and Searching
     'ArgMax'            : argmax,
     'ArgMin'            : argmin,
-    'Max'               : maximum, #elemwise maximum
-    'Min'               : minimum #elemwise minimum
+    'Max'               : maximum,
+    'Min'               : minimum,
+    'Clip'              : clip,
+    'ReduceLogSum'      : reduce_log_sum,
+    'ReduceLogSumExp'   : reduce_log_sum_exp,
+    'ReduceSumSquare'   : reduce_sum_square,
+    'ReduceL2'          : reduce_l2,
+    'MaxRoiPool'        : max_roi_pooling,
+    'InstanceNormalization' : instance_norm,
+    'LogSoftmax'        : log_softmax,
+    'Softsign'          : softsign,
+    'Less'              : lesser,
+    'Greater'           : greater,
+    'Equal'             : equal,
+    'And'               : logical_and,
+    'Xor'               : logical_xor,
+    'Not'               : logical_not,
+    'Or'                : logical_or
 }

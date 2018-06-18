@@ -331,7 +331,7 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
                              dispatch_mode, wanted_mode);
 }
 
-static void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
+void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
   using namespace mshadow;
   ConvolutionParam param_;
   try {

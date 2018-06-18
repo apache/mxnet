@@ -1,5 +1,4 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
+/* * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -22,6 +21,7 @@
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
 */
+#include <stdlib.h>
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
@@ -43,7 +43,37 @@ TEST(Storage, Basic_CPU) {
 }
 
 #if MXNET_USE_CUDA
-TEST(Storage, Basic_GPU) {
+TEST(Storage_GPU, Basic_GPU) {
+  if (mxnet::test::unitTestsWithCuda) {
+    putenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF=20");
+    putenv("MXNET_GPU_MEM_POOL_TYPE=Round");
+    auto &&storage = mxnet::Storage::Get();
+    mxnet::Context context_gpu = mxnet::Context::GPU(0);
+    auto &&handle = storage->Alloc(32, context_gpu);
+    auto &&handle2 = storage->Alloc(2097153, context_gpu);
+    EXPECT_EQ(handle.ctx, context_gpu);
+    EXPECT_EQ(handle.size, 32);
+    EXPECT_EQ(handle2.ctx, context_gpu);
+    EXPECT_EQ(handle2.size, 2097153);
+    auto ptr = handle.dptr;
+    auto ptr2 = handle2.dptr;
+    storage->Free(handle);
+    storage->Free(handle2);
+
+    handle = storage->Alloc(4095, context_gpu);
+    EXPECT_EQ(handle.ctx, context_gpu);
+    EXPECT_EQ(handle.size, 4095);
+    EXPECT_EQ(handle.dptr, ptr);
+    storage->Free(handle);
+
+    handle2 = storage->Alloc(3145728, context_gpu);
+    EXPECT_EQ(handle2.ctx, context_gpu);
+    EXPECT_EQ(handle2.size, 3145728);
+    EXPECT_EQ(handle2.dptr, ptr2);
+    storage->Free(handle2);
+    unsetenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF");
+    unsetenv("MXNET_GPU_MEM_POOL_TYPE");
+  }
   if (mxnet::test::unitTestsWithCuda) {
     constexpr size_t kSize = 1024;
     mxnet::Context context_gpu = mxnet::Context::GPU(0);

@@ -16,7 +16,26 @@
   <properties>
     <spark.version>1.6.3</spark.version>
   </properties>
-
+  <profiles>
+    <profile>
+      <id>osx-x86_64-cpu</id>
+      <properties>
+        <platform>osx-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-cpu</id>
+      <properties>
+        <platform>linux-x86_64-cpu</platform>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64-gpu</id>
+      <properties>
+        <platform>linux-x86_64-gpu</platform>
+      </properties>
+    </profile>
+  </profiles>
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>

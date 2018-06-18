@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, random_seed
+from common import setup_module, with_seed, random_seed, teardown
 import scipy.stats as ss
 
 def same(a, b):
@@ -293,31 +293,22 @@ def test_random_seed_setting_for_context():
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
-            # Currently python API does not provide a method to get the number of gpu devices.
-            # Waiting for PR #10354, which provides the method, to be merged.
-            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
-            try:
-                with mx.Context(dev_type, dev_id):
-                    ctx = mx.context.current_context()
-                    seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
+        for dev_id in range(0, mx.context.num_gpus() if dev_type == 'gpu' else 1):
+            with mx.Context(dev_type, dev_id):
+                ctx = mx.context.current_context()
+                seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
 
-                    # Check imperative. `multinomial` uses non-parallel rng.
-                    rnds = mx.nd.random.multinomial(data=mx.nd.array(probs, dtype=dtype), shape=num_samples)
-                    samples_imp.append(rnds.asnumpy())
+                # Check imperative. `multinomial` uses non-parallel rng.
+                rnds = mx.nd.random.multinomial(data=mx.nd.array(probs, dtype=dtype), shape=num_samples)
+                samples_imp.append(rnds.asnumpy())
 
-                    # Check symbolic. `multinomial` uses non-parallel rng.
-                    P = mx.sym.Variable("P")
-                    X = mx.sym.random.multinomial(data=P, shape=num_samples, get_prob=False)
-                    exe = X.bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
-                    set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
-                    exe.forward()
-                    samples_sym.append(exe.outputs[0].asnumpy())
-            except mx.MXNetError as e:
-                if str(e).find("invalid device ordinal") != -1:
-                    break
-                else:
-                    raise e
+                # Check symbolic. `multinomial` uses non-parallel rng.
+                P = mx.sym.Variable("P")
+                X = mx.sym.random.multinomial(data=P, shape=num_samples, get_prob=False)
+                exe = X.bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
+                set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
+                exe.forward()
+                samples_sym.append(exe.outputs[0].asnumpy())
         # The samples should be identical across different gpu devices.
         for i in range(1, len(samples_imp)):
             assert same(samples_imp[i - 1], samples_imp[i])
@@ -333,42 +324,33 @@ def test_parallel_random_seed_setting_for_context():
         samples_imp = []
         samples_sym = []
         # Collect random number samples from the generators of all devices, each seeded with the same number.
-        for dev_id in range(0, 16 if dev_type == 'gpu' else 1):
-            # Currently python API does not provide a method to get the number of gpu devices.
-            # Waiting for PR #10354, which provides the method, to be merged.
-            # As a temporal workaround, try first and catch the exception caused by the absence of the device with `dev_id`.
-            try:
-                with mx.Context(dev_type, dev_id):
-                    ctx = mx.context.current_context()
-                    # Avoid excessive test cpu runtimes.
-                    num_temp_seeds = 25 if dev_type == 'gpu' else 1
-                    # To flush out a possible race condition, run multiple times.
-                    for _ in range(20):
-                        # Create enough samples such that we get a meaningful distribution.
-                        shape = (200, 200)
-                        params = { 'low': -1.5, 'high': 3.0 }
-                        params.update(shape=shape, dtype=dtype)
+        for dev_id in range(0, mx.context.num_gpus() if dev_type == 'gpu' else 1):
+            with mx.Context(dev_type, dev_id):
+                ctx = mx.context.current_context()
+                # Avoid excessive test cpu runtimes.
+                num_temp_seeds = 25 if dev_type == 'gpu' else 1
+                # To flush out a possible race condition, run multiple times.
+                for _ in range(20):
+                    # Create enough samples such that we get a meaningful distribution.
+                    shape = (200, 200)
+                    params = { 'low': -1.5, 'high': 3.0 }
+                    params.update(shape=shape, dtype=dtype)
 
-                        # Check imperative. `uniform` uses parallel rng.
-                        seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
-                        rnds = mx.nd.random.uniform(**params)
-                        samples_imp.append(rnds.asnumpy())
+                    # Check imperative. `uniform` uses parallel rng.
+                    seed = set_seed_variously_for_context(ctx, 1, num_temp_seeds, seed_to_test)
+                    rnds = mx.nd.random.uniform(**params)
+                    samples_imp.append(rnds.asnumpy())
 
-                        # Check symbolic. `uniform` uses parallel rng.
-                        X = mx.sym.Variable("X")
-                        Y = mx.sym.random.uniform(**params) + X
-                        x = mx.nd.zeros(shape, dtype=dtype)
-                        xgrad = mx.nd.zeros(shape, dtype=dtype)
-                        yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
-                        set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
-                        yexec.forward(is_train=True)
-                        yexec.backward(yexec.outputs[0])
-                        samples_sym.append(yexec.outputs[0].asnumpy())
-            except mx.MXNetError as e:
-                if str(e).find("invalid device ordinal") != -1:
-                    break
-                else:
-                    raise e
+                    # Check symbolic. `uniform` uses parallel rng.
+                    X = mx.sym.Variable("X")
+                    Y = mx.sym.random.uniform(**params) + X
+                    x = mx.nd.zeros(shape, dtype=dtype)
+                    xgrad = mx.nd.zeros(shape, dtype=dtype)
+                    yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+                    set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
+                    yexec.forward(is_train=True)
+                    yexec.backward(yexec.outputs[0])
+                    samples_sym.append(yexec.outputs[0].asnumpy())
         # The samples should be identical across different gpu devices.
         for i in range(1, len(samples_imp)):
             assert same(samples_imp[i - 1], samples_imp[i])
