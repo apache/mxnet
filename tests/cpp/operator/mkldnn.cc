@@ -738,7 +738,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
 void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
-  std::vector<OpReqType> req(attrs.num_inputs);
+  std::vector<OpReqType> req(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
