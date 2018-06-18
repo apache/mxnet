@@ -758,7 +758,8 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
-        outputs[0]->WaitToRead();
+        for (auto output : outputs)
+          output->WaitToRead();
         verify_fn(inputs, outputs);
       }
     }
@@ -780,8 +781,8 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      inputs[0] = &orig.arr;
+      for (auto output : outputs)
+        output->WaitToRead();
       std::vector<NDArray *> orig_inputs(attrs.num_inputs);
       for (int i = 0; i < attrs.num_inputs; i++)
         orig_inputs[i] = &orig.arr;
