@@ -22,7 +22,8 @@
 
 set -ex
 pushd .
-export ANDROID_NDK_REVISION=15c
+# This environment variable comes from the docker file
+echo "Downloading android SDK rev ${ANDROID_NDK_REVISION}"
 curl -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
 unzip ./android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
 cd android-ndk-r${ANDROID_NDK_REVISION} && \

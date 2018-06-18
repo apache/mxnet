@@ -21,7 +21,7 @@ import os
 import pickle as pkl
 import unittest
 from nose.tools import raises
-from common import setup_module, with_seed, assertRaises, TemporaryDirectory
+from common import setup_module, with_seed, assertRaises, TemporaryDirectory, teardown
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
@@ -712,9 +712,8 @@ def test_order():
                  k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
     assert_almost_equal(nd_ret_argsort, gt)
 
-    # test topk with a big shape
-    a = mx.nd.arange(0, 54686454, step=1, repeat=1)
-    assert_almost_equal(a.topk(k=54686454).asnumpy(), a.asnumpy()[::-1])
+    a = mx.nd.arange(0, 1024, step=1, repeat=1)
+    assert_almost_equal(a.topk(k=1024).asnumpy(), a.asnumpy()[::-1])
 
     # Repeat those tests that don't involve indices.  These should pass even with
     # duplicated input data values (over many repeated runs with different random seeds,

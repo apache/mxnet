@@ -16,7 +16,7 @@
 # under the License.
 
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import random
 import warnings
 

@@ -31,7 +31,6 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
-# wrap compiler calls with ccache
 build_ccache_wrappers() {
     set -ex
 
@@ -63,6 +62,38 @@ build_ccache_wrappers() {
     export CXX=`pwd`/cxx
 }
 
+build_wheel() {
+
+    set -ex
+    pushd .
+
+    PYTHON_DIR=${1:-/work/mxnet/python}
+    BUILD_DIR=${2:-/work/build}
+
+    # build
+
+    export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
+
+    cd ${PYTHON_DIR}
+    python setup.py bdist_wheel --universal
+
+    # repackage
+
+    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
+    # mxnet folder, then repackage the wheel.
+    WHEEL=`readlink -f dist/*.whl`
+    TMPDIR=`mktemp -d`
+    unzip -d ${TMPDIR} ${WHEEL}
+    rm ${WHEEL}
+    cd ${TMPDIR}
+    mv *.data/data/mxnet/libmxnet.so mxnet
+    zip -r ${WHEEL} .
+    cp ${WHEEL} ${BUILD_DIR}
+    rm -rf ${TMPDIR}
+
+    popd
+}
+
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
 
@@ -70,27 +101,27 @@ build_jetson() {
     set -ex
     pushd .
 
-    build_ccache_wrappers
-
-    cp -f make/crosscompile.jetson.mk ./config.mk
-
+    cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
+    build_wheel /work/mxnet/python /work/mxnet/lib
+    popd
+}
 
-    # Fix pathing issues in the wheel.  We need to move libmxnet.so from the data folder to the
-    # mxnet folder, then repackage the wheel.
-    WHEEL=`readlink -f dist/*.whl`
-    TMPDIR=`mktemp -d`
-    unzip -d $TMPDIR $WHEEL
-    rm $WHEEL
-    cd $TMPDIR
-    mv *.data/data/mxnet/libmxnet.so mxnet
-    zip -r $WHEEL .
-    cp $WHEEL /work/build
-    rm -rf $TMPDIR
+report_ccache_usage() {
+    set -ex
+    pushd .
+
+    # Show global ccache summary at the end of each run.
+    ccache -s
+    if [ -e $CCACHE_LOGFILE ]
+    then
+        # Display local ccache log, excluding some overly verbose output.
+        cat $CCACHE_LOGFILE | grep -v "Config:" | grep -v "stats.lock"
+    else
+        echo "No ccache log found."
+    fi
+
     popd
 }
 
@@ -107,7 +138,7 @@ build_armv6() {
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
     cmake \
-        -DCMAKE_TOOLCHAIN_FILE=$CROSS_ROOT/Toolchain.cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
@@ -120,11 +151,10 @@ build_armv6() {
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+
+    ninja -v
+    report_ccache_usage
+    build_wheel
     popd
 }
 
@@ -132,21 +162,31 @@ build_armv7() {
     set -ex
     pushd .
     cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
     cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
+        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+
+    ninja -v
+    report_ccache_usage
+    build_wheel
     popd
 }
 
@@ -164,7 +204,8 @@ build_amzn_linux_cpu() {
         -DUSE_LAPACK=OFF\
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
+    report_ccache_usage
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
 }
 
@@ -173,13 +214,39 @@ build_arm64() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
+        -DSUPPORT_F16C=OFF\
+        -DUSE_OPENCV=OFF\
+        -DUSE_OPENMP=OFF\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=Release\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -G Ninja /work/mxnet
+    ninja -v
+    report_ccache_usage
+    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
+    cd /work/mxnet/python
+    python setup.py bdist_wheel --universal
+    cp dist/*.whl /work/build
+}
+
+build_android_armv7() {
+    set -ex
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF\
+        -DUSE_SSE=OFF\
+        -DSUPPORT_F16C=OFF\
+        -DUSE_LAPACK=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
+    ninja -v
+    report_ccache_usage
     export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
     cd /work/mxnet/python
     python setup.py bdist_wheel --universal
@@ -189,9 +256,15 @@ build_arm64() {
 build_android_arm64() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+# There are other ways for CMake to cross compile android, like setting the following variables
+# below. But right not it doesn't work as expected, we need to find what's the best strategy to 
+# build with CMake in Android.
+#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
+#        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
+#        -DCMAKE_SYSTEM_NAME=Android \
+#
+    cmake\
+        -DANDROID=ON \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DUSE_LAPACK=OFF\
@@ -201,11 +274,7 @@ build_android_arm64() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    ninja -v
 }
 
 build_centos7_cpu() {
@@ -213,6 +282,7 @@ build_centos7_cpu() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
+
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -220,6 +290,8 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_centos7_mkldnn() {
@@ -227,6 +299,7 @@ build_centos7_mkldnn() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
+
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -234,6 +307,8 @@ build_centos7_mkldnn() {
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_centos7_gpu() {
@@ -267,6 +342,8 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang39() {
@@ -283,6 +360,8 @@ build_ubuntu_cpu_clang39() {
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50() {
@@ -299,6 +378,8 @@ build_ubuntu_cpu_clang50() {
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
@@ -315,6 +396,8 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
@@ -331,17 +414,23 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_cpu_mkldnn() {
     set -ex
+
     build_ccache_wrappers
+
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_gpu() {
@@ -350,7 +439,9 @@ build_ubuntu_gpu() {
 
 build_ubuntu_gpu_mkldnn() {
     set -ex
+
     build_ccache_wrappers
+
     make  \
         DEV=1                         \
         USE_CPP_PACKAGE=1             \
@@ -360,6 +451,8 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         -j$(nproc)
+
+    report_ccache_usage
 }
 
 build_ubuntu_gpu_cuda91_cudnn7() {
@@ -406,6 +499,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
+    report_ccache_usage
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
     cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
     mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
@@ -427,6 +521,7 @@ build_ubuntu_gpu_cmake() {
         /work/mxnet
 
     ninja -v
+    report_ccache_usage
 }
 
 
@@ -448,9 +543,9 @@ unittest_ubuntu_python2_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/unittest
-    nosetests-2.7 --verbose tests/python/train
-    nosetests-2.7 --verbose tests/python/quantization
+    nosetests-2.7 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-2.7 --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    nosetests-2.7 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
@@ -460,20 +555,19 @@ unittest_ubuntu_python3_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/unittest
-    nosetests-3.4 --verbose tests/python/quantization
+    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
-    export PYTHONPATH=./python/ 
+    export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/unittest
-    nosetests-3.4 --verbose tests/python/quantization
-    nosetests-3.4 --verbose tests/python/mkl
+    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
 
 unittest_ubuntu_python2_gpu() {
@@ -483,7 +577,7 @@ unittest_ubuntu_python2_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/gpu
+    nosetests-2.7 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 tutorialtest_ubuntu_python3_gpu() {
@@ -494,7 +588,8 @@ tutorialtest_ubuntu_python3_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python3
-    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 tutorialtest_ubuntu_python2_gpu() {
@@ -505,7 +600,8 @@ tutorialtest_ubuntu_python2_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python2
-    cd /work/mxnet/tests/tutorials && nosetests-3.4 test_tutorials.py --nologcapture
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -515,7 +611,7 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/gpu
+    nosetests-3.4 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -527,7 +623,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --verbose tests/python/quantization_gpu
+    nosetests-2.7 --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -539,7 +635,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --verbose tests/python/quantization_gpu
+    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_ubuntu_cpu_scala() {
@@ -585,14 +681,14 @@ unittest_ubuntu_gpu_R() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/unittest
-    python3.6 -m "nose" --with-timer --verbose tests/python/train
+    python3.6 -m "nose" --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    python3.6 -m "nose" --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-timer --verbose tests/python/gpu
+    python3.6 -m "nose" --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {

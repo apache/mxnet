@@ -30,13 +30,20 @@ FROM dockcross/linux-armv7
 # extract ccache binary into latest context
 COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
-ENV ARCH armv71
-ENV CC /usr/bin/arm-linux-gnueabihf-gcc
-ENV CXX /usr/bin/arm-linux-gnueabihf-g++
+ENV ARCH armv7l
+ENV HOSTCC gcc
+ENV TARGET ARMV7
 
-RUN apt-get update && \
-    apt-get install -y libopenblas-dev:armhf && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /work/deps
+
+COPY install/ubuntu_arm.sh /work/
+RUN /work/ubuntu_arm.sh
+
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
+
+ENV OpenBLAS_HOME=${CROSS_ROOT}
+ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 COPY runtime_functions.sh /work/
-WORKDIR /work/build
+WORKDIR /work/mxnet
