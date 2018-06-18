@@ -574,6 +574,8 @@ int GenerateBinaryTree( std::vector<T>&                  W,
   return reset;
 }
 
+// @input: n is the number of nodes in a balanced binary tree
+// @output: returns how many levels of binary tree there are
 int ComputeDepth( int n ) {
   for (int depth = 0; depth < MAX_DEPTH; ++depth) {
     int num = 2 << depth;
@@ -583,6 +585,11 @@ int ComputeDepth( int n ) {
   return 0;
 }
 
+// Checks whether a given state forms a spanning tree that satisfies:
+//   -balanced
+//   -binary
+//   -each edge in tree corresponds to link in network topology
+//   -each edge in tree does not form self-loop
 template <typename T>
 bool IsValid( const std::vector<T>&   W,
               const std::vector<int>& state,
@@ -590,6 +597,9 @@ bool IsValid( const std::vector<T>&   W,
               int                     row,
               int                     depth ) {
 
+  // At each level of tree, check whether edge:
+  //   -corresponds to link in network topology
+  //   -corresponds to self-loop
   for (int i = 0; i < depth; ++i) {
     int stride = 1 << i;
     for (int j = 0; j+stride < row; j += 2*stride) {
@@ -603,6 +613,8 @@ bool IsValid( const std::vector<T>&   W,
     }
   }
 
+  // If we encounter GPU for first time, increment found_vec.
+  // Otherwise, do nothing
   std::unordered_set<int> found;
   std::vector<int>        found_vec(num_elements,0);
   for (auto val : state) {
@@ -618,14 +630,24 @@ bool IsValid( const std::vector<T>&   W,
       return false;
     }
   }
+
+  // modifier is maximum number of repeats a single GPU can take
+  //   e.g. 5 GPUs in 3-level binary tree => one GPU can repeat 3x
+  //        GPU0 GPU0 GPU0 GPU0 GPU1 GPU2 GPU3 GPU4
   int modifier = (1 << depth) - num_elements;
   int num_found= found.size();
 
+  // So we know we have an invalid state if we find:
+  //   -only 4 unique GPUs
+  //   -9 unique GPUs
   if (row < num_elements) {
     if (num_found > row || num_found < row - modifier) {
       //std::cout << "Not valid: " << found.size() << " rows found but expected between " << row << " and " << row - modifier << std::endl;
       return false;
     }
+
+  // If we are at last recursive level, we can apply a more stringent check:
+  //   -if some GPU is not found, then we are in invalid state
   } else if (row == static_cast<int>(state.size()))
     for (int i = 0; i < num_elements; ++i)
       if (found_vec[i] == 0)
@@ -634,6 +656,24 @@ bool IsValid( const std::vector<T>&   W,
   return true;
 }
 
+// This function takes a spanning tree encoded as state (result), which may have// repeated GPUs representing NO-SENDs and converts it into a unique format. 
+// This has the effect of recognizing redundant sends, grouping them together,
+// so that the Reduce call knows not to perform a CopyFromTo.
+//
+// Initial result: [3 0 0 4 1 2 5 6]
+// Final result:   [3 3 0 4 1 2 5 6]
+//
+// Initial:
+//         3
+//     3     1
+//   3   0   1   5
+// 3 0 0 4 1 2 5 6    // GPU3 will make redundant send to GPU0
+//
+// Final:
+//         3
+//     3     1
+//   3   0   1   5
+// 3 3 0 4 1 2 5 6    // GPU3 knows not to make redundant send to itself
 void Postprocess( std::vector<int>& result, int num_elements, int depth) {
 
   std::vector<int> histogram(num_elements, 0);
@@ -642,29 +682,29 @@ void Postprocess( std::vector<int>& result, int num_elements, int depth) {
     histogram[val]++;
   }
 
-  for (int i = 0; i == 0; ++i) {
-    int stride = 1 << i;
-    for (int j = result.size()-1; j-stride >= 0; j -= 2*stride) {
-      //std::cout << "Comparing " << j << " and " << j-stride << std::endl;
-      int from = result[j];
-      int dest = result[j-stride];
-      if (histogram[from] > 1 && from != dest) {
-        //PrintVector("Old histogram", histogram);
-        //std::cout << "Swapping from " << from << " to " << dest << " on indices " << j << " and " << j-stride << std::endl;
-        result[j] = dest;
-        histogram[from]--;
-        //PrintVector("New histogram", histogram);
-        //PrintVector("New result", result);
+  int stride = 1;
+  for (int j = result.size()-1; j-stride >= 0; j -= 2*stride) {
+    //std::cout << "Comparing " << j << " and " << j-stride << std::endl;
+    int from = result[j];
+    int dest = result[j-stride];
+    if (histogram[from] > 1 && from != dest) {
+      //PrintVector("Old histogram", histogram);
+      //std::cout << "Swapping from " << from << " to " << dest << " on indices " << j << " and " << j-stride << std::endl;
+      result[j] = dest;
+      histogram[from]--;
+      //PrintVector("New histogram", histogram);
+      //PrintVector("New result", result);
       }
     }
-  }  
 }
 
+// Given a spanning tree encoded as a state (result) and weight of each edge
+// in the link topology graph, compute its weight.
 template <typename T>
 T ComputeTreeWeight( const std::vector<T>&   W, 
-                 const std::vector<int>& result, 
-                 int                     num_elements,
-                 int                     depth) {
+                     const std::vector<int>& result, 
+                     int                     num_elements,
+                     int                     depth) {
   T weight = 0.f;
   std::unordered_set<int> links_used;
 
@@ -701,6 +741,20 @@ T ComputeTreeWeight( const std::vector<T>&   W,
   return weight;
 }
 
+// Given a spanning tree encoded as result, which was convenient for performing
+// backtracking, convert it topology_ and scan_ in the classic "binary tree
+// stored in an array" format. For binary trees scan_ is redundant, but this
+// additional data structure leaves future generalization to k-radix trees.
+//
+// Initial result: [3 3 0 4 1 2 5 6]
+// topology_:      [3 3 1 3 0 1 5 3 3 0 4 1 2 5 6]
+// scan_:          [0 1 3 7 15]
+//
+// topology_ is stored in the classic "binary tree stored in an array" format
+// e.g.    3
+//     3     1
+//   3   0   1   5
+// 3 3 0 4 1 2 5 6
 void FormTopology( const std::vector<int>& result, 
                    std::vector<size_t>&    topo_row,
                    std::vector<size_t>&    scan_row,
@@ -720,6 +774,11 @@ void FormTopology( const std::vector<int>& result,
   scan_row.push_back(topo_row.size());
 }
 
+// Recursive function that finds a spanning tree, which fulfills the following
+// conditions:
+//   -balanced
+//   -binary
+//   -maximum weight 
 template <typename T>
 void Backtrack( const std::vector<T>& W,
                 std::vector<int>&     state,
@@ -756,6 +815,8 @@ void Backtrack( const std::vector<T>& W,
   }
 }
 
+// Apply penalty factor alpha to each link in link topology graph that is used
+// by the spanning tree
 template <typename T>
 void UpdateWeight( std::vector<T>&            W,
                    const std::vector<size_t>& topo_row,
@@ -775,10 +836,12 @@ void UpdateWeight( std::vector<T>&            W,
 }
 
 // Do brute-force backtracking approach if Kernighan-Lin fails to find a binary
-// tree of height Log P
-// Metrics:
-// 1) minimize depth
+// tree of height Log P.
+//
+// Constraints:
+// 1) minimize depth (balance)
 // 2) maximize edge weight
+// 3) tree is binary
 template <typename T>
 void BacktrackingGenerateBinaryTree( std::vector<T>&      W, 
                                      int                  num_elements,
