@@ -470,6 +470,7 @@ def test_pool():
         nn.MaxPool1D(3),
         nn.MaxPool1D(3, 2),
         nn.AvgPool1D(),
+        nn.AvgPool1D(count_include_pad=False),
         nn.GlobalAvgPool1D(),
         ]
     for layer in layers1d:
@@ -481,6 +482,7 @@ def test_pool():
         nn.MaxPool2D((3, 3)),
         nn.MaxPool2D(3, 2),
         nn.AvgPool2D(),
+        nn.AvgPool2D(count_include_pad=False),
         nn.GlobalAvgPool2D(),
         ]
     for layer in layers2d:
@@ -491,6 +493,7 @@ def test_pool():
         nn.MaxPool3D((3, 3, 3)),
         nn.MaxPool3D(3, 2),
         nn.AvgPool3D(),
+        nn.AvgPool3D(count_include_pad=False),
         nn.GlobalAvgPool3D(),
         ]
     for layer in layers3d:
