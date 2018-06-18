@@ -57,7 +57,7 @@ private[mxnet] object APIDocGenerator{
     val md = MessageDigest.getInstance("MD5")
     md.update(input.getBytes("UTF-8"))
     val digest = md.digest()
-    digest.map(b => (b & 0xff).toHexString).mkString
+    org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
   }
 
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
