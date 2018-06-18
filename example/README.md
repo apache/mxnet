@@ -22,9 +22,11 @@ This page contains a curated list of awesome MXNet examples, tutorials and blogs
 
 If you want to contribute to this list and the examples, please open a new pull request.
 
+
 ### Examples
 
 Example applications or scripts should be submitted in this `example` folder.
+
 
 ### Tutorials
 
