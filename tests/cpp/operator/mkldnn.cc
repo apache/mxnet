@@ -845,7 +845,6 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     PrintVerifyMsg(orig_arr, in_arr);
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
     orig_arr.arr.CopyFrom(*input_mem);
-    auto old_mem = orig_arr.arr.GetMKLDNNData();
     op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
