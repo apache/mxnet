@@ -885,11 +885,6 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
     const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
     const auto dispatch_ex =
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
-    if (!dispatched && in_stype == kDefaultStorage) {
-      // dns -> dns
-      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                       DispatchMode::kFCompute);
-    }
     const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
     if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
         axis.ndim() == 0 && param.ord == 2) {

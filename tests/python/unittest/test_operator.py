@@ -2880,30 +2880,44 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
                                numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
 @with_seed()
-def test_l1_norm():
+def test_norm():
+    def l1norm(input_data, axis=0, keepdims=False):
+        return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
+    def l2norm(input_data, axis=0, keepdims=False): 
+        return np.linalg.norm(input_data, axis=axis, keepdims=keepdims)
+
     ctx = default_context()
     data = mx.symbol.Variable('data')
     in_data_dim = random_sample([4,5,6], 1)[0]
     in_shape = rand_shape_nd(in_data_dim)
-    for dtype in [np.float16, np.float32, np.float64]:
-        in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
-        for i in range(in_data_dim):
-            for keep_dims in [True, False]:
-                norm_sym = mx.symbol.norm(data=data, ord=1, axis=i, keepdims=keep_dims)
-                npy_out = np.sum(abs(in_data), axis=i, keepdims=keep_dims)
-                check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                       rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                       atol=1e-5, ctx=ctx)
-                # check gradient
-                #check_numeric_gradient(norm_sym, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
-                if i < in_data_dim-1:
-                    norm_sym = mx.symbol.norm(data=data, ord=1, axis=(i, i+1), keepdims=keep_dims)
-                    npy_out = np.sum(abs(in_data), axis=(i, i+1), keepdims=keep_dims)
+    for ord in [1, 2]:
+        for dtype in [np.float16, np.float32, np.float64]:
+            in_data = np.random.uniform(0, 1, in_shape).astype(dtype)
+            for i in range(in_data_dim):
+                for keep_dims in [True, False]:
+                    norm_sym = mx.symbol.norm(data=data, ord=ord, axis=i, keepdims=keep_dims)
+                    npy_out = l1norm(in_data, i, keep_dims) if ord==1 else l2norm(in_data, i, keep_dims)
                     check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                       rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                       atol=1e-5, ctx=ctx)
+                                           rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                           atol=1e-5, ctx=ctx)
+                    check_symbolic_backward(norm_sym, [in_data], [np.ones(in_shape)],
+                                            [in_data/npy_out],
+                                            rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                            atol=1e-5, ctx=ctx)
                     # check gradient
-                    #check_numeric_gradient(norm_sym, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+                    check_numeric_gradient(norm_sym, [in_data], numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
+                    if i < in_data_dim-1:
+                        norm_sym = mx.symbol.norm(data=data, ord=ord, axis=(i, i+1), keepdims=keep_dims)
+                        npy_out = l1norm(in_data, (i, i+1), keep_dims) if ord==1 else l2norm(in_data, (i, i+1), keep_dims)
+                        check_symbolic_forward(norm_sym, [in_data], [npy_out],
+                                           rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                           atol=1e-5, ctx=ctx)
+                        check_symbolic_backward(norm_sym, [in_data], [np.ones(in_shape)],
+                                                [in_data/npy_out],
+                                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                                atol=1e-5, ctx=ctx)
+                        # check gradient
+                        check_numeric_gradient(norm_sym, [in_data], numeric_eps=1e-2, rtol=1e-2, atol=1e-3)
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
