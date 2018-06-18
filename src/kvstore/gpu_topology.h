@@ -69,7 +69,6 @@ void PrintVector( const std::string& str, const std::vector<T>& vec ) {
 template <typename T>
 void PrintMatrix( const std::string& str, const std::vector<T>& matrix, 
     int num_rows, int num_cols ) {
-  PrintVector("Matrix vector", matrix);  
   std::cout << str << ":\n";
   int count = 0;
   for (int row = 0; row < num_rows; ++row) {
@@ -793,14 +792,14 @@ void FormTopology( const std::vector<int>& result,
 //   -binary
 //   -maximum weight 
 template <typename T>
-bool Backtrack( const std::vector<T>& W,
-                std::vector<int>&     state,
-                std::vector<int>&     best_result,
-                T&                    best_result_weight,
-                int                   row,
-                int                   num_elements,
-                int                   depth,
-                bool                  optimal ) {
+bool RecursiveBacktrack( const std::vector<T>& W,
+                         std::vector<int>&     state,
+                         std::vector<int>&     best_result,
+                         T&                    best_result_weight,
+                         int                   row,
+                         int                   num_elements,
+                         int                   depth,
+                         bool                  optimal ) {
   if (row == static_cast<int>(state.size())) {
     std::vector<int> result = state;
     Postprocess(result, num_elements, depth);
@@ -834,6 +833,74 @@ bool Backtrack( const std::vector<T>& W,
       return stop;
   }
   return stop;
+}
+
+template <typename T>
+void IterativeBacktrack( const std::vector<T>& W,
+                         std::vector<int>&     state,
+                         std::vector<int>&     best_result,
+                         T&                    best_result_weight,
+                         int                   row,
+                         int                   num_elements,
+                         int                   depth,
+                         bool                  optimal ) {
+  std::stack<int> state_stack;
+  row = 1;
+  int pos = 0;
+  state_stack.push(pos);
+
+  while (true) {
+    // If there is no valid position, 2 cases:
+    // a) if stack is empty, break and stop search
+    // b) if stack is not empty, pop stack and set current position to next 
+    //    position backtrack to previous row
+    while (!state_stack.empty() && pos >= num_elements) {
+      pos = state_stack.top();
+      pos++;
+      state_stack.pop();
+      state[state_stack.size()+1] = -1;
+      row--;
+    }
+    if (state_stack.empty()) break;
+
+    state[row] = pos;
+    // If there is a valid position push the position to stack, set current 
+    // position to 0 and move to next row
+    //PrintVector("Trying state", state);
+    if (IsValid(W, state, num_elements, row+1, depth)) {
+      state_stack.push(pos);
+      pos = 0;
+      row++;
+    } else {
+      pos++;
+      state[row] = -1;
+    }
+
+    // If stack has size N, a solution is found
+    // Pop stack, set current position to next position
+    // Backtrack to find next solution
+    if (row == static_cast<int>(state.size())) {
+      //PrintVector("state", state);
+      std::vector<int> result = state;
+      Postprocess(result, num_elements, depth);
+      T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
+
+      // Save this spanning tree if it is highest weight tree found sofar
+      if (weight > best_result_weight) {
+        std::swap(best_result_weight, weight);
+        best_result = result;
+        //std::cout << "New best weight: " << best_result_weight << " > " << weight << std::endl;
+        //PrintVector("New best", result);
+      }
+      if (!optimal) break;
+      
+      pos = state_stack.top();
+      pos++;
+      state_stack.pop();
+      state[state_stack.size()+1] = -1;
+      row--;
+    }
+  }
 }
 
 // Apply penalty factor alpha to each link in link topology graph that is used
@@ -894,7 +961,13 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
   // Place root and try all combinations
   state[0] = root;
 
-  Backtrack( W, state, result, result_weight, 1, num_elements, depth, false );
+  // Seek optimal solution until depth <= 3 i.e. 8 GPUs
+  // For larger numbers of GPUs, settle for first tree found (non-optimal), but 
+  // this saves a lot of runtime, because Backtrack is exponential time
+  if (depth <= 3)
+    IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, true );
+  else
+    IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, false );
   //result_weight = ComputeTreeWeight(W, result, num_elements, depth, false);
   //Backtrack( W, state, result, result_weight, 1, num_elements, depth, true  );
   //T result_weight2 = ComputeTreeWeight(W, result, num_elements, depth, false);
