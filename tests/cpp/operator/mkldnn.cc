@@ -751,10 +751,10 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
-        for (int i = 0; i < attrs.num_outputs; i++)
+        for (int i = 0; i < attrs.num_outputs; i++) {
           req[i] = kWriteTo;
-
-        outputs[0] = &out_arr.arr;
+          outputs[i] = &out_arr.arr;
+        }
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -773,9 +773,10 @@ void TestOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
       NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &arr.arr;
-      for (int i = 0; i < attrs.num_outputs; i++)
+      for (int i = 0; i < attrs.num_outputs; i++) {
         req[i] = kWriteInplace;
-      outputs[0] = &arr.arr;
+        outputs[i] = &arr.arr;
+      }
       PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
