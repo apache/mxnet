@@ -47,6 +47,7 @@ This document describes all the ONNX-MXNet APIs.
 .. automodule:: mxnet.contrib.onnx
     :members: import_model
     :members: get_model_metadata
+    :members: export_model
 
 ```
 
