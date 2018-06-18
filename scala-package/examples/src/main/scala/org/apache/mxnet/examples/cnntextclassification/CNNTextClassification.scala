@@ -72,7 +72,7 @@ object CNNTextClassification {
 
   def setupCnnModel(ctx: Context, batchSize: Int, sentenceSize: Int, numEmbed: Int,
       numLabel: Int = 2, numFilter: Int = 100, filterList: Array[Int ] = Array(3, 4, 5),
-      dropout: Float = 0.5f): CNNModel = {
+      dropout: Float = 0.0f): CNNModel = {
 
     val cnn = makeTextCNN(sentenceSize, numEmbed, batchSize,
       numLabel, filterList, numFilter, dropout)
@@ -98,7 +98,7 @@ object CNNTextClassification {
                devLabels: Array[Float], batchSize: Int, saveModelPath: String,
                learningRate: Float = 0.001f): Float = {
     val maxGradNorm = 0.5f
-    val epoch = 200
+    val epoch = 30
     val initializer = new Uniform(0.1f)
     val opt = new RMSProp(learningRate)
     val updater = Optimizer.getUpdater(opt)
