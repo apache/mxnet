@@ -152,7 +152,6 @@ class Trainer(object):
 
     def _init_kvstore(self):
         """Create kvstore."""
-        arg_arrays = {}
         config = self._kvstore_params
         if self._contains_sparse:
             kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
@@ -162,6 +161,7 @@ class Trainer(object):
                                    "gradients and/or sparse weights are present for "
                                    "Parameter '%s'."%param.name)
         else:
+            arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
             if config['update_on_kvstore'] is not None:
