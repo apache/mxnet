@@ -26,6 +26,7 @@
 #include <mxnet/c_api.h>
 #include <mxnet/executor.h>
 #include "./c_api_common.h"
+#include "../executor/graph_executor.h"
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
@@ -440,9 +441,9 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   std::vector<NDArray> arg_grad_vec;
   std::vector<NDArray> aux_state_vec;
 
-  *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
-                              aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
-                              grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
+  *out = Executor::SimpleBind(*sym, ctx, ctx_map, &in_arg_ctx_vec, &arg_grad_ctx_vec,
+                              &aux_state_ctx_vec, &arg_shape_map, &arg_dtype_map, &arg_stype_map,
+                              &grad_req_type_vec, &shared_arg_name_set, &in_arg_vec,
                               &arg_grad_vec, &aux_state_vec,
                               use_shared_buffer ? &shared_buffer_map : nullptr,
                               reinterpret_cast<Executor*>(shared_exec_handle));
