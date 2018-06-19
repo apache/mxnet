@@ -208,7 +208,6 @@ build_amzn_linux_cpu() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
 }
 
 build_arm64() {
@@ -225,16 +224,17 @@ build_arm64() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
 }
 
 build_android_armv7() {
     set -ex
     cd /work/build
+#        -DCMAKE_SYSTEM_NAME=Android\
+#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
+#        -DCMAKE_SYSTEM_VERSION=21\
     cmake \
+        -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
@@ -249,10 +249,6 @@ build_android_armv7() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
 }
 
 build_android_arm64() {
@@ -263,8 +259,7 @@ build_android_arm64() {
 # build with CMake in Android.
 #        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
 #        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
-#        -DCMAKE_SYSTEM_NAME=Android \
-#
+#        -DCMAKE_SYSTEM_VERSION=21\
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
