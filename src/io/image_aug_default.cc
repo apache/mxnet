@@ -187,8 +187,8 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(pad).set_default(0)
         .describe("Change size from ``[width, height]`` into "
                   "``[pad + width + pad, pad + height + pad]`` by padding pixes");
-    DMLC_DECLARE_FIELD(seed_aug).set_default(-1)
-        .describe("Random seed for augmentations. Default -1 does not set random seed.");
+    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
+        .describe("Random seed for augmentations.");
   }
 };
 
@@ -250,7 +250,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   }
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
-    if (!seed_init_state && param_.seed_aug > -1) {
+    if (!seed_init_state && param_.seed_aug.has_value()) {
       prnd->seed(param_.seed_aug);
       seed_init_state = true;
     }
