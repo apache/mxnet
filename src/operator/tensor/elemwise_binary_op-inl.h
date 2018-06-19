@@ -426,6 +426,36 @@ struct ElemwiseDnsCsrDnsKernel {
   }
 };
 
+/*!
+ * \brief Kernel for performing elemwise op between dense and csr matrix
+ * \param tid          global thread id
+ * \param req          type of request
+ * \param out          output array
+ * \param dns_data     data array of dense input
+ * \param csr_data     data array of csr input
+ * \param csr_indices  indices array of csr input
+ * \param csr_indptr   indptr array of csr input
+ * \param num_rows     number of rows of both inputs
+ * \param num_cols     number of columns of both inputs
+ */
+template<int req, typename OP>
+struct ElemwiseDnsCsrDnsWarpKernel {
+  template<typename DType, typename IType, typename CType>
+  MSHADOW_XINLINE static void Map(int tid, DType* out, DType* dns_data,
+                                  const DType* csr_data, const IType* csr_indices,
+                                  const CType* csr_indptr, const nnvm::dim_t num_rows,
+                                  const nnvm::dim_t num_cols) {
+    if (tid < 32 * num_rows) {
+      const int row_id = tid >> 5;
+      const int warp_id = tid & (32 - 1);
+      for (int j = csr_indptr[row_id] + warp_id; j < csr_indptr[row_id+1]; j += 32) {
+        KERNEL_ASSIGN(out[row_id * num_cols + csr_indices[j]], req,
+                      OP::Map(dns_data[row_id * num_cols + csr_indices[j]], csr_data[j]));
+      }
+    }
+  }
+};
+
 /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
 template<typename xpu, typename OP>
 void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<xpu> *s,
@@ -458,20 +488,34 @@ void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<xpu> *s,
             mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::negation, Req>, xpu>::Launch(
               s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
             if (!csr.storage_initialized()) { return; }
-            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, mshadow_op::plus>, xpu>::Launch(
-              s, num_csr_rows, output.data().dptr<DType>(),
-              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            if (std::is_same<xpu, cpu>::value) {
+              mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, mshadow_op::plus>, xpu>::Launch(
+                s, num_csr_rows, output.data().dptr<DType>(),
+                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            } else {
+              mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, mshadow_op::plus>, xpu>::Launch(
+                s, 32 * num_csr_rows, output.data().dptr<DType>(),
+                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            }
           } else {
             if (req == kWriteTo) {
               mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
                 s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
             }
             if (!csr.storage_initialized()) { return; }
-            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, OP>, xpu>::Launch(
-              s, num_csr_rows, output.data().dptr<DType>(),
-              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            if (std::is_same<xpu, cpu>::value) {
+              mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, OP>, xpu>::Launch(
+                s, num_csr_rows, output.data().dptr<DType>(),
+                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            } else {
+              mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, OP>, xpu>::Launch(
+                s, 32 * num_csr_rows, output.data().dptr<DType>(),
+                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+            }
           }
         });
       });
