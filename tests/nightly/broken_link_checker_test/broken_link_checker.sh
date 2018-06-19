@@ -21,29 +21,13 @@
 
 #software-properties-common, curl, npm are installed in the docker container 'ubuntu_blc'
 
-#git config --global user.email \"$APACHE_USERNAME@gl.com\" && git config --global user.name \"$APACHE_USERNAME\"
+echo "Invoking broken_link_checker.sh script"
 echo `pwd`
-#echo "Clone the incubator-mxnet-site repo and checkout the correct branch"
-#git clone https://$APACHE_USERNAME:$APACHE_PASSWORD@github.com/leleamol/incubator-mxnet-site.git
-#cd incubator-mxnet-site
-#git checkout link-checker
-#cd _urlList
-#echo "Copying the broken link checker scripts from incubator-mxnet repo."
-#cp /work/mxnet/tests/nightly/broken_link_checker_test/find_broken_link.sh .
-#cp /work/mxnet/tests/nightly/broken_link_checker_test/check_regression.sh .
-#echo `pwd`
-
 cd tests/nightly/broken_link_checker_test
 echo `pwd`
-
-#echo "Copying the url_list.txt from s3 bucket"
-#aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  url_list.txt
 
 echo "Running test_broken_links.py"
 python test_broken_links.py
 
 echo "Running check_regression.sh"
 ./check_regression.sh
-cd ../.
-
-echo "Commit the new urls found"
