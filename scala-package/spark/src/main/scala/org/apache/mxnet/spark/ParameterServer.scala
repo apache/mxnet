@@ -51,7 +51,7 @@ private[mxnet] object ParameterServer {
 
   def buildEnv(role: String, rootUri: String, rootPort: Int,
                numServer: Int, numWorker: Int): Map[String, String] = {
-    val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+    val envs = mutable.HashMap.empty[String, String]
     envs.put("DMLC_ROLE", role)
     envs.put("DMLC_PS_ROOT_URI", rootUri)
     envs.put("DMLC_PS_ROOT_PORT", rootPort.toString)
@@ -127,9 +127,9 @@ class ParameterServer(
     val inputStream = psProcess.get().getInputStream
     val errorStream = psProcess.get().getErrorStream
     logger.info(s"Starting InputStream-Redirecter Thread for $rootUri:$rootPort")
-    new RedirectThread(inputStream, System.out, "InputStream-Redirecter", true).start()
+    new RedirectThread(inputStream, System.out, "InputStream-Redirecter", false).start()
     logger.info(s"Starting ErrorStream-Redirecter Thread for $rootUri:$rootPort")
-    new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", true).start()
+    new RedirectThread(errorStream, System.err, "ErrorStream-Redirecter", false).start()
   }
 
   def startProcess(): Int = {

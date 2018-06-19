@@ -51,6 +51,7 @@ class StorageImpl : public Storage {
   static void ActivateDevice(Context ctx) {
     switch (ctx.dev_type) {
       case Context::kCPU:
+      case Context::kCPUPinned:
         break;
       case Context::kCPUShared: {
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -58,8 +59,7 @@ class StorageImpl : public Storage {
 #endif  // defined(ANDROID) || defined(__ANDROID__)
       }
         break;
-      case Context::kGPU:
-      case Context::kCPUPinned: {
+      case Context::kGPU: {
 #if MXNET_USE_CUDA
           if (num_gpu_device > 0) {
             CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
@@ -118,7 +118,21 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 #if MXNET_USE_CUDA
             CUDA_CALL(cudaGetDeviceCount(&num_gpu_device));
             CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
-            ptr = new storage::GPUPooledStorageManager();
+
+            const char *type = getenv("MXNET_GPU_MEM_POOL_TYPE");
+            const bool default_pool = (type == nullptr);
+            if (default_pool) type = "Naive";
+            std::string strategy = type;
+
+            if (strategy == "Round") {
+              ptr = new storage::GPUPooledRoundedStorageManager();
+              LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
+            } else {
+              if (strategy != "Naive") {
+                LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
+              }
+              ptr = new storage::GPUPooledStorageManager();
+            }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
 #endif  // MXNET_USE_CUDA

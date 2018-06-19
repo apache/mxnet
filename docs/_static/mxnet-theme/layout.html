@@ -102,11 +102,18 @@
        must come *after* these tags. #}
     {{ metatags }}
     {%- block htmltitle %}
-    {%- if pagename != 'index' %}
-
+    <meta property="og:title"              content="{{ title }}" />
+    <meta property="og:image"              content="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/og-logo.png" />
+    <meta property="og:image:secure_url"              content="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/og-logo.png" />
+    {%- if pagename != 'index' and 'no title' not in title %}
+    <meta property="og:description"        content="{{ title }}" />
     <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
-    {%- else %}
+    {%- elif pagename == 'index' %}
+    <meta property="og:description"        content="A flexible and efficient library for deep learning." />
     <title>MXNet: A Scalable Deep Learning Framework</title>
+    {%- else %}
+    <meta property="og:description"        content="A flexible and efficient library for deep learning." />
+    <title>{{ pagename.split('/')[0]|capitalize }}{{ titlesuffix }}</title>
     {%- endif %}
     {%- endblock %}
     {{ css() }}

@@ -17,6 +17,7 @@
 
 package org.apache.mxnet
 
+import org.apache.mxnet.utils.CToScalaUtils
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -42,7 +43,7 @@ class MacrosSuite extends FunSuite with BeforeAndAfterAll {
     )
 
     for (idx <- input.indices) {
-      val result = SymbolImplMacros.argumentCleaner(input(idx))
+      val result = CToScalaUtils.argumentCleaner(input(idx), "org.apache.mxnet.Symbol")
       assert(result._1 === output(idx)._1 && result._2 === output(idx)._2)
     }
   }
