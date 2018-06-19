@@ -56,9 +56,11 @@ class CuDNNDeconvolutionOp {
             int backward_compute_type,
             const std::vector<TShape>& in_shape,
             const std::vector<TShape>& out_shape,
-            const RunContext& rctx) {
+            const RunContext& rctx,
+            bool add_to_weight) {
     using namespace mshadow;
     this->param_ = param;
+    this->add_to_weight_ = add_to_weight;
     InitBufferForParam();
     auto cudnn_forward_compute_type = convertToCuDNNDataType(forward_compute_type);
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
@@ -257,6 +259,7 @@ class CuDNNDeconvolutionOp {
           filter_desc_,
           gwmat.dptr_ + weight_offset_ * g));
         #elif CUDNN_MAJOR >= 5
+        CHECK_EQ(add_to_weight_, req[deconv::kWeight] == kAddTo);
         CUDNN_CALL(cudnnConvolutionBackwardFilter(
           s->dnn_handle_,
           &alpha,
@@ -543,8 +546,8 @@ class CuDNNDeconvolutionOp {
     if (!CuDNNDeconvAlgoReg::Get()->Find(param_, in_shape, out_shape, dtype_,
                                          cudnn_forward_compute_type,
                                          cudnn_backward_compute_type,
-                                         SMArch(rctx.ctx.dev_id), &forward_algo_,
-                                         &back_algo_, &back_algo_w_)) {
+                                         SMArch(rctx.ctx.dev_id), add_to_weight_,
+                                         &forward_algo_, &back_algo_, &back_algo_w_)) {
       mshadow::Stream <gpu> *s = rctx.get_stream<gpu>();
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
@@ -578,8 +581,10 @@ class CuDNNDeconvolutionOp {
       auto max_bwd_filt_algos = MaxBackwardFilterAlgos(s->dnn_handle_);
       std::vector<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filt_results(max_bwd_filt_algos);
       int actual_bwd_filter_algos = 0;
-      auto bwd_filter_algo_discoverer =
-        param_.cudnn_tune.value() == conv::kOff ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
+      // In cudnn v7.1.4, find() returned wgrad algos that could fail for large c if we
+      // were summing into the output (i.e. beta != 0).  Get() returned OK algos though.
+      auto bwd_filter_algo_discoverer = (add_to_weight_ ||
+        param_.cudnn_tune.value() == conv::kOff) ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
                                                 : cudnnFindConvolutionBackwardFilterAlgorithm;
       CUDNN_CALL((*bwd_filter_algo_discoverer)(s->dnn_handle_,
                                                out_desc_,
@@ -735,7 +740,8 @@ class CuDNNDeconvolutionOp {
       CuDNNDeconvAlgoReg::Get()->Register(param_, in_shape, out_shape, dtype_,
                                           cudnn_forward_compute_type,
                                           cudnn_backward_compute_type,
-                                          SMArch(rctx.ctx.dev_id), this->forward_algo_,
+                                          SMArch(rctx.ctx.dev_id), this->add_to_weight_,
+                                          this->forward_algo_,
                                           this->back_algo_, this->back_algo_w_);
     }
     // If we're allowing Tensor Core variants of the algos to be considered in
@@ -912,6 +918,8 @@ class CuDNNDeconvolutionOp {
   cudnnTensorFormat_t format_;
   // Allow TensorCore algo policy
   bool cudnn_tensor_core_;
+  // Is req[kWeight] == deconv::kAddTo ?
+  bool add_to_weight_;
   DeconvolutionParam param_;
 };
 #endif  // CUDNN
