@@ -560,14 +560,23 @@ unittest_ubuntu_python2_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENFORCE_CYTHON=1
-    check_cython 2
     nosetests-2.7 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+}
+
+unittest_ubuntu_python3_cython_cpu() {
     set -ex
     export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
@@ -592,6 +601,16 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 }
 
 unittest_ubuntu_python2_gpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-2.7 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_python2_cython_gpu() {
     set -ex
     export PYTHONPATH=./python/
     # MXNET_MKLDNN_DEBUG is buggy and produces false positives
@@ -634,8 +653,6 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENFORCE_CYTHON=1
-    check_cython 3
     nosetests-3.4 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 

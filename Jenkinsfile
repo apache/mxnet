@@ -22,11 +22,9 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-// mx_lib with cython
-mx_cython_lib = 'lib/libmxnet.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_cython_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
-// mx_dist_lib with cython
 mx_cython_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
@@ -135,6 +133,12 @@ def python3_ut(docker_container_name) {
   }
 }
 
+def python3_cython_ut(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    docker_run(docker_container_name, 'unittest_ubuntu_python3_cython_cpu', false)
+  }
+}
+
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -147,6 +151,12 @@ def python3_ut_mkldnn(docker_container_name) {
 def python2_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python2_gpu', true)
+  }
+}
+
+def python2_cython_gpu_ut(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    docker_run(docker_container_name, 'unittest_ubuntu_python2_cython_gpu', true)
   }
 }
 
@@ -495,7 +505,7 @@ try {
         ws('workspace/ut-python2-cpu') {
           try {
             init_git()
-            unpack_lib('cpu', mx_cython_lib)
+            unpack_lib('cpu', mx_lib)
             python2_ut('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
@@ -511,7 +521,7 @@ try {
           try {
             init_git()
             unpack_lib('cpu', mx_cython_lib)
-            python3_ut('ubuntu_cpu')
+            python3_cython_ut('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
             collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
@@ -525,7 +535,7 @@ try {
           try {
             init_git()
             unpack_lib('gpu', mx_cython_lib)
-            python2_gpu_ut('ubuntu_gpu')
+            python2_cython_gpu_ut('ubuntu_gpu')
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
           }
@@ -537,7 +547,7 @@ try {
         ws('workspace/ut-python3-gpu') {
           try {
             init_git()
-            unpack_lib('gpu', mx_cython_lib)
+            unpack_lib('gpu', mx_lib)
             python3_gpu_ut('ubuntu_gpu')
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
