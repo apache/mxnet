@@ -43,17 +43,23 @@ class TestRNNLayer(gluon.HybridBlock):
 def test_contrib_rnn(cell, rnn_data, states):
     ctx = rnn_data.context
     num_batches = 20
-    cell1 = copy.deepcopy(cell)
-    cell2 = copy.deepcopy(cell)
 
     # Imperative
+    cell1 = copy.deepcopy(cell)
     layer1 = TestRNNLayer(cell1)
     layer1.initialize(ctx=ctx)
 
     # Hybridize
+    cell2 = copy.deepcopy(cell)
     layer2 = TestRNNLayer(cell2)
     layer2.initialize(ctx=ctx)
     layer2.hybridize()
+
+    # Hybridize
+    cell3 = copy.deepcopy(cell)
+    cell3.hybridize(static_alloc=True)
+    layer3 = TestRNNLayer(cell3)
+    layer3.initialize(ctx=ctx)
 
     tic = time.time()
     for i in range(num_batches):
@@ -69,6 +75,12 @@ def test_contrib_rnn(cell, rnn_data, states):
 
     tic = time.time()
     for i in range(num_batches):
+        res3 = layer3(rnn_data, states)
+        mx.nd.waitall()
+    print("Hybrid-cell inference takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
         with mx.autograd.record():
             res1 = layer1(rnn_data, states)
         res1.backward()
@@ -80,6 +92,13 @@ def test_contrib_rnn(cell, rnn_data, states):
             res2 = layer2(rnn_data, states)
         res2.backward()
     print("Hybrid training takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
+            res3 = layer3(rnn_data, states)
+        res3.backward()
+    print("Hybrid-cell training takes " + str(time.time() - tic))
 
     layer2.export("foreach_rnn")
     symnet = mx.symbol.load('foreach_rnn-symbol.json')
