@@ -34,7 +34,7 @@ clean_repo() {
 check_cython() {
     set -ex
     local python_ver=$1
-    if [ "$(echo -e 'import mxnet as mx\nprint(mx.nd._internal.NDArrayBase)' | python)" != "<class 'mxnet._cy$python_ver.ndarray.NDArrayBase'>" ]; then
+    if [ "$(echo -e 'import mxnet as mx\nprint(mx.nd._internal.NDArrayBase.__module__)' | python${python_ver})" != "mxnet._cy${python_ver}.ndarray" ]; then
         echo "Error: cython is not used."
         return 1
     fi
