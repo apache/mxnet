@@ -46,7 +46,9 @@ try {
         ws('workspace/brokenLinkChecker') {
           init_git()
           withCredentials([usernamePassword(credentialsId: 'github-leleamol', passwordVariable: 'APACHE_PASSWORD', usernameVariable: 'APACHE_USERNAME')]) {
+		  sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  /work/mxnet/tests/nightly/broken_link_checker_test/url_list.txt'
           sh "ci/build.py --platform ubuntu_blc /work/runtime_functions.sh broken_link_checker"
+		  sh 'aws s3 cp /work/mxnet/tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
           }
         }
       }

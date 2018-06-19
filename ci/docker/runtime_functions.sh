@@ -790,10 +790,7 @@ deploy_docs() {
 broken_link_checker() {
     set -ex
     chmod -R 0755 tests/nightly/broken_link_checker_test/
-	echo "Copying the url_list.txt from s3 bucket"
-	aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
-	aws s3 cp /tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt
 }
 
 ##############################################################
