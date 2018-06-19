@@ -77,7 +77,7 @@ try {
         }
       }
     },
-    'CompilationWarnings: GPU': {
+    'CompilationWarnings: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-compilationTest') {
           init_git()

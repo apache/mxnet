@@ -21,8 +21,6 @@
 
 FROM ubuntu:16.04
 
-ARG USER_ID=os.getuid()
-
 WORKDIR /work/deps
 
 RUN apt-get update && apt-get -y install sudo
@@ -32,6 +30,8 @@ RUN /work/ubuntu_adduser.sh
 
 COPY install/ubuntu_runas_sudo.sh /work/
 RUN /work/ubuntu_runas_sudo.sh
+
+ARG USER_ID=os.getuid()
 
 COPY runtime_functions.sh /work/
 
