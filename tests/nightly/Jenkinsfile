@@ -78,10 +78,10 @@ try {
       }
     },
     'CompilationWarnings: GPU': {
-      node('mxnetlinux-gpu') {
+      node('mxnetlinux-cpu') {
         ws('workspace/nt-compilationTest') {
           init_git()
-          docker_run('ubuntu_nightly_gpu', 'nightly_test_compilation_warning', false)
+          docker_run('ubuntu_nightly_cpu', 'nightly_test_compilation_warning', false)
         }
       }
     },
