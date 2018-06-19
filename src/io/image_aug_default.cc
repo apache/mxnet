@@ -23,6 +23,7 @@
  * \brief Default augmenter.
  */
 #include <mxnet/base.h>
+#include <dmlc/optional.h>
 #include <utility>
 #include <string>
 #include <algorithm>
