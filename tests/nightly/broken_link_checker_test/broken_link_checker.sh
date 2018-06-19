@@ -36,8 +36,8 @@ echo `pwd`
 cd tests/nightly/broken_link_checker_test
 echo `pwd`
 
-echo "Copying the url_list.txt from s3 bucket"
-aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  url_list.txt
+#echo "Copying the url_list.txt from s3 bucket"
+#aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  url_list.txt
 
 echo "Running test_broken_links.py"
 python test_broken_links.py
