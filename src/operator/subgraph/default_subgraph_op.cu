@@ -23,7 +23,7 @@
  * \brief GPU Implementation of subgraph operations
  */
 
-#include "./subgraph_op.h"
+#include "./default_subgraph_op.h"
 
 namespace mxnet {
 namespace op {

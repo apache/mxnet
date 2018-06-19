@@ -18,7 +18,7 @@
 */
 
 #include <mxnet/ndarray.h>
-#include "./subgraph_op.h"
+#include "./default_subgraph_op.h"
 #include "../../imperative/imperative_utils.h"
 #include "../../imperative/cached_op.h"
 

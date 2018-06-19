@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_SUBGRAPH_OP_H_
-#define MXNET_OPERATOR_SUBGRAPH_SUBGRAPH_OP_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
+#define MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 
 #include "./common.h"
 
@@ -118,4 +118,4 @@ class DefaultSubgraphProperty: public SubgraphProperty {
 }
 }
 
-#endif  // MXNET_OPERATOR_SUBGRAPH_SUBGRAPH_OP_H_ 
+#endif  // MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_ 

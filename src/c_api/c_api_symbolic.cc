@@ -31,7 +31,7 @@
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
-#include "../operator/subgraph/subgraph_op.h"
+#include "../operator/subgraph/default_subgraph_op.h"
 
 namespace mxnet {
 namespace op {

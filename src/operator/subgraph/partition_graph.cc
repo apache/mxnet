@@ -29,7 +29,7 @@
 #include <unordered_set>
 #include <stack>
 
-#include "./subgraph_op.h"
+#include "./default_subgraph_op.h"
 #include "./common.h"
 
 namespace nnvm {
