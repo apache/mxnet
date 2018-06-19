@@ -1,5 +1,6 @@
 #! /bin/sh
 
+echo "Running the check_regression.sh script"
 cat blc_output.txt | uniq | grep -Eo "(http|https).* " | sort| uniq > unique_current_urls.txt
 
 cat url_list.txt unique_current_urls.txt | sort | uniq > new_url_list.txt
@@ -21,7 +22,6 @@ rm -rf unique_current_urls.txt
 rm -rf blc_output.txt
 if [ $regression ]; then
 	echo "FAIL: Found Regression in broken link checker"
-	exit 1
 else 
 	echo "SUCCESS: No Regression found"
 fi
