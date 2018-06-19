@@ -132,10 +132,18 @@ def test_gru_bidirectional():
                 mx.rnn.GRUCell(H, prefix='l1_'),
                 mx.rnn.GRUCell(H, prefix='r1_'),
                 output_prefix='bi_gru_1_'))
-    for i in range(100):
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+
+
+# this test case is for verifying the fix of flaky test_gru_bidirectional
+# Will be removed after CI is passed
+@with_seed()
+def test_loop_gru_bidirectional():
+    for i in range(1000):
+        test_gru_bidirectional()
 
 
 # Currently, fused LSTM operator doesn't support dropout.
