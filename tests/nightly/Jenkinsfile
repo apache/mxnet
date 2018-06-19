@@ -120,7 +120,6 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation1') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas"
           docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas', false)
         }
       }
@@ -129,7 +128,6 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation2') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MIN=1"
           docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MIN=1', false)
         }
       }
@@ -138,7 +136,6 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation3') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1"
           docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1', false)
         }
       }
@@ -147,7 +144,6 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation4') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1"
           docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1', false)
         }
       }
@@ -156,7 +152,6 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-amalgamation5') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_nightly_cpu /work/runtime_functions.sh nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0"
           docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0', false)
         }
       }
@@ -165,15 +160,11 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-mxnetjs') {
           init_git()
-          //sh "ci/build.py --platform ubuntu_emscripten /work/runtime_functions.sh nightly_test_javascript"
           docker_run('ubuntu_emscripten', 'nightly_test_javascript', false)
         }
       }
     }
-
-
   }
-
 } catch (caughtError) {
   node("mxnetlinux-cpu") {
     sh "echo caught ${caughtError}"
