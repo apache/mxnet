@@ -45,6 +45,11 @@ def benchmark_rnn(cell, rnn_data, states):
     num_batches = 20
 
     # Imperative
+    cell0 = copy.deepcopy(cell)
+    layer0 = TestRNNLayer(cell0)
+    layer0.initialize(ctx=ctx)
+
+    # Hybridize
     cell1 = copy.deepcopy(cell)
     cell1.hybridize()
     layer1 = TestRNNLayer(cell1)
@@ -65,21 +70,27 @@ def benchmark_rnn(cell, rnn_data, states):
 
     tic = time.time()
     for i in range(num_batches):
-        res1 = layer1(rnn_data, states)
+        res0 = layer0(rnn_data, states)
         mx.nd.waitall()
     print("Imperative inference takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        res1 = layer1(rnn_data, states)
+        mx.nd.waitall()
+    print("Hybrid-cell inference takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        res3 = layer3(rnn_data, states)
+        mx.nd.waitall()
+    print("Static-hybrid-cell inference takes " + str(time.time() - tic))
 
     tic = time.time()
     for i in range(num_batches):
         res2 = layer2(rnn_data, states)
         mx.nd.waitall()
     print("Hybrid inference takes " + str(time.time() - tic))
-
-    tic = time.time()
-    for i in range(num_batches):
-        res3 = layer3(rnn_data, states)
-        mx.nd.waitall()
-    print("Hybrid-cell inference takes " + str(time.time() - tic))
 
     layer2.export("foreach_rnn")
     symnet = mx.symbol.load('foreach_rnn-symbol.json')
@@ -100,10 +111,26 @@ def benchmark_rnn(cell, rnn_data, states):
     tic = time.time()
     for i in range(num_batches):
         with mx.autograd.record():
+            res0 = layer0(rnn_data, states)
+        res0.backward()
+        mx.nd.waitall()
+    print("Imperative training takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
             res1 = layer1(rnn_data, states)
         res1.backward()
         mx.nd.waitall()
-    print("Imperative training takes " + str(time.time() - tic))
+    print("Hybrid-cell training takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
+            res3 = layer3(rnn_data, states)
+        res3.backward()
+        mx.nd.waitall()
+    print("Static-hybrid-cell training takes " + str(time.time() - tic))
 
     tic = time.time()
     for i in range(num_batches):
@@ -112,14 +139,6 @@ def benchmark_rnn(cell, rnn_data, states):
         res2.backward()
         mx.nd.waitall()
     print("Hybrid training takes " + str(time.time() - tic))
-
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res3 = layer3(rnn_data, states)
-        res3.backward()
-        mx.nd.waitall()
-    print("Hybrid-cell training takes " + str(time.time() - tic))
 
     # gradients for the backward of the foreach symbol
     args_grad1 = {}
