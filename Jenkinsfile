@@ -505,7 +505,7 @@ try {
         ws('workspace/ut-python2-cpu') {
           try {
             init_git()
-            unpack_lib('cpu', mx_lib)
+            unpack_lib('cpu')
             python2_ut('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
