@@ -80,7 +80,7 @@ CC=gcc-4.9 CXX=g++-4.9 cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INST
 ### Build MXNet with MKL-DNN
 
 ```
-make -j $(sysctl -n hw.ncpu) USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+make -j $(sysctl -n hw.ncpu) CC=gcc-4.9 CXX=g++-4.9 USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
 ```
 
 *Note: Temporarily disable OPENCV.*
