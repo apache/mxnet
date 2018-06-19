@@ -109,7 +109,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
                   "for resnet training on ImageNet data.");
     DMLC_DECLARE_FIELD(max_rotate_angle).set_default(0.0f)
         .describe("Rotate by a random degree in ``[-v, v]``");
-    DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(1.0f)
+    DMLC_DECLARE_FIELD(max_aspect_ratio).set_default(0.0f)
         .describe("Change the aspect (namely width/height) to a random value. "
                   "If min_aspect_ratio is None then the aspect ratio ins sampled from "
                   "[1 - max_aspect_ratio, 1 + max_aspect_ratio], "

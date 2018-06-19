@@ -53,10 +53,13 @@ def add_data_aug_args(parser):
                      help='max change of saturation, whose range is [0, 255]')
     aug.add_argument('--max-random-l', type=int, default=0,
                      help='max change of intensity, whose range is [0, 255]')
-    aug.add_argument('--min-random-aspect-ratio', type=float, default=1,
-                     help='min value of aspect ratio, whose value should be positive.')
-    aug.add_argument('--max-random-aspect-ratio', type=float, default=1,
-                     help='max value of aspect ratio')
+    aug.add_argument('--min-random-aspect-ratio', type=float, default=None,
+                     help='min value of aspect ratio, whose value is either None or a positive value.')
+    aug.add_argument('--max-random-aspect-ratio', type=float, default=0,
+                     help='max value of aspect ratio. If min_random_aspect_ratio is None, '
+                          'the aspect ratio range is [1-max_random_aspect_ratio, '
+                          '1+max_random_aspect_ratio], otherwise it is '
+                          '[min_random_aspect_ratio, max_random_aspect_ratio].')
     aug.add_argument('--max-random-rotate-angle', type=int, default=0,
                      help='max angle to rotate, whose range is [0, 360]')
     aug.add_argument('--max-random-shear-ratio', type=float, default=0,
