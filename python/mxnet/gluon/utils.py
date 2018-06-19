@@ -118,10 +118,14 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 def clip_global_norm(arrays, max_norm):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
     """
+    def _norm(array):
+        if array.stype == 'default':
+            x = array.reshape((-1,))
+            return ndarray.dot(x, x)
+        return array.norm().square()
     assert len(arrays) > 0
     ctx = arrays[0].context
-    total_norm = ndarray.add_n(*[ndarray.dot(x, x).as_in_context(ctx)
-                                 for x in (arr.reshape((-1,)) for arr in arrays)])
+    total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
     total_norm = ndarray.sqrt(total_norm).asscalar()
     if not np.isfinite(total_norm):
         warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),

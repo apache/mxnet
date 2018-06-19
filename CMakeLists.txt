@@ -15,7 +15,7 @@ mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
 mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
 mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON)
+mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
@@ -365,7 +365,7 @@ if(USE_OPENMP)
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
     endif()
   endif()
-elseif(UNIX)
+elseif(UNIX AND NOT ANDROID)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
 
@@ -580,11 +580,6 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/CMakeLists.txt")
-  set(nnvm_LINKER_LIBS nnvm)
-  list(APPEND mxnet_LINKER_LIBS ${nnvm_LINKER_LIBS})
-endif()
-
 if(NOT MSVC)
   # Only add c++11 flags and definitions after cuda compiling
   add_definitions(-DDMLC_USE_CXX11)
@@ -664,7 +659,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
-    ${nnvm_LINKER_LIBS}
     ${pslite_LINKER_LIBS}
     )
 else()
