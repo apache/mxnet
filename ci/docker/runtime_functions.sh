@@ -31,6 +31,15 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
+check_cython() {
+    set -ex
+    local python_ver=$1
+    if [ "$(echo -e 'import mxnet as mx\nprint(mx.nd._internal.NDArrayBase)' | python)" != "<class 'mxnet._cy$python_ver.ndarray.NDArrayBase'>" ]; then
+        echo "Error: cython is not used."
+        return 1
+    fi
+}
+
 build_ccache_wrappers() {
     set -ex
 
@@ -292,10 +301,6 @@ build_centos7_cpu() {
         -j$(nproc)
 
     report_ccache_usage
-
-    export CC="gcc"
-    export CXX="g++"
-    make cython PYTHON=python3.6
 }
 
 build_centos7_mkldnn() {
@@ -330,7 +335,6 @@ build_centos7_gpu() {
         USE_CUDNN=1 \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-    make cython PYTHON=python3.6
 }
 
 build_ubuntu_cpu() {
@@ -349,6 +353,11 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 
     report_ccache_usage
+
+    export CC="gcc"
+    export CXX="g++"
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_clang39() {
@@ -473,6 +482,9 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_amalgamation() {
@@ -548,6 +560,8 @@ unittest_ubuntu_python2_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 2
     nosetests-2.7 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -560,6 +574,8 @@ unittest_ubuntu_python3_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
@@ -582,6 +598,8 @@ unittest_ubuntu_python2_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 2
     nosetests-2.7 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -616,6 +634,8 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -686,7 +706,6 @@ unittest_ubuntu_gpu_R() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    export MXNET_ENFORCE_CYTHON=1
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
@@ -694,7 +713,6 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export MXNET_ENFORCE_CYTHON=1
     python3.6 -m "nose" --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 

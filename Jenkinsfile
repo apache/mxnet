@@ -22,10 +22,12 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-// mxnet libraries with cython
-mx_cython_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+// mx_lib with cython
+mx_cython_lib = 'lib/libmxnet.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
+// mx_dist_lib with cython
+mx_cython_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
@@ -172,7 +174,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            pack_lib('centos7_cpu', mx_cython_lib)
+            pack_lib('centos7_cpu')
           }
         }
       }
@@ -194,7 +196,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            pack_lib('centos7_gpu', mx_cython_lib)
+            pack_lib('centos7_gpu')
           }
         }
       }
@@ -205,7 +207,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            pack_lib('cpu', mx_dist_lib)
+            pack_lib('cpu', mx_cython_dist_lib)
           }
         }
       }
@@ -280,7 +282,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-            pack_lib('gpu', mx_dist_lib)
+            pack_lib('gpu', mx_cython_dist_lib)
             stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
             stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
             stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
@@ -493,7 +495,7 @@ try {
         ws('workspace/ut-python2-cpu') {
           try {
             init_git()
-            unpack_lib('cpu')
+            unpack_lib('cpu', mx_cython_lib)
             python2_ut('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
@@ -508,7 +510,7 @@ try {
         ws('workspace/ut-python3-cpu') {
           try {
             init_git()
-            unpack_lib('cpu')
+            unpack_lib('cpu', mx_cython_lib)
             python3_ut('ubuntu_cpu')
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
@@ -522,7 +524,7 @@ try {
         ws('workspace/ut-python2-gpu') {
           try {
             init_git()
-            unpack_lib('gpu', mx_lib)
+            unpack_lib('gpu', mx_cython_lib)
             python2_gpu_ut('ubuntu_gpu')
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
@@ -535,7 +537,7 @@ try {
         ws('workspace/ut-python3-gpu') {
           try {
             init_git()
-            unpack_lib('gpu', mx_lib)
+            unpack_lib('gpu', mx_cython_lib)
             python3_gpu_ut('ubuntu_gpu')
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
@@ -634,7 +636,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               init_git()
-              unpack_lib('centos7_cpu', mx_cython_lib)
+              unpack_lib('centos7_cpu')
               docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
             } finally {
               collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
@@ -650,7 +652,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               init_git()
-              unpack_lib('centos7_gpu', mx_cython_lib)
+              unpack_lib('centos7_gpu')
               docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
             } finally {
               collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
