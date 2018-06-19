@@ -133,6 +133,19 @@ def test_blockscope():
     thread.join()
     event.clear()
     assert status[0], "Spawned thread isn't using the correct blockscope namemanager"
+    
+def test_createblock():
+    status = [False]
+    def f():
+        net = mx.gluon.nn.Dense(2)
+        net.initialize()
+        net(mx.nd.array([1, 2, 3]))
+        status[0] = True
+
+    thread = threading.Thread(target=f)
+    thread.start()
+    thread.join()
+    assert status[0], "Failed to create a layer within a thread"
 
 if __name__ == '__main__':
     import nose
