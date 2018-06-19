@@ -19,12 +19,9 @@
 
 #Author: Amol Lele
 
-#software-properties-common, curl are installed in the docker container 'ubuntu_cpu'
-# install git-core
+#software-properties-common, curl, npm are installed in the docker container 'ubuntu_blc'
 
-#rm -rf incubator-mxnet-site && rm -rf website-link-checker
-
-git config --global user.email \"$APACHE_USERNAME@gl.com\" && git config --global user.name \"$APACHE_USERNAME\"
+#git config --global user.email \"$APACHE_USERNAME@gl.com\" && git config --global user.name \"$APACHE_USERNAME\"
 echo `pwd`
 #echo "Clone the incubator-mxnet-site repo and checkout the correct branch"
 #git clone https://$APACHE_USERNAME:$APACHE_PASSWORD@github.com/leleamol/incubator-mxnet-site.git
@@ -38,15 +35,15 @@ echo `pwd`
 
 cd tests/nightly/broken_link_checker_test
 echo `pwd`
+
+echo "Copying the url_list.txt from s3 bucket"
+aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  url_list.txt
+
 echo "Running test_broken_links.py"
 python test_broken_links.py
 
-touch url_list.txt
 echo "Running check_regression.sh"
 ./check_regression.sh
 cd ../.
 
 echo "Commit the new urls found"
-#git add ./_urlList/url_list.txt
-#git commit -m "New Urls"
-#git push origin link-checker
