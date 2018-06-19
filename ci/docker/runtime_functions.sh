@@ -35,8 +35,11 @@ check_cython() {
     set -ex
     local python_ver=$1
     if [ "$(echo -e 'import mxnet as mx\nprint(mx.nd._internal.NDArrayBase.__module__)' | python${python_ver})" != "mxnet._cy${python_ver}.ndarray" ]; then
-        echo "Error: cython is not used."
+        echo "ERROR: cython is not used."
         return 1
+    else
+        echo "NOTE: cython is used."
+        return 0
     fi
 }
 

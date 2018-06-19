@@ -97,7 +97,9 @@ def config_cython():
                 libraries=libraries,
                 extra_link_args=extra_link_args,
                 language="c++"))
-        return cythonize(ret)
+        # If `force=True` is not used and you cythonize the modules for python2 and python3
+        # successively, you need to delete `mxnet/cython/ndarray.cpp` after the first cythonize.
+        return cythonize(ret, force=True)
     except ImportError:
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
