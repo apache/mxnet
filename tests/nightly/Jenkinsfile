@@ -160,7 +160,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-mxnetjs') {
           init_git()
-          docker_run('ubuntu_emscripten', 'nightly_test_javascript', false)
+          docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
         }
       }
     }

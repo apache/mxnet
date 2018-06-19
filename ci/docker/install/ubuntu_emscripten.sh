@@ -38,4 +38,4 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;JSBackend" \
 -DCLANG_INCLUDE_TESTS=OFF && make -j$(nproc)
 
 chmod -R 777 /work/deps/emscripten-fastcomp/
-export LLVM=/work/deps/emscripten-fastcomp/build/bin
+#export LLVM=/work/deps/emscripten-fastcomp/build/bin

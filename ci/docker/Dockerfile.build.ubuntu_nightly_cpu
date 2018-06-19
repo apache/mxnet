@@ -46,6 +46,8 @@ COPY install/ubuntu_docs.sh /work/
 RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_nightly_tests.sh /work/
 RUN /work/ubuntu_nightly_tests.sh
+COPY install/ubuntu_emscripten.sh /work/
+RUN /work/ubuntu_emscripten.sh
 
 ARG USER_ID=0
 
@@ -56,3 +58,4 @@ COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+ENV LLVM=/work/deps/emscripten-fastcomp/build/bin
