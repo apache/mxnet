@@ -106,11 +106,11 @@ def test_contrib_rnn(batch_size, input_size, hidden_size, seq_len, ctx):
 
 if __name__ == '__main__':
     print("Benchmark in CPU (batch size: 1)")
-    test_contrib_rnn(1, 100, 100, 100, mx.cpu(0))
+    test_contrib_rnn(1, 500, 500, 100, mx.cpu(0))
     print("Benchmark in CPU (batch size: 32)")
-    test_contrib_rnn(32, 100, 100, 100, mx.cpu(0))
+    test_contrib_rnn(32, 500, 500, 100, mx.cpu(0))
     if len(get_gpus()) > 0:
         print("Benchmark in GPU (batch size: 1)")
-        test_contrib_rnn(1, 100, 100, 100, mx.gpu(0))
+        test_contrib_rnn(1, 500, 500, 100, mx.gpu(0))
         print("Benchmark in GPU (batch size: 32)")
-        test_contrib_rnn(32, 100, 100, 100, mx.gpu(0))
+        test_contrib_rnn(32, 500, 500, 100, mx.gpu(0))
