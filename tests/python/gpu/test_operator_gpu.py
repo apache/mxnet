@@ -532,6 +532,47 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_convolution_large_c():
+    def test_with_1D_size(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, 65536, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, 65536, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
+        # The convolution accumulates many values, so set a large tolerance.
+        tol = {np.dtype(np.float32): 1,
+               np.dtype(np.float64): 1}
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req='add')
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that use cudnnFind() exclusively.
+    for trial in range(0,6):
+        test_with_1D_size(2**(trial+1), 'write')
+    # Then create symbols that must avoid cached cudnnFind() results in some cases.
+    for trial in range(0,6):
+        test_with_1D_size(2**(trial+1), 'add')
+
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_deconvolution_large_c():
+    def test_with_1D_size(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCW', num_filter=65536, kernel=(2,), name='deconv')
+        # The convolution accumulates many values, so set a large tolerance.
+        tol = {np.dtype(np.float32): 1,
+               np.dtype(np.float64): 1}
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that use cudnnFind() exclusively.
+    for trial in range(0,6):
+        test_with_1D_size(2**(trial+1), 'write')
+    # Then create symbols that must avoid cached cudnnFind() results in some cases.
+    for trial in range(0,6):
+        test_with_1D_size(2**(trial+1), 'add')
 
 @with_seed()
 def test_convolution_versions():
