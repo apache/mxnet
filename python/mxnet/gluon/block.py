@@ -50,8 +50,9 @@ class _BlockScope(object):
         current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
-                with _name.NameManager():
-                    prefix = _name.NameManager._current.value.get(None, hint) + '_'
+                if not hasattr(_name.NameManager._current, "value"):
+                    _name.NameManager._current.value = _name.NameManager()
+                prefix = _name.NameManager._current.value.get(None, hint) + '_'
             if params is None:
                 params = ParameterDict(prefix)
             else:
