@@ -141,6 +141,7 @@ def test_createblock():
         net.initialize()
         net(mx.nd.array([1, 2, 3]))
         status[0] = True
+
     thread = threading.Thread(target=f)
     thread.start()
     thread.join()
