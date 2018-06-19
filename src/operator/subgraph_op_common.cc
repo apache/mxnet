@@ -184,6 +184,19 @@ bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
   return true;
 }
 
+LoopState::LoopState(const Symbol &g) {
+  this->subgraph_sym = g;
+  this->subgraph.outputs = g.outputs;
+
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
+  // We turn on static_alloc for two reasons.
+  // It avoids the overhead of unnecessary memory allocation.
+  // only static_alloc supports nested call of CachedOp.
+  kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
+  iter_op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+}
+
 void LoopState::Forward(int iter_no,
                         std::vector<NDArray> cinputs,
                         const std::vector<OpReqType>& req,
@@ -205,33 +218,7 @@ void LoopState::Forward(int iter_no,
   for (size_t i = 0; i < outputs.size(); i++)
     outputs[i] = &coutputs[i];
 
-  std::vector<std::pair<std::string, std::string> > kwargs;
-  kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  // We turn on static_alloc for two reasons.
-  // It avoids the overhead of unnecessary memory allocation.
-  // only static_alloc supports nested call of CachedOp.
-  kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
-  CachedOpPtr op;
-  if (is_recording && iter_ops.size() > (size_t) iter_no)
-    op = iter_ops[iter_no];
-  else if (!is_recording && iter_ops.size() == 1)
-    op = iter_ops[0];
-
-  // If we need to run backward and we don't have a cached op for this iteration,
-  // we create one for this iteration.
-  if (is_recording && op == nullptr) {
-    op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
-    CHECK_EQ(iter_ops.size(), iter_no);
-    iter_ops.push_back(op);
-  } else if (op == nullptr) {
-    // If we don't need to run backward and this is the first time of
-    // running the iteration, we need to create a new cached op.
-    op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
-    CHECK(iter_ops.empty());
-    iter_ops.push_back(op);
-  }
-  OpStatePtr state = op->Forward(nullptr, inputs, outputs);
-
+  OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs);
   if (is_recording) {
     all_inputs.push_back(cinputs);
     all_outputs.push_back(coutputs);
@@ -248,9 +235,9 @@ void LoopState::Backward(int iter_no,
   using namespace nnvm;
   using namespace imperative;
 
-  CHECK_GT(iter_ops.size(), iter_no)
+  CHECK_GT(all_states.size(), iter_no)
       << "We didn't record the computation for iteration " << iter_no;
-  auto op = iter_ops[iter_no];
+  auto op = iter_op;
   std::vector<NDArray *> inputs;
   std::vector<NDArray *> outputs;
   inputs.reserve(op->num_backward_inputs());
