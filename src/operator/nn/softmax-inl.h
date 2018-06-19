@@ -53,7 +53,7 @@ struct log_softmax_fwd {
 
 template<typename OP, typename DType, int ndim>
 inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
-                    Shape<ndim> shape, int axis) {
+                    Shape<ndim> shape, int axis, double temperature) {
   index_t M = shape[axis];
   index_t N = shape.Size()/M;
   Shape<ndim> stride = calc_stride(shape);
@@ -72,11 +72,11 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
 
     DType sum = DType(0);
     for (index_t j = 0; j < M; ++j) {
-      sum += std::exp(in[base + j*sa] - mmax);
+      sum += std::exp((in[base + j*sa] - mmax)/temperature);
     }
 
     for (index_t j = 0; j < M; ++j) {
-      out[base + j*sa] = OP::Map(in[base + j*sa] - mmax, sum);
+      out[base + j*sa] = OP::Map((in[base + j*sa] - mmax)/temperature, sum);
     }
   }
 }
@@ -226,9 +226,12 @@ inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
 
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   int axis;
+  double temperature;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(axis).set_default(-1)
       .describe("The axis along which to compute softmax.");
+    DMLC_DECLARE_FIELD(temperature).set_default(1.0)
+      .describe("The temperature in softmax function")
   }
 };
 
@@ -247,10 +250,10 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (shape.ndim() == 2) {
       Softmax<OP>(ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-              outputs[0].dptr<DType>(), shape.get<2>(), axis);
+              outputs[0].dptr<DType>(), shape.get<2>(), axis, param.temperature);
     } else {
       Softmax<OP>(ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-              outputs[0].dptr<DType>(), shape.get<3>(), axis);
+              outputs[0].dptr<DType>(), shape.get<3>(), axis, param.temperature);
     }
   });
 }

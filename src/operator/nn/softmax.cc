@@ -77,9 +77,11 @@ MXNET_OPERATOR_REGISTER_UNARY(softmax)
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
 
 .. math::
-   softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
+   softmax(\mathbf{z/t})_j = \frac{e^{z_j/t}}{\sum_{k=1}^K e^{z_k/t}}
 
 for :math:`j = 1, ..., K`
+
+t is the temperature parameter often used in reinforcement learning. By default, t equals 1.0
 
 Example::
 
