@@ -92,8 +92,6 @@ def _create_kvstore(kvstore, num_device, arg_params):
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
-        if kv.type == 'dist_sync_allreduce':
-            update_on_kvstore = False
     elif isinstance(kvstore, str):
         # create kvstore using the string type
         if num_device is 1 and 'dist' not in kvstore:
@@ -107,12 +105,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
-            if kvstore == 'dist_sync_allreduce':
-                update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    if kv is None:
+    if (kv is None) or ('allreduce' in kv.type):
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)

@@ -585,7 +585,7 @@ void BackgroundThreadLoop() {
   MPI_Finalize();
 }
 
-int InitializeMPIOnce(bool gpu) {
+int InitializeMPIOnce() {
   if (coll_global.initialized_flag.test_and_set())
     return coll_global.init_status;
 
@@ -657,7 +657,7 @@ int MXGetMpiRank(int *ret) {
 }
 
 int MXCOLLIBInit() {
-  return InitializeMPIOnce(false);
+  return InitializeMPIOnce();
 }
 
 int MXGetLocalRank(int *ret) {
@@ -840,6 +840,7 @@ int MXAllGather(const std::vector<int> &keys,
                 const std::vector<mxnet::NDArray*> &values,
                 int priority) {
   // place holder
+  LOG(FATAL) << "Collective AllGather has not been implemented yet!";
   return 0;
 }
 
@@ -847,7 +848,13 @@ int MXAllGatherEx(const std::vector<std::string> &keys,
                   const std::vector<mxnet::NDArray*> &values,
                   int priority) {
   // place holder
+  LOG(FATAL) << "Collective AllGather has not been implemented yet!";
   return 0;
+}
+
+int MXBarrier() {
+  mxnet::Engine::Get()->WaitForAll();
+  return MPI_Barrier(MPI_COMM_WORLD);
 }
 
 }  // end of namespace kvstore

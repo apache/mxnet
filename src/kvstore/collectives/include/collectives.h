@@ -35,8 +35,8 @@ namespace mxnet {
 namespace kvstore {
 
 /*!
- * \brief Get node number.
- * \param ret out param for node number.
+ * \brief Get total node number.
+ * \param ret out param for total node number.
  * \return 0 when success, -1 when failure happens
  */
 int MXGetMpiSize(int *ret);
@@ -132,6 +132,12 @@ int MXAllGather(const std::vector<int> &keys,
 int MXAllGatherEx(const std::vector<std::string> &keys,
                   const std::vector<mxnet::NDArray*> &values,
                   int priority);
+
+/*!
+ * \brief Blocks until all rank reached this routine
+ * \return - when success, -1 when failure happens
+ */
+int MXBarrier();
 
 }  // namespace kvstore
 }  // namespace mxnet

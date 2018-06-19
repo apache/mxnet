@@ -53,20 +53,20 @@ KVStore* KVStore::Create(const char *type_name) {
     use_device_comm = true;
   }
 
-#if MXNET_USE_ALLREDUCE_DIST_KVSTORE
-  if (has("dist_sync_allreduce")) {
-    kv = new kvstore::KVStoreDistSyncAllReduce();
-    kv->type_ = tname;
-    return kv;
-  }
+  if (has("dist")) {
+#if defined(MXNET_USE_ALLREDUCE_DIST_KVSTORE) && defined(MXNET_USE_DIST_KVSTORE)
+    if (has("allreduce")) {
+      kv = new kvstore::KVStoreDistSyncAllReduce();
+      kv->type_ = tname;
+      return kv;
+    }
 #else
-  if (has("dist_sync_allreduce")) {
-    LOG(FATAL) << "compile with USE_ALLREDUCE_DIST_KVSTORE=1 to use " << tname;
-    return nullptr;
-  }
+    if (has("allreduce")) {
+      LOG(FATAL) << "compile with USE_ALLREDUCE_DIST_KVSTORE=1 to use " << tname;
+      return nullptr;
+    }
 #endif
 
-  if (has("dist")) {
 #if MXNET_USE_DIST_KVSTORE
     kv = new kvstore::KVStoreDist(use_device_comm);
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {

@@ -148,6 +148,13 @@ class KVStoreDistSyncAllReduce : public KVStore {
     }
   }
 
+  void Barrier() override {
+    int ret = MXBarrier();
+    if (ret != 0) {
+      LOG(FATAL) << "MXBarrier is not successful. ret: " << ret;
+    }
+  }
+
   int get_rank() const override {
     int ret, rank;
     ret = MXGetMpiRank(&rank);

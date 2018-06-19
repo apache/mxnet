@@ -229,7 +229,7 @@ class KVStore(object):
         >>> print b
         <RowSparseNDArray 2x3 @cpu(0)>
         """
-        if self.type != 'dist_sync_allreduce':
+        if 'allreduce' not in self.type: # pylint: disable=unsupported-membership-test
             ckeys, cvals, use_str_keys = _ctype_key_value(key, value)
             if use_str_keys:
                 check_call(_LIB.MXKVStorePushEx(
@@ -305,7 +305,7 @@ class KVStore(object):
         [ 2.  2.  2.]]
         """
         assert(out is not None)
-        if self.type != 'dist_sync_allreduce':
+        if 'allreduce' not in self.type: # pylint: disable=unsupported-membership-test
             ckeys, cvals, use_str_keys = _ctype_key_value(key, out)
             if use_str_keys:
                 check_call(_LIB.MXKVStorePullEx(
@@ -317,7 +317,7 @@ class KVStore(object):
             raise Exception("This api is not supported for kvstore with type %s. \
                              Please use pushpull instead."%self.type)
 
-    def pushpull(self, key, ins, outs, priority=0):
+    def pushpull(self, keys, ins, outs, priority=0):
         """ allreduce a single or a sequence of key-value pairs from all nodes.
 
         This function returns immediately after sending an allreduce request to mpi background
@@ -328,7 +328,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
+        keys : str, int, or sequence of str or int
               Keys.
 
         ins : NDArray, or list of list of NDArray
@@ -360,9 +360,9 @@ class KVStore(object):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-        if self.type == 'dist_sync_allreduce':
-            ckeys, cinvals, use_str_keys = _ctype_key_value(key, ins)
-            ckeys, coutvals, use_str_keys = _ctype_key_value(key, outs)
+        if 'allreduce' in self.type: # pylint: disable=unsupported-membership-test
+            ckeys, cinvals, use_str_keys = _ctype_key_value(keys, ins)
+            ckeys, coutvals, use_str_keys = _ctype_key_value(keys, outs)
             if use_str_keys:
                 check_call(_LIB.MXKVStorePushPullEx(
                     self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
@@ -375,7 +375,7 @@ class KVStore(object):
             raise Exception("This api is not supported for kvstore with type %s. \
                              Please use push and pull instead."%self.type)
 
-    def broadcast(self, key, values, root_rank, priority=0):
+    def broadcast(self, keys, values, root_rank, priority=0):
         """ Broadcast a single or a sequence of key-value pairs from root_rank to all other nodes
 
         This function returns immediately after sending an broadcast request to mpi background
@@ -385,7 +385,7 @@ class KVStore(object):
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
+        keys : str, int, or sequence of str or int
               Keys.
 
         values : NDArray, or list of list of NDArray
@@ -403,13 +403,14 @@ class KVStore(object):
         >>>   value = mx.nd.ones(shape)
         >>> else:
         >>>   value = mx.nd.zeros(shape)
+        >>> kv.broadcast('key', value, 0)
         >>> if kv.rank != 0:
         >>>   print value.asnumpy
-        >>> [[ 2.  2.  2.]
-            [ 2.  2.  2.]]
+        >>> [[ 1.  1.  1.]
+            [ 1.  1.  1.]]
         """
-        if self.type == 'dist_sync_allreduce':
-            ckeys, cinvals, use_str_keys = _ctype_key_value(key, values)
+        if 'allreduce' in self.type: # pylint: disable=unsupported-membership-test
+            ckeys, cinvals, use_str_keys = _ctype_key_value(keys, values)
             if use_str_keys:
                 check_call(_LIB.MXKVStoreBroadcastEx(
                     self.handle, mx_uint(len(ckeys)), ckeys, cinvals,
@@ -477,7 +478,7 @@ class KVStore(object):
         """
         assert(out is not None)
         assert(row_ids is not None)
-        if self.type == 'dist_sync_allreduce':
+        if 'allreduce' in self.type: # pylint: disable=unsupported-membership-test
             raise Exception("This api is not supported for kvstore with type %s"%self.type)
         if isinstance(row_ids, NDArray):
             row_ids = [row_ids]
@@ -745,7 +746,7 @@ class KVStore(object):
         body : str
             the body of the command.
         """
-        if self.type == 'dist_sync_allreduce':
+        if 'allreduce' in self.type: # pylint: disable=unsupported-membership-test
             raise Exception("This api is not supported for kvstore with type %s"%self.type)
         else:
             check_call(_LIB.MXKVStoreSendCommmandToServers(

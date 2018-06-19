@@ -1929,7 +1929,8 @@ MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
 
 /*!
  * \brief aggregate and sum up a list of (key, value) pairs from from all nodes, the result is stored
- *        in out_vals. It has the same syntax as allreduce.
+ *        in out_vals. It has the same syntax as allreduce. Note: Currently only kvstore with type
+ *        'dist_sync_allreduce' support this api.
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys
@@ -1947,7 +1948,8 @@ MXNET_DLL int MXKVStorePushPull(KVStoreHandle handle,
 
 /*!
  * \brief aggregate and sum up a list of (key, value) pairs from from all nodes, the result is stored
- *        in out_vals. It has the same syntax as allreduce.
+ *        in out_vals. It has the same syntax as allreduce.Note: Currently only kvstore with type
+ *        'dist_sync_allreduce' support this api.
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys in string.
@@ -1964,12 +1966,14 @@ MXNET_DLL int MXKVStorePushPullEx(KVStoreHandle handle,
                                   int priority);
 
 /*!
- * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes.
+ * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes. Note:
+ *        Currently only kvstore with type 'dist_sync_allreduce' support this api.
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys.
  * \param vals on node with root rank, the list of (key, value) will be broadcast.
  *             on other nodes, the list of (key, value) will be the place to store the result.
+ * \param root_rank the rank where the values will be broadcast.
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
@@ -1981,12 +1985,14 @@ MXNET_DLL int MXKVStoreBroadcast(KVStoreHandle handle,
                                  int priority);
 
 /*!
- * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes.
+ * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes. Note:
+ *        Currently only kvstore with type 'dist_sync_allreduce' support this api.
  * \param handle handle to the kvstore
  * \param num the number of key-value pairs
  * \param keys the list of keys in string.
  * \param vals on node with root rank, the list of (key, value) will be broadcast.
  *             on other nodes, the list of (key, value) will be the place to store the result.
+ * \param root_rank the rank where the values will be broadcast.
  * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
