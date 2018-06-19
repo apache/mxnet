@@ -144,7 +144,7 @@ def test_gru_bidirectional():
 def test_loop_gru_bidirectional():
     for i in range(1000):
         test_gru_bidirectional()
-
+        print("passed %d times" %i)
 
 # Currently, fused LSTM operator doesn't support dropout.
 # Will change this test after dropout is supported
