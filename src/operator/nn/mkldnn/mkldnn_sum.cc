@@ -23,6 +23,7 @@
  * \author Da Zheng
 */
 #include <iostream>
+#include <vector>
 
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
@@ -31,16 +32,16 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+void MKLDNNSum(std::vector<mkldnn::memory> &in_mems,
          const mkldnn::memory &out) {
-  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
-  std::vector<float> scales(2, 1);
+  std::vector<mkldnn::memory::primitive_desc> input_pds(in_mems.size());
+  std::vector<float> scales(in_mems.size(), 1);
   std::vector<mkldnn::primitive::at> inputs;
-  input_pds[0] = arr1.get_primitive_desc();
-  input_pds[1] = arr2.get_primitive_desc();
-  CHECK(input_pds[0] == input_pds[1]);
-  inputs.push_back(arr1);
-  inputs.push_back(arr2);
+  for (int i = 0; i < in_mems.size(); i++) {
+    input_pds[i] = in_mems[i].get_primitive_desc();
+    inputs.push_back(in_mems[i]);
+    if (i > 0) CHECK(input_pds[i] == input_pds[i-1]);
+  }
   // TODO(zhengda) I need to reorder memory here.
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
   MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
@@ -54,7 +55,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   }
 
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  std::vector<mkldnn::primitive::at> in_prims;
+  std::vector<mkldnn::memory> in_prims;
   std::vector<mkldnn::memory::primitive_desc> in_pds(inputs.size());
   std::vector<float> scales(inputs.size(), 1);
   in_prims.reserve(inputs.size());
@@ -70,11 +71,10 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     in_prims.push_back(*in_mem);
     in_pds[i] = in_mem->get_primitive_desc();
   }
-
   mkldnn::sum::primitive_desc pdesc(scales, in_pds);
   auto mem = CreateMKLDNNMem(out_data, pdesc.dst_primitive_desc(), req, &inputs[0]);
   MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *mem.second));
+  MKLDNNSum(in_prims, *mem.second);
   CommitOutput(out_data, mem);
   stream->Submit();
 }

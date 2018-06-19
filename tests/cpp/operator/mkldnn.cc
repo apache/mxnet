@@ -799,7 +799,8 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       if (out_mem == nullptr)
         continue;
       PrintVerifyMsg(in_arr, in_arr);
-      op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
+      std::vector<mkldnn::memory> in_mems = {*in_mem1, *in_mem2};
+      op::MKLDNNSum(in_mems, *out_mem);
       MKLDNNStream::Get()->Submit();
       VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
     }
@@ -812,7 +813,8 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
     orig_arr.arr.CopyFrom(*input_mem);
     auto old_mem = orig_arr.arr.GetMKLDNNData();
-    op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
+    std::vector<mkldnn::memory> in_mems = {*input_mem, *input_mem2};
+    op::MKLDNNSum(in_mems, *input_mem);
     MKLDNNStream::Get()->Submit();
     VerifySumMemory(*old_mem, *input_mem2, *input_mem);
   }
