@@ -71,16 +71,13 @@ class LoopState {
   // For training, each iteration has a cached op because each iteration
   // needs to maintain a set of memory buffers for all computation states,
   // which will be used in the backward.
-  std::vector<CachedOpPtr> iter_ops;
+  CachedOpPtr iter_op;
   std::vector<OpStatePtr> all_states;
   Symbol subgraph_sym;
   nnvm::Graph subgraph;
 
  public:
-  explicit LoopState(const Symbol &g) {
-    this->subgraph_sym = g;
-    this->subgraph.outputs = g.outputs;
-  }
+  explicit LoopState(const Symbol &g);
 
   void Forward(int iter_no,
                std::vector<NDArray> cinputs,
