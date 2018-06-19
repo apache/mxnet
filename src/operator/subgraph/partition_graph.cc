@@ -105,9 +105,12 @@ void CreateSimpleGraph(const Graph& g,
  * \brief Reset labels of the subgraph nodes to the original state
  * and clear the vector of subgraph nodes.
  */
-void ResetSubgraphNodes(std::vector<SimpleNode*>* subgraph_nodes) {
-  for (auto sn : *subgraph_nodes) {
-    sn->label = -1;
+void ResetNodeLabels(const nnvm::Graph& g,
+                     const std::vector<SimpleNodePtr>& simple_nodes,
+                     std::vector<nnvm::Node*>* subgraph_nodes) {
+  for (auto n : *subgraph_nodes) {
+    const auto nid = g.indexed_graph().node_id(n);
+    simple_nodes[nid]->label = -1;
   }
   subgraph_nodes->clear();
 }
@@ -132,7 +135,7 @@ bool LabelSubgraph(const Graph& g,
                    const int label,
                    const size_t snid,  // simple node id, this is a seed
                    const std::vector<SimpleNodePtr>& simple_nodes,
-                   std::vector<SimpleNode*>* subgraph_nodes,
+                   std::vector<nnvm::Node*>* subgraph_nodes,
                    std::unordered_set<const nnvm::Node*>* excluded_nodes = nullptr) {
   const auto& indexed_graph = g.indexed_graph();
   std::queue<SimpleNode*> node_queue;
@@ -154,7 +157,7 @@ bool LabelSubgraph(const Graph& g,
     SimpleNode* cur_node = node_queue.front();
     node_queue.pop();
     //cur_node->label = label;
-    subgraph_nodes->push_back(cur_node);
+    subgraph_nodes->push_back(cur_node->node);
     // get qualified adjacent input nodes
     for (auto& e : cur_node->node->inputs) {
       const bool select_input = (!excluded_nodes || !excluded_nodes->count(e.node.get()))
@@ -216,13 +219,10 @@ bool LabelSubgraph(const Graph& g,
       << simple_nodes[excluded_node_id]->node->attrs.name << " and "
       << simple_nodes[snid]->node->attrs.name;
     excluded_nodes->insert(simple_nodes[excluded_node_id]->node);
-    ResetSubgraphNodes(subgraph_nodes);
+    ResetNodeLabels(g, simple_nodes, subgraph_nodes);
     return false;
   }
-  auto simple_node_cmp = [&] (const SimpleNode* node1, const SimpleNode* node2) {
-    return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
-  };
-  std::sort(subgraph_nodes->begin(), subgraph_nodes->end(), simple_node_cmp);
+  std::sort(subgraph_nodes->begin(), subgraph_nodes->end(), node_cmp);
   return true;
 }
 
@@ -241,7 +241,7 @@ void PreSelectSubgraphNodes(const Graph& g,
                             const int label,
                             const size_t snid,
                             const std::vector<SimpleNodePtr>& simple_nodes,
-                            std::vector<SimpleNode*>* subgraph_nodes) {
+                            std::vector<nnvm::Node*>* subgraph_nodes) {
   std::unordered_set<const nnvm::Node*> excluded_nodes;
   const size_t max_num_retry = simple_nodes.size() * simple_nodes.size();
   size_t count = 0;
@@ -267,8 +267,66 @@ void PreSelectSubgraphNodes(const Graph& g,
                   "seed node " << simple_nodes[snid]->node->attrs.name << "as a subgraph with one node";
     CHECK(subgraph_nodes->empty());
     simple_nodes[snid]->label = label;
-    subgraph_nodes->push_back(simple_nodes[snid].get());
+    subgraph_nodes->push_back(simple_nodes[snid]->node);
   }
+}
+
+/*!
+ * \brief Given a vector of nodes, group them into individual subgraphs
+ * based upon their connectivity.
+ */
+void PostProcessNodeCandidates(const nnvm::Graph& g,
+                               const std::vector<nnvm::Node*>& nodes,
+                               const std::vector<SimpleNodePtr>& simple_nodes,
+                               std::vector<std::vector<SimpleNode*>>* subgraphs,
+                               size_t* subgraph_id) {
+  const auto& indexed_graph = g.indexed_graph();
+  std::unordered_set<nnvm::Node*> node_set(nodes.begin(), nodes.end());
+  auto simple_node_cmp = [&] (const SimpleNode* node1, const SimpleNode* node2) {
+    return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
+  };
+  for (auto node : nodes) {
+    if (!node_set.count(node)) {
+      // The node has been included in a subgraph
+      continue;
+    }
+    std::queue<nnvm::Node*> q;
+    q.push(node);
+    CHECK_EQ(node_set.erase(node), 1U);
+    subgraphs->emplace_back();
+    const auto nid = indexed_graph.node_id(node);
+    simple_nodes[nid]->label = *subgraph_id;
+    subgraphs->back().push_back(simple_nodes[nid].get());
+    while (!q.empty()) {
+      nnvm::Node* cur_node = q.front();
+      q.pop();
+      for (auto& e : cur_node->inputs) {
+        auto in_it = node_set.find(e.node.get());
+        if (in_it != node_set.end()) {
+          q.push(*in_it);
+          const auto in_nid = indexed_graph.node_id(*in_it);
+          simple_nodes[in_nid]->label = *subgraph_id;
+          subgraphs->back().push_back(simple_nodes[in_nid].get());
+          node_set.erase(in_it);
+        }
+      }
+      const auto cur_nid = indexed_graph.node_id(cur_node);
+      const SimpleNode* cur_snode = simple_nodes[cur_nid].get();
+      for (const auto& kv : cur_snode->outputs) {
+        const auto out_it = node_set.find(kv.first);
+        if (out_it != node_set.end()) {
+          q.push(*out_it);
+          const auto out_nid = indexed_graph.node_id(*out_it);
+          simple_nodes[out_nid]->label = *subgraph_id;
+          subgraphs->back().push_back(simple_nodes[out_nid].get());
+          node_set.erase(out_it);
+        }
+      }
+    }
+    ++(*subgraph_id);
+    std::sort(subgraphs->back().begin(), subgraphs->back().end(), simple_node_cmp);
+  }
+  CHECK(node_set.empty());
 }
 
 /*!
@@ -291,94 +349,38 @@ void FindSubgraphs(Graph* g,
     auto subgraph_selector = subg_prop.CreateSubgraphSelector();
     if (subgraph_selector->Select(*node) && simple_nodes[i]->label == -1) {
       // pre-select nodes that can be grouped in a subgraph
-      std::vector<SimpleNode*> simple_node_candidates;
+      std::vector<nnvm::Node*> preselected_nodes;
       PreSelectSubgraphNodes(*g, subgraph_selector, subgraph_id, i, simple_nodes,
-                             &simple_node_candidates);
+                             &preselected_nodes);
 
-      // Filter out nodes that do not qualify being included in a subgraph
-      // simple_node_candidates are already ordered in the topological order
-      std::vector<nnvm::Node*> node_candidates(simple_node_candidates.size(), nullptr);
-      std::transform(simple_node_candidates.begin(), simple_node_candidates.end(),
-                     node_candidates.begin(),
-                     [](SimpleNode* snode) { return snode->node; });
-      subgraph_selector->Filter(g, &node_candidates);
+      // filter out unqualified pre-selected nodes
+      std::vector<nnvm::Node*> filtered_nodes = preselected_nodes;
+      subgraph_selector->Filter(g, &filtered_nodes);
 
-      // make sure node_candidates is a subset of simple_node_candidates
-      CHECK_LE(node_candidates.size(), simple_node_candidates.size());
-      for (const auto n : node_candidates) {
-        const auto nid = indexed_graph.node_id(n);
-        CHECK_LT(nid, simple_nodes.size());
-        const auto snit = std::find(simple_node_candidates.begin(), simple_node_candidates.end(),
-                                    simple_nodes[nid].get());
-        CHECK(snit != simple_node_candidates.end())
-          << "Node " << n->attrs.name << " is not found in the pre-selected subgraph node"
-             " candidates. Please make sure that no new nodes were added in your subgraph"
+      // make sure filtered_nodes is a subset of preselected_nodes 
+      for (const auto n : filtered_nodes) {
+        const auto nit = std::find(preselected_nodes.begin(), preselected_nodes.end(), n);
+        CHECK(nit != preselected_nodes.end())
+          << "Node " << n->attrs.name << " is not found in the pre-selected subgraph nodes."
+             " Please make sure that no new nodes were added in your subgraph"
              " selector's Filter function";
       }
 
       // make sure nodes are sorted
-      std::sort(node_candidates.begin(), node_candidates.end(), node_cmp);
+      std::sort(filtered_nodes.begin(), filtered_nodes.end(), node_cmp);
 
-      // Check whether there are multiple subgraphs in node_candidates
-      // starts from node_candidates[0] and find all the nodes that can form
-      // a subgraph in node_candidates. The nodes that are not reachable from node_candidates[0]
-      // will be dropped.
-      if (node_candidates.size() < simple_node_candidates.size() && !node_candidates.empty()) {
-        std::unordered_set<nnvm::Node*> node_set(node_candidates.begin(), node_candidates.end());
-        std::queue<nnvm::Node*> q;
-        q.push(node_candidates[0]);
-        node_set.erase(node_candidates[0]);
-        while (!q.empty()) {
-          nnvm::Node* cur_node = q.front();
-          q.pop();
-          for (auto& e : cur_node->inputs) {
-            auto in_it = node_set.find(e.node.get());
-            if (in_it != node_set.end()) {
-              q.push(*in_it);
-              node_set.erase(in_it);
-            }
-          }
-          const auto cur_nid = indexed_graph.node_id(cur_node);
-          const SimpleNode* cur_snode = simple_nodes[indexed_graph.node_id(cur_node)].get();
-          for (const auto& kv : cur_snode->outputs) {
-            const auto out_it = node_set.find(kv.first);
-            if (out_it != node_set.end()) {
-              q.push(*out_it);
-              node_set.erase(out_it);
-            }
-          }
-        }
-        std::vector<nnvm::Node*> tmp_nodes;
-        for (auto n : node_candidates) {
-          if (!node_set.count(n)) {
-            tmp_nodes.push_back(n);
-          }
-        }
-        node_candidates = tmp_nodes;
-      }
-
-      // Get the nodes that are filtered out and mark their labels as -1
-      if (node_candidates.size() < simple_node_candidates.size()) {
-        for (const auto snode : simple_node_candidates) {
-          const auto nit = std::find(node_candidates.begin(), node_candidates.end(), snode->node);
-          if (nit == node_candidates.end()) {
-            snode->label = -1;
-          }
+      // reset node labels that are not in filtered nodes
+      for (const auto n : preselected_nodes) {
+        const auto nit = std::find(filtered_nodes.begin(), filtered_nodes.end(), n);
+        if (nit == filtered_nodes.end()) {
+          simple_nodes[indexed_graph.node_id(n)]->label = -1;
         }
       }
-
-      // save finally selected subgraph nodes
-      if (!node_candidates.empty()) {
-        if (node_candidates.size() == simple_node_candidates.size()) {
-          subgraph_nodes->emplace_back(std::move(simple_node_candidates));
-        } else {
-          subgraph_nodes->emplace_back();
-          subgraph_nodes->back().reserve(node_candidates.size());
-          for (auto n : node_candidates) {
-            subgraph_nodes->back().push_back(simple_nodes[indexed_graph.node_id(n)].get());
-          }
-        }
-        ++subgraph_id;
+      // find out subgraphs from the filtered nodes
+      std::vector<std::vector<SimpleNode*>> subgraphs;
+      PostProcessNodeCandidates(*g, filtered_nodes, simple_nodes, &subgraphs, &subgraph_id);
+      if (!subgraphs.empty()) {
+        subgraph_nodes->insert(subgraph_nodes->end(), subgraphs.begin(), subgraphs.end());
       }
     }
   }
