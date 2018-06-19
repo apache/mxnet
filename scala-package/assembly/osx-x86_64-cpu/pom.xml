@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full-parent_2.11</artifactId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.2.1</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -16,18 +16,18 @@
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-      <version>1.2.1-SNAPSHOT</version>
+      <version>1.2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>libmxnet-scala-osx-x86_64-cpu</artifactId>
-      <version>1.2.1-SNAPSHOT</version>
+      <version>1.2.1</version>
       <type>jnilib</type>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-infer_${scala.binary.version}</artifactId>
-      <version>1.2.1-SNAPSHOT</version>
+      <version>1.2.1</version>
     </dependency>
   </dependencies>
 
