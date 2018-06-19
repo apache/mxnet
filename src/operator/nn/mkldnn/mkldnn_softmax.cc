@@ -38,11 +38,17 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto input_mem = in_data.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
+  int axis = param.axis;
+  int ndim = in_data.shape().ndim();
+  CHECK(axis < ndim && axis >= -ndim)
+    << "axis " << axis << "exceeds the input dimension of " << ndim;
+  axis = (axis + ndim) % ndim;
+
   auto cpu_engine = data_mpd.get_engine();
   auto prop = ctx.is_train
     ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
   mkldnn::softmax_forward::desc desc = mkldnn::softmax_forward::desc(prop,
-      data_md, param.axis);
+      data_md, axis);
   mkldnn::softmax_forward::primitive_desc pdesc(desc, cpu_engine);
 
   auto output_memory = out_data.GetMKLDNNData();
