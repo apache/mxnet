@@ -27,6 +27,7 @@
 
 #include <cmath>
 #include <climits>
+#include <mkldnn_types.h>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -426,6 +427,18 @@ OpAttrs GetSumBackwardsOp() {
   return attrs;
 }
 
+OpAttrs GetConcatOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("concat");
+  attrs.dispatches.resize(2);
+  attrs.attrs.dict.insert({"num_args" , 1});
+  attrs.attrs.dict.insert({"dim" , 0});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -604,6 +617,133 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
+/*
+ * We want to get a few types of NDArrays for testing the concat operator:
+ * 1. Normal NDArray
+ * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
+ * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
+ *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
+ *    type of NDArrays only exists for weight arrays. I don't think we should
+ *    pass them to all operators.
+ *    In the inference mode, the MKLDNN memory in the weight array will be
+ *    reordered to 5 dimensions.
+ * 4. Reshaped/sliced NDArray
+ * 5. Reused NDArray (this is created by the MXNet executor). This type of
+ *    NDArrays can only be used as output arrays.
+ * 6. Reused NDArray converted from an array with a different data type.
+ * 7. Reused reshaped/sliced NDArray.
+ * 8. Reused NDArray with MKLDNN layout.
+ * 9. Reused NDArray with MKLDNN layout of different dimensions.
+ */
+std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
+                                              const std::vector<mkldnn::memory::primitive_desc> &pds,
+                                              const InitFunc init_fn, int num_input, int dim) {
+  std::vector<NDArrayAttrs> in_arrs;
+  std::string desc;
+  CHECK(shape.ndim() > dim);
+
+  TShape new_shape = shape;
+  new_shape [dim] = shape[dim] * num_input;
+
+  // Type 1.
+  NDArray arr(new_shape , Context());
+  in_arrs.emplace_back(arr, "Normal NDArray");
+  init_fn(&in_arrs.back().arr, true);
+
+  // Type 4.
+  TShape tmp_shape = shape;
+  tmp_shape[0] = shape[0] * 2;
+  tmp_shape[dim] = shape[dim] * num_input;
+  NDArray arr0(tmp_shape, Context());
+  init_fn(&arr0, true);
+  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+
+  // Type 5.
+  // Get a reused version.
+  nnvm::TShape s(1);
+  s[0] = shape.Size() * num_input;
+  NDArray arr1(s, Context());
+  arr1 = arr1.AsArray(new_shape, arr1.dtype());
+  init_fn(&arr1, true);
+  in_arrs.emplace_back(arr1, "Reused NDArray");
+
+  // Type 6.
+  s[0] = new_shape.Size() * GetTypeSize(mshadow::default_type_flag);
+  NDArray arr2(s, Context(), true, mshadow::kUint8);
+  arr2 = arr2.AsArray(new_shape, mshadow::default_type_flag);
+  init_fn(&arr2, true);
+  in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
+
+  // Type 7
+  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+  NDArray arr3(s, Context(), true, mshadow::kUint8);
+  tmp_shape[0] = shape[0] * 2;
+  tmp_shape[dim] = shape[dim] * num_input;
+  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
+  init_fn(&arr3, true);
+  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
+
+
+  for (auto pd : pds) {
+    if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
+      continue;
+
+    auto new_pd = GetMemPD(new_shape, pd.desc().data.data_type, static_cast<mkldnn::memory::format>(pd.desc().data.format));
+
+    // Type 2, 3.
+    arr = NDArray(new_shape, Context());
+    desc = "MKLDNN NDArray";
+    if (new_shape.ndim() != new_pd.desc().data.ndims) {
+      std::stringstream ss;
+      ss << "MKLDNN NDArray with different memory layout "
+         << new_shape.ndim() << "/" << new_pd.desc().data.ndims;
+      desc = ss.str();
+    }
+    in_arrs.emplace_back(arr, desc);
+    InitMKLDNNArray(&in_arrs.back().arr, new_pd, init_fn, true);
+
+    // Type 8, 9.
+    // Get a reused version.
+    nnvm::TShape s(1);
+    s[0] = shape.Size() * num_input;
+    NDArray arr = NDArray(s, Context());
+    arr = arr.AsArray(new_shape, arr.dtype());
+    InitMKLDNNArray(&arr, new_pd, init_fn, true);
+    desc = "Reused MKLDNN NDArray";
+    if (new_shape.ndim() != new_pd.desc().data.ndims) {
+      std::stringstream ss;
+      ss << "Reused MKLDNN NDArray with different memory layout "
+         << new_shape.ndim() << "/" << new_pd.desc().data.ndims;
+      desc = ss.str();
+    }
+    in_arrs.emplace_back(arr, desc);
+  }
+  return in_arrs;
+}
+
+TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
+  auto shapes_pds = GetTestArrayShapes();
+  std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
+  std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
+  std::vector dims = {1,2,3,4,5};
+  std::vector num_inputs = {1,2,3};
+  for (auto shape: shapes) {
+    for (int dim: dims) {
+      for (int num_input : num_inputs) {
+        if (shape.ndim() <= dim)
+          continue;
+        auto output_arrs = GetTestOutputArraysConcat(shape, pds, InitDefaultArray, num_input, dim);
+        for (auto out_arr : output_arrs) {
+          auto out_shape = out_arr.arr.shape();
+          EXPECT_EQ(shape.Size() * num_input, out_arr.arr.shape().Size());
+          EXPECT_EQ(shape[dim] * num_input, out_arr.arr.shape()[dim]);
+        }
+      }
+    }
+  }
+}
+
+
 void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
                       const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
@@ -694,10 +834,12 @@ TEST(MKLDNN_NDArray, CopyFrom) {
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (auto in_arr : in_arrs) {
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+      in_arr.arr = in_arr.arr.Reorder2Default();
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
+        InitDefaultArray);
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
-      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
-        in_arr.arr = in_arr.arr.Reorder2Default();
       const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
       out_arr.arr.CopyFrom(*mem);
       MKLDNNStream::Get()->Submit();
