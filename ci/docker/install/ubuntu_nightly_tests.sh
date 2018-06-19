@@ -20,10 +20,10 @@
 #Install steps for the nightly tests
 
 set -ex
-apt-get update
 
 #Install for Compilation warning Nightly Test
 add-apt-repository ppa:ubuntu-toolchain-r/test
+apt-get update
 apt-get -y install time
 
 # Install for RAT License Check Nightly Test

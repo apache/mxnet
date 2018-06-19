@@ -793,16 +793,20 @@ nightly_test_compilation_warning() {
 #Checks the MXNet Installation Guide - currently checks pip, build from source and virtual env on cpu and gpu
 nightly_test_installation() {
     set -ex
+    # The run_test_installation_docs.sh expects the path to index.md and the first and last line numbers of the index.md file
+    # First execute the test script and then call the method specified by the Jenkinsfile - ${1}
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
 #Runs a simple MNIST training example
 nightly_test_image_classification() {
+    set -ex
     ./tests/nightly/test_image_classification.sh
 }
 
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
+    set -ex
     export PYTHONPATH=./python/
     python tests/nightly/test_kvstore.py
 }
