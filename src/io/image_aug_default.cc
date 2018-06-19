@@ -82,7 +82,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   /*! \brief shape of the image data*/
   TShape data_shape;
   /*! \brief random seed for augmentations */
-  int seed_aug;
+  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
@@ -204,7 +204,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
     if (!seed_init_state && param_.seed_aug.has_value()) {
-      prnd->seed(param_.seed_aug);
+      prnd->seed(param_.seed_aug.value());
       seed_init_state = true;
     }
     using mshadow::index_t;
