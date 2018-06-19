@@ -40,12 +40,13 @@ class TestRNNLayer(gluon.HybridBlock):
         out, states = F.contrib.foreach(self.cell, inputs, states)
         return out
 
-def test_contrib_rnn(cell, rnn_data, states):
+def benchmark_rnn(cell, rnn_data, states):
     ctx = rnn_data.context
     num_batches = 20
 
     # Imperative
     cell1 = copy.deepcopy(cell)
+    cell1.hybridize()
     layer1 = TestRNNLayer(cell1)
     layer1.initialize(ctx=ctx)
 
@@ -54,6 +55,7 @@ def test_contrib_rnn(cell, rnn_data, states):
     layer2 = TestRNNLayer(cell2)
     layer2.initialize(ctx=ctx)
     layer2.hybridize()
+    layer2(rnn_data, states)
 
     # Hybridize
     cell3 = copy.deepcopy(cell)
@@ -79,30 +81,8 @@ def test_contrib_rnn(cell, rnn_data, states):
         mx.nd.waitall()
     print("Hybrid-cell inference takes " + str(time.time() - tic))
 
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res1 = layer1(rnn_data, states)
-        res1.backward()
-    print("Imperative training takes " + str(time.time() - tic))
-
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res2 = layer2(rnn_data, states)
-        res2.backward()
-    print("Hybrid training takes " + str(time.time() - tic))
-
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res3 = layer3(rnn_data, states)
-        res3.backward()
-    print("Hybrid-cell training takes " + str(time.time() - tic))
-
     layer2.export("foreach_rnn")
     symnet = mx.symbol.load('foreach_rnn-symbol.json')
-    # Inputs
     args1 = {}
     params = layer2.collect_params()
     for key in params.keys():
@@ -110,6 +90,37 @@ def test_contrib_rnn(cell, rnn_data, states):
     args1['data0'] = rnn_data
     for i in range(len(states)):
         args1['data' + str(i + 1)] = states[i]
+    exe = symnet.bind(ctx=ctx, args=args1)
+    tic = time.time()
+    for i in range(num_batches):
+        exe.forward(is_train=False)
+        mx.nd.waitall()
+    print("Symbol inference takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
+            res1 = layer1(rnn_data, states)
+        res1.backward()
+        mx.nd.waitall()
+    print("Imperative training takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
+            res2 = layer2(rnn_data, states)
+        res2.backward()
+        mx.nd.waitall()
+    print("Hybrid training takes " + str(time.time() - tic))
+
+    tic = time.time()
+    for i in range(num_batches):
+        with mx.autograd.record():
+            res3 = layer3(rnn_data, states)
+        res3.backward()
+        mx.nd.waitall()
+    print("Hybrid-cell training takes " + str(time.time() - tic))
+
     # gradients for the backward of the foreach symbol
     args_grad1 = {}
     for key in args1.keys():
@@ -119,22 +130,24 @@ def test_contrib_rnn(cell, rnn_data, states):
     for i in range(num_batches):
         exe.forward(is_train=True)
         exe.backward(res2)
+        mx.nd.waitall()
     print("Symbol training takes " + str(time.time() - tic))
+    print("")
 
 if __name__ == '__main__':
-    ndim = 500
+    ndim = 512
     seq_len = 100
     batch_sizes = [1, 32]
-    cells = [gluon.rnn.RNNCell(ndim, prefix='rnn_'),
+    cells = [gluon.rnn.GRUCell(ndim, prefix='rnn_'),
              gluon.rnn.LSTMCell(ndim, prefix='rnn_')]
     ctxs = [mx.cpu(0), mx.gpu(0)]
-    for ctx in ctxs:
-        for batch_size in batch_sizes:
-            for cell in cells:
+    for cell in cells:
+        for ctx in ctxs:
+            for batch_size in batch_sizes:
                 if len(get_gpus()) == 0 and ctx == mx.gpu(0):
                     continue
 
-                if isinstance(cell, gluon.rnn.RNNCell):
+                if isinstance(cell, gluon.rnn.GRUCell):
                     rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, ndim),
                                             ctx=mx.cpu(0))
                     states = []
@@ -148,5 +161,10 @@ if __name__ == '__main__':
                                                ctx=mx.cpu(0)))
                     states.append(mx.nd.normal(loc=0, scale=1, shape=(batch_size, ndim),
                                                ctx=mx.cpu(0)))
-                print("Benchmark {} in CPU (batch size: {})".format(cell._alias(), batch_size))
-                test_contrib_rnn(cell, rnn_data, states)
+                if ctx == mx.gpu(0):
+                    dev = "GPU"
+                else:
+                    dev = "CPU"
+                print("Benchmark {} in {} (batch size: {})".format(cell._alias(), dev,
+                                                                   batch_size))
+                benchmark_rnn(cell, rnn_data, states)
