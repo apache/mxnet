@@ -14,7 +14,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - Values: Int ```(default=2)```
   - The maximum number of threads to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
 * MXNET_GPU_COPY_NTHREADS
-  - Values: Int ```(default=1)```
+  - Values: Int ```(default=2)```
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS
   - Values: Int ```(default=1)```
