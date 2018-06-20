@@ -1,5 +1,7 @@
 # Build/Install MXNet with MKL-DNN
 
+Building MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) will gain better performance when using Intel Xeon CPUs for training and inference. The improvement of performance can be seen in this [page](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu). Below are instructions for linux, MacOS and Windows platform.
+
 <h2 id="0">Contents</h2>
 
 * [1. Linux](#1)
@@ -69,9 +71,11 @@ cd incubator-mxnet
 
 ### Enable OpenMP for MacOS
 
-If you want to enable OpenMP for better performance, you should modify these two files:
+If you want to enable OpenMP for better performance, you should modify these two files in MXNet root dictionary:
 
-1. Makefile L138:
+1. Makefile:
+
+Add CFLAGS '-fopenmp' for Darwin.
 
 ```
 ifeq ($(USE_OPENMP), 1)
@@ -81,7 +85,9 @@ ifeq ($(USE_OPENMP), 1)
 endif
 ```
 
-2. prepare_mkldnn.sh L96:
+2. prepare_mkldnn.sh:
+
+Set cmake complier to gcc-4.9 to support OpenMP.
 
 ```
 CC=gcc-4.9 CXX=g++-4.9 cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
