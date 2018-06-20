@@ -687,8 +687,9 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
-
-    auto new_pd = GetMemPD(new_shape, pd.desc().data.data_type, static_cast<mkldnn::memory::format>(pd.desc().data.format));
+    
+    auto new_pd = GetMemPD(new_shape, mshadow::DataType<mshadow::default_real_t>::kFlag,
+        static_cast<mkldnn::memory::format>(pd.desc().data.format));
 
     // Type 2, 3.
     arr = NDArray(new_shape, Context());
