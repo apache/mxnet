@@ -897,21 +897,22 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     auto in_arr2 = in_arrs2[i];
     if (!SupportMKLDNN(in_arr.arr))
       continue;
-    auto input_mem = in_arr.arr.GetMKLDNNData();
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
       in_arr.arr = in_arr.arr.Reorder2Default();
       in_arr2.arr = in_arr2.arr.Reorder2Default();
     }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kWriteInplace);
-    op::MKLDNNSum(*input_mem, *input_mem, *output_mem_t.second);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
-    VerifySumResult({&orig_arr.arr, &orig_arr.arr}, {&in_arr.arr});
+    VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
 
   for (int i = 0; i < in_arrs.size(); i++) {
@@ -926,13 +927,14 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       PrintVerifyMsg(in_arr, out_arr);
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, in_mem->get_primitive_desc(), kAddTo);
-      op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
+      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
-      VerifyAddRequest({&in_arr.arr, &in_arr.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
+      VerifyAddRequest({&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
     }
   }
 }
