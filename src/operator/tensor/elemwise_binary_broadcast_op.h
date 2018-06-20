@@ -525,7 +525,8 @@ void BinaryBroadcastComputeDenseEx(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename LOP, typename ROP>
-void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
+inline typename std::enable_if<std::is_same<xpu, cpu>::value, void>::type
+BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
                                     const std::vector<TBlob>& inputs,
                                     const std::vector<OpReqType>& req,
@@ -554,6 +555,14 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
     });
   }
 }
+
+template<typename xpu, typename LOP, typename ROP>
+inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
+BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs);
 
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
@@ -626,4 +635,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+#ifdef __CUDACC__
+#include "./elemwise_binary_broadcast_op-inl.cuh"
+#endif
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_

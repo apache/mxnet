@@ -602,6 +602,11 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   ReduceImpl<Reducer, ndim, DType, OP>(stream, small, req, big, workspace, config);
 }
 
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
+                        const Tensor<cpu, 1, char>& workspace, const TBlob& big) {};
+
+
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<gpu, 1, char>& workspace, const TBlob& big,
