@@ -29,6 +29,7 @@
 
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -56,7 +57,19 @@ inline void AllocateNDArrayCopy(NDArray** nd,
   switch (stype) {
     case kUndefinedStorage:
     case kDefaultStorage:
+#if MXNET_USE_MKLDNN == 1
+      if (inputs[idx].IsMKLDNNData()) {
+        *nd = new NDArray(inputs[idx].shape(), inputs[idx].ctx(), false,
+                          inputs[idx].dtype());
+        const mkldnn::memory *mem = inputs[idx].GetMKLDNNData();
+        (*nd)->CopyFrom(*mem);
+        MKLDNNStream::Get()->Submit();
+      } else {
+        *nd = new NDArray(inputs[idx].data(), dev_id);
+      }
+#else
       *nd = new NDArray(inputs[idx].data(), dev_id);
+#endif
       break;
     case kRowSparseStorage:
       aux.push_back(inputs[idx].aux_data(rowsparse::kIdx));
