@@ -15,10 +15,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 ```
 
-
 ```python
 def plot_schedule(schedule_fn, iterations=1500):
-    iterations = [i for i in range(iterations)]
+    # Iteration count starting at 1
+    iterations = [i+1 for i in range(iterations)]
     lrs = [schedule_fn(i) for i in iterations]
     plt.scatter(iterations, lrs)
     plt.xlabel("Iteration")
@@ -53,9 +53,9 @@ class TriangularSchedule():
         
     def __call__(self, iteration):
         if iteration <= self.cycle_length*self.inc_fraction:
-            unit_cycle = iteration * 1/(self.cycle_length*self.inc_fraction)
+            unit_cycle = iteration * 1 / (self.cycle_length * self.inc_fraction)
         elif iteration <= self.cycle_length:
-            unit_cycle = (self.cycle_length - iteration) * 1/(self.cycle_length*(1-self.inc_fraction))
+            unit_cycle = (self.cycle_length - iteration) * 1 / (self.cycle_length * (1 - self.inc_fraction))
         else:
             unit_cycle = 0
         adjusted_cycle = (unit_cycle * (self.max_lr - self.min_lr)) + self.min_lr
@@ -93,7 +93,7 @@ class CosineAnnealingSchedule():
         
     def __call__(self, iteration):
         if iteration <= self.cycle_length:
-            unit_cycle = (1 + math.cos(iteration*math.pi/self.cycle_length))/2
+            unit_cycle = (1 + math.cos(iteration * math.pi / self.cycle_length)) / 2
             adjusted_cycle = (unit_cycle * (self.max_lr - self.min_lr)) + self.min_lr
             return adjusted_cycle
         else:
@@ -139,7 +139,7 @@ class LinearWarmUp():
     
     def __call__(self, iteration):
         if iteration <= self.length:
-            return iteration * (self.finish_lr-self.start_lr)/(self.length) + self.start_lr
+            return iteration * (self.finish_lr - self.start_lr)/(self.length) + self.start_lr
         else:
             return self.schedule(iteration - self.length)
 ```
@@ -184,7 +184,7 @@ class LinearCoolDown():
         if iteration <= self.start_idx:
             return self.schedule(iteration)
         elif iteration <= self.finish_idx:
-            return (iteration - self.start_idx) * (self.finish_lr-self.start_lr)/(self.length) + self.start_lr
+            return (iteration - self.start_idx) * (self.finish_lr - self.start_lr) / (self.length) + self.start_lr
         else:
             return self.finish_lr
 ```
@@ -205,7 +205,7 @@ plot_schedule(schedule)
 
 #### 1-Cycle: for "Super-Convergence"
 
-Cool-down is used in the "1-Cycle" schedule proposed by [Leslie N. Smith, Nicholay Topin (2017)](https://arxiv.org/abs/1708.07120) to train neural networks very quickly in certain circumstances (coined "super-convergence"). We implement a single and symmetric cycle of the triangular schedule above (i.e. `inc_fraction=0.5`), followed by a cool-down period of `cooldown_length` iterations.
+So we can implement the "1-Cycle" schedule proposed by [Leslie N. Smith, Nicholay Topin (2017)](https://arxiv.org/abs/1708.07120) we use a single and symmetric cycle of the triangular schedule above (i.e. `inc_fraction=0.5`), followed by a cool-down period of `cooldown_length` iterations.
 
 
 ```python
@@ -272,7 +272,7 @@ class CyclicalSchedule():
             cycle_length = math.ceil(cycle_length * self.length_decay)
             cycle_idx += 1
             idx += cycle_length
-        cycle_offset = iteration-idx+cycle_length
+        cycle_offset = iteration - idx + cycle_length
         
         schedule = self.schedule_class(cycle_length=cycle_length, **self.kwargs)
         return schedule(cycle_offset) * self.magnitude_decay**cycle_idx

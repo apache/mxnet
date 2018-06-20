@@ -1,7 +1,7 @@
 
 # Learning Rate Schedules
 
-Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. One of the simplest learning rate strategies is to have a fixed learning rate throughout the training process. Choosing a small learning rate allows the optimizer find good solutions but this comes at the expense of limiting the initial speed of convergence. Changing the learning rate over time can overcome this tradeoff.
+Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural networks because it controls both the speed of convergence and the ultimate performance of the network. One of the simplest learning rate strategies is to have a fixed learning rate throughout the training process. Choosing a small learning rate allows the optimizer find good solutions, but this comes at the expense of limiting the initial speed of convergence. Changing the learning rate over time can overcome this tradeoff.
 
 Schedules define how the learning rate changes over time and are typically specified for each epoch or iteration (i.e. batch) of training. Schedules differ from adaptive methods (such as AdaDelta and Adam) because they:
 
@@ -24,7 +24,8 @@ import numpy as np
 
 ```python
 def plot_schedule(schedule_fn, iterations=1500):
-    iterations = [i for i in range(iterations)]
+    # Iteration count starting at 1
+    iterations = [i+1 for i in range(iterations)]
     lrs = [schedule_fn(i) for i in iterations]
     plt.scatter(iterations, lrs)
     plt.xlabel("Iteration")
@@ -34,9 +35,11 @@ def plot_schedule(schedule_fn, iterations=1500):
 
 ## Schedules
 
+In this section, we take a look at the schedules in `mx.lr_scheduler`. All of these schedules define the learning rate for a given iteration, and it is expected that iterations start at 1 rather than 0. So to find the learning rate for the 100th iteration, you can call `schedule(100)`.
+
 ### Stepwise Decay Schedule
 
-One of the most commonly used learning rate schedules is called stepwise decay, where the learning rate is reduced by a factor at certain intervals. MXNet implements a `FactorScheduler` for equally spaced intervals, and `MultiFactorScheduler` for greater control. We start with an example of halving the learning rate every 250 iterations.
+One of the most commonly used learning rate schedules is called stepwise decay, where the learning rate is reduced by a factor at certain intervals. MXNet implements a `FactorScheduler` for equally spaced intervals, and `MultiFactorScheduler` for greater control. We start with an example of halving the learning rate every 250 iterations. More precisely, the learning rate will be multiplied by `factor` _after_ the `step` index and multiples thereafter. So in the example below the learning rate of the 250th iteration will be 1 and the 251st iteration will be 0.5.
 
 
 ```python
@@ -51,7 +54,7 @@ plot_schedule(schedule)
 
 Note: the `base_lr` is used to determine the initial learning rate. It takes a default value of 0.01 since we inherit from `mx.lr_scheduler.LRScheduler`, but it can be set as a property of the schedule. We will see later in this tutorial that `base_lr` is set automatically when providing the `lr_schedule` to `Optimizer`. Also be aware that the schedules in `mx.lr_scheduler` have state (i.e. counters, etc) so calling the schedule out of order may give unexpected results.
 
-We can define non-uniform intervals with `MultiFactorScheduler` and in the example below we halve the learning rate at iterations 250, 750 (500 iterations after) and 900 (150 iterations after).
+We can define non-uniform intervals with `MultiFactorScheduler` and in the example below we halve the learning rate _after_ the 250th, 750th (i.e. a step length of 500 iterations) and 900th (a step length of 150 iterations). As before, the learning rate of the 250th iteration will be 1 and the 251th iteration will be 0.5.
 
 
 ```python
@@ -66,7 +69,7 @@ plot_schedule(schedule)
 
 ### Polynomial Schedule
 
-Stepwise schedules and the discontinuities they introduce may sometimes lead to instability in the optimization, so in some cases smoother schedules are preferred. `PolyScheduler` gives a smooth decay using a polynomial function and reaches a learning rate of 0 after `max_update` iterations. In the example below, we have a quadratic function (`pwr=2`) that falls from 1 to 0 over 1000 iterations. After this the learning rate stays at 0 so nothing will be learnt from `max_update` iterations onwards.
+Stepwise schedules and the discontinuities they introduce may sometimes lead to instability in the optimization, so in some cases smoother schedules are preferred. `PolyScheduler` gives a smooth decay using a polynomial function and reaches a learning rate of 0 after `max_update` iterations. In the example below, we have a quadratic function (`pwr=2`) that falls from 0.998 at iteration 1 to 0 at iteration 1000. After this the learning rate stays at 0, so nothing will be learnt from `max_update` iterations onwards.
 
 
 ```python
@@ -80,9 +83,11 @@ plot_schedule(schedule)
 
 Note: unlike `FactorScheduler`, the `base_lr` is set as an argument when instantiating the schedule.
 
+And we don't evaluate at `iteration=0` (to get `base_lr`) since we are working with schedules starting at `iteration=1`.
+
 ### Custom Schedules
 
-You can implement your own custom schedule with a function or callable class, that takes an integer denoting the iteration index (e.g. 123) and returns a float representing the learning rate to be used for that iteration. We implement the Cosine Annealing Schedule in the example below as a callable class (see `__call__` method).
+You can implement your own custom schedule with a function or callable class, that takes an integer denoting the iteration index (starting at 1) and returns a float representing the learning rate to be used for that iteration. We implement the Cosine Annealing Schedule in the example below as a callable class (see `__call__` method).
 
 
 ```python
@@ -94,7 +99,7 @@ class CosineAnnealingSchedule():
         
     def __call__(self, iteration):
         if iteration <= self.cycle_length:
-            unit_cycle = (1 + math.cos(iteration*math.pi/self.cycle_length))/2
+            unit_cycle = (1 + math.cos(iteration * math.pi / self.cycle_length)) / 2
             adjusted_cycle = (unit_cycle * (self.max_lr - self.min_lr)) + self.min_lr
             return adjusted_cycle
         else:
@@ -113,7 +118,7 @@ plot_schedule(schedule)
 
 While training a simple handwritten digit classifier on the MNIST dataset, we take a look at how to use a learning rate schedule during training. Our demonstration model is a basic convolutional neural network. We start by preparing our `DataLoader` and defining the network. 
 
-As discussed above, the schedule should return a learning rate given an iteration index.
+As discussed above, the schedule should return a learning rate given an (1-based) iteration index.
 
 
 ```python
@@ -162,18 +167,20 @@ net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
 softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
-We're now ready to create our schedule, and in this example we opt for a stepwise decay schedule using `MultiFactorScheduler`. Since we're only training a demonstration model for a limited number of epochs (10 in total) we will exaggerate the schedule and drop the learning rate by 90% at 4, 7 and 9 epochs. We call these steps. Schedules are defined for iterations (i.e. training batches), so we must represent our steps in iterations too.
+We're now ready to create our schedule, and in this example we opt for a stepwise decay schedule using `MultiFactorScheduler`. Since we're only training a demonstration model for a limited number of epochs (10 in total) we will exaggerate the schedule and drop the learning rate by 90% after the 4th, 7th and 9th epochs. We call these steps, and the drop occurs _after_ the step index. Schedules are defined for iterations (i.e. training batches), so we must represent our steps in iterations too.
 
 
 ```python
 steps_epochs = [4, 7, 9]
 # assuming we keep partial batches, see `last_batch` parameter of DataLoader
 iterations_per_epoch = math.ceil(len(train_dataset) / batch_size)
+# iterations just before starts of epochs (iterations are 1-indexed)
 steps_iterations = [s*iterations_per_epoch for s in steps_epochs]
-print("Step at iterations: {}".format(steps_iterations))
+print("Learning rate drops after iterations: {}".format(steps_iterations))
 ```
 
-Step at iterations: [3752, 6566, 8442] <!--notebook-skip-line-->
+    Learning rate drops after iterations: [3752, 6566, 8442]
+
 
 
 ```python
@@ -196,9 +203,11 @@ trainer = mx.gluon.Trainer(params=net.collect_params(), optimizer=sgd_optimizer)
 
 
 ```python
-for epoch in range(10):
+num_epochs = 10
+# epoch and batch counts starting at 1
+for epoch in range(1, num_epochs+1):
     # Iterate through the images and labels in the training data
-    for batch_num, (data, label) in enumerate(train_dataloader):
+    for batch_num, (data, label) in enumerate(train_dataloader, start=1):
         # get the images and labels
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
@@ -214,31 +223,31 @@ for epoch in range(10):
         trainer.step(data.shape[0])
 
         # Show loss and learning rate after first iteration of epoch
-        if batch_num == 0:
+        if batch_num == 1:
             curr_loss = mx.nd.mean(loss).asscalar()
             curr_lr = trainer.learning_rate
             print("Epoch: %d; Batch %d; Loss %f; LR %f" % (epoch, batch_num, curr_loss, curr_lr))
 ```
 
-Epoch: 0; Batch 0; Loss 2.304634; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 1; Batch 1; Loss 2.304071; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 1; Batch 0; Loss 0.251240; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 2; Batch 1; Loss 0.059640; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 2; Batch 0; Loss 0.168092; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 3; Batch 1; Loss 0.072601; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 3; Batch 0; Loss 0.045231; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 4; Batch 1; Loss 0.042228; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 4; Batch 0; Loss 0.094022; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 5; Batch 1; Loss 0.025745; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 5; Batch 0; Loss 0.031173; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 6; Batch 1; Loss 0.027391; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 6; Batch 0; Loss 0.004187; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 7; Batch 1; Loss 0.048237; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 7; Batch 0; Loss 0.015699; LR 0.000300 <!--notebook-skip-line-->
+Epoch: 8; Batch 1; Loss 0.024213; LR 0.000300 <!--notebook-skip-line-->
 
-Epoch: 8; Batch 0; Loss 0.159275; LR 0.000300 <!--notebook-skip-line-->
+Epoch: 9; Batch 1; Loss 0.008892; LR 0.000300 <!--notebook-skip-line-->
 
-Epoch: 9; Batch 0; Loss 0.105180; LR 0.000030 <!--notebook-skip-line-->
+Epoch: 10; Batch 1; Loss 0.006875; LR 0.000030 <!--notebook-skip-line-->
 
 
 We see that the learning rate starts at 0.03, and falls to 0.00003 by the end of training as per the schedule we defined.
@@ -259,10 +268,12 @@ schedule.base_lr = 0.03
 sgd_optimizer = mx.optimizer.SGD()
 trainer = mx.gluon.Trainer(params=net.collect_params(), optimizer=sgd_optimizer)
 
-iteration_idx = 0
-for epoch in range(10):
+iteration_idx = 1
+num_epochs = 10
+# epoch and batch counts starting at 1
+for epoch in range(1, num_epochs + 1):
     # Iterate through the images and labels in the training data
-    for batch_num, (data, label) in enumerate(train_dataloader):
+    for batch_num, (data, label) in enumerate(train_dataloader, start=1):
         # get the images and labels
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
@@ -280,32 +291,32 @@ for epoch in range(10):
         # Update parameters
         trainer.step(data.shape[0])
         # Show loss and learning rate after first iteration of epoch
-        if batch_num == 0:
+        if batch_num == 1:
             curr_loss = mx.nd.mean(loss).asscalar()
             curr_lr = trainer.learning_rate
             print("Epoch: %d; Batch %d; Loss %f; LR %f" % (epoch, batch_num, curr_loss, curr_lr))
         iteration_idx += 1
 ```
 
-Epoch: 0; Batch 0; Loss 2.304286; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 1; Batch 1; Loss 2.334119; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 1; Batch 0; Loss 0.113910; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 2; Batch 1; Loss 0.178930; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 2; Batch 0; Loss 0.041778; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 3; Batch 1; Loss 0.142640; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 3; Batch 0; Loss 0.066455; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 4; Batch 1; Loss 0.041116; LR 0.030000 <!--notebook-skip-line-->
 
-Epoch: 4; Batch 0; Loss 0.091915; LR 0.030000 <!--notebook-skip-line-->
+Epoch: 5; Batch 1; Loss 0.051049; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 5; Batch 0; Loss 0.035965; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 6; Batch 1; Loss 0.027170; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 6; Batch 0; Loss 0.005169; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 7; Batch 1; Loss 0.083776; LR 0.003000 <!--notebook-skip-line-->
 
-Epoch: 7; Batch 0; Loss 0.017087; LR 0.003000 <!--notebook-skip-line-->
+Epoch: 8; Batch 1; Loss 0.082553; LR 0.000300 <!--notebook-skip-line-->
 
-Epoch: 8; Batch 0; Loss 0.039928; LR 0.000300 <!--notebook-skip-line-->
+Epoch: 9; Batch 1; Loss 0.027984; LR 0.000300 <!--notebook-skip-line-->
 
-Epoch: 9; Batch 0; Loss 0.003349; LR 0.000300 <!--notebook-skip-line-->
+Epoch: 10; Batch 1; Loss 0.030896; LR 0.000030 <!--notebook-skip-line-->
 
 
 Once again, we see the learning rate start at 0.03, and fall to 0.00003 by the end of training as per the schedule we defined.
