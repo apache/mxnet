@@ -354,8 +354,7 @@ void FindSubgraphs(Graph* g,
                              &preselected_nodes);
 
       // filter out unqualified pre-selected nodes
-      std::vector<nnvm::Node*> filtered_nodes = preselected_nodes;
-      subgraph_selector->Filter(g, &filtered_nodes);
+      std::vector<nnvm::Node*> filtered_nodes = subgraph_selector->Filter(g, preselected_nodes);
 
       // make sure filtered_nodes is a subset of preselected_nodes 
       for (const auto n : filtered_nodes) {
