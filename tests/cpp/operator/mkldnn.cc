@@ -431,8 +431,7 @@ OpAttrs GetConcatOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("concat");
   attrs.dispatches.resize(2);
-  attrs.attrs.dict.insert({"num_args" , 1});
-  attrs.attrs.dict.insert({"dim" , 0});
+  attrs.attrs.dict.insert({"num_args" , 1}, {"dim" , 0});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
