@@ -626,6 +626,10 @@ static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive
                          static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
 
+/*
+ * We want to get a few types of NDArrays for testing the Concat operation
+ * Similar to GetTestOutputArrays but outputs are scaled by a factor of num_inputs
+ */
 std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
                                               const std::vector<mkldnn::memory::primitive_desc> &pds,
                                               const InitFunc init_fn, int num_input, int dim) {
