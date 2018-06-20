@@ -100,46 +100,32 @@ class CommDeviceTree : public Comm {
           BufferEntry& buf = merge_buf_[topo_id][key];
 
           if ( devs_[topo_id] == src[i].ctx() ) {
-            //buf.merged = src[i];
             CopyFromTo(src[i], &(buf.merged[merged_row]), priority);
-            //LOG(WARNING) << "Initial reduce copy from " << src[i].ctx() << " to " << buf.merged[merged_row].ctx();
           }
         }
       }
-      //LOG(WARNING) << "Copy to merged";
 
       for (int level = depth_; level > 0; --level) {
         int start = scan_[root][level  ];
         int end   = scan_[root][level+1];
-        //LOG(WARNING) << "Reduce level: " << level;
 
-        //LOG(WARNING) << "From " << start << " to " << end;
         unsigned is_dest = 0;
         int      dest_id = 0;
         for (int j = start; j < end; ++j) {
           int topo_id = topology[j];
           dest_id     = (is_dest==0) ? topo_id : dest_id;
-          //LOG(WARNING) << topo_id << " -> " << dest_id;
 
           BufferEntry& buf_dest = merge_buf_[dest_id][key];
           BufferEntry& buf_from = merge_buf_[topo_id][key];
-          //LOG(WARNING) << "Dest shape " << buf_dest.merged[merged_row].ctx() << buf_dest.copy_buf[merged_row][0].ctx();
-          //LOG(WARNING) << "From shape " << buf_from.merged[merged_row].ctx() << buf_from.copy_buf[merged_row][0].ctx();
 
           if (!is_dest) {
             reduce[dest_id].push_back( buf_dest.merged[merged_row] );
-            //LOG(WARNING) << topo_id << " == " << dest_id;
           } else {
             if (dest_id != topo_id) {
-              //buf_dest.copy_buf[is_dest-1] = NDArray(
-              //    buf_dest.merged.shape(), buf_dest.merged.ctx(), false, 
-              //    buf_dest.merged.dtype());
               CopyFromTo(buf_from.merged[merged_row],
                   &(buf_dest.copy_buf[merged_row][is_dest-1]),
                   priority);
               reduce[dest_id].push_back( buf_dest.copy_buf[merged_row][is_dest-1] );
-              //LOG(WARNING) << "Reduce copy from " << buf_from.merged[merged_row].ctx() << " to " << buf_dest.copy_buf[merged_row][is_dest-1].ctx();
-              //LOG(WARNING) << topo_id << " != " << dest_id;
             }
           }
 
@@ -151,27 +137,21 @@ class CommDeviceTree : public Comm {
         end   = scan_[root][level  ];
         for (int i = start; i < end; ++i) {
           int gpu_id = topology[i];
-          //LOG(WARNING) << "Doing reduce on GPU" << gpu_id;
-          //LOG(WARNING) << "With #elems " << reduce[gpu_id].size();
 
           // conditional to detect whether operation must be done
           if ( reduce[gpu_id].size() > 1 ) {
             BufferEntry& buf = merge_buf_[gpu_id][key];
-            //LOG(WARNING) << "reduce input 1 " << reduce[gpu_id][0].ctx();
-            //LOG(WARNING) << "reduce input 2 " << reduce[gpu_id][1].ctx();
-            //LOG(WARNING) << "buf.mg output  " << buf.merged[merged_row].ctx();
             ElementwiseSum(reduce[gpu_id], &(buf.merged[merged_row]), priority);
           }
         }
 
         // reset
-        //LOG(WARNING) << "Clear reduce array";
         for (unsigned i = 0; i < devs_.size(); ++i) {
           reduce[i].clear();
         }
       }
     } else {
-      //LOG(WARNING) << "Only dense input supported for now";
+      LOG(WARNING) << "Only dense input supported for now";
     }
 
     int topo_id = topology[0];
@@ -198,7 +178,6 @@ class CommDeviceTree : public Comm {
     std::vector<std::vector<NDArray*>> broadcast_slice(devs_.size());
     std::vector<int>                   slice_scan(devs_.size()+1);
 
-    //LOG(WARNING) << key << " " << src[0].shape() << " " << src[0].shape().Size();
     int total_size = src[0].shape().Size();
     unsigned first_size = src[0].shape()[0];
 
@@ -211,7 +190,6 @@ class CommDeviceTree : public Comm {
         int slice_size = (first_size + devs_.size()-1)/devs_.size();
         for (unsigned i = 1; i < devs_.size(); ++i) {
           slice_scan[i] = slice_scan[i-1] + slice_size;
-          //LOG(WARNING) << slice_scan[i];
         }
         slice_scan[devs_.size()] = src[0].shape()[0];
 
@@ -239,7 +217,6 @@ class CommDeviceTree : public Comm {
         }
       } else {
         int root = 0;
-        //LOG(WARNING) << "Executing single tree reduce for key " << key << " root " << root;
         ReduceInner(key, src, root, 0, priority);
 
         BufferEntry& buf = merge_buf_[root][key];
@@ -312,29 +289,20 @@ class CommDeviceTree : public Comm {
     if (merged_row == -1)
       CopyFromTo(src, dst[gpu_id], priority);
     temp[gpu_id] = *dst[gpu_id];
-    //LOG(WARNING) << "Bcast copy from " << src.ctx() << " to " << buf.merged[merged_row].ctx();
 
     for (int level = 1; level <= depth_; ++level) {
       int start = scan_[root][level];
       int end   = scan_[root][level+1];
-      //LOG(WARNING) << "Bcast level: " << level;
 
-      //LOG(WARNING) << "From " << start << " to " << end;
       unsigned is_src = 0;
       int      src_id = 0;
       for (int j = start; j < end; ++j) {
         int topo_id = topology[j];
         src_id      = (is_src==0) ? topo_id : src_id;
-        //LOG(WARNING) << src_id << " -> " << topo_id;
 
         if (is_src && src_id != topo_id) {
-          //LOG(WARNING) << src_id << " != " << topo_id;
-
           CopyFromTo(temp[src_id], dst[topo_id], priority);
-
           temp[topo_id] = *dst[topo_id];
-
-          //LOG(WARNING) << "Bcast copy from " << buf_from.merged[merged_row].ctx() << " to " << buf_dest.merged[merged_row].ctx();
         }
 
         is_src = (is_src == static_cast<unsigned>(kBranch)-1) ? 0 : is_src+1;
@@ -362,7 +330,6 @@ class CommDeviceTree : public Comm {
         int slice_size = (dst[0]->shape()[0]+devs_.size()-1)/devs_.size();
         for (unsigned i = 1; i < devs_.size(); ++i) {
           slice_scan[i] = slice_scan[i-1] + slice_size;
-          //LOG(WARNING) << slice_scan[i];
         }
         slice_scan[devs_.size()] = dst[0]->shape()[0];
 
@@ -372,13 +339,11 @@ class CommDeviceTree : public Comm {
             if ( devs_[gpu_id] == dst[gpu_id]->ctx() ) {
               NDArray curr_slice = dst[gpu_id]->Slice(slice_scan[i], slice_scan[i+1]);
               CopyFromTo(buf.merged[i], &curr_slice, priority);
-              //LOG(WARNING) << "Bcast return copy from " << buf.merged[i].ctx() << " to " << curr_slice.ctx();
             }
           }
         }
       } else {
         int root = 0;
-        //LOG(WARNING) << "Executing single tree broadcast for key " << key << " root " << root;
         BroadcastInner(key, src, dst, root, -1, priority);
       }
     }
@@ -527,9 +492,9 @@ class CommDeviceTree : public Comm {
 
       int start = scan_[0][depth_  ];
       int end   = scan_[0][depth_+1];
-      //LOG(WARNING) << "From: " << start << " to: " << end;
 
-      // In order to generalize to any number of GPUs, must support 2 things:
+      // In order to generalize to any number of GPUs, there are many 
+      //   strategies:
       // 1) detect whether we are encountering gpu for first time
       //    first time  => allocate memory
       //    second time => do nothing
@@ -537,7 +502,6 @@ class CommDeviceTree : public Comm {
       //    allocate merge_buf_ to be next biggest power of 2 sized or use 
       //    0, 1, ..., n_gpus (same mapping as dev_id)
       //    e.g. 5, 6, 7, 8 must all have merge_buf_.size() == 8
-      //   -Design decision: use second approach for now
       for (int j = start; j < end; ++j) {
         int topo_id = topology_[0][j];
         auto& buf = merge_buf_[topo_id][key];
@@ -553,18 +517,15 @@ class CommDeviceTree : public Comm {
             int slice_size = (first_size+devs_.size()-1)/devs_.size();
             int last_slice = first_size-(devs_.size()-1)*slice_size;
             shape_copy[0]   = slice_size;
-            //LOG(WARNING) << "Split Check emptiness of copy buf on GPU" << topo_id << " " << ctx;
             buf.merged.resize(devs_.size());
             for (unsigned row = 0; row < devs_.size(); ++row) {
               if (row == devs_.size()-1)
                 shape_copy[0] = last_slice;
-              //LOG(WARNING) << "Split Allocating merg buf to GPU" << topo_id << " of shape" << shape_copy;
               buf.merged[row] = NDArray(shape_copy, ctx, false, type);
               buf.copy_buf.push_back(std::vector<NDArray>());
               if (buf.copy_buf[row].empty()) {
                 buf.copy_buf[row].resize(kBranch-1);
                 for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
-                  //LOG(WARNING) << "Split Allocating copy buf to GPU" << topo_id;
                   buf.copy_buf[row][col] = NDArray(buf.merged[row].shape(),
                                                    buf.merged[row].ctx(), false,
                                                    buf.merged[row].dtype());
@@ -574,15 +535,12 @@ class CommDeviceTree : public Comm {
           } else {
             buf.merged.push_back(NDArray(shape, ctx, false, type));
             if (buf.copy_buf.empty()) {
-              //LOG(WARNING) << "Check emptiness of copy buf on GPU" << topo_id<< " " << ctx;
               buf.copy_buf.push_back(std::vector<NDArray>());
               buf.copy_buf[0].resize(kBranch-1);
               for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
-                //LOG(WARNING) << "Allocating copy buf to GPU" << topo_id;
                 buf.copy_buf[0][col] = NDArray(buf.merged[0].shape(),
                                                buf.merged[0].ctx(), false,
                                                buf.merged[0].dtype());
-                //LOG(WARNING) << "Success allocating copy buf to GPU" << topo_id;
               }
             }
           }
