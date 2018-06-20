@@ -30,7 +30,7 @@ except ImportError:
     pass
 
 from . import symbol
-from ..base import _LIB, c_array, check_call
+from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
