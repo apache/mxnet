@@ -364,13 +364,12 @@ int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *inpu
   API_END_HANDLE_ERROR();
 }
 
-int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle *input_symbols,
+int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
                         int *input_size) {
   // Given a graph, we want to fetch the nodes that have been marked as part of
   // a subgraph.
   API_BEGIN();
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  size_t max_input_size = *input_size;
   std::string subg_attr = "__subgraph_name__";
   auto out_node = s->outputs[0].node;
   auto it = out_node->attrs.dict.find(subg_attr);
@@ -400,9 +399,13 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle *input_symbols,
       input_syms[i] = new nnvm::Symbol();
       input_syms[i]->outputs.push_back(orig_entries[i]);
     }
-    CHECK(input_syms.size() <= max_input_size);
     *input_size = input_syms.size();
-    memcpy(input_symbols, input_syms.data(), sizeof(*input_symbols) * input_syms.size());
+
+    MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*input_size);
+    for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
+    *input_symbols = reinterpret_cast<SymbolHandle*>(dmlc::BeginPtr(ret->ret_handles));
   } else {
     *input_size = 0;
   }

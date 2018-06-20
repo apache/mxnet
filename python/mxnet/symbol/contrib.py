@@ -112,13 +112,14 @@ def _get_graph_inputs(subg):
     return syms
 
 def _cut_subgraph(subg):
-    num_handles = ctypes.c_int(1000)
-    handles = c_array(SymbolHandle, [SymbolHandle(0) for i in range(1000)])
-    check_call(_LIB.MXSymbolCutSubgraph(subg.handle, handles, ctypes.byref(num_handles)))
+    num_handles = ctypes.c_int(0)
+    handles = ctypes.POINTER(SymbolHandle)()
+    check_call(_LIB.MXSymbolCutSubgraph(subg.handle, ctypes.byref(handles),
+                                        ctypes.byref(num_handles)))
 
     syms = []
     for i in range(num_handles.value):
-        s = Symbol(SymbolHandle(handles[i]))
+        s = Symbol(ctypes.cast(handles[i], SymbolHandle))
         syms.append(s)
     return syms
 
