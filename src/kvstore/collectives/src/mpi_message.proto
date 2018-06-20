@@ -64,4 +64,3 @@ message MPIResponse {
   // Empty unless response_type is ERROR.
   string error_message = 3;
 };
-
