@@ -25,12 +25,12 @@
 
 set -ex
 
-apt-get install nodejs unzip
+apt-get install nodejs
 
-git clone https://github.com/kripken/emscripten.git
-git clone https://github.com/kripken/emscripten-fastcomp
+git clone -b 1.38.6 https://github.com/kripken/emscripten.git
+git clone -b 1.38.6 https://github.com/kripken/emscripten-fastcomp
 cd emscripten-fastcomp
-git clone https://github.com/kripken/emscripten-fastcomp-clang tools/clang
+git clone -b 1.38.6 https://github.com/kripken/emscripten-fastcomp-clang tools/clang
 mkdir build && cd build
 
 cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;JSBackend" \
@@ -38,4 +38,3 @@ cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;JSBackend" \
 -DCLANG_INCLUDE_TESTS=OFF && make -j$(nproc)
 
 chmod -R 777 /work/deps/emscripten-fastcomp/
-#export LLVM=/work/deps/emscripten-fastcomp/build/bin
