@@ -49,7 +49,8 @@ private[mxnet] object APIDocGenerator{
     // TODO: GPU test seemed to generate different files
     if (!System.getenv().containsKey("SCALA_ON_GPU")) {
       require(prevHash.equals(finalHash),
-        "Detect Operator changes, comment on this line and update the hashfile")
+        "Detect Operator changes, comment on this line and update the hashfile"
+      + ", please go to scala-package/macros/.../APIDocGenerator.scala")
     }
     val pw = new PrintWriter(new File(FILE_PATH + s"FILEHASH"))
     pw.write(finalHash)
