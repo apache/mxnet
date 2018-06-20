@@ -22,7 +22,7 @@
 
 set -ex
 
-NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml "
+NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 
 clean_repo() {
     set -ex
