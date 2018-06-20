@@ -92,6 +92,10 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
 }
 
+def publish_test_coverage() {
+    sh 'curl -s https://codecov.io/bash | bash -s -'
+}
+
 def collect_test_results_unix(original_file_name, new_file_name) {
     echo 'Saving python test results for ' + new_file_name
     // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
@@ -159,6 +163,7 @@ try {
       ws('workspace/sanity') {
         init_git()
         docker_run('ubuntu_cpu', 'sanity_check', false)
+        publish_test_coverage()
       }
     }
   }
