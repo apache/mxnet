@@ -13,7 +13,11 @@
 ### Prerequisites
 
 ```
-apt-get update && apt-get install -y build-essential git libopencv-dev curl gcc libopenblas-dev python python-pip python-dev python-opencv graphviz python-scipy python-sklearn
+sudo apt-get update
+sudo apt-get install -y build-essential git
+sudo apt-get install -y libopenblas-dev liblapack-dev
+sudo apt-get install -y libopencv-dev
+sudo apt-get install -y graphviz
 ```
 
 ### Clone MXNet sources
@@ -21,7 +25,6 @@ apt-get update && apt-get install -y build-essential git libopencv-dev curl gcc 
 ```
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
-git submodule update --recursive --init
 ```
 
 ### Build MXNet with MKL-DNN
@@ -30,7 +33,7 @@ git submodule update --recursive --init
 make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
-If you don't have full MKL library installed, you can use OpenBLAS by setting `USE_BLAS=openblas`.
+If you don't have full [MKL](https://software.intel.com/en-us/intel-mkl) library installed, you can use OpenBLAS by setting `USE_BLAS=openblas`.
 
 <h2 id="2">MacOS</h2>
 
@@ -55,6 +58,13 @@ brew install opencv
 brew tap homebrew/versions
 brew install gcc49
 brew link gcc49
+```
+
+### Clone MXNet sources
+
+```
+git clone --recursive https://github.com/apache/incubator-mxnet.git
+cd incubator-mxnet
 ```
 
 ### Enable OpenMP for MacOS
@@ -148,7 +158,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 
 ```r
 cd C:\
-git clone https://github.com/apache/incubator-mxnet.git --recursive
+git clone --recursive https://github.com/apache/incubator-mxnet.git
 ```
 
 3. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
@@ -185,9 +195,8 @@ msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 <h2 id="4">Verify MXNet with python</h2>
 
 ```
-export PYTHONPATH=~/incubator-mxnet/python
-pip install --upgrade pip 
-pip install --upgrade jupyter graphviz cython pandas bokeh matplotlib opencv-python requests
+cd python
+sudo python setup.py install
 python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
 
 Expected Output:
