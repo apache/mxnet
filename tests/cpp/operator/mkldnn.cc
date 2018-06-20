@@ -633,8 +633,8 @@ static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive
  * Similar to GetTestOutputArrays but outputs are scaled by a factor of num_inputs
  */
 std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
-                                              const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                              const InitFunc init_fn, int num_inputs, int dim) {
+                                                    const std::vector<mkldnn::memory::primitive_desc> &pds,
+                                                    int num_inputs, int dim) {
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
   CHECK(shape.ndim() > dim);
@@ -645,13 +645,13 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   // Type 1.
   NDArray arr(new_shape , Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
-  init_fn(&in_arrs.back().arr, true);
+  InitDefaultArray(&in_arrs.back().arr, true);
 
   // Type 4.
   TShape tmp_shape = new_shape;
   tmp_shape[0] = new_shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  init_fn(&arr0, true);
+  InitDefaultArray(&arr0, true);
   in_arrs.emplace_back(arr0.Slice(1, new_shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
@@ -660,14 +660,14 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   s[0] = new_shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(new_shape, arr1.dtype());
-  init_fn(&arr1, true);
+  InitDefaultArray(&arr1, true);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = new_shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(new_shape, mshadow::default_type_flag);
-  init_fn(&arr2, true);
+  InitDefaultArray(&arr2, true);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
@@ -676,7 +676,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   tmp_shape = new_shape;
   tmp_shape[0] = new_shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  init_fn(&arr3, true);
+  InitDefaultArray(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, new_shape[0] + 1), "Reused+Reshaped NDArray");
 
 
@@ -696,7 +696,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, new_pd, init_fn, true);
+    InitMKLDNNArray(&in_arrs.back().arr, new_pd, true);
 
     // Type 8, 9.
     // Get a reused version.
@@ -704,7 +704,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
     s[0] = new_shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(new_shape, arr.dtype());
-    InitMKLDNNArray(&arr, new_pd, init_fn, true);
+    InitMKLDNNArray(&arr, new_pd, true);
     desc = "Reused MKLDNN NDArray";
     if (new_shape.ndim() != new_pd.desc().data.ndims) {
       std::stringstream ss;
@@ -726,7 +726,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
-        auto output_arrs = GetTestOutputArraysConcat(shape, pds, InitDefaultArray, num_inputs, dim);
+        auto output_arrs = GetTestOutputArraysConcat(shape, pds, num_inputs, dim);
         for (auto out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
           EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
@@ -830,8 +830,6 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   for (auto in_arr : in_arrs) {
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
       in_arr.arr = in_arr.arr.Reorder2Default();
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-        InitDefaultArray);
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
