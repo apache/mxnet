@@ -56,14 +56,14 @@ def score(network, dev, batch_size, num_batches, dtype):
     data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=dev, dtype=dtype) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, []) # empty label
     mod.forward(batch, is_train=False)
-    if (dtype == 'float16'):
+    if dtype == 'float16':
         arg_params, aux_params = mod.get_params()
         for key in arg_params.keys():
             val = arg_params[key]
-            arg_params[key] = mx.nd.Cast(val, dtype='float16')
+            arg_params[key] = mx.nd.Cast(val, dtype=dtype)
         for key in aux_params.keys():
             val = aux_params[key]
-            aux_params[key] = mx.nd.Cast(val, dtype='float16')
+            aux_params[key] = mx.nd.Cast(val, dtype=dtype)
         mod.set_params(arg_params, aux_params)
 
     # run
@@ -90,12 +90,12 @@ if __name__ == '__main__':
     for dtype in dtypes:
         for net in networks:
             # AlexNet doesn't support float16
-            if (net == 'alexnet' and dtype == 'float16'):
+            if net == 'alexnet' and dtype == 'float16':
                 print("alexnet doesn't support float16")
                 continue
             logging.info('network: %s', net)
             for d in devs:
-                if (dtype == 'float16' and d == mx.cpu()):
+                if dtype == 'float16' and d == mx.cpu():
                     print("CPU doesn't support float16")
                     continue
 
