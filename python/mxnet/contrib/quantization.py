@@ -72,7 +72,8 @@ def _quantize_params(qsym, params):
     return quantized_params
 
 
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None):
+def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
+                     quantized_dtype='int8'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -86,6 +87,8 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None):
         Names of the parameters that users want to quantize offline. It's always recommended to
         quantize parameters offline so that quantizing parameters during the inference can be
         avoided.
+    quantized_dtype: str
+        The quantized destination type for input data.
     """
     num_excluded_symbols = 0
     excluded_handles = []
@@ -108,7 +111,8 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None):
                                      mx_uint(num_excluded_symbols),
                                      c_array(SymbolHandle, excluded_handles),
                                      mx_uint(num_offline),
-                                     c_array(ctypes.c_char_p, offline)))
+                                     c_array(ctypes.c_char_p, offline),
+                                     c_str(quantized_dtype)))
     return Symbol(out)
 
 
@@ -401,7 +405,8 @@ def _load_params(params, logger=logging):
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
-                   calib_data=None, num_calib_examples=None, calib_layer=None, logger=logging):
+                   calib_data=None, num_calib_examples=None, calib_layer=None,
+                   quantized_dtype='int8', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -451,6 +456,9 @@ def quantize_model(sym, arg_params, aux_params,
         calibrate this layer. If yes, the statistics of the layer's output will be collected;
         otherwise, no information of the layer's output will be collected. If not provided,
         all the layers' outputs that need requantization will be collected.
+    quantized_dtype : str
+        The quantized destination type for input data. Currently support 'int8'
+        and 'uint8', default value is 'int8'.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -473,8 +481,13 @@ def quantize_model(sym, arg_params, aux_params,
             idx = nodes.list_outputs().index(sym_name + '_output')
             excluded_syms.append(nodes[idx])
     logger.info('Quantizing symbol')
+
+    if quantized_dtype != 'int8' and quantized_dtype != 'uint8':
+        raise ValueError('unknown quantized_dtype %s received,'
+                         ' expected `int8` or `uint8`' % quantized_dtype)
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_syms,
-                            offline_params=list(arg_params.keys()))
+                            offline_params=list(arg_params.keys()),
+                            quantized_dtype=quantized_dtype)
 
     logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params)

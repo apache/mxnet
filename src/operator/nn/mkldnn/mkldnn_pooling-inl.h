@@ -119,6 +119,10 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
                               const NDArray &out_grad, const NDArray &in_data,
                               const NDArray *workspace, const OpReqType req,
                               const NDArray &in_grad);
+MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
+                                const bool is_train,
+                                const NDArray &data,
+                                const NDArray &output);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_USE_MKLDNN == 1

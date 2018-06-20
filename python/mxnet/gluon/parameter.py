@@ -393,6 +393,8 @@ class Parameter(object):
     def reset_ctx(self, ctx):
         """Re-assign Parameter to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default ``context.current_context()``.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -589,8 +591,8 @@ class Constant(Parameter):
                 super(Block, self).__init__(**kwargs)
                 self.const = self.params.get_constant('const', [[1,2],[3,4]])
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         Name of the parameter.
     value : array-like
@@ -741,7 +743,7 @@ class ParameterDict(object):
         found, :py:func:`get` will create a new :py:class:`Constant` with key-word
         arguments and insert it to self.
 
-        Constants
+        Parameters
         ----------
         name : str
             Name of the desired Constant. It will be prepended with this dictionary's
@@ -816,6 +818,8 @@ class ParameterDict(object):
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default :py:meth:`context.current_context()`.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -848,6 +852,8 @@ class ParameterDict(object):
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         strip_prefix : str, default ''
@@ -872,6 +878,8 @@ class ParameterDict(object):
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context

@@ -77,6 +77,7 @@ class EnumType:
 
 class Arg:
     typeDict = {'boolean':'bool',\
+        'boolean or None':'dmlc::optional<bool>',\
         'Shape(tuple)':'Shape',\
         'Symbol':'Symbol',\
         'NDArray':'Symbol',\

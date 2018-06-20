@@ -20,7 +20,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, teardown
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -203,20 +203,20 @@ def test_parameter_sharing():
     net1.collect_params().initialize()
     net2(mx.nd.zeros((3, 5)))
 
-    net1.save_params('net1.params')
+    net1.save_parameters('net1.params')
 
     net3 = Net(prefix='net3_')
-    net3.load_params('net1.params', mx.cpu())
+    net3.load_parameters('net1.params', mx.cpu())
 
     net4 = Net(prefix='net4_')
     net5 = Net(prefix='net5_', in_units=5, params=net4.collect_params())
     net4.collect_params().initialize()
     net5(mx.nd.zeros((3, 5)))
 
-    net4.save_params('net4.params')
+    net4.save_parameters('net4.params')
 
     net6 = Net(prefix='net6_')
-    net6.load_params('net4.params', mx.cpu())
+    net6.load_parameters('net4.params', mx.cpu())
 
 
 @with_seed()
@@ -360,6 +360,7 @@ def test_sparse_hybrid_block():
 
 @with_seed()
 def check_layer_forward(layer, dshape):
+    print("checking layer {}\nshape: {}.".format(layer, dshape))
     layer.collect_params().initialize()
     x = mx.nd.ones(shape=dshape)
     x.attach_grad()
@@ -439,7 +440,7 @@ def test_deconv():
         nn.Conv2DTranspose(16, (3, 4), groups=2, in_channels=4),
         nn.Conv2DTranspose(16, (3, 4), strides=4, in_channels=4),
         nn.Conv2DTranspose(16, (3, 4), dilation=4, in_channels=4),
-        nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4),
+    #   nn.Conv2DTranspose(16, (3, 4), padding=4, in_channels=4),
         nn.Conv2DTranspose(16, (3, 4), strides=4, output_padding=3, in_channels=4),
         ]
     for layer in layers2d:
@@ -471,6 +472,7 @@ def test_pool():
         nn.MaxPool1D(3),
         nn.MaxPool1D(3, 2),
         nn.AvgPool1D(),
+        nn.AvgPool1D(count_include_pad=False),
         nn.GlobalAvgPool1D(),
         ]
     for layer in layers1d:
@@ -482,6 +484,7 @@ def test_pool():
         nn.MaxPool2D((3, 3)),
         nn.MaxPool2D(3, 2),
         nn.AvgPool2D(),
+        nn.AvgPool2D(count_include_pad=False),
         nn.GlobalAvgPool2D(),
         ]
     for layer in layers2d:
@@ -492,6 +495,7 @@ def test_pool():
         nn.MaxPool3D((3, 3, 3)),
         nn.MaxPool3D(3, 2),
         nn.AvgPool3D(),
+        nn.AvgPool3D(count_include_pad=False),
         nn.GlobalAvgPool3D(),
         ]
     for layer in layers3d:
@@ -781,7 +785,7 @@ def test_export():
     model = gluon.model_zoo.vision.resnet18_v1(
         prefix='resnet', ctx=ctx, pretrained=True)
     model.hybridize()
-    data = mx.nd.random.normal(shape=(1, 3, 224, 224))
+    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
     model.export('gluon')
@@ -799,6 +803,22 @@ def test_export():
 
     assert_almost_equal(out.asnumpy(), out2.asnumpy())
 
+@with_seed()
+def test_import():
+    ctx = mx.context.current_context()
+    net1 = gluon.model_zoo.vision.resnet18_v1(
+        prefix='resnet', ctx=ctx, pretrained=True)
+    net1.hybridize()
+    data = mx.nd.random.normal(shape=(1, 3, 32, 32))
+    out1 = net1(data)
+
+    net1.export('net1', epoch=1)
+
+    net2 = gluon.SymbolBlock.imports(
+        'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
+    out2 = net2(data)
+
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
 
 @with_seed()
 def test_hybrid_stale_cache():
@@ -915,7 +935,7 @@ def test_fill_shape_load():
     net1.hybridize()
     net1.initialize(ctx=ctx)
     net1(mx.nd.ones((2,3,5,7), ctx))
-    net1.save_params('net_fill.params')
+    net1.save_parameters('net_fill.params')
 
     net2 = nn.HybridSequential()
     with net2.name_scope():
@@ -924,7 +944,7 @@ def test_fill_shape_load():
                  nn.Dense(10))
     net2.hybridize()
     net2.initialize()
-    net2.load_params('net_fill.params', ctx)
+    net2.load_parameters('net_fill.params', ctx)
     assert net2[0].weight.shape[1] == 3, net2[0].weight.shape[1]
     assert net2[1].gamma.shape[0] == 64, net2[1].gamma.shape[0]
     assert net2[2].weight.shape[1] == 3072, net2[2].weight.shape[1]
@@ -1070,12 +1090,12 @@ def test_req():
 @with_seed()
 def test_save_load():
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_params('test_save_load.params')
+    net.save_parameters('test_save_load.params')
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_params('test_save_load.params')
+    net.load_parameters('test_save_load.params')
 
 @with_seed()
 def test_symbol_block_save_load():
@@ -1100,10 +1120,10 @@ def test_symbol_block_save_load():
     net1.initialize(mx.init.Normal())
     net1.hybridize()
     net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-    net1.save_params('./test_symbol_block_save_load.params')
+    net1.save_parameters('./test_symbol_block_save_load.params')
 
     net2 = Net()
-    net2.load_params('./test_symbol_block_save_load.params', ctx=mx.cpu())
+    net2.load_parameters('./test_symbol_block_save_load.params', ctx=mx.cpu())
 
 
 @with_seed()
@@ -1255,6 +1275,33 @@ def test_summary():
 
     net.hybridize()
     assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
+
+
+@with_seed()
+def test_legacy_save_params():
+    net = gluon.nn.HybridSequential(prefix='')
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(10, (3, 3)))
+        net.add(gluon.nn.Dense(50))
+    net.initialize()
+    net(mx.nd.ones((1,1,50,50)))
+    a = net(mx.sym.var('data'))
+    a.save('test.json')
+    net.save_params('test.params')
+    model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
+                                     inputs=mx.sym.var('data'))
+    model.load_params('test.params', ctx=mx.cpu())
+
+
+def test_hybrid_static_memory_recording():
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(static_alloc=True)
+
+    x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
+    with mx.autograd.record(True):
+        net(x)
+    net(x)
 
 
 if __name__ == '__main__':
