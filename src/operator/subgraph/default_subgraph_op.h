@@ -20,6 +20,8 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 #define MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 
+#include <vector>
+#include <string>
 #include "./common.h"
 
 namespace mxnet {
@@ -43,7 +45,8 @@ class SubgraphSelector {
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
-  virtual std::vector<nnvm::Node*> Filter(nnvm::Graph* g, const std::vector<nnvm::Node*>& candidates) {
+  virtual std::vector<nnvm::Node*> Filter(nnvm::Graph* g,
+                                          const std::vector<nnvm::Node*>& candidates) {
     return candidates;
   }
 };
@@ -61,7 +64,8 @@ class SubgraphProperty {
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const = 0;
   // create an nnvm node for a given subgraph. Here users can customize how to
   // execute the operators in the subgraph.
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s, const int subgraph_id = 0) const = 0;
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s,
+                                           const int subgraph_id = 0) const = 0;
 };
 
 using SubgraphPropertyPtr = std::shared_ptr<SubgraphProperty>;
@@ -76,7 +80,7 @@ class ContainOpSelector: public SubgraphSelector {
   std::shared_ptr<const std::unordered_set<std::string>> op_names;
 
  public:
-  ContainOpSelector(std::shared_ptr<const std::unordered_set<std::string>> op_names) {
+  explicit ContainOpSelector(std::shared_ptr<const std::unordered_set<std::string>> op_names) {
     this->op_names = op_names;
   }
 
@@ -99,7 +103,7 @@ class ContainOpSelector: public SubgraphSelector {
  */
 class DefaultSubgraphProperty: public SubgraphProperty {
  public:
-  DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names) :
+  explicit DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names) :
     op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
@@ -117,7 +121,7 @@ class DefaultSubgraphProperty: public SubgraphProperty {
   std::shared_ptr<const std::unordered_set<std::string>> op_names_;
 };
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_ 
+#endif  // MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_

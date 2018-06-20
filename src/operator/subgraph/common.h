@@ -20,6 +20,9 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_COMMON_H_
 #define MXNET_OPERATOR_SUBGRAPH_COMMON_H_
 
+#include <string>
+#include <set>
+#include <vector>
 #include "../elemwise_op_common.h"
 #include "../../executor/exec_pass.h"
 
@@ -83,7 +86,6 @@ inline bool DefaultSubgraphOpShape(const nnvm::NodeAttrs& attrs,
   const auto& idx_g = g.indexed_graph();
   CHECK_EQ(idx_g.input_nodes().size(), in_shapes->size());
   CHECK_EQ(idx_g.outputs().size(), out_shapes->size());
-  // TODO: make sure shape inputs matches the order from in_shapes
 
   // Put the input and output shapes to the shape vector.
   nnvm::ShapeVector shapes(idx_g.num_node_entries());
@@ -128,7 +130,6 @@ inline bool DefaultSubgraphOpType(const nnvm::NodeAttrs& attrs,
   const auto& idx_g = g.indexed_graph();
   CHECK_EQ(idx_g.input_nodes().size(), in_types->size());
   CHECK_EQ(idx_g.outputs().size(), out_types->size());
-  // TODO: make sure type inputs matches the order from in_types
 
   // Put the input and output data types to the dtype vector.
   nnvm::DTypeVector types(idx_g.num_node_entries(), -1);
@@ -175,7 +176,6 @@ inline bool DefaultSubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(idx_g.input_nodes().size(), in_stypes->size());
   CHECK_EQ(idx_g.outputs().size(), out_stypes->size());
   exec::DevMaskVector dev_masks(idx_g.num_node_entries(), dev_mask);
-  // TODO: make sure type inputs matches the order from in_types
 
   // Put the input and output storages to the storage vector.
   nnvm::StorageVector stypes(idx_g.num_node_entries(), exec::kBadStorageID);
@@ -224,8 +224,10 @@ inline ExecType DefaultSubgraphOpExecType(const nnvm::NodeAttrs& attrs) {
 inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttrs& attrs) {
   const nnvm::Symbol& subgraph_sym = nnvm::get<nnvm::Symbol>(attrs.parsed);
   const std::vector<std::string> input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAll);
-  const std::vector<std::string> immutable_input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-  const std::vector<std::string> mutable_input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+  const std::vector<std::string> immutable_input_names =
+    subgraph_sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+  const std::vector<std::string> mutable_input_names =
+    subgraph_sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
   CHECK_EQ(immutable_input_names.size() + mutable_input_names.size(), input_names.size());
   std::vector<uint32_t> ret;
   size_t i1 = 0, i2 = 0;
@@ -265,4 +267,4 @@ inline uint32_t DefaultSubgraphOpNumVisibleOutputs(const nnvm::NodeAttrs& attrs)
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_SUBGRAPH_COMMON_H_ 
+#endif  // MXNET_OPERATOR_SUBGRAPH_COMMON_H_

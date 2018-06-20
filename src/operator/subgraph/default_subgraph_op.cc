@@ -29,7 +29,7 @@ namespace op {
 
 class DefaultSubgraphOperator {
  public:
-  DefaultSubgraphOperator(const Symbol& sym) : subgraph_sym_(sym) {
+  explicit DefaultSubgraphOperator(const Symbol& sym) : subgraph_sym_(sym) {
     subgraph_exec_.reset(new CachedOp(sym, {{"static_alloc", "true"}}));
   }
 

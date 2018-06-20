@@ -22,12 +22,12 @@
  * \file partition_graph.cc
  * \brief
  */
-#include <queue>
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
 #include <mxnet/op_attr_types.h>
 #include <unordered_set>
 #include <stack>
+#include <queue>
 
 #include "./default_subgraph_op.h"
 #include "./common.h"
@@ -156,7 +156,6 @@ bool LabelSubgraph(const Graph& g,
   while (!node_queue.empty()) {
     SimpleNode* cur_node = node_queue.front();
     node_queue.pop();
-    //cur_node->label = label;
     subgraph_nodes->push_back(cur_node->node);
     // get qualified adjacent input nodes
     for (auto& e : cur_node->node->inputs) {
@@ -262,9 +261,10 @@ void PreSelectSubgraphNodes(const Graph& g,
   }
   if (!success) {
     LOG(INFO) << "Tried " << count << " times of finding subgraphs starting from node "
-               << simple_nodes[snid]->node->attrs.name << " without success because a loop "
+              << simple_nodes[snid]->node->attrs.name << " without success because a loop "
                   "is always found between the subgraph and some other nodes. Will treat "
-                  "seed node " << simple_nodes[snid]->node->attrs.name << "as a subgraph with one node";
+                  "seed node " << simple_nodes[snid]->node->attrs.name
+              << "as a subgraph with one node";
     CHECK(subgraph_nodes->empty());
     simple_nodes[snid]->label = label;
     subgraph_nodes->push_back(simple_nodes[snid]->node);
@@ -337,7 +337,6 @@ void FindSubgraphs(Graph* g,
                    const SubgraphProperty &subg_prop,
                    const std::vector<SimpleNodePtr>& simple_nodes,
                    std::vector<std::vector<SimpleNode*>>* subgraph_nodes) {
-  //CHECK(simple_nodes != nullptr);
   const auto& indexed_graph = g->indexed_graph();
   CHECK_EQ(indexed_graph.num_nodes(), simple_nodes.size());
   auto node_cmp = [&] (const nnvm::Node* node1, const nnvm::Node* node2) {
@@ -356,7 +355,7 @@ void FindSubgraphs(Graph* g,
       // filter out unqualified pre-selected nodes
       std::vector<nnvm::Node*> filtered_nodes = subgraph_selector->Filter(g, preselected_nodes);
 
-      // make sure filtered_nodes is a subset of preselected_nodes 
+      // make sure filtered_nodes is a subset of preselected_nodes
       for (const auto n : filtered_nodes) {
         const auto nit = std::find(preselected_nodes.begin(), preselected_nodes.end(), n);
         CHECK(nit != preselected_nodes.end())
@@ -456,7 +455,8 @@ void FindInputEntries(const Graph& g,
 void FindOutputEntries(Graph* g,
                        const std::vector<SimpleNodePtr>& simple_nodes,
                        const std::vector<SimpleNode*>& subgraph_nodes,
-                       const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_top_order_map,
+                       const std::unordered_map<const nnvm::NodeEntry*, size_t>&
+                         entry_top_order_map,
                        std::vector<nnvm::NodeEntry*>* output_entries) {
   if (subgraph_nodes.empty()) return;
   const auto& indexed_graph = g->indexed_graph();

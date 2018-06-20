@@ -33,6 +33,10 @@
 namespace mxnet {
 namespace engine {
 
+/*!
+ * \brief var used in Naive Engine for tracking the version
+ * of the objects it is associated with.
+ */
 class NaiveVar final
     : public Var, public common::ObjectPoolAllocatable<NaiveVar> {
  public:
@@ -217,8 +221,6 @@ class NaiveEngine final : public Engine {
   }
   // whether action is completed
   bool req_completed_;
-  // counter
-  //std::atomic<size_t> counter_{0};
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream
