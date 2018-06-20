@@ -626,24 +626,6 @@ static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive
                          static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
 
-/*
- * We want to get a few types of NDArrays for testing the concat operator:
- * 1. Normal NDArray
- * 2. Normal NDArray with MKLDNN layout (output from an MKLDNN operator)
- * 3. Normal NDArray with MKLDNN layout whose MKLDNN memory may have different
- *    dimensions from the NDArray (result of MKLDNNDataReorderAsync). However, this
- *    type of NDArrays only exists for weight arrays. I don't think we should
- *    pass them to all operators.
- *    In the inference mode, the MKLDNN memory in the weight array will be
- *    reordered to 5 dimensions.
- * 4. Reshaped/sliced NDArray
- * 5. Reused NDArray (this is created by the MXNet executor). This type of
- *    NDArrays can only be used as output arrays.
- * 6. Reused NDArray converted from an array with a different data type.
- * 7. Reused reshaped/sliced NDArray.
- * 8. Reused NDArray with MKLDNN layout.
- * 9. Reused NDArray with MKLDNN layout of different dimensions.
- */
 std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
                                               const std::vector<mkldnn::memory::primitive_desc> &pds,
                                               const InitFunc init_fn, int num_input, int dim) {
@@ -670,7 +652,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   // Type 5.
   // Get a reused version.
   nnvm::TShape s(1);
-  s[0] = shape.Size() * num_input;
+  s[0] = new_shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(new_shape, arr1.dtype());
   init_fn(&arr1, true);
@@ -684,11 +666,10 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
-  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+  s[0] = new_shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
   NDArray arr3(s, Context(), true, mshadow::kUint8);
-  tmp_shape = shape;
-  tmp_shape[0] = shape[0] * 2;
-  tmp_shape[dim] = shape[dim] * num_input;
+  tmp_shape = new_shape;
+  tmp_shape[0] = new_shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
   init_fn(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
