@@ -163,7 +163,6 @@ try {
       ws('workspace/sanity') {
         init_git()
         docker_run('ubuntu_cpu', 'sanity_check', false)
-        publish_test_coverage()
       }
     }
   }
@@ -498,6 +497,7 @@ try {
             init_git()
             unpack_lib('cpu')
             python2_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
             collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_cpu_train.xml')
@@ -513,6 +513,7 @@ try {
             init_git()
             unpack_lib('cpu')
             python3_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
             collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
@@ -527,6 +528,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_lib)
             python2_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
           }
@@ -540,6 +542,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_lib)
             python3_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
           }
@@ -554,6 +557,7 @@ try {
               init_git()
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python2_quantize_gpu.xml')
             }
@@ -569,6 +573,7 @@ try {
               init_git()
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
             }
@@ -583,6 +588,7 @@ try {
             init_git()
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python2_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
             collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
@@ -598,6 +604,7 @@ try {
             init_git()
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python2_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_mkldnn_gpu.xml')
           }
@@ -611,6 +618,7 @@ try {
             init_git()
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python3_ut_mkldnn('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
             collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
@@ -625,6 +633,7 @@ try {
             init_git()
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python3_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu.xml')
           }
@@ -639,6 +648,7 @@ try {
               init_git()
               unpack_lib('centos7_cpu')
               docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
               collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_train.xml')
@@ -655,6 +665,7 @@ try {
               init_git()
               unpack_lib('centos7_gpu')
               docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
             }
@@ -669,6 +680,7 @@ try {
             init_git()
             unpack_lib('cpu', mx_dist_lib)
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            publish_test_coverage()
           }
         }
       }
@@ -680,6 +692,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_dist_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
+            publish_test_coverage()
           }
         }
       }
@@ -691,6 +704,7 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
+            publish_test_coverage()
           }
         }
       }
@@ -702,6 +716,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+            publish_test_coverage()
           }
         }
       }
@@ -713,6 +728,7 @@ try {
             init_git()
             unpack_lib('cmake_gpu', mx_cmake_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            publish_test_coverage()
           }
         }
       }
@@ -724,6 +740,7 @@ try {
             init_git()
             unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            publish_test_coverage()
           }
         }
       }
@@ -735,6 +752,7 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            publish_test_coverage()
           }
         }
       }
@@ -746,6 +764,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
+            publish_test_coverage()
           }
         }
       }
@@ -876,6 +895,7 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
+            publish_test_coverage()
           }
         }
       }
@@ -887,6 +907,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_python', true)
+            publish_test_coverage()
           }
         }
       }
@@ -898,6 +919,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
+            publish_test_coverage()
           }
         }
       }
@@ -919,6 +941,7 @@ try {
             unstash 'cpp_test_score'
             unstash 'cpp_test_optimizer'
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            publish_test_coverage()
           }
         }
       }
@@ -930,6 +953,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            publish_test_coverage()
           }
         }
       }
