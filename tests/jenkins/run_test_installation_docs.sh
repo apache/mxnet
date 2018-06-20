@@ -280,7 +280,7 @@ ubuntu_python_cpu_pip()
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    eval ${pip_commands}
+    sudo eval ${pip_commands}
     echo "ubuntu_python_cpu_pip: MXNet Installed Successfully"
 }
 
@@ -340,7 +340,7 @@ ubuntu_python_gpu_pip()
     echo "### Testing Pip ###"
     echo "${pip_commands}"
     echo
-    eval ${pip_commands}
+    sudo eval ${pip_commands}
     echo "ubuntu_python_gpu_pip: MXNet Installed Successfully"
 
 }

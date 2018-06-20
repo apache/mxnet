@@ -231,7 +231,7 @@ $ pip install mxnet-mkl==0.11.0
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
 ```bash
-$ sudo pip install mxnet --pre
+$ pip install mxnet --pre
 ```
 
 **Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
@@ -575,7 +575,7 @@ pip install graphviz
 
 **Experimental Choice** If You would like to install MXNet with Intel MKL, try the experimental pip package with MKL:
 ```bash
-$ sudo pip install mxnet-cu91mkl==1.1.0
+$ pip install mxnet-cu91mkl==1.1.0
 ```
 
 Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
