@@ -735,7 +735,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
   std::vector<int> dims = {1,2,3,4,5};
-  std::vector<int> num_inputs = {1,2,3};
+  std::vector<int> num_inputs = {2,3,4};
   for (auto shape: shapes) {
     for (int dim: dims) {
       for (int num_input : num_inputs) {
