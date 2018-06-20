@@ -686,6 +686,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   // Type 7
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
   NDArray arr3(s, Context(), true, mshadow::kUint8);
+  tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   tmp_shape[dim] = shape[dim] * num_input;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
@@ -734,7 +735,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
-  std::vector<int> dims = {1,2,3,4,5};
+  std::vector<int> dims = {0,1,2,3,4};
   std::vector<int> num_inputs = {2,3,4};
   for (auto shape: shapes) {
     for (int dim: dims) {
