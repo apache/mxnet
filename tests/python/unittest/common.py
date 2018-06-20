@@ -241,3 +241,11 @@ except:
 
         def __exit__(self, exc_type, exc_value, traceback):
             shutil.rmtree(self._dirname)
+
+def teardown():
+    """
+    A function with a 'magic name' executed automatically after each nosetests test module.
+
+    It waits for all operations in one file to finish before carrying on the next.
+    """
+    mx.nd.waitall()

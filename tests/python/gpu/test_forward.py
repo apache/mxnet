@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 from mxnet.gluon import utils
 
 def _get_model():

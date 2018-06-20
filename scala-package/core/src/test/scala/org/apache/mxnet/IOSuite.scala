@@ -24,7 +24,7 @@ import scala.sys.process._
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
 
-  private var tu = new TestUtil
+  private val tu = new TestUtil
 
   test("test MNISTIter & MNISTPack") {
     // get data
@@ -258,7 +258,11 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch0)
 
     // test discard
-    val dataIter1 = new NDArrayIter(data, label, 128, false, "discard")
+    val dataIter1 = new NDArrayIter.Builder()
+      .addData("data0", data(0)).addData("data1", data(1))
+      .addLabel("label", label(0))
+      .setBatchSize(128)
+      .setLastBatchHandle("discard").build()
     val nBatch1 = 7
     batchCount = 0
     while(dataIter1.hasNext) {
