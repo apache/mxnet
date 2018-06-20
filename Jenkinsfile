@@ -163,6 +163,7 @@ try {
       ws('workspace/sanity') {
         init_git()
         docker_run('ubuntu_cpu', 'sanity_check', false)
+        publish_test_coverage()
       }
     }
   }

@@ -534,7 +534,7 @@ sanity_check() {
     tools/license_header.py check
     make cpplint rcpplint jnilint
     make pylint
-    nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS tests/tutorials/test_sanity_tutorials.py
 }
 
 
