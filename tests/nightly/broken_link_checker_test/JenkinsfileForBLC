@@ -21,6 +21,16 @@
 
 err = null
 
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
+  command = command.replaceAll('%PLATFORM%', platform)
+  command = command.replaceAll('%FUNCTION_NAME%', function_name)
+  command = command.replaceAll('%SHARED_MEM%', shared_mem)
+
+  sh command
+}
+
 def init_git() {
   deleteDir()
   retry(5) {
@@ -45,11 +55,9 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/brokenLinkChecker') {
           init_git()
-          withCredentials([usernamePassword(credentialsId: 'github-leleamol', passwordVariable: 'APACHE_PASSWORD', usernameVariable: 'APACHE_USERNAME')]) {
 		  sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
-          sh "ci/build.py --platform ubuntu_blc /work/runtime_functions.sh broken_link_checker"
-		  sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
-          }
+		  docker_run('ubuntu_blc', 'broken_link_checker')
+		  sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'        
         }
       }
     }
