@@ -101,13 +101,14 @@ def rand_zipfian(true_classes, num_sampled, range_max):
     return sampled_classes, expected_count_true, expected_count_sampled
 
 def _get_graph_inputs(subg):
-    num_handles = ctypes.c_int(1000)
-    handles = c_array(SymbolHandle, [SymbolHandle(0) for i in range(1000)])
-    check_call(_LIB.MXSymbolGetInputSymbols(subg.handle, handles, ctypes.byref(num_handles)))
+    num_handles = ctypes.c_int(0)
+    handles = ctypes.POINTER(SymbolHandle)()
+    check_call(_LIB.MXSymbolGetInputSymbols(subg.handle, ctypes.byref(handles),
+                                            ctypes.byref(num_handles)))
 
     syms = []
     for i in range(num_handles.value):
-        s = Symbol(SymbolHandle(handles[i]))
+        s = Symbol(ctypes.cast(handles[i], SymbolHandle))
         syms.append(s)
     return syms
 

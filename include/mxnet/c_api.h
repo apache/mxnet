@@ -1058,7 +1058,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
  * \param inputs The input symbols of the graph.
  * \param input_size the number of input symbols returned.
  */
-MXNET_DLL int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *inputs,
+MXNET_DLL int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **inputs,
                                       int *input_size);
 
 /*!

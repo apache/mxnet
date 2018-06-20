@@ -353,14 +353,17 @@ extern bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
 
 }
 
-int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle *input_arr, int *input_size) {
+int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **input_arr, int *input_size) {
   API_BEGIN();
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  size_t max_input_size = *input_size;
   std::vector<nnvm::Symbol *> input_syms = mxnet::GetInputSymbols(*s);
-  CHECK(input_syms.size() <= max_input_size);
   *input_size = input_syms.size();
-  std::copy(input_syms.begin(), input_syms.end(), input_arr);
+
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_handles.clear();
+  ret->ret_handles.reserve(*input_size);
+  for (int i = 0; i < *input_size; ++i) ret->ret_handles.push_back(input_syms[i]);
+  *input_arr = reinterpret_cast<SymbolHandle*>(dmlc::BeginPtr(ret->ret_handles));
   API_END_HANDLE_ERROR();
 }
 
