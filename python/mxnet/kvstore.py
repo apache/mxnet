@@ -598,7 +598,7 @@ class KVStore(object):
         check_call(_LIB.MXKVStoreIsWorkerNode(ctypes.byref(is_worker)))
 
         # pylint: disable=invalid-name
-        if ('dist' in self.type) and ('mpi' not in self.type) and is_worker.value: # pylint: disable=unsupported-membership-test
+        if ('dist' in self.type) and ('allreduce' not in self.type) and is_worker.value: # pylint: disable=unsupported-membership-test
             # send the optimizer to server
             try:
                 # use ASCII protocol 0, might be slower, but not a big ideal
