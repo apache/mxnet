@@ -18,18 +18,8 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM ubuntu:16.04 as ccachebuilder
-
-COPY install/ubuntu_core.sh /work/
-RUN /work/ubuntu_core.sh
-COPY install/ubuntu_ccache.sh /work/
-RUN /work/ubuntu_ccache.sh
-
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
-
-# extract ccache binary into latest context
-COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 # The cross-compiling emulator
 RUN apt-get update && apt-get install -y \
@@ -88,6 +78,12 @@ RUN git clone https://github.com/xianyi/OpenBLAS.git && \
 ENV OPENBLAS_ROOT /work/OpenBLAS
 ENV LIBRARY_PATH /work/OpenBLAS/lib/:/work/OpenBLAS/:$LIBRARY_PATH
 ENV CPLUS_INCLUDE_PATH /work/OpenBLAS/include/:/work/OpenBLAS/:$CPLUS_INCLUDE_PATH
+
+WORKDIR /work/deps
+
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
 WORKDIR /work
 
 ENV CC /usr/arm-linux-androideabi/bin/arm-linux-androideabi-clang

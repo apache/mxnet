@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,20 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
-
 set -ex
-pushd .
-# This environment variable comes from the docker file
-echo "Downloading android SDK rev ${ANDROID_NDK_REVISION}"
-curl -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-unzip ./android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-cd android-ndk-r${ANDROID_NDK_REVISION} && \
-./build/tools/make_standalone_toolchain.py \
-    --stl=libc++ \
-    --arch arm64 \
-    --api 21 \
-    --install-dir=${CROSS_ROOT} && \
 
-popd
+git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git
+
+cd OpenBLAS
+make -j$(nproc)
+PREFIX=${CROSS_ROOT} make install
+
+cd ..
+
+rm -rf OpenBLAS
