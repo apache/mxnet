@@ -912,7 +912,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   }
 
   g = AttachOpExecs(g);
-  g = AttachOpResources(g);
+  AttachOpResources(g);
   graph_ = std::move(g);
 
   if (shared_exec != nullptr) {
