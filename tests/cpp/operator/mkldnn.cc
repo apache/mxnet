@@ -617,6 +617,15 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
+static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input) {
+  nnvm::TShape s(pd.desc().data.ndims);
+  for (size_t i = 0; i < pd.desc().data.ndims; i++)
+    s[i] = pd.desc().data.dims[i];
+  s[0] = s[0] * num_input;
+  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+                         static_cast<mkldnn::memory::format>(pd.desc().data.format));
+}
+
 /*
  * We want to get a few types of NDArrays for testing the concat operator:
  * 1. Normal NDArray
@@ -687,9 +696,8 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
-    
-    auto new_pd = GetMemPD(new_shape, mshadow::DataType<mshadow::default_real_t>::kFlag,
-        static_cast<mkldnn::memory::format>(pd.desc().data.format));
+
+    auto new_pd = GetExpandedMemPD(pd, num_input);
 
     // Type 2, 3.
     arr = NDArray(new_shape, Context());
