@@ -842,7 +842,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
@@ -855,6 +855,11 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+      if (use_concat_outputs) {
+        std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+        int dim = std::stoi(str_dim);
+        std::vector<NDArrayAttrs> out_arrs = GetTestOutputArraysConcat(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
+      }
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
           inputs[i] = &in_arr.arr;
@@ -932,7 +937,7 @@ TEST(IMPERATIVE, ConcatOp) {
   for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatOp(num_inputs, dim);
-      TestOp(attrs, VerifySumResult);
+      TestOp(attrs, VerifySumResult, true);
     }
   }
 }
