@@ -360,9 +360,9 @@ struct OpAttrs {
 OpAttrs GetCopyOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_copy");
-  attrs.dispatches.resize(2);
   attrs.num_inputs = 1;
   attrs.num_outputs = 1;
+  attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -408,9 +408,9 @@ OpAttrs GetReluBackwardsOp() {
 OpAttrs GetSumOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("elemwise_add");
-  attrs.dispatches.resize(2);
   attrs.num_inputs = 2;
   attrs.num_outputs = 1;
+  attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -427,12 +427,14 @@ OpAttrs GetSumBackwardsOp() {
   return attrs;
 }
 
-OpAttrs GetConcatOp() {
+OpAttrs GetConcatOp(int num_args, int dim) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("concat");
+  attrs.num_inputs = num_args;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
-  attrs.attrs.dict.insert({"num_args" , "1"});
-  attrs.attrs.dict.insert({"dim" , "0"});
+  attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -632,13 +634,13 @@ static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive
  */
 std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
                                               const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                              const InitFunc init_fn, int num_input, int dim) {
+                                              const InitFunc init_fn, int num_inputs, int dim) {
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
   CHECK(shape.ndim() > dim);
 
   TShape new_shape = shape;
-  new_shape[dim] = shape[dim] * num_input;
+  new_shape[dim] = shape[dim] * num_inputs;
 
   // Type 1.
   NDArray arr(new_shape , Context());
@@ -682,7 +684,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
-    auto new_pd = GetExpandedMemPD(pd, num_input);
+    auto new_pd = GetExpandedMemPD(pd, num_inputs);
 
     // Type 2, 3.
     arr = NDArray(new_shape, Context());
@@ -719,18 +721,16 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
-  std::vector<int> dims = {0,1,2,3,4};
-  std::vector<int> num_inputs = {2,3,4};
   for (auto shape: shapes) {
-    for (int dim: dims) {
-      for (int num_input : num_inputs) {
+    for (int dim = 0; dim < 5; dim++) {
+      for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
-        auto output_arrs = GetTestOutputArraysConcat(shape, pds, InitDefaultArray, num_input, dim);
+        auto output_arrs = GetTestOutputArraysConcat(shape, pds, InitDefaultArray, num_inputs, dim);
         for (auto out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
-          EXPECT_EQ(shape.Size() * num_input, out_arr.arr.shape().Size());
-          EXPECT_EQ(shape[dim] * num_input, out_arr.arr.shape()[dim]);
+          EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
+          EXPECT_EQ(shape[dim] * num_inputs, out_arr.arr.shape()[dim]);
         }
       }
     }
@@ -928,6 +928,15 @@ TEST(IMPERATIVE, SumOp) {
 TEST(IMPERATIVE, SumBackwardsOp) {
   OpAttrs attrs = GetSumBackwardsOp();
   TestOp(attrs, VerifySumBackwardsResult);
+}
+
+TEST(IMPERATIVE, ConcatOp) {
+  for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
+    for (int dim = 0; dim < 5; dim++) {
+      OpAttrs attrs = GetConcatOp(num_inputs, dim);
+      TestOp(attrs, VerifySumResult);
+    }
+  }
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
