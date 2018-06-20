@@ -53,7 +53,7 @@ struct log_softmax_fwd {
 
 template<typename OP, typename DType, int ndim>
 inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
-                    Shape<ndim> shape, int axis, double temperature) {
+                    Shape<ndim> shape, int axis, float temperature) {
   index_t M = shape[axis];
   index_t N = shape.Size()/M;
   Shape<ndim> stride = calc_stride(shape);
@@ -226,12 +226,12 @@ inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
 
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   int axis;
-  double temperature;
+  float temperature;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(axis).set_default(-1)
       .describe("The axis along which to compute softmax.");
     DMLC_DECLARE_FIELD(temperature).set_default(1.0)
-      .describe("The temperature in softmax function")
+      .describe("The temperature in softmax function");
   }
 };
 
