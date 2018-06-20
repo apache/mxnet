@@ -695,7 +695,7 @@ void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
                       VerifyFunc verify_fn) {
   NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
   tmp.WaitToRead();
-  verify_fn(in_arrs, tmp);
+  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -813,10 +813,13 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr))
       continue;
-
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      in_arr.arr = in_arr.arr.Reorder2Default();
+      in_arr2.arr = in_arr2.arr.Reorder2Default();
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
@@ -849,19 +852,22 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 }
 
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
   MKLDNNStream *stream = MKLDNNStream::Get();
 
-  for (auto in_arr : in_arrs) {
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
     if (!SupportMKLDNN(in_arr.arr))
       continue;
-    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
       in_arr.arr = in_arr.arr.Reorder2Default();
-
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
+      in_arr2.arr = in_arr2.arr.Reorder2Default();
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
@@ -871,19 +877,19 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       op::MKLDNNSum(*in_mem, *in_mem, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
-      VerifySumResult({&in_arr.arr, &in_arr.arr}, out_arr.arr);
+      VerifySumResult({&in_arr.arr, &in_arr.arr}, {&out_arr.arr});
     }
     auto input_mem = in_arr.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     orig_arr.arr.WaitToRead();
     PrintVerifyMsg(orig_arr, in_arr);
-    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kWriteInplace);
     op::MKLDNNSum(*input_mem, *input_mem, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
-    VerifySumResult({&orig_arr.arr, &orig_arr.arr}, in_arr.arr);
+    VerifySumResult({&orig_arr.arr, &orig_arr.arr}, {&in_arr.arr});
   }
 
   for (auto in_arr : in_arrs) {
@@ -891,8 +897,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       continue;
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
       in_arr.arr = in_arr.arr.Reorder2Default();
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
