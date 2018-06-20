@@ -638,7 +638,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   CHECK(shape.ndim() > dim);
 
   TShape new_shape = shape;
-  new_shape [dim] = shape[dim] * num_input;
+  new_shape[dim] = shape[dim] * num_input;
 
   // Type 1.
   NDArray arr(new_shape , Context());
@@ -646,12 +646,11 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   init_fn(&in_arrs.back().arr, true);
 
   // Type 4.
-  TShape tmp_shape = shape;
-  tmp_shape[0] = shape[0] * 2;
-  tmp_shape[dim] = shape[dim] * num_input;
+  TShape tmp_shape = new_shape;
+  tmp_shape[0] = new_shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
   init_fn(&arr0, true);
-  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+  in_arrs.emplace_back(arr0.Slice(1, new_shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
   // Get a reused version.
@@ -676,7 +675,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
   tmp_shape[0] = new_shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
   init_fn(&arr3, true);
-  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
+  in_arrs.emplace_back(arr3.Slice(1, new_shape[0] + 1), "Reused+Reshaped NDArray");
 
 
   for (auto pd : pds) {
@@ -700,7 +699,7 @@ std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
     // Type 8, 9.
     // Get a reused version.
     nnvm::TShape s(1);
-    s[0] = shape.Size() * num_input;
+    s[0] = new_shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(new_shape, arr.dtype());
     InitMKLDNNArray(&arr, new_pd, init_fn, true);
