@@ -44,6 +44,7 @@ Select API:&nbsp;
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
+    * [Profiling MXNet Models](/tutorials/python/profiler.html)
 * API Guides
     * Core APIs
         * NDArray

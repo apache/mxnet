@@ -22,7 +22,6 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import setup_module, with_seed, assertRaises, teardown
 import numpy as np
-from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
@@ -91,15 +90,16 @@ def test_parameter_invalid_access():
 
 @with_seed()
 def test_paramdict():
+    ctx = mx.cpu(1)
     params0 = gluon.ParameterDict('net_')
     params0.get('w0', shape=(10, 10))
     params0.get('w1', shape=(10, 10), stype='row_sparse')
-    all_row_ids = mx.nd.arange(0, 10, ctx=mx.cpu())
+    all_row_ids = mx.nd.arange(0, 10, ctx=ctx)
     # check param names
     assert list(params0.keys()) == ['net_w0', 'net_w1']
-    params0.initialize(ctx=mx.cpu())
+    params0.initialize(ctx=ctx)
     trainer0 = mx.gluon.Trainer(params0, 'sgd')
-    prev_w0 = params0.get('w0').data(mx.cpu())
+    prev_w0 = params0.get('w0').data(ctx)
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     # save params
     params0.save('test_paramdict.params')
@@ -108,11 +108,11 @@ def test_paramdict():
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
     params1.get('w1', shape=(10, 10), stype='row_sparse')
-    params1.load('test_paramdict.params', mx.cpu())
+    params1.load('test_paramdict.params', ctx)
     trainer1 = mx.gluon.Trainer(params1, 'sgd')
 
     # compare the values before and after save/load
-    cur_w0 = params1.get('w0').data(mx.cpu())
+    cur_w0 = params1.get('w0').data(ctx)
     cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
@@ -122,11 +122,11 @@ def test_paramdict():
     params2 = gluon.ParameterDict('net_')
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
-    params2.load('test_paramdict.params', mx.cpu())
+    params2.load('test_paramdict.params', ctx)
 
     # compare the values before and after save/load
-    cur_w0 = params2.get('w0').data(mx.cpu())
-    cur_w1 = params2.get('w1').data(mx.cpu())
+    cur_w0 = params2.get('w0').data(ctx)
+    cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
@@ -471,6 +471,7 @@ def test_pool():
         nn.MaxPool1D(3),
         nn.MaxPool1D(3, 2),
         nn.AvgPool1D(),
+        nn.AvgPool1D(count_include_pad=False),
         nn.GlobalAvgPool1D(),
         ]
     for layer in layers1d:
@@ -482,6 +483,7 @@ def test_pool():
         nn.MaxPool2D((3, 3)),
         nn.MaxPool2D(3, 2),
         nn.AvgPool2D(),
+        nn.AvgPool2D(count_include_pad=False),
         nn.GlobalAvgPool2D(),
         ]
     for layer in layers2d:
@@ -492,6 +494,7 @@ def test_pool():
         nn.MaxPool3D((3, 3, 3)),
         nn.MaxPool3D(3, 2),
         nn.AvgPool3D(),
+        nn.AvgPool3D(count_include_pad=False),
         nn.GlobalAvgPool3D(),
         ]
     for layer in layers3d:
@@ -729,19 +732,23 @@ def test_sequential_warning():
 
 @with_seed()
 def test_global_norm_clip():
-    x1 = mx.nd.ones((3,3))
-    x2 = mx.nd.ones((4,4))
-    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
-    assert norm == 5.0
-    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
-    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
+    stypes = ['default', 'row_sparse']
+    def check_global_norm_clip(stype):
+        x1 = mx.nd.ones((3,3)).tostype(stype)
+        x2 = mx.nd.ones((4,4)).tostype(stype)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+        assert norm == 5.0
+        assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+        assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
 
-    x3 = mx.nd.array([1.0, 2.0, float('nan')])
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        gluon.utils.clip_global_norm([x1, x3], 2.0)
-        assert len(w) == 1
+        x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            gluon.utils.clip_global_norm([x1, x3], 2.0)
+            assert len(w) == 1
 
+    for stype in stypes:
+        check_global_norm_clip(stype)
 
 @with_seed()
 def test_embedding():
@@ -1125,6 +1132,7 @@ def test_hybrid_multi_context():
     net.hybridize()
     net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
 
+
 @with_seed()
 def test_zero_grad():
     data = mx.nd.random.uniform(shape=(3,3))
@@ -1137,60 +1145,6 @@ def test_zero_grad():
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
-def check_hybrid_static_memory(**kwargs):
-    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
-    x.attach_grad()
-
-    net1 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
-    net2 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
-    net2.hybridize(**kwargs)
-    net1(x)
-    net2(x)
-
-    def test(net, x):
-        with mx.autograd.record():
-            y = net(x) + net(x)
-            y.backward()
-
-        grads = {k: v.grad() for k, v in net.collect_params().items() if v.grad_req != 'null'}
-
-        return y, grads
-
-    y1, grads1 = test(net1, x)
-    y2, grads2 = test(net2, x)
-
-    assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
-    for key in grads1:
-        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
-
-def test_hybrid_static_memory():
-    check_hybrid_static_memory()
-    check_hybrid_static_memory(static_alloc=True)
-    check_hybrid_static_memory(static_alloc=True, static_shape=True)
-
-def check_hybrid_static_memory_switching(**kwargs):
-    net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(**kwargs)
-
-    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
-    net(x)
-    with mx.autograd.record():
-        y = net(x)
-        y.backward()
-    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
-    net(x)
-    with mx.autograd.record():
-        y = net(x)
-        y.backward()
-    mx.nd.waitall()
-
-def test_hybrid_static_memory_switching():
-    check_hybrid_static_memory_switching()
-    check_hybrid_static_memory_switching(static_alloc=True)
-    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():

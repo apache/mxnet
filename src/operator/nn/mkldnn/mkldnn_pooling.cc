@@ -121,7 +121,11 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
       return mkldnn::algorithm::pooling_max;
       break;
     case pool_enum::kAvgPooling:
-      return mkldnn::algorithm::pooling_avg_include_padding;
+      if (param.count_include_pad.has_value() && !param.count_include_pad.value()) {
+        return mkldnn::algorithm::pooling_avg_exclude_padding;
+      } else {
+        return mkldnn::algorithm::pooling_avg_include_padding;
+      }
       break;
     default:
       LOG(FATAL) << "MKLDNN Pooling: Unknown pooling method.";

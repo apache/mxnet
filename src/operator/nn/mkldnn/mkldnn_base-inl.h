@@ -324,13 +324,16 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
  * The difference is that the first function can create MKLDNN memory with
  * special layouts in an NDArray, while the second one can only create MKLDNN
  * memory with default layouts.
+ * Also an optional in_arr parameter can be passed in the first function with
+ * the kWriteInPlace req to validate if mkldnn can support write in place;
+ * otherwise new memory will be written to an copied back onto out_arr.
  * If these two functions are used, we have to call CommitOutput to write
  * the output back to the output NDArray.
  */
-mkldnn_output_t CreateMKLDNNMem(const NDArray &arr,
+mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
                                 const mkldnn::memory::primitive_desc &desc,
-                                OpReqType req);
-mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &arr,
+                                OpReqType req, const NDArray* in_arr = nullptr);
+mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,
                                        const mkldnn::memory::primitive_desc &desc,
                                        OpReqType req);
 /* This function has to be used with one of the functions above. */
