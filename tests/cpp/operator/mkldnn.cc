@@ -809,6 +809,27 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
+                              const std::vector<NDArray *> &out_arrs) {
+  int num_inputs = in_arrs.size();
+  int input_size = in_arrs[0]->shape().Size();
+  std::vector<NDArray> inputs(num_inputs);
+  std::vector<mshadow::default_real_t*> data(num_inputs);
+  for (int i = 0; i < num_inputs; i++) {
+    NDArray tmp = in_arrs[i]->Reorder2Default();
+    data[i] = tmp.data().dptr<mshadow::default_real_t>();
+  }
+  NDArray output = out_arrs[0]->Reorder2Default();
+  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
+
+  EXPECT_EQ(input_size * num_inputs, output.shape().Size());
+  for (size_t i = 0; i < input_size; i++) {
+    for (int input_num = 0; i < num_inputs; i++) {
+      ASSERT_EQ(data[input_num][i], out_data[input_num * input_size + i]);
+    }
+  }
+}
+
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
@@ -937,7 +958,7 @@ TEST(IMPERATIVE, ConcatOp) {
   for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatOp(num_inputs, dim);
-      TestOp(attrs, VerifySumResult, true);
+      TestOp(attrs, VerifyConcatResult, true);
     }
   }
 }
