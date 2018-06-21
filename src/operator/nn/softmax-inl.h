@@ -157,7 +157,7 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
   red::sum::SetInitValue(smem[x]);
   if (temperature == 1.0) {
     for (index_t i = x; i < M; i += x_size) {
-      red::sum::Reduce(smem[x], static_cast<DType>(expf(in[base + i*sa] - smax))); 
+      red::sum::Reduce(smem[x], static_cast<DType>(expf(in[base + i*sa] - smax)));
     }
   } else {
     for (index_t i = x; i < M; i += x_size) {
@@ -174,7 +174,7 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
   if (temperature == 1.0) {
     for (index_t i = x; i < M; i += x_size) {
       out[base + i*sa] = OP::Map((in[base + i*sa] - smax), ssum);
-    } 
+    }
   } else {
     for (index_t i = x; i < M; i += x_size) {
       out[base + i*sa] = OP::Map((in[base + i*sa] - smax)/temperature, ssum);
