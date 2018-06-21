@@ -55,6 +55,7 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
   int normalization;
   bool out_grad;
   float smooth_alpha;
+  float temperature;
   DMLC_DECLARE_PARAMETER(SoftmaxOutputParam) {
     DMLC_DECLARE_FIELD(grad_scale).set_default(1.0f)
     .describe("Scales the gradient by a float factor.");
@@ -87,6 +88,9 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
               "for the backwards pass.  This constant gets subtracted from the"
               "one-hot encoding of the gold label and distributed uniformly to"
               "all other labels.");
+    DMLC_DECLARE_FIELD(temperature)
+    .set_default(1.0f)
+    .describe("Temperature parameter for the softmax function. Default is 1.0");
   };
 };
 
