@@ -48,16 +48,6 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
                           std::vector<int> *out_attrs);
 
 /*
- * Infer the storage types of inputs and outputs of the backward computation of
- * an operator that contains a subgraph.
- */
-bool InferSubgraphBackwardStorage(const nnvm::Symbol &subgraph,
-                                  const int dev_mask,
-                                  DispatchMode* dispatch_mode,
-                                  std::vector<int> *in_attrs,
-                                  std::vector<int> *out_attrs);
-
-/*
  * This contains the states for running a loop and provides methods
  * of running the subgraph computation for an iteration.
  */

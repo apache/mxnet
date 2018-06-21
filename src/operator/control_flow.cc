@@ -341,8 +341,10 @@ static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_args - 1);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  return InferSubgraphBackwardStorage(*attrs.subgraphs[0], dev_mask,
-                                      dispatch_mode, in_attrs, out_attrs);
+  CachedOp op(*attrs.subgraphs[0],
+              std::vector<std::pair<std::string, std::string> >());
+  return op.BackwardStorageType(attrs, dev_mask, dispatch_mode,
+                                in_attrs, out_attrs);
 }
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
