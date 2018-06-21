@@ -786,8 +786,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_cpu.xml')
+              collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_cpu.xml')
             }
           }
         }
@@ -809,8 +808,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_cpu.xml')
+              collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_cpu.xml')
             }
           }
         }
@@ -832,8 +830,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_gpu.xml')
             }
           }
         }
@@ -855,8 +852,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_gpu.xml')
             }
           }
         }
@@ -878,8 +874,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
+              collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
             }
           }
         }
