@@ -573,7 +573,7 @@ static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive
  */
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                              int num_inputs = 0, int dim = 0) {
+                                              int num_inputs = 0, int dim = 0, bool is_rand = true) {
   TShape target_shape = shape;
   if (num_inputs != 0)
     target_shape[dim] = shape[dim] * num_inputs;
@@ -583,13 +583,13 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   // Type 1.
   NDArray arr(target_shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
-  InitDefaultArray(&in_arrs.back().arr, true);
+  InitDefaultArray(&in_arrs.back().arr, is_rand);
 
   // Type 4.
   TShape tmp_shape = target_shape;
   tmp_shape[0] = target_shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  InitDefaultArray(&arr0, true);
+  InitDefaultArray(&arr0, is_rand);
   in_arrs.emplace_back(arr0.Slice(1, target_shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
@@ -598,14 +598,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   s[0] = target_shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(target_shape, arr1.dtype());
-  InitDefaultArray(&arr1, true);
+  InitDefaultArray(&arr1, is_rand);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = target_shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(target_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr2, true);
+  InitDefaultArray(&arr2, is_rand);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
@@ -613,7 +613,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = target_shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr3, true);
+  InitDefaultArray(&arr3, is_rand);
   in_arrs.emplace_back(arr3.Slice(1, target_shape[0] + 1), "Reused+Reshaped NDArray");
 
   for (auto pd : pds) {
@@ -634,7 +634,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, target_pd, true);
+    InitMKLDNNArray(&in_arrs.back().arr, target_pd, is_rand);
 
     // Type 8, 9.
     // Get a reused version.
@@ -642,7 +642,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     s[0] = target_shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(target_shape, arr.dtype());
-    InitMKLDNNArray(&arr, target_pd, true);
+    InitMKLDNNArray(&arr, target_pd, is_rand);
     desc = "Reused MKLDNN NDArray";
     if (target_shape.ndim() != target_pd.desc().data.ndims) {
       std::stringstream ss;
@@ -869,7 +869,8 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         int dim = std::stoi(str_dim);
         if (dim >= in_arr.arr.shape().ndim())
           continue;
-        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
+        bool rand_output = !reverse_input_output;
+        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, rand_output);
       }
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
