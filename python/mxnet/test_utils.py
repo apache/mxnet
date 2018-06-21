@@ -1367,7 +1367,7 @@ def list_gpus():
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-def download(url, fname=None, dirname=None, overwrite=False):
+def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     """Download an given URL
 
     Parameters
@@ -1385,12 +1385,17 @@ def download(url, fname=None, dirname=None, overwrite=False):
         Default is false, which means skipping download if the local file
         exists. If true, then download the url to overwrite the local file if
         exists.
+    retries : integer, default 5
+        The number of times to attempt the download in case of failure or non 200 return codes
 
     Returns
     -------
     str
         The filename of the downloaded file
     """
+
+    assert retries >= 0, "Number of retries should be at least 0"
+
     if fname is None:
         fname = url.split('/')[-1]
 
@@ -1411,12 +1416,24 @@ def download(url, fname=None, dirname=None, overwrite=False):
         logging.info("%s exists, skipping download", fname)
         return fname
 
-    r = requests.get(url, stream=True)
-    assert r.status_code == 200, "failed to open %s" % url
-    with open(fname, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
+    while retries+1 > 0:
+        # Disable pyling too broad Exception
+        # pylint: disable=W0703
+        try:
+            r = requests.get(url, stream=True)
+            assert r.status_code == 200, "failed to open %s" % url
+            with open(fname, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk: # filter out keep-alive new chunks
+                        f.write(chunk)
+                break
+        except Exception as e:
+            retries -= 1
+            if retries <= 0:
+                raise e
+            else:
+                print("download failed, retrying, {} attempt{} left"
+                      .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
@@ -1627,16 +1644,20 @@ def discard_stderr():
     with discard_stderr():
         ...
     """
+    with open(os.devnull, 'w') as bit_bucket:
+        try:
+            stderr_fileno = sys.stderr.fileno()
+            old_stderr = os.dup(stderr_fileno)
+            try:
+                os.dup2(bit_bucket.fileno(), stderr_fileno)
+                yield
+            finally:
+                os.dup2(old_stderr, stderr_fileno)
+        except AttributeError:
+            # On some systems is stderr not a file descriptor but actually a virtual pipeline
+            # that can not be copied
+            yield
 
-    try:
-        stderr_fileno = sys.stderr.fileno()
-        old_stderr = os.dup(stderr_fileno)
-        bit_bucket = open(os.devnull, 'w')
-        os.dup2(bit_bucket.fileno(), stderr_fileno)
-        yield
-    finally:
-        os.dup2(old_stderr, stderr_fileno)
-        bit_bucket.close()
 
 class DummyIter(mx.io.DataIter):
     """A dummy iterator that always returns the same batch of data

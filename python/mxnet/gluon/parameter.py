@@ -68,7 +68,7 @@ class Parameter(object):
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
-    shape : tuple of int, default None
+    shape : int or tuple of int, default None
         Shape of this parameter. By default shape is not specified. Parameter with
         unknown shape can be used for :py:class:`Symbol` API, but ``init`` will throw an error
         when using :py:class:`NDArray` API.
@@ -112,6 +112,8 @@ class Parameter(object):
         self._differentiable = differentiable
         self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
+        if isinstance(shape, int):
+            shape = (shape,)
         self._shape = shape
         self.name = name
         self.dtype = dtype
@@ -308,14 +310,16 @@ class Parameter(object):
                                 self._grad, self.grad_req)
 
     def _reduce(self):
-        """Reduce data from multiple context."""
+        """Reduce data from multiple context to cpu."""
+        ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
         else:
             # fetch all rows for 'row_sparse' param
-            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=context.cpu())
-            data = self.row_sparse_data(all_row_ids)
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
+            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
+            self._trainer._row_sparse_pull(self, data, all_row_ids)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -389,6 +393,8 @@ class Parameter(object):
     def reset_ctx(self, ctx):
         """Re-assign Parameter to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default ``context.current_context()``.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -585,8 +591,8 @@ class Constant(Parameter):
                 super(Block, self).__init__(**kwargs)
                 self.const = self.params.get_constant('const', [[1,2],[3,4]])
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         Name of the parameter.
     value : array-like
@@ -737,7 +743,7 @@ class ParameterDict(object):
         found, :py:func:`get` will create a new :py:class:`Constant` with key-word
         arguments and insert it to self.
 
-        Constants
+        Parameters
         ----------
         name : str
             Name of the desired Constant. It will be prepended with this dictionary's
@@ -812,6 +818,8 @@ class ParameterDict(object):
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default :py:meth:`context.current_context()`.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -844,6 +852,8 @@ class ParameterDict(object):
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         strip_prefix : str, default ''
@@ -868,6 +878,8 @@ class ParameterDict(object):
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context

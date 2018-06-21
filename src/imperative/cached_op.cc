@@ -22,6 +22,7 @@
 #include "./cached_op.h"
 #include "../executor/exec_pass.h"
 #include "../profiler/profiler.h"
+#include "../operator/operator_common.h"
 
 
 namespace mxnet {
@@ -95,8 +96,11 @@ CachedOp::CachedOp(
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy = Op::Get("_copy");
-
   config_.Init(flags);
+
+  if (config_.static_shape) {
+    CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
+  }
 
   // construct forward graph
   {
@@ -200,26 +204,17 @@ CachedOp::CachedOp(
     size_t num_forward_outputs = num_outputs();
     for (uint32_t i = 0; i < ograd_entries_.size(); ++i) {
       if (!idx.exist(ograd_entries_[i].node.get())) continue;
-      auto eid = idx.entry_id(ograd_entries_[i]);
-      if (ref_count[eid] > 0) {
-        bwd_ograd_dep_.push_back(i);
-      }
+      bwd_ograd_dep_.push_back(i);
     }
     save_inputs_.resize(num_forward_inputs, false);
     for (uint32_t i = 0; i < num_forward_inputs; ++i) {
-      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      if (ref_count[eid] > 0) {
-        save_inputs_[i] = true;
-        bwd_in_dep_.push_back(i);
-      }
+      save_inputs_[i] = true;
+      bwd_in_dep_.push_back(i);
     }
     save_outputs_.resize(idx.outputs().size(), false);
     for (uint32_t i = 0; i < num_forward_outputs; ++i) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      if (ref_count[eid] > 0) {
-        save_outputs_[i] = true;
-        bwd_out_dep_.push_back(i);
-      }
+      save_outputs_[i] = true;
+      bwd_out_dep_.push_back(i);
     }
   }
 }
@@ -229,7 +224,7 @@ CachedOp::~CachedOp() {
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     const nnvm::NodePtr& node,
-    const std::vector<nnvm::NodeEntry>& ograds) {
+    const std::vector<nnvm::NodeEntry>& ograds) const {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
   static const auto _NoGrad = Op::Get("_NoGradient");
@@ -324,6 +319,27 @@ bool CachedOp::SetForwardGraph(
   return false;
 }
 
+// Utility function to set backward input eids
+void SetBackwardInputEid(const std::vector<uint32_t>& bwd_in_dep,
+                         const std::vector<uint32_t>& bwd_out_dep,
+                         const std::vector<uint32_t>& bwd_ograd_dep,
+                         const std::vector<nnvm::NodeEntry>& ograd_entries,
+                         const nnvm::IndexedGraph& idx,
+                         std::vector<uint32_t> *bwd_input_eid) {
+  for (const auto& i : bwd_ograd_dep) {
+    auto eid = idx.entry_id(ograd_entries[i]);
+    bwd_input_eid->push_back(eid);
+  }
+  for (const auto& i : bwd_in_dep) {
+    auto eid = idx.entry_id(idx.input_nodes()[i], 0);
+    bwd_input_eid->push_back(eid);
+  }
+  for (const auto& i : bwd_out_dep) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    bwd_input_eid->push_back(eid);
+  }
+}
+
 bool CachedOp::SetBackwardGraph(
     GraphInfo* info,
     const std::vector<OpReqType>& reqs,
@@ -352,18 +368,8 @@ bool CachedOp::SetBackwardGraph(
 
   if (info->bwd_input_eid.size() != inputs.size()) {
     info->bwd_input_eid.clear();
-    for (const auto& i : bwd_ograd_dep_) {
-      auto eid = idx.entry_id(ograd_entries_[i]);
-      info->bwd_input_eid.push_back(eid);
-    }
-    for (const auto& i : bwd_in_dep_) {
-      auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      info->bwd_input_eid.push_back(eid);
-    }
-    for (const auto& i : bwd_out_dep_) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      info->bwd_input_eid.push_back(eid);
-    }
+    SetBackwardInputEid(bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_,
+                        ograd_entries_, idx, &info->bwd_input_eid);
     CHECK_EQ(inputs.size(), info->bwd_input_eid.size());
   }
 
@@ -674,7 +680,7 @@ OpStatePtr CachedOp::StaticForward(
   std::lock_guard<std::mutex> lock(state.mutex);
 
   bool match = SetForwardGraph(&state.info, recording, inputs);
-  match = match && state.recording != recording;
+  match = match && state.recording == recording;
 
   nnvm::Graph& g = state.info.fwd_graph;
   const auto& idx = g.indexed_graph();
@@ -1015,6 +1021,79 @@ void CachedOp::Backward(
   Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
+bool CachedOp::ForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                  const int dev_mask,
+                                  DispatchMode* dispatch_mode,
+                                  std::vector<int> *in_attrs,
+                                  std::vector<int> *out_attrs) {
+  using namespace imperative;
+  nnvm::Graph g(fwd_graph_);
+  const auto& idx = g.indexed_graph();
+  const auto &outputs = idx.outputs();
+
+  // Prepare stypes and contexts based on inputs
+  StorageTypeVector storage_type_inputs;
+  storage_type_inputs.reserve(in_attrs->size());
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    storage_type_inputs.emplace_back(in_attrs->at(i));
+  }
+  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
+
+  // Forward graph storage type inference
+  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(storage_type_inputs), true);
+  // Retrieve result and set outputs
+  const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i]);
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
+bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
+                                   const int dev_mask,
+                                   DispatchMode* dispatch_mode,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  using namespace imperative;
+  nnvm::Graph g(full_graph_);
+  const auto& idx = g.indexed_graph();
+  const auto &outputs = idx.outputs();
+  const size_t num_forward_outputs = fwd_graph_.outputs.size();
+  CHECK_EQ(outputs.size(), num_forward_outputs + out_attrs->size());
+
+  // Construct bwd_input_eid
+  std::vector<uint32_t> bwd_input_eid;
+  SetBackwardInputEid(bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_,
+                      ograd_entries_, idx, &bwd_input_eid);
+  CHECK_EQ(in_attrs->size(), bwd_input_eid.size());
+
+  // Prepare stypes and contexts based on inputs
+  StorageTypeVector stypes(idx.num_node_entries(), -1);
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    stypes[bwd_input_eid[i]] = in_attrs->at(i);
+  }
+  // Some out_attr is known ahead of time (e.g. the grad stype is given by users).
+  // Prepare these to before invoking infer storage on the subgraph
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
+    stypes[eid] = out_attrs->at(i);
+  }
+  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
+
+  // Full graph storage type inference
+  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(stypes), false);
+  // Retrieve result and set outputs
+  const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    const auto eid = idx.entry_id(outputs[i + num_forward_outputs]);
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
+  }
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
 
 NNVM_REGISTER_OP(_CachedOp)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -1024,6 +1103,14 @@ NNVM_REGISTER_OP(_CachedOp)
 .set_num_outputs([](const NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op->num_outputs();
+  })
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->ForwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
   })
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -1039,6 +1126,14 @@ NNVM_REGISTER_OP(_backward_CachedOp)
 .set_num_outputs([](const NodeAttrs& attrs){
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op->num_inputs() - op->mutable_input_nodes().size();
+  })
+.set_attr<FInferStorageType>("FInferStorageType", [](const nnvm::NodeAttrs& attrs,
+                                                     const int dev_mask,
+                                                     DispatchMode* dispatch_mode,
+                                                     std::vector<int> *in_attrs,
+                                                     std::vector<int> *out_attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->BackwardStorageType(attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
   })
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);

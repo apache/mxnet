@@ -79,7 +79,10 @@ def _test_tutorial_nb(tutorial):
         os.makedirs(working_dir)
     try:
         notebook = nbformat.read(tutorial_path + '.ipynb', as_version=IPYTHON_VERSION)
-        time.sleep(0.5) # Adding a small delay to allow time for sockets to be freed
+        # Adding a small delay to allow time for sockets to be freed
+        # stop-gap measure to battle the 1000ms linger of socket hard coded
+        # in the kernel API code
+        time.sleep(1.1) 
         if kernel is not None:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:
@@ -145,6 +148,9 @@ def test_gluon_autograd():
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
 
+def test_gluon_save_load_model():
+    assert _test_tutorial_nb('gluon/save_load_params')
+
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
     
@@ -207,3 +213,6 @@ def test_vision_large_scale_classification():
 
 def test_vision_cnn_visualization():
     assert _test_tutorial_nb('vision/cnn_visualization')
+
+def test_python_profiler():
+    assert _test_tutorial_nb('python/profiler')

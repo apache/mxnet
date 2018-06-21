@@ -16,7 +16,7 @@
 # under the License.
 
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import random
 import warnings
 
@@ -360,11 +360,44 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         if ((lhs_stype is 'default' and rhs_stype is 'row_sparse') or
-            (lhs_stype is 'default' and rhs_stype is 'csr')):
+            (lhs_stype is 'default' and rhs_stype is 'csr') or
+            (lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (rhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=l),
                                     lambda l, r: l + r,
                                     lambda outg, l, r: (outg, outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+            test_elemwise_binary_op("elemwise_sub", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_sub(l, r, out=l),
+                                    lambda l, r: l - r,
+                                    lambda outg, l, r: (outg, -outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+
+        if ((lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (lhs_density == 0.0)):
+            test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=r),
+                                    lambda l, r: l + r,
+                                    lambda outg, l, r: (outg, outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+            test_elemwise_binary_op("elemwise_sub", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_sub(l, r, out=l),
+                                    lambda l, r: l - r,
+                                    lambda outg, l, r: (outg, -outg),
                                     lhs_grad_stype, rhs_grad_stype,
                                     ograd_density=ograd_density,
                                     force_lr_overlap=force_lr_overlap,

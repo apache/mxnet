@@ -224,13 +224,24 @@ class FeedForward private(
     var i = 0
     while (data.hasNext && i != numBatch) {
       val batch = data.next()
-      i += 1
-      ExecutorManager.loadData(batch, dataArrays)
-      predExec.forward(isTrain = false)
-      val padded = batch.pad
-      val realSize = batchSize - padded
-      for ((list, nd) <- outputs zip predExec.outputs) {
-        list += nd.slice(0, realSize).copy()
+      try {
+        i += 1
+        ExecutorManager.loadData(batch, dataArrays)
+        predExec.forward(isTrain = false)
+        val padded = batch.pad
+        val realSize = batchSize - padded
+        for ((list, nd) <- outputs zip predExec.outputs) {
+          // The slice is being written to a value so that dispose can be called after the copy.
+          // The one liner nd.slice().copy() leads to leaking the memory of the slice.
+          val ndSliced = nd.slice(0, realSize)
+          try {
+            list += ndSliced.copy()
+          } finally {
+            ndSliced.dispose()
+          }
+        }
+      } finally {
+        batch.dispose()
       }
     }
     // TODO(Yizhi): we can use Symbol.concat to do the same thing. Can it be more efficient?
