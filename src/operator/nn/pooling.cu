@@ -60,6 +60,7 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       switch (param.pool_type) {
         case pool_enum::kMaxPooling:
+        case pool_enum::kMaxPoolingDeterministic:
         case pool_enum::kAvgPooling:
           GetCuDNNPoolingOp<DType>(param).Forward(ctx, inputs[0], req[0], outputs[0]);
           return;
@@ -76,6 +77,7 @@ void PoolingCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kMaxPoolingDeterministic == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type
         || pool_enum::kLpPooling == param.pool_type) {
@@ -115,6 +117,7 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       switch (param.pool_type) {
         case pool_enum::kMaxPooling:
+        case pool_enum::kMaxPoolingDeterministic:
         case pool_enum::kAvgPooling:
           GetCuDNNPoolingOp<DType>(param).Backward(ctx, inputs[ograd_idx],
                                                    inputs[in_data_idx], inputs[out_data_idx],
@@ -133,6 +136,7 @@ void PoolingGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kMaxPoolingDeterministic == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type
         || pool_enum::kLpPooling == param.pool_type) {
