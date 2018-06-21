@@ -50,7 +50,7 @@ class CommDeviceTree : public Comm {
  public:
   CommDeviceTree() {
     inited_ = false;
-    bigarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_BIGARRAY_BOUND", 10000000);
+    gpuarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_GPUARRAY_BOUND", 10000000);
     backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 0);
     link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_LINK_USAGE_PENALTY", 0.7);
     stream_ = dmlc::GetEnv("MXNET_KVSTORE_STREAM", 1);
@@ -205,7 +205,7 @@ class CommDeviceTree : public Comm {
     const NDArrayStorageType stype = src[0].storage_type();
     // normal dense reduce
     if (stype == kDefaultStorage) {
-      if (total_size > bigarray_bound_ && first_size >= devs_.size()) {
+      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
         // Find slice bounds
         slice_scan[0] = 0;
         int slice_size = (first_size + devs_.size()-1)/devs_.size();
@@ -356,7 +356,7 @@ class CommDeviceTree : public Comm {
     } else {
       int total_size = src.shape().Size();
       unsigned first_size = src.shape()[0];
-      if (total_size > bigarray_bound_ && first_size >= devs_.size()) {
+      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
         std::vector<int> slice_scan(devs_.size()+1);
         slice_scan[0] = 0;
         int slice_size = (dst[0]->shape()[0]+devs_.size()-1)/devs_.size();
@@ -548,7 +548,7 @@ class CommDeviceTree : public Comm {
           TShape shape_copy = shape;
           int total_size = shape.Size();
           unsigned first_size = shape[0];
-          if (total_size > bigarray_bound_ && first_size >= devs_.size()) {
+          if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
             // Find slice bounds
             int slice_size = (first_size+devs_.size()-1)/devs_.size();
             int last_slice = first_size-(devs_.size()-1)*slice_size;
@@ -644,7 +644,7 @@ class CommDeviceTree : public Comm {
   /// \brief Highest numbered device
   int   max_dev_;
   int   depth_;
-  int   bigarray_bound_;
+  int   gpuarray_bound_;
   bool  inited_;
   bool  stream_;
   bool  backtrack_;
