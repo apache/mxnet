@@ -77,7 +77,7 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
       }
 
       for (index_t j = 0; j < M; ++j) {
-        out[base + j*sa] = OP::Map(in[base + j*sa] - mmx, sum);
+        out[base + j*sa] = OP::Map(in[base + j*sa] - mmax, sum);
       }
     } else {
       for (index_t j = 0; j < M; ++j) {
