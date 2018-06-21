@@ -60,6 +60,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
 
     DMLC_DECLARE_FIELD(pool_type).set_default(pool_enum::kMaxPooling)  // add default pooling method
     .add_enum("max", pool_enum::kMaxPooling)
+    .add_enum("max_deterministic", pool_enum::kMaxPoolingDeterministic)
     .add_enum("avg", pool_enum::kAvgPooling)
     .add_enum("sum", pool_enum::kSumPooling)
     .add_enum("lp", pool_enum::kLpPooling)
@@ -266,6 +267,7 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
   }
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kMaxPoolingDeterministic == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type
         || pool_enum::kLpPooling == param.pool_type) {
@@ -306,6 +308,7 @@ void PoolingGradCompute(const nnvm::NodeAttrs& attrs,
   }
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (pool_enum::kMaxPooling == param.pool_type
+        || pool_enum::kMaxPoolingDeterministic == param.pool_type
         || pool_enum::kAvgPooling == param.pool_type
         || pool_enum::kSumPooling == param.pool_type
         || pool_enum::kLpPooling == param.pool_type) {

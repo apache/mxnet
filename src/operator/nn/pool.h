@@ -72,7 +72,7 @@ namespace op {
 namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut, kMask};
-enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling, kLpPooling};
+enum PoolingOpType {kMaxPooling, kMaxPoolingDeterministic, kAvgPooling, kSumPooling, kLpPooling};
 enum PoolingOpPadConventionType {kValid, kFull};
 }  // namespace pool_enum
 

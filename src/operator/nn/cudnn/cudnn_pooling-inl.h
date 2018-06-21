@@ -50,6 +50,9 @@ class CuDNNPoolingOp {
       case pool_enum::kMaxPooling:
         mode_ = CUDNN_POOLING_MAX;
         break;
+      case pool_enum::kMaxPoolingDeterministic:
+        mode_ = CUDNN_POOLING_MAX_DETERMINISTIC;
+        break;
       case pool_enum::kAvgPooling:
         if (param_.count_include_pad.has_value() && !param_.count_include_pad.value()) {
           mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
