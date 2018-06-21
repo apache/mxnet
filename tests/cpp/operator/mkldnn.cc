@@ -780,11 +780,34 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                        const std::vector<NDArray *> &out_arrs) {
+  int num_inputs = in_arrs.size();
+  int input_size = in_arrs[0]->shape().Size();
+  TShape input_shape = in_arrs[0]->shape();
+  NDArray output = out_arrs[0]->Reorder2Default();
+  size_t total_size = output.shape().Size();
+  EXPECT_EQ(input_size * num_inputs, total_size);
+  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
+
+  int dim = GetDim(input_shape, output.shape());
+  int block_size = GetBlockSize(input_shape, dim);
+  int num_blocks = input_size / block_size;
+  for (size_t input_num = 0; input_num < num_inputs; input_num++) {
+    NDArray tmp = in_arrs[input_num]->Reorder2Default();
+    mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
+    for (size_t block_num = 0; block_num < num_blocks; block_num++) {
+      for (size_t i = 0; i < block_size; i++)
+        ASSERT_EQ(data[block_num * block_size + i], out_data[(block_num * num_inputs + input_num) * block_size + i]);
+    }
+  }
+}
+
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
   std::stringstream ss;
-  ss << "Verifying: " << arr1.desc.c_str() <<
+  ss << "Verifying: " << arr1.desc.c_str() << " " <<
      GetShapeString(t1) << " with " << arr2.desc.c_str() << GetShapeString(t2) << "\n";
   printf("%s", ss.str().c_str());
 }
