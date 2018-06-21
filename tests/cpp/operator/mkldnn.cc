@@ -825,7 +825,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       if (out_arr.arr.IsView())
         continue;
-      auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
+      auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
