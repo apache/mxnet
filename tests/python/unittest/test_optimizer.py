@@ -230,7 +230,10 @@ def test_sgd():
                                     ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
                                 continue
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            if dtype == np.float16:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3)
+                            else:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
                             # test operator fallback on cpu
                             if dtype != np.float16:
                                 compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],

@@ -91,15 +91,16 @@ def test_parameter_invalid_access():
 
 @with_seed()
 def test_paramdict():
+    ctx = mx.cpu(1)
     params0 = gluon.ParameterDict('net_')
     params0.get('w0', shape=(10, 10))
     params0.get('w1', shape=(10, 10), stype='row_sparse')
-    all_row_ids = mx.nd.arange(0, 10, ctx=mx.cpu())
+    all_row_ids = mx.nd.arange(0, 10, ctx=ctx)
     # check param names
     assert list(params0.keys()) == ['net_w0', 'net_w1']
-    params0.initialize(ctx=mx.cpu())
+    params0.initialize(ctx=ctx)
     trainer0 = mx.gluon.Trainer(params0, 'sgd')
-    prev_w0 = params0.get('w0').data(mx.cpu())
+    prev_w0 = params0.get('w0').data(ctx)
     prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
     # save params
     params0.save('test_paramdict.params')
@@ -108,11 +109,11 @@ def test_paramdict():
     params1 = gluon.ParameterDict('net_')
     params1.get('w0', shape=(10, 10))
     params1.get('w1', shape=(10, 10), stype='row_sparse')
-    params1.load('test_paramdict.params', mx.cpu())
+    params1.load('test_paramdict.params', ctx)
     trainer1 = mx.gluon.Trainer(params1, 'sgd')
 
     # compare the values before and after save/load
-    cur_w0 = params1.get('w0').data(mx.cpu())
+    cur_w0 = params1.get('w0').data(ctx)
     cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
@@ -122,11 +123,11 @@ def test_paramdict():
     params2 = gluon.ParameterDict('net_')
     params2.get('w0', shape=(10, 10))
     params2.get('w1', shape=(10, 10))
-    params2.load('test_paramdict.params', mx.cpu())
+    params2.load('test_paramdict.params', ctx)
 
     # compare the values before and after save/load
-    cur_w0 = params2.get('w0').data(mx.cpu())
-    cur_w1 = params2.get('w1').data(mx.cpu())
+    cur_w0 = params2.get('w0').data(ctx)
+    cur_w1 = params2.get('w1').data(ctx)
     mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
     mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
 
@@ -471,6 +472,7 @@ def test_pool():
         nn.MaxPool1D(3),
         nn.MaxPool1D(3, 2),
         nn.AvgPool1D(),
+        nn.AvgPool1D(count_include_pad=False),
         nn.GlobalAvgPool1D(),
         ]
     for layer in layers1d:
@@ -482,6 +484,7 @@ def test_pool():
         nn.MaxPool2D((3, 3)),
         nn.MaxPool2D(3, 2),
         nn.AvgPool2D(),
+        nn.AvgPool2D(count_include_pad=False),
         nn.GlobalAvgPool2D(),
         ]
     for layer in layers2d:
@@ -492,6 +495,7 @@ def test_pool():
         nn.MaxPool3D((3, 3, 3)),
         nn.MaxPool3D(3, 2),
         nn.AvgPool3D(),
+        nn.AvgPool3D(count_include_pad=False),
         nn.GlobalAvgPool3D(),
         ]
     for layer in layers3d:
@@ -729,19 +733,23 @@ def test_sequential_warning():
 
 @with_seed()
 def test_global_norm_clip():
-    x1 = mx.nd.ones((3,3))
-    x2 = mx.nd.ones((4,4))
-    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
-    assert norm == 5.0
-    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
-    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
+    stypes = ['default', 'row_sparse']
+    def check_global_norm_clip(stype):
+        x1 = mx.nd.ones((3,3)).tostype(stype)
+        x2 = mx.nd.ones((4,4)).tostype(stype)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+        assert norm == 5.0
+        assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
+        assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
 
-    x3 = mx.nd.array([1.0, 2.0, float('nan')])
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        gluon.utils.clip_global_norm([x1, x3], 2.0)
-        assert len(w) == 1
+        x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            gluon.utils.clip_global_norm([x1, x3], 2.0)
+            assert len(w) == 1
 
+    for stype in stypes:
+        check_global_norm_clip(stype)
 
 @with_seed()
 def test_embedding():
@@ -1283,6 +1291,74 @@ def test_legacy_save_params():
     model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
                                      inputs=mx.sym.var('data'))
     model.load_params('test.params', ctx=mx.cpu())
+
+
+@with_seed()
+def test_sparse_hybrid_block_grad():
+    class Embedding(mx.gluon.HybridBlock):
+        def __init__(self, num_tokens, embedding_size):
+            super(Embedding, self).__init__()
+            self.num_tokens = num_tokens
+
+            with self.name_scope():
+                self.embedding = mx.gluon.nn.Embedding(
+                    num_tokens, embedding_size, sparse_grad=True)
+
+        def hybrid_forward(self, F, words):
+            emb = self.embedding(words)
+            return emb + F.ones_like(emb)
+
+    embedding = Embedding(20, 3)
+    embedding.initialize()
+    embedding.hybridize()
+
+    with mx.autograd.record():
+        emb0 = embedding(mx.nd.arange(10)).sum()
+        emb1 = embedding(mx.nd.arange(10)).sum()
+        loss = emb0 + emb1
+    loss.backward()
+    grad = embedding.embedding.weight.grad().asnumpy()
+    assert (grad[:10] == 2).all()
+    assert (grad[10:] == 0).all()
+
+@with_seed()
+def test_sparse_hybrid_block():
+    class Linear(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(Linear, self).__init__()
+            with self.name_scope():
+                self.w = self.params.get('w', shape=(units, units))
+
+        def hybrid_forward(self, F, x, w):
+            return F.dot(x, w)
+
+    class SparseBlock(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(SparseBlock, self).__init__()
+            with self.name_scope():
+                self.net = Linear(units)
+
+        def hybrid_forward(self, F, x):
+            return self.net(x) * x
+
+    block = SparseBlock(2)
+    block.initialize()
+    block.hybridize()
+    x = mx.nd.ones((2,2)).tostype('csr')
+    with mx.autograd.record():
+        z = block(x) + block(x)
+    z.backward()
+    assert (block.net.w.grad().asnumpy() == 4).all()
+
+def test_hybrid_static_memory_recording():
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(static_alloc=True)
+
+    x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
+    with mx.autograd.record(True):
+        net(x)
+    net(x)
 
 
 if __name__ == '__main__':

@@ -155,6 +155,7 @@ endif
 # issue covered with this
 #   -  for Ubuntu 14.04 or lower, lapack is not automatically installed with openblas
 #   -  for Ubuntu, installing atlas will not automatically install the atlas provided lapack library
+#   -  for rhel7.2, try installing the package `lapack-static` via yum will dismiss this warning.
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
@@ -222,7 +223,10 @@ ifeq ($(USE_GPERFTOOLS), 1)
 		ifeq (,$(FIND_LIBFILE))
 			FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 			ifeq (,$(FIND_LIBFILE))
-				USE_GPERFTOOLS=0
+				FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+				ifeq (,$(FIND_LIBFILE))
+					USE_GPERFTOOLS=0
+				endif
 			endif
 		endif
 	endif
@@ -245,7 +249,10 @@ ifneq ($(USE_GPERFTOOLS), 1)
 				ifeq (,$(FIND_LIBFILE))
 					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
 					ifeq (,$(FIND_LIBFILE))
-						USE_JEMALLOC=0
+						FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
+						ifeq (,$(FIND_LIBFILE))
+							USE_JEMALLOC=0
+						endif
 					endif
 				endif
 			endif

@@ -71,13 +71,13 @@ class CachedOp {
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
   ~CachedOp();
-  uint32_t num_inputs() {
+  uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
-  uint32_t num_outputs() {
+  uint32_t num_outputs() const {
     return fwd_graph_.outputs.size();
   }
-  uint32_t num_backward_inputs() {
+  uint32_t num_backward_inputs() const {
     return bwd_ograd_dep_.size() + bwd_in_dep_.size() + bwd_out_dep_.size();
   }
   std::vector<bool>& save_inputs() {
@@ -86,12 +86,12 @@ class CachedOp {
   std::vector<bool>& save_outputs() {
     return save_outputs_;
   }
-  const std::unordered_set<uint32_t>& mutable_input_nodes() {
+  const std::unordered_set<uint32_t>& mutable_input_nodes() const {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
   std::vector<nnvm::NodeEntry> Gradient(
       const nnvm::NodePtr& node,
-      const std::vector<nnvm::NodeEntry>& ograds);
+      const std::vector<nnvm::NodeEntry>& ograds) const;
   void Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
@@ -102,6 +102,20 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  // forward storage type inference
+  bool ForwardStorageType(
+      const nnvm::NodeAttrs& attrs,
+      const int dev_mask,
+      DispatchMode* dispatch_mode,
+      std::vector<int> *in_attrs,
+      std::vector<int> *out_attrs);
+  // backward storage type inference
+  bool BackwardStorageType(
+      const nnvm::NodeAttrs& attrs,
+      const int dev_mask,
+      DispatchMode* dispatch_mode,
+      std::vector<int> *in_attrs,
+      std::vector<int> *out_attrs);
 
  private:
   struct GraphInfo;

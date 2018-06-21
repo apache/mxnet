@@ -1,5 +1,5 @@
 var versionSelect   = defaultVersion = 'v1.2.0';
-var deviceSelect    = 'Linux';
+var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';
 var environSelect   = 'Pip';
@@ -16,10 +16,10 @@ $(document).ready(function () {
         $('li a:contains(' + versionSelect + ')').parent().siblings().removeClass('active');
         $('li a:contains(' + versionSelect + ')').parent().addClass('active');
         $('.current-version').html( versionSelect + ' <span class="caret"></span></button>' );
-        if (urlParams.get('device'))
-            deviceSelect = urlParams.get('device');
-        $('button:contains(' + deviceSelect + ')').siblings().removeClass('active');
-        $('button:contains(' + deviceSelect + ')').addClass('active');
+        if (urlParams.get('platform'))
+            platformSelect = urlParams.get('platform');
+        $('button:contains(' + platformSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + platformSelect + ')').addClass('active');
         if (urlParams.get('language'))
             languageSelect = urlParams.get('language');
         $('button:contains(' + languageSelect + ')').siblings().removeClass('active');
@@ -35,9 +35,9 @@ $(document).ready(function () {
         showContent();
         if (window.location.href.includes("/install/index.html")) {
             if (versionSelect.includes(defaultVersion)) {
-                history.pushState(null, null, '/install/index.html?device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
             } else {
-                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&device=' + deviceSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
             }
         } 
     }
@@ -71,8 +71,8 @@ $(document).ready(function () {
                   history.pushState(null, null, '/install/index.html' + window.location.search.replace( 'version', 'prev' ));
               }
         }
-        else if ($(this).hasClass("Devices")) {
-            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('device'), $(this).text() ));
+        else if ($(this).hasClass("platforms")) {
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('platform'), $(this).text() ));
         }
         else if ($(this).hasClass("languages")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('language'), $(this).text() ));
