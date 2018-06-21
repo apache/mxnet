@@ -858,15 +858,6 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   }
 }
 
-//mkldnn::sum::primitive_desc GetSumPD(const mkldnn::memory *in_mem, const mkldnn::memory *in_mem2) {
-//  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
-//  std::vector<float> scales(2, 1);
-//  std::vector<mkldnn::primitive::at> inputs;
-//  input_pds[0] = in_mem->get_primitive_desc();
-//  input_pds[1] = in_mem2->get_primitive_desc();
-//  return mkldnn::sum::primitive_desc(scales, input_pds);
-//}
-
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
