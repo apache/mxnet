@@ -804,6 +804,8 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
       if (use_concat_outputs) {
         std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
         int dim = std::stoi(str_dim);
+        if (dim >= in_arr.arr.shape().ndim())
+          continue;
         out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
       }
       for (auto out_arr : out_arrs) {
