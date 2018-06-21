@@ -858,14 +858,14 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   }
 }
 
-mkldnn::sum::primitive_desc GetSumPD(const mkldnn::memory *in_mem, const mkldnn::memory *in_mem2) {
-  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
-  std::vector<float> scales(2, 1);
-  std::vector<mkldnn::primitive::at> inputs;
-  input_pds[0] = in_mem->get_primitive_desc();
-  input_pds[1] = in_mem2->get_primitive_desc();
-  return mkldnn::sum::primitive_desc(scales, input_pds);
-}
+//mkldnn::sum::primitive_desc GetSumPD(const mkldnn::memory *in_mem, const mkldnn::memory *in_mem2) {
+//  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
+//  std::vector<float> scales(2, 1);
+//  std::vector<mkldnn::primitive::at> inputs;
+//  input_pds[0] = in_mem->get_primitive_desc();
+//  input_pds[1] = in_mem2->get_primitive_desc();
+//  return mkldnn::sum::primitive_desc(scales, input_pds);
+//}
 
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
@@ -890,8 +890,8 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       orig_output.WaitToRead();
       PrintVerifyMsg(in_arr, out_arr);
-      auto sum_pd = GetSumPD(in_mem, in_mem2);
-      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, sum_pd.dst_primitive_desc(), kWriteTo);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
+      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
       op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
