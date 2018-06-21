@@ -35,23 +35,23 @@ void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
          const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(2);
   std::vector<float> scales(2, 1);
-  std::vector<mkldnn::primitive::at> inputs;
-  CHECK(arr1.get_primitive_desc() == arr2.get_primitive_desc());
-  const mkldnn::memory *in_mem1 = &arr1;
-  const mkldnn::memory *in_mem2 = &arr2;
-  if (arr1.get_primitive_desc() != out.get_primitive_desc()) {
-    auto tmp_memory1 = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
-    auto tmp_memory2 = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
-    mxnet::MKLDNNCopy(*in_mem1, tmp_memory1);
-    mxnet::MKLDNNCopy(*in_mem2, tmp_memory2);
-    in_mem1 = tmp_memory1;
-    in_mem2 = tmp_memory2;
+  std::vector<mkldnn::primitive::at> inputs(2);
+  input_pds[0] = arr1.get_primitive_desc();
+  input_pds[1] = arr2.get_primitive_desc();
+  CHECK(input_pds[0] == input_pds[0]);
+  inputs[0] = arr1;
+  inputs[1] = arr2;
+  auto output_pd = out.get_primitive_desc();
+  if (input_pds[0] != output_pd) {
+    auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
+    auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);
+    mxnet::MKLDNNCopy(arr1, tmp_memory1);
+    mxnet::MKLDNNCopy(arr2, tmp_memory2);
+    input_pds[0] = tmp_memory1->get_primitive_desc();
+    input_pds[1] = tmp_memory2->get_primitive_desc();
+    inputs[0] = *tmp_memory1;
+    inputs[1] = *tmp_memory2;
   }
-
-  input_pds[0] = in_mem1->get_primitive_desc();
-  input_pds[1] = in_mem2->get_primitive_desc();
-  inputs.push_back(*in_mem1);
-  inputs.push_back(*in_mem2);
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
   MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }
