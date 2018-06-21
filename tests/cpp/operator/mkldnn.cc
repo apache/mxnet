@@ -862,6 +862,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
   MKLDNNStream *stream = MKLDNNStream::Get();
 
+  // kWriteTo
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
@@ -887,6 +888,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     }
   }
 
+  // kWriteInPlace
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
@@ -910,6 +912,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
 
+  // kAddTo
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
