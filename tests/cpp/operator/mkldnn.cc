@@ -444,8 +444,11 @@ OpAttrs GetConcatOp(int num_args, int dim) {
 OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Concat");
-  attrs.num_inputs = 1;
-  attrs.num_outputs = num_args;
+
+  // input/output are switched because we reversed in TestOp
+  attrs.num_inputs = num_args;
+  attrs.num_outputs = 1;
+
   attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
   attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
@@ -881,6 +884,9 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
           std::vector<NDArray*> tmp = inputs;
           inputs = outputs;
           outputs = tmp;
+          req = std::vector<OpReqType>(outputs.size());
+          for (int i = 0; i < outputs.size(); i++)
+            req[i] = kWriteTo;
         }
 
         PrintVerifyMsg(in_arr, out_arr);
