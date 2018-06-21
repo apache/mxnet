@@ -15,14 +15,14 @@
 ;; limitations under the License.
 ;;
 
-(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "0.1.1-SNAPSHOT"
+(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.2.1-SNAPSHOT"
   :description "Clojure package for MXNet"
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [t6/from-scala "0.3.0"]
                  ;; Choose the right dependency for your system
-                 [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.0"]
-                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.0"]
-                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.0"]
+                 [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]
+                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]
+                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]
                  [org.apache.logging.log4j/log4j-api "2.8.1"]
@@ -31,4 +31,19 @@
   :plugins [[lein-codox "0.10.3" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]]
   :codox {:namespaces [#"^org\.apache\.clojure-mxnet\.(?!gen).*"]}
-  :aliases {"generate-code" ["run" "-m" "dev.generator"]})
+  :aliases {"generate-code" ["run" "-m" "dev.generator"]}
+  :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"
+                              ;; If a repository contains releases only setting
+                              ;; :snapshots to false will speed up dependencies.
+                              :snapshots true
+                              ;; Disable signing releases deployed to this repo.
+                              ;; (Not recommended.)
+                              :sign-releases false
+                              ;; You can also set the policies for how to handle
+                              ;; :checksum failures to :fail, :warn, or :ignore.
+                              :checksum :fail
+                              ;; How often should this repository be checked for
+                              ;; snapshot updates? (:daily, :always, or :never)
+                              :update :always
+                              ;; You can also apply them to releases only:
+                              :releases {:checksum :fail :update :always}}]])

@@ -42,10 +42,6 @@ Follow the instructions from https://mxnet.incubator.apache.org/install/osx_setu
 about _Prepare Environment for GPU Installation_
 and _Install MXNet dependencies_
 
-The only difference is that for OSX you will need to install opencv2 to use the prebuilt jar
-`brew search opencv@2`
-`brew install opencv@2`
-
 
 ### Use Prebuilt Jars
 There are deployed jars on Clojars for each supported system
