@@ -638,6 +638,15 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
+std::string GetShapeString(const TShape shape) {
+  std::stringstream ss;
+  ss << "(";
+  for (size_t i = 0; i < shape.ndim(); i++)
+    ss << shape[i] << ", ";
+  ss << ")";
+  return ss.str();
+}
+
 TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
@@ -647,6 +656,9 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
+        printf("Extending ");
+        printf("%s", GetShapeString(shape).c_str());
+        printf(" dim %d and %d num_inputs\n", dim, num_inputs);
         auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
         for (auto out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
@@ -750,14 +762,10 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
-
-  printf("Verifying: %s (", arr1.desc.c_str());
-  for (size_t i = 0; i < t1.ndim(); i++)
-    printf("%ld, ", t1[i]);
-  printf(") with %s (", arr2.desc.c_str());
-  for (size_t i = 0; i < t2.ndim(); i++)
-    printf("%ld, ", t2[i]);
-  printf(")\n");
+  std::stringstream ss;
+  ss << "Verifying: " << arr1.desc.c_str() <<
+     GetShapeString(t1) << "with " << arr2.desc.c_str() << GetShapeString(t2) << "\n";
+  printf("%s", ss.str().c_str());
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
