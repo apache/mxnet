@@ -44,17 +44,6 @@ private[mxnet] object APIDocGenerator{
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     val finalHash = hashCollector.mkString("\n")
-    val prevHash = Source.fromFile(FILE_PATH + s"FILEHASH")
-      .getLines().mkString("\n")
-    // TODO: GPU test seemed to generate different files
-    if (!System.getenv().containsKey("SCALA_ON_GPU")) {
-      require(prevHash.equals(finalHash),
-        "Detect Operator changes, comment on this line and update the hashfile"
-      + ", please go to scala-package/macros/.../APIDocGenerator.scala")
-    }
-    val pw = new PrintWriter(new File(FILE_PATH + s"FILEHASH"))
-    pw.write(finalHash)
-    pw.close()
   }
 
   def MD5Generator(input : String) : String = {
@@ -193,7 +182,7 @@ private[mxnet] object APIDocGenerator{
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = CToScalaUtils.argumentCleaner(argType, returnType)
+      val typeAndOption = CToScalaUtils.argumentCleaner(argType, argName, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     new absClassFunction(aliasName, desc.value, argList.toList, returnType)
