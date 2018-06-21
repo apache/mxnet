@@ -200,7 +200,7 @@ def foreach(body, data, init_states, name="foreach"):
     # the python function, we need to prune the computation graph constructed from
     # the function. One way of doing it is to mark the nodes in the computation graph
     # with AttrScope and prune the nodes without the special attribute.
-    with AttrScope(subgraph_name=name):
+    with AttrScope(__subgraph_name__=name):
         if isinstance(data, list):
             in_eles = [symbol.var(sym.name) for sym in data]
         else:

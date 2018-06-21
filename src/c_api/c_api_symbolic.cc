@@ -38,11 +38,10 @@ void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
 const std::vector<std::string> kHiddenKeys = {
-  "ctx_group", "lr_mult", "wd_mult", "force_mirroring", "mirror_stage", "subgraph_name"
+  "ctx_group", "lr_mult", "wd_mult", "force_mirroring", "mirror_stage"
 };
 const std::vector<std::string> kReplacedHiddenKeys = {
-  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__", "__mirror_stage__",
-  "subgraph_name"
+  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__", "__mirror_stage__"
 };
 const char *kNamespaceSeparator = "$";
 
