@@ -924,6 +924,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
       PrintVerifyMsg(in_arr, out_arr);
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
