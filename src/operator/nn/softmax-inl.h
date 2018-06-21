@@ -71,12 +71,22 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
     }
 
     DType sum = DType(0);
-    for (index_t j = 0; j < M; ++j) {
-      sum += std::exp((in[base + j*sa] - mmax)/temperature);
-    }
+    if (temperature == 1.0) {
+      for (index_t j = 0; j < M; ++j) {
+        sum += std::exp(in[base + j*sa] - mmax);
+      }
 
-    for (index_t j = 0; j < M; ++j) {
-      out[base + j*sa] = OP::Map((in[base + j*sa] - mmax)/temperature, sum);
+      for (index_t j = 0; j < M; ++j) {
+        out[base + j*sa] = OP::Map(in[base + j*sa] - mmx, sum);
+      }
+    } else {
+      for (index_t j = 0; j < M; ++j) {
+        sum += std::exp((in[base + j*sa] - mmax)/temperature);
+      }
+
+      for (index_t j = 0; j < M; ++j) {
+        out[base + j*sa] = OP::Map((in[base + j*sa] - mmax)/temperature, sum);
+      }
     }
   }
 }
@@ -145,17 +155,30 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
   __syncthreads();
 
   red::sum::SetInitValue(smem[x]);
-  for (index_t i = x; i < M; i += x_size) {
-    red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/temperature));
+  if (temperature == 1.0) {
+    for (index_t i = x; i < M; i += x_size) {
+      red::sum::Reduce(smem[x], static_cast<DType>(expf(in[base + i*sa] - smax))); 
+    }
+  } else {
+    for (index_t i = x; i < M; i += x_size) {
+      red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/temperature)));
+    }
   }
+
   __syncthreads();
   cuda::Reduce1D<red::sum, x_bits>(smem);
   __syncthreads();
   DType ssum = smem[0];
   __syncthreads();
 
-  for (index_t i = x; i < M; i += x_size) {
-    out[base + i*sa] = OP::Map((in[base + i*sa] - smax)/temperature, ssum);
+  if (temperature == 1.0) {
+    for (index_t i = x; i < M; i += x_size) {
+      out[base + i*sa] = OP::Map((in[base + i*sa] - smax), ssum);
+    } 
+  } else {
+    for (index_t i = x; i < M; i += x_size) {
+      out[base + i*sa] = OP::Map((in[base + i*sa] - smax)/temperature, ssum);
+    }
   }
 }
 
