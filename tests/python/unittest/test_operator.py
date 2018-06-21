@@ -6058,7 +6058,8 @@ def test_foreach():
             all_ins.extend(frees)
             for i in range(len(all_ins)):
                 assert_almost_equal(all_ins[i].grad.asnumpy(),
-                        e.grad_arrays[gin_order[i]].asnumpy())
+                        e.grad_arrays[gin_order[i]].asnumpy(),
+                        rtol=0.001, atol=0.0001)
 
     # Test cases:
     # * graph inputs are stored in different orders.
