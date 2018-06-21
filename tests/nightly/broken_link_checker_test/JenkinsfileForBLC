@@ -53,9 +53,19 @@ try {
     parallel 'BrokenLinkChecker: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/brokenLinkChecker') {
-          init_git()
-		  sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
-		  docker_run('ubuntu_blc', 'broken_link_checker', false)      
+			try {
+          		init_git()
+		  		sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
+		  		docker_run('ubuntu_blc', 'broken_link_checker', false)
+			} catch (caughtError)  {
+				internalError = caughtError 
+			} finally {
+		  		sh "echo Storing the new url_list.txt to S3 bucket" 
+		    	sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
+				if (internalError) {
+					throw internalError
+				}
+			}
         }
       }
     }
@@ -68,10 +78,6 @@ try {
   }
 } finally {
   node("mxnetlinux-cpu") {
-  	ws('workspace/brokenLinkChecker') {
-  		sh "echo Storing the new url_list.txt to S3 bucket" 
-    	sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
-	}
     // Only send email if nightly test failed
     if (currentBuild.result == "FAILURE") {
     emailext body: 'The broken link checker test has failed. Please view the logs at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY TEST FAILED] build ${BUILD_NUMBER}', to: '${EMAIL}'
