@@ -774,6 +774,62 @@ build_docs() {
     popd
 }
 
+
+# Functions that run the nightly Tests:
+
+#Runs Apache RAT Check on MXNet Source for License Headers
+nightly_test_rat_check() {
+    set -ex
+    ./tests/nightly/apache_rat_license_check/license_check.sh
+}
+
+#Checks MXNet for Compilation Warnings
+nightly_test_compilation_warning() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/compilation_warnings/compilation_warnings.sh
+}
+
+#Checks the MXNet Installation Guide - currently checks pip, build from source and virtual env on cpu and gpu
+nightly_test_installation() {
+    set -ex
+    # The run_test_installation_docs.sh expects the path to index.md and the first and last line numbers of the index.md file
+    # First execute the test script and then call the method specified by the Jenkinsfile - ${1}
+    source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
+}
+
+#Runs a simple MNIST training example
+nightly_test_image_classification() {
+    set -ex
+    ./tests/nightly/test_image_classification.sh
+}
+
+#Single Node KVStore Test
+nightly_test_KVStore_singleNode() {
+    set -ex
+    export PYTHONPATH=./python/
+    python tests/nightly/test_kvstore.py
+}
+
+#Tests Amalgamation Build with 5 different sets of flags
+nightly_test_amalgamation() {
+    set -ex
+    # Amalgamation can not be run with -j nproc
+    make -C amalgamation/ clean
+    make -C amalgamation/ ${1} ${2}
+}
+
+#Tests Amalgamation Build for Javascript
+nightly_test_javascript() {
+    set -ex
+    export LLVM=/work/deps/emscripten-fastcomp/build/bin
+    # This part is needed to run emcc correctly
+    cd /work/deps/emscripten
+    ./emcc
+    touch ~/.emscripten
+    make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
+}
+
 # Deploy
 
 deploy_docs() {
