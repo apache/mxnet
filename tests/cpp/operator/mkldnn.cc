@@ -745,11 +745,15 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
                               const std::vector<NDArray *> &out_arrs) {
   int num_inputs = in_arrs.size();
   int input_size = in_arrs[0]->shape().Size();
+  TShape input_shape = in_arrs[0]->shape();
 
+  // reshape output to extend 0 dim so that data can be read continuously
+  TShape target_shape = input_shape;
+  target_shape[0] = target_shape[0] * num_inputs;
   NDArray output = out_arrs[0]->Reorder2Default();
-  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
-
   EXPECT_EQ(input_size * num_inputs, output.shape().Size());
+  output = output.Reshape(target_shape);
+  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
   for (size_t input_num = 0; input_num < num_inputs; input_num++) {
     NDArray tmp = in_arrs[input_num]->Reorder2Default();
     for (int i = 0; i < input_size; i++) {
