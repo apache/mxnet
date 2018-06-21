@@ -66,15 +66,10 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-ifneq ($(MKLDNN_ROOT),)
-	MKLDNNROOT = $(MKLDNN_ROOT)
-	MKLROOT = $(MKLDNN_ROOT)
-else
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 ifneq ($(USE_BLAS), mkl)
 	export USE_MKLML = 1
-endif
 endif
 endif
 

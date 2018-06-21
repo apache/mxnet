@@ -16,51 +16,41 @@
 # under the License.
 
 ifeq ($(USE_MKLDNN), 1)
-	MKLDNN_ROOTDIR = $(ROOTDIR)/3rdparty/mkldnn
-	MKLDNN_BUILDDIR = $(MKLDNN_ROOTDIR)/build
-	MKLDNN_INSTALLDIR = $(MKLDNN_ROOTDIR)/install
-	MKLDNN_LIBDIR = $(ROOTDIR)/lib
+	MKLDNN_SUBMODDIR = $(ROOTDIR)/3rdparty/mkldnn
+	MKLDNN_BUILDDIR = $(MKLDNN_SUBMODDIR)/build
+	MXNET_LIBDIR = $(ROOTDIR)/lib
 ifeq ($(UNAME_S), Darwin)
-	OMP_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libiomp5.dylib
-	MKLML_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libmklml.dylib
-	MKLDNN_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libmkldnn.0.dylib
+	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.dylib
+	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml.dylib
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.0.dylib
 else
-	OMP_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libiomp5.so
-	MKLML_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libmklml_intel.so
-	MKLDNN_LIBFILE = $(MKLDNN_INSTALLDIR)/lib/libmkldnn.so.0
+	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
+	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.0
 endif
 endif
 
-.PHONY: mkldnn mkldnn_clean mkldnn_lib_sync
+.PHONY: mkldnn mkldnn_clean
 
-mkldnn_build: $(MKLDNN_INSTALLDIR)/lib/libmkldnn.so
+mkldnn_build: $(MKLDNNROOT)/lib/libmkldnn.so
 
-$(MKLDNN_INSTALLDIR)/lib/libmkldnn.so:
-	mkdir -p $(MKLDNN_INSTALLDIR)
-	cd $(MKLDNN_ROOTDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh && cd .. && cp -a external/*/* $(MKLDNN_INSTALLDIR)/.
-	cmake $(MKLDNN_ROOTDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNN_INSTALLDIR) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF
+$(MKLDNNROOT)/lib/libmkldnn.so:
+	mkdir -p $(MKLDNNROOT)
+	cd $(MKLDNN_SUBMODDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh && cd .. && cp -a external/*/* $(MKLDNNROOT)/.
+	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
-	mkdir -p $(MKLDNN_LIBDIR)
-	cp $(OMP_LIBFILE) $(MKLDNN_LIBDIR)
-	cp $(MKLML_LIBFILE) $(MKLDNN_LIBDIR)
-	cp $(MKLDNN_LIBFILE) $(MKLDNN_LIBDIR)
-
-mkldnn_lib_sync:
-	mkdir -p $(MKLDNNROOT)
-	rsync -a $(MKLDNN_INSTALLDIR)/include $(MKLDNN_INSTALLDIR)/lib $(MKLDNNROOT)/.
+	mkdir -p $(MXNET_LIBDIR)
+	cp $(OMP_LIBFILE) $(MXNET_LIBDIR)
+	cp $(MKLML_LIBFILE) $(MXNET_LIBDIR)
+	cp $(MKLDNN_LIBFILE) $(MXNET_LIBDIR)
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
 	$(RM) -r 3rdparty/mkldnn/install/*
 
 ifeq ($(USE_MKLDNN), 1)
-ifeq ($(MKLDNNROOT), $(ROOTDIR)/3rdparty/mkldnn/install)
 mkldnn: mkldnn_build
-else
-mkldnn: mkldnn_lib_sync
-mkldnn_lib_sync: mkldnn_build
-endif
 else
 mkldnn:
 endif
