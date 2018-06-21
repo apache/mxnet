@@ -3,7 +3,8 @@
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
-            [org.apache.clojure-mxnet.symbol :as sym])
+            [org.apache.clojure-mxnet.symbol :as sym]
+            [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet Shape NDArrayFuncReturn NDArray)
            (scala.collection Map Set)
            (scala.collection.mutable ArrayBuffer)
@@ -160,6 +161,8 @@
     (is (instance? ListMap x))
     (is (= "Map(x -> 1, y -> 2)" (str x)))))
 
+(s/def ::x string?)
+
 (deftest test-validate
   (is (nil? (util/validate! string? "foo" "Not a string!")))
-  (is (thrown-with-msg? Exception #"Not a string!" (util/validate! string? 1 "Not a string!"))))
+  (is (thrown-with-msg? Exception #"Not a string!" (util/validate! ::x 1 "Not a string!"))))
