@@ -931,7 +931,8 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
-      VerifyAddRequest({&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
+      VerifyAddRequest(
+          {&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
     }
   }
 }
