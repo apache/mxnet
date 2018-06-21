@@ -525,6 +525,15 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
   EXPECT_GT(mkldnn_count, 0);
 }
 
+static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input) {
+  nnvm::TShape s(pd.desc().data.ndims);
+  for (size_t i = 0; i < pd.desc().data.ndims; i++)
+    s[i] = pd.desc().data.dims[i];
+  s[0] = s[0] * num_input;
+  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -542,174 +551,86 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
  * 7. Reused reshaped/sliced NDArray.
  * 8. Reused NDArray with MKLDNN layout.
  * 9. Reused NDArray with MKLDNN layout of different dimensions.
+ *
+ * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
  */
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
-                                         const std::vector<mkldnn::memory::primitive_desc> &pds) {
+                                         const std::vector<mkldnn::memory::primitive_desc> &pds,
+                                              int num_inputs = 0, int dim = 0) {
+  TShape target_shape = shape;
+  if (num_inputs != 0)
+    target_shape[dim] = shape[dim] * num_inputs;
+
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
   // Type 1.
-  NDArray arr(shape, Context());
+  NDArray arr(target_shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
   InitDefaultArray(&in_arrs.back().arr, true);
 
   // Type 4.
-  TShape tmp_shape = shape;
-  tmp_shape[0] = shape[0] * 2;
+  TShape tmp_shape = target_shape;
+  tmp_shape[0] = target_shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
   InitDefaultArray(&arr0, true);
-  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+  in_arrs.emplace_back(arr0.Slice(1, target_shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
   // Get a reused version.
   nnvm::TShape s(1);
-  s[0] = shape.Size();
+  s[0] = target_shape.Size();
   NDArray arr1(s, Context());
-  arr1 = arr1.AsArray(shape, arr1.dtype());
+  arr1 = arr1.AsArray(target_shape, arr1.dtype());
   InitDefaultArray(&arr1, true);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
-  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
+  s[0] = target_shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
-  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
+  arr2 = arr2.AsArray(target_shape, mshadow::default_type_flag);
   InitDefaultArray(&arr2, true);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
-  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+  s[0] = target_shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
   NDArray arr3(s, Context(), true, mshadow::kUint8);
-  tmp_shape[0] = shape[0] * 2;
+  tmp_shape[0] = target_shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
   InitDefaultArray(&arr3, true);
-  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
-
+  in_arrs.emplace_back(arr3.Slice(1, target_shape[0] + 1), "Reused+Reshaped NDArray");
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
+    auto target_pd = pd;
+    if (num_inputs != 0)
+      target_pd = GetExpandedMemPD(pd, num_inputs);
+
     // Type 2, 3.
-    arr = NDArray(shape, Context());
+    arr = NDArray(target_shape, Context());
     desc = "MKLDNN NDArray";
-    if (shape.ndim() != pd.desc().data.ndims) {
+    if (target_shape.ndim() != target_pd.desc().data.ndims) {
       std::stringstream ss;
       ss << "MKLDNN NDArray with different memory layout "
-         << shape.ndim() << "/" << pd.desc().data.ndims;
+         << target_shape.ndim() << "/" << target_pd.desc().data.ndims;
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, pd, true);
+    InitMKLDNNArray(&in_arrs.back().arr, target_pd, true);
 
     // Type 8, 9.
     // Get a reused version.
     nnvm::TShape s(1);
-    s[0] = shape.Size();
+    s[0] = target_shape.Size();
     NDArray arr = NDArray(s, Context());
-    arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, pd, true);
+    arr = arr.AsArray(target_shape, arr.dtype());
+    InitMKLDNNArray(&arr, target_pd, true);
     desc = "Reused MKLDNN NDArray";
-    if (shape.ndim() != pd.desc().data.ndims) {
+    if (target_shape.ndim() != target_pd.desc().data.ndims) {
       std::stringstream ss;
       ss << "Reused MKLDNN NDArray with different memory layout "
-         << shape.ndim() << "/" << pd.desc().data.ndims;
-      desc = ss.str();
-    }
-    in_arrs.emplace_back(arr, desc);
-  }
-  return in_arrs;
-}
-
-static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input) {
-  nnvm::TShape s(pd.desc().data.ndims);
-  for (size_t i = 0; i < pd.desc().data.ndims; i++)
-    s[i] = pd.desc().data.dims[i];
-  s[0] = s[0] * num_input;
-  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
-                         static_cast<mkldnn::memory::format>(pd.desc().data.format));
-}
-
-/*
- * We want to get a few types of NDArrays for testing the Concat operation
- * Similar to GetTestOutputArrays but outputs are scaled by a factor of num_inputs
- */
-std::vector<NDArrayAttrs> GetTestOutputArraysConcat(const TShape &shape,
-                                                    const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                                    int num_inputs, int dim) {
-  std::vector<NDArrayAttrs> in_arrs;
-  std::string desc;
-  CHECK(shape.ndim() > dim);
-
-  TShape new_shape = shape;
-  new_shape[dim] = shape[dim] * num_inputs;
-
-  // Type 1.
-  NDArray arr(new_shape , Context());
-  in_arrs.emplace_back(arr, "Normal NDArray");
-  InitDefaultArray(&in_arrs.back().arr, true);
-
-  // Type 4.
-  TShape tmp_shape = new_shape;
-  tmp_shape[0] = new_shape[0] * 2;
-  NDArray arr0(tmp_shape, Context());
-  InitDefaultArray(&arr0, true);
-  in_arrs.emplace_back(arr0.Slice(1, new_shape[0] + 1), "Reshaped NDArray");
-
-  // Type 5.
-  // Get a reused version.
-  nnvm::TShape s(1);
-  s[0] = new_shape.Size();
-  NDArray arr1(s, Context());
-  arr1 = arr1.AsArray(new_shape, arr1.dtype());
-  InitDefaultArray(&arr1, true);
-  in_arrs.emplace_back(arr1, "Reused NDArray");
-
-  // Type 6.
-  s[0] = new_shape.Size() * GetTypeSize(mshadow::default_type_flag);
-  NDArray arr2(s, Context(), true, mshadow::kUint8);
-  arr2 = arr2.AsArray(new_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr2, true);
-  in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
-
-  // Type 7
-  s[0] = new_shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
-  NDArray arr3(s, Context(), true, mshadow::kUint8);
-  tmp_shape = new_shape;
-  tmp_shape[0] = new_shape[0] * 2;
-  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr3, true);
-  in_arrs.emplace_back(arr3.Slice(1, new_shape[0] + 1), "Reused+Reshaped NDArray");
-
-
-  for (auto pd : pds) {
-    if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
-      continue;
-
-    auto new_pd = GetExpandedMemPD(pd, num_inputs);
-
-    // Type 2, 3.
-    arr = NDArray(new_shape, Context());
-    desc = "MKLDNN NDArray";
-    if (new_shape.ndim() != new_pd.desc().data.ndims) {
-      std::stringstream ss;
-      ss << "MKLDNN NDArray with different memory layout "
-         << new_shape.ndim() << "/" << new_pd.desc().data.ndims;
-      desc = ss.str();
-    }
-    in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, new_pd, true);
-
-    // Type 8, 9.
-    // Get a reused version.
-    nnvm::TShape s(1);
-    s[0] = new_shape.Size();
-    NDArray arr = NDArray(s, Context());
-    arr = arr.AsArray(new_shape, arr.dtype());
-    InitMKLDNNArray(&arr, new_pd, true);
-    desc = "Reused MKLDNN NDArray";
-    if (new_shape.ndim() != new_pd.desc().data.ndims) {
-      std::stringstream ss;
-      ss << "Reused MKLDNN NDArray with different memory layout "
-         << new_shape.ndim() << "/" << new_pd.desc().data.ndims;
+         << target_shape.ndim() << "/" << target_pd.desc().data.ndims;
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
@@ -726,7 +647,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
-        auto output_arrs = GetTestOutputArraysConcat(shape, pds, num_inputs, dim);
+        auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
         for (auto out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
           EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
@@ -736,7 +657,6 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
     }
   }
 }
-
 
 void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
                       const std::vector<NDArray *> &out_arrs) {
@@ -879,7 +799,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
       if (use_concat_outputs) {
         std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
         int dim = std::stoi(str_dim);
-        out_arrs = GetTestOutputArraysConcat(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
+        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
       }
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
