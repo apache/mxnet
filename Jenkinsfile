@@ -374,6 +374,17 @@ try {
         }
       }
     },
+    'TensorRT': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            pack_lib('tensorrt')
+          }
+        }
+      }
+    },
     'Build CPU windows':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
