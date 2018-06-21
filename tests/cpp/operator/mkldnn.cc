@@ -741,24 +741,41 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+int GetDim(TShape input_shape, TShape output_shape) {
+  CHECK(input_shape.Size() != output_shape.Size());
+  for (size_t i = 0; i < input_shape.ndim(); i++) {
+    if (input_shape.data()[i] != output_shape.data()[i])
+      return i;
+  }
+  return -1;
+}
+
+int GetBlockSize(TShape shape, int dim) {
+  int block_size = 1;
+  for (int i = shape.ndim() - 1; i >= dim; i--)
+    block_size *= shape[i];
+  return block_size;
+}
+
 void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
                               const std::vector<NDArray *> &out_arrs) {
   int num_inputs = in_arrs.size();
   int input_size = in_arrs[0]->shape().Size();
   TShape input_shape = in_arrs[0]->shape();
-
-  // reshape output to extend 0 dim so that data can be read continuously
-  TShape target_shape = input_shape;
-  target_shape[0] = target_shape[0] * num_inputs;
   NDArray output = out_arrs[0]->Reorder2Default();
-  EXPECT_EQ(input_size * num_inputs, output.shape().Size());
-  output = output.Reshape(target_shape);
+  size_t total_size = output.shape().Size();
+  EXPECT_EQ(input_size * num_inputs, total_size);
   mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
+
+  int dim = GetDim(input_shape, output.shape());
+  int block_size = GetBlockSize(input_shape, dim);
+  int num_blocks = input_size / block_size;
   for (size_t input_num = 0; input_num < num_inputs; input_num++) {
     NDArray tmp = in_arrs[input_num]->Reorder2Default();
-    for (int i = 0; i < input_size; i++) {
-      mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
-      ASSERT_EQ(data[i], out_data[input_num * input_size + i]);
+    mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
+    for (size_t block_num = 0; block_num < num_blocks; block_num++) {
+      for (size_t i = 0; i < block_size; i++)
+        ASSERT_EQ(data[block_num * block_size + i], out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
 }
