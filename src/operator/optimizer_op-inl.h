@@ -1670,19 +1670,13 @@ inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
   const int grad_stype = in_attrs->at(1);
   const int state_stype = in_attrs->at(2);
   bool dispatched = false;
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
-      common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
-      param.wd == 0.0f) {
-    // rsp, rsp, rsp -> rsp with wd = 0.0
-    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
-  }
   if (!dispatched && grad_stype == kRowSparseStorage &&
       (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage) &&
-      state_stype == weight_stype) {
+      state_stype == weight_stype && param.wd == 0.0f) {
     // weight and state share stype, grad's stype = rsp
-    dispatched = storage_type_assign(out_attrs, static_cast<NDArrayStorageType>(weight_stype),
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+    dispatched = storage_type_assign(
+        out_attrs, static_cast<NDArrayStorageType>(weight_stype), dispatch_mode,
+        DispatchMode::kFComputeEx);
   }
   return dispatched;
 }
