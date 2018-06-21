@@ -432,10 +432,24 @@ OpAttrs GetConcatOp(int num_args, int dim) {
   attrs.attrs.op = Op::Get("concat");
   attrs.num_inputs = num_args;
   attrs.num_outputs = 1;
-  attrs.dispatches.resize(2);
   attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
   attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Concat");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = num_args;
+  attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
@@ -782,10 +796,11 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
 
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
-  int num_inputs = in_arrs.size();
-  int input_size = in_arrs[0]->shape().Size();
-  TShape input_shape = in_arrs[0]->shape();
-  NDArray output = out_arrs[0]->Reorder2Default();
+  // out_arrs is smaller arrays that form larger in_arr
+  int num_inputs = out_arrs.size();
+  int input_size = out_arrs[0]->shape().Size();
+  TShape input_shape = out_arrs[0]->shape();
+  NDArray output = in_arrs[0]->Reorder2Default();
   size_t total_size = output.shape().Size();
   EXPECT_EQ(input_size * num_inputs, total_size);
   mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
@@ -794,7 +809,7 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
   int block_size = GetBlockSize(input_shape, dim);
   int num_blocks = input_size / block_size;
   for (size_t input_num = 0; input_num < num_inputs; input_num++) {
-    NDArray tmp = in_arrs[input_num]->Reorder2Default();
+    NDArray tmp = out_arrs[input_num]->Reorder2Default();
     mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
     for (size_t block_num = 0; block_num < num_blocks; block_num++) {
       for (size_t i = 0; i < block_size; i++)
@@ -832,7 +847,8 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs = false) {
+void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
+            bool use_concat_outputs = false, bool reverse_input_output = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
@@ -859,6 +875,14 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
           req[i] = kWriteTo;
           outputs[i] = &out_arr.arr;
         }
+
+        // used for concat backwards
+        if (reverse_input_output) {
+          std::vector<NDArray*> tmp = inputs;
+          inputs = outputs;
+          outputs = tmp;
+        }
+
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -932,6 +956,15 @@ TEST(IMPERATIVE, ConcatOp) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatOp(num_inputs, dim);
       TestOp(attrs, VerifyConcatResult, true);
+    }
+  }
+}
+
+TEST(IMPERATIVE, ConcatBackwardsOp) {
+  for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
+    for (int dim = 0; dim < 5; dim++) {
+      OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
+      TestOp(attrs, VerifyConcatBackwardsResult, true, true);
     }
   }
 }
