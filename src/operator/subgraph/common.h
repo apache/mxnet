@@ -178,7 +178,7 @@ inline bool DefaultSubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
   exec::DevMaskVector dev_masks(idx_g.num_node_entries(), dev_mask);
 
   // Put the input and output storages to the storage vector.
-  nnvm::StorageVector stypes(idx_g.num_node_entries(), exec::kBadStorageID);
+  StorageTypeVector stypes(idx_g.num_node_entries(), kUndefinedStorage);
   const auto &input_nids = idx_g.input_nodes();
   CHECK_EQ(input_nids.size(), in_stypes->size());
   for (size_t i = 0; i < in_stypes->size(); i++) {
