@@ -81,6 +81,12 @@ include $(DMLC_CORE)/make/dmlc.mk
 WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
+ifeq ($(ENABLE_TEST_COVERAGE), 1)
+    DEBUG=1
+	DEV=1
+	CFLAGS += -coverage
+endif
+
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
 	NVCCFLAGS += -Werror cross-execution-space-call

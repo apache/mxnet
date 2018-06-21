@@ -204,10 +204,12 @@ try {
     'CPU: Openblas': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            pack_lib('cpu', mx_dist_lib)
+          withEnv(['ENABLE_TEST_COVERAGE=1']) {
+            timeout(time: max_time, unit: 'MINUTES') {
+              init_git()
+              docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
+              pack_lib('cpu', mx_dist_lib)
+            }
           }
         }
       }
