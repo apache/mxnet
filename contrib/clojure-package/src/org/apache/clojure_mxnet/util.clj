@@ -35,8 +35,8 @@
                            "float<>" "vec-of-floats"
                            "byte<>" "byte-array"
                            "java.lang.String<>" "vec-or-strings"
-                           "ml.dmlc.mxnet.NDArray" "ndarray"
-                           "ml.dmlc.mxnet.Symbol" "sym"})
+                           "org.apache.mxnet.NDArray" "ndarray"
+                           "org.apache.mxnet.Symbol" "sym"})
 
 (def symbol-param-coerce {"java.lang.String" "sym-name"
                           "float" "num"
@@ -48,7 +48,8 @@
                           "float<>" "vec-of-floats"
                           "byte<>" "byte-array"
                           "java.lang.String<>" "vec-or-strings"
-                          "ml.dmlc.mxnet.Symbol" "sym"})
+                          "org.apache.mxnet.Symbol" "sym"
+                          "java.lang.Object" "object"})
 
 (defn empty-list []
   ($ List/empty))

@@ -28,12 +28,12 @@
 
 (defn
  div
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$div
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -56,22 +56,22 @@
 
 (defn
  >
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$greater
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
  >=
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$greater$eq
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -118,22 +118,22 @@
 
 (defn
  <
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$less
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
  <=
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$less$eq
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -176,12 +176,12 @@
 
 (defn
  -
- ([sym Object-or-Symbol]
+ ([sym object-or-sym]
   (util/coerce-return
    (.$minus
     sym
     (util/nil-or-coerce-param
-     Object-or-Symbol
+     object-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -204,12 +204,12 @@
 
 (defn
  %
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$percent
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -234,12 +234,12 @@
 
 (defn
  +
- ([sym Object-or-Symbol]
+ ([sym object-or-sym]
   (util/coerce-return
    (.$plus
     sym
     (util/nil-or-coerce-param
-     Object-or-Symbol
+     object-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -262,12 +262,12 @@
 
 (defn
  *
- ([sym Symbol-or-Object]
+ ([sym sym-or-object]
   (util/coerce-return
    (.$times
     sym
     (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -290,12 +290,12 @@
 
 (defn
  **
- ([sym Object-or-Symbol]
+ ([sym object-or-sym]
   (util/coerce-return
    (.$times$times
     sym
     (util/nil-or-coerce-param
-     Object-or-Symbol
+     object-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -5269,14 +5269,14 @@
 
 (defn
  equal
- ([Symbol-or-Symbol-or-Object Object-or-Symbol-or-Symbol]
+ ([sym-or-sym-or-object object-or-sym-or-sym]
   (util/coerce-return
    (Symbol/equal
     (util/nil-or-coerce-param
-     Symbol-or-Symbol-or-Object
+     sym-or-sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})
     (util/nil-or-coerce-param
-     Object-or-Symbol-or-Symbol
+     object-or-sym-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -5945,26 +5945,22 @@
 
 (defn
  greater
- ([Symbol-or-Symbol Symbol-or-Object]
+ ([sym-or-sym sym-or-object]
   (util/coerce-return
    (Symbol/greater
+    (util/nil-or-coerce-param sym-or-sym #{"org.apache.mxnet.Symbol"})
     (util/nil-or-coerce-param
-     Symbol-or-Symbol
-     #{"org.apache.mxnet.Symbol"})
-    (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
  greater-equal
- ([Symbol-or-Symbol Symbol-or-Object]
+ ([sym-or-sym sym-or-object]
   (util/coerce-return
    (Symbol/greaterEqual
+    (util/nil-or-coerce-param sym-or-sym #{"org.apache.mxnet.Symbol"})
     (util/nil-or-coerce-param
-     Symbol-or-Symbol
-     #{"org.apache.mxnet.Symbol"})
-    (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn handle ([sym] (util/coerce-return (.handle sym))))
@@ -6100,26 +6096,22 @@
 
 (defn
  lesser
- ([Symbol-or-Symbol Symbol-or-Object]
+ ([sym-or-sym sym-or-object]
   (util/coerce-return
    (Symbol/lesser
+    (util/nil-or-coerce-param sym-or-sym #{"org.apache.mxnet.Symbol"})
     (util/nil-or-coerce-param
-     Symbol-or-Symbol
-     #{"org.apache.mxnet.Symbol"})
-    (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
  lesser-equal
- ([Symbol-or-Symbol Symbol-or-Object]
+ ([sym-or-sym sym-or-object]
   (util/coerce-return
    (Symbol/lesserEqual
+    (util/nil-or-coerce-param sym-or-sym #{"org.apache.mxnet.Symbol"})
     (util/nil-or-coerce-param
-     Symbol-or-Symbol
-     #{"org.apache.mxnet.Symbol"})
-    (util/nil-or-coerce-param
-     Symbol-or-Object
+     sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -7402,14 +7394,14 @@
 
 (defn
  not-equal
- ([Symbol-or-Symbol-or-Object Symbol-or-Object-or-Symbol]
+ ([sym-or-sym-or-object sym-or-object-or-sym]
   (util/coerce-return
    (Symbol/notEqual
     (util/nil-or-coerce-param
-     Symbol-or-Symbol-or-Object
+     sym-or-sym-or-object
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})
     (util/nil-or-coerce-param
-     Symbol-or-Object-or-Symbol
+     sym-or-object-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn
@@ -7652,14 +7644,14 @@
 
 (defn
  pow
- ([Symbol-or-Object-or-Symbol Object-or-Symbol-or-Symbol]
+ ([sym-or-object-or-sym object-or-sym-or-sym]
   (util/coerce-return
    (Symbol/pow
     (util/nil-or-coerce-param
-     Symbol-or-Object-or-Symbol
+     sym-or-object-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})
     (util/nil-or-coerce-param
-     Object-or-Symbol-or-Symbol
+     object-or-sym-or-sym
      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
 (defn

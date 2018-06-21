@@ -26,162 +26,162 @@
 
 (defn
  div
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$div
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  div=
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$div$eq
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  >
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$greater
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  >=
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$greater$eq
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  <
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$less
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  <=
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$less$eq
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  -
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$minus
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  -=
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$minus$eq
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  %
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$percent
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  %=
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$percent$eq
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  +
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$plus
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  +=
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$plus$eq
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  *
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$times
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  *=
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$times$eq
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  **
- ([ndarray num-or-NDArray]
+ ([ndarray num-or-ndarray]
   (util/coerce-return
    (.$times$times
     ndarray
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  **=
- ([ndarray NDArray-or-num]
+ ([ndarray ndarray-or-num]
   (util/coerce-return
    (.$times$times$eq
     ndarray
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1111,14 +1111,14 @@
 
 (defn
  equal
- ([NDArray-or-NDArray NDArray-or-num]
+ ([ndarray-or-ndarray ndarray-or-num]
   (util/coerce-return
    (NDArray/equal
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1248,26 +1248,26 @@
 
 (defn
  greater
- ([NDArray-or-NDArray NDArray-or-num]
+ ([ndarray-or-ndarray ndarray-or-num]
   (util/coerce-return
    (NDArray/greater
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  greater-equal
- ([NDArray-or-NDArray num-or-NDArray]
+ ([ndarray-or-ndarray num-or-ndarray]
   (util/coerce-return
    (NDArray/greaterEqual
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn handle ([ndarray] (util/coerce-return (.handle ndarray))))
@@ -1300,26 +1300,26 @@
 
 (defn
  lesser
- ([NDArray-or-NDArray NDArray-or-num]
+ ([ndarray-or-ndarray ndarray-or-num]
   (util/coerce-return
    (NDArray/lesser
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
  lesser-equal
- ([NDArray-or-NDArray NDArray-or-num]
+ ([ndarray-or-ndarray ndarray-or-num]
   (util/coerce-return
    (NDArray/lesserEqual
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num
+     ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1501,14 +1501,14 @@
 
 (defn
  maximum
- ([num-or-NDArray-or-NDArray NDArray-or-num-or-NDArray]
+ ([num-or-ndarray-or-ndarray ndarray-or-num-or-ndarray]
   (util/coerce-return
    (NDArray/maximum
     (util/coerce-param
-     num-or-NDArray-or-NDArray
+     num-or-ndarray-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num-or-NDArray
+     ndarray-or-num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1540,14 +1540,14 @@
 
 (defn
  minimum
- ([NDArray-or-NDArray-or-num num-or-NDArray-or-NDArray]
+ ([ndarray-or-ndarray-or-num num-or-ndarray-or-ndarray]
   (util/coerce-return
    (NDArray/minimum
     (util/coerce-param
-     NDArray-or-NDArray-or-num
+     ndarray-or-ndarray-or-num
      #{"float" "org.apache.mxnet.NDArray"})
     (util/coerce-param
-     num-or-NDArray-or-NDArray
+     num-or-ndarray-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1615,14 +1615,14 @@
 
 (defn
  not-equal
- ([NDArray-or-NDArray num-or-NDArray]
+ ([ndarray-or-ndarray num-or-ndarray]
   (util/coerce-return
    (NDArray/notEqual
     (util/coerce-param
-     NDArray-or-NDArray
+     ndarray-or-ndarray
      #{"org.apache.mxnet.NDArray"})
     (util/coerce-param
-     num-or-NDArray
+     num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1636,11 +1636,11 @@
 
 (defn
  onehot-encode
- ([NDArray NDArray-1]
+ ([ndarray ndarray-1]
   (util/coerce-return
    (NDArray/onehotEncode
-    (util/coerce-param NDArray #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param NDArray-1 #{"org.apache.mxnet.NDArray"})))))
+    (util/coerce-param ndarray #{"org.apache.mxnet.NDArray"})
+    (util/coerce-param ndarray-1 #{"org.apache.mxnet.NDArray"})))))
 
 (defn
  ones-like
@@ -1694,14 +1694,14 @@
 
 (defn
  power
- ([num-or-NDArray-or-NDArray NDArray-or-num-or-NDArray]
+ ([num-or-ndarray-or-ndarray ndarray-or-num-or-ndarray]
   (util/coerce-return
    (NDArray/power
     (util/coerce-param
-     num-or-NDArray-or-NDArray
+     num-or-ndarray-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})
     (util/coerce-param
-     NDArray-or-num-or-NDArray
+     ndarray-or-num-or-ndarray
      #{"float" "org.apache.mxnet.NDArray"})))))
 
 (defn
@@ -1979,12 +1979,12 @@
 
 (defn
  set
- ([ndarray NDArray-or-num-or-vec-of-floats]
+ ([ndarray ndarray-or-num-or-vec-of-floats]
   (util/coerce-return
    (.set
     ndarray
     (util/coerce-param
-     NDArray-or-num-or-vec-of-floats
+     ndarray-or-num-or-vec-of-floats
      #{"float" "float<>" "org.apache.mxnet.NDArray"})))))
 
 (defn
