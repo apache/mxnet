@@ -40,11 +40,10 @@ void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   const mkldnn::memory *in_mem1 = &arr1;
   const mkldnn::memory *in_mem2 = &arr2;
   if (arr1.get_primitive_desc() != out.get_primitive_desc()) {
-    MKLDNNStream *stream = MKLDNNStream::Get();
     auto tmp_memory1 = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
     auto tmp_memory2 = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
-    stream->RegisterPrim(mkldnn::reorder(arr1, *tmp_memory1));
-    stream->RegisterPrim(mkldnn::reorder(arr2, *tmp_memory2));
+    mxnet::MKLDNNCopy(*in_mem1, tmp_memory1);
+    mxnet::MKLDNNCopy(*in_mem2, tmp_memory2);
     in_mem1 = tmp_memory1;
     in_mem2 = tmp_memory2;
   }
