@@ -826,9 +826,6 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
       if (out_arr.arr.IsView())
         continue;
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
-      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
-      if (out_mem == nullptr)
-        continue;
       PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
