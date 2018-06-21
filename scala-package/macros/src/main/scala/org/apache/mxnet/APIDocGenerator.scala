@@ -182,7 +182,7 @@ private[mxnet] object APIDocGenerator{
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = CToScalaUtils.argumentCleaner(argType, argName, returnType)
+      val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     new absClassFunction(aliasName, desc.value, argList.toList, returnType)

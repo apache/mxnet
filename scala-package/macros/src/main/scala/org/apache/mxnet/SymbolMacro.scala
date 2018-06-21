@@ -231,7 +231,7 @@ private[mxnet] object SymbolImplMacros {
     // scalastyle:on println
     val argList = argNames zip argTypes map { case (argName, argType) =>
         val typeAndOption =
-          CToScalaUtils.argumentCleaner(argType, argName, "org.apache.mxnet.Symbol")
+          CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
         new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new SymbolFunction(aliasName, argList.toList)
