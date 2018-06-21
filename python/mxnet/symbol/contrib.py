@@ -196,7 +196,7 @@ def foreach(body, data, init_states, name="foreach"):
     check_data(init_states, symbol.Symbol, "init_states should be a symbol or a list of symbols")
     not_state_list = isinstance(init_states, symbol.Symbol)
 
-    # TODO(zhengda) If the input python function references to the symbols outside
+    # If the input python function references to the symbols outside
     # the python function, we need to prune the computation graph constructed from
     # the function. One way of doing it is to mark the nodes in the computation graph
     # with AttrScope and prune the nodes without the special attribute.
