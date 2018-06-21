@@ -733,19 +733,16 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
                               const std::vector<NDArray *> &out_arrs) {
   int num_inputs = in_arrs.size();
   int input_size = in_arrs[0]->shape().Size();
-  std::vector<NDArray> inputs(num_inputs);
-  std::vector<mshadow::default_real_t*> data(num_inputs);
-  for (int i = 0; i < num_inputs; i++) {
-    NDArray tmp = in_arrs[i]->Reorder2Default();
-    data[i] = tmp.data().dptr<mshadow::default_real_t>();
-  }
+
   NDArray output = out_arrs[0]->Reorder2Default();
   mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
 
   EXPECT_EQ(input_size * num_inputs, output.shape().Size());
-  for (size_t i = 0; i < input_size; i++) {
-    for (int input_num = 0; i < num_inputs; i++) {
-      ASSERT_EQ(data[input_num][i], out_data[input_num * input_size + i]);
+  for (size_t input_num = 0; input_num < num_inputs; input_num++) {
+    NDArray tmp = in_arrs[input_num]->Reorder2Default();
+    for (int i = 0; i < input_size; i++) {
+      mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
+      ASSERT_EQ(data[i], out_data[input_num * input_size + i]);
     }
   }
 }
@@ -811,8 +808,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
         PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
-        for (auto output : outputs)
-          output->WaitToRead();
+        Engine::Get()->WaitForAll();
         verify_fn(inputs, outputs);
       }
     }
@@ -838,8 +834,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
       PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
-      for (auto output : outputs)
-        output->WaitToRead();
+      Engine::Get()->WaitForAll();
       std::vector<NDArray *> orig_inputs(attrs.num_inputs);
       for (int i = 0; i < attrs.num_inputs; i++)
         orig_inputs[i] = &orig.arr;
