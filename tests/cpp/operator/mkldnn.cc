@@ -898,6 +898,10 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn, bool use_concat_outputs 
     }
   }
 
+  // cannot WriteInPlace concat operation
+  if (use_concat_outputs)
+    return;
+
   for (auto dispatch : dispatches) {
     in_arrs = GetTestInputArrays();
     for (auto arr : in_arrs) {
