@@ -260,15 +260,12 @@ bool KernighanLin( const std::vector<T>&            W,
         // -1 means vertex i is in Cluster B
         if (P[i] == static_cast<int>(color)) {
           cluster_list.push_back(i);
-          //std::cout << "Number in Cluster A: " << first_partition << "\n";
-          //std::cout << "Put vertex " << i << " in Cluster " << P_temp[i] << "\n";
         } else
           P_temp[i] = 0;
       }
 
       // 1b) Shuffle using random generator
       std::shuffle(cluster_list.begin(), cluster_list.end(), gen);
-      //PrintVector("Partition permutation", cluster_list);
       for (unsigned i = 0; i < cluster_list.size(); ++i) {
         if (first_partition < target_partition) {
           int dest = cluster_list[i];
@@ -279,7 +276,6 @@ bool KernighanLin( const std::vector<T>&            W,
           P_temp[dest] = -1;
         }
       }
-      //PrintVector("Partition candidate", P_temp);
 
       // 2) Do iterations of Kernighan-Lin until convergence
       T   g_max = 0;
@@ -292,9 +288,7 @@ bool KernighanLin( const std::vector<T>&            W,
         // a) Compute difference between external and internal costs of all 
         //    elements in vector D
         gemv( W, P_temp, D );
-        //PrintVector( "D pre-ewisemult", D );
         ewisemult( P_temp, -1.f, D );
-        //PrintVector( "D post-ewisemult", D );
 
         // av and bv are used to hold candidates for moving
         // gv stores the score associated with move
@@ -310,10 +304,7 @@ bool KernighanLin( const std::vector<T>&            W,
           T   g;
           FindBestMove( W, P_temp, D, used, a, b, g );
           if (g > 0) {
-            //std::cout << "Best move found in iter " << iter;
-            //std::cout << ": " << a << " -> " << b << " : " << g << "\n";
           } else {
-            //std::cout << "No moves found in iter  " << iter << std::endl;
             g_max = 0;
             break;
           }
@@ -330,14 +321,10 @@ bool KernighanLin( const std::vector<T>&            W,
           used.insert(b);
 
           // e) Update D using P_temp
-          //PrintVector( "P_temp post-update", P_temp );
           gemv( W, P_temp, D );
-          //PrintVector( "D pre-ewisemult", D );
           ewisemult( P_temp, -1.f, D );
-          //PrintVector( "D post-ewisemult", D );
           D[a] = 0;
           D[b] = 0;
-          //PrintVector( "D post-ewisemult", D );
         }
 
         // 3) Find when to stop by doing linear scan through gv
@@ -355,7 +342,6 @@ bool KernighanLin( const std::vector<T>&            W,
         //    Otherwise, rollback changes to P_temp2
         if (g_max > 0) {
           for (int i = 0; i < g_k; i++) {
-            //std::cout << g_max << " " << g_k << " " << i << " " << av.size() << " " << bv.size() << " " << gv.size() << std::endl;
             int a      = av[i];
             int b      = bv[i];
             int temp   = P_temp2[a];
@@ -377,8 +363,6 @@ bool KernighanLin( const std::vector<T>&            W,
           moves++;
         }
       }
-      //std::cout << "New color " << num_partitions << " with " << moves;
-      //std::cout << " elements\n";
       cluster_pairs.push_back(std::make_pair<int,int>(static_cast<int>(color), 
           static_cast<int>(num_partitions)));
 
@@ -407,7 +391,6 @@ int GetChild( const std::vector<int>&        P,
               int                            color, 
               int                            parent ) {
   for (unsigned i = 0; i < P.size(); ++i) {
-    //std::cout << "Child " << i << ": " << P[i] << std::endl;
     if (P[i] == color && static_cast<int>(i) != parent)
       return i;
   }
@@ -469,10 +452,8 @@ int KLGenerateBinaryTree( std::vector<T>&                  W,
   int reset = 0;
 
   for (unsigned i = 0; i < cluster_pairs.size(); ++i) {
-    //std::cout << "Cluster pair " << i << std::endl;
     if (i==0)
       scan_row.push_back(topo_row.size());
-    //std::cout << "Pair " << i << ": " << cluster_pairs[i].first << " " << cluster_pairs[i].second << std::endl;
     int parent, child = -1;
     if (cluster_pairs[i].second==-2) {
       // Root must be color of pair.first
@@ -480,13 +461,11 @@ int KLGenerateBinaryTree( std::vector<T>&                  W,
       parent     = GetRoot( P, color, roots );
       if (parent == -1) return 1;
       child      = GetChild(P, color, parent);
-      //std::cout << "Best link (case 1): " << color << ": " << parent << " -> " << child << ": " << std::endl;
     } else if (cluster_pairs[i].second==-1) {
       int color  = cluster_pairs[i].first;
       parent     = GetRoot( P, color, roots );
       if (parent == -1) return 1;
       child      = parent;
-      //std::cout << "Best link (case 2): " << color << ": " << parent << " -> " << child << ": " << std::endl;
     } else {
       // Root must exist in either first or second element of pair
       int color  = cluster_pairs[i].first;
@@ -509,13 +488,11 @@ int KLGenerateBinaryTree( std::vector<T>&                  W,
       }
 
       if (child == -1) {
-        //std::cout << "No path to other cluster found from " << parent << " at level " << scan_row.size() << std::endl;
         new_roots.insert(parent);
 
         //child = parent;
         return 1;
       } else {
-        //std::cout << "Best link (case 3): " << parent << " -> " << child << ": " << weight << std::endl;
         new_roots.insert(parent);
         new_roots.insert(child);
       }
@@ -540,7 +517,6 @@ int KLGenerateBinaryTree( std::vector<T>&                  W,
       child = new_topo[parent];
     topo_row.push_back(parent);
     topo_row.push_back(child);
-    //std::cout << "New pair: " << parent << " " << child << " " << new_topo[parent] << std::endl;
   }
 
   cluster_pairs.clear();
@@ -581,9 +557,7 @@ bool IsValid( const std::vector<T>&   W,
     for (int j = 0; j+stride < row; j += 2*stride) {
       int from   = state[j];
       int dest   = state[j+stride];
-      //std::cout << "Comparing " << j << " and " << j+stride << " in row " << row << std::endl;
       if (W[from*num_elements + dest] == static_cast<T>(0) && from != dest) {
-        //std::cout << "Not valid: no edge from " << from << " to " << dest << " at index " << from*num_elements+dest << std::endl;
         return false;
       }
     }
@@ -602,7 +576,6 @@ bool IsValid( const std::vector<T>&   W,
         found_vec[val] = 1;
       }
     } else {
-      //std::cout << "Not valid: " << val << " exceeds # of GPUs\n";
       return false;
     }
   }
@@ -618,7 +591,6 @@ bool IsValid( const std::vector<T>&   W,
   //   -9 unique GPUs
   if (row < num_elements) {
     if (num_found > row || num_found < row - modifier) {
-      //std::cout << "Not valid: " << found.size() << " rows found but expected between " << row << " and " << row - modifier << std::endl;
       return false;
     }
 
@@ -627,7 +599,6 @@ bool IsValid( const std::vector<T>&   W,
   } else if (row == static_cast<int>(state.size())) {
     for (int i = 0; i < num_elements; ++i) {
       if (found_vec[i] == 0) {
-        //std::cout << "Not valid: " << i << " not found" << std::endl;
         return false;
       }
     }
@@ -667,19 +638,13 @@ void Postprocess( std::vector<int>& result, int num_elements, int depth) {
       int val = result[i];
       histogram[val]++;
     }
-    //PrintVector("above histo", histogram_above);
 
     for (int i = result.size()-stride; i-stride >= 0; i -= 2*stride) {
-      //std::cout << "Comparing " << i << " and " << i-stride << std::endl;
       int from = result[i];
       int dest = result[i-stride];
       if ((histogram[from] > 1 || histogram_above[from] >= 1) && from != dest) {
-        //PrintVector("Old histogram", histogram);
-        //std::cout << "Swapping from " << from << " to " << dest << " on indices " << i << " and " << i-stride << std::endl;
         result[i] = dest;
         histogram[from]--;
-        //PrintVector("New histogram", histogram);
-        //PrintVector("New result", result);
       }
     }
   }
@@ -714,17 +679,14 @@ T ComputeTreeWeight( const std::vector<T>&   W,
         if (links_used.find(from*num_elements+dest) != links_used.end() 
             && penalty) {
           weight -= 100;
-          //std::cout << "Penalty 1: " << from << " to " << dest << std::endl;
         }
         links_used.insert(from*num_elements+dest);
         links_used.insert(dest*num_elements+from);
-        //std::cout << "Not valid: no edge from " << from << " to " << dest << std::endl;
       }
 
       nodes_used[from] = true;
       if (i > 0 && nodes_used[dest] && penalty) {
         weight -= 10;
-        //std::cout << "Penalty 2: " << from << " and " <<  dest << " seen before\n";
       }
       nodes_used[dest] = true;
     }
@@ -789,11 +751,6 @@ bool RecursiveBacktrack( const std::vector<T>& W,
     if (weight > best_result_weight) {
       std::swap(best_result_weight, weight);
       best_result        = result;
-      //std::cout << "New best weight: " << best_result_weight << " > " << weight << std::endl;
-      //PrintVector("New best", result);
-    } else {
-      //std::cout << "Not best weight: " << weight << " < " << best_result_weight << std::endl;
-      //PrintVector("Not best", result);
     }
     return !optimal;
   }
@@ -802,7 +759,6 @@ bool RecursiveBacktrack( const std::vector<T>& W,
   bool stop = false;
   for (int j = 0; j < num_elements; ++j) {
     state[row] = j;
-    //PrintVector("Trying state", state);
     if (IsValid(W, state, num_elements, row+1, depth)) {
       stop = Backtrack( W, state, best_result, best_result_weight, row+1, 
           num_elements, depth, optimal );
@@ -846,7 +802,6 @@ void IterativeBacktrack( const std::vector<T>& W,
     state[row] = pos;
     // If there is a valid position push the position to stack, set current 
     // position to 0 and move to next row
-    //PrintVector("Trying state", state);
     if (IsValid(W, state, num_elements, row+1, depth)) {
       state_stack.push(pos);
       pos = 0;
@@ -860,7 +815,6 @@ void IterativeBacktrack( const std::vector<T>& W,
     // Pop stack, set current position to next position
     // Backtrack to find next solution
     if (row == static_cast<int>(state.size())) {
-      //PrintVector("state", state);
       std::vector<int> result = state;
       Postprocess(result, num_elements, depth);
       T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
@@ -869,8 +823,6 @@ void IterativeBacktrack( const std::vector<T>& W,
       if (weight > best_result_weight) {
         std::swap(best_result_weight, weight);
         best_result = result;
-        //std::cout << "New best weight: " << best_result_weight << " > " << weight << std::endl;
-        //PrintVector("New best", result);
       }
       if (!optimal) break;
       
@@ -893,11 +845,8 @@ void UpdateWeight( std::vector<T>&            W,
   for (unsigned i = 1; i < topo_row.size() - 1; i += 2) {
     unsigned parent = topo_row[i];
     unsigned child  = topo_row[i+1];
-    if (parent >= num_elements*num_elements || 
-        child >= num_elements*num_elements)
-      LOG(WARNING) << "W array out of bounds\n";
-    else if (parent != child) {
-      //std::cout << W[child*num_elements+parent] << " " << alpha << std::endl;
+    if (!(parent >= num_elements*num_elements || 
+        child >= num_elements*num_elements) && (parent != child)) {
       W[parent*num_elements+child] *= alpha;
       W[child*num_elements+parent] *= alpha;
     }
@@ -948,13 +897,6 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
     IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, true );
   else
     IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, false );
-  //result_weight = ComputeTreeWeight(W, result, num_elements, depth, false);
-  //Backtrack( W, state, result, result_weight, 1, num_elements, depth, true  );
-  //T result_weight2 = ComputeTreeWeight(W, result, num_elements, depth, false);
-  //PrintVector("result", result);
-  //std::cout << "First solution reached " << 
-  //    (result_weight2-result_weight)/result_weight2 << " of optimal " <<
-  //    result_weight << " " << result_weight2 << "\n";
   FormTopology( result, topo_row, scan_row, depth );
 }
 
@@ -1015,7 +957,6 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
 
     // Run Kernighan-Lin to generate partition
     stop = KernighanLin(W, P_temp, num_partitions_temp, cluster_pairs, gen);
-    //PrintVector("New partition", P_temp);
 
     // Use partitions found and a given root to find best inter-cluster edge for    // each pair of clusters, and returns them as roots of next cluster
     // If reset is true, then rewind back to previous clustering
@@ -1029,8 +970,7 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
 
   if (reset == 1) {
     if (!backtrack)
-      std::cout << "No valid binary tree found from root " << root << ", try backtracking\n";
-    //std::cout << "Trying backtracking\n";
+      LOG(WARNING) << "No valid binary tree found from root " << root << ", try backtracking";
     BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
     topo = topo_temp;
@@ -1084,11 +1024,12 @@ void ComputeTrees( const std::vector<T>&             W,
 
   std::vector<std::vector<size_t>> topo_temp(num_elements,
       std::vector<size_t>());
-  for (int i = 0; i < num_elements; ++i)
+
+  /*for (int i = 0; i < num_elements; ++i)
     PrintTopo("Topo", topo[i], scan[i]);
 
   PrintMatrix("W", W, num_elements, num_elements);
-  PrintMatrix("Links", adj, num_elements, num_elements);
+  PrintMatrix("Links", adj, num_elements, num_elements);*/
 }
 
 }  // namespace kvstore
