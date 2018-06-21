@@ -27,7 +27,7 @@ import time
 import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
-def get_symbol(network, batch_size):
+def get_symbol(network, batch_size, dtype):
     image_shape = (3,299,299) if network == 'inception-v3' else (3,224,224)
     num_layers = 0
     if 'resnet' in network:
@@ -39,12 +39,13 @@ def get_symbol(network, batch_size):
     net = import_module('symbols.'+network)
     sym = net.get_symbol(num_classes = 1000,
                          image_shape = ','.join([str(i) for i in image_shape]),
-                         num_layers  = num_layers)
+                         num_layers  = num_layers,
+                         dtype=dtype)
     return (sym, [('data', (batch_size,)+image_shape)])
 
-def score(network, dev, batch_size, num_batches):
+def score(network, dev, batch_size, num_batches, dtype):
     # get mod
-    sym, data_shape = get_symbol(network, batch_size)
+    sym, data_shape = get_symbol(network, batch_size, dtype)
     mod = mx.mod.Module(symbol=sym, context=dev)
     mod.bind(for_training     = False,
              inputs_need_grad = False,
@@ -52,8 +53,18 @@ def score(network, dev, batch_size, num_batches):
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
 
     # get data
-    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=dev) for _, shape in mod.data_shapes]
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=dev, dtype=dtype) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, []) # empty label
+    mod.forward(batch, is_train=False)
+    if dtype == 'float16':
+        arg_params, aux_params = mod.get_params()
+        for key in arg_params.keys():
+            val = arg_params[key]
+            arg_params[key] = mx.nd.Cast(val, dtype=dtype)
+        for key in aux_params.keys():
+            val = aux_params[key]
+            aux_params[key] = mx.nd.Cast(val, dtype=dtype)
+        mod.set_params(arg_params, aux_params)
 
     # run
     dry_run = 5                 # use 5 iterations to warm up
@@ -74,11 +85,21 @@ if __name__ == '__main__':
     devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]
+    dtypes=['float16', 'float32']
 
-    for net in networks:
-        logging.info('network: %s', net)
-        for d in devs:
-            logging.info('device: %s', d)
-            for b in batch_sizes:
-                speed = score(network=net, dev=d, batch_size=b, num_batches=10)
-                logging.info('batch size %2d, image/sec: %f', b, speed)
+    for dtype in dtypes:
+        for net in networks:
+            # AlexNet doesn't support float16
+            if net == 'alexnet' and dtype == 'float16':
+                print("alexnet doesn't support float16")
+                continue
+            logging.info('network: %s', net)
+            for d in devs:
+                if dtype == 'float16' and d == mx.cpu():
+                    print("CPU doesn't support float16")
+                    continue
+
+                logging.info('device: %s', d)
+                for b in batch_sizes:
+                    speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
+                    logging.info('batch size %2d, image/sec: %f', b, speed)
