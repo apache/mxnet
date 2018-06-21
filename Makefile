@@ -499,8 +499,8 @@ ifeq ($(USE_CPP_PACKAGE), 1)
 include cpp-package/cpp-package.mk
 endif
 
-include tests/cpp/unittest.mk
 include mkldnn.mk
+include tests/cpp/unittest.mk
 
 extra-packages: $(EXTRA_PACKAGES)
 
