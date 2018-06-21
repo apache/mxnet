@@ -28,9 +28,23 @@
 #include "./engine_impl.h"
 #include "../profiler/profiler.h"
 #include "./openmp.h"
+#include "../common/object_pool.h"
 
 namespace mxnet {
 namespace engine {
+
+/*!
+ * \brief var used in Naive Engine for tracking the version
+ * of the objects it is associated with.
+ */
+class NaiveVar final
+    : public Var, public common::ObjectPoolAllocatable<NaiveVar> {
+ public:
+  inline static NaiveVar* CastFromBase(Var* ptr) {
+    return ptr->Cast<NaiveVar>();
+  }
+};  // class NaiveVar
+
 
 // implement naive engine
 class NaiveEngine final : public Engine {
@@ -71,8 +85,11 @@ class NaiveEngine final : public Engine {
 
   // new variables
   VarHandle NewVariable() override {
+    return NaiveVar::New();
+#if 0
     size_t v = ++counter_;
     return reinterpret_cast<VarHandle>(v);
+#endif
   }
 
   OprHandle NewOperator(AsyncFn fn,
@@ -165,14 +182,26 @@ class NaiveEngine final : public Engine {
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
+    // increment var version
+    for (auto var : mutable_vars) {
+      ++var->version_;
+    }
     if (profiling) {
       opr->opr_profile->stop();
     }
   }
 
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override {
+    NaiveVar* naive_var = NaiveVar::CastFromBase(var);
+    this->PushAsync([delete_fn, naive_var](RunContext ctx, CallbackOnComplete on_complete) mutable {
+        delete_fn(ctx);
+        NaiveVar::Delete(naive_var);
+        on_complete();
+      }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0, "DeleteVariable");
+#if 0
     this->PushSync(delete_fn, exec_ctx, {}, {var},
                    FnProperty::kNormal, 0, "DeleteVariable");
+#endif
   }
 
   void WaitForVar(VarHandle var) override {
@@ -192,8 +221,6 @@ class NaiveEngine final : public Engine {
   }
   // whether action is completed
   bool req_completed_;
-  // counter
-  std::atomic<size_t> counter_{0};
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream

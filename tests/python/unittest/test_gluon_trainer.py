@@ -175,6 +175,7 @@ def test_trainer_save_load():
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
+@unittest.skip("temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11353")
 @with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):

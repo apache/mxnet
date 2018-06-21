@@ -39,6 +39,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../engine/engine_impl.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -1973,6 +1974,7 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
           << "less than the size of first dimension and in ascending order";
   CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
+
 
 #if MXNET_PREDICT_ONLY == 0
 // register API function
