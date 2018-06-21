@@ -33,8 +33,12 @@
 namespace mxnet {
 namespace engine {
 
+#if 0
 /*! \brief base class of engine variables, used for type checking */
 struct Var {
+  virtual uint32_t version() {
+    return version_;
+  }
 #if ENGINE_DEBUG
   virtual ~Var() = default;
 #endif  // ENGINE_DEBUG
@@ -45,7 +49,13 @@ struct Var {
    */
   template <typename T>
   inline T* Cast();
+  /*!
+   * \brief version number of the var. Every time the object it is associated with
+   * is modified, the version number is incremented by 1.
+   */
+  uint32_t version_{0};
 };  // struct Var
+#endif
 
 /*! \brief base class of engine operators, used for type checking */
 struct Opr {
