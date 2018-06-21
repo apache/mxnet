@@ -922,7 +922,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
-      auto in_mem2 = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
       orig_output.WaitToRead();
       PrintVerifyMsg(in_arr, out_arr);
