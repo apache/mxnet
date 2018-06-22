@@ -409,12 +409,7 @@ void ShapeCompute<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-  const TShape& in_shape = in_data.shape_;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    mxnet_op::Kernel<mshadow_op::identity_with_cast, cpu>::Launch(
-      s, in_data.ndim(), out_data.dptr<DType>(), in_shape.data());
-  });
+  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * sizeof(index_t));
 }
 
 NNVM_REGISTER_OP(shape_array)
@@ -422,7 +417,7 @@ NNVM_REGISTER_OP(shape_array)
 
 Example::
 
-  shape_nd([[1,2,3,4], [5,6,7,8]]) = [2,4]
+  shape_array([[1,2,3,4], [5,6,7,8]]) = [2,4]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -463,9 +458,7 @@ void SizeCompute<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-  mxnet_op::Kernel<mshadow_op::size_kernel, cpu>::Launch(
-    s, 1U, out_data.dptr<int64_t>(), in_data.Size());
+  out_data[0] = int64_t(in_data.Size());
 }
 
 NNVM_REGISTER_OP(size_array)
@@ -473,7 +466,7 @@ NNVM_REGISTER_OP(size_array)
 
 Example::
 
-  size_nd([[1,2,3,4], [5,6,7,8]]) = [8]
+  size_array([[1,2,3,4], [5,6,7,8]]) = [8]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

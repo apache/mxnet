@@ -97,21 +97,6 @@ struct identity_with_cast {
   }
 };
 
-struct shape_kernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, mshadow::Shape<10> shape, uint32_t ndims) {
-    if (i < static_cast<int>(ndims)) {
-      out[i] = shape[i];
-    }
-  }
-};
-
-struct size_kernel {
-  MSHADOW_XINLINE static void Map(int i, int64_t *out, uint32_t in) {
-    out[0] = int64_t(in);
-  }
-};
-
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
