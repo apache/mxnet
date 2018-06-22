@@ -653,7 +653,7 @@ class CommDevice : public Comm {
           }
           on_complete();
         }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
-      FnProperty::kNormal, priority, "KVStoreSparseRetain");
+      FnProperty::kCopyFromGPU, priority, "KVStoreSparseRetain");
       CopyFromTo(retained_gpu, out, priority);
     }
   }

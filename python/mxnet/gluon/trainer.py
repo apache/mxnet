@@ -69,7 +69,8 @@ class Trainer(object):
                 "got %s."%(type(params)))
         self._params = []
         # parameters to initialize on the kvstore
-        self._contains_sparse = False
+        self._contains_sparse_weight = False
+        self._contains_sparse_grad = False
         self._param2idx = {}
         for i, param in enumerate(params):
             if not isinstance(param, Parameter):
@@ -80,7 +81,9 @@ class Trainer(object):
             self._params.append(param)
             param._set_trainer(self)
             if param._stype != 'default':
-                self._contains_sparse = True
+                self._contains_sparse_weight = True
+            if param._grad_stype != 'default':
+                self._contains_sparse_grad = True
         self._compression_params = compression_params
         optimizer_params = optimizer_params if optimizer_params else {}
         self._scale = float(optimizer_params.get('rescale_grad', 1.0))
@@ -153,13 +156,31 @@ class Trainer(object):
     def _init_kvstore(self):
         """Create kvstore."""
         config = self._kvstore_params
-        if self._contains_sparse:
-            kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
-            # update_on_kvstore is set to False by the user
+        # if weight is sparse, the weight must be updated on KVStore.
+        # training loop contains:
+        #    - row_sparse_pull(sparse_weight)
+        #    - forward()
+        #    - backward()
+        #    - push(sparse_grad), push(dense_grad)
+        #    - pull(dense_weight)
+        if self._contains_sparse_weight:
+            kvstore = _create_sparse_kvstore(config['kvstore'], len(self._contexts))
+            update_on_kvstore = True
+            # raise Error if update_on_kvstore is set to False by the user
             if config['update_on_kvstore'] is False:
-                raise RuntimeError("Cannot set update_on_kvstore to False when sparse "
-                                   "gradients and/or sparse weights are present for "
-                                   "Parameter '%s'."%param.name)
+                raise RuntimeError("Cannot set update_on_kvstore to False when sparse weights "
+                                   "are present.")
+        # if weight is dense and grad is sparse, the weight better not be updated on KVStore.
+        # training loop contains:
+        #    - forward()
+        #    - backward()
+        #    - push(grad)
+        #    - pull(grad)
+        #    - update(grad, weight)
+        elif self._contains_sparse_grad:
+            kvstore = _create_sparse_kvstore(config['kvstore'], len(self._contexts))
+            update_on_kvstore = False
+        # normal case
         else:
             arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
@@ -169,9 +190,12 @@ class Trainer(object):
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
-            # kv.pull(row_sparse_grad) is not supported
-            if 'dist' in kvstore.type and not self._contains_sparse:
-                update_on_kvstore = False
+            if 'dist' in kvstore.type:
+                # kv.pull(row_sparse_grad) is not supported for dist kvstore
+                if self._contains_sparse_weight or self._contains_sparse_grad:
+                    update_on_kvstore = True
+                else:
+                    update_on_kvstore = False
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
@@ -272,7 +296,7 @@ class Trainer(object):
                     self._kvstore.push(i, param.list_grad(), priority=-i)
 
                     if not self._update_on_kvstore:
-                        self._kvstore.pull(i, param.list_grad(), priority=-i)
+                        self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=False)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.
@@ -327,7 +351,7 @@ class Trainer(object):
             if self._kvstore and self._update_on_kvstore:
                 if param._stype == 'default':
                     # 'row_sparse' parameters are not pulled immediately - they're pulled
-                    # in `SparseBlock.sparse_forward`
+                    # in `Block.forward`
                     self._kvstore.pull(i, param.list_data(), priority=-i)
                 continue
 
