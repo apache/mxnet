@@ -151,6 +151,7 @@ def default_mp_batchify_fn(data):
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
+    dataset._fork()
     while True:
         idx, samples = key_queue.get()
         if idx is None:
