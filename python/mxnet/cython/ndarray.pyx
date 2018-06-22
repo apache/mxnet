@@ -106,34 +106,11 @@ cdef class CachedOp:
         cdef vector[const char*] c_flag_keys = SVec2Ptr(s_flag_keys)
         cdef vector[const char*] c_flag_vals = SVec2Ptr(s_flag_vals)
 
-        cdef vector[string] s_param_names
-        cdef vector[NDArrayHandle] param_arrays
-        if inputs is None:
-            assert params is None, "When inputs is None params must also be None."
-            inputs = sym.list_inputs()
-        elif params is not None:
-            for name, arrs in params.items():
-                c_name = c_str(name)
-                for a in arrs:
-                    param_arrays.push_back((<NDArrayBase>a).chandle)
-                    s_param_names.push_back(c_name)
-        cdef vector[const char*] param_names = SVec2Ptr(s_param_names)
-
-        cdef vector[string] s_inputs
-        for i in inputs:
-            s_inputs.push_back(c_str(i))
-        cdef vector[const char*] c_inputs = SVec2Ptr(s_inputs)
-
         CALL(MXCreateCachedOpEx(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
             len(flags),
             CBeginPtr(c_flag_keys),
             CBeginPtr(c_flag_vals),
-            len(inputs),
-            CBeginPtr(c_inputs),
-            len(param_names),
-            CBeginPtr(param_names),
-            &param_arrays[0] if param_arrays.size() != 0 else NULL,
             &self.chandle))
 
     def __del__(self):
