@@ -24,7 +24,6 @@
  * \author Bing Xu
 */
 
-#include <mkldnn_types.h>
 #include "./concat-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
