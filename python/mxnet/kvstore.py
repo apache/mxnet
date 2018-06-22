@@ -263,7 +263,7 @@ class KVStore(object):
             Higher priority pull operations are likely to be executed before
             other pull actions.
 
-        ignore_sparse: bool, optional
+        ignore_sparse: bool, optional, default True
             Whether to ignore sparse arrays in the request.
 
         Examples
