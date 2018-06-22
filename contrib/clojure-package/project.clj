@@ -20,8 +20,8 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [t6/from-scala "0.3.0"]
                  ;; Choose the right dependency for your system
-                 [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]
-                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]
+                 ;[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]
+                 [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]
