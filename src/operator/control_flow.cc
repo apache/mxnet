@@ -36,8 +36,12 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_args;
   int num_outputs;
   int num_out_data;
+  // The location of states in the subgraph inputs.
   nnvm::Tuple<dim_t> in_state_locs;
+  // The location of data arrays in the subgraph inputs.
   nnvm::Tuple<dim_t> in_data_locs;
+  // The location of remaining arrays in the subgraph inputs.
+  nnvm::Tuple<dim_t> remain_locs;
   DMLC_DECLARE_PARAMETER(ForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
@@ -49,6 +53,8 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
     .describe("The locations of loop states among the inputs.");
     DMLC_DECLARE_FIELD(in_data_locs)
     .describe("The locations of input data among the inputs.");
+    DMLC_DECLARE_FIELD(remain_locs)
+    .describe("The locations of remaining data among the inputs.");
   }
 };  // struct ForeachParam
 
@@ -73,12 +79,9 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   const size_t iter_dim = 0;
   CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
   CHECK_GT(params.in_data_locs.ndim(), 0);
-  size_t loc0 = params.in_data_locs[0];
-  size_t len = inputs[loc0].shape()[iter_dim];
-  for (size_t i = 1; i < params.in_data_locs.ndim(); i++) {
-    size_t loc = params.in_data_locs[i];
-    CHECK_EQ(inputs[loc].shape()[iter_dim], len);
-  }
+  size_t len = inputs[0].shape()[iter_dim];
+  for (size_t i = 1; i < params.in_data_locs.ndim(); i++)
+    CHECK_EQ(inputs[i].shape()[iter_dim], len);
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
     CHECK_EQ(len, outputs[i].shape()[iter_dim]);
   for (const auto &arr : outputs)
@@ -112,12 +115,13 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
 
   // Initialize the inputs for the subgraph.
   // In each iteration, we need to update the subgraph inputs for input data
-  // and the loop states. This initialization helps to get the read-only
-  // arrays in the loop.
+  // and the loop states.
   std::vector<NDArray> subg_inputs(inputs.size());
-  for (size_t i = 0; i < inputs.size(); i++) {
-    // These are the initial states.
-    subg_inputs[i] = inputs[i];
+  // The remaining arrays (other than input data and states) only need to be set once.
+  for (size_t j = 0; j < params.remain_locs.ndim(); j++) {
+    CHECK_LT(params.remain_locs[j], subg_inputs.size());
+    subg_inputs[params.remain_locs[j]] = inputs[j + params.in_data_locs.ndim()
+        + params.in_state_locs.ndim()];
   }
 
   // Here we iterate over the first dimension of the first input array.
@@ -144,15 +148,20 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
     // Get a slice from the input data arrays.
     for (size_t j = 0; j < params.in_data_locs.ndim(); j++) {
       size_t loc = params.in_data_locs[j];
-      subg_inputs[loc] = inputs[loc].At(i);
+      subg_inputs[loc] = inputs[j].At(i);
     }
-    // For the rest of the iterations, the rest of the arguments are the outputs
+    // For the rest of the iterations, the states are the outputs
     // from the previous iteration.
     if (i > 0) {
       for (size_t j = params.num_out_data; j < subg_out_prev->size(); j++) {
         size_t idx = j - params.num_out_data;
         CHECK_LT(params.in_state_locs[idx], subg_inputs.size());
         subg_inputs[params.in_state_locs[idx]] = (*subg_out_prev)[j];
+      }
+    } else {
+      for (size_t j = 0; j < params.in_state_locs.ndim(); j++) {
+        CHECK_LT(params.in_state_locs[j], subg_inputs.size());
+        subg_inputs[params.in_state_locs[j]] = inputs[j + params.in_data_locs.ndim()];
       }
     }
 
@@ -173,69 +182,84 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
     CHECK_EQ(arr.storage_type(), kDefaultStorage)
         << "The for operator doesn't support the sparse format";
   size_t iter_dim = 0;
-  std::unordered_set<size_t> in_data_locs(params.in_data_locs.begin(),
-                                          params.in_data_locs.end());
-  std::unordered_set<size_t> in_state_locs(params.in_state_locs.begin(),
-                                           params.in_state_locs.end());
   // The inputs contain out gradients, inputs and outputs.
   int len = inputs[0].shape()[iter_dim];
   size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
-  std::vector<NDArray> ograds(params.num_outputs);
-  std::vector<NDArray> igrads(outputs.size());
-  for (size_t i = num_output_data; i < ograds.size(); i++)
-    ograds[i] = inputs[i];
-  std::vector<OpReqType> iter_req(req.size());
+  std::vector<NDArray> subg_ograds(params.num_outputs);
+  std::vector<NDArray> subg_igrads = outputs;
+  for (size_t i = num_output_data; i < subg_ograds.size(); i++)
+    subg_ograds[i] = inputs[i];
+  std::vector<OpReqType> subg_req;
   for (auto r : req)
     CHECK_NE(r, kWriteInplace);
+
+  // There are three types of arrays in igrads.
+  // * data gradients.
+  // * loop variable gradients.
+  // * remaining variable gradients.
+  // They are in the following order:
+  // [data vars], [loop vars], [remaining vars]
+
+  // [remaining vars]
+  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+    size_t loc = params.remain_locs[i];
+    subg_igrads[loc] = outputs[i + params.in_data_locs.ndim() + params.in_state_locs.ndim()];
+  }
+
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
     for (int i = 0; i < params.num_out_data; i++)
-      ograds[i] = inputs[i].At(iter_num);
-
-    // There are three types of arrays in igrads.
-    // * data gradients.
-    // * loop variable gradients.
-    // * read-only variable gradients.
-    // These are the input data gradients.
-    for (size_t i = 0; i < igrads.size(); i++) {
-      // data gradients.
-      if (in_data_locs.count(i)) {
-        igrads[i] = outputs[i].At(iter_num);
-        iter_req[i] = req[i];
-        continue;
-      }
-
-      bool in_state = in_state_locs.count(i);
-      if (iter_num != 0 && in_state) {
-        // For state gradients, we need to allocate new NDArrays
-        // because intermediate state gradients won't be returned to the users.
-        igrads[i] = NDArray(outputs[i].shape(), outputs[i].ctx(),
-                            true, outputs[i].dtype());
-      } else {
-        igrads[i] = outputs[i];
-      }
-      if (in_state)
-        // For the first iteration, we need to use the request provided by
-        // the user to write state gradients to the outputs.
-        iter_req[i] = iter_num != 0 ? kWriteTo : req[i];
-      else
-        // For all read-only variable gradients, we need to use the request
-        // provided by the user in the last iteration and later on add gradients
-        // to the output arrays.
-        iter_req[i] = iter_num == len - 1 ? req[i]: kAddTo;
+      subg_ograds[i] = inputs[i].At(iter_num);
+    if (iter_num == len - 1) {
+      subg_req = req;
+    } else {
+      subg_req.clear();
+      subg_req.resize(req.size(), kAddTo);
     }
 
-    state.Backward(iter_num, ograds, iter_req, igrads);
+    // [data vars]
+    for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+      size_t loc = params.in_data_locs[i];
+      subg_igrads[loc] = outputs[i].At(iter_num);
+      subg_req[loc] = req[i];
+    }
+    // [loop vars]
+    for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+      size_t loc = params.in_state_locs[i];
+      const NDArray &output = outputs[i + params.in_data_locs.ndim()];
+      if (iter_num != 0) {
+        // For state gradients, we need to allocate new NDArrays
+        // because intermediate state gradients won't be returned to the users.
+        subg_igrads[loc] = NDArray(output.shape(), output.ctx(), true, output.dtype());
+      } else {
+        subg_igrads[loc] = output;
+      }
+      // For the first iteration, we need to use the request provided by
+      // the user to write state gradients to the outputs.
+      subg_req[loc] = iter_num != 0 ? kWriteTo : req[i + params.in_data_locs.ndim()];
+    }
 
-    size_t num_states = ograds.size() - num_output_data;
+    state.Backward(iter_num, subg_ograds, subg_req, subg_igrads);
+
+    size_t num_states = subg_ograds.size() - num_output_data;
     for (size_t i = 0; i < num_states; i++) {
       size_t loc = params.in_state_locs[i];
-      CHECK_LT(loc, igrads.size());
-      ograds[i + num_output_data] = igrads[loc];
+      CHECK_LT(loc, subg_igrads.size());
+      subg_ograds[i + num_output_data] = subg_igrads[loc];
     }
   }
   state.Cleanup();
+}
+
+template<typename T>
+static void remap(const std::vector<T> &op_in, size_t start,
+                  const nnvm::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
+  auto op_in_it = op_in.begin() + start;
+  for (size_t i = 0; i < locs.ndim(); i++) {
+    dim_t loc = locs[i];
+    subg_in->at(loc) = *(op_in_it + i);
+  }
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
@@ -244,73 +268,92 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  nnvm::Graph g;
-  g.outputs = attrs.subgraphs[0]->outputs;
-  const auto& idx = g.indexed_graph();
-  CHECK_EQ(idx.input_nodes().size(), in_shape->size());
-  CHECK_EQ(idx.outputs().size(), out_shape->size());
 
-  // Put the input and output shapes to the shape vector.
-  nnvm::ShapeVector shapes(idx.num_node_entries());
-  const auto &input_nids = idx.input_nodes();
-  CHECK_EQ(input_nids.size(), in_shape->size());
-  for (size_t i = 0; i < in_shape->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    shapes[eid] = in_shape->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_shape->size());
-  for (size_t i = 0; i < out_shape->size(); i++) {
-    auto eid = idx.entry_id(g.outputs[i]);
-    shapes[eid] = out_shape->at(i);
-  }
-  // foreach iterates over the first input NDArray over the first dimension.
-  size_t loc0 = params.in_data_locs[0];
-  size_t len = in_shape->at(loc0)[0];
+  std::vector<TShape> subg_in_shape(in_shape->size());
+  // data shape
   for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
-    auto eid = idx.entry_id(input_nids[loc], 0);
-    CHECK_EQ(len, in_shape->at(loc)[0]);
-    shapes[eid] = TShape(in_shape->at(loc).begin() + 1, in_shape->at(loc).end());
+    subg_in_shape[loc] = TShape(in_shape->at(i).begin() + 1, in_shape->at(i).end());
+  }
+  // state shape
+  remap(*in_shape, params.in_data_locs.ndim(), params.in_state_locs,
+        &subg_in_shape);
+  // remaining shape
+  remap(*in_shape, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs, &subg_in_shape);
+
+  std::vector<TShape> subg_out_shape = *out_shape;
+  for (int i = 0; i < params.num_out_data; i++) {
+    TShape shape = subg_out_shape[i];
+    // If we don't have shape info, we don't need to do anything.
+    if (shape.ndim() == 0)
+      continue;
+    subg_out_shape[i] = TShape(shape.begin() + 1, shape.end());
   }
 
-  // Infer shape of the graph.
-  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
-  g = exec::InferShape(std::move(g));
+  bool infer_success = InferSubgraphShape(*attrs.subgraphs[0],
+                                          &subg_in_shape, &subg_out_shape);
 
-  const auto& shapes1 = g.GetAttr<nnvm::ShapeVector>("shape");
-  // Inferring the shape in the subgraph may infer the shape of the inputs.
-  // We need to copy the inferred input shapes back.
-  CHECK_EQ(input_nids.size(), in_shape->size());
-  for (size_t i = 0; i < in_shape->size(); i++) {
-    auto eid = idx.entry_id(input_nids[i], 0);
-    // If the input shape is none, we should update them.
-    if ((*in_shape)[i].ndim() == 0 || (*in_shape)[i].Size() == 0)
-      SHAPE_ASSIGN_CHECK(*in_shape, i, shapes1[eid]);
-  }
+  // After inference, we need to move inferred information back to in_shape and
+  // out_shape.
 
   // For the shape of output data.
+  size_t len = in_shape->at(0)[0];
+  CHECK_GT(len, 0);
   for (int i = 0; i < params.num_out_data; i++) {
-    uint32_t eid = idx.entry_id(g.outputs[i]);
-    const auto& g_out_shape = shapes1[eid];
+    // If the output shape isn't inferred, we don't need to propogate the info.
+    const auto& g_out_shape = subg_out_shape[i];
+    if (g_out_shape.ndim() == 0)
+      continue;
+
     auto out = TShape(g_out_shape.ndim() + 1);
     out[0] = len;
     for (size_t i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
     SHAPE_ASSIGN_CHECK(*out_shape, i, out);
   }
+  // For the shape of output states.
+  for (size_t i = params.num_out_data; i < subg_out_shape.size(); i++)
+    SHAPE_ASSIGN_CHECK(*out_shape, i, subg_out_shape[i]);
 
-  // For the remaining shapes.
-  for (size_t i = params.num_out_data; i < g.outputs.size(); i++) {
-    uint32_t eid = idx.entry_id(g.outputs[i]);
-    SHAPE_ASSIGN_CHECK(*out_shape, i, shapes1[eid]);
+  // For the shape of input data.
+  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    const auto &shape = subg_in_shape[loc];
+    // If the input data shape isn't inferred, we don't need to propogate the
+    // info.
+    if (shape.ndim() == 0)
+      continue;
+
+    auto in = TShape(shape.ndim() + 1);
+    in[0] = len;
+    for (size_t i = 1; i < in.ndim(); i++)
+      in[i] = shape[i - 1];
+    SHAPE_ASSIGN_CHECK(*in_shape, i, in);
   }
-  size_t num_states = g.outputs.size() - params.num_out_data;
-  for (size_t i = 0; i < num_states; i++) {
+  // For the shape of state.
+  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
-    CHECK((*out_shape)[i + params.num_out_data] == (*in_shape)[loc]);
+    SHAPE_ASSIGN_CHECK(*in_shape, i + params.in_data_locs.ndim(),
+                       subg_in_shape[loc]);
+  }
+  // For the shape of remaining data.
+  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+    size_t loc = params.remain_locs[i];
+    SHAPE_ASSIGN_CHECK(*in_shape,
+                       i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+                       subg_in_shape[loc]);
+  }
+
+  if (infer_success) {
+    size_t num_states = out_shape->size() - params.num_out_data;
+    for (size_t i = 0; i < num_states; i++) {
+      CHECK_EQ((*out_shape)[i + params.num_out_data],
+               (*in_shape)[i + params.in_data_locs.ndim()]);
+    }
   }
   // Check if we have inferred the shapes correctly.
-  return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
+  return infer_success;
 }
 
 static bool ForeachType(const nnvm::NodeAttrs& attrs,
@@ -318,7 +361,26 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  return InferSubgraphDataType(*attrs.subgraphs[0], in_type, out_type);
+  std::vector<int> subg_in_type(in_type->size(), 0);
+  remap(*in_type, 0, params.in_data_locs, &subg_in_type);
+  remap(*in_type, params.in_data_locs.ndim(), params.in_state_locs, &subg_in_type);
+  remap(*in_type, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs, &subg_in_type);
+  bool success = InferSubgraphDataType(*attrs.subgraphs[0], &subg_in_type, out_type);
+  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    TYPE_ASSIGN_CHECK(*in_type, i, subg_in_type[loc]);
+  }
+  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+    size_t loc = params.in_state_locs[i];
+    TYPE_ASSIGN_CHECK(*in_type, i + params.in_data_locs.ndim(), subg_in_type[loc]);
+  }
+  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+    size_t loc = params.remain_locs[i];
+    TYPE_ASSIGN_CHECK(*in_type, i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+                      subg_in_type[loc]);
+  }
+  return success;
 }
 
 static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
@@ -329,8 +391,29 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
-  return InferSubgraphStorage(*attrs.subgraphs[0], dev_mask,
-                              dispatch_mode, in_attrs, out_attrs);
+  std::vector<int> subg_in_attrs(in_attrs->size(), kUndefinedStorage);
+  remap(*in_attrs, 0, params.in_data_locs, &subg_in_attrs);
+  remap(*in_attrs, params.in_data_locs.ndim(), params.in_state_locs, &subg_in_attrs);
+  remap(*in_attrs, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs, &subg_in_attrs);
+  bool success = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask,
+                                      dispatch_mode, &subg_in_attrs, out_attrs);
+  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    size_t loc = params.in_data_locs[i];
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, subg_in_attrs[loc]);
+  }
+  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+    size_t loc = params.in_state_locs[i];
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i + params.in_data_locs.ndim(),
+                              subg_in_attrs[loc]);
+  }
+  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+    size_t loc = params.remain_locs[i];
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs,
+                              i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+                              subg_in_attrs[loc]);
+  }
+  return success;
 }
 
 static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
@@ -340,11 +423,24 @@ static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
                                        std::vector<int> *out_attrs) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_args - 1);
+  CHECK_EQ(in_attrs->size(), (size_t) params.num_args - 1 + params.num_outputs * 2);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
   CachedOp op(*attrs.subgraphs[0],
               std::vector<std::pair<std::string, std::string> >());
+  // map the operator inputs to the subgraph inputs.
+  std::vector<int> subg_forward_ins(params.num_args - 1, kUndefinedStorage);
+  remap(*in_attrs, params.num_outputs, params.in_data_locs, &subg_forward_ins);
+  remap(*in_attrs, params.num_outputs + params.in_data_locs.ndim(),
+        params.in_state_locs, &subg_forward_ins);
+  remap(*in_attrs, params.num_outputs + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
+        params.remain_locs, &subg_forward_ins);
+
+  // Copy backward input storage to backward subgraph input storage.
+  std::vector<int> subg_in_attrs = *in_attrs;
+  for (size_t i = 0; i < subg_forward_ins.size(); i++)
+    subg_in_attrs[i + params.num_outputs] = subg_forward_ins[i];
   return op.BackwardStorageType(attrs, dev_mask, dispatch_mode,
-                                in_attrs, out_attrs);
+                                &subg_in_attrs, out_attrs);
 }
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,

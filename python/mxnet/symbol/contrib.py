@@ -254,32 +254,42 @@ def foreach(body, data, init_states, name="foreach"):
     cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
     cut_var_names = cut_var_map.keys()
 
-    ordered_ins = []
-    in_state_locs = []
+    subg_input_names = g.list_inputs()
+    # ordered_ins contains input symbols in the following order:
+    # data_syms, state_syms, followed by cut_vars and vars in the closure.
+    ordered_ins = data_syms
+    ordered_ins.extend(init_states)
+
+    # this defines the location of data_syms in the list of subgraph inputs
     in_data_locs = []
-    for in_name in g.list_inputs():
+    for name in data_names:
+        in_data_locs.append(subg_input_names.index(name))
+
+    # this defines the location of state_syms in the list of subgraph inputs.
+    in_state_locs = []
+    for name in state_names:
+        in_state_locs.append(subg_input_names.index(name))
+
+    remain_locs = []
+    for in_name in subg_input_names:
         assert in_name in gin_names, "The input variable %s can't be found in graph inputs: %s" \
                 % (in_name, str(gin_names))
-        if in_name in state_names:
-            ordered_ins.append(states_map[in_name])
-            in_state_locs.append(len(ordered_ins) - 1)
-        elif in_name in data_names:
-            ordered_ins.append(data_map[in_name])
-            in_data_locs.append(len(ordered_ins) - 1)
-        elif in_name in cut_var_names:
+        if in_name in cut_var_names:
             ordered_ins.append(cut_var_map[in_name])
-        else:
+            remain_locs.append(subg_input_names.index(in_name))
+        elif in_name not in data_names and in_name not in state_names:
             # The remaining inputs are the variable nodes created inside the UDF.
             # The subgraph can't have nodes shared with the main graph. As such,
             # we need to make a copy of these variable nodes.
             assert in_name in gin_names
             ordered_ins.append(copy.deepcopy(input_syms[in_name]))
+            remain_locs.append(subg_input_names.index(in_name))
 
     num_outputs = len(flat_out)
     num_states = len(state_names)
     ret = symbol._internal._foreach(g, *ordered_ins, num_outputs=num_outputs,
                                     num_out_data=num_out_data, in_state_locs=in_state_locs,
-                                    in_data_locs=in_data_locs)
+                                    in_data_locs=in_data_locs, remain_locs=remain_locs)
     if num_outputs - num_states > 1:
         outs = []
         for i in range(num_outputs - num_states):
