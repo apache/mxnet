@@ -454,11 +454,8 @@ OpAttrs GetConcatOp(int num_args, int dim) {
 OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Concat");
-
-  // input/output are switched because we reversed in TestOp
-  attrs.num_inputs = num_args;
-  attrs.num_outputs = 1;
-
+  attrs.num_inputs = 1;
+  attrs.num_outputs = num_args;
   attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
   attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
@@ -831,7 +828,7 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
 
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
-  // out_arrs is smaller arrays that form larger in_arr
+  // in_arrs is larger array, out_arr is ammler
   int num_inputs = out_arrs.size();
   int input_size = out_arrs[0]->shape().Size();
   TShape input_shape = out_arrs[0]->shape();
@@ -888,13 +885,15 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (use_concat_inputs) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_inputs, dim);
+    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
 
   for (int ai = 0; ai < in_arrs.size(); ai++) {
     auto in_arr = in_arrs[ai];
     for (auto dispatch : dispatches) {
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+
+      // used scaled up version for outputs
       if (use_concat_outputs) {
         std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
         int dim = std::stoi(str_dim);
@@ -903,14 +902,14 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, true);
       }
 
+      // used scaled down version for outputs
       if (use_concat_inputs) {
         std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
         int dim = std::stoi(str_dim);
         if (dim >= in_arr.arr.shape().ndim())
           continue;
-        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_inputs), dim, true);
+        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_outputs), dim, true);
       }
-
 
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
