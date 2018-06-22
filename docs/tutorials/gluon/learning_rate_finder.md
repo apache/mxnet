@@ -3,7 +3,7 @@
 
 Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. Set the learning too low and you could be twiddling your thumbs for quite some time as the parameters update very slowly. Set it too high and the updates will skip over optimal solutions, or worse the optimizer might not converge at all!
 
-Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We take a look at the central idea of the paper, cyclical learning rate schedules, in the tutorial found here, but in this tutorial we implement a 'Learning Rate Finder' in MXNet with the Gluon API that you can use while training your own networks.
+Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We take a look at the central idea of the paper, cyclical learning rate schedules, in the tutorial called 'Advanced Learning Rate Schedules', but in this tutorial we implement a 'Learning Rate Finder' in MXNet with the Gluon API that you can use while training your own networks.
 
 ## Simple Idea
 
@@ -17,11 +17,11 @@ We then analyse the results by plotting a graph of the learning rate against the
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_finder/finder_plot.png) <!--notebook-skip-line-->
 
-As expected, for very small learning rates we don't see much change in the loss as the paramater updates are negligible. At a learning rate of 0.001 we start to see the loss fall. Setting the initial learning rate here is reasonable, but we still have the potential to learn faster. We observe a drop in the loss up until 0.1 where the loss appears to diverge. We want to set the initial learning rate as high as possible before the loss becomes unstable, so we choose a learning rate of 0.05.
+As expected, for very small learning rates we don't see much change in the loss as the parameter updates are negligible. At a learning rate of 0.001, we start to see the loss fall. Setting the initial learning rate here is reasonable, but we still have the potential to learn faster. We observe a drop in the loss up until 0.1 where the loss appears to diverge. We want to set the initial learning rate as high as possible before the loss becomes unstable, so we choose a learning rate of 0.05.
 
 ## Epoch to Iteration
 
-Usually our unit of work is an epoch (a full pass through the dataset) and the learning rate would typically be held constant throughout the epoch. With the Learning Rate Finder (and cyclical learning rate schedules) we are required to vary the learning rate every iteration. As such we structure our training code so that a single iteration can be run with a given learning rate. You can implement Learner as you wish. Just initialize the network, define the loss and trainer in `__init__` and keep your training logic for a single batch in `iteration`.
+Usually, our unit of work is an epoch (a full pass through the dataset) and the learning rate would typically be held constant throughout the epoch. With the Learning Rate Finder (and cyclical learning rate schedules) we are required to vary the learning rate every iteration. As such we structure our training code so that a single iteration can be run with a given learning rate. You can implement Learner as you wish. Just initialize the network, define the loss and trainer in `__init__` and keep your training logic for a single batch in `iteration`.
 
 
 ```python
@@ -43,7 +43,7 @@ class Learner():
         # So we don't need to be in `for batch in data_loader` scope
         # and can call for next batch in `iteration`
         self.data_loader_iter = iter(self.data_loader)
-        self.net.collect_params().initialize(mx.init.Xavier(), ctx=self.ctx)
+        self.net.initialize(mx.init.Xavier(), ctx=self.ctx)
         self.loss_fn = mx.gluon.loss.SoftmaxCrossEntropyLoss()
         self.trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .001})
         
@@ -141,7 +141,8 @@ class LRFinder():
         if not self.learner.trainer._kv_initialized:
             self.learner.trainer._init_kvstore()
         # Store params and optimizer state for restore after lr_finder procedure
-        self.learner.net.save_params("lr_finder.params")
+        # Useful for applying the method partway through training, not just for initialization of lr.
+        self.learner.net.save_parameters("lr_finder.params")
         self.learner.trainer.save_states("lr_finder.state")
         lr = lr_start
         self.results = [] # List of (lr, loss) tuples
@@ -154,7 +155,7 @@ class LRFinder():
                 break
             lr = lr * lr_multiplier
         # Restore params (as finder changed them)
-        self.learner.net.load_params("lr_finder.params", ctx=self.learner.ctx)
+        self.learner.net.load_parameters("lr_finder.params", ctx=self.learner.ctx)
         self.learner.trainer.load_states("lr_finder.state")
         self.plot()
         
@@ -227,7 +228,7 @@ As discussed before, we should select a learning rate where the loss is falling 
 
 
 ```python
-learner.net.save_params("net.params")
+learner.net.save_parameters("net.params")
 lr = 0.05
 
 for iter_idx in range(500):
@@ -258,7 +259,7 @@ And now we have a baseline, let's see what happens when we train with a learning
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_params("net.params", ctx=ctx)
+learner.net.load_parameters("net.params", ctx=ctx)
 lr = 0.5
 
 for iter_idx in range(500):
@@ -289,7 +290,7 @@ And lastly, we see how the model trains with a more conservative learning rate o
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_params("net.params", ctx=ctx)
+learner.net.load_parameters("net.params", ctx=ctx)
 lr = 0.005
 
 for iter_idx in range(500):
