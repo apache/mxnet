@@ -142,7 +142,7 @@ class LRFinder():
             self.learner.trainer._init_kvstore()
         # Store params and optimizer state for restore after lr_finder procedure
         # Useful for applying the method partway through training, not just for initialization of lr.
-        self.learner.net.save_parameters("lr_finder.params")
+        self.learner.net.save_params("lr_finder.params")
         self.learner.trainer.save_states("lr_finder.state")
         lr = lr_start
         self.results = [] # List of (lr, loss) tuples
@@ -155,7 +155,7 @@ class LRFinder():
                 break
             lr = lr * lr_multiplier
         # Restore params (as finder changed them)
-        self.learner.net.load_parameters("lr_finder.params", ctx=self.learner.ctx)
+        self.learner.net.load_params("lr_finder.params", ctx=self.learner.ctx)
         self.learner.trainer.load_states("lr_finder.state")
         self.plot()
         
@@ -228,7 +228,7 @@ As discussed before, we should select a learning rate where the loss is falling 
 
 
 ```python
-learner.net.save_parameters("net.params")
+learner.net.save_params("net.params")
 lr = 0.05
 
 for iter_idx in range(500):
@@ -259,7 +259,7 @@ And now we have a baseline, let's see what happens when we train with a learning
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_parameters("net.params", ctx=ctx)
+learner.net.load_params("net.params", ctx=ctx)
 lr = 0.5
 
 for iter_idx in range(500):
@@ -290,7 +290,7 @@ And lastly, we see how the model trains with a more conservative learning rate o
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_parameters("net.params", ctx=ctx)
+learner.net.load_params("net.params", ctx=ctx)
 lr = 0.005
 
 for iter_idx in range(500):
