@@ -745,6 +745,202 @@ class FusedRNNCell(BaseRNNCell):
         return stack
 
 
+class OpenLSTMRNNCell(BaseRNNCell):
+    """Fusing RNN layers across time step into one kernel.
+    Improves speed and is flexible compared with cuDNN implementation.
+    Parameters
+    ----------
+    num_hidden : int
+        Number of units in output symbol.
+    num_layers : int, default 1
+        Number of layers in the cell.
+    dropout : float, default 0.
+        Fraction of the input that gets dropped out during training time.
+    get_next_state : bool, default False
+        Whether to return the states that can be used as starting states next time.
+    forget_bias : bias added to forget gate, default to 1.0.
+        Jozefowicz et al. 2015 recommends setting this to 1.0
+    prefix : str, default 'lstm_'
+        Prefix for names of layers
+        (this prefix is also used for names of weights if `params` is None
+        i.e. if `params` are being created and not reused)
+    params : RNNParams, default None
+        Container for weight sharing between cells. Created if None.
+    """
+    def __init__(self, num_hidden, num_layers=1, forget_bias=1.0,
+                 dropout=0., get_next_state=False, prefix=None, params=None):
+        if prefix is None:
+            prefix = 'lstm_'
+        super(OpenLSTMRNNCell, self).__init__(prefix=prefix, params=params)
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+        self._dropout = dropout
+        self._get_next_state = get_next_state
+
+        self._iW = self.params.get('i2h_weight',
+                                   init=init.OpenLSTMRNNiWInit(prefix=prefix,
+                                                               num_hidden=num_hidden,
+                                                               num_layers=num_layers))
+        self._hW = self.params.get('h2h_weight',
+                                   init=init.OpenLSTMRNNhWInit(prefix=prefix,
+                                                               num_hidden=num_hidden,
+                                                               num_layers=num_layers))
+        # We add the forget_bias to i2h_bias, this adds the bias to the forget gate activation.
+        self._iB = self.params.get('i2h_bias',
+                                   init=init.OpenLSTMRNNiBInit(prefix=prefix,
+                                                               num_hidden=num_hidden,
+                                                               num_layers=num_layers,
+                                                               forget_bias=forget_bias))
+        self._hB = self.params.get('h2h_bias',
+                                   init=init.OpenLSTMRNNhBInit(prefix=prefix,
+                                                               num_hidden=num_hidden,
+                                                               num_layers=num_layers,
+                                                               forget_bias=forget_bias))
+
+    @property
+    def state_info(self):
+        return [{'shape': (self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'},
+                {'shape': (self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'}]
+
+    @property
+    def _gate_names(self):
+        return ['_i', '_f', '_c', '_o']
+
+    @property
+    def _num_gates(self):
+        return len(self._gate_names)
+
+    def _slice_weights(self, iW, iB, hW, hB, num_layers, num_input, num_hidden):
+        args = {}
+
+        gate_names = self._gate_names
+
+        iw_idx, ib_idx, hw_idx, hb_idx = 0, 0, 0, 0
+
+        for layer in range(num_layers):
+            for direction in ['l']:
+                for gate in gate_names:
+                    iw_name = '%s%s%d_i2h%s_weight' % (self._prefix, direction, layer, gate)
+                    ib_name = '%s%s%d_i2h%s_bias'   % (self._prefix, direction, layer, gate)
+                    hw_name = '%s%s%d_h2h%s_weight' % (self._prefix, direction, layer, gate)
+                    hb_name = '%s%s%d_h2h%s_bias'   % (self._prefix, direction, layer, gate)
+                    if layer > 0:
+                        args[iw_name] = iW[iw_idx:iw_idx+num_hidden*num_hidden]\
+                            .reshape((num_hidden, num_hidden))
+                        args[ib_name] = iB[ib_idx:ib_idx+num_hidden]\
+                            .reshape((num_hidden,))
+                        args[hw_name] = hW[hw_idx:hw_idx+num_hidden*num_hidden]\
+                            .reshape((num_hidden, num_hidden))
+                        args[hb_name] = hB[hb_idx:hb_idx+num_hidden]\
+                            .reshape((num_hidden,))
+                        iw_idx += num_hidden * num_hidden
+                        ib_idx += num_hidden
+                        hw_idx += num_hidden * num_hidden
+                        hb_idx += num_hidden
+                    else:
+                        args[iw_name] = iW[iw_idx:iw_idx+num_hidden*num_input]\
+                            .reshape((num_hidden, num_input))
+                        args[ib_name] = iB[ib_idx:ib_idx+num_hidden]\
+                            .reshape((num_hidden,))
+                        args[hw_name] = hW[hw_idx:hw_idx+num_hidden*num_hidden]\
+                            .reshape((num_hidden, num_hidden))
+                        args[hb_name] = hB[hb_idx:hb_idx+num_hidden]\
+                            .reshape((num_hidden,))
+                        iw_idx += num_hidden * num_input
+                        ib_idx += num_hidden
+                        hw_idx += num_hidden * num_hidden
+                        hb_idx += num_hidden
+
+        assert iw_idx == iW.size and ib_idx == iB.size and \
+            hw_idx == hW.size and hb_idx == hB.size, \
+            "Size of accmulated weights/biases (%d,%d,%d,%d) " \
+            "do not match what has been expected (%d,%d,%d,%d)." % \
+            (iw_idx, ib_idx, hw_idx, hb_idx, iW.size, iB.size, hW.size, hB.size)
+
+        return args
+
+    def unpack_weights(self, args):
+        args = args.copy()
+
+        iW = args.pop(self._iW.name)
+        iB = args.pop(self._iB.name)
+        hW = args.pop(self._hW.name)
+        hB = args.pop(self._hB.name)
+
+        # compute the input (embedding) dimension
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+        num_input = iW.size // self._num_gates // num_hidden - \
+                    num_hidden * (num_layers - 1)
+
+        sliced_args = self._slice_weights(iW=iW, iB=iB, hW=hW, hB=hB,
+                                          num_input=num_input,
+                                          num_layers=num_layers,
+                                          num_hidden=num_hidden)
+        args.update({name: nd.copy() for name, nd in sliced_args.items()})
+
+        return args
+
+    def pack_weights(self, args):
+        args = args.copy()
+
+        w0 = args['%sl0_i2h%s_weight' % (self._prefix, self._gate_names[0])]
+
+        num_gates = self._num_gates
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+        num_input = w0.shape[1]
+
+        iW_size = num_gates * num_hidden * num_input + \
+                  (num_layers - 1) * num_gates * num_hidden * num_hidden
+        iB_size = num_layers * num_gates * num_hidden
+        hW_size = num_layers * num_gates * num_hidden * num_hidden
+        hB_size = num_layers * num_gates * num_hidden
+
+        iW = ndarray.zeros((iW_size,), ctx=w0.context, dtype=w0.dtype)
+        iB = ndarray.zeros((iB_size,), ctx=w0.context, dtype=w0.dtype)
+        hW = ndarray.zeros((hW_size,), ctx=w0.context, dtype=w0.dtype)
+        hB = ndarray.zeros((hB_size,), ctx=w0.context, dtype=w0.dtype)
+
+        for name, nd in self._slice_weights(iW=iW, iB=iB, hW=hW, hB=hB,
+                                            num_input=num_input,
+                                            num_layers=num_layers,
+                                            num_hidden=num_hidden).items():
+            nd[:] = args.pop(name)
+
+        args[self._iW.name] = iW
+        args[self._iB.name] = iB
+        args[self._hW.name] = hW
+        args[self._hB.name] = hB
+
+        return args
+
+    def __call__(self, inputs, states):
+        raise NotImplementedError("OpenLSTMRNNCell cannot be stepped. Please use unroll")
+
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
+        assert layout == 'NTC', "OpenLSTMRNNCell is expecting NTC layout."
+
+        self.reset()
+
+        if begin_state is None:
+            begin_state = self.begin_state()
+
+        rnn = symbol.OpenLSTMRNN(data=inputs, num_layers=self._num_layers,
+                                 num_hidden_units=self._num_hidden,
+                                 init_hidden=begin_state[1],
+                                 init_cell=begin_state[0],
+                                 i2h_weight=self._iW, i2h_bias=self._iB,
+                                 h2h_weight=self._hW, h2h_bias=self._hB,
+                                 i_dp_prob=self._dropout, state_outputs=self._get_next_state,
+                                 name=self._prefix+'rnn')
+
+        if not self._get_next_state:
+            return rnn, []
+        else:
+            return rnn[0], [rnn[1], rnn[2]]
+
+
 class SequentialRNNCell(BaseRNNCell):
     """Sequantially stacking multiple RNN cells.
 

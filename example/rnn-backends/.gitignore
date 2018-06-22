@@ -1,0 +1,6 @@
+# Datasets
+*.txt
+*.tokens
+
+# Logging Directories
+log

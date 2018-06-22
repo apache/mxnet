@@ -161,7 +161,7 @@ class Initializer(object):
         Parameters
         ----------
         name : str
-            Name of corresponding NDArray.
+            Name of corrosponding NDArray.
 
         arr : NDArray
             NDArray to be initialized.
@@ -424,14 +424,12 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initializes the weights to a given value.
-    The value passed in can be a scalar or a NDarray that matches the shape
-    of the parameter to be set.
+    """Initializes the weights to a scalar value.
 
     Parameters
     ----------
-    value : float, NDArray
-        Value to set.
+    value : float
+        Fill value.
     """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
@@ -653,7 +651,7 @@ class Bilinear(Initializer):
 
 @register
 class LSTMBias(Initializer):
-    """Initialize all biases of an LSTMCell to 0.0 except for
+    """Initialize all bias of an LSTMCell to 0.0 except for
     the forget gate whose bias is set to custom value.
 
     Parameters
@@ -726,3 +724,197 @@ class FusedRNN(Initializer):
                 self._init(arg_desc, args[name])
 
         arr[:] = cell.pack_weights(args)['parameters']
+
+@register
+class OpenLSTMRNNiWInit(Initializer):
+    """
+    OpenLSTMRNN Input->Hidden Weight Initializer
+    """
+    def __init__(self, prefix, num_hidden, num_layers):
+        super(OpenLSTMRNNiWInit, self).__init__(prefix=prefix,
+                                                num_hidden=num_hidden,
+                                                num_layers=num_layers)
+        self._prefix = prefix
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+
+    def _slice_and_init(self, desc, arr):
+
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+
+        from .rnn import rnn_cell
+
+        rnn_cell = rnn_cell.OpenLSTMRNNCell(num_hidden=num_hidden,
+                                            num_layers=num_layers)
+
+        gate_names = rnn_cell._gate_names
+
+        num_input = arr.size // rnn_cell._num_gates // num_hidden - \
+                    num_hidden * (num_layers - 1)
+
+        iw_idx = 0
+
+        for layer in range(num_layers):
+            for direction in ['l']:
+                for gate in gate_names:
+                    iw_name = '%s%s%d_i2h%s_weight' % (self._prefix, direction, layer, gate)
+                    arg_desc = InitDesc(iw_name, global_init=desc.global_init)
+
+                    if layer > 0:
+                        desc.global_init(arg_desc,
+                                         arr[iw_idx:iw_idx+num_hidden*num_hidden]
+                                         .reshape((num_hidden, num_hidden)))
+                        iw_idx += num_hidden*num_hidden
+                    else:
+                        desc.global_init(arg_desc,
+                                         arr[iw_idx:iw_idx+num_hidden*num_input]
+                                         .reshape((num_hidden, num_input)))
+                        iw_idx += num_hidden*num_input
+
+        assert iw_idx == arr.size, "Size of accmulated weights/biases (%d) do not match " \
+            "what has been expected (%d)." % (iw_idx, arr.size)
+
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
+        self._slice_and_init(desc=desc, arr=arr)
+
+@register
+class OpenLSTMRNNhWInit(Initializer):
+    """
+    OpenLSTMRNN Hidden->Hidden Weight Initializer
+    """
+    def __init__(self, prefix, num_hidden, num_layers):
+        super(OpenLSTMRNNhWInit, self).__init__(prefix=prefix,
+                                                num_hidden=num_hidden,
+                                                num_layers=num_layers)
+        self._prefix = prefix
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+
+    def _slice_and_init(self, desc, arr):
+
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+
+        from .rnn import rnn_cell
+
+        rnn_cell = rnn_cell.OpenLSTMRNNCell(num_hidden=num_hidden,
+                                            num_layers=num_layers)
+
+        gate_names = rnn_cell._gate_names
+
+        hw_idx = 0
+
+        for layer in range(num_layers):
+            for direction in ['l']:
+                for gate in gate_names:
+                    hw_name = '%s%s%d_h2h%s_weight' % (self._prefix, direction, layer, gate)
+                    arg_desc = InitDesc(hw_name, global_init=desc.global_init)
+
+                    desc.global_init(arg_desc,
+                                     arr[hw_idx:hw_idx+num_hidden*num_hidden]
+                                     .reshape((num_hidden, num_hidden)))
+                    hw_idx += num_hidden*num_hidden
+
+        assert hw_idx == arr.size, "Size of accmulated weights/biases (%d) do not match " \
+            "what has been expected (%d)." % (hw_idx, arr.size)
+
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
+        self._slice_and_init(desc=desc, arr=arr)
+
+@register
+class OpenLSTMRNNiBInit(Initializer):
+    """
+    OpenLSTMRNN Input->Hidden Bias Initializer
+    """
+    def __init__(self, prefix, num_hidden, num_layers, forget_bias=1.0):
+        super(OpenLSTMRNNiBInit, self).__init__(prefix=prefix,
+                                                num_hidden=num_hidden,
+                                                num_layers=num_layers,
+                                                forget_bias=forget_bias)
+        self._prefix = prefix
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+        self._forget_bias = forget_bias
+
+    def _slice_and_init(self, desc, arr):
+
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+
+        from .rnn import rnn_cell
+
+        rnn_cell = rnn_cell.OpenLSTMRNNCell(num_hidden=num_hidden,
+                                            num_layers=num_layers)
+
+        gate_names = rnn_cell._gate_names
+
+        ib_idx = 0
+
+        for layer in range(num_layers):
+            for direction in ['l']:
+                for gate in gate_names:
+                    ib_name = '%s%s%d_i2h%s_bias' % (self._prefix, direction, layer, gate)
+                    arg_desc = InitDesc(ib_name, global_init=desc.global_init)
+
+                    if gate == 'f':
+                        arr[ib_idx:ib_idx+num_hidden] = self._forget_bias
+                    else:
+                        # fall back to global initializer
+                        desc.global_init(arg_desc,
+                                         arr[ib_idx:ib_idx+num_hidden].reshape((num_hidden,)))
+                    ib_idx += num_hidden
+
+        assert ib_idx == arr.size, "Size of accmulated weights/biases (%d) do not match " \
+            "what has been expected (%d)." % (ib_idx, arr.size)
+
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
+        self._slice_and_init(desc=desc, arr=arr)
+
+@register
+class OpenLSTMRNNhBInit(Initializer):
+    """
+    OpenLSTMRNN Hidden->Hidden Bias Initializer
+    """
+    def __init__(self, prefix, num_hidden, num_layers, forget_bias=1.0):
+        super(OpenLSTMRNNhBInit, self).__init__(prefix=prefix,
+                                                num_hidden=num_hidden,
+                                                num_layers=num_layers,
+                                                forget_bias=forget_bias)
+        self._prefix = prefix
+        self._num_hidden = num_hidden
+        self._num_layers = num_layers
+        self._forget_bias = forget_bias
+
+    def _slice_and_init(self, desc, arr):
+
+        num_hidden = self._num_hidden
+        num_layers = self._num_layers
+
+        from .rnn import rnn_cell
+
+        rnn_cell = rnn_cell.OpenLSTMRNNCell(num_hidden=num_hidden,
+                                            num_layers=num_layers)
+
+        gate_names = rnn_cell._gate_names
+
+        hb_idx = 0
+
+        for layer in range(num_layers):
+            for direction in ['l']:
+                for gate in gate_names:
+                    hb_name = '%s%s%d_h2h%s_bias' % (self._prefix, direction, layer, gate)
+                    arg_desc = InitDesc(hb_name, global_init=desc.global_init)
+
+                    if gate == 'f':
+                        arr[hb_idx:hb_idx+num_hidden] = self._forget_bias
+                    else:
+                        # fall back to global initializer
+                        desc.global_init(arg_desc,
+                                         arr[hb_idx:hb_idx+num_hidden].reshape((num_hidden,)))
+                    hb_idx += num_hidden
+        assert hb_idx == arr.size, "Size of accmulated weights/biases (%d) do not match " \
+            "what has been expected (%d)." % (hb_idx, arr.size)
+
+    def _init_weight(self, desc, arr): # pylint: disable=arguments-differ
+        self._slice_and_init(desc=desc, arr=arr)
