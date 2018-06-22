@@ -61,6 +61,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   void StopNoWait() {
     SignalQueuesForKill();
     gpu_normal_workers_.Clear();
+    gpu_priority_workers_.Clear();
     gpu_copy_workers_.Clear();
     cpu_normal_workers_.Clear();
     cpu_priority_worker_.reset(nullptr);
@@ -101,6 +102,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
       this->ExecuteOprBlock(RunContext{ctx, nullptr}, opr_block);
     } else {
       if (ctx.dev_mask() == Context::kCPU) {
+        // CPU execution.
         if (opr_block->opr->prop == FnProperty::kCPUPrioritized) {
           cpu_priority_worker_->task_queue.Push(opr_block, opr_block->priority);
         } else {
@@ -152,23 +154,43 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
           }
         } else {
           const size_t nthread = gpu_worker_nthreads_;
-          auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
-            // Signify to kernel that GPU is being used, so reserve cores as necessary
-            OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
-              auto blk = new ThreadWorkerBlock<kWorkerQueue>();
-              blk->pool.reset(new ThreadPool(
-                nthread,
-                [this, ctx, is_copy, blk]
-                  (std::shared_ptr<dmlc::ManualEvent> ready_event) {
-                    this->GPUWorker(ctx, is_copy, blk, ready_event);
-                  }, true));
-              return blk;
-          });
-          if (ptr) {
-            if (opr_block->opr->prop == FnProperty::kDeleteVar) {
-              ptr->task_queue.PushFront(opr_block, opr_block->priority);
-            } else {
+          // GPU priority task
+          if (opr_block->opr->prop == FnProperty::kGPUPrioritized) {
+            auto ptr = gpu_priority_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
+              // Signify to kernel that GPU is being used, so reserve cores as necessary
+              OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
+                auto blk = new ThreadWorkerBlock<kPriorityQueue>();
+                blk->pool.reset(new ThreadPool(
+                  nthread,
+                  [this, ctx, is_copy, blk]
+                    (std::shared_ptr<dmlc::ManualEvent> ready_event) {
+                      this->GPUWorker(ctx, is_copy, blk, ready_event);
+                    }, true));
+                return blk;
+            });
+            if (ptr) {
               ptr->task_queue.Push(opr_block, opr_block->priority);
+            }
+          } else {
+            // GPU normal task
+            auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
+              // Signify to kernel that GPU is being used, so reserve cores as necessary
+              OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
+                auto blk = new ThreadWorkerBlock<kWorkerQueue>();
+                blk->pool.reset(new ThreadPool(
+                  nthread,
+                  [this, ctx, is_copy, blk]
+                    (std::shared_ptr<dmlc::ManualEvent> ready_event) {
+                      this->GPUWorker(ctx, is_copy, blk, ready_event);
+                    }, true));
+                return blk;
+            });
+            if (ptr) {
+              if (opr_block->opr->prop == FnProperty::kDeleteVar) {
+                ptr->task_queue.PushFront(opr_block, opr_block->priority);
+              } else {
+                ptr->task_queue.Push(opr_block, opr_block->priority);
+              }
             }
           }
         }
@@ -206,6 +228,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > gpu_normal_workers_;
   // workers doing copy works from/to GPU
   common::LazyAllocArray<ThreadWorkerBlock<kCopyQueue> > gpu_copy_workers_;
+  // gpu priority workers
+  common::LazyAllocArray<ThreadWorkerBlock<kPriorityQueue> > gpu_priority_workers_;
   /*!
    * \brief GPU worker that performs operations on a certain device.
    * \param dev_id The device id of the worker.
@@ -304,6 +328,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 
   /*! Signal all queues for shutdown */
   void SignalQueuesForKill() {
+    SignalQueueForKill(&gpu_priority_workers_);
     SignalQueueForKill(&gpu_normal_workers_);
     SignalQueueForKill(&gpu_copy_workers_);
     SignalQueueForKill(&cpu_normal_workers_);

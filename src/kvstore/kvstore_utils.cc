@@ -29,8 +29,8 @@ namespace mxnet {
 namespace kvstore {
 
 template<>
-void UniqueImpl<cpu>(const Resource& rsc, mshadow::Stream<cpu> *s,
-                      const NDArray& out) {
+void UniqueImpl<cpu>(NDArray* workspace, mshadow::Stream<cpu> *s,
+                     const NDArray& out) {
   const size_t num_elements = out.shape().Size();
   CHECK_EQ(out.storage_type(), kRowSparseStorage) << "row_sparse NDArray is expected";
   MSHADOW_IDX_TYPE_SWITCH(out.dtype(), IType, {

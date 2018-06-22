@@ -379,22 +379,20 @@ class KVStoreLocal : public KVStore {
     NDArray data_in_ctx = diff_ctx ? NDArray(data.shape(), ctx, true, data.dtype()) : data;
     // if data == data_in_ctx, CopyFromTo is smart enough to skip the copy
     CopyFromTo(data, &data_in_ctx, priority);
-    Resource rsc = ResourceManager::Get()->Request(out.ctx(),
-      ResourceRequest(ResourceRequest::kTempSpace));
     // GPU requires temp resources
-    std::vector<Engine::VarHandle> mutate_vars{out.var()};
-    if (out.ctx().dev_mask() == gpu::kDevMask) mutate_vars.emplace_back(rsc.var);
+    bool is_gpu = out.ctx().dev_mask() == gpu::kDevMask;
     Engine::Get()->PushAsync(
       [=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         // copy data.data() to out.data()
         out.CheckAndAlloc({mshadow::Shape1(num_elements)});
         TBlob out_data = out.data();
+        NDArray workspace;
         switch (out.ctx().dev_mask()) {
           case cpu::kDevMask: {
             mshadow::Stream<cpu> *s = rctx.get_stream<cpu>();
             ndarray::Copy<cpu, cpu>(data_in_ctx.data(), &out_data,
                                     ctx, ctx, rctx);
-            UniqueImpl(rsc, s, out);
+            UniqueImpl(&workspace, s, out);
             break;
           }
   #if MXNET_USE_CUDA
@@ -402,7 +400,7 @@ class KVStoreLocal : public KVStore {
             mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
             ndarray::Copy<gpu, gpu>(data_in_ctx.data(), &out_data,
                                     ctx, ctx, rctx);
-            UniqueImpl(rsc, s, out);
+            UniqueImpl(&workspace, s, out);
             // wait for GPU operations to complete
             s->Wait();
             break;
@@ -412,8 +410,9 @@ class KVStoreLocal : public KVStore {
             LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
         }
         on_complete();
-      }, out.ctx(), {data_in_ctx.var()}, mutate_vars,
-      FnProperty::kNormal, priority, "KVStoreUnique");
+      }, out.ctx(), {data_in_ctx.var()}, {out.var()},
+      is_gpu ? FnProperty::kGPUPrioritized : FnProperty::kCPUPrioritized,
+      priority, "KVStoreUnique");
     return out;
   }
 
