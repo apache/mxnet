@@ -24,8 +24,8 @@ WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
-COPY install/ubuntu_ccache.sh /work/
-RUN /work/ubuntu_ccache.sh
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
 COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 COPY install/ubuntu_scala.sh /work/
