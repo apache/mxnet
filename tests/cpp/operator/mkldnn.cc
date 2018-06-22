@@ -856,7 +856,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (auto in_arr : in_arrs) {
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
-      in_arr.arr = in_arr.arr.Reorder2Default();
+      continue;
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
