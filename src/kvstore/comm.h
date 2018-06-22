@@ -474,6 +474,31 @@ class CommDevice : public Comm {
     }
   }
 
+  const NDArray& ReduceRowSparse(int key, const std::vector<NDArray>& src,
+                                 int priority) {
+    auto& buf = merge_buf_[key];
+    std::vector<NDArray> reduce(src.size());
+
+    const NDArrayStorageType stype = src[0].storage_type();
+    NDArray& buf_merged = buf.merged_buf(stype);
+    if (buf.copy_buf.empty()) {
+      // initialize buffer for copying during reduce
+      buf.copy_buf.resize(src.size());
+      for (size_t j = 0; j < src.size(); ++j) {
+        buf.copy_buf[j] = NDArray(stype, src[0].shape(), buf_merged.ctx(), true, src[0].dtype());
+      }
+    }
+    CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
+         << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
+         << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
+    for (size_t i = 0; i < src.size(); ++i) {
+      CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf_merged, priority);
+    return buf_merged;
+  }
+
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
                         int priority) override {
     // when this reduce is called from kvstore_dist, gc is not set
@@ -490,13 +515,14 @@ class CommDevice : public Comm {
 
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
-    std::vector<NDArray> reduce(src.size());
 
     const NDArrayStorageType stype = src[0].storage_type();
     NDArray& buf_merged = buf.merged_buf(stype);
     // normal dense reduce
     if (stype == kDefaultStorage) {
       CopyFromTo(src[0], &buf_merged, priority);
+
+      std::vector<NDArray> reduce(src.size());
       reduce[0] = buf_merged;
 
       if (buf.copy_buf.empty()) {
@@ -514,24 +540,11 @@ class CommDevice : public Comm {
         CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
         reduce[i+1] = buf.copy_buf[i];
       }
+      ElementwiseSum(reduce, &buf_merged, priority);
     } else {
       // sparse reduce
-      if (buf.copy_buf.empty()) {
-        // initialize buffer for copying during reduce
-        buf.copy_buf.resize(src.size());
-        for (size_t j = 0; j < src.size(); ++j) {
-          buf.copy_buf[j] = NDArray(stype, src[0].shape(), buf_merged.ctx(), true, src[0].dtype());
-        }
-      }
-      CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
-           << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
-           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
-      for (size_t i = 0; i < src.size(); ++i) {
-        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
-        reduce[i] = buf.copy_buf[i];
-      }
+      buf_merged = ReduceRowSparse( key, src, priority );
     }
-    ElementwiseSum(reduce, &buf_merged, priority);
     return buf_merged;
   }
 
@@ -767,11 +780,13 @@ class CommDevice : public Comm {
       return sparse_merged;
     }
 
-   private:
+    private:
     /// \brief the sparse merged value for reduce and rowsparse broadcast operations
     NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+
+  public:
   bool inited_;
 };
 
