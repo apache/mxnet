@@ -212,7 +212,7 @@ def test_trainer_reset_local_kv():
         x = params.get('x', shape=(10,), lr_mult=1.0)
         params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        params.save('test_trainer_reset_kv.params')
+        params.save('test_trainer_reset_local_kv.params')
         with mx.autograd.record():
             for w in x.list_data():
                 y = w + 1
@@ -220,7 +220,7 @@ def test_trainer_reset_local_kv():
         trainer.step(1)
         assert trainer._kvstore.type == kv
         # load would reset kvstore
-        params.load('test_trainer_reset_kv.params')
+        params.load('test_trainer_reset_local_kv.params')
         assert trainer._kvstore is None
         assert trainer._kv_initialized is False
         with mx.autograd.record():
