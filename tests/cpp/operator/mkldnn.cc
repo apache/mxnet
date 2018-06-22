@@ -550,8 +550,8 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
            shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
+      InitMKLDNNArray(&arr, pd);
       in_arrs.emplace_back(arr, desc);
-      InitMKLDNNArray(&in_arrs.back().arr, pd);
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());

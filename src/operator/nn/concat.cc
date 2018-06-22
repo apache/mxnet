@@ -189,7 +189,7 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
 
 bool SupportMKLDNNConcat(NDArray arr) {
   return (arr.shape().ndim() == 2 || arr.shape().ndim() == 4) &&
-      arr.dtype() == mshadow::kFloat32 &&
+      arr.dtype() == mshadow::kFloat32 && !arr.IsView() &&
       arr.shape().ndim() == arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
 }
 
