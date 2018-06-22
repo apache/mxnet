@@ -106,7 +106,7 @@ def collect_test_results_unix(original_file_name, new_file_name) {
 def collect_test_results_windows(original_file_name, new_file_name) {
     echo 'Saving python test results for ' + new_file_name
     // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
-    bat 'xcopy ' + original_file_name + ' ' + new_file_name
+    bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
     archiveArtifacts artifacts: new_file_name
 } 
 
