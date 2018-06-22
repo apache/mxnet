@@ -450,9 +450,9 @@ build_ubuntu_gpu_tensorrt() {
     cd build
     cmake \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..
-    make -j$(nproc)
-    make install
+        -DBUILD_SHARED_LIBS=ON ..\
+        -G Ninja
+    ninja -v
     ldconfig
     cd ..
     mkdir /usr/include/x86_64-linux-gnu/onnx
