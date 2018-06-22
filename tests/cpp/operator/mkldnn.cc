@@ -27,7 +27,6 @@
 
 #include <cmath>
 #include <climits>
-#include <mkldnn_types.h>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
