@@ -89,7 +89,7 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
         bool debug_builder) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  nvinfer1::DataType model_dtype;
+  nvinfer1::DataType model_dtype = nvinfer1::DataType::kFLOAT;
   switch ( model_dtype_nbits ) {
     case 32:
       model_dtype = nvinfer1::DataType::kFLOAT;
@@ -109,7 +109,11 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
                                       *trt_network, trt_logger));
 
   ::ONNX_NAMESPACE::ModelProto parsed_model;
-  bool can_parse_onnx = parsed_model.ParseFromString(onnx_model);
+  // We check for a valid parse, but the main effect is the side effect
+  // of populating parsed_model
+  if (! parsed_model.ParseFromString(onnx_model) ) {
+    throw dmlc::Error("Could not parse ONNX from string");
+  }
 
   if ( !trt_parser->parse(onnx_model.c_str(), onnx_model.size()) ) {
       int nerror = trt_parser->getNbErrors();
