@@ -888,10 +888,11 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
     in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
 
-  for (int ai = 0; ai < in_arrs.size(); ai++) {
-    auto in_arr = in_arrs[ai];
+  for (auto in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
 
       // used scaled up version for outputs
       if (use_concat_outputs) {
@@ -899,7 +900,8 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         int dim = std::stoi(str_dim);
         if (dim >= in_arr.arr.shape().ndim())
           continue;
-        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, true);
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, true);
       }
 
       // used scaled down version for outputs
@@ -908,18 +910,19 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         int dim = std::stoi(str_dim);
         if (dim >= in_arr.arr.shape().ndim())
           continue;
-        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_outputs), dim, true);
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_outputs), dim, true);
       }
-
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
-      for (auto out_arr : out_arrs) {
+
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < attrs.num_outputs; i++) {
           req[i] = kWriteTo;
-          outputs[i] = &out_arr.arr;
+          outputs[i] = &out_arrs[i][output_i].arr;
         }
 
-        PrintVerifyMsg(in_arr, out_arr);
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
