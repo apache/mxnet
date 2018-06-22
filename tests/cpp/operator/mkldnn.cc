@@ -572,25 +572,6 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   return in_arrs;
 }
 
-TEST(MKLDNN_NDArray, GetTestInputArrays) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  int mkldnn_count = 0, mkldnn_view_count = 0;
-  for (auto arr : in_arrs) {
-    if (arr.arr.IsView() && arr.arr.IsMKLDNNData()) {
-      mkldnn_view_count++;
-      continue;
-    }
-
-    if (arr.arr.IsMKLDNNData()) {
-      mkldnn_count++;
-      continue;
-    }
-  }
-
-  EXPECT_GT(mkldnn_view_count, 0);
-  EXPECT_GT(mkldnn_count, 0);
-}
-
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
