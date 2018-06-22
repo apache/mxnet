@@ -458,7 +458,7 @@ def test_convolution_with_type():
 def check_consistency_NxM(sym_list, ctx_list):
     # e.g. if sym_list=[sym1, sym2] and ctx_list=[ctx1, ctx2, ctx3], then resulting lists are:
     # sym_list=[sym1, sym1, sym1, sym2, sym2, sym2] and ctx_list=[ctx1, ctx2, ctx3, ctx1, ctx2, ctx3]
-    check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list))
+    check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 @with_seed()
 def test_convolution_options():
