@@ -28,8 +28,10 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <limits>
 #include <random>
 #include <stack>
+#include <string>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -39,7 +41,7 @@ namespace mxnet {
 namespace kvstore {
 
 template <typename T>
-void PrintVector( const std::string& str, const std::vector<T>& vec ) {
+void PrintVector(const std::string& str, const std::vector<T>& vec) {
   std::cout << str << ":\n";
   for (unsigned i = 0; i < vec.size(); ++i)
     std::cout << vec[i] << " ";
@@ -47,8 +49,8 @@ void PrintVector( const std::string& str, const std::vector<T>& vec ) {
 }
 
 template <typename T>
-void PrintMatrix( const std::string& str, const std::vector<T>& matrix, 
-    int num_rows, int num_cols ) {
+void PrintMatrix(const std::string& str, const std::vector<T>& matrix,
+    int num_rows, int num_cols) {
   std::cout << str << ":\n";
   int count = 0;
   for (int row = 0; row < num_rows; ++row) {
@@ -59,8 +61,8 @@ void PrintMatrix( const std::string& str, const std::vector<T>& matrix,
   }
 }
 
-void PrintTopo( const std::string& str, const std::vector<size_t>& topo_row, 
-    std::vector<size_t> scan_row ) {
+void PrintTopo(const std::string& str, const std::vector<size_t>& topo_row,
+    std::vector<size_t> scan_row) {
   PrintVector("Topo vector", topo_row);
   PrintVector("Scan vector", scan_row);
   std::cout << str << ":\n";
@@ -68,11 +70,10 @@ void PrintTopo( const std::string& str, const std::vector<size_t>& topo_row,
   for (int row = 0; row < depth; ++row) {
     int start = scan_row[row];
     int end   = scan_row[row+1];
-    for (; start<end; start++) {
-      for (int i = 0; i < (2<<(depth-row-2))+1; ++i) {
+    for (; start < end; start++) {
+      for (int i = 0; i < (2 << (depth-row-2))+1; ++i) {
         std::cout << " ";
       }
-      //std::cout << " ";
       std::cout << topo_row[start];
     }
     std::cout << std::endl;
@@ -88,8 +89,8 @@ void PrintTopo( const std::string& str, const std::vector<size_t>& topo_row,
 //            2: 1 NVLink connection
 //            3: 2 NVLink connections
 template <typename T>
-void GetP2PWeight( const std::vector<Context>& devs,
-                   std::vector<T>&             matrix ) {
+void GetP2PWeight(const std::vector<Context>& devs,
+                  std::vector<T>*             matrix) {
   int num_gpus = devs.size();
   int count    = 0;
   std::vector<int> zero_dev_id(num_gpus, -1);
@@ -104,16 +105,16 @@ void GetP2PWeight( const std::vector<Context>& devs,
 
   for (int row = 0; row < num_gpus; ++row) {
     for (int col = 0; col < num_gpus; ++col) {
-      if (row==col) {
-        matrix[row*num_gpus+col] = 0;
+      if (row == col) {
+        (*matrix)[row*num_gpus+col] = 0;
       } else {
         int value;
         int row_gpu = zero_dev_id[row];
         int col_gpu = zero_dev_id[col];
-        cudaDeviceGetP2PAttribute( &value, attr, row_gpu, col_gpu );
+        cudaDeviceGetP2PAttribute(&value, attr, row_gpu, col_gpu);
         if (value > max[row])
           max[row] = value;
-        matrix[row*num_gpus+col] = static_cast<T>(value)+1;
+        (*matrix)[row*num_gpus+col] = static_cast<T>(value)+1;
       }
     }
   }
@@ -128,52 +129,52 @@ void GetP2PWeight( const std::vector<Context>& devs,
   // If all GPUs have at least 1 NVLink connection, then we can use NVLink only
   // to communicate instead of going over PCI-E
   if (max_value > 0) {
-    for (auto& matrix_value : matrix) {
-      matrix_value = (matrix_value==1) ? 0 : matrix_value;
+    for (auto& matrix_value : *matrix) {
+      matrix_value = (matrix_value == 1) ? 0 : matrix_value;
     }
   }
-  PrintMatrix( "Weight W", matrix, num_gpus, num_gpus );
+  PrintMatrix("Weight W", *matrix, num_gpus, num_gpus);
 }
 
 // Dense matrix-vector multiplication
 // Assume: matrix is square
 //   y = A*x (no accumulate)
 template <typename T>
-void gemv( const std::vector<T>&   A,
-           const std::vector<int>& x,
-           std::vector<T>&         y ) {
+void gemv(const std::vector<T>&   A,
+          const std::vector<int>& x,
+          std::vector<T>*         y) {
   int nrows = x.size();
   int count = 0;
-  for (int row=0; row<nrows; ++row) {
-    y[row] = 0;
-    for (int col=0; col<nrows; ++col) {
-      y[row] += A[count]*static_cast<T>(x[col]);
+  for (int row=0; row < nrows; ++row) {
+    (*y)[row] = 0;
+    for (int col=0; col < nrows; ++col) {
+      (*y)[row] += A[count]*static_cast<T>(x[col]);
       count++;
     }
-  }  
+  }
 }
 
 // Element-wise multiplication between 2 dense vectors
 //   w = w * alpha*u
 template <typename T>
-void ewisemult( const std::vector<int>& u,
-                T                       alpha,
-                std::vector<T>&         w ) {
+void ewisemult(const std::vector<int>& u,
+               T                       alpha,
+               std::vector<T>*         w) {
   int nelem = u.size();
-  for (int i=0; i<nelem; ++i) {
-    w[i] *= alpha*static_cast<T>(u[i]);
+  for (int i=0; i < nelem; ++i) {
+    (*w)[i] *= alpha*static_cast<T>(u[i]);
   }
 }
 
 // Element-wise addition between 2 dense vectors
 //   w = w + alpha*u
 template <typename T>
-void ewiseadd( const std::vector<T>& u,
-               T                     alpha,
-               std::vector<T>&       w ) {
+void ewiseadd(const std::vector<T>& u,
+              T                     alpha,
+              std::vector<T>*       w) {
   int nelem = u.size();
-  for (int i=0; i<nelem; ++i) {
-    w[i] += alpha*static_cast<T>(u[i]);
+  for (int i=0; i < nelem; ++i) {
+    (*w)[i] += alpha*static_cast<T>(u[i]);
   }
 }
 
@@ -183,27 +184,27 @@ void ewiseadd( const std::vector<T>& u,
 // Optimization: Only need to look at upper triangular since weight matrix is
 //   symmetric
 template <typename T>
-void FindBestMove( const std::vector<T>&          W,
-                   const std::vector<int>&        P_temp,
-                   const std::vector<T>&          D,
-                   const std::unordered_set<int>& used,
-                   int&                           a,
-                   int&                           b,
-                   T&                             g ) {
+void FindBestMove(const std::vector<T>&          W,
+                  const std::vector<int>&        P_temp,
+                  const std::vector<T>&          D,
+                  const std::unordered_set<int>& used,
+                  int*                           a,
+                  int*                           b,
+                  T*                             g) {
   int nrows = P_temp.size();
-  g = 0;
-  a = -1;
-  b = -1;
-  for (int row=0; row<nrows; ++row) {
-    if ( P_temp[row]==0 || used.find(row)!=used.end() ) continue;
-    for (int col=row+1; col<nrows; ++col) {
-      if (P_temp[col]==0 || P_temp[row]==P_temp[col]) continue;
+  *g = 0;
+  *a = -1;
+  *b = -1;
+  for (int row=0; row < nrows; ++row) {
+    if (P_temp[row] == 0 || used.find(row) != used.end()) continue;
+    for (int col=row+1; col < nrows; ++col) {
+      if (P_temp[col] == 0 || P_temp[row] == P_temp[col]) continue;
 
       T cost = D[row]+D[col]-2*W[row*nrows+col];
-      if( cost>g ) {
-        g = cost;
-        a = row;
-        b = col;
+      if (cost > *g) {
+        *g = cost;
+        *a = row;
+        *b = col;
       }
     }
   }
@@ -216,31 +217,30 @@ void FindBestMove( const std::vector<T>&          W,
 //          cluster_pairs stores the mapping that tells us which 2 clusters are
 //               the output of partitioning one large cluster
 template <typename T>
-bool KernighanLin( const std::vector<T>&            W,
-                   std::vector<int>&                P,
-                   int&                             num_partitions,
-                   std::vector<std::pair<int,int>>& cluster_pairs,
-                   std::mt19937&                    gen ) {
-
-  std::vector<int> histogram(num_partitions, 0);
-  std::vector<int> P_temp(P.size(), 0);
-  std::vector<int> P_temp2(P.size(), 0);
-  std::vector<T>   D(P.size(), 0);
-  std::vector<T>   D_temp(P.size(), 0);
+bool KernighanLin(const std::vector<T>&             W,
+                  std::vector<int>*                 P,
+                  int*                              num_partitions,
+                  std::vector<std::pair<int, int>>* cluster_pairs,
+                  std::mt19937*                     gen) {
+  std::vector<int> histogram(*num_partitions, 0);
+  std::vector<int> P_temp(P->size(), 0);
+  std::vector<int> P_temp2(P->size(), 0);
+  std::vector<T>   D(P->size(), 0);
+  std::vector<T>   D_temp(P->size(), 0);
 
   // 0) For every partition, determine if it can be partitioned further.
   //    To do this, we must do a histogram of each partition:
-  for (unsigned i=0; i<P.size(); ++i) {
-    histogram[P[i]]++;
+  for (unsigned i=0; i < P->size(); ++i) {
+    histogram[(*P)[i]]++;
   }
 
   bool stop       = true;
-  for (unsigned color=0; color<histogram.size(); ++color) {
+  for (unsigned color=0; color < histogram.size(); ++color) {
     int partition_size = histogram[color];
     // Save cluster in preparation for push to topo in GenerateBinaryTree()
     if (partition_size <= 2) {
-      cluster_pairs.push_back(std::make_pair<int,int>(
-          static_cast<int>(color),-partition_size));
+      cluster_pairs->push_back(
+         std::pair<int, int>(static_cast<int>(color), -partition_size));
 
     // Do Kernighan-Lin if clustering is necessary
     } else {
@@ -254,18 +254,19 @@ bool KernighanLin( const std::vector<T>&            W,
       int target_partition = partition_size/2;
       std::vector<int> cluster_list;
 
-      for (unsigned i = 0; i < P.size(); ++i) {
+      for (unsigned i = 0; i < P->size(); ++i) {
         // Required to shift from [0,1] to {-1,1}
         //  1 means vertex i is in Cluster A
         // -1 means vertex i is in Cluster B
-        if (P[i] == static_cast<int>(color)) {
+        if ((*P)[i] == static_cast<int>(color)) {
           cluster_list.push_back(i);
-        } else
+        } else {
           P_temp[i] = 0;
+        }
       }
 
       // 1b) Shuffle using random generator
-      std::shuffle(cluster_list.begin(), cluster_list.end(), gen);
+      std::shuffle(cluster_list.begin(), cluster_list.end(), *gen);
       for (unsigned i = 0; i < cluster_list.size(); ++i) {
         if (first_partition < target_partition) {
           int dest = cluster_list[i];
@@ -285,10 +286,10 @@ bool KernighanLin( const std::vector<T>&            W,
         count++;
         P_temp2 = P_temp;
 
-        // a) Compute difference between external and internal costs of all 
+        // a) Compute difference between external and internal costs of all
         //    elements in vector D
-        gemv( W, P_temp, D );
-        ewisemult( P_temp, -1.f, D );
+        gemv(W, P_temp, &D);
+        ewisemult(P_temp, -1.f, &D);
 
         // av and bv are used to hold candidates for moving
         // gv stores the score associated with move
@@ -298,11 +299,11 @@ bool KernighanLin( const std::vector<T>&            W,
 
         std::unordered_set<int> used;
 
-        for (int iter=0; iter<partition_size/2; ++iter) {
+        for (int iter=0; iter < partition_size/2; ++iter) {
           // b) Find best move by looking through upper triangular of W matrix
           int a, b;
           T   g;
-          FindBestMove( W, P_temp, D, used, a, b, g );
+          FindBestMove(W, P_temp, D, used, &a, &b, &g);
           if (g > 0) {
           } else {
             g_max = 0;
@@ -321,8 +322,8 @@ bool KernighanLin( const std::vector<T>&            W,
           used.insert(b);
 
           // e) Update D using P_temp
-          gemv( W, P_temp, D );
-          ewisemult( P_temp, -1.f, D );
+          gemv(W, P_temp, &D);
+          ewisemult(P_temp, -1.f, &D);
           D[a] = 0;
           D[b] = 0;
         }
@@ -353,20 +354,20 @@ bool KernighanLin( const std::vector<T>&            W,
         } else {
           P_temp = P_temp2;
         }
-      } while (g_max > 0 && count <= P.size());
+      } while (g_max > 0 && count <= P->size());
 
       // 5) Update P using P_temp
       int moves = 0;
-      for (unsigned i=0; i<P.size(); ++i) {
-        if (P_temp[i]==-1) {
-          P[i] = num_partitions;
+      for (unsigned i=0; i < P->size(); ++i) {
+        if (P_temp[i] == -1) {
+          (*P)[i] = *num_partitions;
           moves++;
         }
       }
-      cluster_pairs.push_back(std::make_pair<int,int>(static_cast<int>(color), 
-          static_cast<int>(num_partitions)));
+      cluster_pairs->push_back(std::pair<int, int>(static_cast<int>(color),
+          static_cast<int>(*num_partitions)));
 
-      num_partitions++;
+      (*num_partitions)++;
     }
   }
 
@@ -375,11 +376,11 @@ bool KernighanLin( const std::vector<T>&            W,
 
 // Returns root of a given color if found in roots
 // Returns -1 if it is not found
-int GetRoot( const std::vector<int>&        P, 
-             int                            color, 
-             const std::unordered_set<int>& roots ) {
+int GetRoot(const std::vector<int>&        P,
+            int                            color,
+            const std::unordered_set<int>& roots) {
   for (auto root : roots) {
-    if (P[root]==color)
+    if (P[root] == color)
       return root;
   }
   return -1;
@@ -387,9 +388,9 @@ int GetRoot( const std::vector<int>&        P,
 
 // Returns root of a given color if found in roots
 // Returns -1 if it is not found
-int GetChild( const std::vector<int>&        P, 
-              int                            color, 
-              int                            parent ) {
+int GetChild(const std::vector<int>& P,
+             int                     color,
+             int                     parent) {
   for (unsigned i = 0; i < P.size(); ++i) {
     if (P[i] == color && static_cast<int>(i) != parent)
       return i;
@@ -407,90 +408,90 @@ int GetChild( const std::vector<int>&        P,
 //          g is weight of edge
 // Optimization: Only need to look at row a in matrix
 template <typename T>
-void FindBestEdge( const std::vector<T>&   W,
-                   const std::vector<int>& P,
-                   int                     parent,
-                   int                     dest_cluster,
-                   std::vector<int>&       b,
-                   T&                      g ) {
+void FindBestEdge(const std::vector<T>&   W,
+                  const std::vector<int>& P,
+                  int                     parent,
+                  int                     dest_cluster,
+                  std::vector<int>*       b,
+                  T*                      g) {
   int nrows = P.size();
   int row   = parent;
-  g         = 0;
-  b.push_back(-1);
-  for (int col=0; col<nrows; ++col) {
-    if (col==row || P[col]!=dest_cluster) continue;
+  *g        = 0;
+  b->push_back(-1);
+  for (int col=0; col < nrows; ++col) {
+    if (col == row || P[col] != dest_cluster) continue;
 
     T cost = W[row*nrows+col];
-    if( cost > g ) {
-      b.clear();
+    if (cost > *g) {
+      b->clear();
     }
-    if( cost >= g ) {
-      b.push_back(col);
-      g = cost;
+    if (cost >= *g) {
+      b->push_back(col);
+      *g = cost;
     }
   }
 }
 
 // Given a vector of color pairs, appends to binary tree matrix topo
-// @input:  cluster_pairs gives pairing between clusters, an edge is found 
+// @input:  W gives the link topology
+//          P gives the result of KL partitioning
+//          cluster_pairs gives pairing between clusters, an edge is found
 //                        between each pairing
-//          roots gives source vertex 
+//          roots gives source vertices
 //          gen gives random number generation to break ties
 // @output: cluster_pairs
 //          topo_row says where new edges are appended to
 //          scan_row says where we should start looking for topo_row
 template <typename T>
-int KLGenerateBinaryTree( std::vector<T>&                  W,
-                          const std::vector<int>&          P,
-                          std::vector<std::pair<int,int>>& cluster_pairs, 
-                          std::unordered_set<int>&         roots,
-                          std::vector<size_t>&             topo_row,
-                          std::vector<size_t>&             scan_row,
-                          std::mt19937&                    gen ) {
-  std::unordered_set<int>     new_roots;
-  std::unordered_map<int,int> new_topo;
+int KLGenerateBinaryTree(const std::vector<T>&             W,
+                         const std::vector<int>&           P,
+                         std::vector<std::pair<int, int>>* cluster_pairs,
+                         std::unordered_set<int>*          roots,
+                         std::vector<size_t>*              topo_row,
+                         std::vector<size_t>*              scan_row,
+                         std::mt19937*                     gen) {
+  std::unordered_set<int>      new_roots;
+  std::unordered_map<int, int> new_topo;
   int reset = 0;
 
-  for (unsigned i = 0; i < cluster_pairs.size(); ++i) {
-    if (i==0)
-      scan_row.push_back(topo_row.size());
+  for (unsigned i = 0; i < cluster_pairs->size(); ++i) {
+    if (i == 0)
+      scan_row->push_back(topo_row->size());
     int parent, child = -1;
-    if (cluster_pairs[i].second==-2) {
+    if ((*cluster_pairs)[i].second == -2) {
       // Root must be color of pair.first
-      int color  = cluster_pairs[i].first;
-      parent     = GetRoot( P, color, roots );
+      int color  = (*cluster_pairs)[i].first;
+      parent     = GetRoot(P, color, *roots);
       if (parent == -1) return 1;
       child      = GetChild(P, color, parent);
-    } else if (cluster_pairs[i].second==-1) {
-      int color  = cluster_pairs[i].first;
-      parent     = GetRoot( P, color, roots );
+    } else if ((*cluster_pairs)[i].second == -1) {
+      int color  = (*cluster_pairs)[i].first;
+      parent     = GetRoot(P, color, *roots);
       if (parent == -1) return 1;
       child      = parent;
     } else {
       // Root must exist in either first or second element of pair
-      int color  = cluster_pairs[i].first;
-      parent     = GetRoot(P, color, roots);
-      color      = (parent==-1) ? cluster_pairs[i].second  : color;
-      parent     = (parent==-1) ? GetRoot(P, color, roots) : parent;
+      int color  = (*cluster_pairs)[i].first;
+      parent     = GetRoot(P, color, *roots);
+      color      = (parent == -1) ? (*cluster_pairs)[i].second  : color;
+      parent     = (parent == -1) ? GetRoot(P, color, *roots) : parent;
 
       int from_cluster = color;
-      int dest_cluster = (from_cluster==cluster_pairs[i].first) ? 
-          cluster_pairs[i].second : cluster_pairs[i].first;
+      int dest_cluster = (from_cluster == (*cluster_pairs)[i].first) ?
+          (*cluster_pairs)[i].second : (*cluster_pairs)[i].first;
 
       std::vector<int> candidates;
       T weight;
-      FindBestEdge( W, P, parent, dest_cluster, candidates, weight );
+      FindBestEdge(W, P, parent, dest_cluster, &candidates, &weight);
 
       // If no candidates
-      if (candidates[0]!=-1) {
-        std::shuffle(candidates.begin(), candidates.end(), gen);
+      if (candidates[0] != -1) {
+        std::shuffle(candidates.begin(), candidates.end(), *gen);
         child = candidates[0];
       }
 
       if (child == -1) {
         new_roots.insert(parent);
-
-        //child = parent;
         return 1;
       } else {
         new_roots.insert(parent);
@@ -501,34 +502,34 @@ int KLGenerateBinaryTree( std::vector<T>&                  W,
     new_topo[parent] = child;
   }
 
-  int depth = scan_row.size();
-  int start = scan_row[depth-2];
-  int end   = scan_row[depth-1];
+  int depth = scan_row->size();
+  int start = (*scan_row)[depth-2];
+  int end   = (*scan_row)[depth-1];
 
   for (int i = start; i < end; ++i) {
-    int parent = topo_row[i];
+    int parent = (*topo_row)[i];
     int child;
 
-    // If not first, check previous level whether or not we are encountering 
+    // If not first, check previous level whether or not we are encountering
     // this root for the first time in this level of the tree
-    if (i != start && parent == static_cast<int>(topo_row[i-1]))
+    if (i != start && parent == static_cast<int>((*topo_row)[i-1]))
       child = parent;
     else
       child = new_topo[parent];
-    topo_row.push_back(parent);
-    topo_row.push_back(child);
+    topo_row->push_back(parent);
+    topo_row->push_back(child);
   }
 
-  cluster_pairs.clear();
-  roots.clear();
-  roots = std::move(new_roots);
+  cluster_pairs->clear();
+  roots->clear();
+  *roots = std::move(new_roots);
 
   return reset;
 }
 
 // @input: n is the number of nodes in a balanced binary tree
 // @output: returns how many levels of binary tree there are
-int ComputeDepth( int n ) {
+int ComputeDepth(int n) {
   for (int depth = 0; depth < MAX_DEPTH; ++depth) {
     int num = 2 << depth;
     if (n <= num)
@@ -543,12 +544,11 @@ int ComputeDepth( int n ) {
 //   -each edge in tree corresponds to link in network topology
 //   -each edge in tree does not form self-loop
 template <typename T>
-bool IsValid( const std::vector<T>&   W,
-              const std::vector<int>& state,
-              int                     num_elements,
-              int                     row,
-              int                     depth ) {
-
+bool IsValid(const std::vector<T>&   W,
+             const std::vector<int>& state,
+             int                     num_elements,
+             int                     row,
+             int                     depth) {
   // At each level of tree, check whether edge:
   //   -corresponds to link in network topology
   //   -corresponds to self-loop
@@ -566,7 +566,7 @@ bool IsValid( const std::vector<T>&   W,
   // If we encounter GPU for first time, increment found_vec.
   // Otherwise, do nothing
   std::unordered_set<int> found;
-  std::vector<int>        found_vec(num_elements,0);
+  std::vector<int>        found_vec(num_elements, 0);
   for (auto val : state) {
     if (val == -1)
       continue;
@@ -583,8 +583,8 @@ bool IsValid( const std::vector<T>&   W,
   // modifier is maximum number of repeats a single GPU can take
   //   e.g. 5 GPUs in 3-level binary tree => one GPU can repeat 3x
   //        GPU0 GPU0 GPU0 GPU0 GPU1 GPU2 GPU3 GPU4
-  int modifier = (1 << depth) - num_elements;
-  int num_found= found.size();
+  int modifier  = (1 << depth) - num_elements;
+  int num_found = found.size();
 
   // So we know we have an invalid state if we find:
   //   -only 4 unique GPUs
@@ -607,7 +607,8 @@ bool IsValid( const std::vector<T>&   W,
   return true;
 }
 
-// This function takes a spanning tree encoded as state (result), which may have// repeated GPUs representing NO-SENDs and converts it into a unique format. 
+// This function takes a spanning tree encoded as state (result), which may have
+// repeated GPUs representing NO-SENDs and converts it into a unique format.
 // This has the effect of recognizing redundant sends, grouping them together,
 // so that the Reduce call knows not to perform a CopyFromTo.
 //
@@ -625,25 +626,25 @@ bool IsValid( const std::vector<T>&   W,
 //     3     1
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6    // GPU3 knows not to make redundant send to itself
-void Postprocess( std::vector<int>& result, int num_elements, int depth) {
+void Postprocess(std::vector<int>* result, int num_elements, int depth) {
   for (int level = depth - 1; level >= 0; --level) {
     int stride = 1 << level;
-    std::vector<int> histogram_above(num_elements,0);
-    for (unsigned i = 0; i < result.size(); i += 2*stride) {
-      int val = result[i];
+    std::vector<int> histogram_above(num_elements, 0);
+    for (unsigned i = 0; i < result->size(); i += 2*stride) {
+      int val = (*result)[i];
       histogram_above[val]++;
     }
     std::vector<int> histogram(num_elements, 0);
-    for (unsigned i = 0; i < result.size(); i += stride) {
-      int val = result[i];
+    for (unsigned i = 0; i < result->size(); i += stride) {
+      int val = (*result)[i];
       histogram[val]++;
     }
 
-    for (int i = result.size()-stride; i-stride >= 0; i -= 2*stride) {
-      int from = result[i];
-      int dest = result[i-stride];
+    for (int i = result->size()-stride; i-stride >= 0; i -= 2*stride) {
+      int from = (*result)[i];
+      int dest = (*result)[i-stride];
       if ((histogram[from] > 1 || histogram_above[from] >= 1) && from != dest) {
-        result[i] = dest;
+        (*result)[i] = dest;
         histogram[from]--;
       }
     }
@@ -656,11 +657,11 @@ void Postprocess( std::vector<int>& result, int num_elements, int depth) {
 //         -usually turned on when backtracking to get better solutions
 //         -usually turned off when outside the penalty to get weight of tree
 template <typename T>
-T ComputeTreeWeight( const std::vector<T>&   W, 
-                     const std::vector<int>& result, 
-                     int                     num_elements,
-                     int                     depth,
-                     bool                    penalty ) {
+T ComputeTreeWeight(const std::vector<T>&   W,
+                    const std::vector<int>& result,
+                    int                     num_elements,
+                    int                     depth,
+                    bool                    penalty) {
   T weight = 0.f;
   std::unordered_set<int> links_used;
 
@@ -674,10 +675,10 @@ T ComputeTreeWeight( const std::vector<T>&   W,
         weight += W[from*num_elements+dest];
 
         // Penalize: (1) use of redundant edges in a single tree
-        //           (2) repeated use of a GPU in a single tree at the same 
+        //           (2) repeated use of a GPU in a single tree at the same
         //               level above the leaf level
-        if (links_used.find(from*num_elements+dest) != links_used.end() 
-            && penalty) {
+        if (links_used.find(from*num_elements+dest) != links_used.end()
+                            && penalty) {
           weight -= 100;
         }
         links_used.insert(from*num_elements+dest);
@@ -709,48 +710,48 @@ T ComputeTreeWeight( const std::vector<T>&   W,
 //     3     1
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6
-void FormTopology( const std::vector<int>& result, 
-                   std::vector<size_t>&    topo_row,
-                   std::vector<size_t>&    scan_row,
-                   int                     depth ) {
-  scan_row.push_back(topo_row.size());
+void FormTopology(const std::vector<int>& result,
+                  std::vector<size_t>*    topo_row,
+                  std::vector<size_t>*    scan_row,
+                  int                     depth) {
+  scan_row->push_back(topo_row->size());
   for (int i = depth; i > 0; --i) {
     int stride = 1 << i;
     for (unsigned j = 0; j < result.size(); j += stride) {
       int from = result[j];
-      topo_row.push_back(from);
+      topo_row->push_back(from);
     }
-    scan_row.push_back(topo_row.size());
+    scan_row->push_back(topo_row->size());
   }
 
   // Insert at the end, result vector
-  topo_row.insert(topo_row.end(), result.begin(), result.end());
-  scan_row.push_back(topo_row.size());
+  topo_row->insert(topo_row->end(), result.begin(), result.end());
+  scan_row->push_back(topo_row->size());
 }
 
 // Recursive function that finds a spanning tree, which fulfills the following
 // conditions:
 //   -balanced
 //   -binary
-//   -maximum weight 
+//   -maximum weight
 template <typename T>
-bool RecursiveBacktrack( const std::vector<T>& W,
-                         std::vector<int>&     state,
-                         std::vector<int>&     best_result,
-                         T&                    best_result_weight,
-                         int                   row,
-                         int                   num_elements,
-                         int                   depth,
-                         bool                  optimal ) {
-  if (row == static_cast<int>(state.size())) {
-    std::vector<int> result = state;
-    Postprocess(result, num_elements, depth);
+bool RecursiveBacktrack(const std::vector<T>& W,
+                        std::vector<int>*     state,
+                        std::vector<int>*     best_result,
+                        T*                    best_result_weight,
+                        int                   row,
+                        int                   num_elements,
+                        int                   depth,
+                        bool                  optimal) {
+  if (row == static_cast<int>(state->size())) {
+    std::vector<int> result = *state;
+    Postprocess(&result, num_elements, depth);
     T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
 
     // Save this spanning tree if it is highest weight tree found sofar
-    if (weight > best_result_weight) {
-      std::swap(best_result_weight, weight);
-      best_result        = result;
+    if (weight > *best_result_weight) {
+      std::swap(*best_result_weight, weight);
+      *best_result = result;
     }
     return !optimal;
   }
@@ -758,13 +759,11 @@ bool RecursiveBacktrack( const std::vector<T>& W,
   // If not last recursive level, try to find valid tree for next level
   bool stop = false;
   for (int j = 0; j < num_elements; ++j) {
-    state[row] = j;
-    if (IsValid(W, state, num_elements, row+1, depth)) {
-      stop = Backtrack( W, state, best_result, best_result_weight, row+1, 
-          num_elements, depth, optimal );
-      state[row] = -1;
-    } else
-      state[row] = -1;
+    (*state)[row] = j;
+    if (IsValid(W, state, num_elements, row+1, depth))
+      stop = RecursiveBacktrack(W, state, best_result, best_result_weight,
+                                row+1, num_elements, depth, optimal);
+    (*state)[row] = -1;
     if (stop)
       return stop;
   }
@@ -772,14 +771,14 @@ bool RecursiveBacktrack( const std::vector<T>& W,
 }
 
 template <typename T>
-void IterativeBacktrack( const std::vector<T>& W,
-                         std::vector<int>&     state,
-                         std::vector<int>&     best_result,
-                         T&                    best_result_weight,
-                         int                   row,
-                         int                   num_elements,
-                         int                   depth,
-                         bool                  optimal ) {
+void IterativeBacktrack(const std::vector<T>& W,
+                        std::vector<int>*     state,
+                        std::vector<int>*     best_result,
+                        T*                    best_result_weight,
+                        int                   row,
+                        int                   num_elements,
+                        int                   depth,
+                        bool                  optimal) {
   std::stack<int> state_stack;
   row = 1;
   int pos = 0;
@@ -788,48 +787,48 @@ void IterativeBacktrack( const std::vector<T>& W,
   while (true) {
     // If there is no valid position, 2 cases:
     // a) if stack is empty, break and stop search
-    // b) if stack is not empty, pop stack and set current position to next 
+    // b) if stack is not empty, pop stack and set current position to next
     //    position backtrack to previous row
     while (!state_stack.empty() && pos >= num_elements) {
       pos = state_stack.top();
       pos++;
       state_stack.pop();
-      state[state_stack.size()+1] = -1;
+      (*state)[state_stack.size()+1] = -1;
       row--;
     }
     if (state_stack.empty()) break;
 
-    state[row] = pos;
-    // If there is a valid position push the position to stack, set current 
+    (*state)[row] = pos;
+    // If there is a valid position push the position to stack, set current
     // position to 0 and move to next row
-    if (IsValid(W, state, num_elements, row+1, depth)) {
+    if (IsValid(W, *state, num_elements, row+1, depth)) {
       state_stack.push(pos);
       pos = 0;
       row++;
     } else {
       pos++;
-      state[row] = -1;
+      (*state)[row] = -1;
     }
 
     // If stack has size N, a solution is found
     // Pop stack, set current position to next position
     // Backtrack to find next solution
-    if (row == static_cast<int>(state.size())) {
-      std::vector<int> result = state;
-      Postprocess(result, num_elements, depth);
+    if (row == static_cast<int>(state->size())) {
+      std::vector<int> result = *state;
+      Postprocess(&result, num_elements, depth);
       T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
 
-      // Save this spanning tree if it is highest weight tree found sofar
-      if (weight > best_result_weight) {
-        std::swap(best_result_weight, weight);
-        best_result = result;
+      // Save this spanning tree if it is highest weight tree found so far
+      if (weight > *best_result_weight) {
+        std::swap(*best_result_weight, weight);
+        *best_result = result;
       }
       if (!optimal) break;
-      
+
       pos = state_stack.top();
       pos++;
       state_stack.pop();
-      state[state_stack.size()+1] = -1;
+      (*state)[state_stack.size()+1] = -1;
       row--;
     }
   }
@@ -838,17 +837,17 @@ void IterativeBacktrack( const std::vector<T>& W,
 // Apply penalty factor alpha to each link in link topology graph that is used
 // by the spanning tree
 template <typename T>
-void UpdateWeight( std::vector<T>&            W,
-                   const std::vector<size_t>& topo_row,
-                   int                        num_elements,
-                   float                      alpha ) {
+void UpdateWeight(std::vector<T>*            W,
+                  const std::vector<size_t>& topo_row,
+                  int                        num_elements,
+                  float                      alpha) {
   for (unsigned i = 1; i < topo_row.size() - 1; i += 2) {
     unsigned parent = topo_row[i];
     unsigned child  = topo_row[i+1];
-    if (!(parent >= num_elements*num_elements || 
+    if (!(parent >= num_elements*num_elements ||
         child >= num_elements*num_elements) && (parent != child)) {
-      W[parent*num_elements+child] *= alpha;
-      W[child*num_elements+parent] *= alpha;
+      (*W)[parent*num_elements+child] *= alpha;
+      (*W)[child*num_elements+parent] *= alpha;
     }
   }
 }
@@ -861,15 +860,14 @@ void UpdateWeight( std::vector<T>&            W,
 // 2) maximize edge weight
 // 3) tree is binary
 template <typename T>
-void BacktrackGenerateBinaryTree( std::vector<T>&      W, 
-                                  int                  num_elements,
-                                  int                  root,
-                                  std::vector<size_t>& topo_row, 
-                                  std::vector<size_t>& scan_row ) {
-
+void BacktrackGenerateBinaryTree(std::vector<T>*      W,
+                                 int                  num_elements,
+                                 int                  root,
+                                 std::vector<size_t>* topo_row,
+                                 std::vector<size_t>* scan_row) {
   // Clear before starting
-  topo_row.clear();
-  scan_row.clear();
+  topo_row->clear();
+  scan_row->clear();
 
   // Compute depth
   // num_elements: depth
@@ -879,7 +877,7 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
   // 8: 3
   // 9: 4
   int depth = ComputeDepth(num_elements);
-  int depth_leaves = 1<<depth;
+  int depth_leaves = 1 << depth;
 
   // State vector
   // -1 means unplaced
@@ -891,26 +889,27 @@ void BacktrackGenerateBinaryTree( std::vector<T>&      W,
   state[0] = root;
 
   // Seek optimal solution until depth <= 3 i.e. 8 GPUs
-  // For larger numbers of GPUs, settle for first tree found (non-optimal), but 
+  // For larger numbers of GPUs, settle for first tree found (non-optimal), but
   // this saves a lot of runtime, because Backtrack is exponential time
   if (depth <= 3)
-    IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, true );
+    IterativeBacktrack(*W, &state, &result, &result_weight, 1, num_elements,
+                       depth, true);
   else
-    IterativeBacktrack( W, state, result, result_weight, 1, num_elements, depth, false );
-  FormTopology( result, topo_row, scan_row, depth );
+    IterativeBacktrack(*W, &state, &result, &result_weight, 1, num_elements,
+                       depth, false);
+  FormTopology(result, topo_row, scan_row, depth);
 }
 
 // ComputeTreesFromRoot does the same thing as ComputeTrees, with the only
 // exception being it will do it from a fixed GPU as root
 template <typename T>
-void ComputeTreesFromRoot( std::vector<T>&      W, 
-                           int                  num_elements,
-                           int                  root,
-                           float                alpha,
-                           bool                 backtrack,
-                           std::vector<size_t>& topo, 
-                           std::vector<size_t>& scan ) {
-
+void ComputeTreesFromRoot(std::vector<T>*      W,
+                          int                  num_elements,
+                          int                  root,
+                          float                alpha,
+                          bool                 backtrack,
+                          std::vector<size_t>* topo,
+                          std::vector<size_t>* scan) {
   int num_partitions = 1;
 
   // Initialize partition array to indicate which partition each element belongs
@@ -919,18 +918,18 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
 
   // Initialize vector of pairs that will tell us edges between what 2 clusters
   // we should be looking to build the tree from
-  std::vector<std::pair<int,int>> cluster_pairs;
+  std::vector<std::pair<int, int>> cluster_pairs;
 
-  // Initialize vector of roots that will tell us edges between 
+  // Initialize vector of roots that will tell us edges between
   std::unordered_set<int> roots;
   roots.insert(root);
 
   // Will be used to obtain a seed for the random number engine
   // RNG: Standard mersenne_twister_engine seeded with rd()
   //     -use 0 for testing (TODO: remove this)
-  std::random_device rd;
+  // std::random_device rd;
+  // std::mt19937 gen(rd());
   std::mt19937 gen(1);
-  //std::mt19937 gen(rd());
 
   // Temporary variables for rewinding
   std::vector<int> P_temp;
@@ -951,17 +950,19 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
       P_temp              = P;
       num_partitions_temp = num_partitions;
       roots_temp          = roots;
-      topo_temp           = topo;
-      scan_temp           = scan;
+      topo_temp           = *topo;
+      scan_temp           = *scan;
     }
 
     // Run Kernighan-Lin to generate partition
-    stop = KernighanLin(W, P_temp, num_partitions_temp, cluster_pairs, gen);
+    stop = KernighanLin(*W, &P_temp, &num_partitions_temp, &cluster_pairs,
+                        &gen);
 
-    // Use partitions found and a given root to find best inter-cluster edge for    // each pair of clusters, and returns them as roots of next cluster
+    // Use partitions found and a given root to find best inter-cluster edge for
+    // each pair of clusters, and returns them as roots of next cluster
     // If reset is true, then rewind back to previous clustering
-    reset = KLGenerateBinaryTree(W, P_temp, cluster_pairs, roots_temp, 
-        topo_temp, scan_temp, gen);
+    reset = KLGenerateBinaryTree(*W, P_temp, &cluster_pairs, &roots_temp,
+                                 &topo_temp, &scan_temp, &gen);
 
     if (reset)
       level++;
@@ -969,15 +970,15 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
   }
 
   if (reset == 1) {
-    if (!backtrack)
-      LOG(WARNING) << "No valid binary tree found from root " << root << ", try backtracking";
+    // if (!backtrack)
+    //  LOG(WARNING) << "No valid binary tree found from root " << root << ", try backtracking";
     BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
-    topo = topo_temp;
-    scan = scan_temp;
-    scan.push_back(topo.size());
+    *topo = topo_temp;
+    *scan = scan_temp;
+    scan->push_back(topo->size());
   }
-  UpdateWeight( W, topo, num_elements, alpha );
+  UpdateWeight(W, *topo, num_elements, alpha);
 }
 
 // ComputeTrees computes balanced binary spanning trees of maximum edge weight
@@ -989,32 +990,32 @@ void ComputeTreesFromRoot( std::vector<T>&      W,
 // @output: topo stores the trees generated
 //          scan stores the start of each level of each tree
 template <typename T>
-void ComputeTrees( const std::vector<T>&             W, 
-                   int                               num_elements,
-                   float                             alpha,
-                   bool                              backtrack,
-                   std::vector<std::vector<size_t>>& topo, 
-                   std::vector<std::vector<size_t>>& scan ) {
+void ComputeTrees(const std::vector<T>&             W,
+                  int                               num_elements,
+                  float                             alpha,
+                  bool                              backtrack,
+                  std::vector<std::vector<size_t>>* topo,
+                  std::vector<std::vector<size_t>>* scan) {
   std::vector<T> W_copy = W;
 
-  topo.clear();
-  scan.clear();
+  topo->clear();
+  scan->clear();
   for (int i = 0; i < num_elements; ++i) {
-    topo.push_back(std::vector<size_t>());
-    scan.push_back(std::vector<size_t>());
-    topo[i].push_back(i);
-    scan[i].push_back(0);
-    ComputeTreesFromRoot(W_copy, num_elements, i, alpha, backtrack, topo[i], 
-        scan[i]);
+    topo->push_back(std::vector<size_t>());
+    scan->push_back(std::vector<size_t>());
+    (*topo)[i].push_back(i);
+    (*scan)[i].push_back(0);
+    ComputeTreesFromRoot(&W_copy, num_elements, i, alpha, backtrack,
+                         &((*topo)[i]), &((*scan)[i]));
   }
 
   // Note: must sum up adj matrix to show link usage before we readjust topo
   // from 0, 1, ..., n_gpus format to dev_id format, which will cause segfault
   std::vector<int> adj(W.size(), 0);
   for (int row = 0; row < num_elements; ++row) {
-    for (unsigned col = 1; col < topo[0].size(); col += 2) {
-      int from = std::min(topo[row][col], topo[row][col+1]);
-      int dest = std::max(topo[row][col], topo[row][col+1]);
+    for (unsigned col = 1; col < (*topo)[0].size(); col += 2) {
+      int from = std::min((*topo)[row][col], (*topo)[row][col+1]);
+      int dest = std::max((*topo)[row][col], (*topo)[row][col+1]);
       if (from != dest) {
         adj[from*num_elements+dest] += 1;
         adj[dest*num_elements+from] += 1;
@@ -1034,4 +1035,4 @@ void ComputeTrees( const std::vector<T>&             W,
 
 }  // namespace kvstore
 }  // namespace mxnet
-#endif  // MXNET_KVSTORE_GPU_TOPOLOGY_H
+#endif  // MXNET_KVSTORE_GPU_TOPOLOGY_H_
