@@ -190,6 +190,7 @@ def test_trainer_reset_kv():
         trainer.step(1)
         assert trainer._kvstore.type == kv
         # load would reset kvstore
+        mx.nd.waitall()
         params.load('test_trainer_reset_kv.params')
         assert trainer._kvstore is None
         assert trainer._kv_initialized is False
@@ -201,35 +202,7 @@ def test_trainer_reset_kv():
         # the updated parameter should be based on the loaded checkpoint
         assert (x.data(mx.cpu()) == -0.2).asnumpy().all()
 
-    kvs = ['device']
-    for kv in kvs:
-        check_trainer_reset_kv(kv)
-
-@with_seed()
-def test_trainer_reset_local_kv():
-    def check_trainer_reset_kv(kv):
-        params = gluon.ParameterDict()
-        x = params.get('x', shape=(10,), lr_mult=1.0)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        params.save('test_trainer_reset_local_kv.params')
-        with mx.autograd.record():
-            for w in x.list_data():
-                y = w + 1
-                y.backward()
-        trainer.step(1)
-        assert trainer._kvstore.type == kv
-        # load would reset kvstore
-        params.load('test_trainer_reset_local_kv.params')
-        assert trainer._kvstore is None
-        assert trainer._kv_initialized is False
-        with mx.autograd.record():
-            for w in x.list_data():
-                y = w + 1
-                y.backward()
-        trainer.step(1)
-        # the updated parameter should be based on the loaded checkpoint
-        assert (x.data(mx.cpu()) == -0.2).asnumpy().all()
-
-
-    check_trainer_reset_kv('local')
+    kvs = ['local', 'device']
+    for i in range(100000):
+        for kv in kvs:
+            check_trainer_reset_kv(kv)
