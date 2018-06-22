@@ -1652,20 +1652,6 @@
      #{"scala.collection.Seq"})))))
 
 (defn
- org$apache$mxnet$-warn-if-not-disposed$$super$finalize
- ([ndarray]
-  (util/coerce-return
-   (.org$apache$mxnet$WarnIfNotDisposed$$super$finalize ndarray))))
-
-(defn
- org$apache$mxnet$-warn-if-not-disposed$-setter-$creation-trace-=
- ([ndarray Option]
-  (util/coerce-return
-   (.org$apache$mxnet$WarnIfNotDisposed$_setter_$creationTrace_$eq
-    ndarray
-    (util/coerce-param Option #{"scala.Option"})))))
-
-(defn
  org.apache.mxnet.nd-array
  ([ndarray long bool]
   (util/coerce-return

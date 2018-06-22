@@ -27,7 +27,8 @@
 (defn clojure-case
   [string]
   (-> string
-      (clojure.string/replace #"(.)([A-Z][a-z]+)" "$1-$2")
+      (clojure.string/replace #"(\s+)([A-Z][a-z]+)" "$1-$2")
+      (clojure.string/replace #"([A-Z]+)([A-Z][a-z]+)" "$1-$2")
       (clojure.string/replace #"([a-z0-9])([A-Z])" "$1-$2")
       (clojure.string/lower-case)
       (clojure.string/replace #"\_" "-")
@@ -74,6 +75,7 @@
 (def symbol-public (filter (fn [x] (-> x :flags :public)) symbol-reflect-info))
 
 (def symbol-public-no-default (->> symbol-public
+                                   (filter #(not (re-find #"org\$apache\$mxnet" (str (:name %)))))
                                    (filter #(not (re-find #"\$default" (str (:name %)))))))
 
 (into #{} (mapcat :parameter-types symbol-public-no-default))
@@ -231,7 +233,8 @@
 (def ndarray-public (filter (fn [x] (-> x :flags :public)) ndarray-reflect-info))
 
 (def ndarray-public-no-default (->> ndarray-public
-                             (filter #(not (re-find #"\$default" (str (:name %)))))))
+                                    (filter #(not (re-find #"org\$apache\$mxnet" (str (:name %)))))
+                                    (filter #(not (re-find #"\$default" (str (:name %)))))))
 
 (def ndarray-hand-gen-set  #{"org.apache.mxnet.NDArrayFuncReturn"
                              "org.apache.mxnet.Context"

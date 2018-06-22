@@ -7505,37 +7505,7 @@
     nil))))
 
 (defn
- org$apache$mxnet$-symbol$$compose
- ([sym sym-name-or-sym-name kwargs-map-or-Symbol<>]
-  (util/coerce-return
-   (.org$apache$mxnet$Symbol$$compose
-    sym
-    (util/nil-or-coerce-param
-     sym-name-or-sym-name
-     #{"java.lang.String"})
-    (util/nil-or-coerce-param
-     kwargs-map-or-Symbol<>
-     #{"org.apache.mxnet.Symbol<>"
-       "scala.collection.immutable.Map"})))))
-
-(defn
- org$apache$mxnet$-symbol$$set-attr
- ([sym kwargs-map]
-  (util/coerce-return
-   (.org$apache$mxnet$Symbol$$setAttr
-    sym
-    (util/nil-or-coerce-param
-     kwargs-map
-     #{"scala.collection.immutable.Map"})))))
-
-(defn
- org$apache$mxnet$-warn-if-not-disposed$$super$finalize
- ([sym]
-  (util/coerce-return
-   (.org$apache$mxnet$WarnIfNotDisposed$$super$finalize sym))))
-
-(defn
- org.apache.mxnet.-symbol
+ org.apache.mxnet.symbol
  ([sym long]
   (util/coerce-return
    (.org.apache.mxnet.Symbol
