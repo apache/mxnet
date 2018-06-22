@@ -454,7 +454,7 @@ OpAttrs GetConcatOp(int num_args, int dim) {
 OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Concat");
-  attrs.num_inputs = 1;
+  attrs.num_inputs = 2;
   attrs.num_outputs = num_args;
   attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
   attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
