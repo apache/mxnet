@@ -479,7 +479,7 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t2 = arr2.arr.shape();
   std::stringstream ss;
   ss << "Verifying: " << arr1.desc.c_str() << " " <<
-     GetShapeString(t1) << " with " << arr2.desc.c_str() << GetShapeString(t2) << "\n";
+     GetShapeString(t1) << " with " << arr2.desc.c_str() << " " << GetShapeString(t2) << "\n";
   printf("%s", ss.str().c_str());
 }
 
