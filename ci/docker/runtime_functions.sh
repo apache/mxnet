@@ -439,12 +439,16 @@ build_ubuntu_gpu_tensorrt() {
     set -ex
     pushd .
     pushd .
+
     # Install ONNX
     echo "TensorRT build enabled. Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
     rm -rf build
     mkdir build
     cd build
-    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    cmake \
+        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
+        -DBUILD_SHARED_LIBS=ON ..
     make -j$(nproc)
     make install
     ldconfig
@@ -454,6 +458,7 @@ build_ubuntu_gpu_tensorrt() {
     cp build/libonnx.so /usr/local/lib
     ldconfig
     popd
+
     # Install ONNX-TensorRT
     cd 3rdparty/onnx-tensorrt/
     mkdir build
