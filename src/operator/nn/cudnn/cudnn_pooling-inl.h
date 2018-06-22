@@ -51,7 +51,11 @@ class CuDNNPoolingOp {
         mode_ = CUDNN_POOLING_MAX;
         break;
       case pool_enum::kAvgPooling:
-        mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+        if (param_.count_include_pad.has_value() && !param_.count_include_pad.value()) {
+          mode_ = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+        } else {
+          mode_ = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+        }
         break;
       default:
         LOG(FATAL) << "Not implmented";
@@ -263,7 +267,7 @@ class CuDNNPoolingOp {
                                              &(pad_vec[0]),
                                              &(stride_vec[0])));
       #else
-      LOG(FATAL) << "3D pooling only support CUDNN v5 and abouve";
+      LOG(FATAL) << "3D pooling only support CUDNN v5 and above";
       #endif
     }
   }

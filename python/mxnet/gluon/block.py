@@ -310,23 +310,21 @@ class Block(object):
 
     def save_parameters(self, filename):
         """Save parameters to file.
-        This function is to be used to save parameters of a Gluon model, note that
-        the saved parameters are not meant to be loaded in a different language binding for now.
-        Saving parameters using `.save_parameters()` is different than
-        `.collect_params().save()` and `.save_params()`, which are deprecated ways
-        to save the parameters of a model and should be avoided.
 
-        If your model is hybridizable and you want to export a serialized version of the
-        structure of the model as well as its parameters please refer to
-        :py:meth:`HybridBlock.export`. Such model can then be loaded back in any language binding
-        or even in Gluon using a :py:class:`SymbolBlock`.
-        Refer to this tutorial for a complete overview of saving/loading models with
-        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
+        Saved parameters can only be loaded with `load_parameters`. Note that this
+        method only saves parameters, not model structure. If you want to save
+        model structures, please use :py:meth:`HybridBlock.export`.
 
         Parameters
         ----------
         filename : str
             Path to file.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
@@ -349,11 +347,7 @@ class Block(object):
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False):
-        """Load parameters from file.
-        This function is to be used to load parameters of a Gluon model that were
-        saved using the `.save_parameters()` function. Any other use is undefined behaviour.
-        Refer to this tutorial for a complete overview of saving/loading models with
-        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
+        """Load parameters from file previously saved by `save_parameters`.
 
         Parameters
         ----------
@@ -366,6 +360,12 @@ class Block(object):
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this Block.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
@@ -508,10 +508,6 @@ class Block(object):
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
-        forward_bulk_size : int, default 15
-            Segment size of bulk execution during forward pass.
-        backward_bulk_size : int, default 15
-            Segment size of bulk execution during backward pass.
         """
         for cld in self._children.values():
             cld.hybridize(active, **kwargs)

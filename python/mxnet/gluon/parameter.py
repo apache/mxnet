@@ -310,14 +310,16 @@ class Parameter(object):
                                 self._grad, self.grad_req)
 
     def _reduce(self):
-        """Reduce data from multiple context."""
+        """Reduce data from multiple context to cpu."""
+        ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
         else:
             # fetch all rows for 'row_sparse' param
-            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=context.cpu())
-            data = self.row_sparse_data(all_row_ids)
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
+            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
+            self._trainer._row_sparse_pull(self, data, all_row_ids)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
