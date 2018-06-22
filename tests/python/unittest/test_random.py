@@ -734,4 +734,3 @@ def test_shuffle():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-    #test_sample_multinomial()
