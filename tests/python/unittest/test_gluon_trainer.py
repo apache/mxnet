@@ -175,7 +175,6 @@ def test_trainer_save_load():
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
-    
 @with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):
