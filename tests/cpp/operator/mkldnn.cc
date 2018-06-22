@@ -161,12 +161,12 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
   return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
 }
 
-static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input, int dim = 0) {
+static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
   CHECK(dim <= pd.desc().data.ndims);
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
-  s[dim] = s[dim] * num_input;
+  s[dim] = int(s[dim] * num_input);
   return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
                   static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
@@ -594,10 +594,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
  */
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                              int num_inputs = 0, int dim = 0, bool is_rand = true) {
+                                              float num_inputs = 0, int dim = 0, bool is_rand = true) {
   TShape target_shape = shape;
   if (num_inputs != 0)
-    target_shape[dim] = shape[dim] * num_inputs;
+    target_shape[dim] = int(shape[dim] * num_inputs);
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
@@ -902,6 +902,16 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
           continue;
         out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, true);
       }
+
+      if (use_concat_inputs) {
+        std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+        int dim = std::stoi(str_dim);
+        if (dim >= in_arr.arr.shape().ndim())
+          continue;
+        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_inputs), dim, true);
+      }
+
+
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
       for (auto out_arr : out_arrs) {
