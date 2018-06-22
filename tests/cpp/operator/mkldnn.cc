@@ -860,8 +860,16 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
+  // used for ops that accepts multiple inputs that cannot be the same reference (like concat-back)
+  std::vector<std::vector<NDArrayAttrs>> in_arr_copies(attrs.num_inputs);
+  for (int i = 0; i < attrs.num_inputs; i++) {
+    in_arr_copies[i] = GetTestInputArrays();
+  }
+
+
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  for (auto in_arr : in_arrs) {
+  for (int ai = 0; ai < in_arrs.size(); ai++) {
+    auto in_arr = in_arrs[ai];
     for (auto dispatch : dispatches) {
       std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
       if (use_concat_outputs) {
@@ -874,7 +882,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
       }
       for (auto out_arr : out_arrs) {
         for (int i = 0; i < attrs.num_inputs; i++)
-          inputs[i] = &in_arr.arr;
+          inputs[i] = &in_arr_copies[i][ai].arr;
         for (int i = 0; i < attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arr.arr;
