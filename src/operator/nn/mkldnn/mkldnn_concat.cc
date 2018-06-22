@@ -137,7 +137,10 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int num_in_data = param.num_args;
   int axis_ = param.dim;
   auto engine = CpuEngine::Get()->get_engine();
-  auto gz_mem = inputs[0].GetMKLDNNData();
+  auto in_buff = inputs[0];
+  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
+    in_buff = inputs[0].Reorder2Default();
+  auto gz_mem = in_buff.GetMKLDNNData();
   mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc();
   /* init the offset */
   mkldnn::memory::dims offsets = {0, 0, 0, 0};
