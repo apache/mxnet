@@ -650,9 +650,9 @@ class CuDNNConvolutionOp {
       int actual_bwd_filter_algos = 0;
       // In cudnn v7.1.4, find() returned wgrad algos that could fail for large c if we
       // were summing into the output (i.e. beta != 0).  Get() returned OK algos though.
-      auto bwd_filter_algo_discoverer = (add_to_weight_ ||
-        param_.cudnn_tune.value() == conv::kOff) ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
-                                                 : cudnnFindConvolutionBackwardFilterAlgorithm;
+      auto bwd_filter_algo_discoverer =
+        param_.cudnn_tune.value() == conv::kOff ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
+                                                : cudnnFindConvolutionBackwardFilterAlgorithm;
       CUDNN_CALL((*bwd_filter_algo_discoverer)(s->dnn_handle_,
                                                in_desc_,
                                                out_desc_,
@@ -797,6 +797,13 @@ class CuDNNConvolutionOp {
         }
       }
       #endif  // CUDNN_MAJOR < 7
+
+      // Fix for issue #11241
+      int cudnn_find_issue_max_features = 64 * 1024;
+      if (add_to_weight_ && Features(in_shape[conv::kData]) >= cudnn_find_issue_max_features) {
+        this->back_algo_w_.Set(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true);
+      }
+
       // An algo specification by the user may be cached here, but another
       // convolution will match only if identically specified.
       // We're caching results of *Get* as well as *Find*, but these records
@@ -925,6 +932,19 @@ class CuDNNConvolutionOp {
   // Returns the size in bytes of the 1D Tensor of words.
   size_t TensorSizeBytes(const mshadow::Tensor<gpu, 1, DType> &tensor) {
     return tensor.MSize() * sizeof(DType);
+  }
+
+  // Given a tensor shape of this operation, return the number of features 'c'
+  int64_t Features(const TShape &dshape) {
+    int c = 0;
+    switch (dshape.ndim()) {
+      case 3: c = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW)[1]; break;
+      case 4: c = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW)[1]; break;
+      case 5: c = ConvertLayout(dshape.get<5>(), param_.layout.value(), kNCDHW)[1]; break;
+      default:
+        LOG(FATAL) << "Unexpected convolution data dimension " << dshape.ndim();
+    }
+    return c;
   }
 
   std::vector<int> param_stride_;
