@@ -439,10 +439,9 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
-    pushd .
-    pushd .
 
-    # Install ONNX
+    # Build ONNX
+    pushd .
     echo "TensorRT build enabled. Installing ONNX."
     cd 3rdparty/onnx-tensorrt/third_party/onnx
     rm -rf build
@@ -453,24 +452,23 @@ build_ubuntu_gpu_tensorrt() {
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
     ninja -v
-    ldconfig
-    cd ..
-    mkdir /usr/include/x86_64-linux-gnu/onnx
-    cp build/onnx/onnx*pb.* /usr/include/x86_64-linux-gnu/onnx
-    cp build/libonnx.so /usr/local/lib
-    ldconfig
+    mkdir /work/mxnet/onnx/
+    cp onnx/onnx*pb.* /work/mxnet/onnx/
+    mkdir /work/mxnet/deps/
+    cp libonnx.so /work/mxnet/deps/lib
     popd
 
-    # Install ONNX-TensorRT
+    # Build ONNX-TensorRT
+    pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir build
     cd build
     cmake ..
     make -j$(nproc)
-    make install
-    ldconfig
+    # make install
     popd
 
+    rm -rf build
     make \
         DEV=1                         \
         USE_BLAS=openblas             \
