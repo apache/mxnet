@@ -468,6 +468,24 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
+std::string GetShapeString(const TShape shape) {
+  std::stringstream ss;
+  ss << "(";
+  for (size_t i = 0; i < shape.ndim(); i++)
+    ss << shape[i] << ", ";
+  ss << ")";
+  return ss.str();
+}
+
+void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
+  TShape t1 = arr1.arr.shape();
+  TShape t2 = arr2.arr.shape();
+  std::stringstream ss;
+  ss << "Verifying: " << arr1.desc.c_str() << " " <<
+     GetShapeString(t1) << " with " << arr2.desc.c_str() << GetShapeString(t2) << "\n";
+  printf("%s", ss.str().c_str());
+}
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -674,15 +692,6 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-std::string GetShapeString(const TShape shape) {
-  std::stringstream ss;
-  ss << "(";
-  for (size_t i = 0; i < shape.ndim(); i++)
-    ss << shape[i] << ", ";
-  ss << ")";
-  return ss.str();
-}
-
 TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
@@ -693,6 +702,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
         if (dim >= arr.arr.shape().ndim())
           continue;
         auto ex_arr = expanded_arrs[i];
+        PrintVerifyMsg(ex_arr, arr);
         EXPECT_EQ(arr.arr.shape().Size() * num_inputs, ex_arr.arr.shape().Size());
         EXPECT_EQ(arr.arr.shape()[dim] * num_inputs, ex_arr.arr.shape()[dim]);
         i++;
@@ -856,15 +866,6 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
         ASSERT_EQ(data[block_num * block_size + i], out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
-}
-
-void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
-  TShape t1 = arr1.arr.shape();
-  TShape t2 = arr2.arr.shape();
-  std::stringstream ss;
-  ss << "Verifying: " << arr1.desc.c_str() << " " <<
-     GetShapeString(t1) << " with " << arr2.desc.c_str() << GetShapeString(t2) << "\n";
-  printf("%s", ss.str().c_str());
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
