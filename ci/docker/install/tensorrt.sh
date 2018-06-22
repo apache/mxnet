@@ -31,6 +31,8 @@
 # Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
 pushd .
 cd ..
+apt-get update
+apt-get install -y automake libtool
 git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
 cd protobuf
 ./autogen.sh
