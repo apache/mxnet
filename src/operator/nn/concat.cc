@@ -24,6 +24,7 @@
  * \author Bing Xu
 */
 
+#include <mkldnn_types.h>
 #include "./concat-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
@@ -185,13 +186,19 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
+
+bool SupportMKLDNNConcat(NDArray arr) {
+  return (arr.shape().ndim() == 2 || arr.shape().ndim() == 4) &&
+      arr.dtype() == mshadow::kFloat32 &&
+      arr.shape().ndim() == arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
+}
+
 static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
-      && inputs[0].dtype() == mshadow::kFloat32) {
+  if (SupportMKLDNNConcat(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
