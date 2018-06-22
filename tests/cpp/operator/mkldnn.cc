@@ -538,7 +538,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
         if (shape.ndim() == pd.desc().data.ndims)
           pd = GetExpandedMemPD(pd, num_inputs, dim);
         else
-          GetExpandedMemPD(pd, num_inputs);
+          pd = GetExpandedMemPD(pd, num_inputs);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
