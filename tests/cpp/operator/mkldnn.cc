@@ -161,6 +161,16 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
   return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
 }
 
+static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input, int dim = 0) {
+  CHECK(dim <= pd.desc().data.ndims);
+  nnvm::TShape s(pd.desc().data.ndims);
+  for (size_t i = 0; i < pd.desc().data.ndims; i++)
+    s[i] = pd.desc().data.dims[i];
+  s[dim] = s[dim] * num_input;
+  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
+}
+
 // This function gets special MKLDNN formats without knowing the specific
 // hardware configuration. Certainly, it potentially misses some format if
 // it's specific for certain array shapes. It covers at least one special format
@@ -478,8 +488,9 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
  *
+ *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 0, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -488,10 +499,26 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false) {
   std::string desc;
   for (auto shape : shapes) {
     // Type 1.
+
+    if (num_inputs != 0) {
+      if (dim >= shape.ndim())
+        continue;
+      shape[dim] = shape[dim] * num_inputs;
+    }
+
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
+
+      if (num_inputs != 0) {
+        // preserve if matching layout else just expand on 0 dim
+        if (shape.ndim() == pd.desc().data.ndims)
+          pd = GetExpandedMemPD(pd, num_inputs, dim);
+        else
+          GetExpandedMemPD(pd, num_inputs);
+      }
+
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
 
@@ -540,15 +567,6 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
 
   EXPECT_GT(mkldnn_view_count, 0);
   EXPECT_GT(mkldnn_count, 0);
-}
-
-static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, int num_input) {
-  nnvm::TShape s(pd.desc().data.ndims);
-  for (size_t i = 0; i < pd.desc().data.ndims; i++)
-    s[i] = pd.desc().data.dims[i];
-  s[0] = s[0] * num_input;
-  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
-                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
 
 /*
@@ -624,6 +642,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     if (num_inputs != 0)
       target_pd = GetExpandedMemPD(pd, num_inputs);
 
+
     // Type 2, 3.
     arr = NDArray(target_shape, Context());
     desc = "MKLDNN NDArray";
@@ -662,6 +681,24 @@ std::string GetShapeString(const TShape shape) {
     ss << shape[i] << ", ";
   ss << ")";
   return ss.str();
+}
+
+TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
+  auto in_arrs = GetTestInputArrays();
+  for (int dim = 0; dim < 5; dim++) {
+    for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
+      int i = 0;
+      for (auto arr: in_arrs) {
+        if (dim >= arr.arr.shape().ndim())
+          continue;
+        auto ex_arr = expanded_arrs[i];
+        EXPECT_EQ(arr.arr.shape().Size() * num_inputs, ex_arr.arr.shape().Size());
+        EXPECT_EQ(arr.arr.shape()[dim] * num_inputs, ex_arr.arr.shape()[dim]);
+        i++;
+      }
+    }
+  }
 }
 
 TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
@@ -851,7 +888,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
 }
 
 void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
-            bool use_concat_outputs = false, bool reverse_input_output = false) {
+            bool use_concat_outputs = false, bool use_concat_inputs = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
@@ -860,14 +897,14 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  // used for ops that accepts multiple inputs that cannot be the same reference (like concat-back)
-  std::vector<std::vector<NDArrayAttrs>> in_arr_copies(attrs.num_inputs);
-  for (int i = 0; i < attrs.num_inputs; i++) {
-    in_arr_copies[i] = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+
+  if (use_concat_inputs) {
+    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+    int dim = std::stoi(str_dim);
+    in_arrs = GetTestInputArrays(false, attrs.num_inputs, dim);
   }
 
-
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   for (int ai = 0; ai < in_arrs.size(); ai++) {
     auto in_arr = in_arrs[ai];
     for (auto dispatch : dispatches) {
@@ -877,29 +914,17 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         int dim = std::stoi(str_dim);
         if (dim >= in_arr.arr.shape().ndim())
           continue;
-        bool rand_output = !reverse_input_output;
-        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, rand_output);
+        out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim, true);
       }
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
       for (auto out_arr : out_arrs) {
-        for (int i = 0; i < attrs.num_inputs; i++)
-          inputs[i] = &in_arr_copies[i][ai].arr;
         for (int i = 0; i < attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arr.arr;
         }
 
-        // used for concat backwards
-        if (reverse_input_output) {
-          std::vector<NDArray*> tmp = inputs;
-          inputs = outputs;
-          outputs = tmp;
-          req = std::vector<OpReqType>(outputs.size());
-          for (int i = 0; i < outputs.size(); i++)
-            req[i] = kWriteTo;
-          PrintVerifyMsg(out_arr, in_arr);
-        } else {
-          PrintVerifyMsg(in_arr, out_arr);
-        }
+        PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
