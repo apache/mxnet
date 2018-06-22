@@ -160,12 +160,13 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
   return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
 }
 
-static mkldnn::memory::primitive_desc GetExpandedMemPD(mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
+static mkldnn::memory::primitive_desc GetExpandedMemPD(
+    mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
   CHECK(dim <= pd.desc().data.ndims);
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
-  s[dim] = int(s[dim] * num_input);
+  s[dim] = static_cast<int>(s[dim] * num_input);
   return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
                   static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
@@ -528,7 +529,6 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-
       if (num_inputs != 0) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
@@ -591,9 +591,8 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds,
                                               float num_inputs = 0, int dim = 0) {
-
   if (num_inputs != 0)
-    shape[dim] = int(shape[dim] * num_inputs);
+    shape[dim] = static_cast<int>(shape[dim] * num_inputs);
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
@@ -678,7 +677,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
       std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
       int i = 0;
-      for (auto arr: in_arrs) {
+      for (auto arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
           continue;
         auto ex_arr = expanded_arrs[i];
@@ -695,7 +694,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
-  for (auto shape: shapes) {
+  for (auto shape : shapes) {
     for (int dim = 0; dim < 5; dim++) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
@@ -819,7 +818,8 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
     mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
     for (size_t block_num = 0; block_num < num_blocks; block_num++) {
       for (size_t i = 0; i < block_size; i++)
-        ASSERT_EQ(data[block_num * block_size + i], out_data[(block_num * num_inputs + input_num) * block_size + i]);
+        ASSERT_EQ(data[block_num * block_size + i],
+                  out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
 }
@@ -843,7 +843,8 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
     mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
     for (size_t block_num = 0; block_num < num_blocks; block_num++) {
       for (size_t i = 0; i < block_size; i++)
-        ASSERT_EQ(data[block_num * block_size + i], out_data[(block_num * num_inputs + input_num) * block_size + i]);
+        ASSERT_EQ(data[block_num * block_size + i],
+                  out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
 }
@@ -909,7 +910,8 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         if (dim >= in_arr.arr.shape().ndim())
           continue;
         for (int i = 0; i < attrs.num_outputs; i++)
-          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 1 / float(attrs.num_outputs), dim);
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(),
+              pds, 1 / static_cast<float>(attrs.num_outputs), dim);
       }
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
