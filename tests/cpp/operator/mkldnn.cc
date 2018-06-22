@@ -839,8 +839,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     if (!SupportMKLDNN(in_arr.arr))
       continue;
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
-      in_arr.arr = in_arr.arr.Reorder2Default();
-      in_arr2.arr = in_arr2.arr.Reorder2Default();
+      continue;
     }
     auto input_mem = in_arr.arr.GetMKLDNNData();
     auto input_mem2 = in_arr2.arr.GetMKLDNNData();
