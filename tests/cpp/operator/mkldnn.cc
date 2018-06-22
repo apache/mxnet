@@ -896,9 +896,10 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
           req = std::vector<OpReqType>(outputs.size());
           for (int i = 0; i < outputs.size(); i++)
             req[i] = kWriteTo;
+          PrintVerifyMsg(out_arr, in_arr);
+        } else {
+          PrintVerifyMsg(in_arr, out_arr);
         }
-
-        PrintVerifyMsg(in_arr, out_arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
