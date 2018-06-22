@@ -137,19 +137,16 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   int num_in_data = param.num_args;
   int axis_ = param.dim;
   auto engine = CpuEngine::Get()->get_engine();
-  auto in_buff = inputs[0];
-  if (inputs[0].IsView() && inputs[0].IsMKLDNNData())
-    in_buff = inputs[0].Reorder2Default();
-  auto gz_mem = in_buff.GetMKLDNNData();
+  auto gz_mem = inputs[0].GetMKLDNNData();
   mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc();
   /* init the offset */
   mkldnn::memory::dims offsets = {0, 0, 0, 0};
   for (int i = 0; i < num_in_data; i++) {
     mkldnn::memory::dims diff_src_tz
-        = {static_cast<int>(outputs[i+1].shape()[0]),
-          static_cast<int>(outputs[i+1].shape()[1]),
-          static_cast<int>(outputs[i+1].shape()[2]),
-          static_cast<int>(outputs[i+1].shape()[3])};
+        = {static_cast<int>(outputs[i].shape()[0]),
+          static_cast<int>(outputs[i].shape()[1]),
+          static_cast<int>(outputs[i].shape()[2]),
+          static_cast<int>(outputs[i].shape()[3])};
     auto diff_src_mpd = outputs[i].GetMKLDNNData()->get_primitive_desc();
     auto gradi_mem_ = CreateMKLDNNMem(outputs[i], diff_src_mpd, req[i]);
     // create view from gy to gxs[i]
