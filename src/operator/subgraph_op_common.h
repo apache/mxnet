@@ -38,6 +38,14 @@ bool InferSubgraphDataType(const nnvm::Symbol &subgraph, std::vector<int> *in_ty
                            std::vector<int> *out_type);
 
 /*
+ * Infer the shape of inputs and outputs of an operator that contains a
+ * subgraph.
+ */
+bool InferSubgraphShape(const nnvm::Symbol &subgraph,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape);
+
+/*
  * Infer the storage types of inputs and outputs of an operator that contains a
  * subgraph.
  */

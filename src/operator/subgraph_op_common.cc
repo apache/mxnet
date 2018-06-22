@@ -118,6 +118,49 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
   return g.GetAttr<size_t>("storage_type_num_unknown_nodes") == 0;
 }
 
+bool InferSubgraphShape(const nnvm::Symbol &subgraph,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape) {
+  nnvm::Graph g;
+  g.outputs = subgraph.outputs;
+  const auto& idx = g.indexed_graph();
+  CHECK_EQ(idx.input_nodes().size(), in_shape->size());
+  CHECK_EQ(idx.outputs().size(), out_shape->size());
+
+  // Put the input and output shapes to the shape vector.
+  nnvm::ShapeVector shapes(idx.num_node_entries());
+  const auto &input_nids = idx.input_nodes();
+  CHECK_EQ(input_nids.size(), in_shape->size());
+  for (size_t i = 0; i < in_shape->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    shapes[eid] = in_shape->at(i);
+  }
+  CHECK_EQ(g.outputs.size(), out_shape->size());
+  for (size_t i = 0; i < out_shape->size(); i++) {
+    auto eid = idx.entry_id(g.outputs[i]);
+    shapes[eid] = out_shape->at(i);
+  }
+
+  // Infer shape of the graph.
+  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
+  g = exec::InferShape(std::move(g));
+
+  const auto& shapes1 = g.GetAttr<nnvm::ShapeVector>("shape");
+  // Inferring the shape in the subgraph may infer the shape of the inputs.
+  // We need to copy the inferred input shapes back.
+  CHECK_EQ(input_nids.size(), in_shape->size());
+  for (size_t i = 0; i < in_shape->size(); i++) {
+    auto eid = idx.entry_id(input_nids[i], 0);
+    SHAPE_ASSIGN_CHECK(*in_shape, i, shapes1[eid]);
+  }
+
+  for (size_t i = 0; i < g.outputs.size(); i++) {
+    uint32_t eid = idx.entry_id(g.outputs[i]);
+    SHAPE_ASSIGN_CHECK(*out_shape, i, shapes1[eid]);
+  }
+  return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
+}
+
 LoopState::LoopState(const Symbol &g) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
