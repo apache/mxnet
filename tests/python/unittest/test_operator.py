@@ -115,8 +115,6 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
-
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11219")
 @with_seed()
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
@@ -134,11 +132,10 @@ def test_gru_bidirectional():
                 mx.rnn.GRUCell(H, prefix='l1_'),
                 mx.rnn.GRUCell(H, prefix='r1_'),
                 output_prefix='bi_gru_1_'))
-    
+
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
 
 # Currently, fused LSTM operator doesn't support dropout.
 # Will change this test after dropout is supported
@@ -4098,7 +4095,7 @@ def test_new_softmax():
     for ndim in range(1, 5):
         for _ in range(5):
             shape = np.random.randint(1, 5, size=ndim)
-            axis = np.random.randint(0, ndim)
+            axis = np.random.randint(-ndim, ndim)
             data = np.random.uniform(-2, 2, size=shape)
             sym = mx.sym.softmax(axis=axis)
             check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
