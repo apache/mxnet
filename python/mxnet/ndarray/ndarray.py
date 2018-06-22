@@ -3754,7 +3754,7 @@ def histogram(a, bins=10, range=None):
         If bins is an int, it defines the number of equal-width bins in the
         given range (10, by default). If bins is a sequence, it defines the bin edges,
         including the rightmost edge, allowing for non-uniform bin widths.
-    range_ : (float, float), optional
+    range : (float, float), optional
         The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()).
         Values outside the range are ignored. The first element of the range must be less than or
         equal to the second. range affects the automatic bin computation as well, the range will
@@ -3766,7 +3766,7 @@ def histogram(a, bins=10, range=None):
         return _internal._histogram(data=a, bins=bins)
     elif isinstance(bins, integer_types):
         if range is None:
-            warnings.warn("range_ is not specified, using numpy's result "
+            warnings.warn("range is not specified, using numpy's result "
                           "to ensure consistency with numpy")
             res, bin_bounds = np.histogram(a.asnumpy(), bins=bins)
             return array(res), array(bin_bounds)

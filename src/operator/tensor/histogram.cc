@@ -138,7 +138,10 @@ Example::
 .set_num_outputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "bins"};
+    const HistogramParam& params = nnvm::get<HistogramParam>(attrs.parsed);
+    return params.bin_cnt.has_value() ?
+           std::vector<std::string>{"data"} :
+           std::vector<std::string>{"data", "bins"};
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
