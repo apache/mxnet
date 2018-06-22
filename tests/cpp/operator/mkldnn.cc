@@ -515,6 +515,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
+
+  int slice_amount = 1;
+  if (num_inputs != 0)
+    slice_amount = num_inputs;
   for (auto shape : shapes) {
     // Type 1.
 
@@ -562,7 +566,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
         desc = ss.str();
       }
       InitMKLDNNArray(&arr, pd);
-      in_arrs.emplace_back(arr.Slice(1, arr.shape()[0] - 1), desc);
+      in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
     }
   }
   return in_arrs;
