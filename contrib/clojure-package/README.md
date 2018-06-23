@@ -43,15 +43,16 @@ about _Prepare Environment for GPU Installation_
 and _Install MXNet dependencies_
 
 
-### Use Prebuilt Jars
-There are deployed jars on Clojars for each supported system
+#### Cloning the repo and running from source
 
-* `[org.apache.clojure-mxnet/clojure-mxnet-linux-gpu "0.1.1-SNAPSHOT"]`
-* `[org.apache.clojure-mxnet/clojure-mxnet-linux-cpu "0.1.1-SNAPSHOT"]`
-* `[org.apache.clojure-mxnet/clojure-mxnet-osx-cpu "0.1.1-SNAPSHOT"]`
+To use the prebuilt jars, you will need to replace the native version of the line in the project dependencies with your configuration.
 
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.0"]`
+or
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.0"]`
+or
+`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.0"]`
 
-To test you can do something like:
 
 ```clojure
 
@@ -74,16 +75,6 @@ See the examples/tutorial section for more.
 The jars from maven with the needed MXNet native binaries in it. On startup, the native libraries are extracted from the jar and copied into a temporary location on your path. On termination, they are deleted.
 
 If you want details on the flags (opencv verison and cuda version of the jars), they are documented here https://cwiki.apache.org/confluence/display/MXNET/MXNet-Scala+Release+Process
-
-#### Cloning the repo and running from source
-
-To use the prebuilt jars, you will need to replace the native version of the line in the project dependencies with your configuration.
-
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.0"]`
-or
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.0"]`
-or
-`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.0"]`
 
 
 ### Build from MXNET Source
