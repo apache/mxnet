@@ -6172,6 +6172,19 @@ def test_foreach():
             [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step6, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
+    # Test multiple inputs and outputs.
+    # some of the inputs are used twice.
+    def step8(in1, states, free):
+        out1 = states[0] + in1[0] + free[1] + in1[1] * 2 + free[0]
+        out2 = in1[0] + free[0] + states[1] * 2 + in1[1]
+        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
+    frees = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step8, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
+
 
 @with_seed()
 def test_foreach_nested():
