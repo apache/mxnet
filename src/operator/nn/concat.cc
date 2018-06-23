@@ -159,9 +159,10 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
 }
 #if MXNET_USE_MKLDNN == 1
 bool SupportMKLDNNConcat(NDArray arr) {
-  return (arr.shape().ndim() == 2 || arr.shape().ndim() == 4) &&
-      arr.dtype() == mshadow::kFloat32 && !arr.IsView() &&
-      arr.shape().ndim() == arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
+  unsigned ndim = arr.shape().ndim();
+  unsigned mkldnn_ndims = static_cast<unsigned>(arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims);
+  return (ndim == 2 || ndim == 4) && arr.dtype() == mshadow::kFloat32 && !arr.IsView() &&
+      arr.shape().ndim() == mkldnn_ndims;
 }
 #endif
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
