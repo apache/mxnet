@@ -5880,6 +5880,7 @@ def test_foreach():
     v5 = mx.sym.var("v2")
     v6 = mx.sym.var("v3")
     v7 = mx.sym.var("v4")
+    v8 = mx.sym.var("v5")
 
     # This tests foreach with accumulation sum.
     def step1(in1, states, free):
@@ -5889,8 +5890,31 @@ def test_foreach():
         out = states[0] + in1 * 2 + free[0]
         return (out, [out])
     def step3(in1, states, free):
-        out = in1[0] + in1[1] + states[0] + states[1] + free[0]
+        out = in1[0] + in1[1] * 2 + states[0] + states[1] * 2 + free[0]
         return ([out, out * 2], [out * 2, out * 3])
+    def step4(in1, states, free):
+        out = in1[1] * 2 + states[0] + free[0] + states[1] * 2 + in1[0]
+        return ([out, out * 2], [out * 2, out * 3])
+    def step5(in1, states, free):
+        if isinstance(in1[0], mx.nd.NDArray):
+            out1 = mx.nd.broadcast_add(states[0] + free[1], in1[1] * 2)
+            out2 = mx.nd.broadcast_add(in1[0], free[0] + states[1] * 2)
+        else:
+            out1 = mx.sym.broadcast_add(states[0] + free[1], in1[1] * 2)
+            out2 = mx.sym.broadcast_add(in1[0], free[0] + states[1] * 2)
+        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
+    def step6(in1, states, free):
+        if isinstance(in1[0], mx.nd.NDArray):
+            out1 = mx.nd.broadcast_add(states[0] + mx.nd.cast(free[1], 'float32'),
+                    mx.nd.cast(in1[1], 'float32') * 2)
+            out2 = mx.nd.broadcast_add(in1[0],
+                    free[0] + mx.nd.cast(states[1], 'float32') * 2)
+        else:
+            out1 = mx.sym.broadcast_add(states[0] + mx.sym.cast(free[1], 'float32'),
+                    mx.sym.cast(in1[1], 'float32') * 2)
+            out2 = mx.sym.broadcast_add(in1[0],
+                    free[0] + mx.sym.cast(states[1], 'float32') * 2)
+        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
 
     def verify_foreach(step, in_syms, state_syms, free_syms,
             in_arrs, init_states, frees, out_grads, is_train=True,
@@ -5898,7 +5922,8 @@ def test_foreach():
         step_sym = lambda in_syms, state_syms : step(in_syms, state_syms, free_syms)
         res, states = mx.sym.contrib.foreach(step_sym, in_syms, state_syms)
         out = _as_list(res)
-        for i in range(len(out)):
+        num_outputs = len(out)
+        for i in range(num_outputs):
             out[i] = out[i] * 2
         out.extend(states)
         out = mx.sym.Group(out)
@@ -5977,12 +6002,13 @@ def test_foreach():
                 outs.append(states)
                 states = mx.nd.expand_dims(states, 0)
                 res2.append(states)
-            res = mx.nd.concat(*res2, dim=0)
+            if is_train:
+                res = mx.nd.concat(*res2, dim=0)
 
         tmp_grads = out_grads[0][:]
         tmp_grads1 = [mx.nd.expand_dims(grad, 0) for grad in out_grads[1]]
         tmp_grads.extend(tmp_grads1)
-        if (is_train):
+        if is_train:
             res.backward(mx.nd.concat(*tmp_grads, dim=0))
         for i in range(len(outs)):
             assert e.outputs[i].shape == outs[i].shape
@@ -6056,6 +6082,36 @@ def test_foreach():
             [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
     verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
     verify_foreach(step3, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
+
+    # Test multiple inputs and outputs.
+    # The order of subgraph inputs doesn't match the operator inputs
+    arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step4, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads)
+    verify_foreach(step4, [v3, v4], [v5, v6], [v7], arrs, states, frees, out_grads, False)
+
+    # Test multiple inputs and outputs.
+    # The data inputs and states have different shapes.
+    frees = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2, 2))]
+    arrs = [mx.nd.random.uniform(shape=(3, 2, 2)), mx.nd.random.uniform(shape=(3, 2))]
+    states = [mx.nd.random.uniform(shape=(2, 2)), mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step5, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
+
+    # Test multiple inputs and outputs.
+    # The data inputs and states have different shapes and data types.
+    frees = [mx.nd.random.uniform(shape=(2)),
+            mx.nd.cast(mx.nd.random.uniform(shape=(2, 2)), 'float64')]
+    arrs = [mx.nd.random.uniform(shape=(3, 2, 2)),
+            mx.nd.cast(mx.nd.random.uniform(shape=(3, 2)), dtype='float16')]
+    states = [mx.nd.random.uniform(shape=(2, 2)),
+            mx.nd.cast(mx.nd.random.uniform(shape=(2)), dtype='int32')]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[0].shape)],
+            [mx.nd.random.uniform(-10, 10, states[0].shape), mx.nd.random.uniform(-10, 10, states[1].shape)]]
+    verify_foreach(step6, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
 
 @with_seed()
@@ -6154,8 +6210,8 @@ def test_foreach_lstm():
             'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
             'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr}
     args2 = {'data': data_arr, 'h': h_arr, 'c': c_arr,
-            'mylstm_i2h_weight': i2h_warr, 'mylstm_h2h_weight': h2h_warr,
-            'mylstm_i2h_bias': i2h_barr, 'mylstm_h2h_bias': h2h_barr}
+            'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
+            'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr}
 
     # gradients for the backward of the foreach symbol
     data_arr_grad1 = mx.nd.empty(data_arr.shape)
@@ -6178,8 +6234,8 @@ def test_foreach_lstm():
     i2h_barr_grad2 = mx.nd.empty(i2h_barr.shape)
     h2h_barr_grad2 = mx.nd.empty(h2h_barr.shape)
     args_grad2 = {'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
-            'mylstm_i2h_weight': i2h_warr_grad2, 'mylstm_h2h_weight': h2h_warr_grad2,
-            'mylstm_i2h_bias': i2h_barr_grad2, 'mylstm_h2h_bias': h2h_barr_grad2}
+            'i2h_weight': i2h_warr_grad2, 'h2h_weight': h2h_warr_grad2,
+            'i2h_bias': i2h_barr_grad2, 'h2h_bias': h2h_barr_grad2}
 
     # Symbol of running LSTM with foreach.
     out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
@@ -6191,7 +6247,7 @@ def test_foreach_lstm():
     e1 = out.bind(ctx=default_context(), args=args1, args_grad=args_grad1)
 
     # Symbol of running unrolled LSTM.
-    lstm = mx.rnn.LSTMCell(4, prefix='mylstm_')
+    lstm = mx.rnn.LSTMCell(4, prefix='')
     h = init_h
     c = init_c
     unroll_outs = []
@@ -6226,16 +6282,18 @@ def test_foreach_lstm():
         e1.backward(out_grads)
 
         e2.forward(is_train=True, data = data_arr, h = h_arr, c = c_arr,
-            mylstm_i2h_weight = i2h_warr, mylstm_h2h_weight = h2h_warr,
-            mylstm_i2h_bias = i2h_barr, mylstm_h2h_bias = h2h_barr)
+            i2h_weight = i2h_warr, h2h_weight = h2h_warr,
+            i2h_bias = i2h_barr, h2h_bias = h2h_barr)
         outputs2 = e2.outputs
         e2.backward(out_grads)
 
         for i in range(len(outputs2)):
             assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy(),
                     rtol=0.001, atol=0.0001)
+        input_names = out.list_inputs()
         for i in range(len(e1.grad_arrays)):
-            assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy())
+            name = input_names[i]
+            assert_almost_equal(args_grad1[name].asnumpy(), args_grad2[name].asnumpy())
 
 
 @with_seed()
