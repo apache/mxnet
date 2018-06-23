@@ -107,18 +107,13 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   std::vector<const mkldnn::memory *> data_mem;
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
-  std::vector<NDArray> in_buffer;
   for (int i = 0; i < num_in_data; i++) {
-    NDArray nd = in_data[i];
-    if (nd.IsView() && nd.IsMKLDNNData())
-      nd = nd.Reorder2Default();
-    const mkldnn::memory *tmp_mem = nd.GetMKLDNNData();
+    const mkldnn::memory *tmp_mem = in_data[i].GetMKLDNNData();
     mkldnn::memory::primitive_desc tmp_pd = tmp_mem->get_primitive_desc();
     data_md.push_back(tmp_pd);
     data_mem.push_back(tmp_mem);
-    in_buffer.push_back(nd);
   }
-  MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_buffer, data_md);
+  MKLDNNConcatFwd &fwd = GetConcatForward(concat_dim, in_data, data_md);
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data[concat_enum::kOut],
                                                    fwd.fwd_pd.dst_primitive_desc(),
                                                    req[concat_enum::kOut]);
@@ -135,7 +130,6 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   TmpMemMgr::Get()->Init(ctx.requested[concat_enum::kTempSpace]);
   const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   int num_in_data = param.num_args;
-
   int axis_ = param.dim;
   auto engine = CpuEngine::Get()->get_engine();
   auto gz_mem = inputs[0].GetMKLDNNData();
