@@ -67,7 +67,7 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
                     bool skip_var, std::vector<nnvm::NodeEntry> *orig_entries) {
   struct pred_entry {
     nnvm::NodeEntry e;
-    pred_entry(const nnvm::NodeEntry &_e): e(_e) {}
+    explicit pred_entry(const nnvm::NodeEntry &_e): e(_e) {}
     bool operator()(const nnvm::NodeEntry e1) {
       return e.node == e1.node && e.index == e1.index;
     }
