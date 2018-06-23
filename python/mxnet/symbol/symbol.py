@@ -2451,6 +2451,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
+    if not hasattr(AttrScope._current, "value"):
+        AttrScope._current.value = AttrScope()
     attr = AttrScope._current.value.get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
