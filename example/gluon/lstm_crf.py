@@ -62,8 +62,9 @@ class BiLSTM_CRF(Block):
 
             # Matrix of transition parameters.  Entry i,j is the score of
             # transitioning *to* i *from* j.
-            self.transitions = nd.random.normal(shape=(self.tagset_size, self.tagset_size))
-
+            self.transitions = gluon.Parameter("crf_transition_matrix", 
+                                               shape=(self.tagset_size, self.tagset_size))
+            
             self.hidden = self.init_hidden()
 
     def init_hidden(self):
@@ -85,7 +86,7 @@ class BiLSTM_CRF(Block):
                 emit_score = feat[next_tag].reshape((1, -1))
                 # the ith entry of trans_score is the score of transitioning to
                 # next_tag from i
-                trans_score = self.transitions[next_tag].reshape((1, -1))
+                trans_score = self.transitions.data()[next_tag].reshape((1, -1))
                 # The ith entry of next_tag_var is the value for the
                 # edge (i -> next_tag) before we do log-sum-exp
                 next_tag_var = alphas + trans_score + emit_score
@@ -93,7 +94,7 @@ class BiLSTM_CRF(Block):
                 # scores.
                 alphas_t.append(log_sum_exp(next_tag_var))
             alphas = nd.concat(*alphas_t, dim=0).reshape((1, -1))
-        terminal_var = alphas + self.transitions[self.tag2idx[STOP_TAG]]
+        terminal_var = alphas + self.transitions.data()[self.tag2idx[STOP_TAG]]
         alpha = log_sum_exp(terminal_var)
         return alpha
 
@@ -112,8 +113,8 @@ class BiLSTM_CRF(Block):
         tags = nd.concat(nd.array([self.tag2idx[START_TAG]]), *tags, dim=0)
         for i, feat in enumerate(feats):
             score = score + \
-                self.transitions[to_scalar(tags[i+1]), to_scalar(tags[i])] + feat[to_scalar(tags[i+1])]
-        score = score + self.transitions[self.tag2idx[STOP_TAG],
+                self.transitions.data()[to_scalar(tags[i+1]), to_scalar(tags[i])] + feat[to_scalar(tags[i+1])]
+        score = score + self.transitions.data()[self.tag2idx[STOP_TAG],
                                          to_scalar(tags[int(tags.shape[0]-1)])]
         return score
 
@@ -134,7 +135,7 @@ class BiLSTM_CRF(Block):
                 # from tag i to next_tag.
                 # We don't include the emission scores here because the max
                 # does not depend on them (we add them in below)
-                next_tag_var = vvars + self.transitions[next_tag]
+                next_tag_var = vvars + self.transitions.data()[next_tag]
                 best_tag_id = argmax(next_tag_var)
                 bptrs_t.append(best_tag_id)
                 viterbivars_t.append(next_tag_var[0, best_tag_id])
@@ -144,7 +145,7 @@ class BiLSTM_CRF(Block):
             backpointers.append(bptrs_t)
 
         # Transition to STOP_TAG
-        terminal_var = vvars + self.transitions[self.tag2idx[STOP_TAG]]
+        terminal_var = vvars + self.transitions.data()[self.tag2idx[STOP_TAG]]
         best_tag_id = argmax(terminal_var)
         path_score = terminal_var[0, best_tag_id]
 
@@ -197,6 +198,8 @@ for sentence, tags in training_data:
 tag2idx = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
 
 model = BiLSTM_CRF(len(word2idx), tag2idx, EMBEDDING_DIM, HIDDEN_DIM)
+# Update parameter dictionary to include crf weights
+model.params.update({'crf_transition_matrix':model.transitions}) 
 model.initialize(mx.init.Xavier(magnitude=2.24), ctx=mx.cpu())
 optimizer = gluon.Trainer(model.collect_params(), 'sgd', {'learning_rate': 0.01, 'wd': 1e-4})
 
