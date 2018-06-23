@@ -163,22 +163,25 @@ mkldnn_output_t CreateMKLDNNMem(const NDArray &out_arr,
   if (kAddTo == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::AddBack, tmp);
-  } else if (req == kWriteInplace && in_arr != nullptr && CanWriteTo(out_arr, *in_arr, desc)) {
+  } else if (kWriteInplace == req && in_arr != nullptr && CanWriteTo(out_arr, *in_arr, desc)) {
     mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
     // mem is nullptr if out_arr is view and desc is MKLDNN format.
     // need to Reorder2Default before calling CreateMKLDNNMem
     CHECK(mem != nullptr);
     return mkldnn_output_t(OutDataOp::Noop, mem);
-  } else if (req == kWriteInplace) {
+  } else if (kWriteInplace == req) {
     auto tmp = TmpMemMgr::Get()->Alloc(desc);
     return mkldnn_output_t(OutDataOp::CopyBack, tmp);
+  } else if (kWriteTo == req) {
+    mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
+    if (nullptr == mem) {
+      auto tmp = TmpMemMgr::Get()->Alloc(desc);
+      return mkldnn_output_t(OutDataOp::CopyBack, tmp);
+    }
+    return mkldnn_output_t(OutDataOp::Noop, mem);
   }
-  mkldnn::memory *mem = const_cast<NDArray &>(out_arr).CreateMKLDNNData(desc);
-  if (nullptr == mem) {
-    auto tmp = TmpMemMgr::Get()->Alloc(desc);
-    return mkldnn_output_t(OutDataOp::CopyBack, tmp);
-  }
-  return mkldnn_output_t(OutDataOp::Noop, mem);
+  auto tmp = TmpMemMgr::Get()->Alloc(desc);
+  return mkldnn_output_t(OutDataOp::Noop, tmp);
 }
 
 mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,

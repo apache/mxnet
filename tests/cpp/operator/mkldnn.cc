@@ -933,6 +933,30 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
           {&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
     }
   }
+
+  // kNullOp
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kNullOp);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    // original and input should be the same since noop
+    VerifyCopyResult({&orig_arr.arr}, {&in_arr.arr});
+  }
 }
 
 #endif
