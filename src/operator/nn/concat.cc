@@ -157,7 +157,13 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }
-
+#if MXNET_USE_MKLDNN == 1
+bool SupportMKLDNNConcat(NDArray arr) {
+  return (arr.shape().ndim() == 2 || arr.shape().ndim() == 4) &&
+      arr.dtype() == mshadow::kFloat32 && !arr.IsView() &&
+      arr.shape().ndim() == arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
+}
+#endif
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
                                const OpContext& op_ctx,
                                const std::vector<NDArray>& inputs,
@@ -171,8 +177,7 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
       outputs[0].storage_type() == kCSRStorage) {
     ConcatCSRImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
 #if MXNET_USE_MKLDNN == 1
-  } else if ((inputs[0].shape().ndim() == 2 || inputs[0].shape().ndim() == 4)
-      && inputs[0].dtype() == mshadow::kFloat32) {
+  } else if (SupportMKLDNNConcat(inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
@@ -185,13 +190,6 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-
-bool SupportMKLDNNConcat(NDArray arr) {
-  return (arr.shape().ndim() == 2 || arr.shape().ndim() == 4) &&
-      arr.dtype() == mshadow::kFloat32 && !arr.IsView() &&
-      arr.shape().ndim() == arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
-}
-
 static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
                                    const std::vector<NDArray>& inputs,
