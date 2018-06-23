@@ -588,9 +588,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
  *
  * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
  */
-std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
+std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shp,
                                          const std::vector<mkldnn::memory::primitive_desc> &pds,
                                               float num_inputs = 0, int dim = 0) {
+  TShape shape = shp;
   if (num_inputs != 0)
     shape[dim] = static_cast<int>(shape[dim] * num_inputs);
 
