@@ -5946,40 +5946,6 @@ def test_foreach():
     v7 = mx.sym.var("v4")
     v8 = mx.sym.var("v5")
 
-    # This tests foreach with accumulation sum.
-    def step1(in1, states, free):
-        out = in1 * 2 + states[0] + free[0]
-        return (out, [out])
-    def step2(in1, states, free):
-        out = states[0] + in1 * 2 + free[0]
-        return (out, [out])
-    def step3(in1, states, free):
-        out = in1[0] + in1[1] * 2 + states[0] + states[1] * 2 + free[0]
-        return ([out, out * 2], [out * 2, out * 3])
-    def step4(in1, states, free):
-        out = in1[1] * 2 + states[0] + free[0] + states[1] * 2 + in1[0]
-        return ([out, out * 2], [out * 2, out * 3])
-    def step5(in1, states, free):
-        if isinstance(in1[0], mx.nd.NDArray):
-            out1 = mx.nd.broadcast_add(states[0] + free[1], in1[1] * 2)
-            out2 = mx.nd.broadcast_add(in1[0], free[0] + states[1] * 2)
-        else:
-            out1 = mx.sym.broadcast_add(states[0] + free[1], in1[1] * 2)
-            out2 = mx.sym.broadcast_add(in1[0], free[0] + states[1] * 2)
-        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
-    def step6(in1, states, free):
-        if isinstance(in1[0], mx.nd.NDArray):
-            out1 = mx.nd.broadcast_add(states[0] + mx.nd.cast(free[1], 'float32'),
-                    mx.nd.cast(in1[1], 'float32') * 2)
-            out2 = mx.nd.broadcast_add(in1[0],
-                    free[0] + mx.nd.cast(states[1], 'float32') * 2)
-        else:
-            out1 = mx.sym.broadcast_add(states[0] + mx.sym.cast(free[1], 'float32'),
-                    mx.sym.cast(in1[1], 'float32') * 2)
-            out2 = mx.sym.broadcast_add(in1[0],
-                    free[0] + mx.sym.cast(states[1], 'float32') * 2)
-        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
-
     def verify_foreach(step, in_syms, state_syms, free_syms,
             in_arrs, init_states, frees, out_grads, is_train=True,
             free_vars_func=None, num_iters=1):
@@ -6094,15 +6060,12 @@ def test_foreach():
     # * the number of iterations: odd or even.
     # * multiple inputs and multiple outputs.
     # * inference.
-
-    #states = [mx.nd.random.uniform(shape=(2))]
-
-    #frees1 = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
-    #arrs = mx.nd.random.uniform(shape=(3, 2))
-    states = [mx.nd.arange(2)]
-
+    def step1(in1, states, free):
+        out = in1 * 2 + states[0] + free[0]
+        return (out, [out])
     frees1 = [mx.nd.arange(2), mx.nd.arange(2) + 1]
     arrs = mx.nd.arange(6).reshape(shape=(3, 2))
+    states = [mx.nd.arange(2)]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, True,
@@ -6114,25 +6077,31 @@ def test_foreach():
     verify_foreach(step1, v3, [v4], [v5 + v6], arrs, states, frees1, out_grads, False,
             lambda frees : [frees[0] + frees[1]], 5)
 
+    # Test the even number of iterations.
     frees = [mx.nd.random.uniform(shape=(2))]
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
-
+    # Test the odd number of iterations
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step1, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
+    # Reorder the input and state in the subgraph inputs.
+    def step2(in1, states, free):
+        out = states[0] + in1 * 2 + free[0]
+        return (out, [out])
+    # Test the even number of iterations.
     arrs = mx.nd.random.uniform(shape=(2, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
-
+    # Test the odd number of iterations.
     arrs = mx.nd.random.uniform(shape=(3, 2))
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)],
             [mx.nd.random.uniform(-10, 10, states[0].shape)]]
@@ -6140,6 +6109,9 @@ def test_foreach():
     verify_foreach(step2, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
     # Test multiple inputs and outputs.
+    def step3(in1, states, free):
+        out = in1[0] + in1[1] * 2 + states[0] + states[1] * 2 + free[0]
+        return ([out, out], [out * 2, out * 3])
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
@@ -6149,6 +6121,9 @@ def test_foreach():
 
     # Test multiple inputs and outputs.
     # The order of subgraph inputs doesn't match the operator inputs
+    def step4(in1, states, free):
+        out = in1[1] * 2 + states[0] + free[0] + states[1] * 2 + in1[0]
+        return ([out, out * 2], [out * 2, out * 3])
     arrs = [mx.nd.random.uniform(shape=(3, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
     out_grads = [[mx.nd.random.uniform(-10, 10, arrs[0].shape), mx.nd.random.uniform(-10, 10, arrs[1].shape)],
@@ -6158,6 +6133,14 @@ def test_foreach():
 
     # Test multiple inputs and outputs.
     # The data inputs and states have different shapes.
+    def step5(in1, states, free):
+        if isinstance(in1[0], mx.nd.NDArray):
+            out1 = mx.nd.broadcast_add(states[0] + free[1], in1[1] * 2)
+            out2 = mx.nd.broadcast_add(in1[0], free[0] + states[1] * 2)
+        else:
+            out1 = mx.sym.broadcast_add(states[0] + free[1], in1[1] * 2)
+            out2 = mx.sym.broadcast_add(in1[0], free[0] + states[1] * 2)
+        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
     frees = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2, 2))]
     arrs = [mx.nd.random.uniform(shape=(3, 2, 2)), mx.nd.random.uniform(shape=(3, 2))]
     states = [mx.nd.random.uniform(shape=(2, 2)), mx.nd.random.uniform(shape=(2))]
@@ -6167,6 +6150,18 @@ def test_foreach():
 
     # Test multiple inputs and outputs.
     # The data inputs and states have different shapes and data types.
+    def step6(in1, states, free):
+        if isinstance(in1[0], mx.nd.NDArray):
+            out1 = mx.nd.broadcast_add(states[0] + mx.nd.cast(free[1], 'float32'),
+                    mx.nd.cast(in1[1], 'float32') * 2)
+            out2 = mx.nd.broadcast_add(in1[0],
+                    free[0] + mx.nd.cast(states[1], 'float32') * 2)
+        else:
+            out1 = mx.sym.broadcast_add(states[0] + mx.sym.cast(free[1], 'float32'),
+                    mx.sym.cast(in1[1], 'float32') * 2)
+            out2 = mx.sym.broadcast_add(in1[0],
+                    free[0] + mx.sym.cast(states[1], 'float32') * 2)
+        return ([out1, out2 * 2], [states[0] * 2, states[1] * 3])
     frees = [mx.nd.random.uniform(shape=(2)),
             mx.nd.cast(mx.nd.random.uniform(shape=(2, 2)), 'float64')]
     arrs = [mx.nd.random.uniform(shape=(3, 2, 2)),
