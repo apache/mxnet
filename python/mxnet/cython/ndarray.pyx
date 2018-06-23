@@ -96,7 +96,7 @@ cdef class CachedOp:
         def __set__(self, value):
             self._set_handle(value)
 
-    def __init__(self, sym, flags=(), inputs=None, params=None):
+    def __init__(self, sym, flags=()):
         cdef vector[string] s_flag_keys
         cdef vector[string] s_flag_vals
         if flags is not None:
