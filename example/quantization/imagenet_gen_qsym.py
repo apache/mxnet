@@ -53,6 +53,7 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model')
+    parser.add_argument('--ctx', type=str, default='gpu')
     parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
                         help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
@@ -91,7 +92,17 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
+    parser.add_argument('--quantized-dtype', type=str, default='int8', 
+                        choices=['int8', 'uint8'],
+                        help='quantization destination data type for input data')
     args = parser.parse_args()
+
+    if args.ctx == 'gpu':
+        ctx = mx.gpu(0)
+    elif args.ctx == 'cpu':
+        ctx = mx.cpu(0)
+    else:
+        raise ValueError('ctx %s is not supported in this script' % args.ctx)
 
     logging.basicConfig()
     logger = logging.getLogger('logger')
@@ -129,17 +140,26 @@ if __name__ == '__main__':
     excluded_sym_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
-        calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                 or name.find('sc') != -1
-                                                                 or name.find('fc') != -1)
+        if args.ctx == 'gpu':
+            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
+                                                                     or name.find('sc') != -1
+                                                                     or name.find('fc') != -1)
+        else:
+            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
+                                                                     or name.find('sc') != -1)
+            excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
-            excluded_sym_names = ['conv0']
+            excluded_sym_names += ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
-        calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                 or name.find('fc') != -1)
+        if args.ctx == 'gpu':
+            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
+                                                                     or name.find('fc') != -1)
+        else:
+            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
+            excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
-            excluded_sym_names = ['conv_1']
+            excluded_sym_names += ['conv_1']
     else:
         raise ValueError('model %s is not supported in this script' % args.model)
 
@@ -156,8 +176,9 @@ if __name__ == '__main__':
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                       excluded_sym_names=excluded_sym_names,
-                                                       calib_mode=calib_mode, logger=logger)
+                                                       ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                       calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+                                                       logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
         save_symbol(sym_name, qsym, logger)
     else:
@@ -176,10 +197,11 @@ if __name__ == '__main__':
                                      **mean_args)
 
         cqsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                        ctx=mx.gpu(0), excluded_sym_names=excluded_sym_names,
+                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, logger=logger)
+                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                        logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':

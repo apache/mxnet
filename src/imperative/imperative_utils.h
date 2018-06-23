@@ -82,7 +82,7 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
     ctx = default_ctx;
   }
   // Non-default context (pinned, shared) does not propagate
-  if (ctx.dev_mask() != ctx.dev_type) {
+  if (ctx.dev_mask() != ctx.dev_type && inputs.size() != 0U) {
     ctx = Context::Create(ctx.dev_mask(), ctx.dev_id);
   }
 #if !MXNET_USE_CUDA
@@ -668,7 +668,6 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
     g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(storage_types));
     g = exec::InferStorageType(std::move(g));
   }
-
   CHECK_EQ(g.GetAttr<size_t>("storage_type_num_unknown_nodes"), 0U);
   return false;
 }

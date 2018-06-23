@@ -99,6 +99,7 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Score a model on a dataset')
+    parser.add_argument('--ctx', type=str, default='gpu')
     parser.add_argument('--symbol-file', type=str, required=True, help='symbol file path')
     parser.add_argument('--param-file', type=str, required=True, help='param file path')
     parser.add_argument('--batch-size', type=int, default=32)
@@ -122,6 +123,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if args.ctx == 'gpu':
+        ctx = mx.gpu(0)
+    elif args.ctx == 'cpu':
+        ctx = mx.cpu(0)
+    else:
+        raise ValueError('ctx %s is not supported in this script' % args.ctx)
+    
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
@@ -172,5 +180,5 @@ if __name__ == '__main__':
 
     num_inference_images = args.num_inference_batches * batch_size
     logger.info('Running model %s for inference' % symbol_file)
-    score(sym, arg_params, aux_params, data, [mx.gpu(0)], label_name,
+    score(sym, arg_params, aux_params, data, [ctx], label_name,
           max_num_examples=num_inference_images, logger=logger)

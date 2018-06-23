@@ -34,12 +34,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import platform
 from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
 from typing import *
 
-CCACHE_MAXSIZE = '10G'
+CCACHE_MAXSIZE = '500G'
 
 def get_platforms(path: Optional[str] = "docker"):
     """Get a list of architectures given our dockerfiles"""
@@ -121,11 +122,19 @@ def buildir() -> str:
 
 
 def default_ccache_dir() -> str:
-    if 'CCACHE_DIR' in os.environ:
-        ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
-        os.makedirs(ccache_dir, exist_ok=True)
-        return ccache_dirpython
     # Share ccache across containers
+    if 'CCACHE_DIR' in os.environ:
+        try:
+            ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
+            os.makedirs(ccache_dir, exist_ok=True)
+            return ccache_dir
+        except PermissionError:
+            logging.info('Unable to make dirs at %s, falling back to local temp dir', ccache_dir)
+    # In osx tmpdir is not mountable by default
+    if platform.system() == 'Darwin':
+        ccache_dir = "/tmp/_mxnet_ccache"
+        os.makedirs(ccache_dir, exist_ok=True)
+        return ccache_dir
     return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
 
@@ -151,7 +160,9 @@ def container_run(platform: str,
                '-v', "{}:/work/ccache".format(local_ccache_dir),
                '-u', '{}:{}'.format(os.getuid(), os.getgid()),
                '-e', 'CCACHE_MAXSIZE={}'.format(CCACHE_MAXSIZE),
+               '-e', 'CCACHE_TEMPDIR=/tmp/ccache',  # temp dir should be local and not shared
                '-e', "CCACHE_DIR=/work/ccache",  # this path is inside the container as /work/ccache is mounted
+               '-e', "CCACHE_LOGFILE=/tmp/ccache.log",  # a container-scoped log, useful for ccache verification.
                tag]
     runlist.extend(command)
     cmd = ' '.join(runlist)
@@ -183,7 +194,7 @@ def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         try:
             import docker_cache
-            logging.info('Docker cache download is enabled')
+            logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
         except Exception:
             logging.exception('Unable to retrieve Docker cache. Continue without...')
