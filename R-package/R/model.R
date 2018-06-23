@@ -147,7 +147,7 @@ mx.model.train <- function(symbol, ctx, input.shape, output.shape,
     kvstore$set.optimizer(optimizer)
   } else {
     updaters <- lapply(seq_len(ndevice), function(i) {
-      mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
+      mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays, ctx = ctx[[i]])
     })
   }
   if (!is.null(kvstore)) {

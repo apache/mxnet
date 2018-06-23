@@ -3,8 +3,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
                                    dlist, arg.params, aux.params, 
                                    grad.req, arg.update.idx, 
                                    begin.round, end.round, optimizer, metric, metric_cpu,
-                                   epoch.end.callback, batch.end.callback, kvstore, verbose,
-                                   gc_freq) {
+                                   epoch.end.callback, batch.end.callback, kvstore, verbose) {
   
   ndevice <- length(ctx)
   if (verbose) 
@@ -38,7 +37,7 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
     kvstore$set.optimizer(optimizer)
   } else {
     updaters <- lapply(seq_len(ndevice), function(i) {
-      mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays)
+      mx.opt.get.updater(optimizer, train.execs[[i]]$ref.arg.arrays, ctx = ctx[[i]])
     })
   }
   
@@ -135,9 +134,6 @@ mx.model.train.buckets <- function(symbol, ctx, train.data, eval.data,
       }
       
       nbatch <- nbatch + 1
-      if (!is.null(gc_freq)) {
-        if (nbatch %% gc_freq == 0) gc()
-      }
       
       if (!is.null(batch.end.callback)) {
         batch.end.callback(iteration, nbatch, environment())
@@ -250,7 +246,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
                              num.round = 1, begin.round = 1, 
                              initializer = mx.init.uniform(0.01), optimizer = "sgd", ctx = NULL, 
                              batch.end.callback = NULL, epoch.end.callback = NULL, 
-                             kvstore = "local", verbose = TRUE, metric_cpu = TRUE, gc_freq = NULL) {
+                             kvstore = "local", verbose = TRUE, metric_cpu = TRUE) {
   
   if (!train.data$iter.next()) {
     train.data$reset()
@@ -351,7 +347,7 @@ mx.model.buckets <- function(symbol, train.data, eval.data = NULL, metric = NULL
                                   optimizer = optimizer, metric = metric, 
                                   begin.round = begin.round, end.round = num.round, 
                                   batch.end.callback = batch.end.callback, epoch.end.callback = epoch.end.callback, 
-                                  kvstore = kvstore, verbose = verbose, metric_cpu = metric_cpu, gc_freq = gc_freq)
+                                  kvstore = kvstore, verbose = verbose, metric_cpu = metric_cpu)
   
   return(model)
 }
