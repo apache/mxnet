@@ -220,19 +220,26 @@ def foreach(body, data, init_states, name="foreach"):
                     "the number of output states (%d) should be the same as input states (%d)" \
                     % (len(sym_states), len(init_states))
 
-        if isinstance(sym_out, list):
-            flat_out = sym_out
-        else:
-            flat_out = [sym_out]
+        sym_out = _as_list(sym_out)
+        flat_out = []
+        all_input_names = [i.name for i in in_eles] + [s.name for s in states]
+        output_names = [o.name for o in sym_out]
+        for o in sym_out:
+            if o.name in all_input_names:
+                flat_out.append(symbol.op.identity(o))
+            else:
+                flat_out.append(o)
         num_out_data = len(flat_out)
-        if isinstance(sym_states, list):
-            for s in sym_states:
+
+        sym_states = _as_list(sym_states)
+        for s in sym_states:
+            if s.name in all_input_names or s.name in output_names:
                 # There is a problem if the outputs are the same as the inputs
                 # or the first output. By calling identity, we can make sure that
                 # all symbols will refer to different NDArrays.
                 flat_out.append(symbol.op.identity(s))
-        else:
-            flat_out.append(symbol.op.identity(sym_states))
+            else:
+                flat_out.append(s)
         g = symbol.Group(flat_out)
 
     cut_syms = _cut_subgraph(g)
@@ -262,13 +269,13 @@ def foreach(body, data, init_states, name="foreach"):
 
     # this defines the location of data_syms in the list of subgraph inputs
     in_data_locs = []
-    for name in data_names:
-        in_data_locs.append(subg_input_names.index(name))
+    for dname in data_names:
+        in_data_locs.append(subg_input_names.index(dname))
 
     # this defines the location of state_syms in the list of subgraph inputs.
     in_state_locs = []
-    for name in state_names:
-        in_state_locs.append(subg_input_names.index(name))
+    for sname in state_names:
+        in_state_locs.append(subg_input_names.index(sname))
 
     remain_locs = []
     for in_name in subg_input_names:
