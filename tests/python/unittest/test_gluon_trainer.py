@@ -199,7 +199,7 @@ def test_trainer_reset_kv():
                 y = w + 1
                 y.backward()
         trainer.step(1)
-        # the updated parameter should be based on the checkpoint
+        # the updated parameter should be based on the loaded checkpoint
         assert (x.data(mx.cpu()) == -0.2).asnumpy().all()
 
     kvs = ['local', 'device']
