@@ -124,6 +124,36 @@ def _cut_subgraph(subg):
         syms.append(s)
     return syms
 
+# This construct a subgraph for given output nodes.
+# If an output node is one of the input nodes, we call identity to make sure
+# that outputs nodes are different from input nodes.
+def construct_subgraph(sym_out, sym_states):
+    sym_out = _as_list(sym_out)
+    sym_states = _as_list(sym_states)
+    all_outputs = []
+    all_outputs.extend(sym_out)
+    all_outputs.extend(sym_states)
+    g = symbol.Group(all_outputs)
+
+    flat_out = []
+    all_input_names = g.list_inputs()
+    output_names = [o.name for o in sym_out]
+    for o in sym_out:
+        if o.name in all_input_names:
+            flat_out.append(symbol.op.identity(o))
+        else:
+            flat_out.append(o)
+
+    for s in sym_states:
+        if s.name in all_input_names or s.name in output_names:
+            # There is a problem if the outputs are the same as the inputs
+            # or the first output. By calling identity, we can make sure that
+            # all symbols will refer to different NDArrays.
+            flat_out.append(symbol.op.identity(s))
+        else:
+            flat_out.append(s)
+    return symbol.Group(flat_out)
+
 def foreach(body, data, init_states, name="foreach"):
     """Run a for loop with user-defined computation over Symbols on dimension 0.
 
@@ -219,29 +249,12 @@ def foreach(body, data, init_states, name="foreach"):
             assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
                     "the number of output states (%d) should be the same as input states (%d)" \
                     % (len(sym_states), len(init_states))
+        num_out_data = len(sym_out)
+        num_states = len(sym_states)
+        num_outputs = num_out_data + num_states
+        g = construct_subgraph(sym_out, sym_states)
 
-        sym_out = _as_list(sym_out)
-        flat_out = []
-        all_input_names = [i.name for i in in_eles] + [s.name for s in states]
-        output_names = [o.name for o in sym_out]
-        for o in sym_out:
-            if o.name in all_input_names:
-                flat_out.append(symbol.op.identity(o))
-            else:
-                flat_out.append(o)
-        num_out_data = len(flat_out)
-
-        sym_states = _as_list(sym_states)
-        for s in sym_states:
-            if s.name in all_input_names or s.name in output_names:
-                # There is a problem if the outputs are the same as the inputs
-                # or the first output. By calling identity, we can make sure that
-                # all symbols will refer to different NDArrays.
-                flat_out.append(symbol.op.identity(s))
-            else:
-                flat_out.append(s)
-        g = symbol.Group(flat_out)
-
+    input_syms = _get_graph_inputs(g)
     cut_syms = _cut_subgraph(g)
     input_syms = _get_graph_inputs(g)
 
@@ -265,17 +278,24 @@ def foreach(body, data, init_states, name="foreach"):
     # ordered_ins contains input symbols in the following order:
     # data_syms, state_syms, followed by cut_vars and vars in the closure.
     ordered_ins = data_syms
-    ordered_ins.extend(init_states)
-
     # this defines the location of data_syms in the list of subgraph inputs
     in_data_locs = []
     for dname in data_names:
-        in_data_locs.append(subg_input_names.index(dname))
+        # Some data may not be used.
+        if dname in subg_input_names:
+            in_data_locs.append(subg_input_names.index(dname))
+        else:
+            raise AssertionError("the data arrays have to be used in the loop body")
 
+    ordered_ins.extend(init_states)
     # this defines the location of state_syms in the list of subgraph inputs.
     in_state_locs = []
     for sname in state_names:
-        in_state_locs.append(subg_input_names.index(sname))
+        # Some state may not be used.
+        if sname in subg_input_names:
+            in_state_locs.append(subg_input_names.index(sname))
+        else:
+            raise AssertionError("the state arrays have to be used in the loop body")
 
     remain_locs = []
     for in_name in subg_input_names:
@@ -292,8 +312,6 @@ def foreach(body, data, init_states, name="foreach"):
             ordered_ins.append(copy.deepcopy(input_syms[in_name]))
             remain_locs.append(subg_input_names.index(in_name))
 
-    num_outputs = len(flat_out)
-    num_states = len(state_names)
     ret = symbol._internal._foreach(g, *ordered_ins, num_outputs=num_outputs,
                                     num_out_data=num_out_data, in_state_locs=in_state_locs,
                                     in_data_locs=in_data_locs, remain_locs=remain_locs)

@@ -5984,11 +5984,6 @@ def test_foreach():
             arg_grad_dict['v'+str(i)] = arr_grad
             i = i + 1
 
-        gin_order = []
-        for name in out.list_inputs():
-            name = name[1:]
-            gin_order.append(int(name))
-
         if is_train:
             e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
@@ -6048,9 +6043,10 @@ def test_foreach():
             all_ins = _as_list(in_arrs)[:]
             all_ins.extend(init_states)
             all_ins.extend(frees)
-            for i in range(len(all_ins)):
+            size = min(len(all_ins), len(e.grad_arrays))
+            for i in range(size):
                 assert_almost_equal(all_ins[i].grad.asnumpy(),
-                        e.grad_arrays[gin_order[i]].asnumpy(),
+                        e.grad_arrays[i].asnumpy(),
                         rtol=0.001, atol=0.0001)
 
     # Test cases:
@@ -6186,7 +6182,6 @@ def test_foreach():
     verify_foreach(step7, [v3, v4], [v5, v6], [v7, v8], arrs, states, frees, out_grads, False)
 
     # Test the case that the output is the input.
-    # The output is one of the inputs.
     arrs = mx.nd.random.uniform(shape=(3, 2))
     states = [mx.nd.arange(2)]
     frees = [mx.nd.random.uniform(shape=(2))]
@@ -6200,6 +6195,34 @@ def test_foreach():
         return (in1 * free[0], states)
     verify_foreach(step9, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step9, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+
+    # test without free variables.
+    def step13(in1, states, free):
+        return (in1, states)
+    verify_foreach(step13, v3, [v4], [], arrs, states, frees, out_grads)
+    verify_foreach(step13, v3, [v4], [], arrs, states, frees, out_grads, False)
+
+    # Test the case that not all inputs are used.
+    def step10(in1, states, free):
+        return (in1, states)
+    verify_foreach(step10, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step10, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+    def step11(in1, states, free):
+        return (in1, free)
+    try:
+        verify_foreach(step11, v3, [v4], [v5], arrs, states, frees, out_grads)
+        verify_foreach(step11, v3, [v4], [v5], arrs, states, frees, out_grads, False)
+    except AssertionError:
+        print("the states have to be used")
+    def step12(in1, states, free):
+        return (in1, [states[0] + 1, states[0] + 2])
+    states = [mx.nd.random.uniform(shape=(2)), mx.nd.random.uniform(shape=(2))]
+    frees = []
+    try:
+        verify_foreach(step12, v3, [v4, v5], [], arrs, states, frees, out_grads)
+        verify_foreach(step12, v3, [v4, v5], [], arrs, states, frees, out_grads, False)
+    except AssertionError:
+        print("the states have to be used")
 
 
 @with_seed()
