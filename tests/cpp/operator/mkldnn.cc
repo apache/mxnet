@@ -441,9 +441,6 @@ OpAttrs GetSumBackwardsOp() {
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.requests.insert(OpReqType::kAddTo);
-  attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.requests.insert(OpReqType::kWriteInplace);
-  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
