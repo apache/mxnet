@@ -22,11 +22,14 @@ import mxnet as mx
 import math
 import random
 import itertools
+import platform
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed, teardown
 import unittest
+import logging
+
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
     dshape = (N, T, I)
@@ -1562,27 +1565,34 @@ def check_binary_op_forward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5, mx
     sample_num = 200
     for i in range(sample_num):
         d = gen_data(i)
-        x = baseline(d[0], d[1])
         y = symbol.bind(default_context(), args={'a': mx.nd.array(d[0]), 'b': mx.nd.array(d[1])})
         y.forward(is_train=True)
         y = y.outputs[0].asnumpy()
+        x = baseline(d[0], d[1]).astype(y.dtype)
+        #np.set_printoptions(precision=20)
+        #print("x: {} {}".format(x.dtype, x))
+        #print("y: {} {}".format(y.dtype, y))#
         if mx_nd_func is not None:
             d0 = mx.nd.array(d[0], dtype=d[0].dtype)
             d1 = mx.nd.array(d[1], dtype=d[1].dtype)
             assert_almost_equal(y, mx_nd_func(d0, d1).asnumpy(), rtol=rtol, atol=atol)
         idx = np.abs(x-y) > atol+rtol*np.abs(x)
         if idx.any():
-            print('found precision problem')
+            import binascii
+            np.set_printoptions(precision=20)
+            logging.error("x: {} {}".format(x.dtype, x))
+            logging.error("y: {} {}".format(y.dtype, y))
+            logging.error('found precision problem')
             d[0] = np.broadcast_to(d[0], x.shape)
             d[1] = np.broadcast_to(d[1], x.shape)
-            print('a: {}'.format(d[0][idx]))
-            print('b: {}'.format(d[1][idx]))
+            logging.error('a: {}'.format(d[0][idx]))
+            logging.error('b: {}'.format(d[1][idx]))
             import struct
-            print('a hex: {}'.format(struct.pack('d', d[0][idx]).encode('hex')))
-            print('b hex: {}'.format(struct.pack('d', np.broadcast_to(d[1], x.shape)[idx]).encode('hex')))
-            print('in baseline(a, b): {}'.format(x[idx]))
-            print('in symbol(a, b): {}'.format(y[idx]))
-            print('diff: {}'.format(np.abs(x-y)[idx] - atol-rtol*np.abs(x)[idx]))
+            logging.error('a hex: {}'.format(binascii.hexlify(struct.pack('d', d[0][idx]))))
+            logging.error('b hex: {}'.format(binascii.hexlify(struct.pack('d', np.broadcast_to(d[1], x.shape)[idx]))))
+            logging.error('in baseline(a, b): {}'.format(x[idx]))
+            logging.error('in symbol(a, b): {}'.format(y[idx]))
+            logging.error('diff: {}'.format(np.abs(x-y)[idx] - atol-rtol*np.abs(x)[idx]))
         assert_allclose(y, x, rtol=rtol, atol=atol)
 
 
@@ -1615,6 +1625,20 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
         assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
 
+from ctypes import *
+plat = platform.system()
+if plat  == 'Windows':
+    lib = cdll.msvcrt
+elif plat == 'Darwin':
+    lib = cdll.LoadLibrary("libc++.1.dylib")
+elif plat == 'Linux':
+    lib = cdll.LoadLibrary("libm.so.6")
+lib.fmodf.restype = c_float
+lib.fmod.restype = c_double
+
+def reference_bmod(a,b):
+    return lib.fmodf(c_float(a),c_float(b))
+
 @with_seed()
 def test_binary_op():
     a = mx.sym.Variable('a')
@@ -1641,12 +1665,16 @@ def test_binary_op():
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_binary_data)
 
     def test_bmod(a, b):
-        c = a % b
+        # Python and numpy operate only in double so to avoid numerical errors we have to use
+        # doubles as well. This was a flaky test before when using float32. seed 1688524483
+        c = mx.sym.cast(a, dtype='float64') % mx.sym.cast(b, dtype='float64')
+        #c = a % b
         # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
         # Issue exposed with seed 1768433044
-        check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
+        check_binary_op_forward(c, np.frompyfunc(reference_bmod, 2,1), gen_binary_data, rtol=0, atol=0)
+        #check_binary_op_forward(c, lambda a,b: a % b, gen_binary_data)
         check_binary_op_backward(c,
-            lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
+            lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.cast(a, dtype='int32') % mx.sym.cast(b, dtype='int32')
