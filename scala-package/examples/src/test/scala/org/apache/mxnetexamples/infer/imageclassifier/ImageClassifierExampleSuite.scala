@@ -85,7 +85,6 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       inputImageDir, context)
 
     assert(outputList(0).toList.head._1 === "n02110958 pug, pug-dog")
-    
 
   }
 }
