@@ -229,32 +229,22 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("arange") {
-    def roundNum(x : Float, scale : Int = 6) = {
-      BigDecimal(x).setScale(scale, BigDecimal.RoundingMode.HALF_UP)
-        .toFloat
-    }
     for (i <- 0 until 100000) {
-      val start = roundNum(scala.util.Random.nextFloat() * 5)
-      val stop = roundNum(start + scala.util.Random.nextFloat() * 100)
-      val step = roundNum(scala.util.Random.nextFloat() * 4)
-      val repeat = 1
-      var curr = start
+      val start = scala.util.Random.nextFloat() * 5
+      val stop = start + scala.util.Random.nextFloat() * 100
+      val step = scala.util.Random.nextFloat() * 4
+      val repeat = 5
+      var curr = BigDecimal(start)
       val result = ArrayBuffer[Float]()
-      while (curr <= stop) {
-        result += curr
-        curr += step
+      while (curr <= BigDecimal(stop)) {
+        result += curr.toFloat
+        curr += BigDecimal(step)
       }
-      // val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
       val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)
-      // remove the last element of the Array
-      val scalaOutput = result.toArray
-      val backendOutput = exe.outputs.head.toArray
       assert(exe.gradArrays.length == 0)
-      val (diff, pos) = almost_equal(scalaOutput, backendOutput, true)
-      assert(diff <= 1e-4f,
-        s"$start $stop $step $pos $i\n${scalaOutput.last}\n${backendOutput.last}")
+      assert(CheckUtils.reldiff(result.toArray, exe.outputs.head.toArray) <= 1e-4f)
     }
   }
 
