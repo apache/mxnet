@@ -101,14 +101,14 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   // of outputs. In this way, we don't need to copy the results from the
   // subgraph to the final outputs of the loop.
   if (len % 2 == 1) {
-    for (size_t i = 1; i < subg_outputs1.size(); i++) {
+    for (size_t i = params.num_out_data; i < subg_outputs1.size(); i++) {
       subg_outputs1[i] = outputs[i];
       subg_outputs2[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true,
                                  outputs[i].dtype());
     }
   } else {
     // Otherwise, we'll use the second set of outputs.
-    for (size_t i = 1; i < subg_outputs1.size(); i++) {
+    for (size_t i = params.num_out_data; i < subg_outputs1.size(); i++) {
       subg_outputs1[i] = NDArray(outputs[i].shape(), outputs[i].ctx(), true,
                                  outputs[i].dtype());
       subg_outputs2[i] = outputs[i];

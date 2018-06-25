@@ -6196,12 +6196,6 @@ def test_foreach():
     verify_foreach(step9, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step9, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
-    # test without free variables.
-    def step13(in1, states, free):
-        return (in1, states)
-    verify_foreach(step13, v3, [v4], [], arrs, states, frees, out_grads)
-    verify_foreach(step13, v3, [v4], [], arrs, states, frees, out_grads, False)
-
     # Test the case that not all inputs are used.
     def step10(in1, states, free):
         return (in1, states)
@@ -6223,6 +6217,25 @@ def test_foreach():
         verify_foreach(step12, v3, [v4, v5], [], arrs, states, frees, out_grads, False)
     except AssertionError:
         print("the states have to be used")
+
+    # test without free variables.
+    def step13(in1, states, free):
+        return (in1, states)
+    states = [mx.nd.random.uniform(shape=(2))]
+    verify_foreach(step13, v3, [v4], [], arrs, states, [], out_grads)
+    verify_foreach(step13, v3, [v4], [], arrs, states, [], out_grads, False)
+
+    # test when there isn't output data or output states.
+    def step14(in1, states, free):
+        return (in1 * free[0], [])
+    frees = [mx.nd.random.uniform(shape=(2))]
+    verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
+    verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
+    def step15(in1, states, free):
+        return ([], [in1 * states[0] * free[0]])
+    out_grads = [[], [mx.nd.random.uniform(-10, 10, states[0].shape)]]
+    verify_foreach(step15, v3, [v4], [v5], arrs, states, frees, out_grads)
+    verify_foreach(step15, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
 
 @with_seed()
