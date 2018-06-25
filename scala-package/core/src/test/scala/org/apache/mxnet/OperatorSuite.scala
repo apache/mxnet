@@ -252,8 +252,9 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       val scalaOutput = result.toArray
       val backendOutput = exe.outputs.head.toArray
       assert(exe.gradArrays.length == 0)
-      if (!scalaOutput.isEmpty) assert(CheckUtils.reldiff(scalaOutput,
-        backendOutput) <= 1e-3f, s"$start $stop $step $i")
+      val (diff, pos) = almost_equal(scalaOutput, backendOutput, true)
+      assert(diff <= 1e-4f,
+        s"$start $stop $step $pos $i\n${scalaOutput.last}\n${backendOutput.last}")
     }
   }
 
