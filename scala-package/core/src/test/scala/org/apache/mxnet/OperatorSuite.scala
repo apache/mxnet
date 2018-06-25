@@ -233,7 +233,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       val start = scala.util.Random.nextFloat() * 5
       val stop = start + scala.util.Random.nextFloat() * 100
       val step = scala.util.Random.nextFloat() * 4
-      val repeat = 5
+      val repeat = 1
       var curr = BigDecimal(start)
       val result = ArrayBuffer[Float]()
       while (curr <= BigDecimal(stop)) {
