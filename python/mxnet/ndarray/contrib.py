@@ -189,6 +189,6 @@ def foreach(body, data, init_states):
         tmp_outputs.append(ndarray.op.stack(*out))
     outputs = tmp_outputs
 
-    if not_data_list:
+    if not_data_list and len(outputs) == 1:
         outputs = outputs[0]
     return (outputs, states)
