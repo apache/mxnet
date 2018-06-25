@@ -319,8 +319,10 @@ def foreach(body, data, init_states, name="foreach"):
         outs = []
         for i in range(num_outputs - num_states):
             outs.append(ret[i])
-    else:
+    elif num_outputs - num_states == 1:
         outs = ret[0]
+    else:
+        outs = []
     states = []
     for i in range(num_states):
         states.append(ret[num_outputs - num_states + i])

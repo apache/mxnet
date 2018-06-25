@@ -63,6 +63,7 @@ DMLC_REGISTER_PARAMETER(ForeachParam);
 class ForeachState: public LoopState {
  public:
   ForeachParam params;
+  int num_iterations;
 
   ForeachState(const Symbol &g, const ForeachParam &params) : LoopState(g) {
     this->params = params;
@@ -80,6 +81,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
   CHECK_GT(params.in_data_locs.ndim(), 0);
   size_t len = inputs[0].shape()[iter_dim];
+  state.num_iterations = len;
   for (size_t i = 1; i < params.in_data_locs.ndim(); i++)
     CHECK_EQ(inputs[i].shape()[iter_dim], len);
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
@@ -182,8 +184,7 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
     CHECK_EQ(arr.storage_type(), kDefaultStorage)
         << "The for operator doesn't support the sparse format";
   size_t iter_dim = 0;
-  // The inputs contain out gradients, inputs and outputs.
-  int len = inputs[0].shape()[iter_dim];
+  int len = state.num_iterations;
   size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
