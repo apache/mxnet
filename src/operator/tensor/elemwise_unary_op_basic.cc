@@ -409,7 +409,7 @@ void ShapeCompute<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * sizeof(index_t));
+  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * sizeof(int64_t));
 }
 
 NNVM_REGISTER_OP(shape_array)
@@ -458,7 +458,8 @@ void SizeCompute<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  out_data[0] = int64_t(in_data.Size());
+  const index_t size_var = in_data.Size();
+  memcpy(out_data.dptr_, &size_var, 1U * sizeof(int64_t));
 }
 
 NNVM_REGISTER_OP(size_array)

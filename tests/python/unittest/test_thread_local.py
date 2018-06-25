@@ -134,6 +134,35 @@ def test_blockscope():
     event.clear()
     assert status[0], "Spawned thread isn't using the correct blockscope namemanager"
 
+def test_createblock():
+    status = [False]
+    def f():
+        net = mx.gluon.nn.Dense(2)
+        net.initialize()
+        x = net(mx.nd.array([1, 2, 3]))
+        x.wait_to_read()
+        status[0] = True
+
+    thread = threading.Thread(target=f)
+    thread.start()
+    thread.join()
+    assert status[0], "Failed to create a layer within a thread"
+
+def test_symbol():
+    status = [False]
+    def f():
+        a = mx.sym.var("a")
+        b = mx.sym.var("b")
+        a_ = mx.nd.ones((2, 2))
+        c_ = a_.copy()
+        func1 = (a + b).bind(mx.cpu(), args={'a': a_, 'b': c_})
+        func1.forward()[0].wait_to_read()
+        status[0] = True
+    thread = threading.Thread(target=f)
+    thread.start()
+    thread.join()
+    assert status[0], "Failed to execute a symbolic graph within a thread"
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
