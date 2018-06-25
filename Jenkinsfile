@@ -93,18 +93,22 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
-    echo 'Saving python test results for ' + new_file_name
-    // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
-    sh 'cp ' + original_file_name + ' ' + new_file_name
-    archiveArtifacts artifacts: new_file_name
+    if (fileExists(original_file_name)) {
+        // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
+        // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
+		sh 'cp ' + original_file_name + ' ' + new_file_name
+        archiveArtifacts artifacts: new_file_name
+    }
 }
 
 def collect_test_results_windows(original_file_name, new_file_name) {
-    echo 'Saving python test results for ' + new_file_name
     // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
-    bat 'xcopy ' + original_file_name + ' ' + new_file_name
-    archiveArtifacts artifacts: new_file_name
-} 
+    // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
+    if (fileExists(original_file_name)) {
+        bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
+        archiveArtifacts artifacts: new_file_name
+    }
+}
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
