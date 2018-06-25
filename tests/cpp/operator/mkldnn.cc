@@ -691,7 +691,7 @@ void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
                       VerifyFunc verify_fn) {
   NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
   tmp.WaitToRead();
-  verify_fn(in_arrs, tmp);
+  verify_fn(in_arrs, {&tmp});
 }
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
@@ -731,13 +731,14 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<NDArrayAttrs> in_arrs;
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  in_arrs = GetTestInputArrays();
     for (auto in_arr : in_arrs) {
       for (auto dispatch : dispatches) {
         std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);

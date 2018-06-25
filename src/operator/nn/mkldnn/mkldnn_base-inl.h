@@ -320,7 +320,7 @@ enum OutDataOp {
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 
 
-void CopyMKLDNNMem(const mkldnn::memory &mem,
+void MKLDNNCopy(const mkldnn::memory &mem,
                       const mkldnn::memory* this_mem);
 
 /*

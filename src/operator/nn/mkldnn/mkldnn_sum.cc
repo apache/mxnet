@@ -31,35 +31,19 @@
 namespace mxnet {
 namespace op {
 
-void MKLDNNSum(const std::vector<const mkldnn::memory*> arrs,
-               const mkldnn::memory &out) {
-  std::vector<mkldnn::memory::primitive_desc> input_pds(arrs.size());
-  std::vector<float> scales(arrs.size(), 1);
+void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
+             const mkldnn::memory &out) {
+  std::vector<mkldnn::memory::primitive_desc> input_pds(2);
+  std::vector<float> scales(2, 1);
   std::vector<mkldnn::primitive::at> inputs;
-
-  mkldnn::memory::primitive_desc prev_pd;
-  mkldnn::memory::primitive_desc tmp_pd;
-  for (size_t i = 0; i < arrs.size(); i++) {
-    input_pds[i] = arrs[i]->get_primitive_desc();
-    inputs.push_back(*arrs[i]);
-  }
-
-
+  input_pds[0] = arr1.get_primitive_desc();
+  input_pds[1] = arr2.get_primitive_desc();
+  CHECK(input_pds[0] == input_pds[1]);
+  inputs.push_back(arr1);
+  inputs.push_back(arr2);
+  // TODO(zhengda) I need to reorder memory here.
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
-  // check if inplace sum is possible
-  auto in_place = false;
-  for (size_t i = 0; i < arrs.size(); i++) {
-    if (input_pds[i] == sum_pd.dst_primitive_desc() && arrs[i]->get_data_handle() == out.get_data_handle())
-      in_place = true;
-  }
-  if (in_place) {
-    // do sum computation directly on output NDArray
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
-  } else {
-    auto sum_res = TmpMemMgr::Get()->Alloc(out.get_primitive_desc());
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, *sum_res));
-    CopyMKLDNNMem(*sum_res, &out);
-  }
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }
 
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
