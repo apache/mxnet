@@ -749,7 +749,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
-  in_arrs = GetTestInputArrays();
+    in_arrs = GetTestInputArrays();
     for (auto in_arr : in_arrs) {
       for (auto dispatch : dispatches) {
         std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
@@ -772,28 +772,28 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   }
 
   if (attrs.requests.find(OpReqType::kWriteInplace) != attrs.requests.end()) {
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays();
-    for (auto arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &arr.arr;
-      for (int i = 0; i < attrs.num_outputs; i++) {
-        req[i] = kWriteInplace;
-        outputs[i] = &arr.arr;
-      }
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      for (auto output : outputs)
-        output->WaitToRead();
-      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        orig_inputs[i] = &orig.arr;
-      verify_fn(orig_inputs, outputs);
+    for (auto dispatch : dispatches) {
+      in_arrs = GetTestInputArrays();
+      for (auto arr : in_arrs) {
+        // If the array is a view, we shouldn't write data to it.
+        if (arr.arr.IsView())
+          continue;
+        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &arr.arr;
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteInplace;
+          outputs[i] = &arr.arr;
+        }
+        PrintVerifyMsg(orig, arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                    dispatch, mxnet::OpStatePtr());
+        for (auto output : outputs)
+          output->WaitToRead();
+        std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          orig_inputs[i] = &orig.arr;
+        verify_fn(orig_inputs, outputs);
       }
     }
   }
