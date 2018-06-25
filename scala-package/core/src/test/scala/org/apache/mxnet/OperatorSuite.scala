@@ -18,12 +18,12 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.CheckUtils._
-
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import org.scalacheck.Gen
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class OperatorSuite extends FunSuite with BeforeAndAfterAll
   with Matchers with GeneratorDrivenPropertyChecks {
@@ -229,21 +229,31 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("arange") {
-    for (i <- 0 until 10000) {
-      val start = scala.util.Random.nextFloat() * 5
-      val stop = start + scala.util.Random.nextFloat() * 100
-      val step = scala.util.Random.nextFloat() * 4
+    def roundNum(x : Float, scale : Int = 6) = {
+      BigDecimal(x).setScale(scale, BigDecimal.RoundingMode.HALF_UP)
+        .toFloat
+    }
+    for (i <- 0 until 100000) {
+      val start = roundNum(scala.util.Random.nextFloat() * 5)
+      val stop = roundNum(start + scala.util.Random.nextFloat() * 100)
+      val step = roundNum(scala.util.Random.nextFloat() * 4)
       val repeat = 1
-      val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
+      var curr = start
+      val result = ArrayBuffer[Float]()
+      while (curr <= stop) {
+        result += curr
+        curr += step
+      }
+      // val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
       val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)
       // remove the last element of the Array
-      val scalaOutput = result.toArray.init
-      val backendOutput = exe.outputs.head.toArray.init
+      val scalaOutput = result.toArray
+      val backendOutput = exe.outputs.head.toArray
       assert(exe.gradArrays.length == 0)
       if (!scalaOutput.isEmpty) assert(CheckUtils.reldiff(scalaOutput,
-        backendOutput) <= 1e-3f)
+        backendOutput) <= 1e-3f, s"$start $stop $step $i")
     }
   }
 
