@@ -213,3 +213,6 @@ def test_vision_large_scale_classification():
 
 def test_vision_cnn_visualization():
     assert _test_tutorial_nb('vision/cnn_visualization')
+
+def test_python_profiler():
+    assert _test_tutorial_nb('python/profiler')

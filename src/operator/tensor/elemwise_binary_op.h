@@ -420,7 +420,7 @@ class ElemwiseBinaryOp : public OpBase {
     if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
       // rsp, rsp, ... -> rsp
       dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
-                                       dispatch_mode, dispatch_ex);
+                                       dispatch_mode, DispatchMode::kFComputeEx);
     }
     if (!dispatched && csr && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
       // csr, csr, ... -> csr

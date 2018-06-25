@@ -18,17 +18,7 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM ubuntu:16.04 as ccachebuilder
-
-COPY install/ubuntu_core.sh /work/
-RUN /work/ubuntu_core.sh
-COPY install/ubuntu_ccache.sh /work/
-RUN /work/ubuntu_ccache.sh
-
 FROM dockcross/linux-armv7
-
-# extract ccache binary into latest context
-COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 ENV ARCH armv7l
 ENV HOSTCC gcc
@@ -44,6 +34,9 @@ RUN /work/arm_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
 ENV OpenBLAS_DIR=${CROSS_ROOT}
+
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

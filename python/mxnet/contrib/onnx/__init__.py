@@ -16,5 +16,6 @@
 # under the License.
 """Module for ONNX model format support for Apache MXNet."""
 
-from ._import.import_model import import_model, get_model_metadata
-from ._import.import_to_gluon import import_to_gluon
+from .onnx2mx.import_model import import_model, get_model_metadata
+from .onnx2mx.import_to_gluon import import_to_gluon
+from .mx2onnx.export_model import export_model

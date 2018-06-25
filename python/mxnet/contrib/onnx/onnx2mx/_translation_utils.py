@@ -168,6 +168,7 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj):
         op_sym = op_name
     return op_sym
 
+
 def _fix_channels(op_name, attrs, inputs, proto_obj):
     """A workaround for getting 'channels' or 'units' since onnx don't provide
     these attributes. We check the shape of weights provided to get the number.

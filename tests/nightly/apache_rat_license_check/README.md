@@ -7,7 +7,7 @@ This file lists all the files, directories and file formats that are excluded fr
 If you think something is wrong, feel free to change!
 
 ### Nightly test script for license check
-Coming soon...
+The license check script called by the Jenkinsfile
 
 ### How to run the RAT check locally
 The following commands can be used to run a Apache RAT check locally - 

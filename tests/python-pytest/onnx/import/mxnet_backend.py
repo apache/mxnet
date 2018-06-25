@@ -17,8 +17,7 @@
 
 # coding: utf-8
 """MXNet backend wrapper for onnx test infrastructure"""
-import mxnet as mx
-from mxnet.contrib.onnx._import.import_onnx import GraphProto
+from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
 try:
     from onnx import helper, TensorProto
     from onnx.backend.base import Backend
