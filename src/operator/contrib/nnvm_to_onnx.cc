@@ -345,7 +345,7 @@ void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& attrs,
                           const array_view<IndexedGraph::NodeEntry>& inputs) {
   node_proto->set_op_type("Softmax");
 
-  // Setting by default to 1 since MxNet doesn't provide such an attribute
+  // Setting by default to 1 since MXNet doesn't provide such an attribute
   // for softmax
   // in its node params. This attribute is only relevant when the input is
   // coerced
@@ -362,7 +362,7 @@ void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& attrs,
                     const array_view<IndexedGraph::NodeEntry>& inputs) {
   node_proto->set_op_type("Flatten");
 
-  // Setting by default to 1 since MxNet doesn't provide such an attribute
+  // Setting by default to 1 since MXNet doesn't provide such an attribute
   // for Flatten
   // in its node params. This attribute is only relevant when the input is
   // coerced

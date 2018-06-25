@@ -22,7 +22,7 @@
 /*!
  * Copyright (c) 2018 by Contributors
  * \file onnx_to_tensorrt.h
- * \brief TensorRT integration with the MxNet executor
+ * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang
  */
 
