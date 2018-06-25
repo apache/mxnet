@@ -443,23 +443,23 @@ build_ubuntu_gpu_tensorrt() {
     echo "TensorRT build enabled. Installing ONNX."
     cd 3rdparty/onnx-tensorrt/third_party/onnx
     rm -rf build
-    mkdir build
+    mkdir -p build
     cd build
     cmake \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
     ninja -v
-    mkdir /work/mxnet/onnx/
+    mkdir -p /work/mxnet/onnx/
     cp onnx/onnx*pb.* /work/mxnet/onnx/
-    mkdir /work/mxnet/deps/
+    mkdir -p /work/mxnet/deps/
     cp libonnx.so /work/mxnet/deps/lib
     popd
 
     # Build ONNX-TensorRT
     pushd .
     cd 3rdparty/onnx-tensorrt/
-    mkdir build
+    mkdir -p build
     cd build
     cmake ..
     make -j$(nproc)
@@ -468,15 +468,16 @@ build_ubuntu_gpu_tensorrt() {
 
     rm -rf build
     make \
-        DEV=1                         \
-        USE_BLAS=openblas             \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1                   \
-        USE_CPP_PACKAGE=1             \
-        USE_DIST_KVSTORE=1            \
-        USE_TENSORRT=1                \
-        ONNX_NAMESPACE=onnx           \
+        DEV=1                                               \
+        USE_BLAS=openblas                                   \
+        USE_CUDA=1                                          \
+        USE_CUDA_PATH=/usr/local/cuda                       \
+        USE_CUDNN=1                                         \
+        USE_CPP_PACKAGE=1                                   \
+        USE_DIST_KVSTORE=1                                  \
+        USE_TENSORRT=1                                      \
+        ONNX_NAMESPACE=onnx                                 \
+        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
         -j$(nproc)
 }
 
