@@ -25,11 +25,14 @@ from time import time
 import sys
 import urllib
 
+
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
 
-def set_use_tensorrt(status = False):
+
+def set_use_tensorrt(status=False):
     os.environ["MXNET_USE_TENSORRT"] = str(int(status))
+
 
 def download_file(url, local_fname=None, force_write=False):
     # requests is not default installed
@@ -43,7 +46,7 @@ def download_file(url, local_fname=None, force_write=False):
 
     if dir_name != "":
         if not os.path.exists(dir_name):
-            try: # try to create the directory if it doesn't exists
+            try:  # try to create the directory if it doesn't exists
                 os.makedirs(dir_name)
             except OSError as exc:
                 if exc.errno != errno.EEXIST:
@@ -53,9 +56,10 @@ def download_file(url, local_fname=None, force_write=False):
     assert r.status_code == 200, "failed to open %s" % url
     with open(local_fname, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
+            if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
     return local_fname
+
 
 def download_cifar10(data_dir):
     fnames = (os.path.join(data_dir, "cifar10_train.rec"),
@@ -64,8 +68,9 @@ def download_cifar10(data_dir):
     download_file('http://data.mxnet.io/data/cifar10/cifar10_train.rec', fnames[0])
     return fnames
 
+
 def get_cifar10_iterator(args, kv):
-    data_shape = (3, 32, 32) #28, 28) 
+    data_shape = (3, 32, 32)  # 28, 28)
     data_dir = args['data_dir']
     if os.name == "nt":
         data_dir = data_dir[:-1] + "\\"
@@ -74,26 +79,26 @@ def get_cifar10_iterator(args, kv):
         download_cifar10(data_dir)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = os.path.join(data_dir, "cifar10_train.rec"),
-        mean_img    = os.path.join(data_dir, "mean.bin"),
-        data_shape  = data_shape,
-        batch_size  = args['batch_size'],
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv['num_workers'],
-        part_index  = kv['rank'])
+        path_imgrec=os.path.join(data_dir, "cifar10_train.rec"),
+        mean_img=os.path.join(data_dir, "mean.bin"),
+        data_shape=data_shape,
+        batch_size=args['batch_size'],
+        rand_crop=True,
+        rand_mirror=True,
+        num_parts=kv['num_workers'],
+        part_index=kv['rank'])
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = os.path.join(data_dir, "cifar10_val.rec"),
-        mean_img    = os.path.join(data_dir, "mean.bin"),
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = args['batch_size'],
-        num_parts   = kv['num_workers'],
-        part_index  = kv['rank'])
+        path_imgrec=os.path.join(data_dir, "cifar10_val.rec"),
+        mean_img=os.path.join(data_dir, "mean.bin"),
+        rand_crop=False,
+        rand_mirror=False,
+        data_shape=data_shape,
+        batch_size=args['batch_size'],
+        num_parts=kv['num_workers'],
+        part_index=kv['rank'])
 
-    return (train, val)
+    return train, val
 
 
 # To support Python 2 and 3.x < 3.5
@@ -103,13 +108,14 @@ def merge_dicts(*dict_args):
         result.update(dictionary)
     return result
 
-def get_exec(model_prefix='resnet50', image_size=(32, 32), batch_size = 128, ctx=mx.gpu(0), epoch=1):
+
+def get_exec(model_prefix='resnet50', image_size=(32, 32), batch_size=128, ctx=mx.gpu(0), epoch=1):
 
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, epoch)
 
     h, w = image_size
-    data_shape=(batch_size, 3, h, w)
-    sm_shape=(batch_size,)
+    data_shape = (batch_size, 3, h, w)
+    sm_shape = (batch_size,)
 
     data = mx.sym.Variable("data")
     softmax_label = mx.sym.Variable("softmax_label")
@@ -119,10 +125,11 @@ def get_exec(model_prefix='resnet50', image_size=(32, 32), batch_size = 128, ctx
     if not get_use_tensorrt():
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
-    executor = sym.simple_bind(ctx=ctx, data = data_shape,
-        softmax_label=sm_shape, grad_req='null', shared_buffer=all_params, force_rebind=True)
+    executor = sym.simple_bind(ctx=ctx, data=data_shape, softmax_label=sm_shape, grad_req='null',
+                               shared_buffer=all_params, force_rebind=True)
 
     return executor, h, w
+
 
 def compute(model_prefix, epoch, data_dir, batch_size=128):
 
@@ -134,14 +141,17 @@ def compute(model_prefix, epoch, data_dir, batch_size=128):
     num_ex = 10000
     all_preds = np.zeros([num_ex, 10])
 
-    train_iter, test_iter = get_cifar10_iterator(args={'data_dir':data_dir, 'batch_size':batch_size}, kv={'num_workers':1, 'rank':0})
+    train_iter, test_iter = get_cifar10_iterator(args={'data_dir': data_dir, 'batch_size': batch_size},
+                                                 kv={'num_workers': 1, 'rank': 0})
 
-    train_iter2, test_iter2 = get_cifar10_iterator(args={'data_dir':data_dir, 'batch_size':num_ex}, kv={'num_workers':1, 'rank':0})
+    train_iter2, test_iter2 = get_cifar10_iterator(args={'data_dir': data_dir, 'batch_size': num_ex},
+                                                   kv={'num_workers': 1, 'rank': 0})
 
     all_label_train = train_iter2.next().label[0].asnumpy()
     all_label_test = test_iter2.next().label[0].asnumpy().astype(np.int32)
 
-    train_iter, test_iter = get_cifar10_iterator(args={'data_dir':'./data', 'batch_size':batch_size}, kv={'num_workers':1, 'rank':0})
+    train_iter, test_iter = get_cifar10_iterator(args={'data_dir': './data', 'batch_size': batch_size},
+                                                 kv={'num_workers': 1, 'rank': 0})
 
     start = time()
 
@@ -165,6 +175,7 @@ def compute(model_prefix, epoch, data_dir, batch_size=128):
 
     return percentage, time() - start
 
+
 if __name__ == '__main__':
 
     model_prefix = sys.argv[1]
@@ -183,4 +194,3 @@ if __name__ == '__main__':
     print("MXNet time: %f" % mxnet_time)
     print("MXNet-TensorRT time: %f" % trt_time)
     print("Speedup: %fx" % (mxnet_time / trt_time))
-

@@ -16,9 +16,9 @@
 # under the License.
 
 import os
-#pylint: disable=unused-import
+# pylint: disable=unused-import
 import unittest
-#pylint: enable=unused-import
+# pylint: enable=unused-import
 import numpy as np
 import mxnet as mx
 from ctypes.util import find_library
@@ -28,11 +28,14 @@ assert get_device_count() > 0, "No GPUs available to test TensorRT"
 
 assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
 
+
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
 
-def set_use_tensorrt(status = False):
+
+def set_use_tensorrt(status=False):
     os.environ["MXNET_USE_TENSORRT"] = str(int(status))
+
 
 def merge_dicts(*dict_args):
     """Merge arg_params and aux_params to populate shared_buffer"""
@@ -40,6 +43,7 @@ def merge_dicts(*dict_args):
     for dictionary in dict_args:
         result.update(dictionary)
     return result
+
 
 def get_iters(mnist, batch_size):
     """Get MNIST iterators."""
@@ -51,6 +55,7 @@ def get_iters(mnist, batch_size):
     test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
     all_test_labels = np.array(mnist['test_label'])
     return train_iter, val_iter, test_iter, all_test_labels
+
 
 def lenet5():
     """LeNet-5 Symbol"""
@@ -76,6 +81,7 @@ def lenet5():
     #pylint: enable=no-member
     return lenet
 
+
 def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     """train LeNet-5 model on MNIST data"""
     ctx = mx.gpu(0)
@@ -95,6 +101,7 @@ def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     accuracy = acc.get()[1]
     assert accuracy > 0.95, "LeNet-5 training accuracy on MNIST was too low"
     return lenet_model
+
 
 def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size):
     """Run inference with either MXNet or TensorRT"""
@@ -169,6 +176,7 @@ def test_tensorrt_inference():
     assert abs(mx_pct - trt_pct) < 1e-2, \
         """Diff. between MXNet & TensorRT accuracy too high:
            MXNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
+
 
 if __name__ == '__main__':
     test_tensorrt_inference()
