@@ -17,10 +17,8 @@
 
 # coding: utf-8
 """Gluon backend wrapper for onnx test infrastructure"""
-import mxnet as mx
-from mxnet import nd
-from mxnet.contrib.onnx._import.import_onnx import GraphProto
-import numpy as np
+from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
+
 try:
     from onnx import helper, TensorProto
     from onnx.backend.base import Backend

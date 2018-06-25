@@ -31,22 +31,6 @@
 namespace mxnet {
 namespace op {
 
-template<typename OP>
-void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<gpu> *s,
-                                const nnvm::NodeAttrs &attrs,
-                                const OpContext &ctx,
-                                const NDArray &lhs,
-                                const NDArray &rhs,
-                                const OpReqType req,
-                                const NDArray &output,
-                                const bool lhs_may_be_dense,
-                                const bool rhs_may_be_dense,
-                                const bool allow_inplace,
-                                const bool scatter) {
-  LOG(FATAL) << "GPU not supported for RspRspOp";
-}
-
-
 /*! \brief binary op handling for the following row sparse inputs/outputs
   rsp, rsp -> rsp,
   dns, rsp -> rsp,
@@ -622,7 +606,7 @@ void ElemwiseBinaryOp::DnsRspDnsOp(mshadow::Stream<xpu> *s,
                                    const bool reverse) {
   using namespace mshadow;
   using namespace mxnet_op;
-  CHECK_EQ(dns.storage_type(), kDefaultStorage);
+  CHECK(dns.storage_type() == kDefaultStorage || dns.storage_type() == kRowSparseStorage);
   CHECK_EQ(rsp.storage_type(), kRowSparseStorage);
   CHECK_EQ(output.data().Size(), dns.data().Size());
   CHECK(req != kAddTo);
