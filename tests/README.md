@@ -23,7 +23,7 @@
     ```
     with
     ```
-    file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/test_main.cc" "cpp/{YOUR TEST FILE}")
+    file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/test_main.cc" "cpp/{RELATIVE_PATH_TO_TEST_FILE}")
     ```
 
 ### Building with Ninja
