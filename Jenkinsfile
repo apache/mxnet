@@ -100,7 +100,7 @@ def collect_test_results_unix(original_file_name, new_file_name) {
     if (fileExists(original_file_name)) {
         // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
         // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
-		sh 'cp ' + original_file_name + ' ' + new_file_name
+	sh 'cp ' + original_file_name + ' ' + new_file_name
         archiveArtifacts artifacts: new_file_name
     }
 }
