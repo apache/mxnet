@@ -1,0 +1,45 @@
+# Testing MXNET
+
+## Running CPP Tests
+
+1. Install [cmake](https://cmake.org/install/)
+1. Create a build directory in the root of the mxnet project
+    ```
+    mkdir build
+    cd build
+    ```
+1. Generate your Makefile and build along with the tests with cmake (specify appropraite flags)
+    ```
+    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DBLAS=Open -DCMAKE_BUILD_TYPE=Debug .. && make
+    ```
+1.  Run tests
+    ```
+    ctest --verbose
+    ```
+
+1. The following will run all the tests the in `cpp` directory. To run just your test file replace the following in your `tests/CMakeLists.txt`
+    ```
+    file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
+    ```
+    with
+    ```
+    file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/test_main.cc" "cpp/{YOUR TEST FILE}")
+    ```
+
+### Building with Ninja
+
+Ninja is a build tool (like make) that prioritizes building speed. If you will be building frequently, we recommend you use ninja
+
+1. Download Ninja via package manager or directly from [source](https://github.com/ninja-build/ninja)
+    ```
+    apt-get install ninja-build
+    ```
+1. When running cmake, add the `-GNinja` flag to specify cmake to generate a Ninja build file
+    ```
+    cmake -DUSE_CUDNN=ON -DUSE_CUDA=ON -DUSE_MKLDNN=ON -DBLAS=Open -GNinja -DCMAKE_BUILD_TYPE=Debug ..
+    ```
+1. Run the ninja build file with
+    ```
+    ninja
+    ```
+
