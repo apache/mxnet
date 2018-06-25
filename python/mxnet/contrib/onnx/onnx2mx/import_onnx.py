@@ -23,7 +23,7 @@ from .... import symbol
 from .... import cpu, gpu
 from .... import ndarray as nd
 from ....base import string_types
-from .import_helper import _convert_map as convert_map
+from ._import_helper import _convert_map as convert_map
 
 class GraphProto(object): # pylint: disable=too-few-public-methods
     """A helper class for handling mxnet symbol copying from pb2.GraphProto.

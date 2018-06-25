@@ -335,7 +335,7 @@ def test_CSVIter():
     for dtype in ['int32', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
 
-
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11359")
 def test_ImageRecordIter_seed_augmentation():
     get_cifar10()
     seed_aug = 3
