@@ -164,7 +164,7 @@ class Trainer(object):
         #    - push(sparse_grad), push(dense_grad)
         #    - pull(dense_weight)
         if self._contains_sparse_weight:
-            kvstore = _create_sparse_kvstore(config['kvstore'], len(self._contexts))
+            kvstore = _create_sparse_kvstore(config['kvstore'])
             update_on_kvstore = True
             # raise Error if update_on_kvstore is set to False by the user
             if config['update_on_kvstore'] is False:
@@ -178,7 +178,8 @@ class Trainer(object):
         #    - pull(grad)
         #    - update(grad, weight)
         elif self._contains_sparse_grad:
-            kvstore = _create_sparse_kvstore(config['kvstore'], len(self._contexts))
+            arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
+            kvstore, _ = _create_kvstore(config['kvstore'], len(self._contexts), arg_arrays)
             update_on_kvstore = False
         # normal case
         else:

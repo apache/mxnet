@@ -55,25 +55,18 @@ BatchEndParam = namedtuple('BatchEndParams',
                             'eval_metric',
                             'locals'])
 
-def _create_sparse_kvstore(kvstore, num_device):
+def _create_sparse_kvstore(kvstore):
     """Create kvstore assuming some parameters' storage types are row_sparse.
 
     Parameters
     ----------
     kvstore : KVStore or str
         The kvstore.
-    num_device : int
-        The number of devices
     """
     if isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
-        # create kvstore using the string type
-        if num_device is 1 and 'dist' not in kvstore:
-            # no need to use kv for single device and single machine
-            kv = None
-        else:
-            kv = kvs.create(kvstore)
+        kv = kvs.create(kvstore)
     else:
         raise TypeError("Cannot create '%s' KVStore with row_sparse parameters. "
                         "The type must be KVStore or str." % kvstore)
