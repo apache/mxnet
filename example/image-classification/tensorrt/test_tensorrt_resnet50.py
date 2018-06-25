@@ -172,15 +172,15 @@ if __name__ == '__main__':
     data_dir = sys.argv[3]
     batch_size = 1024
 
-    print("\nRunning inference in MxNet\n")
+    print("\nRunning inference in MXNet\n")
     set_use_tensorrt(False)
     mxnet_pct, mxnet_time = compute(model_prefix, epoch, data_dir, batch_size)
 
-    print("\nRunning inference in MxNet-TensorRT\n")
+    print("\nRunning inference in MXNet-TensorRT\n")
     set_use_tensorrt(True)
     trt_pct, trt_time = compute(model_prefix, epoch, data_dir, batch_size)
 
-    print("MxNet time: %f" % mxnet_time)
-    print("MxNet-TensorRT time: %f" % trt_time)
+    print("MXNet time: %f" % mxnet_time)
+    print("MXNet-TensorRT time: %f" % trt_time)
     print("Speedup: %fx" % (mxnet_time / trt_time))
 
