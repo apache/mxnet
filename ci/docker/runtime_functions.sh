@@ -439,6 +439,54 @@ build_ubuntu_gpu() {
     build_ubuntu_gpu_cuda91_cudnn7
 }
 
+build_ubuntu_gpu_tensorrt() {
+
+    set -ex
+
+    build_ccache_wrappers
+
+    # Build ONNX
+    pushd .
+    echo "TensorRT build enabled. Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
+    rm -rf build
+    mkdir -p build
+    cd build
+    cmake \
+        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
+        -DBUILD_SHARED_LIBS=ON ..\
+        -G Ninja
+    ninja -v
+    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    popd
+
+    # Build ONNX-TensorRT
+    pushd .
+    cd 3rdparty/onnx-tensorrt/
+    mkdir -p build
+    cd build
+    cmake ..
+    make -j$(nproc)
+    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    popd
+
+    rm -rf build
+    make \
+        DEV=1                                               \
+        USE_BLAS=openblas                                   \
+        USE_CUDA=1                                          \
+        USE_CUDA_PATH=/usr/local/cuda                       \
+        USE_CUDNN=1                                         \
+        USE_DIST_KVSTORE=0                                  \
+        USE_TENSORRT=1                                      \
+        ONNX_NAMESPACE=onnx                                 \
+        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
+        -j$(nproc)
+
+    report_ccache_usage
+}
+
 build_ubuntu_gpu_mkldnn() {
     set -ex
 
