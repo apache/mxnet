@@ -105,7 +105,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
                               const OpReqType &req, const NDArray &in_grad);
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-             const mkldnn::memory &out);
+         const mkldnn::memory &out);
 
 }  // namespace op
 }  // namespace mxnet

@@ -32,7 +32,7 @@ namespace mxnet {
 namespace op {
 
 void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
-             const mkldnn::memory &out) {
+         const mkldnn::memory &out) {
   std::vector<mkldnn::memory::primitive_desc> input_pds(2);
   std::vector<float> scales(2, 1);
   std::vector<mkldnn::primitive::at> inputs;
