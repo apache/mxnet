@@ -62,7 +62,7 @@ class BiLSTM_CRF(Block):
 
             # Matrix of transition parameters.  Entry i,j is the score of
             # transitioning *to* i *from* j.
-            self.transitions = gluon.Parameter("crf_transition_matrix", 
+            self.transitions = self.params.get("crf_transition_matrix", 
                                                shape=(self.tagset_size, self.tagset_size))
             
             self.hidden = self.init_hidden()
@@ -198,8 +198,6 @@ for sentence, tags in training_data:
 tag2idx = {"B": 0, "I": 1, "O": 2, START_TAG: 3, STOP_TAG: 4}
 
 model = BiLSTM_CRF(len(word2idx), tag2idx, EMBEDDING_DIM, HIDDEN_DIM)
-# Update parameter dictionary to include crf weights
-model.params.update({'crf_transition_matrix':model.transitions}) 
 model.initialize(mx.init.Xavier(magnitude=2.24), ctx=mx.cpu())
 optimizer = gluon.Trainer(model.collect_params(), 'sgd', {'learning_rate': 0.01, 'wd': 1e-4})
 
