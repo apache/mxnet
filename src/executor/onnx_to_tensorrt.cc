@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2018 by Contributors
  * \file onnx_to_tensorrt.cc
- * \brief TensorRT integration with the MxNet executor
+ * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang
  */
 
@@ -111,7 +111,7 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
-  if (! parsed_model.ParseFromString(onnx_model) ) {
+  if (!parsed_model.ParseFromString(onnx_model)) {
     throw dmlc::Error("Could not parse ONNX from string");
   }
 

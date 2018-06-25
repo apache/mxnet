@@ -17,16 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
-# echo "TensorRT build enabled. Installing Protobuf."; \
-# git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
-# cd protobuf
-# ./autogen.sh
-# ./configure
-# make -j$(nproc)
-# make install
-# ldconfig
-
 # Install Protobuf
 # Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
 pushd .
@@ -49,37 +39,3 @@ dpkg -i tensorrt.deb
 apt-get update
 apt-get install -y --allow-downgrades libnvinfer-dev
 rm tensorrt.deb
-
-# Install ONNX
-#pushd .
-#cd 3rdparty/onnx-tensorrt/third_party/onnx
-#rm -rf build
-#mkdir build
-#cd build
-#cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
-#make -j$(nproc)
-#make install
-#ldconfig
-#cd ..
-#mkdir /usr/include/x86_64-linux-gnu/onnx
-#cp build/onnx/onnx*pb.* /usr/include/x86_64-linux-gnu/onnx
-#cp build/libonnx.so /usr/local/lib
-#ldconfig
-#popd
-#
-## Install ONNX-TensorRT
-#echo "==============================================================="
-#pwd
-#ls -la
-#cd ..
-#ls -la
-#cd /
-#ls -R 
-#echo "==============================================================="
-#cd 3rdparty/onnx-tensorrt/
-#mkdir build
-#cd build
-#cmake ..
-#make -j$(nproc)
-#make install
-#ldconfig
