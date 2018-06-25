@@ -97,7 +97,7 @@ def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     return lenet_model
 
 def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size):
-    """Run inference with either MxNet or TensorRT"""
+    """Run inference with either MXNet or TensorRT"""
 
     shared_buffer = merge_dicts(arg_params, aux_params)
     if not get_use_tensorrt():
@@ -134,7 +134,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
 
 
 def test_tensorrt_inference():
-    """Run inference comparison between MxNet and TensorRT.
+    """Run inference comparison between MXNet and TensorRT.
        This could be used stand-alone or with nosetests."""
     mnist = mx.test_utils.get_mnist()
     num_epochs = 10
@@ -150,25 +150,25 @@ def test_tensorrt_inference():
                                      *get_iters(mnist, batch_size)[:-1])
         trained_lenet.save_checkpoint(model_name, num_epochs)
 
-    # Load serialized MxNet model (model-symbol.json + model-epoch.params)
+    # Load serialized MXNet model (model-symbol.json + model-epoch.params)
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
 
-    print("Running inference in MxNet")
+    print("Running inference in MXNet")
     set_use_tensorrt(False)
     mx_pct = run_inference(sym, arg_params, aux_params, mnist,
                            all_test_labels, batch_size=batch_size)
 
-    print("Running inference in MxNet-TensorRT")
+    print("Running inference in MXNet-TensorRT")
     set_use_tensorrt(True)
     trt_pct = run_inference(sym, arg_params, aux_params, mnist,
                             all_test_labels,  batch_size=batch_size)
 
-    print("MxNet accuracy: %f" % mx_pct)
-    print("MxNet-TensorRT accuracy: %f" % trt_pct)
+    print("MXNet accuracy: %f" % mx_pct)
+    print("MXNet-TensorRT accuracy: %f" % trt_pct)
 
     assert abs(mx_pct - trt_pct) < 1e-2, \
-        """Diff. between MxNet & TensorRT accuracy too high:
-           MxNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
+        """Diff. between MXNet & TensorRT accuracy too high:
+           MXNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
 
 if __name__ == '__main__':
     test_tensorrt_inference()

@@ -455,7 +455,7 @@ void dispNodesSet(Graph g, std::unordered_set<nnvm::Node*> s) {
 Graph ReplaceSubgraph(Graph&& g,
                       std::unordered_set<nnvm::Node*> set_subgraph,
                       std::unordered_map<std::string, NDArray>* const params_map) {
-  // Create MxNet subgraph
+  // Create MXNet subgraph
   Graph subgraph;
 
   const auto sub_outputs_in_main = GetSubgraphOutputs(g, set_subgraph);
