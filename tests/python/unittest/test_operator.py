@@ -60,14 +60,14 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
 
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
-    mod2.backward(out_grads=[dy])    
+    mod2.backward(out_grads=[dy])
     if grad_req != 'null':
         assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
     else:
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
-        
-        
+
+
 
 @with_seed()
 def test_lstm_sym():
@@ -77,7 +77,7 @@ def test_lstm_sym():
     stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
-    
+
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
@@ -118,16 +118,16 @@ def test_gru_sym():
 @with_seed()
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
-    
+
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='gru',
                                 bidirectional=True, get_next_state=True, prefix='')
-    
+
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.GRUCell(H, prefix='l0_'),
                 mx.rnn.GRUCell(H, prefix='r0_'),
-                output_prefix='bi_gru_0_'))    
-    
+                output_prefix='bi_gru_0_'))
+
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.GRUCell(H, prefix='l1_'),
                 mx.rnn.GRUCell(H, prefix='r1_'),
@@ -1111,7 +1111,7 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
     exe.forward(is_train=True)
     out = exe.outputs[0].asnumpy()
     exe.backward(out_grad)
-    assert_almost_equal(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy(), rtol=1e-4, atol=1e-3)
+    assert_almost_equal(out + args_grad_addto_npy[0], args_grad_addto[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 def check_deconvolution_gradient(input_shape, num_filter, pad):
@@ -4758,7 +4758,7 @@ def test_laop():
     check_fw(test_gemm, [a2, b2, c2], [r2])
     if grad_check == 1:
         check_grad(test_gemm, [a2, b2, c2])
-    
+
     # Check gemm2 operator same way as gemm.
     res_gemm = 4. * np.dot(data_in1, data_in2)
     test_gemm = mx.sym.linalg.gemm2(data1, data2, alpha=4.)
