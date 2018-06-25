@@ -442,7 +442,7 @@ build_ubuntu_gpu_tensorrt() {
 
     # Build ONNX
     pushd .
-    echo "TensorRT build enabled. Installing ONNX."
+    echo "Installing ONNX."
     cd 3rdparty/onnx-tensorrt/third_party/onnx
     rm -rf build
     mkdir -p build
@@ -465,6 +465,11 @@ build_ubuntu_gpu_tensorrt() {
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
+
+    mkdir -p /work/mxnet/lib/
+    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
     rm -rf build
     make \
@@ -657,6 +662,14 @@ unittest_ubuntu_python3_gpu() {
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_tensorrt_gpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    nosetests-3.4 --verbose tests/python/tensorrt
 }
 
 # quantization gpu currently only runs on P3 instances
