@@ -22,9 +22,11 @@ This page contains a curated list of awesome MXNet examples, tutorials and blogs
 
 If you want to contribute to this list and the examples, please open a new pull request.
 
+
 ### Examples
 
 Example applications or scripts should be submitted in this `example` folder.
+
 
 ### Tutorials
 
@@ -218,8 +220,11 @@ If your tutorial depends on specific packages, simply add them to this provision
 
 * Dmitrii Tsybulevskii, 1st place of the [Yelp Restaurant Photo Classification](https://www.kaggle.com/c/yelp-restaurant-photo-classification). Link to [the Kaggle interview](http://blog.kaggle.com/2016/04/28/yelp-restaurant-photo-classification-winners-interview-1st-place-dmitrii-tsybulevskii/).
 
-## <a name="tools-with-mxnet"></a>Tools with MXnet
+## <a name="tools-with-mxnet"></a>Tools with MXNet
+* [Keras-MXNet](https://github.com/awslabs/keras-apache-mxnet) - Keras 2 with an MXNet Backend
+* [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator integration and MXNet as backend for GPU computing
+* [MXBoard](https://github.com/awslabs/mxboard) - Model visualizations using TensorBoard
+* [MXNet Model Server](model-server/mms.md) - A flexible and easy to use tool for serving Deep Learning models
+* [MXNet-face](https://github.com/tornadomeet/mxnet-face) - Using MXNet for face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model get 97.13%+-0.88% accuracy on LFW, and with only 20MB size
+* [ONNX-MXNet](https://mxnet.incubator.apache.org/api/python/contrib/onnx.html) - Implements the ONNX model format support within MXNet
 * [TensorFuse](https://github.com/dementrock/tensorfuse) - Common interface for Theano, CGT, TensorFlow, and mxnet (experimental) by [dementrock](https://github.com/dementrock)
-* [MXnet-face](https://github.com/tornadomeet/mxnet-face) - Using mxnet for face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model get 97.13%+-0.88% accuracy on LFW, and with only 20MB size.
-* [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator Integration and MXnet as backend for GPU computing
-* [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) - a flexible and easy to use tool for serving Deep Learning models
