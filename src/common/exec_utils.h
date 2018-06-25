@@ -104,7 +104,7 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
         temp = bufs->at(i);
       } else if (kAddTo == req->at(i) && nd.IsMKLDNNData()) {
         temp = nd.Reorder2Default();
-      } else if (kAddTo == req->at(i) && !nd.IsMKLDNNData()) {
+      } else if (kAddTo == req->at(i)) {
         temp = nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
