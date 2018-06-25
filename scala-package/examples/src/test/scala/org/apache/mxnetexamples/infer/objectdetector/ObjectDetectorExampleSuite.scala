@@ -83,6 +83,5 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     assert(output(0)(0)._1 === "car")
 
-    Process("rm -rf " + modelDirPath + " " + inputImageDir) !
   }
 }
