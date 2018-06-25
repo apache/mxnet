@@ -183,16 +183,15 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   for (const auto &arr : outputs)
     CHECK_EQ(arr.storage_type(), kDefaultStorage)
         << "The for operator doesn't support the sparse format";
-  size_t iter_dim = 0;
   int len = state.num_iterations;
   size_t num_output_data = params.num_out_data;
 
   // In backward computation, we need to run iterations from backwards.
   std::vector<NDArray> subg_ograds(params.num_outputs);
-  std::vector<NDArray> subg_igrads = outputs;
+  std::vector<NDArray> subg_igrads(outputs.size());
   for (size_t i = num_output_data; i < subg_ograds.size(); i++)
     subg_ograds[i] = inputs[i];
-  std::vector<OpReqType> subg_req;
+  std::vector<OpReqType> subg_req(req.size());
   for (auto r : req)
     CHECK_NE(r, kWriteInplace);
 
@@ -206,17 +205,21 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   // [remaining vars]
   for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
-    subg_igrads[loc] = outputs[i + params.in_data_locs.ndim() + params.in_state_locs.ndim()];
+    size_t orig_loc = i + params.in_data_locs.ndim() + params.in_state_locs.ndim();
+    subg_igrads[loc] = outputs[orig_loc];
+    subg_req[loc] = req[orig_loc];
   }
 
   for (int iter_num = len - 1; iter_num >= 0; iter_num--) {
     for (int i = 0; i < params.num_out_data; i++)
       subg_ograds[i] = inputs[i].At(iter_num);
-    if (iter_num == len - 1) {
-      subg_req = req;
-    } else {
-      subg_req.clear();
-      subg_req.resize(req.size(), kAddTo);
+    if (iter_num < len - 1) {
+      // For the rest of the iterations, we should add graidents to the
+      // remaining vars.
+      for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+        size_t loc = params.remain_locs[i];
+        subg_req[loc] = kAddTo;
+      }
     }
 
     // [data vars]
