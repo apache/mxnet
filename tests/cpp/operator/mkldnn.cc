@@ -366,6 +366,9 @@ OpAttrs GetCopyOp() {
   attrs.num_outputs = 1;
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -408,6 +411,8 @@ OpAttrs GetReluBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
   return attrs;
 }
 
@@ -419,6 +424,9 @@ OpAttrs GetSumOp() {
   attrs.num_outputs = 1;
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -430,6 +438,9 @@ OpAttrs GetSumBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.requests.insert(OpReqType::kAddTo);
