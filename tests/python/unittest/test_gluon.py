@@ -22,6 +22,7 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import setup_module, with_seed, assertRaises, teardown
 import numpy as np
+from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
 import warnings
@@ -1132,7 +1133,6 @@ def test_hybrid_multi_context():
     net.hybridize()
     net(mx.nd.zeros((1, 3, 32, 32), ctx=mx.cpu(0))).asnumpy()
 
-
 @with_seed()
 def test_zero_grad():
     data = mx.nd.random.uniform(shape=(3,3))
@@ -1145,6 +1145,60 @@ def test_zero_grad():
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
+def check_hybrid_static_memory(**kwargs):
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    x.attach_grad()
+
+    net1 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
+    net2 = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
+    net2.hybridize(**kwargs)
+    net1(x)
+    net2(x)
+
+    def test(net, x):
+        with mx.autograd.record():
+            y = net(x) + net(x)
+            y.backward()
+
+        grads = {k: v.grad() for k, v in net.collect_params().items() if v.grad_req != 'null'}
+
+        return y, grads
+
+    y1, grads1 = test(net1, x)
+    y2, grads2 = test(net2, x)
+
+    assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
+    for key in grads1:
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+
+def test_hybrid_static_memory():
+    check_hybrid_static_memory()
+    check_hybrid_static_memory(static_alloc=True)
+    check_hybrid_static_memory(static_alloc=True, static_shape=True)
+
+def check_hybrid_static_memory_switching(**kwargs):
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(**kwargs)
+
+    x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+    x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
+    net(x)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+    mx.nd.waitall()
+
+def test_hybrid_static_memory_switching():
+    check_hybrid_static_memory_switching()
+    check_hybrid_static_memory_switching(static_alloc=True)
+    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
@@ -1237,6 +1291,74 @@ def test_legacy_save_params():
     model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
                                      inputs=mx.sym.var('data'))
     model.load_params('test.params', ctx=mx.cpu())
+
+
+@with_seed()
+def test_sparse_hybrid_block_grad():
+    class Embedding(mx.gluon.HybridBlock):
+        def __init__(self, num_tokens, embedding_size):
+            super(Embedding, self).__init__()
+            self.num_tokens = num_tokens
+
+            with self.name_scope():
+                self.embedding = mx.gluon.nn.Embedding(
+                    num_tokens, embedding_size, sparse_grad=True)
+
+        def hybrid_forward(self, F, words):
+            emb = self.embedding(words)
+            return emb + F.ones_like(emb)
+
+    embedding = Embedding(20, 3)
+    embedding.initialize()
+    embedding.hybridize()
+
+    with mx.autograd.record():
+        emb0 = embedding(mx.nd.arange(10)).sum()
+        emb1 = embedding(mx.nd.arange(10)).sum()
+        loss = emb0 + emb1
+    loss.backward()
+    grad = embedding.embedding.weight.grad().asnumpy()
+    assert (grad[:10] == 2).all()
+    assert (grad[10:] == 0).all()
+
+@with_seed()
+def test_sparse_hybrid_block():
+    class Linear(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(Linear, self).__init__()
+            with self.name_scope():
+                self.w = self.params.get('w', shape=(units, units))
+
+        def hybrid_forward(self, F, x, w):
+            return F.dot(x, w)
+
+    class SparseBlock(mx.gluon.HybridBlock):
+        def __init__(self, units):
+            super(SparseBlock, self).__init__()
+            with self.name_scope():
+                self.net = Linear(units)
+
+        def hybrid_forward(self, F, x):
+            return self.net(x) * x
+
+    block = SparseBlock(2)
+    block.initialize()
+    block.hybridize()
+    x = mx.nd.ones((2,2)).tostype('csr')
+    with mx.autograd.record():
+        z = block(x) + block(x)
+    z.backward()
+    assert (block.net.w.grad().asnumpy() == 4).all()
+
+def test_hybrid_static_memory_recording():
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(static_alloc=True)
+
+    x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
+    with mx.autograd.record(True):
+        net(x)
+    net(x)
 
 
 if __name__ == '__main__':

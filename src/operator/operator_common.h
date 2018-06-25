@@ -256,7 +256,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define STORAGE_TYPE_ASSIGN_CHECK(type_array, index, type)                  \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                         \
+    if (!::mxnet::op::type_assign(&(type_array)[index], type)) {            \
       std::ostringstream os;                                                \
       os << "Storage type inconsistent, Provided = "                        \
          << common::stype_string((type_array)[index]) << ','                \
@@ -274,7 +274,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define DISPATCH_MODE_ASSIGN_CHECK(type_array, index, type)                 \
   {                                                                         \
-    if (!dispatch_mode_assign(&(type_array)[index], type)) {                \
+    if (!::mxnet::op::dispatch_mode_assign(&(type_array)[index], type)) {   \
       std::ostringstream os;                                                \
       os << "Dispatch mode inconsistent, Provided = "                       \
          << common::dispatch_mode_string((type_array)[index]) << ','        \
