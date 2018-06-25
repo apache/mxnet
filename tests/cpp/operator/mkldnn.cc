@@ -760,8 +760,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
           PrintVerifyMsg(in_arr, out_arr);
           Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                       outputs, req, dispatch, mxnet::OpStatePtr());
-          for (auto output : outputs)
-            output->WaitToRead();
+          Engine::Get()->WaitForAll();
           verify_fn(inputs, outputs);
         }
       }
@@ -785,8 +784,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
         PrintVerifyMsg(orig, arr);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                     dispatch, mxnet::OpStatePtr());
-        for (auto output : outputs)
-          output->WaitToRead();
+        Engine::Get()->WaitForAll();
         std::vector<NDArray *> orig_inputs(attrs.num_inputs);
         for (int i = 0; i < attrs.num_inputs; i++)
           orig_inputs[i] = &orig.arr;
@@ -811,7 +809,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
           PrintVerifyMsg(in_arr, out_arr);
           Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                       outputs, req, dispatch, mxnet::OpStatePtr());
-          out_arr.arr.WaitToRead();
+          Engine::Get()->WaitForAll();
           VerifyAddRequest(inputs, {&orig_output}, outputs, verify_fn);
         }
       }
