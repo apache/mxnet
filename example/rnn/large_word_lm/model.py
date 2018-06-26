@@ -127,7 +127,7 @@ def sampled_softmax(num_classes, num_samples, in_dim, inputs, weight, bias,
         new_targets = S.zeros_like(label)
         return logits, new_targets
 
-def generate_samples(label, num_splits, num_samples, num_classes):
+def generate_samples(label, num_splits, sampler):
     """ Split labels into `num_splits` and
         generate candidates based on log-uniform distribution.
     """
@@ -139,10 +139,10 @@ def generate_samples(label, num_splits, num_samples, num_classes):
     samples = []
     for label_split in label_splits:
         label_split_2d = label_split.reshape((-1,1))
-        sampled_value = mx.nd.contrib.rand_zipfian(label_split_2d, num_samples, num_classes)
+        sampled_value = sampler.draw(label_split_2d)
         sampled_classes, exp_cnt_true, exp_cnt_sampled = sampled_value
         samples.append(sampled_classes.astype(np.float32))
-        prob_targets.append(exp_cnt_true.astype(np.float32))
+        prob_targets.append(exp_cnt_true.astype(np.float32).reshape((-1,1)))
         prob_samples.append(exp_cnt_sampled.astype(np.float32))
     return samples, prob_samples, prob_targets
 

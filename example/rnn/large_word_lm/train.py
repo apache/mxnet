@@ -23,6 +23,7 @@ from data import MultiSentenceIter, Vocabulary
 from model import *
 from custom_module import CustomModule
 import os, math, logging, sys
+from sampler import LogUniformSampler
 
 if __name__ == '__main__':
     # parser
@@ -51,6 +52,7 @@ if __name__ == '__main__':
     model = Model(args, ntokens, rescale_loss)
     train_loss_and_states = model.train()
     eval_loss_and_states = model.eval()
+    sampler = LogUniformSampler(ntokens, args.k)
 
     # training module
     data_names, label_names = ['data', 'mask'], ['label']
@@ -83,7 +85,7 @@ if __name__ == '__main__':
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-num_sample_names]
         next_batch = train_data.next()
-        next_sampled_values = generate_samples(next_batch.label[0], ngpus, args.k, ntokens)
+        next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
         stop_iter = False
         while not stop_iter:
             batch = next_batch
@@ -102,8 +104,7 @@ if __name__ == '__main__':
             try:
                 # prefetch the next batch of data and samples
                 next_batch = train_data.next()
-                next_sampled_values = generate_samples(next_batch.label[0], ngpus,
-                                                       args.k, ntokens)
+                next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
             except StopIteration:
                 stop_iter = True
             # cache LSTMP states of the current batch
@@ -132,8 +133,11 @@ if __name__ == '__main__':
             nbatch += 1
 
         # run evaluation with full softmax on cpu
-        module.save_checkpoint(args.checkpoint_dir, epoch, save_optimizer_states=False)
-        cpu_train_mod = CustomModule.load(args.checkpoint_dir, epoch, context=mx.cpu(),
+        if not os.path.exists(args.checkpoint_dir):
+            os.mkdir(args.checkpoint_dir)
+        ckp = os.path.join(args.checkpoint_dir, 'ckp')
+        module.save_checkpoint(ckp, epoch, save_optimizer_states=False)
+        cpu_train_mod = CustomModule.load(ckp, epoch, context=mx.cpu(),
                                           state_names=train_state_names,
                                           data_names=data_names, label_names=label_names)
         # eval data iter
