@@ -98,7 +98,7 @@ object CNNTextClassification {
                devLabels: Array[Float], batchSize: Int, saveModelPath: String,
                learningRate: Float = 0.001f): Float = {
     val maxGradNorm = 0.5f
-    val epoch = 30
+    val epoch = 10
     val initializer = new Uniform(0.1f)
     val opt = new RMSProp(learningRate)
     val updater = Optimizer.getUpdater(opt)
