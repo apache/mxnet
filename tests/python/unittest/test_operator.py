@@ -19,6 +19,7 @@
 from __future__ import print_function
 import numpy as np
 import mxnet as mx
+import copy
 import math
 import random
 import itertools
@@ -6292,27 +6293,19 @@ def test_foreach_nested():
     assert_almost_equal(state.grad.asnumpy(), state_grad.asnumpy())
 
 
-@with_seed()
-def test_foreach_lstm():
+def check_foreach_rnn(cell_type, num_states):
     data = mx.sym.var("data")
-    init_h = mx.sym.var("h")
-    init_c = mx.sym.var("c")
-    i2h_weight = mx.sym.var("i2h_weight")
-    h2h_weight = mx.sym.var("h2h_weight")
-    i2h_bias = mx.sym.var("i2h_bias")
-    h2h_bias = mx.sym.var("h2h_bias")
+    params = mx.rnn.RNNParams()
+    hidden_dim = 4
+    input_dim = 5
+    seq_len = 2
+    batch_size = 2
 
     # This tests foreach with accumulation sum.
     def step(in1, states):
-        params = mx.rnn.RNNParams()
-        params._params['i2h_weight'] = i2h_weight
-        params._params['h2h_weight'] = h2h_weight
-        params._params['i2h_bias'] = i2h_bias
-        params._params['h2h_bias'] = h2h_bias
-        lstm = mx.rnn.LSTMCell(4, prefix='mylstm_', params=params)
-        next_h, [next_h, next_c] = lstm(in1, states)
-        # TODO This is problematic. We can't count on the user to define two different symbols.
-        return (next_h, [next_h, next_c])
+        rnn = cell_type(hidden_dim, prefix='', params=params)
+        next_h, states = rnn(in1, states)
+        return (next_h, states)
 
     def sym_group(out):
         if (isinstance(out[0], mx.sym.Symbol)):
@@ -6322,47 +6315,27 @@ def test_foreach_lstm():
         ret.extend(out[1])
         return mx.sym.Group(ret)
 
+    rnn = cell_type(hidden_dim, prefix='', params=params)
+    if num_states == 2:
+        init_states = [mx.sym.var("h"), mx.sym.var("c")]
+    else:
+        init_states = [mx.sym.var("h")]
+    out = mx.sym.contrib.foreach(step, data, init_states)
+    out = sym_group(out)
+    arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=(seq_len, batch_size, input_dim),
+            h=(batch_size, hidden_dim))
+    rnn_inputs = out.list_inputs()
+
     # Inputs
-    data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
-    h_arr = mx.nd.random.uniform(shape=(2, 4))
-    c_arr = mx.nd.random.uniform(shape=(2, 4))
-    i2h_warr = mx.nd.random.uniform(shape=(16, 4))
-    h2h_warr = mx.nd.random.uniform(shape=(16, 4))
-    i2h_barr = mx.nd.random.uniform(shape=(16))
-    h2h_barr = mx.nd.random.uniform(shape=(16))
-    args1 = {'data': data_arr, 'h': h_arr, 'c': c_arr,
-            'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
-            'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr}
-    args2 = {'data': data_arr, 'h': h_arr, 'c': c_arr,
-            'i2h_weight': i2h_warr, 'h2h_weight': h2h_warr,
-            'i2h_bias': i2h_barr, 'h2h_bias': h2h_barr}
-
+    args1 = {name:mx.nd.random.uniform(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
+    args2 = copy.deepcopy(args1)
     # gradients for the backward of the foreach symbol
-    data_arr_grad1 = mx.nd.empty(data_arr.shape)
-    h_arr_grad1 = mx.nd.empty(h_arr.shape)
-    c_arr_grad1 = mx.nd.empty(c_arr.shape)
-    i2h_warr_grad1 = mx.nd.empty(i2h_warr.shape)
-    h2h_warr_grad1 = mx.nd.empty(h2h_warr.shape)
-    i2h_barr_grad1 = mx.nd.empty(i2h_barr.shape)
-    h2h_barr_grad1 = mx.nd.empty(h2h_barr.shape)
-    args_grad1 = {'data': data_arr_grad1, 'h': h_arr_grad1, 'c': c_arr_grad1,
-            'i2h_weight': i2h_warr_grad1, 'h2h_weight': h2h_warr_grad1,
-            'i2h_bias': i2h_barr_grad1, 'h2h_bias': h2h_barr_grad1}
-
+    args_grad1 = {name:mx.nd.empty(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
     # gradients for the backward of the unrolled symbol.
-    data_arr_grad2 = mx.nd.empty(data_arr.shape)
-    h_arr_grad2 = mx.nd.empty(h_arr.shape)
-    c_arr_grad2 = mx.nd.empty(c_arr.shape)
-    i2h_warr_grad2 = mx.nd.empty(i2h_warr.shape)
-    h2h_warr_grad2 = mx.nd.empty(h2h_warr.shape)
-    i2h_barr_grad2 = mx.nd.empty(i2h_barr.shape)
-    h2h_barr_grad2 = mx.nd.empty(h2h_barr.shape)
-    args_grad2 = {'data': data_arr_grad2, 'h': h_arr_grad2, 'c': c_arr_grad2,
-            'i2h_weight': i2h_warr_grad2, 'h2h_weight': h2h_warr_grad2,
-            'i2h_bias': i2h_barr_grad2, 'h2h_bias': h2h_barr_grad2}
+    args_grad2 = {name:mx.nd.empty(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
 
     # Symbol of running LSTM with foreach.
-    out = mx.sym.contrib.foreach(step, data, [init_h, init_c])
+    out = mx.sym.contrib.foreach(step, data, init_states)
     out = sym_group(out)
     js_1 = out.tojson()
     out = mx.sym.load_json(js_1)
@@ -6371,15 +6344,15 @@ def test_foreach_lstm():
     e1 = out.bind(ctx=default_context(), args=args1, args_grad=args_grad1)
 
     # Symbol of running unrolled LSTM.
-    lstm = mx.rnn.LSTMCell(4, prefix='')
-    h = init_h
-    c = init_c
+    lstm = cell_type(hidden_dim, prefix='')
     unroll_outs = []
-    for inputs in mx.sym.split(data, num_outputs=data_arr.shape[0], axis=0, squeeze_axis=True):
-        h, [h, c] = lstm(inputs, [h, c])
+    states = init_states
+    for inputs in mx.sym.split(data, num_outputs=seq_len, axis=0, squeeze_axis=True):
+        h, states = lstm(inputs, states)
         unroll_outs.append(mx.sym.expand_dims(h, axis=0))
-    unroll_outs = mx.sym.concat(*unroll_outs, dim=0)
-    out = mx.sym.Group([unroll_outs, h, c])
+    unroll_outs = _as_list(mx.sym.concat(*unroll_outs, dim=0))
+    unroll_outs.extend(states)
+    out = mx.sym.Group(unroll_outs)
     js_1 = out.tojson()
     out = mx.sym.load_json(js_1)
     js_2 = out.tojson()
@@ -6391,23 +6364,13 @@ def test_foreach_lstm():
         for arr in e1.outputs:
             out_grads.append(mx.nd.random.uniform(-10, 10, arr.shape))
 
-        data_arr = mx.nd.random.uniform(shape=(2, 2, 4))
-        h_arr = mx.nd.random.uniform(shape=(2, 4))
-        c_arr = mx.nd.random.uniform(shape=(2, 4))
-        i2h_warr = mx.nd.random.uniform(shape=(16, 4))
-        h2h_warr = mx.nd.random.uniform(shape=(16, 4))
-        i2h_barr = mx.nd.random.uniform(shape=(16))
-        h2h_barr = mx.nd.random.uniform(shape=(16))
+        args = {name:mx.nd.random.uniform(shape=arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
 
-        e1.forward(is_train=True, data = data_arr, h = h_arr, c = c_arr,
-            i2h_weight = i2h_warr, h2h_weight = h2h_warr,
-            i2h_bias = i2h_barr, h2h_bias = h2h_barr)
+        e1.forward(is_train=True, **args)
         outputs1 = e1.outputs
         e1.backward(out_grads)
 
-        e2.forward(is_train=True, data = data_arr, h = h_arr, c = c_arr,
-            i2h_weight = i2h_warr, h2h_weight = h2h_warr,
-            i2h_bias = i2h_barr, h2h_bias = h2h_barr)
+        e2.forward(is_train=True, **args)
         outputs2 = e2.outputs
         e2.backward(out_grads)
 
@@ -6418,6 +6381,13 @@ def test_foreach_lstm():
         for i in range(len(e1.grad_arrays)):
             name = input_names[i]
             assert_almost_equal(args_grad1[name].asnumpy(), args_grad2[name].asnumpy())
+
+
+@with_seed()
+def test_foreach_rnn():
+    cell_types = [(mx.rnn.LSTMCell, 2), (mx.rnn.RNNCell, 1), (mx.rnn.GRUCell, 1)]
+    for cell_type, num_states in cell_types:
+        check_foreach_rnn(cell_type, num_states)
 
 
 @with_seed()
