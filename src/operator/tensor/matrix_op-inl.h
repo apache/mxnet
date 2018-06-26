@@ -606,7 +606,6 @@ inline void GetIndexRange(const TShape& dshape,
                           common::StaticArray<int, ndim>* end,
                           common::StaticArray<int, ndim>* step) {
   CHECK_NE(dshape.ndim(), 0U);
-//  CHECK_NE(dshape.Size(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
   CHECK_LE(param_end.ndim(), dshape.ndim())
@@ -643,8 +642,11 @@ inline void GetIndexRange(const TShape& dshape,
     } else if (s < 0) {
       b = len - 1;
     }
-    CHECK_LE(b, len) << "slicing with begin[" << i << "]="
-                     << b << " exceends limit of " << len;
+
+    if (len != 0) {
+      CHECK_LT(b, len) << "slicing with begin[" << i << "]="
+                       << b << " exceends limit of " << len;
+    }
 
     if (param_end[i].has_value()) {
       e = param_end[i].value();
