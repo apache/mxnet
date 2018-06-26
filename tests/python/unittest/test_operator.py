@@ -5740,6 +5740,17 @@ def test_slice():
     slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
     check_numeric_gradient(slice_sym, [in_data])
 
+def test_slice_partial_infer():
+    var1 = mx.sym.var(name="data", shape=(0,20))
+    var2 = mx.sym.slice(var1,begin=(None, None), end=(None,10))
+    assert (var2.infer_shape_partial()[1][0] == (0L, 10L)), var2.infer_shape_partial()[1]
+
+    var2 = mx.sym.slice(var1,begin=(None, 3), end=(None,10))
+    assert (var2.infer_shape_partial()[1][0] == (0L, 7L)), var2.infer_shape_partial()[1]
+
+    var1 = mx.sym.var(name="data", shape=(10,0))
+    var2 = mx.sym.slice(var1,begin=(1, None), end=(3,None))
+    assert (var2.infer_shape_partial()[1][0] == (2L, 0L)), var2.infer_shape_partial()[1]
 
 @with_seed()
 def test_float16_min_max():
