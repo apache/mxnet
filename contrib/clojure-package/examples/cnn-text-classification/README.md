@@ -31,8 +31,3 @@ and then run
 
 - `lein uberjar`
 - `java -Xms1024m -Xmx2048m -jar target/cnn-text-classification-0.1.0-SNAPSHOT-standalone.jar`
-
-
-
-
-

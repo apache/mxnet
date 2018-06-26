@@ -28,47 +28,49 @@
 
 (def mr-dataset-path "data/mr-data") ;; the MR polarity dataset path
 (def glove-file-path "data/glove/glove.6B.50d.txt")
+(def num-filter 100)
+(def num-label 2)
+(def dropout 0.5)
 
 (defn shuffle-data [test-num {:keys [data label sentence-count sentence-size embedding-size]}]
   (println "Shuffling the data and splitting into training and test sets")
   (println {:sentence-count sentence-count
             :sentence-size sentence-size
             :embedding-size embedding-size})
-  (let [shuffled (shuffle (map (fn [d l] [d l]) data label))
+  (let [shuffled (shuffle (map #(vector %1 %2) data label))
         train-num (- (count shuffled) test-num)
         training (into [] (take train-num shuffled))
         test (into [] (drop train-num shuffled))]
-    {:training {:data  (ndarray/array (into [] (flatten (mapv (fn [v] (first v)) training)))
+    {:training {:data  (ndarray/array (into [] (flatten (mapv first training)))
                                       [train-num 1 sentence-size embedding-size]) ;; has to be channel x y
-                :label (ndarray/array (into [] (flatten (mapv (fn [v] (last v) ) training)))
+                :label (ndarray/array (into [] (flatten (mapv last  training)))
                                       [train-num])}
-     :test {:data  (ndarray/array (into [] (flatten (mapv (fn [v] (first v)) test)))
+     :test {:data  (ndarray/array (into [] (flatten (mapv first test)))
                                   [test-num 1 sentence-size embedding-size]) ;; has to be channel x y
-            :label (ndarray/array (into [] (flatten (mapv (fn [v] (last v) ) test)))
+            :label (ndarray/array (into [] (flatten (mapv last  test)))
                                   [test-num])}}))
+
+(defn make-filter-layers [{:keys [input-x num-embed sentence-size] :as config}
+                          filter-size]
+  (as-> (sym/convolution {:data input-x
+                          :kernel [filter-size num-embed]
+                          :num-filter num-filter}) data
+    (sym/activation {:data data :act-type "relu"})
+    (sym/pooling {:data data
+                  :pool-type "max"
+                  :kernel [(inc (- sentence-size filter-size)) 1]
+                  :stride [1 1]})))
 
 ;;; convnet with multiple filter sizes
 ;; from Convolutional Neural Networks for Sentence Classification by Yoon Kim
 (defn get-multi-filter-convnet [num-embed sentence-size batch-size]
   (let [filter-list [3 4 5]
-        num-filter 100
-        num-label 2
-        dropout 0.5
         input-x (sym/variable "data")
-        polled-outputs (mapv (fn [filter-size]
-                               (as-> (sym/convolution {:data input-x
-                                                       :kernel [filter-size num-embed]
-                                                       :num-filter num-filter}) data
-                                 (sym/activation {:data data :act-type "relu"})
-                                 (sym/pooling {:data data
-                                               :pool-type "max"
-                                               :kernel [(inc (- sentence-size filter-size)) 1]
-                                               :stride [1 1]})))
-                             filter-list)
+        polled-outputs (mapv #(make-filter-layers {:input-x input-x :num-embed num-embed :sentence-size sentence-size} %) filter-list)
         total-filters (* num-filter (count filter-list))
         concat (sym/concat "concat" nil polled-outputs {:dim 1})
         hpool (sym/reshape "hpool" {:data concat :target-shape [batch-size total-filters]})
-        hdrop (if (> dropout 0) (sym/dropout "hdrop" {:data hpool :p dropout}) hpool)
+        hdrop (if (pos? dropout) (sym/dropout "hdrop" {:data hpool :p dropout}) hpool)
         fc (sym/fully-connected  "fc1" {:data hdrop :num-hidden num-label})]
     (sym/softmax-output "softmax" {:data fc})))
 
@@ -78,7 +80,7 @@
         sentence-size (:sentence-size ms-dataset)
         shuffled (shuffle-data test-size ms-dataset)
         train-data (mx-io/ndarray-iter [(get-in shuffled [:training :data])]
-                                       {:label[(get-in  shuffled [:training :label])]
+                                       {:label [(get-in shuffled [:training :label])]
                                         :label-name "softmax_label"
                                         :data-batch-size batch-size
                                         :last-batch-handle "pad"})
