@@ -160,6 +160,12 @@ def test_gluon_pretrained_models():
 def test_gluon_learning_rate_finder():
     assert _test_tutorial_nb('gluon/learning_rate_finder')
 
+def test_gluon_learning_rate_schedules():
+    assert _test_tutorial_nb('gluon/learning_rate_schedules')
+
+def test_gluon_learning_rate_schedules_advanced():
+    assert _test_tutorial_nb('gluon/learning_rate_schedules_advanced')
+  
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
 
@@ -196,6 +202,9 @@ def test_python_kvstore():
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
 
+def test_python_profiler():
+    assert _test_tutorial_nb('python/profiler')
+    
 def test_sparse_row_sparse():
     assert _test_tutorial_nb('sparse/row_sparse')
 
@@ -216,6 +225,3 @@ def test_vision_large_scale_classification():
 
 def test_vision_cnn_visualization():
     assert _test_tutorial_nb('vision/cnn_visualization')
-
-def test_python_profiler():
-    assert _test_tutorial_nb('python/profiler')

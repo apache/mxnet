@@ -43,6 +43,8 @@ Select API:&nbsp;
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
     * [Learning Rate Finder](/tutorials/gluon/learning_rate_finder.html)
+    * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
+    * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
 * API Guides
     * Core APIs

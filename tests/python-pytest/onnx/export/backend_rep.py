@@ -16,17 +16,16 @@
 # under the License.
 
 # coding: utf-8
-"""MXNet backend rep for onnx test infrastructure"""
+"""backend rep for onnx test infrastructure"""
 try:
     from onnx.backend.base import BackendRep
 except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed. Instructions to"
-                      + " install - https://github.com/onnx/onnx#installation")
+    raise ImportError("Onnx and protobuf need to be installed")
 import mxnet as mx
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
+# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
 # MXNetBackendRep object will be returned by MXNetBackend's prepare method which is used to
 # execute a model repeatedly.
 # Inputs will be passed to the run method of MXNetBackendRep class, it will perform computation and

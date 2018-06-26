@@ -15,7 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Test Cases to be run for the import module"""
+"""ONNX test backend wrapper"""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import unittest
+try:
+    import onnx.backend.test
+except ImportError:
+    raise ImportError("Onnx and protobuf need to be installed")
+
+import backend as mxnet_backend
+
+# This is a pytest magic variable to load extra plugins
+pytest_plugins = "onnx.backend.test.report",
+
+BACKEND_TESTS = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
 IMPLEMENTED_OPERATORS_TEST = [
     'test_random_uniform',
@@ -42,7 +59,6 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_reduce_mean',
     'test_reduce_prod',
     'test_squeeze',
-    'test_unsqueeze',
     'test_softmax_example',
     'test_softmax_large_number',
     'test_softmax_axis_2',
@@ -59,16 +75,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_min',
-    'test_logical_and',
-    'test_logical_xor',
-    'test_logical_not',
-    'test_logical_or',
-    'test_clip',
-    'test_softsign',
-    'test_reduce_l2',
-    'test_reduce_log_sum',
-    'test_reduce_log_sum_exp',
-    'test_reduce_sum_square'
+    'test_max'
     #pytorch operator tests
     'test_operator_exp',
     'test_operator_maxpool',
@@ -79,7 +86,7 @@ IMPLEMENTED_OPERATORS_TEST = [
 BASIC_MODEL_TESTS = [
     'test_AvgPool2D',
     'test_BatchNorm',
-    'test_ConstantPad2d'
+    'test_ConstantPad2d',
     'test_Conv2d',
     'test_ELU',
     'test_LeakyReLU',
@@ -96,11 +103,30 @@ BASIC_MODEL_TESTS = [
 STANDARD_MODEL = [
     'test_bvlc_alexnet',
     'test_densenet121',
-    #'test_inception_v1',
-    #'test_inception_v2',
+    # 'test_inception_v1',
+    # 'test_inception_v2',
     'test_resnet50',
-    #'test_shufflenet',
+    # 'test_shufflenet',
     'test_squeezenet',
-    'test_zfnet512',
+    'test_vgg16',
     'test_vgg19'
     ]
+
+for op_test in IMPLEMENTED_OPERATORS_TEST:
+    BACKEND_TESTS.include(op_test)
+
+for basic_model_test in BASIC_MODEL_TESTS:
+    BACKEND_TESTS.include(basic_model_test)
+
+for std_model_test in STANDARD_MODEL:
+    BACKEND_TESTS.include(std_model_test)
+
+BACKEND_TESTS.exclude('.*broadcast.*')
+BACKEND_TESTS.exclude('.*bcast.*')
+
+
+# import all test cases at global scope to make them visible to python.unittest
+globals().update(BACKEND_TESTS.enable_report().test_cases)
+
+if __name__ == '__main__':
+    unittest.main()
