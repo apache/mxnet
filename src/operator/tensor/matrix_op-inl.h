@@ -663,7 +663,6 @@ inline void GetIndexRange(const TShape& dshape,
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
-
   }
   for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
     (*begin)[i] = 0;
