@@ -127,7 +127,7 @@ def _cut_subgraph(subg):
 # This construct a subgraph for given output nodes.
 # If an output node is one of the input nodes, we call identity to make sure
 # that outputs nodes are different from input nodes.
-def construct_subgraph(sym_out, sym_states):
+def _construct_subgraph(sym_out, sym_states):
     sym_out = _as_list(sym_out)
     sym_states = _as_list(sym_states)
     all_outputs = []
@@ -252,7 +252,7 @@ def foreach(body, data, init_states, name="foreach"):
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
-        g = construct_subgraph(sym_out, sym_states)
+        g = _construct_subgraph(sym_out, sym_states)
 
     input_syms = _get_graph_inputs(g)
     cut_syms = _cut_subgraph(g)
