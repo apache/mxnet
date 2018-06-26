@@ -606,7 +606,7 @@ inline void GetIndexRange(const TShape& dshape,
                           common::StaticArray<int, ndim>* end,
                           common::StaticArray<int, ndim>* step) {
   CHECK_NE(dshape.ndim(), 0U);
-  CHECK_NE(dshape.Size(), 0U);
+//  CHECK_NE(dshape.Size(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
   CHECK_LE(param_end.ndim(), dshape.ndim())
@@ -643,7 +643,7 @@ inline void GetIndexRange(const TShape& dshape,
     } else if (s < 0) {
       b = len - 1;
     }
-    CHECK_LT(b, len) << "slicing with begin[" << i << "]="
+    CHECK_LE(b, len) << "slicing with begin[" << i << "]="
                      << b << " exceends limit of " << len;
 
     if (param_end[i].has_value()) {
@@ -658,10 +658,10 @@ inline void GetIndexRange(const TShape& dshape,
     }
     CHECK_LE(e, len) << "slicing with end[" << i << "]="
                      << e << " exceeds limit of " << len;
-
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
+
   }
   for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
     (*begin)[i] = 0;
@@ -674,13 +674,23 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     const int e, const int s,
                                     TShape* oshape) {
   if (s > 0) {
-    CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+    CHECK_LE(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
                    << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (e - b - 1) / s + 1;
+    if (e == b) {
+      // for partial shape infer
+      (*oshape)[i] = 0;
+    } else {
+      (*oshape)[i] = (e - b - 1) / s + 1;
+    }
   } else {
-    CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+    CHECK_LE(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
                    << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (b - e - 1) / (-s) + 1;
+    if (e == b) {
+      // for partial shape infer
+      (*oshape)[i] = 0;
+    } else {
+      (*oshape)[i] = (b - e - 1) / (-s) + 1;
+    }
   }
 }
 
@@ -690,7 +700,6 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0 || dshape.Size() == 0) return false;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   TShape oshape = dshape;
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
