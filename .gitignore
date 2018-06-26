@@ -170,5 +170,3 @@ tests/mxnet_unit_tests
 # generated wrappers for ccache
 cc
 cxx
-contrib/clojure-package/test/test-ndarray.clj
-contrib/clojure-package/test/test-symbol.clj
