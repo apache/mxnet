@@ -275,8 +275,6 @@ For example::
    broadcast_like([[1,2,3]], target=[[0, 0, 0], [0, 0, 0]]) = [[ 1.,  2.,  3.],
                                                                [ 1.,  2.,  3.]]
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<BroadcastLikeParam>)
-.add_arguments(BroadcastLikeParam::__FIELDS__())
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
