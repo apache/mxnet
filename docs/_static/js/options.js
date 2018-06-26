@@ -8,9 +8,19 @@ $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
     }
+   
+    function urlSearchParams(searchString) {
+        let urlDict = new Map();
+        let searchParams = searchString.substring(1).split("&");
+        searchParams.forEach(function(element) {
+            kvPair = element.split("=");
+            urlDict.set(kvPair[0], kvPair[1]);
+        });
+        return urlDict;
+    }
 
     function setSelects(){
-        let urlParams = new URLSearchParams(window.location.search);
+        let urlParams = urlSearchParams(window.location.search);
         if (urlParams.get('version'))
             versionSelect = urlParams.get('version');
         $('li a:contains(' + versionSelect + ')').parent().siblings().removeClass('active');
@@ -56,7 +66,7 @@ $(document).ready(function () {
     setSelects();
     function setContent() {
         var el = $(this);
-        let urlParams = new URLSearchParams(window.location.search);
+        let urlParams = urlSearchParams(window.location.search);
         el.siblings().removeClass('active');
         el.addClass('active');
         if ($(this).hasClass("versions")) {
