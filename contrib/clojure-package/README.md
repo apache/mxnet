@@ -109,7 +109,7 @@ To test your installation, you should run `lein test`. This will run the test su
 The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. To generate, use the `dev/generator.clj` file. These generated files are checked in as source, so the only time you would need to run them is if you are updated the clojure package with an updated scala jar and want to regenerate the code.
 
 To do this run the leiningen task
-`lein run -m dev.generator`
+`lein run generate-code`
 
 Or load in the repl and use the functions:
 
@@ -155,8 +155,8 @@ I find this command to be very handy
 `nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 5
 timestamp, name, utilization.gpu [%], utilization.memory [%], memory.total [MiB], memory.free [MiB], memory.used [MiB]`
 
-**Is the Gluon Api supported?**
-There are 3 high level apis supported in MxNet: FeedForward, Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory.
+**Supported APIs**
+There are 3 high level apis supported in MxNet: (Model/FeedForward), Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory. The Model/FeedForward Api is deprected.
 
 Gluon support will come later and may or may not be built on the Scala gluon api (when it lands there)
 
