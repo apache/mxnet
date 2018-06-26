@@ -6380,7 +6380,8 @@ def check_foreach_rnn(cell_type, num_states):
         input_names = out.list_inputs()
         for i in range(len(e1.grad_arrays)):
             name = input_names[i]
-            assert_almost_equal(args_grad1[name].asnumpy(), args_grad2[name].asnumpy())
+            assert_almost_equal(args_grad1[name].asnumpy(), args_grad2[name].asnumpy(),
+                    rtol=0.001, atol=0.0001)
 
 
 @with_seed()
