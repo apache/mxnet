@@ -267,10 +267,8 @@ def foreach(body, data, init_states, name="foreach"):
     # This array contains the symbols for the inputs of foreach.
     # They are ordered according to the inputs of the subgraph.
     init_states = _as_list(init_states)
-    states_map = {sym.name:sym for sym in init_states}
     state_names = [sym.name for sym in init_states]
     data_syms = _as_list(data)
-    data_map = {sym.name:sym for sym in data_syms}
     data_names = [sym.name for sym in data_syms]
     cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
     cut_var_names = cut_var_map.keys()
