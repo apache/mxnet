@@ -16,7 +16,7 @@
 ;;
 
 (ns dev.generator
-  (:require [t6.from-scala.core :as $]
+  (:require [t6.from-scala.core :as scala]
             [clojure.reflect :as r]
             [org.apache.clojure-mxnet.util :as util]
             [clojure.pprint])
@@ -174,7 +174,7 @@
    (let [[op-name op-values] operation
          function-name (-> op-name
                            str
-                           $/decode-scala-symbol
+                           scala/decode-scala-symbol
                            clojure-case
                            symbol)]
      `(~'defn ~function-name
@@ -298,7 +298,7 @@
    (let [[op-name op-values] operation
          function-name (-> op-name
                            str
-                           $/decode-scala-symbol
+                           scala/decode-scala-symbol
                            clojure-case
                            symbol)]
      `(~'defn ~function-name
