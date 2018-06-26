@@ -38,21 +38,21 @@ def test_rnn():
 
 
 class TestRNNLayer(gluon.HybridBlock):
-    def __init__(self, hidden_size, prefix=None, params=None):
+    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
         super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = gluon.rnn.RNNCell(hidden_size, prefix='rnn_')
+        self.cell = cell_type(hidden_size, prefix='rnn_')
 
     def hybrid_forward(self, F, inputs, states):
-        states = [states]
         out, states = F.contrib.foreach(self.cell, inputs, states)
         return out
 
-def test_contrib_rnn():
+def check_contrib_rnn(cell_type, num_states):
     batch_size = 10
     hidden_size = 100
     rnn_data = mx.nd.normal(loc=0, scale=1, shape=(5, batch_size, 50))
-    states = mx.nd.normal(loc=0, scale=1, shape=(batch_size, hidden_size))
-    layer = TestRNNLayer(hidden_size)
+    state_shape = (batch_size, hidden_size)
+    states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
+    layer = TestRNNLayer(cell_type, hidden_size)
     layer.initialize(ctx=mx.cpu(0))
     res1 = layer(rnn_data, states)
     params1 = layer.collect_params()
@@ -64,7 +64,7 @@ def test_contrib_rnn():
     res1.backward()
     trainer.step(batch_size)
 
-    layer = TestRNNLayer(hidden_size)
+    layer = TestRNNLayer(cell_type, hidden_size)
     layer.initialize(ctx=mx.cpu(0))
     layer.hybridize()
     res2 = layer(rnn_data, states)
@@ -83,6 +83,13 @@ def test_contrib_rnn():
         weight1 = val.data()
         weight2 = params2[key].data()
         assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(), rtol=0.001, atol=0.0001)
+
+
+def test_contrib_rnn():
+    cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
+            (gluon.rnn.GRUCell, 1)]
+    for cell_type, num_states in cell_types:
+        check_contrib_rnn(cell_type, num_states)
 
 
 def test_lstm():
