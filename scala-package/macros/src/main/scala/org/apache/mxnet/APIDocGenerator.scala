@@ -56,7 +56,12 @@ private[mxnet] object APIDocGenerator{
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    val absFuncs = absClassFunctions.map(absClassFunction => {
+    // Defines Operators that should not generated
+    val notGenerated = Set("Custom")
+    // TODO: Add Filter to the same location in case of refactor
+    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
+      .filterNot(ele => notGenerated.contains(ele.name))
+      .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
       s"$scalaDoc\n$defBody"
@@ -178,9 +183,6 @@ private[mxnet] object APIDocGenerator{
 
     _LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-
-    val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
-
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
       val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
