@@ -644,7 +644,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
   if (IsMKLDNNData() && IsView())
     ptr_->Reorder2Default();
 
-  const mkldnn::memory* this_mem = GetMKLDNNData();
+  const mkldnn::memory *this_mem = GetMKLDNNData();
   MKLDNNCopy(mem, this_mem);
 }
 
