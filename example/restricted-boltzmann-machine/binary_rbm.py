@@ -79,11 +79,7 @@ class BinaryRBM(mx.operator.CustomOp):
             layer_bias.tile(reps=(other_layer_sample.shape[0], 1)),
             transpose_b=interaction_transpose) # (num_batch, num_units_in_layer)
         prob_1.sigmoid(out=prob_1)
-        prob_0 = mx.nd.ones_like(prob_1)
-        prob_0 -= prob_1
-        prob_dist = mx.nd.concat(prob_0.expand_dims(2), prob_1.expand_dims(2), dim=2)
-        return mx.nd.random.multinomial(prob_dist).astype('float32'), prob_1
-        #return mx.nd.random.multinomial(prob_dist, dtype='float32'), prob_1 # This needs MXNet >= 1.3
+        return mx.nd.random.uniform(shape=prob_1.shape) < prob_1, prob_1
 
 @mx.operator.register('BinaryRBM')
 class BinaryRBMProp(mx.operator.CustomOpProp):
