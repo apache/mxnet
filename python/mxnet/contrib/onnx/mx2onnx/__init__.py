@@ -15,9 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import sys, os
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, '../common/'))
+# coding: utf-8
+"""ONNX Export module"""
+from __future__ import absolute_import
 
-import models
-
+from . import export_model
+from . import export_onnx
+from . import _op_translations
