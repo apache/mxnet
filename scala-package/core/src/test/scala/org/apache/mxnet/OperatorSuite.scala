@@ -229,7 +229,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("arange") {
-    for (i <- 0 until 100000) {
+    for (i <- 0 until 5) {
       val start = scala.util.Random.nextFloat() * 5
       val stop = start + scala.util.Random.nextFloat() * 100
       val step = scala.util.Random.nextFloat() * 4
