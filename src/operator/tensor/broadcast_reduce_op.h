@@ -137,6 +137,17 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   }
 };
 
+struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
+  TBlob target;
+  DMLC_DECLARE_PARAMETER(BroadcastLikeParam) {
+    DMLC_DECLARE_FIELD(target).set_default(TBlob())
+      .describe("The target array which the broadcasting array should be like."
+                " E.g `A = broadcast_like(B, target=[[1., 1., 1.], [2., 2., 2., ]])` "
+                "has the same meaning as `A = broadcast_to(B, shape=(3,2))`.");
+  }
+};
+
+
 inline int CheckAxis(int axis, int ndim) {
   CHECK(axis < ndim && axis >= -ndim)
     << "axis " << axis << " exceeds the input dimension of " << ndim;
@@ -332,6 +343,30 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
+
+inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TShape& ishape = (*in_attrs)[0];
+  if (ishape.ndim() == 0) return false;
+  const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
+  CHECK_EQ(ishape.ndim(), param.target.shape_.ndim())
+    << "Operand of shape " << ishape << " cannot be broadcasted to " << param.target.shape_;
+  TShape oshape = param.target.shape_;
+  for (index_t i = 0; i < ishape.ndim(); ++i) {
+    if (oshape[i] != 0) {
+      CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
+        << "Array cannot be broadcasted from " << ishape << " to " << param.target.shape_;
+    } else {
+      oshape[i] = ishape[i];
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
 
 inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
                                         TShape *new_big, TShape *new_small) {

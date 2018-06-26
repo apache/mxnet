@@ -264,6 +264,22 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
+MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_like)
+.describe(R"code(Broadcasts the input array to be like a target array
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
+
+For example::
+
+   broadcast_like([[1,2,3]], target=[[0, 0, 0], [0, 0, 0]]) = [[ 1.,  2.,  3.],
+                                                               [ 1.,  2.,  3.]]
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<BroadcastLikeParam>)
+.add_arguments(BroadcastLikeParam::__FIELDS__())
+.set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+
 // backward op for broadcast.
 NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr_parser(ParamParser<ReduceAxesParam>)
