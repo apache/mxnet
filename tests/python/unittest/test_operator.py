@@ -5752,6 +5752,10 @@ def test_slice_partial_infer():
     var2 = mx.sym.slice(var1,begin=(1, None), end=(3,None))
     assert (var2.infer_shape_partial()[1][0] == (2L, 0L)), var2.infer_shape_partial()[1]
 
+    var2 = mx.symbol.slice_axis(data=var1, axis=0, begin=0, end=5)
+    assert (var2.infer_shape_partial()[1][0] == (5L, 0L)), var2.infer_shape_partial()[1]
+
+
 @with_seed()
 def test_float16_min_max():
     """Test for issue: https://github.com/apache/incubator-mxnet/issues/9007"""
