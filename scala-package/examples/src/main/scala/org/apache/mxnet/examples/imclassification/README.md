@@ -5,7 +5,7 @@ This is the MNIST Training Example implemented for Scala type-safe api
 ```$xslt
 https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/mnist/mnist.zip
 ```
-###Unzip the file
+### Unzip the file
 ```$xslt
 unzip mnist.zip
 ```
