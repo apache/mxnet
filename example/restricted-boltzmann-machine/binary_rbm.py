@@ -100,7 +100,7 @@ class BinaryRBMProp(mx.operator.CustomOpProp):
         # 1: (the number of visible units,)
         # 2: (the number of hidden units,)
         # 3: (the number of visible units, the number of hidden units)
-        return ['data', 'visible_layer_bias', 'hidden_layer_bias', 'interaction']
+        return ['data', 'visible_layer_bias', 'hidden_layer_bias', 'interaction_weight']
 
     def list_outputs(self):
         # 0: The probabilities that each visible unit is 1 after `k` steps of Gibbs sampling starting from the given `data`.
@@ -149,7 +149,7 @@ class BinaryRBMBlock(mx.gluon.HybridBlock):
             self.for_training = for_training
             self.visible_layer_bias = self.params.get('visible_layer_bias', shape=(0,), allow_deferred_init=True)
             self.hidden_layer_bias = self.params.get('hidden_layer_bias', shape=(0,), allow_deferred_init=True)
-            self.interaction = self.params.get('interaction', shape=(0, 0), allow_deferred_init=True)
+            self.interaction = self.params.get('interaction_weight', shape=(0, 0), allow_deferred_init=True)
             if for_training:
                 self.aux_visible_layer_sample = self.params.get('aux_visible_layer_sample', shape=(0, 0), allow_deferred_init=True)
                 self.aux_hidden_layer_sample = self.params.get('aux_hidden_layer_sample', shape=(0, 0), allow_deferred_init=True)
