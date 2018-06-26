@@ -55,25 +55,32 @@ class CustomOpExampleSuite extends FunSuite with BeforeAndAfterAll {
 
   test("Example CI: Test CustomopRtc MNIST") {
     // This test is GPU only
-    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      logger.info("Downloading mnist model")
-      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-      val tempDirPath = System.getProperty("java.io.tmpdir")
-      val modelDirPath = tempDirPath + File.separator + "mnist/"
-      val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
-          tmpFile)
+    // TODO: RTC is depreciated, need to change to CUDA Module
+    val RTC_fixed = false
+    if (RTC_fixed) {
+      if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+        System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+        logger.info("Downloading mnist model")
+        val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+        val tempDirPath = System.getProperty("java.io.tmpdir")
+        val modelDirPath = tempDirPath + File.separator + "mnist/"
+        val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
+        if (!tmpFile.exists()) {
+          FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
+            tmpFile)
+        }
+        // TODO: Need to confirm with Windows
+        Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+          + tempDirPath + "/mnist/") !
+        val context = Context.gpu()
+        val output = ExampleCustomOpWithRtc.test(modelDirPath, context)
+        assert(output >= 0.95f)
+      } else {
+        logger.info("GPU test only, skipped...")
       }
-      // TODO: Need to confirm with Windows
-      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-        + tempDirPath + "/mnist/") !
-      val context = Context.gpu()
-      val output = ExampleCustomOpWithRtc.test(modelDirPath, context)
-      assert(output >= 0.95f)
     } else {
-      logger.info("GPU test only, skipped...")
+      logger.warn("RTC module is not up to date, please don't use this" +
+      "\nCreate CudaModule for this")
     }
   }
 }
