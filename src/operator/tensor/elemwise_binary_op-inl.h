@@ -27,6 +27,9 @@
 #include <vector>
 #include <algorithm>
 #include "./elemwise_binary_op.h"
+#include "../mxnet_op.h"
+#define WARP_SIZE 32
+#define WARP_SIZE_BITS 5
 
 namespace mxnet {
 namespace op {
@@ -445,10 +448,10 @@ struct ElemwiseDnsCsrDnsWarpKernel {
                                   const DType* csr_data, const IType* csr_indices,
                                   const CType* csr_indptr, const nnvm::dim_t num_rows,
                                   const nnvm::dim_t num_cols) {
-    if (tid < 32 * num_rows) {
-      const int row_id = tid >> 5;
-      const int warp_id = tid & (32 - 1);
-      for (int j = csr_indptr[row_id] + warp_id; j < csr_indptr[row_id+1]; j += 32) {
+    if (tid < WARP_SIZE * num_rows) {
+      const int row_id = tid >> WARP_SIZE_BITS;
+      const int warp_id = tid & (WARP_SIZE - 1);
+      for (int j = csr_indptr[row_id] + warp_id; j < csr_indptr[row_id+1]; j += WARP_SIZE) {
         KERNEL_ASSIGN(out[row_id * num_cols + csr_indices[j]], req,
                       OP::Map(dns_data[row_id * num_cols + csr_indices[j]], csr_data[j]));
       }
@@ -457,8 +460,8 @@ struct ElemwiseDnsCsrDnsWarpKernel {
 };
 
 /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
-template<typename xpu, typename OP>
-void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<xpu> *s,
+template<typename OP>
+void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<cpu> *s,
                                    const nnvm::NodeAttrs &attrs,
                                    const OpContext &ctx,
                                    const NDArray &dns,
@@ -485,37 +488,23 @@ void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<xpu> *s,
       MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {
         MXNET_ASSIGN_REQ_SWITCH(req, Req, {
           if (reverse && std::is_same<OP, mshadow_op::minus>::value) {
-            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::negation, Req>, xpu>::Launch(
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::negation, Req>, cpu>::Launch(
               s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
             if (!csr.storage_initialized()) { return; }
-            if (std::is_same<xpu, cpu>::value) {
-              mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, mshadow_op::plus>, xpu>::Launch(
-                s, num_csr_rows, output.data().dptr<DType>(),
-                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
-            } else {
-              mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, mshadow_op::plus>, xpu>::Launch(
-                s, 32 * num_csr_rows, output.data().dptr<DType>(),
-                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
-            }
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, mshadow_op::plus>, cpu>::Launch(
+              s, num_csr_rows, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
           } else {
             if (req == kWriteTo) {
-              mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
+              mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, cpu>::Launch(
                 s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
             }
             if (!csr.storage_initialized()) { return; }
-            if (std::is_same<xpu, cpu>::value) {
-              mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, OP>, xpu>::Launch(
-                s, num_csr_rows, output.data().dptr<DType>(),
-                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
-            } else {
-              mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, OP>, xpu>::Launch(
-                s, 32 * num_csr_rows, output.data().dptr<DType>(),
-                output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
-                csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
-            }
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsKernel<Req, OP>, cpu>::Launch(
+              s, num_csr_rows, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
           }
         });
       });

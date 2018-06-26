@@ -25,9 +25,9 @@
 // this will be invoked by nvcc and compile GPU version
 #include <cub/cub.cuh>
 #include <dmlc/logging.h>
-#include "../operator/mxnet_op.h"
 #include "../operator/tensor/elemwise_binary_op-inl.h"
 #include "../operator/tensor/elemwise_sum.h"
+#include "../operator/tensor/indexing_op.h"
 #include "../operator/tensor/init_op.h"
 #include "../operator/tensor/util/tensor_util-inl.h"
 #include "../operator/tensor/util/tensor_util-inl.cuh"
@@ -207,7 +207,7 @@ void ElementwiseSumDnsCsrDnsImpl(mshadow::Stream<gpu>* s,
       MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {  // indptr type
         if (nds[1].storage_initialized()) {
           Kernel<ElemwiseDnsCsrDnsWarpKernel<kWriteTo, mshadow_op::plus>, gpu>::Launch(
-            s, 32 * num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
+            s, kWarpSize * num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
             csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
             csr_indptr.dptr<CType>(), num_rows, num_cols);
         }
@@ -254,7 +254,7 @@ void ElementwiseSumContainsDnsImpl(mshadow::Stream<gpu>* s,
             MSHADOW_IDX_TYPE_SWITCH(nd_indptr.type_flag_, CType, {  // indptr type
               if (nd.storage_initialized()) {
                 Kernel<ElemwiseDnsCsrDnsWarpKernel<kWriteTo, mshadow_op::plus>, gpu>::Launch(
-                  s, 32 * num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
+                  s, kWarpSize * num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
                   nd_data.dptr<DType>(), nd_indices.dptr<IType>(),
                   nd_indptr.dptr<CType>(), num_rows, num_cols);
               }
