@@ -701,8 +701,10 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape& dshape = (*in_attrs)[0];
+  if (dshape.ndim() == 0) return false;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   TShape oshape = dshape;
+
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<int, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
