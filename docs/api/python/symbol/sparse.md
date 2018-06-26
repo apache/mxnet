@@ -76,6 +76,15 @@ In the rest of this document, we list sparse related routines provided by the
     cast_storage
 ```
 
+### Joining arrays
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    concat
+```
+
 ### Indexing routines
 
 ```eval_rst

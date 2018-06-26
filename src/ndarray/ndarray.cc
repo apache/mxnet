@@ -482,7 +482,7 @@ const mkldnn::memory *NDArray::GetMKLDNNData(
   if (mem->get_primitive_desc() == desc
       || (desc1.data.format == GetDefaultFormat(desc1)
         && desc2.data.format == GetDefaultFormat(desc2))) {
-    return GetMKLDNNExact(ptr_->mkl_mem_->GetRaw(), desc);
+    return GetMKLDNNExact(mem, desc);
   } else {
     return nullptr;
   }
@@ -638,7 +638,6 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
 
   CHECK(mem.get_primitive_desc().get_size() == shape().Size() * GetTypeSize(dtype_))
       << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-  MKLDNNStream *stream = MKLDNNStream::Get();
   // If this array uses MKLDNN layout, we have to make sure it's not a view.
   // Otherwise, we'll have to change the layout inside the array.
 
@@ -646,74 +645,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     ptr_->Reorder2Default();
 
   const mkldnn::memory *this_mem = GetMKLDNNData();
-  mkldnn::memory::primitive_desc from_pd = mem.get_primitive_desc();
-  mkldnn::memory::desc from_desc = from_pd.desc();
-  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
-  mkldnn::memory::desc this_desc = this_pd.desc();
-  mkldnn_memory_format_t from_def_format = GetDefaultFormat(from_desc);
-  mkldnn_memory_format_t this_def_format = GetDefaultFormat(this_desc);
-  if (IsView()) {
-    // Sliced array must use the default layout.
-    CHECK_EQ(GetDefaultFormat(this_desc), this_desc.data.format);
-  }
-  // It's possible that the memory and the NDArray don't have the same shape.
-  if (!same_shape(this_desc, from_desc)
-      // If the source memory uses the default layout, we can reshape directly.
-      && from_def_format == from_desc.data.format) {
-    // In this case, we can simply create a new MKLDNN memory for the required
-    // shape.
-    mkldnn::memory::dims dims(this_desc.data.dims,
-                              this_desc.data.dims + this_desc.data.ndims);
-    auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
-    auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
-    mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-    mkldnn::memory::primitive_desc pd(data_md, from_pd.get_engine());
-    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
-    stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
-  } else if (!same_shape(this_desc, from_desc)) {
-    // In this case, the source memory stores data in a customized layout. We
-    // need to reorganize the data in memory before we can reshape.
-    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(from_pd, from_def_format);
-    mkldnn::memory *def_mem = TmpMemMgr::Get()->Alloc(def_pd);
-    stream->RegisterPrim(mkldnn::reorder(mem, *def_mem));
-    // Now we can reshape it
-    mkldnn::memory::dims dims(this_desc.data.dims,
-                              this_desc.data.dims + this_desc.data.ndims);
-    auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
-    auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
-    mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-    mkldnn::memory::primitive_desc pd(data_md, from_pd.get_engine());
-    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
-    stream->RegisterMem(tmp_mem);
-    stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
-  } else if (from_pd == this_pd) {
-    // If the layout is the same, we can just copy data.
-    stream->RegisterPrim(mkldnn::reorder(mem, *this_mem));
-  } else {
-    // If both are not using the default layouts. There isn't much we can do,
-    // other than reorder data layout directly.
-    if (this_def_format != this_desc.data.format
-        && from_def_format != from_desc.data.format) {
-      stream->RegisterPrim(mkldnn::reorder(mem, *this_mem));
-    } else if (this_def_format == this_desc.data.format) {
-      // If the dest mem uses the default memory layout, we can simply use
-      // the default format of the source memory to improve perf of reorder.
-      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(from_pd,
-                                                           from_def_format);
-      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, this_mem->get_data_handle()));
-      stream->RegisterMem(tmp_mem);
-      stream->RegisterPrim(mkldnn::reorder(mem, *tmp_mem));
-    } else {
-      // If the src mem uses the default memory layout, we can use
-      // the default format of the source memory to improve perf.
-      mkldnn::memory::primitive_desc pd = GetPrimitiveDesc(this_pd,
-                                                           this_def_format);
-      mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
-      stream->RegisterMem(tmp_mem);
-      stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
-    }
-  }
+  MKLDNNCopy(mem, this_mem);
 }
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &desc) {
