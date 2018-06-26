@@ -18,7 +18,9 @@
 package org.apache.mxnet.examples.imclassification
 
 import java.io.File
+import java.net.URL
 
+import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -39,12 +41,16 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
       logger.info("CPU test only, skipped...")
     } else {
       logger.info("Downloading mnist model")
+      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
       val tempDirPath = System.getProperty("java.io.tmpdir")
       val modelDirPath = tempDirPath + File.separator + "mnist/"
       logger.info("tempDirPath: %s".format(tempDirPath))
-      Process("wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci" +
-        "/mnist/mnist.zip " + "-P " + tempDirPath + "/mnist/ -q") !
-
+      val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
+      if (!tmpFile.exists()) {
+        FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
+          tmpFile)
+      }
+      // TODO: Need to confirm with Windows
       Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
         + tempDirPath + "/mnist/") !
 
