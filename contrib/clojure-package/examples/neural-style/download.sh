@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -evx
 
 mkdir -p model
 cd model

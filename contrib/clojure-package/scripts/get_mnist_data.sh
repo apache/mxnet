@@ -18,7 +18,7 @@
 # under the License.
 
 
-set -e
+set -evx
 
 if [ ! -z "$MXNET_DATA_DIR" ]; then
   data_path="$MXNET_DATA_DIR"

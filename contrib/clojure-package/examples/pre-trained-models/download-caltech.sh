@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+set -evx
 
 mkdir -p caltech-256
 cd caltech-256
