@@ -18,7 +18,7 @@ What is needed now is alpha testing on both OSX and Linux to discover any bugs, 
 
 Help with this effort is greatly appreciated and contributors will be recognized in the project README.
 
-Testing instructions can be found in the Testing.md
+Testing instructions can be found in the testing.md
 
 ## Getting Started
 
