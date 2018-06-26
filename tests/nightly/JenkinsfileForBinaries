@@ -95,7 +95,6 @@ try {
         ws('workspace/nt-KVStoreTest') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          //https://github.com/apache/incubator-mxnet/issues/11289
           docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
         }
       }
