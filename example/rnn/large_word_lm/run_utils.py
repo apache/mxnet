@@ -77,6 +77,7 @@ def evaluate(mod, data_iter, epoch, log_interval):
         total_L += outputs[-1][0]
         mod.set_states(states=states)
         nbatch += 1
+        # don't include padding data in the test perplexity
         density += batch.data[1].mean()
         if (nbatch + 1) % log_interval == 0:
             logging.info("Eval batch %d loss : %.7f" % (nbatch, (total_L / density).asscalar()))

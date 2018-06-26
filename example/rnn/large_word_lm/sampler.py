@@ -3,6 +3,7 @@ import os
 import numpy as np
 import mxnet as mx
 import log_uniform
+from mxnet import ndarray
 
 class LogUniformSampler():
     def __init__(self, range_max, num_sampled):
@@ -10,13 +11,14 @@ class LogUniformSampler():
         self.num_sampled = num_sampled
         self.sampler = log_uniform.LogUniformSampler(range_max)
 
-    def prob_helper(self, num_tries, num_sampled, prob):
+    def _prob_helper(self, num_tries, num_sampled, prob):
         if num_tries == num_sampled:
             return prob * num_sampled
         return (num_tries * (-prob).log1p()).expm1() * -1
 
     def draw(self, true_classes):
-        from mxnet import ndarray
+        """Draw samples from log uniform distribution and returns sampled candidates,
+        expected count for true classes and sampled classes."""
         range_max = self.range_max
         num_sampled = self.num_sampled
         ctx = true_classes.context
@@ -27,11 +29,10 @@ class LogUniformSampler():
 
         true_cls = true_classes.as_in_context(ctx).astype('float64')
         prob_true = ((true_cls + 2.0) / (true_cls + 1.0)).log() / log_range
-        count_true = self.prob_helper(num_tries, num_sampled, prob_true)
+        count_true = self._prob_helper(num_tries, num_sampled, prob_true)
 
         sampled_classes = ndarray.array(sampled_classes, ctx=ctx, dtype='int64')
         sampled_cls_fp64 = sampled_classes.astype('float64')
         prob_sampled = ((sampled_cls_fp64 + 2.0) / (sampled_cls_fp64 + 1.0)).log() / log_range
-        count_sampled = self.prob_helper(num_tries, num_sampled, prob_sampled)
+        count_sampled = self._prob_helper(num_tries, num_sampled, prob_sampled)
         return [sampled_classes, count_true, count_sampled]
-

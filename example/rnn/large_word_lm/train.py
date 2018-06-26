@@ -151,6 +151,6 @@ if __name__ == '__main__':
         # use `shared_module` to share parameter with the training module
         eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label,
                          shared_module=cpu_train_mod, for_training=False)
-        val_L = run_utils.evaluate(eval_module, eval_data, epoch, 20)
+        val_L = run_utils.evaluate(eval_module, eval_data, epoch, 30)
         train_data.reset()
     logging.info("Training completed. ")

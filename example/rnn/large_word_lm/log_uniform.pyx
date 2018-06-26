@@ -16,8 +16,6 @@
 # under the License.
 
 from libcpp.unordered_set cimport unordered_set
-from libcpp.vector cimport vector
-from libcpp.pair cimport pair
 import cython
 
 cdef extern from "LogUniformGenerator.h":

@@ -27,7 +27,6 @@
 #define _LOG_UNIFORM_GENERATOR_H
 
 #include <unordered_set>
-#include <vector>
 #include <utility>
 #include <random>
 
