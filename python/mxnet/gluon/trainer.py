@@ -192,11 +192,7 @@ class Trainer(object):
                 kvstore.set_gradient_compression(self._compression_params)
             if 'dist' in kvstore.type:
                 # kv.pull(row_sparse_grad) is not supported for dist kvstore
-                contains_sparse = self._contains_sparse_weight or self._contains_sparse_grad
-                if contains_sparse:
-                    update_on_kvstore = True
-                else:
-                    update_on_kvstore = False
+                update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
