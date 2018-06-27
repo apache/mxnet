@@ -504,7 +504,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   std::string desc;
 
   int slice_amount = 1;
-  if (num_inputs != 0 && dim == 0)
+  if (dim == 0)
     slice_amount = num_inputs;
   for (auto shape : shapes) {
     if (dim >= shape.ndim())
@@ -771,7 +771,7 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
-/**
+/*
  * Determines axis ndarrays are concatenated by
  * Used to verify concat/concat backwards operator
  */
@@ -784,7 +784,7 @@ int GetDim(TShape input_shape, TShape output_shape) {
   return -1;
 }
 
-/**
+/*
  * Calculates the size of continuous block of array inside arger concatenated array
  * Used to verify concat/concat backwards operator
  */
