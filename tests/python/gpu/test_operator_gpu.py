@@ -1624,7 +1624,6 @@ def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
 
-@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8211")
 @with_seed()
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
