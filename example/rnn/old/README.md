@@ -3,7 +3,7 @@ RNN Example
 This folder contains RNN examples using low level symbol interface.
 
 ## Data
-Run `get_ptb_data.sh` to download PenTreeBank data.
+Run `get_sherlockholmes_data.sh` to download PenTreeBank data.
 
 ## Python
 

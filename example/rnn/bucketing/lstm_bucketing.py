@@ -92,7 +92,7 @@ if __name__ == '__main__':
                                  output_dim=args.num_embed, name='embed')
 
         stack.reset()
-        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+        outputs = stack.unroll(seq_len, inputs=embed, merge_outputs=True)[0]
 
         pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')

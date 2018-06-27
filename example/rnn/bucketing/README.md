@@ -23,11 +23,11 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
   For Python2 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python  --gpus 0,1,2,3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) 
+      $ python [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
 
   For Python3 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python3 --gpus 0,1,2,3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) 
+      $ python3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
 
 
 ### Performance Note:
