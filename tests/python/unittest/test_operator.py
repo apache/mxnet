@@ -6228,7 +6228,7 @@ def test_foreach():
 
     # test when there isn't output data or output states.
     def step14(in1, states, free):
-        return (in1 * free[0], [])
+        return (in1 + free[0], [])
     frees = [mx.nd.random.uniform(shape=(2))]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
