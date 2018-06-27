@@ -19,7 +19,7 @@
 
 echo
 echo "NOTE: To continue, you need to review the licensing of the data sets used by this script"
-echo "See https://catalog.ldc.upenn.edu/ldc99t42 for the licensing"
+echo "See https://www.gutenberg.org/wiki/Gutenberg:The_Project_Gutenberg_License for the licensing"
 read -p "Please confirm you have reviewed the licensing [Y/n]:" -n 1 -r
 echo
 
