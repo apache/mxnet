@@ -58,7 +58,7 @@ def rnn(bptt, vocab_size, num_embed, nhid, num_layers, dropout, num_proj, batch_
         init_h = S.var(prefix + 'init_h', shape=(batch_size, num_proj), init=mx.init.Zero())
         init_c = S.var(prefix + 'init_c', shape=(batch_size, nhid), init=mx.init.Zero())
         state_names += [prefix + 'init_h', prefix + 'init_c']
-        lstmp = mx.gluon.contrib.rnn.LSTMPCell(nhid, num_proj)
+        lstmp = mx.gluon.contrib.rnn.LSTMPCell(nhid, num_proj, prefix=prefix)
         outputs, next_states = lstmp.unroll(bptt, outputs, begin_state=[init_h, init_c], \
                                             layout='NTC', merge_outputs=True)
         outputs = S.Dropout(outputs, p=dropout)
@@ -148,20 +148,21 @@ def generate_samples(label, num_splits, sampler):
 
 class Model():
     """ LSTMP with Importance Sampling """
-    def __init__(self, args, ntokens, rescale_loss):
-        out = rnn(args.bptt, ntokens, args.emsize, args.nhid, args.nlayers,
-                  args.dropout, args.num_proj, args.batch_size)
+    def __init__(self, ntokens, rescale_loss, bptt, emsize,
+                 nhid, nlayers, dropout, num_proj, batch_size, k):
+        out = rnn(bptt, ntokens, emsize, nhid, nlayers,
+                  dropout, num_proj, batch_size)
         rnn_out, self.last_states, self.lstm_args, self.state_names = out
         # decoder weight and bias
         decoder_w = S.var("decoder_weight", stype='row_sparse')
         decoder_b = S.var("decoder_bias", shape=(ntokens, 1), stype='row_sparse')
 
         # sampled softmax for training
-        sample = S.var('sample', shape=(args.k,))
-        prob_sample = S.var("prob_sample", shape=(args.k,))
+        sample = S.var('sample', shape=(k,))
+        prob_sample = S.var("prob_sample", shape=(k,))
         prob_target = S.var("prob_target")
         self.sample_names = ['sample', 'prob_sample', 'prob_target']
-        logits, new_targets = sampled_softmax(ntokens, args.k, args.num_proj,
+        logits, new_targets = sampled_softmax(ntokens, k, num_proj,
                                               rnn_out, decoder_w, decoder_b,
                                               [sample, prob_sample, prob_target])
         self.train_loss = cross_entropy_loss(logits, new_targets, rescale_loss=rescale_loss)
