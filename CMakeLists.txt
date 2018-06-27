@@ -185,7 +185,6 @@ if(USE_VTUNE)
   list(APPEND mxnet_LINKER_LIBS dl)
 endif()
 
-set(USE_MKLDNN ON)
 
 if(USE_MKLDNN)
   include(cmake/MklDnn.cmake)
