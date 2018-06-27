@@ -375,6 +375,22 @@ def test_invalid_operations():
     check_invalid_gluon_trainer_reset()
     check_invalid_pull()
 
+def test_gluon_trainer():
+    def check_trainer_kv_type(stype, grad_stype, update_on_kv):
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        trainer._init_kvstore()
+        assert trainer._kv_initialized
+        assert trainer._update_on_kvstore is update_on_kv
+
+    check_trainer_kv_type('default', 'default', False)
+    check_trainer_kv_type('default', 'row_sparse', True)
+    check_trainer_kv_type('row_sparse', 'row_sparse', True)
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
     parser.add_argument('--nrepeat', type=int, default=7)
@@ -382,6 +398,8 @@ if __name__ == "__main__":
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
+    if opt.type == 'gluon':
+        test_gluon_trainer()
     if opt.type == 'invalid':
         test_invalid_operations()
     if opt.type == 'all' or opt.type == 'init':
