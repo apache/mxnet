@@ -575,9 +575,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
  *
  * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
  */
-std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shp,
-                                              const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                              float num_inputs = 0, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestOutputArrays(
+    const TShape &shp,
+    const std::vector<mkldnn::memory::primitive_desc> &pds,
+    float num_inputs = 0, int dim = 0) {
   TShape shape = shp;
   if (num_inputs != 0)
     shape[dim] = static_cast<int>(shape[dim] * num_inputs);
@@ -688,7 +689,8 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
-        std::cout << "Extending " << shape << " dim " << dim << " and " << num_inputs << "num_inputs\n";
+        std::cout << "Extending " << shape << " dim " <<
+                  dim << " and " << num_inputs << "num_inputs\n";
         auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
         for (auto &out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
@@ -885,6 +887,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
 
+  // concat backwards uses scaled up inputs
   if (use_concat_inputs) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
