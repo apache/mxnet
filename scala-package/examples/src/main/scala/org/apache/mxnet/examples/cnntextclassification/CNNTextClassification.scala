@@ -50,6 +50,8 @@ object CNNTextClassification {
       val relu = Symbol.api.Activation(data = Some(conv), act_type = "relu")
       val pool = Symbol.api.Pooling(data = Some(relu), pool_type = Some("max"),
         kernel = Some(new Shape(sentenceSize - filterSize + 1, 1)), stride = Some(new Shape(1, 1)))
+      relu.dispose()
+      conv.dispose()
       pool
     }
 
@@ -67,12 +69,19 @@ object CNNTextClassification {
 
     val fc = Symbol.api.FullyConnected(data = Some(hDrop), num_hidden = numLabel)
     val sm = Symbol.api.SoftmaxOutput(data = Some(fc), label = Some(inputY))
+    fc.dispose()
+    hDrop.dispose()
+    hPool.dispose()
+    concat.dispose()
+    polledOutputs.foreach(_.dispose())
+    inputX.dispose()
+    inputY.dispose()
     sm
   }
 
   def setupCnnModel(ctx: Context, batchSize: Int, sentenceSize: Int, numEmbed: Int,
-      numLabel: Int = 2, numFilter: Int = 100, filterList: Array[Int ] = Array(3, 4, 5),
-      dropout: Float = 0.0f): CNNModel = {
+                    numLabel: Int = 2, numFilter: Int = 100, filterList: Array[Int ] = Array(3, 4, 5),
+                    dropout: Float = 0.0f): CNNModel = {
 
     val cnn = makeTextCNN(sentenceSize, numEmbed, batchSize,
       numLabel, filterList, numFilter, dropout)
@@ -147,15 +156,19 @@ object CNNTextClassification {
 
         val tmpCorrect = {
           val predLabel = NDArray.api.argmax_channel(model.cnnExec.outputs(0))
-          predLabel.toArray.zip(batchL).map { predLabel =>
+          val result = predLabel.toArray.zip(batchL).map { predLabel =>
             if (predLabel._1 == predLabel._2) 1
             else 0
           }.sum.toFloat
+          predLabel.dispose()
+          result
         }
 
         numCorrect = numCorrect + tmpCorrect
         val norm = Math.sqrt(paramBlocks.map { case (idx, weight, grad, state, name) =>
-          val l2Norm = NDArray.api.norm(grad / batchSize).toScalar
+          val temp = NDArray.api.norm(grad / batchSize).disposeDepsExcept(grad)
+          val l2Norm = temp.toScalar
+          temp.dispose()
           l2Norm * l2Norm
         }.sum).toFloat
 
@@ -202,10 +215,12 @@ object CNNTextClassification {
 
           val tmpCorrect = {
             val predLabel = NDArray.api.argmax_channel(model.cnnExec.outputs(0))
-            predLabel.toArray.zip(batchL).map { predLabel =>
+            val result = predLabel.toArray.zip(batchL).map { predLabel =>
               if (predLabel._1 == predLabel._2) 1
               else 0
             }.sum.toFloat
+            predLabel.dispose()
+            result
           }
           numCorrect = numCorrect + tmpCorrect
         }
