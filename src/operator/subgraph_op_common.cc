@@ -175,9 +175,9 @@ LoopState::LoopState(const Symbol &g) {
 }
 
 void LoopState::Forward(int iter_no,
-                        std::vector<NDArray> cinputs,
+                        const std::vector<NDArray> &cinputs,
                         const std::vector<OpReqType>& req,
-                        std::vector<NDArray> coutputs,
+                        const std::vector<NDArray> &coutputs,
                         bool is_recording) {
   using namespace nnvm;
   using namespace imperative;
@@ -188,14 +188,21 @@ void LoopState::Forward(int iter_no,
   else
     orig_is_record = Imperative::Get()->is_recording();
 
+  std::vector<NDArray> in_bufs = cinputs;
+  std::vector<NDArray> out_bufs = coutputs;
   std::vector<NDArray *> inputs(cinputs.size());
   std::vector<NDArray *> outputs(coutputs.size());
   for (size_t i = 0; i < inputs.size(); i++)
-    inputs[i] = &cinputs[i];
+    inputs[i] = &in_bufs[i];
   for (size_t i = 0; i < outputs.size(); i++)
-    outputs[i] = &coutputs[i];
+    outputs[i] = &out_bufs[i];
 
   OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs);
+  // If an input and an output share the array, the output array will be changed
+  // by CachedOp. We need to copy data to the real output.
+  for (size_t i = 0; i < out_bufs.size(); i++)
+    if (!out_bufs[i].IsSame(coutputs[i]))
+      CopyFromTo(out_bufs[i], coutputs[i]);
   if (is_recording) {
     all_inputs.push_back(cinputs);
     all_outputs.push_back(coutputs);
@@ -206,9 +213,9 @@ void LoopState::Forward(int iter_no,
 }
 
 void LoopState::Backward(int iter_no,
-                         std::vector<NDArray> ograds,
+                         const std::vector<NDArray> &ograds,
                          const std::vector<OpReqType> &req,
-                         std::vector<NDArray> igrads) {
+                         const std::vector<NDArray> &igrads) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -219,8 +226,10 @@ void LoopState::Backward(int iter_no,
   std::vector<NDArray *> outputs;
   inputs.reserve(op->num_backward_inputs());
   outputs.reserve(op->num_inputs());
+  std::vector<NDArray> ograd_bufs = ograds;
+  std::vector<NDArray> igrad_bufs = igrads;
   for (size_t i = 0; i < ograds.size(); i++)
-    inputs.push_back(&ograds[i]);
+    inputs.push_back(&ograd_bufs[i]);
 
   const std::vector<bool> &save_inputs = op->save_inputs();
   const std::vector<bool> &save_outputs = op->save_outputs();
@@ -236,10 +245,15 @@ void LoopState::Backward(int iter_no,
   }
   CHECK_EQ(inputs.size(), op->num_backward_inputs());
   for (size_t i = 0; i < igrads.size(); i++)
-    outputs.push_back(&igrads[i]);
+    outputs.push_back(&igrad_bufs[i]);
   CHECK_EQ(outputs.size(), op->num_inputs());
   auto state = all_states[iter_no];
   op->Backward(false, state, inputs, req, outputs);
+  // If an input and an output share the array, the output array will be changed
+  // by CachedOp. We need to copy data to the real output.
+  for (size_t i = 0; i < igrads.size(); i++)
+    if (!igrads[i].IsSame(igrad_bufs[i]))
+      CopyFromTo(igrad_bufs[i], igrads[i]);
 }
 
 }  // namespace op

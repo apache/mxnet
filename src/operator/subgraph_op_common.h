@@ -78,14 +78,14 @@ class LoopState {
   explicit LoopState(const Symbol &g);
 
   void Forward(int iter_no,
-               std::vector<NDArray> cinputs,
+               const std::vector<NDArray> &inputs,
                const std::vector<OpReqType>& req,
-               std::vector<NDArray> coutputs,
+               const std::vector<NDArray> &outputs,
                bool is_recording);
   void Backward(int iter_no,
-                std::vector<NDArray> ograds,
+                const std::vector<NDArray> &ograds,
                 const std::vector<OpReqType> &req,
-                std::vector<NDArray> igrads);
+                const std::vector<NDArray> &igrads);
   void Cleanup() {
     all_outputs.clear();
     all_inputs.clear();
