@@ -720,6 +720,9 @@ OpStatePtr CachedOp::StaticForward(
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     auto eid = idx.entry_id(idx.outputs()[i]);
+    // An input and an output may share the same array.
+    if (!state.arrays[eid]->is_none())
+      *outputs[i] = state.arrays[eid]->Detach();
     state.arrays[eid] = outputs[i];
     if (!outputs[i]->is_none()) continue;
     *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
@@ -892,7 +895,11 @@ void CachedOp::DynamicBackward(
   }
   for (size_t i = 0, j = num_forward_outputs; i < reqs.size(); ++i) {
     if (reqs[i] == kNullOp) continue;
-    arrays[idx.entry_id(idx.outputs()[j++])] = outputs[i];
+    auto eid = idx.entry_id(idx.outputs()[j++]);
+    // An input and an output may share the same array.
+    if (!arrays[eid]->is_none())
+      *outputs[i] = arrays[eid]->Detach();
+    arrays[eid] = outputs[i];
   }
 
   // Allocate NDArrays
@@ -953,6 +960,11 @@ void CachedOp::StaticBackward(
     StaticAllocMemory(state_ptr, true, true);
   }
 
+  for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
+    auto eid = state.info.bwd_input_eid[i];
+    if (state.dynamic_entries[eid]) state.arrays[eid] = inputs[i];
+  }
+
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       const auto iter = fwd_input_to_grad_output_.find(i);
@@ -964,6 +976,9 @@ void CachedOp::StaticBackward(
           !(state.array_reqs[eid] == reqs[iter->second])) {
         match = false;
         state.array_reqs[eid] = reqs[iter->second];
+        // An input and an output may share the same array.
+        if (!state.arrays[eid]->is_none())
+          *outputs[iter->second] = state.arrays[eid]->Detach();
         *state.arrays[eid] = *outputs[iter->second];
         state.dynamic_entries[eid] = false;
       }
@@ -975,6 +990,9 @@ void CachedOp::StaticBackward(
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[iter->second];
+      // An input and an output may share the same array.
+      if (!state.arrays[eid]->is_none())
+        *outputs[iter->second] = state.arrays[eid]->Detach();
       state.arrays[eid] = outputs[iter->second];
     }
   } else {
@@ -983,17 +1001,15 @@ void CachedOp::StaticBackward(
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
       state.array_reqs[eid] = reqs[i];
+      // An input and an output may share the same array.
+      if (!state.arrays[eid]->is_none())
+        *outputs[i] = state.arrays[eid]->Detach();
       state.arrays[eid] = outputs[i];
     }
   }
 
   if (!state.bwd_exec_init || !match) {
     StaticInitExec(state_ptr, true, true);
-  }
-
-  for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
-    auto eid = state.info.bwd_input_eid[i];
-    if (state.dynamic_entries[eid]) state.arrays[eid] = inputs[i];
   }
 
   StaticRunOps(default_ctx, g, state_ptr, num_forward_nodes, idx.num_nodes());
