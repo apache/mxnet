@@ -41,6 +41,7 @@ brew install maven
 brew install opencv@2
 ```
 
+
 ### Ubuntu Prerequisites Setup
 
 **Step 1.**: Download the MXNet source.
@@ -61,23 +62,6 @@ sudo ./ci/docker/install/ubuntu_scala.sh
 ## Access the Maven Package for MXNet
 
 To view the latest Maven packages, you can check the Maven repository for the `org.apache.mxnet` packages.
-<<<<<<< HEAD
-
-*  [MXNet Maven Packages](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
-
-In the tutorial below, you will install the latest package at the time of this writing. You may find a different artifact for your specific operating system, or a newer one by reviewing what is currently available in the Maven repo.
-
-The configuration you should update is in the pom file's dependency for MXNet:
-
-```
-<dependency>
-  <groupId>org.apache.mxnet</groupId>
-  <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.2.0</version>
-</dependency>
-```
-=======
->>>>>>> updated screenshots; clarified dependency updates
 
 *  [MXNet Maven Packages](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
 
