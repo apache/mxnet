@@ -506,7 +506,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   int slice_amount = 1;
   if (dim == 0)
     slice_amount = num_inputs;
-  for (auto shape : shapes) {
+  for (auto &shape : shapes) {
     if (dim >= shape.ndim())
       continue;
     shape[dim] = shape[dim] * num_inputs;
@@ -515,7 +515,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
-    for (auto pd : pds) {
+    for (auto &pd : pds) {
       if (num_inputs != 0) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
@@ -620,7 +620,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shp,
   InitDefaultArray(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
 
-  for (auto pd : pds) {
+  for (auto &pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
@@ -683,7 +683,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
-  for (auto shape : shapes) {
+  for (auto &shape : shapes) {
     for (int dim = 0; dim < 5; dim++) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
@@ -892,7 +892,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 
   for (auto &in_arr : in_arrs) {
-    for (auto dispatch : dispatches) {
+    for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
       for (int i = 0; i < attrs.num_outputs; i++)
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
@@ -939,7 +939,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (use_concat_outputs)
     return;
 
-  for (auto dispatch : dispatches) {
+  for (auto &dispatch : dispatches) {
     in_arrs = GetTestInputArrays();
     for (auto &arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
@@ -1078,7 +1078,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       continue;
     }
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    for (auto out_arr : out_arrs) {
+    for (auto &out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
@@ -1127,7 +1127,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       continue;
     }
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    for (auto out_arr : out_arrs) {
+    for (auto &out_arr : out_arrs) {
       auto in_mem = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
