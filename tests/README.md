@@ -42,4 +42,17 @@ Ninja is a build tool (like make) that prioritizes building speed. If you will b
     ```
     ninja
     ```
+    
+## Runing Python Tests Within Docker
+
+1. To run tests inside docker run the following comamdn
+    ```
+    ci/build.py --platform {PLATFORM} /work/runtime_functions.sh {RUNTIME_FUNCTION}
+    ```
+An example for running python tests would be
+```
+ci/build.py --platform build_ubuntu_cpu_mkldnn /work/runtime_functions.sh unittest_ubuntu_python3_cpu PYTHONPATH=./python/ nosetests-2.7 tests/python/unittest
+```
+
+
 
