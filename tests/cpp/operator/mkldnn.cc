@@ -506,7 +506,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   int slice_amount = 1;
   if (dim == 0)
     slice_amount = num_inputs;
-  for (auto &shape : shapes) {
+  for (auto shape : shapes) {
     if (dim >= shape.ndim())
       continue;
     shape[dim] = shape[dim] * num_inputs;
