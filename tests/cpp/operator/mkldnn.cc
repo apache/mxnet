@@ -665,7 +665,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
       std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
       int i = 0;
-      for (auto arr : in_arrs) {
+      for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
           continue;
         auto ex_arr = expanded_arrs[i];
@@ -689,7 +689,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
           continue;
         std::cout << "Extending " << shape << " dim " << dim << " and " << num_inputs << "num_inputs\n";
         auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
-        for (auto out_arr : output_arrs) {
+        for (auto &out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
           EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
           EXPECT_EQ(shape[dim] * num_inputs, out_arr.arr.shape()[dim]);
@@ -848,11 +848,11 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  for (auto in_arr : in_arrs) {
+  for (auto &in_arr : in_arrs) {
     if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
       continue;
     std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    for (auto out_arr : out_arrs) {
+    for (auto &out_arr : out_arrs) {
       const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
       out_arr.arr.CopyFrom(*mem);
       MKLDNNStream::Get()->Submit();
@@ -881,7 +881,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
     in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
 
-  for (auto in_arr : in_arrs) {
+  for (auto &in_arr : in_arrs) {
     for (auto dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
       for (int i = 0; i < attrs.num_outputs; i++)
@@ -931,7 +931,7 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
 
   for (auto dispatch : dispatches) {
     in_arrs = GetTestInputArrays();
-    for (auto arr : in_arrs) {
+    for (auto &arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
       if (arr.arr.IsView())
         continue;
@@ -1015,7 +1015,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
       continue;
 
-    for (auto out_arr : out_arrs) {
+    for (auto &out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
       auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
