@@ -340,7 +340,7 @@ def main():
         description='Tool for testing caffe to mxnet conversion layer by layer')
     parser.add_argument('--image_url', type=str,
                         default='https://github.com/dmlc/web-data/raw/master/mxnet/doc/'\
-        'tutorials/python/predict_image/cat.jpg',
+                                'tutorials/python/predict_image/cat.jpg',
                         help='input image to test inference, can be either file path or url')
     parser.add_argument('--caffe_prototxt_path', type=str,
                         default='./model.prototxt',
