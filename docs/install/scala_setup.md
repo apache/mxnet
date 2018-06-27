@@ -2,9 +2,9 @@
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead of these instructions.
 
-**Step 1.**: Download the MXNet source.
+**Step 1.** Download the MXNet source.
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
@@ -30,9 +30,9 @@ sudo ./ci/docker/install/ubuntu_core.sh
 sudo ./ci/docker/install/ubuntu_scala.sh
 ```
 
-**Step 3.**: Run the example project.
+**Step 3.** Run the demo MXNet-Scala project.
 
-Go to the [example project's README](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo) and follow the directions to test the MXNet-Scala package installation.
+Go to the [MXNet-Scala demo project's README](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo) and follow the directions to test the MXNet-Scala package installation.
 
 
 ### Example MXNet-Scala Dependencies Definition
