@@ -22,8 +22,10 @@
  */
 #ifndef MXNET_KVSTORE_GPU_TOPOLOGY_H_
 #define MXNET_KVSTORE_GPU_TOPOLOGY_H_
-#include <cuda_runtime_api.h>
-#include <cuda.h>
+#if MXNET_USE_CUDA
+  #include <cuda_runtime_api.h>
+  #include <cuda.h>
+#endif
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -99,6 +101,7 @@ inline void GetP2PWeight(const std::vector<Context>& devs,
     count++;
   }
 
+#if MXNET_USE_CUDA
   cudaDeviceP2PAttr attr;
   attr = cudaDevP2PAttrPerformanceRank;
   std::vector<int> max(num_gpus, 0);
@@ -134,6 +137,9 @@ inline void GetP2PWeight(const std::vector<Context>& devs,
     }
   }
   PrintMatrix("Weight W", *matrix, num_gpus, num_gpus);
+#else
+  LOG(WARNING) << "GPU required for link topology";
+#endif
 }
 
 // Dense matrix-vector multiplication
