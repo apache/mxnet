@@ -166,8 +166,8 @@ The project's `pom.xml` will be open for editing.
 <<<<<<< HEAD
       <url>http://mxnet.apache.org</url>
 =======
-      <url>http://mxnet.io</url>
->>>>>>> updated instructions
+      <url>http://mxnet.apache.org</url>
+>>>>>>> Update mxnet_scala_on_intellij.md
       <distribution>repo</distribution>
     </license>
   </licenses>
