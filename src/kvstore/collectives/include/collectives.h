@@ -27,10 +27,11 @@
 #if MXNET_USE_ALLREDUCE_DIST_KVSTORE
 
 #include <mxnet/ndarray.h>
-#include "../../comm.h"
 
 #include <vector>
 #include <string>
+
+#include "../../comm.h"
 
 namespace mxnet {
 namespace kvstore {

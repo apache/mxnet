@@ -163,8 +163,7 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
     return size;
   }
 
-private:
-
+ private:
   void InitImpl(const std::vector<int>& keys,
                 const std::vector<NDArray>& values) override {
     CheckUnique(keys);
@@ -194,7 +193,7 @@ private:
       const auto storage_type = reduced.storage_type();
       auto &comm_buf = comm_buf_[key];
       if (reduced.ctx().dev_mask() == cpu::kDevMask) {
-        comm_buf = reduced; // avoid memory copy
+        comm_buf = reduced;  // avoid memory copy
       } else {
          if (comm_buf.is_none()) {
           if (storage_type == kDefaultStorage) {
@@ -253,7 +252,7 @@ private:
              static_cast<size_t>(keys.size()));
   }
 
-private:
+ private:
   std::unordered_map<int, NDArray> comm_buf_;
 };
 }  // namespace kvstore
