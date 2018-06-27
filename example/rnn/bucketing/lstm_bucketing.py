@@ -20,7 +20,7 @@ import mxnet as mx
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
+parser = argparse.ArgumentParser(description="Train RNN on Sherlock Holmes",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-layers', type=int, default=2,
                     help='number of stacked RNN layers')

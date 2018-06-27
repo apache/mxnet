@@ -44,7 +44,7 @@ GetOptions(
 
 =head1 NAME
 
-    lstm_bucketing.pl - Example of training LSTM RNN on Penn Tree Bank data using high level RNN interface
+    lstm_bucketing.pl - Example of training LSTM RNN on Sherlock Holmes data using high level RNN interface
 
 =head1 SYNOPSIS
 
