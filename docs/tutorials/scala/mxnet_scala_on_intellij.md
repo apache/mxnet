@@ -77,11 +77,6 @@ The configuration you should update is in the pom file's dependency for MXNet:
 ```
 
 
-## Access the Maven Package for MXNet
-
-
->>>>>>> updated instructions
-
 ## Set Up Your Project
 
 Now that you've installed your prerequisites, you are ready to setup IntelliJ and your first MXNet-Scala project!
