@@ -158,7 +158,12 @@ object DataHelper {
     val xVec = sentences.map { sentence =>
       sentence.map { word =>
         if (word2vec.contains(word)) word2vec(word)
-        else Random.uniform(-0.25f, 0.25f, Shape(embeddingSize), Context.cpu()).toArray
+        else {
+          val temp = Random.uniform(-0.25f, 0.25f, Shape(embeddingSize), Context.cpu())
+          val result = temp.toArray
+          temp.dispose()
+          result
+        }
       }
     }
     xVec
