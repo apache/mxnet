@@ -91,14 +91,14 @@ class GraphExecutor : public Executor {
   void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
             const std::map<std::string, Context>& ctx_map,
-            const std::vector<Context>& in_arg_ctxes,
-            const std::vector<Context>& arg_grad_ctxes,
-            const std::vector<Context>& aux_state_ctxes,
-            const std::unordered_map<std::string, TShape>& arg_shape_map,
-            const std::unordered_map<std::string, int>& arg_dtype_map,
-            const std::unordered_map<std::string, int>& arg_stype_map,
-            const std::vector<OpReqType>& grad_req_types,
-            const std::unordered_set<std::string>& shared_arg_names,
+            std::vector<Context>* in_arg_ctxes,
+            std::vector<Context>* arg_grad_ctxes,
+            std::vector<Context>* aux_state_ctxes,
+            std::unordered_map<std::string, TShape>* arg_shape_map,
+            std::unordered_map<std::string, int>* arg_dtype_map,
+            std::unordered_map<std::string, int>* arg_stype_map,
+            std::vector<OpReqType>* grad_req_types,
+            std::unordered_set<std::string>* shared_arg_names,
             std::vector<NDArray>* in_arg_vec,
             std::vector<NDArray>* arg_grad_vec,
             std::vector<NDArray>* aux_state_vec,
@@ -212,6 +212,17 @@ class GraphExecutor : public Executor {
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
+
+  Graph ReinitGraph(Graph&& g, const Context &default_ctx,
+                    const std::map<std::string, Context> &ctx_map,
+                    std::vector<Context>* in_arg_ctxes,
+                    std::vector<Context>* arg_grad_ctxes,
+                    std::vector<Context>* aux_state_ctxes,
+                    std::vector<OpReqType>* grad_req_types,
+                    std::unordered_map<std::string, TShape>* arg_shape_map,
+                    std::unordered_map<std::string, int>* arg_dtype_map,
+                    std::unordered_map<std::string, int>* arg_stype_map,
+                    std::unordered_map<std::string, NDArray> *params_map);
 
   // internal graph
   nnvm::Graph graph_;
