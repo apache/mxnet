@@ -773,6 +773,10 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+/**
+ * Determines axis ndarrays are concatenated by
+ * Used to verify concat/concat backwards operator
+ */
 int GetDim(TShape input_shape, TShape output_shape) {
   CHECK(input_shape.Size() != output_shape.Size());
   for (size_t i = 0; i < input_shape.ndim(); i++) {
@@ -782,6 +786,10 @@ int GetDim(TShape input_shape, TShape output_shape) {
   return -1;
 }
 
+/**
+ * Calculates the size of continuous block of array inside arger concatenated array
+ * Used to verify concat/concat backwards operator
+ */
 int GetBlockSize(TShape shape, int dim) {
   int block_size = 1;
   for (int i = shape.ndim() - 1; i >= dim; i--)
