@@ -180,33 +180,14 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
-### Install and Using the MXNet Package for Scala
 
-For Linux users, MXNet provides prebuilt binary packages on Maven that support computers with either GPU or CPU processors.
+## Install the MXNet Package for Scala
 
-First, you will need the MXNet and Scala dependencies installed on your system. The following instructions and scripts are for Ubuntu 16.04. Then you can download and run an example from the MXNet-Scala API.
+To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-While you don't need the source code to use the Maven package, having it will help you setup dependencies and run tests to verify the installation.
+Further information is in the [MXNet-Scala Setup Instructions](./scala_setup.md).
 
-**Step 1.**: Download the MXNet source.
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
-```
-
-**Step 2.**: Run the dependency installation scripts.
-
-```bash
-sudo ./ci/docker/install/ubuntu_core.sh
-sudo ./ci/docker/install/ubuntu_scala.sh
-```
-
-**Step 3.**: Run the example project.
-
-```bash
-java .....
-```
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
 
 
 ### Install the MXNet Package for Perl

@@ -1068,13 +1068,24 @@ $ R CMD INSTALL mxnet_current_r.tar.gz
 </div> <!-- END of R -->
 
 
-<div class="scala julia perl">
+<div class="scala">
+<div class="cpu gpu">
+
+Follow the installation instructions [in the MXNet-Scala setup guide](./scala_setup.md).
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of scala -->
+
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
+
 <div class="cpp">
 <div class="cpu gpu">
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
@@ -1500,14 +1511,24 @@ Will be available soon.
 </div> <!-- END of GPU -->
 </div> <!-- END of R -->
 
+<div class="scala">
+<div class="cpu gpu">
 
-<div class="scala julia perl">
+Follow the installation instructions [in the MXNet-Scala setup guide](./scala_setup.md).
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of scala -->
+
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
+
 <div class="cpp">
 <p>To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.</p>
 <br/>
@@ -1854,14 +1875,22 @@ Alternatively, You can also follow the installation instructions [in this guide]
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->
 
+<div class="scala">
+<div class="cpu gpu">
 
-<div class="scala julia perl">
+MXNet-Scala for Windows is not yet available.
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of scala -->
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
 <div class="cpp">
 <div class="cpu gpu">
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>

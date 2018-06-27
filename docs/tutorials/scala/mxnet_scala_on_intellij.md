@@ -15,8 +15,6 @@ The following instructions are provided for macOS and Ubuntu 16.04. Windows supp
 
 ### Mac Prerequisites Setup
 
-For other operating systems, visit each Prerequisite's website and follow their installations instructions. For macOS, you're in luck:
-
 **Step 1.** Install brew:
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
