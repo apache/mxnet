@@ -516,7 +516,6 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-
       if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
@@ -961,7 +960,8 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
       int dim = std::stoi(str_dim);
       if (dim >= in_arr.arr.shape().ndim())
         continue;
-      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) : static_cast<float>(attrs.num_inputs);
+      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
+          static_cast<float>(attrs.num_inputs);
       for (int i = 0; i < attrs.num_outputs; i++)
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
 
