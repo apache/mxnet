@@ -495,7 +495,7 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 0, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -507,14 +507,11 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   if (num_inputs != 0 && dim == 0)
     slice_amount = num_inputs;
   for (auto shape : shapes) {
+    if (dim >= shape.ndim())
+      continue;
+    shape[dim] = shape[dim] * num_inputs;
+
     // Type 1.
-
-    if (num_inputs != 0) {
-      if (dim >= shape.ndim())
-        continue;
-      shape[dim] = shape[dim] * num_inputs;
-    }
-
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
