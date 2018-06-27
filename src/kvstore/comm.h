@@ -786,7 +786,6 @@ class CommDevice : public Comm {
     NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
-  
 
  public:
   bool inited_;

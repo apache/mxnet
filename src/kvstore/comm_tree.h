@@ -72,9 +72,9 @@ class CommDeviceTree : public CommDevice {
       }
       QueryTopology();
       // Note: delayed allocation set to true, because we do not want to allocate
-      // both in TreeBufferEntry and BufferEntry, so we use a size_t to keep 
+      // both in TreeBufferEntry and BufferEntry, so we use a size_t to keep
       // track of each key's shape within BufferEntry
-      // -this information is required for inherited Reduce- and 
+      // -this information is required for inherited Reduce- and
       //  BroadcastRowSparse
       InitMergeBuffer(devs_);
       InitMergeBufferTree();
@@ -429,7 +429,7 @@ class CommDeviceTree : public CommDevice {
                 buf.copy_buf[row].resize(kBranch-1);
                 for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
                   buf.copy_buf[row][col] = NDArray(buf.merged[row].shape(),
-                                                   buf.merged[row].ctx(), 
+                                                   buf.merged[row].ctx(),
                                                    delay_alloc,
                                                    buf.merged[row].dtype());
                 }
