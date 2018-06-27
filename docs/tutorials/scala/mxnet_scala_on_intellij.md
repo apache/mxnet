@@ -363,6 +363,19 @@ Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
 This can be resolved be installing OpenCV2.
 
 
+
+### Troubleshooting
+
+If you get an error, check if it is like this one regarding OpenCV. For example, you might see the following in the middle of the error messages.
+
+```
+...
+Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
+...
+```
+
+This can be resolved be installing OpenCV2.
+
 ### Command Line Build Option
 
 - You can also compile the project by using the following command at the command line. Change directories to this project's folder then run the following:
