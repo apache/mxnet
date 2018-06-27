@@ -75,7 +75,7 @@
          (take 5))))
 
 (defn feature-extraction []
-  (let [nd-img (get-image "http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg" false)
+  (let [nd-img (get-image "http://animalsbirds.com/wp-content/uploads/2016/07/Animal-Cat-HD-Wallpapers.jpg" false)
         mod (-> (m/load-checkpoint {:prefix (str model-dir "/resnet-152") :epoch 0})
                 (m/bind {:for-training false :data-shapes [{:name "data" :shape [1 num-channels h w]}]}))
         fe-sym (-> (m/symbol mod)
@@ -93,7 +93,7 @@
 
 (comment
 
-  (predict "http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg" true)
+  (predict "http://animalsbirds.com/wp-content/uploads/2016/07/Animal-Cat-HD-Wallpapers.jpg" true)
   ;; ({:prob 0.69066674, :label "n02122948 kitten, kitty"}
   ;;  {:prob 0.04466057, :label "n01323155 kit"}
   ;;  {:prob 0.029682875, :label "n01318894 pet"}
