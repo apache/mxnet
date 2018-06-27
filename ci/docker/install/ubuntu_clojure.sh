@@ -25,9 +25,5 @@ set -ex
 echo 'Installing Clojure...'
 
 wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
-chmod 777 lein
+chmod 775 lein
 sudo cp lein /usr/local/bin
-sudo apt install libcurl3
-sudo add-apt-repository ppa:timsc/opencv-3.4
-sudo apt-get update
-sudo apt install -y libopencv-imgcodecs3.4

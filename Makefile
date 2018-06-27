@@ -605,6 +605,9 @@ scaladeploy:
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
+clojuretest:
+	(cd $(ROOTDIR)/contrib/clojure-package;	lein test)
+
 jnilint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
