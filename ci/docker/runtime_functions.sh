@@ -654,10 +654,9 @@ unittest_ubuntu_gpu_scala() {
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
-    #make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
     make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
     make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make clojuretest
+    ./contrib/clojure-package/ci-test.sh
 }
 
 unittest_ubuntu_cpugpu_perl() {
