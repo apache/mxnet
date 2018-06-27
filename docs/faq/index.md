@@ -32,6 +32,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [What are the best setup and data-handling tips and tricks for improving speed?](http://mxnet.io/faq/perf.html)
 
+* [How do I use mixed precision with MXNet or Gluon?](http://mxnet.io/faq/float16.html)
 
 ## Deployment Environments
 * [Can I run MXNet on smart or mobile devices?](http://mxnet.io/faq/smart_device.html)
