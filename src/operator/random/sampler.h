@@ -38,7 +38,7 @@ namespace op {
  * \brief Launch a generic kernel with parallel random generator.
  * \tparam gen random generator
  * \tparam N Number of iterations
- * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+ * \tparam Args Varargs type to eventually pass to the OP::Map() function
  */
 template<typename OP, typename xpu, typename GType, typename ...Args>
 inline static void LaunchRNG(mshadow::Stream<xpu> *s,
