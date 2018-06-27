@@ -516,7 +516,8 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto &pd : pds) {
-      if (num_inputs != 0) {
+
+      if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
           pd = GetExpandedMemPD(pd, num_inputs, dim);
@@ -671,7 +672,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
         if (dim >= arr.arr.shape().ndim())
           continue;
         auto ex_arr = expanded_arrs[i];
-        PrintVerifyMsg(ex_arr, arr);
+        PrintVerifyMsg(arr, ex_arr);
         EXPECT_EQ(arr.arr.shape().Size() * num_inputs, ex_arr.arr.shape().Size());
         EXPECT_EQ(arr.arr.shape()[dim] * num_inputs, ex_arr.arr.shape()[dim]);
         i++;
