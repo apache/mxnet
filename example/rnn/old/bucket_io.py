@@ -21,6 +21,7 @@ from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python")
 import numpy as np
+import math
 import mxnet as mx
 
 # The interface of a data iter that works for bucketing
@@ -202,7 +203,7 @@ class BucketSentenceIter(mx.io.DataIter):
         # truncate each bucket into multiple of batch-size
         bucket_n_batches = []
         for i in range(len(self.data)):
-            bucket_n_batches.append(len(self.data[i]) / self.batch_size)
+            bucket_n_batches.append(int(math.floor(self.data[i]) / self.batch_size))
             self.data[i] = self.data[i][:int(bucket_n_batches[i]*self.batch_size)]
 
         bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
