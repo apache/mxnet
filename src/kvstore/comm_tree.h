@@ -60,7 +60,9 @@ class CommDeviceTree : public CommDevice {
 
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
+    tree_sorted_key_attrs_.emplace_back(key, shape, dtype);
     sorted_key_attrs_.emplace_back(key, shape, dtype);
+    bool delay_alloc = true;
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
@@ -69,7 +71,13 @@ class CommDeviceTree : public CommDevice {
         devs_.push_back(a.ctx());
       }
       QueryTopology();
-      InitMergeBuffer();
+      // Note: delayed allocation set to true, because we do not want to allocate
+      // both in TreeBufferEntry and BufferEntry, so we use a size_t to keep 
+      // track of each key's shape within BufferEntry
+      // -this information is required for inherited Reduce- and 
+      //  BroadcastRowSparse
+      InitMergeBuffer(devs_);
+      InitMergeBufferTree();
       if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
         EnableP2P();
       }
@@ -362,7 +370,7 @@ class CommDeviceTree : public CommDevice {
 
   using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
-  void InitMergeBuffer() {
+  void InitMergeBufferTree() {
     LOG(WARNING) << "Using Tree";
 
     // same as all-reduce, except:
@@ -372,12 +380,13 @@ class CommDeviceTree : public CommDevice {
     for (unsigned i = 0; i < devs_.size(); ++i)
       tree_merge_buf_.push_back(std::unordered_map<int, TreeBufferEntry>());
 
+    bool delay_alloc = true;
     std::map<int, int> key_dist;
 
-    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
-      const int key  = std::get<0>(sorted_key_attrs_[i]);
-      const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
-      const int type = std::get<2>(sorted_key_attrs_[i]);
+    for (size_t i = 0; i < tree_sorted_key_attrs_.size(); ++i) {
+      const int key  = std::get<0>(tree_sorted_key_attrs_[i]);
+      const TShape& shape = std::get<1>(tree_sorted_key_attrs_[i]);
+      const int type = std::get<2>(tree_sorted_key_attrs_[i]);
 
       if (key_dist.find(shape.Size()) == key_dist.end())
         key_dist[shape.Size()] = 1;
@@ -414,13 +423,14 @@ class CommDeviceTree : public CommDevice {
             for (unsigned row = 0; row < devs_.size(); ++row) {
               if (row == devs_.size()-1)
                 shape_copy[0] = last_slice;
-              buf.merged[row] = NDArray(shape_copy, ctx, false, type);
+              buf.merged[row] = NDArray(shape_copy, ctx, delay_alloc, type);
               buf.copy_buf.push_back(std::vector<NDArray>());
               if (buf.copy_buf[row].empty()) {
                 buf.copy_buf[row].resize(kBranch-1);
                 for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
                   buf.copy_buf[row][col] = NDArray(buf.merged[row].shape(),
-                                                   buf.merged[row].ctx(), false,
+                                                   buf.merged[row].ctx(), 
+                                                   delay_alloc,
                                                    buf.merged[row].dtype());
                 }
               }
@@ -432,7 +442,7 @@ class CommDeviceTree : public CommDevice {
               buf.copy_buf[0].resize(kBranch-1);
               for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
                 buf.copy_buf[0][col] = NDArray(buf.merged[0].shape(),
-                                               buf.merged[0].ctx(), false,
+                                               buf.merged[0].ctx(), delay_alloc,
                                                buf.merged[0].dtype());
               }
             }
@@ -447,7 +457,7 @@ class CommDeviceTree : public CommDevice {
     inited_ = true;
   }
 
-  std::vector<KeyAttrs> sorted_key_attrs_;
+  std::vector<KeyAttrs> tree_sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct TreeBufferEntry {
     /// \brief the dense merged value for reduce and broadcast operations
@@ -460,22 +470,6 @@ class CommDeviceTree : public CommDevice {
     std::vector<NDArray> compressed_send_buf;
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> compressed_recv_buf;
-
-    /// \brief the merged buffer for the given storage type (could be either dense or row_sparse)
-    inline NDArray& merged_buf(NDArrayStorageType stype) {
-      if (stype == kDefaultStorage) {
-        CHECK(merged.size() > 0 && !merged[0].is_none()) << "unintialized merge buffer detected";
-        return merged[0];
-      }
-      CHECK(stype == kRowSparseStorage) << "unexpected storage type " << stype;
-      // check if sparse_merged is initialized
-      if (sparse_merged.is_none()) {
-        CHECK(merged.size() > 0 && !merged[0].is_none());
-        sparse_merged = NDArray(kRowSparseStorage, merged[0].shape(),
-                                merged[0].ctx(), true, merged[0].dtype());
-      }
-      return sparse_merged;
-    }
 
    private:
     /// \brief the sparse merged value for reduce and rowsparse broadcast operations

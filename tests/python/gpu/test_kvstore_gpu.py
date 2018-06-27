@@ -21,6 +21,7 @@ import os
 import mxnet as mx
 import numpy as np
 import unittest
+import logging
 from mxnet.test_utils import assert_almost_equal, default_context
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -88,34 +89,48 @@ def test_rsp_push_pull():
 
     # test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9384
     # check_rsp_push_pull('local')
+    os.environ["MXNET_KVSTORE_USETREE"] = ""
+    check_rsp_push_pull('device')
+    check_rsp_push_pull('device', is_push_cpu=False)
+    os.environ["MXNET_KVSTORE_USETREE"] = "1"
+    logging.info("Setting env to use tree reduce...")
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
 
 def test_row_sparse_pull_single_device():
-    kvstore = mx.kv.create('device')
-    copy = mx.nd.random_normal(shape=(4,4), ctx=mx.gpu(0))
-    grad = copy.tostype("row_sparse")
+    envs = ["","1"]
+    for env in envs:
+        os.environ["MXNET_KVSTORE_USETREE"] = env
 
-    key = 0
-    kvstore.init(key, grad)
-    idx = grad.indices
-    kvstore.push(key, grad)
-    kvstore.row_sparse_pull(key, out=grad, row_ids=idx)
+        kvstore = mx.kv.create('device')
+        copy = mx.nd.random_normal(shape=(4,4), ctx=mx.gpu(0))
+        grad = copy.tostype("row_sparse")
 
-    assert_almost_equal(grad.asnumpy(), copy.asnumpy())
+        key = 0
+        kvstore.init(key, grad)
+        idx = grad.indices
+        kvstore.push(key, grad)
+        kvstore.row_sparse_pull(key, out=grad, row_ids=idx)
+
+        assert_almost_equal(grad.asnumpy(), copy.asnumpy())
 
 
 def test_rsp_push_pull_large_rowid():
-    num_rows = 793470
-    val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())
-    kv = mx.kv.create('device')
-    kv.init('a', val)
-    out = mx.nd.zeros((num_rows,1), stype='row_sparse').copyto(mx.gpu())
-    kv.push('a', val)
-    kv.row_sparse_pull('a', out=out, row_ids=mx.nd.arange(0, num_rows, dtype='int64'))
-    assert(out.indices.shape[0] == num_rows)
+    envs = ["","1"]
+    for env in envs:
+        os.environ["MXNET_KVSTORE_USETREE"] = env
 
+        num_rows = 793470
+        val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())
+        kv = mx.kv.create('device')
+        kv.init('a', val)
+        out = mx.nd.zeros((num_rows,1), stype='row_sparse').copyto(mx.gpu())
+        kv.push('a', val)
+        kv.row_sparse_pull('a', out=out, row_ids=mx.nd.arange(0, num_rows, dtype='int64'))
+        assert(out.indices.shape[0] == num_rows)
+
+    os.environ["MXNET_KVSTORE_USETREE"] = ""
 if __name__ == '__main__':
     import nose
     nose.runmodule()

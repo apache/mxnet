@@ -671,6 +671,42 @@ class CommDevice : public Comm {
     }
   }
 
+  using KeyAttrs = std::tuple<int, TShape, int>;
+  // try to allocate buff on device evenly
+  void InitMergeBuffer(const std::vector<Context>& devs) {
+    std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
+              const KeyAttrs& a, const KeyAttrs& b) {
+      return std::get<1>(a).Size() > std::get<1>(b).Size();
+    });
+
+    std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
+    for (auto d : devs) {
+      ctx_info[d.dev_id] = std::make_pair(d, 0);
+    }
+
+    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
+      const int key  = std::get<0>(sorted_key_attrs_[i]);
+      const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
+      const int type = std::get<2>(sorted_key_attrs_[i]);
+      auto& buf = merge_buf_[key];
+      Context ctx;
+      size_t min_size = std::numeric_limits<size_t>::max();
+      for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
+        size_t size = it->second.second;
+        if (size <= min_size) {
+          ctx = it->second.first;
+          min_size = size;
+        }
+      }
+      // Delayed allocation - as the dense merged buffer might not be used at all if push()
+      // only sees sparse arrays
+      bool delay_alloc = true;
+      buf.merged = NDArray(shape, ctx, delay_alloc, type);
+      ctx_info[ctx.dev_id].second += shape.Size();
+    }
+    inited_ = true;
+  }
+
  private:
   void EnableP2P(const std::vector<Context>& devs) {
 #if MXNET_USE_CUDA
@@ -714,43 +750,6 @@ class CommDevice : public Comm {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
-  // try to allocate buff on device evenly
-  void InitMergeBuffer(const std::vector<Context>& devs) {
-    std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
-              const KeyAttrs& a, const KeyAttrs& b) {
-      return std::get<1>(a).Size() > std::get<1>(b).Size();
-    });
-
-    std::unordered_map<int, std::pair<Context, size_t>> ctx_info;
-    for (auto d : devs) {
-      ctx_info[d.dev_id] = std::make_pair(d, 0);
-    }
-
-    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
-      const int key  = std::get<0>(sorted_key_attrs_[i]);
-      const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
-      const int type = std::get<2>(sorted_key_attrs_[i]);
-      auto& buf = merge_buf_[key];
-      Context ctx;
-      size_t min_size = std::numeric_limits<size_t>::max();
-      for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
-        size_t size = it->second.second;
-        if (size <= min_size) {
-          ctx = it->second.first;
-          min_size = size;
-        }
-      }
-      // Delayed allocation - as the dense merged buffer might not be used at all if push()
-      // only sees sparse arrays
-      bool delay_alloc = true;
-      buf.merged = NDArray(shape, ctx, delay_alloc, type);
-      ctx_info[ctx.dev_id].second += shape.Size();
-    }
-    inited_ = true;
-  }
-
-  std::vector<KeyAttrs> sorted_key_attrs_;
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the dense merged value for reduce and broadcast operations
@@ -763,6 +762,8 @@ class CommDevice : public Comm {
     std::vector<NDArray> compressed_send_buf;
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> compressed_recv_buf;
+    /// \brief size of allocation in case we do not actually allocate merged
+    TShape merged_size;
 
     /// \brief the merged buffer for the given storage type (could be either dense or row_sparse)
     inline NDArray& merged_buf(NDArrayStorageType stype) {
@@ -785,9 +786,11 @@ class CommDevice : public Comm {
     NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+  
 
  public:
   bool inited_;
+  std::vector<KeyAttrs> sorted_key_attrs_;
 };
 
 }  // namespace kvstore

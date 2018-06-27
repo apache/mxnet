@@ -35,13 +35,13 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#define MAX_DEPTH 16
+#define MXNET_KVSTORE_MAXDEPTH 16
 
 namespace mxnet {
 namespace kvstore {
 
 template <typename T>
-void PrintVector(const std::string& str, const std::vector<T>& vec) {
+inline void PrintVector(const std::string& str, const std::vector<T>& vec) {
   std::cout << str << ":\n";
   for (unsigned i = 0; i < vec.size(); ++i)
     std::cout << vec[i] << " ";
@@ -49,7 +49,7 @@ void PrintVector(const std::string& str, const std::vector<T>& vec) {
 }
 
 template <typename T>
-void PrintMatrix(const std::string& str, const std::vector<T>& matrix,
+inline void PrintMatrix(const std::string& str, const std::vector<T>& matrix,
     int num_rows, int num_cols) {
   std::cout << str << ":\n";
   int count = 0;
@@ -61,7 +61,7 @@ void PrintMatrix(const std::string& str, const std::vector<T>& matrix,
   }
 }
 
-void PrintTopo(const std::string& str, const std::vector<size_t>& topo_row,
+inline void PrintTopo(const std::string& str, const std::vector<size_t>& topo_row,
     std::vector<size_t> scan_row) {
   PrintVector("Topo vector", topo_row);
   PrintVector("Scan vector", scan_row);
@@ -89,7 +89,7 @@ void PrintTopo(const std::string& str, const std::vector<size_t>& topo_row,
 //            2: 1 NVLink connection
 //            3: 2 NVLink connections
 template <typename T>
-void GetP2PWeight(const std::vector<Context>& devs,
+inline void GetP2PWeight(const std::vector<Context>& devs,
                   std::vector<T>*             matrix) {
   int num_gpus = devs.size();
   int count    = 0;
@@ -140,7 +140,7 @@ void GetP2PWeight(const std::vector<Context>& devs,
 // Assume: matrix is square
 //   y = A*x (no accumulate)
 template <typename T>
-void gemv(const std::vector<T>&   A,
+inline void gemv(const std::vector<T>&   A,
           const std::vector<int>& x,
           std::vector<T>*         y) {
   int nrows = x.size();
@@ -157,7 +157,7 @@ void gemv(const std::vector<T>&   A,
 // Element-wise multiplication between 2 dense vectors
 //   w = w * alpha*u
 template <typename T>
-void ewisemult(const std::vector<int>& u,
+inline void ewisemult(const std::vector<int>& u,
                T                       alpha,
                std::vector<T>*         w) {
   int nelem = u.size();
@@ -169,7 +169,7 @@ void ewisemult(const std::vector<int>& u,
 // Element-wise addition between 2 dense vectors
 //   w = w + alpha*u
 template <typename T>
-void ewiseadd(const std::vector<T>& u,
+inline void ewiseadd(const std::vector<T>& u,
               T                     alpha,
               std::vector<T>*       w) {
   int nelem = u.size();
@@ -184,7 +184,7 @@ void ewiseadd(const std::vector<T>& u,
 // Optimization: Only need to look at upper triangular since weight matrix is
 //   symmetric
 template <typename T>
-void FindBestMove(const std::vector<T>&          W,
+inline void FindBestMove(const std::vector<T>&          W,
                   const std::vector<int>&        P_temp,
                   const std::vector<T>&          D,
                   const std::unordered_set<int>& used,
@@ -217,7 +217,7 @@ void FindBestMove(const std::vector<T>&          W,
 //          cluster_pairs stores the mapping that tells us which 2 clusters are
 //               the output of partitioning one large cluster
 template <typename T>
-bool KernighanLin(const std::vector<T>&             W,
+inline bool KernighanLin(const std::vector<T>&             W,
                   std::vector<int>*                 P,
                   int*                              num_partitions,
                   std::vector<std::pair<int, int>>* cluster_pairs,
@@ -376,7 +376,7 @@ bool KernighanLin(const std::vector<T>&             W,
 
 // Returns root of a given color if found in roots
 // Returns -1 if it is not found
-int GetRoot(const std::vector<int>&        P,
+inline int GetRoot(const std::vector<int>&        P,
             int                            color,
             const std::unordered_set<int>& roots) {
   for (auto root : roots) {
@@ -388,7 +388,7 @@ int GetRoot(const std::vector<int>&        P,
 
 // Returns root of a given color if found in roots
 // Returns -1 if it is not found
-int GetChild(const std::vector<int>& P,
+inline int GetChild(const std::vector<int>& P,
              int                     color,
              int                     parent) {
   for (unsigned i = 0; i < P.size(); ++i) {
@@ -408,7 +408,7 @@ int GetChild(const std::vector<int>& P,
 //          g is weight of edge
 // Optimization: Only need to look at row a in matrix
 template <typename T>
-void FindBestEdge(const std::vector<T>&   W,
+inline void FindBestEdge(const std::vector<T>&   W,
                   const std::vector<int>& P,
                   int                     parent,
                   int                     dest_cluster,
@@ -443,7 +443,7 @@ void FindBestEdge(const std::vector<T>&   W,
 //          topo_row says where new edges are appended to
 //          scan_row says where we should start looking for topo_row
 template <typename T>
-int KLGenerateBinaryTree(const std::vector<T>&             W,
+inline int KLGenerateBinaryTree(const std::vector<T>&             W,
                          const std::vector<int>&           P,
                          std::vector<std::pair<int, int>>* cluster_pairs,
                          std::unordered_set<int>*          roots,
@@ -529,8 +529,8 @@ int KLGenerateBinaryTree(const std::vector<T>&             W,
 
 // @input: n is the number of nodes in a balanced binary tree
 // @output: returns how many levels of binary tree there are
-int ComputeDepth(int n) {
-  for (int depth = 0; depth < MAX_DEPTH; ++depth) {
+inline int ComputeDepth(int n) {
+  for (int depth = 0; depth < MXNET_KVSTORE_MAXDEPTH; ++depth) {
     int num = 2 << depth;
     if (n <= num)
       return depth+1;
@@ -544,7 +544,7 @@ int ComputeDepth(int n) {
 //   -each edge in tree corresponds to link in network topology
 //   -each edge in tree does not form self-loop
 template <typename T>
-bool IsValid(const std::vector<T>&   W,
+inline bool IsValid(const std::vector<T>&   W,
              const std::vector<int>& state,
              int                     num_elements,
              int                     row,
@@ -626,7 +626,7 @@ bool IsValid(const std::vector<T>&   W,
 //     3     1
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6    // GPU3 knows not to make redundant send to itself
-void Postprocess(std::vector<int>* result, int num_elements, int depth) {
+inline void Postprocess(std::vector<int>* result, int num_elements, int depth) {
   for (int level = depth - 1; level >= 0; --level) {
     int stride = 1 << level;
     std::vector<int> histogram_above(num_elements, 0);
@@ -657,7 +657,7 @@ void Postprocess(std::vector<int>* result, int num_elements, int depth) {
 //         -usually turned on when backtracking to get better solutions
 //         -usually turned off when outside the penalty to get weight of tree
 template <typename T>
-T ComputeTreeWeight(const std::vector<T>&   W,
+inline T ComputeTreeWeight(const std::vector<T>&   W,
                     const std::vector<int>& result,
                     int                     num_elements,
                     int                     depth,
@@ -710,7 +710,7 @@ T ComputeTreeWeight(const std::vector<T>&   W,
 //     3     1
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6
-void FormTopology(const std::vector<int>& result,
+inline void FormTopology(const std::vector<int>& result,
                   std::vector<size_t>*    topo_row,
                   std::vector<size_t>*    scan_row,
                   int                     depth) {
@@ -735,7 +735,7 @@ void FormTopology(const std::vector<int>& result,
 //   -binary
 //   -maximum weight
 template <typename T>
-bool RecursiveBacktrack(const std::vector<T>& W,
+inline bool RecursiveBacktrack(const std::vector<T>& W,
                         std::vector<int>*     state,
                         std::vector<int>*     best_result,
                         T*                    best_result_weight,
@@ -771,7 +771,7 @@ bool RecursiveBacktrack(const std::vector<T>& W,
 }
 
 template <typename T>
-void IterativeBacktrack(const std::vector<T>& W,
+inline void IterativeBacktrack(const std::vector<T>& W,
                         std::vector<int>*     state,
                         std::vector<int>*     best_result,
                         T*                    best_result_weight,
@@ -837,7 +837,7 @@ void IterativeBacktrack(const std::vector<T>& W,
 // Apply penalty factor alpha to each link in link topology graph that is used
 // by the spanning tree
 template <typename T>
-void UpdateWeight(std::vector<T>*            W,
+inline void UpdateWeight(std::vector<T>*            W,
                   const std::vector<size_t>& topo_row,
                   int                        num_elements,
                   float                      alpha) {
@@ -860,7 +860,7 @@ void UpdateWeight(std::vector<T>*            W,
 // 2) maximize edge weight
 // 3) tree is binary
 template <typename T>
-void BacktrackGenerateBinaryTree(std::vector<T>*      W,
+inline void BacktrackGenerateBinaryTree(std::vector<T>*      W,
                                  int                  num_elements,
                                  int                  root,
                                  std::vector<size_t>* topo_row,
@@ -903,7 +903,7 @@ void BacktrackGenerateBinaryTree(std::vector<T>*      W,
 // ComputeTreesFromRoot does the same thing as ComputeTrees, with the only
 // exception being it will do it from a fixed GPU as root
 template <typename T>
-void ComputeTreesFromRoot(std::vector<T>*      W,
+inline void ComputeTreesFromRoot(std::vector<T>*      W,
                           int                  num_elements,
                           int                  root,
                           float                alpha,
@@ -990,7 +990,7 @@ void ComputeTreesFromRoot(std::vector<T>*      W,
 // @output: topo stores the trees generated
 //          scan stores the start of each level of each tree
 template <typename T>
-void ComputeTrees(const std::vector<T>&             W,
+inline void ComputeTrees(const std::vector<T>&             W,
                   int                               num_elements,
                   float                             alpha,
                   bool                              backtrack,
