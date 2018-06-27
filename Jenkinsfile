@@ -948,19 +948,20 @@ try {
           }
         }
       }
-    },
-    'dist-kvstore tests GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
-            publish_test_coverage()
-          }
-        }
-      }
     }
+    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
+    // 'dist-kvstore tests GPU': {
+    //  node('mxnetlinux-gpu') {
+    //    ws('workspace/it-dist-kvstore') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        init_git()
+    //        unpack_lib('gpu')
+    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+    //        publish_test_coverage()
+    //      }
+    //    }
+    //  }
+    //}
   }
 
   stage('Deploy') {
