@@ -266,6 +266,16 @@ static void remap(const std::vector<T> &op_in, size_t start,
   }
 }
 
+static inline TShape SliceFirstDim(const TShape &s) {
+  if (s.ndim() > 1) {
+    return TShape(s.begin() + 1, s.end());
+  } else {
+    TShape s(1);
+    s[0] = 1;
+    return s;
+  }
+}
+
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
                          std::vector<TShape> *in_shape,
                          std::vector<TShape> *out_shape) {
@@ -275,9 +285,12 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
   std::vector<TShape> subg_in_shape(in_shape->size());
   // data shape
+  std::vector<bool> data_1d(params.in_data_locs.ndim(), false);
   for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
-    subg_in_shape[loc] = TShape(in_shape->at(i).begin() + 1, in_shape->at(i).end());
+    if (in_shape->at(i).ndim() == 1)
+      data_1d[i] = true;
+    subg_in_shape[loc] = SliceFirstDim(in_shape->at(i));
   }
   // state shape
   remap(*in_shape, params.in_data_locs.ndim(), params.in_state_locs,
@@ -292,7 +305,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     // If we don't have shape info, we don't need to do anything.
     if (shape.ndim() == 0)
       continue;
-    subg_out_shape[i] = TShape(shape.begin() + 1, shape.end());
+    subg_out_shape[i] = SliceFirstDim(shape);
   }
 
   bool infer_success = InferSubgraphShape(*attrs.subgraphs[0],
@@ -329,11 +342,17 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     if (shape.ndim() == 0)
       continue;
 
-    auto in = TShape(shape.ndim() + 1);
-    in[0] = len;
-    for (size_t i = 1; i < in.ndim(); i++)
-      in[i] = shape[i - 1];
-    SHAPE_ASSIGN_CHECK(*in_shape, i, in);
+    if (data_1d[i]) {
+      TShape s(1);
+      s[0] = len;
+      SHAPE_ASSIGN_CHECK(*in_shape, i, s);
+    } else {
+      auto in = TShape(shape.ndim() + 1);
+      in[0] = len;
+      for (size_t i = 1; i < in.ndim(); i++)
+        in[i] = shape[i - 1];
+      SHAPE_ASSIGN_CHECK(*in_shape, i, in);
+    }
   }
   // For the shape of state.
   for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {

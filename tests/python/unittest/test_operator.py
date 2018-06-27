@@ -6238,6 +6238,24 @@ def test_foreach():
     verify_foreach(step15, v3, [v4], [v5], arrs, states, frees, out_grads)
     verify_foreach(step15, v3, [v4], [v5], arrs, states, frees, out_grads, False)
 
+    # Test the case of iterating on a 1D data array.
+    def step16(in1, states, free):
+        return ([in1[0] * states[0]], [states[0] * 2])
+    arrs = [mx.nd.arange(3)]
+    states = [mx.nd.random.uniform(shape=(1))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, (3, 1))],
+            [mx.nd.random.uniform(-10, 10, (1))]]
+    verify_foreach(step16, [v3], [v4], [], arrs, states, [], out_grads)
+    verify_foreach(step16, [v3], [v4], [], arrs, states, [], out_grads, False)
+    def step17(in1, states, free):
+        return ([in1[1] * in1[0] * states[0]], [states[0] * 2])
+    arrs = [mx.nd.random.uniform(shape=(3, 1)), mx.nd.arange(3)]
+    states = [mx.nd.random.uniform(shape=(1))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, (3, 1))],
+            [mx.nd.random.uniform(-10, 10, (1))]]
+    verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads)
+    verify_foreach(step17, [v3, v4], [v5], [], arrs, states, [], out_grads, False)
+
 
 @with_seed()
 def test_foreach_nested():
