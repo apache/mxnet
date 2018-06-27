@@ -44,6 +44,11 @@ template<typename OP, typename xpu, typename GType, typename ...Args>
 inline static void LaunchRNG(mshadow::Stream<xpu> *s,
                              common::random::RandGenerator<xpu, GType> *gen,
                              const int N, Args... args) {
+  // minimal check to avoid division by zero, below.
+  // if `N` is zero the map operation is a no-op in any case.
+  if (N <= 0) {
+    return;
+  }
   const int nloop = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
                     RandGenerator<xpu>::kMinNumRandomPerThread;
   const int nthread = std::min(nloop, RandGenerator<xpu>::kNumRandomStates);
