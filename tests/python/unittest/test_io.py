@@ -407,7 +407,8 @@ def test_ImageRecordIter_seed_augmentation():
         mean_img="data/cifar/cifar10_mean.bin",
         shuffle=False,
         data_shape=(3, 28, 28),
-        batch_size=3)
+        batch_size=3,
+        seed_aug=seed_aug)
     batch = dataiter.next()
     data = batch.data[0].asnumpy().astype(np.uint8)
 
