@@ -515,7 +515,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
-    for (auto &pd : pds) {
+    for (auto pd : pds) {
 
       if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
