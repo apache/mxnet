@@ -40,6 +40,7 @@ brew install maven
 ```
 brew install opencv@2
 ```
+<<<<<<< HEAD
 
 ## Access the Maven Package for MXNet
 
@@ -58,6 +59,12 @@ The configuration you should update is in the pom file's dependency for MXNet:
   <version>1.2.0</version>
 </dependency>
 ```
+=======
+
+## Access the Maven Package for MXNet
+
+
+>>>>>>> updated instructions
 
 ## Set Up Your Project
 
@@ -156,7 +163,11 @@ The project's `pom.xml` will be open for editing.
   <licenses>
     <license>
       <name>Apache2</name>
+<<<<<<< HEAD
       <url>http://mxnet.apache.org</url>
+=======
+      <url>http://mxnet.io</url>
+>>>>>>> updated instructions
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -328,6 +339,19 @@ Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
 
 This can be resolved be installing OpenCV2.
 
+
+
+### Troubleshooting
+
+If you get an error, check if it is like this one regarding OpenCV. For example, you might see the following in the middle of the error messages.
+
+```
+...
+Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
+...
+```
+
+This can be resolved be installing OpenCV2.
 
 ### Command Line Build Option
 
