@@ -1070,23 +1070,25 @@ $ R CMD INSTALL mxnet_current_r.tar.gz
 
 <div class="scala">
 <div class="gpu">
-```
+
+```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
 </dependency>
 ```
-
+<br>
 </div> <!-- End of gpu -->
 
 <div class="cpu">
-```
+
+```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
 </dependency>
 ```
-
+<br>
 </div> <!-- End of cpu -->
 </div> <!-- End of scala -->
 
@@ -1528,17 +1530,18 @@ Will be available soon.
 <div class="scala">
 <div class="cpu">
 
-```
+```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <version>1.2.0</version>
 </dependency>
 ```
-
+<br>
 </div> <!-- End of cpu  -->
 <div class="gpu">
-Not available at this time.
+
+Not available at this time. <br>
+
 </div>
 </div> <!-- End of scala -->
 
@@ -2485,7 +2488,7 @@ b
 <div class="linux">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the [MXNet-Scala setup guide](./scala_setup.md).
+      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
     </div>
   </div>
 
@@ -2501,7 +2504,7 @@ Will be available soon.
 <div class="macos">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the [MXNet-Scala setup guide](./scala_setup.md).
+      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
     </div>
   </div>
   <div class="julia perl cpp">
