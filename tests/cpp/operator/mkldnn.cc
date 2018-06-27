@@ -875,8 +875,7 @@ TEST(MKLDNN_NDArray, CopyFrom) {
   }
 }
 
-void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
-            bool use_concat_outputs = false, bool use_concat_inputs = false) {
+void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
@@ -886,49 +885,18 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-
-  // concat backwards uses scaled up inputs
-  if (use_concat_inputs) {
-    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-    int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
-  }
-
   for (auto &in_arr : in_arrs) {
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
       for (int i = 0; i < attrs.num_outputs; i++)
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-
-      // used scaled up version for outputs
-      if (use_concat_outputs) {
-        std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-        int dim = std::stoi(str_dim);
-        if (dim >= in_arr.arr.shape().ndim())
-          continue;
-        for (int i = 0; i < attrs.num_outputs; i++)
-          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, attrs.num_inputs, dim);
-      }
-
-      // used scaled down version for outputs
-      if (use_concat_inputs) {
-        std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-        int dim = std::stoi(str_dim);
-        if (dim >= in_arr.arr.shape().ndim())
-          continue;
-        for (int i = 0; i < attrs.num_outputs; i++)
-          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(),
-              pds, 1 / static_cast<float>(attrs.num_outputs), dim);
-      }
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
-
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
         }
-
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -937,10 +905,6 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
       }
     }
   }
-
-  // cannot WriteInPlace concat operation
-  if (use_concat_outputs)
-    return;
 
   for (auto &dispatch : dispatches) {
     in_arrs = GetTestInputArrays();
@@ -963,6 +927,58 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn,
       for (int i = 0; i < attrs.num_inputs; i++)
         orig_inputs[i] = &orig.arr;
       verify_fn(orig_inputs, outputs);
+    }
+  }
+}
+
+void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
+            bool backwards = false) {
+  std::vector<NDArray*> inputs(attrs.num_inputs);
+  std::vector<NDArray*> outputs(attrs.num_outputs);
+  std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+
+  // concat backwards uses scaled up inputs
+  if (backwards) {
+    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+    int dim = std::stoi(str_dim);
+    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+  }
+
+  for (auto &in_arr : in_arrs) {
+    for (auto &dispatch : dispatches) {
+      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+
+      std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+      int dim = std::stoi(str_dim);
+      if (dim >= in_arr.arr.shape().ndim())
+        continue;
+      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) : static_cast<float>(attrs.num_inputs);
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
+
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
+
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+        }
+
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        verify_fn(inputs, outputs);
+      }
     }
   }
 }
@@ -1001,7 +1017,7 @@ TEST(IMPERATIVE, ConcatOp) {
   for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatOp(num_inputs, dim);
-      TestOp(attrs, VerifyConcatResult, true);
+      TestConcatOp(attrs, VerifyConcatResult);
     }
   }
 }
@@ -1010,7 +1026,7 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
   for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
-      TestOp(attrs, VerifyConcatBackwardsResult, true, true);
+      TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
     }
   }
 }
