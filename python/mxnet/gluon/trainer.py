@@ -164,8 +164,7 @@ class Trainer(object):
         #    - push(sparse_grad), push(dense_grad)
         #    - pull(dense_weight)
         if self._contains_sparse_weight:
-            kvstore = _create_sparse_kvstore(config['kvstore'])
-            update_on_kvstore = True
+            kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
             # raise Error if update_on_kvstore is set to False by the user
             if config['update_on_kvstore'] is False:
                 raise RuntimeError("Cannot set update_on_kvstore to False when sparse weights "

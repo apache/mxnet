@@ -63,6 +63,8 @@ def _create_sparse_kvstore(kvstore):
     kvstore : KVStore or str
         The kvstore.
     """
+    # always update on kvstore
+    update_on_kvstore = True
     if isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
@@ -70,7 +72,7 @@ def _create_sparse_kvstore(kvstore):
     else:
         raise TypeError("Cannot create '%s' KVStore with row_sparse parameters. "
                         "The type must be KVStore or str." % kvstore)
-    return kv
+    return (kv, update_on_kvstore)
 
 def _create_kvstore(kvstore, num_device, arg_params):
     """Create kvstore
