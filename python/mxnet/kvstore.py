@@ -166,7 +166,7 @@ class KVStore(object):
         There is no synchronization between workers.
         One can use ``_barrier()`` to sync all workers.
 
-        Note: This api is not supported for kvstore with type dist_sync_allreduce.
+        Note: This api is not supported for allreduce kvstore.
         Use :py:meth:`pushpull` instead.
 
         Parameters
@@ -256,7 +256,7 @@ class KVStore(object):
         For `RowSparseNDArray` values, this call is ignored,
         please use ``row_sparse_pull`` instead.
 
-        Note: This api is not supported for kvstore with type dist_sync_allreduce.
+        Note: This api is not supported for allreduce kvstore.
         Use :py:meth:`pushpull` instead.
 
         Parameters
@@ -324,7 +324,7 @@ class KVStore(object):
         thread. The rank 0 node will collect allreduce request info from all nodes and ensure
         every all reduce execution order is the same across all nodes.
 
-        Note: This api is only supported for kvstore with type dist_sync_allreduce
+        Note: This api is only supported for allreduce kvstore
 
         Parameters
         ----------
@@ -381,7 +381,7 @@ class KVStore(object):
         This function returns immediately after sending an broadcast request to mpi background
         thread. In mpi background thread, it will invoke MPI_Bcast in every node.
 
-        Note: This api is only supported for kvstore with type dist_sync_allreduce
+        Note: This api is only supported for allreduce kvstore
 
         Parameters
         ----------
@@ -433,7 +433,7 @@ class KVStore(object):
 
         The returned values are guaranteed to be the latest values in the store.
 
-        Note: This api is not supported for kvstore with type dist_sync_allreduce
+        Note: This api is not supported for allreduce kvstore
 
         Parameters
         ----------
@@ -569,7 +569,7 @@ class KVStore(object):
         If using multiple machines and this operation is invoked from a worker node,
         it will serialized the optimizer with pickle and send it to all servers.
         The function returns after all servers have been updated.
-        In kvstore with dist_sync_allreduce, this api only updates the local optimizer
+        In allreduce kvstore, this api only updates the local optimizer
         same as single machine.
 
         Parameters
@@ -782,10 +782,13 @@ def create(name='local'):
     With ``dist_sync_allreduce``, no parameter server configured, replace push and pull apis with
     pushpull.
 
+    ``dist_device_sync_allreduce``: Behaves same as dist_sync_allreduce, but it will two levels
+    allreduce, firstly reduce across devices in single node, then reduce across machines.
+
     Parameters
     ----------
     name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async',
-            'dist_sync_allreduce'}
+            'dist_sync_allreduce' 'dist_device_sync_allreduce'}
         The type of KVStore.
     Returns
     -------

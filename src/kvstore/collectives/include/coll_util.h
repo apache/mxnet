@@ -38,31 +38,6 @@
 #define MXCOLL_DEBUG(fmt, args...)
 #endif
 
-/****************************************************
- * The function is used to locate the index of the element
- * in the all equivalent elements.
- *
- * e.g.
- * vec = { 1,6,3,3,1,2,3 }
- *                     ^
- * countNth(vec, 3, 6) = 3
- * vec = { 1,6,3,3,1,2,3 }
- *                 ^
- * countNth(vec, 1, 4) = 2
- ***************************************************/
-template <typename T>
-size_t countIDX(const std::vector<T> &vec,
-                const T &key,
-                size_t endIdx) {
-  size_t curIdx = 0;
-  size_t count = 0;
-  for (auto &value : vec) {
-    if (curIdx > endIdx) break;
-    if (value == key) count++;
-    curIdx++;
-  }
-  return count;
-}
 
 #endif
 #endif  // MXNET_KVSTORE_COLLECTIVES_INCLUDE_COLL_UTIL_H_

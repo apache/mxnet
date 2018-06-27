@@ -117,9 +117,8 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
-        if 'allreduce' not in kvstore.type:
-            kvstore.init(name, arg_params[name])
-        else:
+        kvstore.init(name, arg_params[name])
+        if 'allreduce' in kvstore.type:
             kvstore.broadcast(name, param_on_devs, 0, priority=-idx)
 
         if update_on_kvstore:

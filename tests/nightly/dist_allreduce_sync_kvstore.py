@@ -42,6 +42,8 @@ def init_kv():
 
 def test_sync_pushpull():
     kv, my_rank, nworker = init_kv()
+    kv.init('3', mx.nd.ones(shape))
+    kv.init('99', mx.nd.ones(big_shape))
     def check_pushpull(kv, my_rank, nworker):
         nrepeat = 3
         for i in range(nrepeat):
@@ -60,6 +62,8 @@ def test_sync_pushpull():
 
 def test_sync_broadcast():
     kv, my_rank, nworker = init_kv()
+    kv.init('4', mx.nd.zeros(shape))
+    kv.init('98', mx.nd.zeros(big_shape))
     def check_broadcast(kv, my_rank, nworker):
         nrepeat = 3
         for i in range(nrepeat):
@@ -69,8 +73,8 @@ def test_sync_broadcast():
             else:
                 val = mx.nd.zeros(shape)
                 val2 = mx.nd.zeros(big_shape)
-            kv.broadcast('3', val, 0)
-            kv.broadcast('99', val2, 0)
+            kv.broadcast('4', val, 0)
+            kv.broadcast('98', val2, 0)
             num = 1
             check_diff_to_scalar(val, num)
             check_diff_to_scalar(val2, num)

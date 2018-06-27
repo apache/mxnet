@@ -35,6 +35,7 @@
 #include <algorithm>
 #include "./comm.h"
 #include "./kvstore_utils.h"
+#include "./kvstore_local.h"
 
 #if MXNET_USE_ALLREDUCE_DIST_KVSTORE
 #include "collectives/include/collectives.h"
@@ -45,26 +46,17 @@ namespace kvstore {
 /**
  * \brief store data in local machine
  */
-class KVStoreDistSyncAllReduce : public KVStore {
+class KVStoreDistSyncAllReduce : public KVStoreLocal {
  public:
-  KVStoreDistSyncAllReduce() : KVStore() {
-    int ret = MXCOLLIBInit();
+  explicit KVStoreDistSyncAllReduce(bool use_device_comm)
+  : KVStoreLocal(use_device_comm) {
+    int ret = MXCOLLIBInit(comm_);
     if (ret != 0) {
       LOG(FATAL) << "kvstore with type [" << type_ << "] failed with collective library init";
     }
   }
 
   virtual ~KVStoreDistSyncAllReduce() {
-  }
-
-  void Init(const std::vector<int>& keys,
-            const std::vector<NDArray>& values) override {
-    // Init does nothing in kvstore with type dist_sync_allreduce
-  }
-
-  void Init(const std::vector<std::string>& str_keys,
-            const std::vector<NDArray>& values) override {
-    // Init does nothing in kvstore with type dist_sync_allreduce
   }
 
   void Push(const std::vector<int>& keys,
@@ -109,43 +101,39 @@ class KVStoreDistSyncAllReduce : public KVStore {
   }
 
   void PushPull(const std::vector<int> &keys,
-                const std::vector<NDArray*> &in_values,
+                const std::vector<NDArray> &in_values,
                 const std::vector<NDArray*> &out_values,
                 int priority) override {
-    int ret = MXAllReduce(keys, in_values, out_values, priority);
-    if (ret != 0) {
-      LOG(FATAL) << "MXAllReduce is not successful. ret: " << ret;
-    }
+    SetKeyType(kIntKey);
+    PushPullImpl(keys, in_values, out_values, priority);
   }
 
   void PushPull(const std::vector<std::string> &str_keys,
-                const std::vector<NDArray*> &in_values,
+                const std::vector<NDArray> &in_values,
                 const std::vector<NDArray*> &out_values,
                 int priority) override {
-    int ret = MXAllReduceEx(str_keys, in_values, out_values, priority);
-    if (ret != 0) {
-      LOG(FATAL) << "MXAllReduceEx is not successful. ret: " << ret;
-    }
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    PushPullImpl(keys, in_values, out_values, priority);
   }
 
   void Broadcast(const std::vector<int> &keys,
                  const std::vector<NDArray*> &values,
                  int root_rank,
                  int priority) override {
-    int ret = MXBroadcast(keys, values, root_rank, priority);
-    if (ret != 0) {
-      LOG(FATAL) << "MXBroadCast is not successful. ret: " << ret;
-    }
+    SetKeyType(kIntKey);
+    BroadcastImpl(keys, values, root_rank, priority);
   }
 
   void Broadcast(const std::vector<std::string> &str_keys,
                  const std::vector<NDArray*> &values,
                  int root_rank,
                  int priority) override {
-    int ret = MXBroadcastEx(str_keys, values, root_rank, priority);
-    if (ret != 0) {
-      LOG(FATAL) << "MXBroadCastEx is not successful. ret: " << ret;
-    }
+    SetKeyType(kStringKey);
+    std::vector<int> keys(str_keys.size());
+    LookupKeys(str_keys, &keys);
+    BroadcastImpl(keys, values, root_rank, priority);
   }
 
   void Barrier() override {
@@ -174,6 +162,99 @@ class KVStoreDistSyncAllReduce : public KVStore {
     }
     return size;
   }
+
+private:
+
+  void InitImpl(const std::vector<int>& keys,
+                const std::vector<NDArray>& values) override {
+    CheckUnique(keys);
+    for (size_t i = 0; i < keys.size(); ++i) {
+      comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
+    }
+  }
+
+  void PushPullImpl(const std::vector<int> &keys,
+                    const std::vector<NDArray> &in_values,
+                    const std::vector<NDArray*> &out_values,
+                    int priority) {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray> > grouped_invals;
+    std::vector<std::vector<NDArray*> > grouped_outvals;
+
+    CHECK_EQ(in_values.size(), out_values.size());
+    GroupKVPairsPush(keys, in_values, &uniq_keys, &grouped_invals);
+    uniq_keys.clear();
+    GroupKVPairsPull(keys, out_values, &uniq_keys, &grouped_outvals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      // reduce over devices
+      int key = uniq_keys[i];
+      const auto& invals = grouped_invals[i];
+      NDArray reduced = comm_->Reduce(key, invals, priority);
+      const auto storage_type = reduced.storage_type();
+      auto &comm_buf = comm_buf_[key];
+      if (reduced.ctx().dev_mask() == cpu::kDevMask) {
+        comm_buf = reduced; // avoid memory copy
+      } else {
+         if (comm_buf.is_none()) {
+          if (storage_type == kDefaultStorage) {
+            comm_buf = NDArray(reduced.shape(), pinned_ctx_, true, reduced.dtype());
+          } else {
+            comm_buf = NDArray(storage_type, reduced.shape(), pinned_ctx_, true, reduced.dtype());
+          }
+        }
+        CopyFromTo(reduced, &comm_buf);
+      }
+      int ret = MXAllReduce(key, &comm_buf, &comm_buf, priority);
+      if (ret != 0) {
+        LOG(FATAL) << "MXAllReduce is not successful. ret:" << ret;
+      }
+      comm_->Broadcast(key, comm_buf, grouped_outvals[i], priority);
+    }
+  }
+
+  void BroadcastImpl(const std::vector<int> &keys,
+                     const std::vector<NDArray*> &values,
+                     int root_rank,
+                     int priority) {
+    std::vector<int> uniq_keys;
+    std::vector<std::vector<NDArray*> > grouped_vals;
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
+
+    for (size_t i = 0; i < uniq_keys.size(); ++i) {
+      int key = uniq_keys[i];
+      auto& comm_buf = comm_buf_[key];
+      const auto storage_type = grouped_vals[i][0]->storage_type();
+      CHECK_EQ(storage_type, kDefaultStorage)
+              << "Expected stype of value to be kDefaultStorage";
+      if (comm_buf.is_none()) {
+        comm_buf = NDArray(grouped_vals[i][0]->shape(), pinned_ctx_,
+                          true, grouped_vals[i][0]->dtype());
+      }
+
+      if (get_rank() == 0) {
+        CopyFromTo(*grouped_vals[i][0], &comm_buf);
+      }
+      int ret = MXBroadcast(key, &comm_buf, root_rank, priority);
+      if (ret != 0) {
+        LOG(FATAL) << "MXBroadcast is not successful. ret:" << ret;
+      }
+      comm_->Broadcast(key, comm_buf, grouped_vals[i], priority);
+    }
+  }
+
+  /**
+   * \brief check if the keys are all unique
+   */
+  void CheckUnique(const std::vector<int>& keys) {
+    auto keys_copy = keys;
+    auto last = std::unique(keys_copy.begin(), keys_copy.end());
+    CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
+             static_cast<size_t>(keys.size()));
+  }
+
+private:
+  std::unordered_map<int, NDArray> comm_buf_;
 };
 }  // namespace kvstore
 }  // namespace mxnet

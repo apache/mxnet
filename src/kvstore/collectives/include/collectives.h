@@ -27,6 +27,7 @@
 #if MXNET_USE_ALLREDUCE_DIST_KVSTORE
 
 #include <mxnet/ndarray.h>
+#include "../../comm.h"
 
 #include <vector>
 #include <string>
@@ -50,9 +51,11 @@ int MXGetMpiRank(int *ret);
 
 /*!
  * \brief Initialize collective library.
+ * \param comm commDevice for reduce and broadcast
+ *        within single node.
  * \return 0 when success, -1 when failure happens
  */
-int MXCOLLIBInit();
+int MXCOLLIBInit(Comm *comm);
 
 /*!
  * \brief Get the local rank.
@@ -63,75 +66,40 @@ int MXGetLocalRank(int *ret);
 
 /*!
  * \brief Do Allreduce across the multi-node.
- * \param keys the list of keys.
- * \param in_values the list of input values.
- * \param out_values the list of output values.
+ * \param key key.
+ * \param send_value value to be sent.
+ * \param recv_value value to hold the result.
  * \param priority the priority of the action.
  * \return 0 when success, -1 when failure happens
  */
-int MXAllReduce(const std::vector<int> &keys,
-                const std::vector<mxnet::NDArray*> &in_values,
-                const std::vector<mxnet::NDArray*> &out_values,
+int MXAllReduce(int key,
+                mxnet::NDArray* send_value,
+                mxnet::NDArray* recv_value,
                 int priority);
 
 /*!
- * \brief Do Allreduce across the multi-node.
- * \param keys the list of keys.
- * \param in_values the list of input values.
- * \param out_values the list of output values.
- * \param priority the priority of the action.
- * \return 0 when success, -1 when failure happens
- */
-int MXAllReduceEx(const std::vector<std::string> &keys,
-                  const std::vector<mxnet::NDArray*> &in_values,
-                  const std::vector<mxnet::NDArray*> &out_values,
-                  int priority);
-
-/*!
  * \brief Broadcast values in root rank to all other nodes.
- * \param keys the list of keys.
- * \param values the list of values.
+ * \param key the key for the ndarray.
+ * \param value the value to be broadcast.
+ * \param root_rank the value in the rank to be broadcast.
  * \param priority the priority of the action.
  * \return 0 when success, -1 when failure happens
  */
-int MXBroadcast(const std::vector<int> &keys,
-                const std::vector<mxnet::NDArray*> &values,
+int MXBroadcast(int key,
+                mxnet::NDArray* value,
                 int root_rank,
                 int priority);
 
 /*!
- * \brief Broadcast values in root rank to all other nodes.
- * \param keys the list of keys.
- * \param values the list of values.
- * \param priority the priority of the action.
- * \return 0 when success, -1 when failure happens
- */
-int MXBroadcastEx(const std::vector<std::string> &keys,
-                  const std::vector<mxnet::NDArray*> &values,
-                  int root_rank,
-                  int priority);
-
-/*!
  * \brief All gather values in all nodes.
- * \param keys the list of keys.
- * \param values the list of values.
+ * \param key the key for the value.
+ * \param value the value to be gathered.
  * \param priority the priority of the action.
  * \return 0 when success, -1 when failure happens
  */
-int MXAllGather(const std::vector<int> &keys,
-                const std::vector<mxnet::NDArray*> &values,
+int MXAllGather(int key,
+                mxnet::NDArray* value,
                 int priority);
-
-/*!
- * \brief All gather values in all nodes.
- * \param keys the list of keys.
- * \param values the list of values.
- * \param priority the priority of the action.
- * \return 0 when success, -1 when failure happens
- */
-int MXAllGatherEx(const std::vector<std::string> &keys,
-                  const std::vector<mxnet::NDArray*> &values,
-                  int priority);
 
 /*!
  * \brief Blocks until all rank reached this routine
