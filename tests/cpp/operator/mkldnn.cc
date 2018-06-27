@@ -162,7 +162,7 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
 
 static mkldnn::memory::primitive_desc GetExpandedMemPD(
     mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
-  CHECK(dim <= pd.desc().data.ndims);
+  CHECK(dim < pd.desc().data.ndims);
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
@@ -465,22 +465,12 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
-std::string GetShapeString(const TShape shape) {
-  std::stringstream ss;
-  ss << "(";
-  for (size_t i = 0; i < shape.ndim(); i++)
-    ss << shape[i] << ", ";
-  ss << ")";
-  return ss.str();
-}
-
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
   std::stringstream ss;
-  ss << "Verifying: " << arr1.desc.c_str() << " " <<
-     GetShapeString(t1) << " with " << arr2.desc.c_str() << " " << GetShapeString(t2) << "\n";
-  printf("%s", ss.str().c_str());
+  std::cout << "Verifying: " << arr1.desc.c_str() << " " <<
+     t1 << " with " << arr2.desc.c_str() << " " << t2 << "\n";
 }
 
 /*
@@ -700,9 +690,7 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
       for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
         if (shape.ndim() <= dim)
           continue;
-        printf("Extending ");
-        printf("%s", GetShapeString(shape).c_str());
-        printf(" dim %d and %d num_inputs\n", dim, num_inputs);
+        std::cout << "Extending " << shape << " dim " << dim << " and " << num_inputs << "num_inputs\n";
         auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
         for (auto out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
