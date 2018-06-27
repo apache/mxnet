@@ -278,6 +278,164 @@ mx.opt.adam <- function(learning.rate = 1e-3,
 }
 
 
+
+#' Create an AdaGrad optimizer with respective parameters.
+#' AdaGrad optimizer of Duchi et al., 2011,
+#'
+#' This code follows the version in http://arxiv.org/pdf/1212.5701v1.pdf  Eq(5)
+#' by Matthew D. Zeiler, 2012. AdaGrad will help the network to converge faster
+#' in some cases.
+#'
+#' @param learning.rate float, default=0.05
+#'      Step size.
+#' @param epsilon float, default=1e-8
+#' @param wd float, default=0.0
+#'      L2 regularization coefficient add to all the weights.
+#' @param rescale.grad float, default=1.0
+#'      rescaling factor of gradient.
+#' @param clip_gradient float, default=-1.0 (ignored)
+#'      clip gradient in range [-clip_gradient, clip_gradient].
+#' @param lr_scheduler function, optional
+#'      The learning rate scheduler.
+#'
+mx.opt.adagrad <- function(learning.rate = 0.01,
+                           epsilon = 1e-7,
+                           wd = 0,
+                           rescale.grad = 1,
+                           clip_gradient = -1,
+                           lr_scheduler = NULL) {
+  # use lr as short for learing rate.
+  lr <- learning.rate
+  count <- 0
+  num_update <- 0
+  
+  adagrad <- new.env()
+  adagrad$lr <- lr
+  adagrad$count <- 0
+  adagrad$num_update <- 0
+  
+  create_exec <- function(index, weight_dim, ctx) {
+    
+    weight <- mx.symbol.Variable("weight")
+    grad <- mx.symbol.Variable("grad")
+    history <- mx.symbol.Variable("history")
+    
+    grad <- grad * rescale.grad
+    if (!is.null(clip_gradient)) {
+      if(clip_gradient >= 0){
+        grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
+      }
+    }
+    
+    history <- history + (grad * grad)
+    weight <- weight - lr * (grad / mx.symbol.sqrt(history + epsilon) + wd * weight)
+    
+    w <- mx.symbol.identity(weight, name = "w")
+    h <- mx.symbol.identity(history, name = "h")
+    sym <- mx.symbol.Group(c(w, h))
+    
+    exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
+    return(exec)
+  }
+  
+  update <- function(index, exec_w, weight, grad) {
+    if (!is.null(lr_scheduler)) {
+      lr_scheduler(adagrad) ## changing lr
+      lr <- adagrad$lr
+      ## update count
+      indexKey <- paste0('ik', index)
+      if (!exists(envir = adagrad, x = indexKey, inherits = FALSE)){
+        adagrad[[indexKey]] <- 0
+      } else {
+        indexValue <- adagrad[[indexKey]]
+        adagrad[[indexKey]] <- indexValue + 1
+        adagrad$num_update <- max(adagrad$num_update, adagrad[[indexKey]])
+      }
+    }
+    
+    mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
+    mx.exec.forward(exec_w, is.train = F)
+    
+    # update state
+    mx.exec.update.arg.arrays(exec_w, arg.arrays = list(history = exec_w$ref.outputs$h_output), match.name = T)
+    
+    return(exec_w$ref.outputs$w_output)
+  }
+  return(list(create_exec = create_exec, update = update))
+}
+
+
+#' Create an AdaDelta optimizer with respective parameters.
+#'
+#' AdaDelta optimizer as described in Zeiler, M. D. (2012).
+#' *ADADELTA: An adaptive learning rate method.*
+#' http://arxiv.org/abs/1212.5701
+#'
+#' @param rho float, default=0.90
+#'      Decay rate for both squared gradients and delta x.
+#' @param epsilon float, default=1e-5
+#'      The constant as described in the thesis.
+#' @param wd float, default=0.0
+#'      L2 regularization coefficient add to all the weights.
+#' @param rescale.grad float, default=1
+#'      rescaling factor of gradient.
+#' @param clip_gradient float, default=-1 (ignored)
+#'      clip gradient in range [-clip_gradient, clip_gradient].
+#'
+mx.opt.adadelta <- function(rho = 0.90,
+                            epsilon = 1e-5,
+                            wd = 0,
+                            rescale.grad = 1,
+                            clip_gradient = -1) {
+  adadelta <- new.env()
+  
+  create_exec <- function(index, weight_dim, ctx) {
+    
+    weight <- mx.symbol.Variable("weight")
+    grad <- mx.symbol.Variable("grad")
+    acc.g <- mx.symbol.Variable("acc.g")
+    acc.delta <- mx.symbol.Variable("acc.delta")
+    
+    grad <- grad * rescale.grad
+    if (!is.null(clip_gradient)) {
+      if(clip_gradient >= 0){
+        grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
+      }
+    }
+    
+    # update state (acc.g, acc.delta)
+    acc.g <- rho * acc.g + (1 - rho) * (grad * grad)
+    current.delta <- mx.symbol.sqrt(acc.delta + epsilon) / mx.symbol.sqrt(acc.g + epsilon) * grad
+    acc.delta <- rho * acc.delta + (1 - rho) * (current.delta * current.delta)
+    weight <- weight - current.delta - wd * weight
+    
+    w <- mx.symbol.identity(weight, name = "w")
+    g <- mx.symbol.identity(acc.g, name = "g")
+    delta <- mx.symbol.identity(acc.delta, name = "delta")
+    sym <- mx.symbol.Group(c(w, g, delta))
+    
+    exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
+    return(exec)
+  }
+  
+  update <- function(index, exec_w, weight, grad) {
+    
+    mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
+    mx.exec.forward(exec_w, is.train = F)
+    
+    # update state
+    mx.exec.update.arg.arrays(exec_w, 
+                              arg.arrays = list(
+                                acc.g = exec_w$ref.outputs$g_output, 
+                                acc.delta = exec_w$ref.outputs$delta_output), 
+                              match.name = T)
+    
+    return(exec_w$ref.outputs$w_output)
+  }
+  return(list(create_exec = create_exec, update = update))
+}
+
+
 #' Create an optimizer by name and parameters
 #'
 #' @param name The name of the optimizer
@@ -289,8 +447,8 @@ mx.opt.create <- function(name, ...) {
          "sgd" = mx.opt.sgd(...),
          "rmsprop" = mx.opt.rmsprop(...),
          "adam" = mx.opt.adam(...),
-         # "adagrad" = mx.opt.adagrad(...),
-         # "adadelta" = mx.opt.adadelta(...),
+         "adagrad" = mx.opt.adagrad(...),
+         "adadelta" = mx.opt.adadelta(...),
          stop("Unknown optimizer ", name))
 }
 
