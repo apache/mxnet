@@ -241,6 +241,7 @@ private[mxnet] object ExecutorManager {
         require(sliced.shape == dst.shape,
           s"src shape ${sliced.shape} mismatch dst shape ${dst.shape}")
         sliced.copyTo(dst)
+        sliced.dispose()
       }
     }
   }
@@ -524,8 +525,11 @@ private class DataParallelExecutorGroup private(sym: Symbol,
   // Update evaluation metric with label and current outputs
   def updateMetric(metric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
     (trainExecs zip slices).foreach { case (texec, islice) =>
-      val labelsSlice = labels.map(_.slice(islice))
+      val labelsSlice = labels.map(ele =>
+        ele.slice(islice)
+      )
       metric.update(labelsSlice, texec.outputs)
+      labelsSlice.foreach(_.dispose())
     }
   }
 

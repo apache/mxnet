@@ -146,7 +146,7 @@ class FeedForward private(
 
     for ((k, v) <- argParams) {
       if (_argParams != null && _argParams.contains(k) && (!overwrite)) {
-        argParams(k).set(_argParams(k))
+        v.set(_argParams(k))
       } else {
         initializer(k, v)
       }
@@ -154,12 +154,13 @@ class FeedForward private(
 
     for ((k, v) <- auxParams) {
       if (_auxParams != null && _auxParams.contains(k) && (!overwrite)) {
-        auxParams(k).set(_auxParams(k))
+        v.set(_auxParams(k))
       } else {
         initializer(k, v)
       }
     }
-
+    _argParams.foreach(ele => ele._2.dispose())
+    _auxParams.foreach(ele => ele._2.dispose())
     _argParams = argParams
     _auxParams = auxParams
     (argNames, paramNames, auxNames)
