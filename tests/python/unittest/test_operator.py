@@ -3023,8 +3023,7 @@ def test_norm():
     for order in [1, 2]:
         for dtype in [np.float16, np.float32, np.float64]:
             in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
-            if order == 1:
-                in_data[abs(in_data) < 1e-2] = 1e-2
+            in_data[abs(in_data) < 1e-2] = 1e-2
             for i in range(in_data_dim):
                 norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, keepdims=True)
                 npy_out = l1norm(in_data, i) if order==1 else l2norm(in_data, i)
