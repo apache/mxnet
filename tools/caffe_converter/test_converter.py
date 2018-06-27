@@ -84,7 +84,8 @@ def main():
     parser = argparse.ArgumentParser(description='Test Caffe converter')
     parser.add_argument('--cpu', action='store_true', help='use cpu?')
     parser.add_argument('--image_url', type=str,
-                        default='http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg',
+                        default='https://github.com/dmlc/web-data/raw/master/mxnet/doc/'\
+                                'tutorials/python/predict_image/cat.jpg',
                         help='input image to test inference, can be either file path or url')
     args = parser.parse_args()
     if args.cpu:
