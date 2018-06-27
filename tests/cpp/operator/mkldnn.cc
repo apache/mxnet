@@ -621,7 +621,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   InitDefaultArray(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
 
-  for (auto &pd : pds) {
+  for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
