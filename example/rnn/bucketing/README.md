@@ -3,9 +3,9 @@ RNN Example
 This folder contains RNN examples using high level mxnet.rnn interface.
 
 ## Data
-1) Review the license for the PenTreeBank dataset and ensure that you agree to it. Then uncomment the lines in the 'get_ptb_data.sh' script that download the dataset.
+1) Review the license for the PenTreeBank dataset and ensure that you agree to it. Then uncomment the lines in the 'get_sherlockholmes_data.sh' script that download the dataset.
 
-2) Run `get_ptb_data.sh` to download PenTreeBank data.
+2) Run `get_sherlockholmes_data.sh` to download PenTreeBank data.
 
 ## Python
 

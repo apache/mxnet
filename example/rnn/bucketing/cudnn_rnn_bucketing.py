@@ -81,9 +81,9 @@ def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
     return sentences, vocab
 
 def get_data(layout):
-    train_sent, vocab = tokenize_text("./data/ptb.train.txt", start_label=start_label,
+    train_sent, vocab = tokenize_text("./data/sherlockholmes.train.txt", start_label=start_label,
                                       invalid_label=invalid_label)
-    val_sent, _ = tokenize_text("./data/ptb.test.txt", vocab=vocab, start_label=start_label,
+    val_sent, _ = tokenize_text("./data/sherlockholmes.test.txt", vocab=vocab, start_label=start_label,
                                 invalid_label=invalid_label)
 
     data_train  = mx.rnn.BucketSentenceIter(train_sent, args.batch_size, buckets=buckets,
