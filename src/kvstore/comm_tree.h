@@ -62,7 +62,6 @@ class CommDeviceTree : public CommDevice {
             int dtype = mshadow::kFloat32) override {
     tree_sorted_key_attrs_.emplace_back(key, shape, dtype);
     sorted_key_attrs_.emplace_back(key, shape, dtype);
-    bool delay_alloc = true;
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
