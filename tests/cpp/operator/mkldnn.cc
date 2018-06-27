@@ -579,7 +579,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
  * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
  */
 std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shp,
-                                         const std::vector<mkldnn::memory::primitive_desc> &pds,
+                                              const std::vector<mkldnn::memory::primitive_desc> &pds,
                                               float num_inputs = 0, int dim = 0) {
   TShape shape = shp;
   if (num_inputs != 0)
@@ -780,7 +780,7 @@ void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
 int GetDim(TShape input_shape, TShape output_shape) {
   CHECK(input_shape.Size() != output_shape.Size());
   for (size_t i = 0; i < input_shape.ndim(); i++) {
-    if (input_shape.data()[i] != output_shape.data()[i])
+    if (input_shape[i] != output_shape[i])
       return i;
   }
   return -1;
@@ -798,7 +798,7 @@ int GetBlockSize(TShape shape, int dim) {
 }
 
 void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
-                              const std::vector<NDArray *> &out_arrs) {
+                        const std::vector<NDArray *> &out_arrs) {
   int num_inputs = in_arrs.size();
   int input_size = in_arrs[0]->shape().Size();
   TShape input_shape = in_arrs[0]->shape();
