@@ -64,7 +64,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 - [Python](#install-the-mxnet-package-for-python)
 - [R](#install-mxnet-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
-
+- **Scala** is not yet available for Windows
 
 ## Install MXNet for Python
 
