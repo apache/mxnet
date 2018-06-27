@@ -11,7 +11,9 @@ To use this tutorial you need the following software:
 - [OpenCV](https://opencv.org/)
 - [IntelliJ IDE](https://www.jetbrains.com/idea/)
 
-## Mac Prerequisites Setup
+The following instructions are provided for macOS and Ubuntu 16.04. Windows support is not yet available.
+
+### Mac Prerequisites Setup
 
 For other operating systems, visit each Prerequisite's website and follow their installations instructions. For macOS, you're in luck:
 
@@ -41,6 +43,24 @@ brew install maven
 brew install opencv@2
 ```
 <<<<<<< HEAD
+
+
+### Ubuntu Prerequisites Setup
+
+**Step 1.**: Download the MXNet source.
+
+```bash
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet
+```
+
+**Step 2.**: Run the dependency installation scripts.
+
+```bash
+sudo ./ci/docker/install/ubuntu_core.sh
+sudo ./ci/docker/install/ubuntu_scala.sh
+```
+
 
 ## Access the Maven Package for MXNet
 
