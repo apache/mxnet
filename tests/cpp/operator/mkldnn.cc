@@ -162,7 +162,7 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
 
 static mkldnn::memory::primitive_desc GetExpandedMemPD(
     mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
-  CHECK(dim < pd.desc().data.ndims);
+  CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
