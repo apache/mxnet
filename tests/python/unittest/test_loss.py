@@ -209,7 +209,7 @@ def test_ctc_loss():
 
 @unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
 @with_seed(1234)
-def test_ctc_loss_train():
+def .test_ctc_loss_train():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
     label = mx.nd.arange(4, repeat=N).reshape((N, 4))

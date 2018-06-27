@@ -158,13 +158,16 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
                              dispatch_mode, wanted_mode);
 }
 #if MXNET_USE_MKLDNN == 1
-bool SupportMKLDNNConcat(NDArray arr) {
-  if (arr.IsView()) return false;
-  if (arr.dtype() != mshadow::kFloat32) return false;
-  unsigned ndim = arr.shape().ndim();
-  unsigned mkldnn_ndims =
-      static_cast<unsigned>(arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims);
-  return (ndim == 2 || ndim == 4) && ndim == mkldnn_ndims;
+bool SupportMKLDNNConcat(const std::vector<NDArray> &arrs) {
+  for (auto arr : arrs) {
+    if (arr.IsView()) return false;
+    if (arr.dtype() != mshadow::kFloat32) return false;
+    unsigned ndim = arr.shape().ndim();
+    unsigned mkldnn_ndims =
+        static_cast<unsigned>(arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims);
+    if ((ndim == 2 || ndim == 4) && ndim == mkldnn_ndims) return false;
+  }
+  return true;
 }
 #endif
 static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -180,7 +183,7 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
       outputs[0].storage_type() == kCSRStorage) {
     ConcatCSRImpl<cpu>(attrs, op_ctx, inputs, req, outputs);
 #if MXNET_USE_MKLDNN == 1
-  } else if (SupportMKLDNNConcat(inputs[0])) {
+  } else if (SupportMKLDNNConcat(inputs)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
@@ -198,7 +201,7 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  if (SupportMKLDNNConcat(inputs[0])) {
+  if (SupportMKLDNNConcat(inputs)) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
