@@ -19,10 +19,7 @@
 """TensorBoard functions that can be used to log various status during epoch."""
 from __future__ import absolute_import
 
-try:
-    import tensorflow as tf
-except ImportError:
-    tf = None
+import logging
 
 
 class LogMetricsCallback(object):
@@ -59,10 +56,11 @@ class LogMetricsCallback(object):
     """
     def __init__(self, logging_dir, prefix=None):
         self.prefix = prefix
-        if tf is None:
-            raise ImportError('tensorflow is required for writing TensorBoard event file.'
-                              ' Please check if the tensorflow is installed.')
-        self.summary_writer = tf.summary.FileWriter(logging_dir)
+        try:
+            from mxboard import SummaryWriter
+            self.summary_writer = SummaryWriter(logging_dir)
+        except ImportError:
+            logging.error('You can install mxboard via `pip install mxboard`.')
 
     def __call__(self, param):
         """Callback to log training speed and metrics in TensorBoard."""
@@ -72,8 +70,4 @@ class LogMetricsCallback(object):
         for name, value in name_value:
             if self.prefix is not None:
                 name = '%s-%s' % (self.prefix, name)
-            self.summary_writer.add_summary(
-                tf.Summary(
-                    value=[tf.Summary.Value(
-                        tag=name, simple_value=value)]),
-                global_step=param.epoch)
+            self.summary_writer.add_scalar(name, value, global_step=param.epoch)
