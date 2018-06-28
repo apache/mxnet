@@ -1663,16 +1663,20 @@ inline bool AdagradStorageType(const nnvm::NodeAttrs& attrs,
                                DispatchMode* dispatch_mode,
                                std::vector<int>* in_attrs,
                                std::vector<int>* out_attrs) {
+  const AdagradParam& param = nnvm::get<AdagradParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const AdagradParam& param = nnvm::get<AdagradParam>(attrs.parsed);
+  const int weight_stype = in_attrs->at(0);
+  const int grad_stype = in_attrs->at(1);
+  const int state_stype = in_attrs->at(2);
   bool dispatched = false;
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
-      common::ContainsOnlyStorage(*in_attrs, kRowSparseStorage) &&
-      param.wd == 0.0f) {
-    // rsp, rsp, rsp -> rsp with wd = 0.0
-    dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+  if (!dispatched && grad_stype == kRowSparseStorage &&
+      (weight_stype == kRowSparseStorage || weight_stype == kDefaultStorage) &&
+      state_stype == weight_stype && param.wd == 0.0f) {
+    // weight and state share stype, grad's stype = rsp
+    dispatched = storage_type_assign(
+        out_attrs, static_cast<NDArrayStorageType>(weight_stype), dispatch_mode,
+        DispatchMode::kFComputeEx);
   }
   return dispatched;
 }
@@ -1802,10 +1806,24 @@ inline void AdagradUpdateEx(const nnvm::NodeAttrs& attrs,
                             const std::vector<NDArray> &outputs) {
   using namespace mxnet_op;
   const AdagradParam& param = nnvm::get<AdagradParam>(attrs.parsed);
+
+  const auto weight_stype = inputs[0].storage_type();
+  const auto grad_stype = inputs[1].storage_type();
+  const auto state_stype = inputs[2].storage_type();
+  const auto output_stype = outputs[0].storage_type();
+
   if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) &&
       common::ContainsOnlyStorage(outputs, kRowSparseStorage)) {
     NDArray out = outputs[0];
-    AdagradUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2], req[0], &out);
+    AdagradUpdateRspRspRspImpl<xpu>(param, ctx, inputs[0], inputs[1], inputs[2],
+                                    req[0], &out);
+  } else if (state_stype == weight_stype && output_stype == weight_stype &&
+             weight_stype == kDefaultStorage &&
+             grad_stype == kRowSparseStorage) {
+    TBlob out_blob = outputs[0].data();
+    AdagradUpdateDnsRspDnsImpl<xpu>(param, ctx, inputs[0].data(), inputs[1],
+                                    inputs[2].data(), req[0],
+                                    &out_blob);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

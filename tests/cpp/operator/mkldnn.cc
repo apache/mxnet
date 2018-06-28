@@ -574,6 +574,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
       continue;
 
     // Type 2, 3.
+
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -686,6 +687,15 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   for (size_t i = 0; i < t2.ndim(); i++)
     printf("%ld, ", t2[i]);
   printf(")\n");
+}
+
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
+  tmp.WaitToRead();
+  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -803,25 +813,34 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr))
       continue;
-
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
     for (auto out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
       auto in_mem2 = in_arr2.arr.GetMKLDNNData();
-      auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
-
-      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
-      if (out_mem == nullptr)
+      if (out_arr.arr.IsView())
         continue;
+      auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
       VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
     }
+  }
 
-    // in place
+  // in place
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
     auto input_mem = in_arr.arr.GetMKLDNNData();
     auto input_mem2 = in_arr2.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
@@ -831,6 +850,113 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
+  }
+}
+
+TEST(MKLDNN_BASE, CreateMKLDNNMem) {
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  MKLDNNStream *stream = MKLDNNStream::Get();
+
+  // kWriteTo
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto out_arr : out_arrs) {
+      auto in_mem = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
+      PrintVerifyMsg(in_arr, out_arr);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
+      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
+      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      CommitOutput(out_arr.arr, output_mem_t);
+      stream->Submit();
+      VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
+    }
+  }
+
+  // kWriteInPlace
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr,
+        input_mem->get_primitive_desc(), kWriteInplace, &in_arr.arr);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
+  }
+
+  // kAddTo
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto out_arr : out_arrs) {
+      auto in_mem = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
+      PrintVerifyMsg(in_arr, out_arr);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
+      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
+      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      CommitOutput(out_arr.arr, output_mem_t);
+      stream->Submit();
+      VerifyAddRequest(
+          {&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
+    }
+  }
+
+  // kNullOp
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kNullOp);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    // original and input should be the same since noop
+    VerifyCopyResult({&orig_arr.arr}, {&in_arr.arr});
   }
 }
 
