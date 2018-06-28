@@ -28,7 +28,7 @@ from mxnet.base import py_str, MXNetError
 from common import setup_module, with_seed, teardown
 import unittest
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
+def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol, atol):
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -51,18 +51,18 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
     # check inference
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
 
     # check training
     mod1.forward(batch, is_train=True)
     mod2.forward(batch, is_train=True)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
 
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
     if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
     else:
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
@@ -78,9 +78,9 @@ def test_lstm_sym():
     stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
     stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_lstm_bidirectional():
@@ -98,9 +98,9 @@ def test_lstm_bidirectional():
                 mx.rnn.LSTMCell(H, prefix='r1_'),
                 output_prefix='bi_lstm_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_gru_sym():
@@ -111,9 +111,9 @@ def test_gru_sym():
     stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
     stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_gru_bidirectional():
@@ -133,9 +133,9 @@ def test_gru_bidirectional():
                 mx.rnn.GRUCell(H, prefix='r1_'),
                 output_prefix='bi_gru_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_rnntanh_sym():
@@ -147,9 +147,9 @@ def test_rnntanh_sym():
     stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'))
     stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_rnntanh_bidirectional():
@@ -168,9 +168,9 @@ def test_rnntanh_bidirectional():
                 mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
                 output_prefix='bi_rnntanh_1_'))
     
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-4)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-4)
 
 @with_seed()
 def test_rnnrelu_sym():
@@ -182,9 +182,9 @@ def test_rnnrelu_sym():
     stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l1_'))
     stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-2)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11410")
@@ -205,9 +205,9 @@ def test_rnnrelu_bidirectional():
                 mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
                 output_prefix='bi_rnnrelu_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', 1e-2, 1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', 1e-2, 1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', 1e-2, 1e-2)
 
 @with_seed()
 def test_lstm_dropout():
