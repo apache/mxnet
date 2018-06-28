@@ -68,9 +68,7 @@ endif
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
-ifneq ($(USE_BLAS), mkl)
 	export USE_MKLML = 1
-endif
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
