@@ -457,6 +457,24 @@ build_ubuntu_gpu_mkldnn() {
     report_ccache_usage
 }
 
+build_ubuntu_gpu_mkldnn_nocudnn() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_CUDA=1                    \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_CUDNN=0                   \
+        -j$(nproc)
+
+    report_ccache_usage
+}
+
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
