@@ -4,6 +4,15 @@ MXNet Change Log
 ### Deprecations
 - An incorrect [usage](https://github.com/apache/incubator-mxnet/issues/11091) of `save_params` was advertised in the gluon book which led to MXNet users depending on the incorrect usage and developing a hack around it. A change was made to the internal structure of the `.params` file saved by `save_params` to resolve a bug. This led to user scripts with the above mentioned hack to break. To fix this, `save_params` and `load_params` APIs have been reverted to previous format and marked as deprecated. New APIs: `save_parameters` and `load_parameters` have been added for the new format. All scripts to save and load parameters for a Gluon model should now use the new API for `save_parameters` and `load_parameters`. If your model is hybridizable and you want to export a serialized structure of the model as well as parameters you need to use the `export` API and the newly added `imports` API instead of `save_params` and `load_params` API. For more details, Please see: [issue](https://github.com/apache/incubator-mxnet/issues/11091), [PR](https://github.com/apache/incubator-mxnet/pull/11127).
 
+### User Code Changes
+- If you have been using the `save_params` and `load_params` API and are impacted by the change, below are the recommendations on how to update your code:
+1. If you save parameters to load it back into a `SymbolBlock`, it is strongly recommended to use `export` and `imports` API instead. Although, this is not an use-case that the API was meant to support, it won't break your user code. For more information, please see the docs [here](https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html).
+2. If you create the gluon layers inside a `with name_scope()` block, you must replace `save_params` with `save_parameters`. Otherwise, your models saved in 1.2.1 will fail to load back, although this worked in 1.2.0. 
+3. For the other use cases, such as models created within a `name_scope` (inside a `with name_scope()` block) or models being loaded back into gluon and not `SymbolBlock`, we strongly recommend replacing `save_params` and `load_params` with `save_parameters` and `load_parameters`. Having said that, your code won't break in 1.2.1 but will give you a deprecated warning message for `save_params` and `load_params`.
+
+### Exception to Semantic Versioning
+- We are breaking semantic versioning by making a backwards incompatible change from 1.2.0 in the 1.2.1 patch release. The breaking use case is documented in point 2 above. The reason for doing this is because the 1.2.0 release broke a documented [use case](https://github.com/apache/incubator-mxnet/issues/11091) from the [gluon book](https://gluon.mxnet.io/) and this release reverts the breakage.
+
 ### Bug Fixes
 - Fixed MKLDNN bugs (#10613, #10021, #10616, #10764, #10591, #10731, #10918, #10706, #10651, #10979).
 - Fixed Scala Inference Memory leak (#11216).
