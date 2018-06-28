@@ -91,12 +91,11 @@ try {
       }
     },
     'KVStore_SingleNode: GPU': {
-      node('mxnetlinux-gpu-p3') {
+      node('mxnetlinux-gpu-p3-8xlarge') {
         ws('workspace/nt-KVStoreTest') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          //https://github.com/apache/incubator-mxnet/issues/11289
-          //docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
         }
       }
     }

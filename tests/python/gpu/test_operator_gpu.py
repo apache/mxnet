@@ -87,6 +87,8 @@ def check_countsketch(in_dim,out_dim,n):
                 a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
     assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
 
+
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10988")
 @with_seed(0)
 def test_countsketch():
     nrepeat = 2
@@ -460,6 +462,8 @@ def check_consistency_NxM(sym_list, ctx_list):
     # sym_list=[sym1, sym1, sym1, sym2, sym2, sym2] and ctx_list=[ctx1, ctx2, ctx3, ctx1, ctx2, ctx3]
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list))
 
+
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
 @with_seed()
 def test_convolution_options():
     # 1D convolution
