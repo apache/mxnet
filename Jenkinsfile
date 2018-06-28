@@ -378,50 +378,17 @@ try {
         }
       }
     },
-    //Todo: Set specific CUDA_ARCh for windows builds in cmake
-    'Build GPU windows':{
+    'Build CPU MKLDNN windows':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-            init_git_win()
-            bat """mkdir build_vc14_gpu
-              call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-              cd build_vc14_gpu
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release -DUSE_MKL_IF_AVAILABLE=0 ${env.WORKSPACE}"""
-            bat 'C:\\mxnet\\build_vc14_gpu.bat'
-            bat '''rmdir /s/q pkg_vc14_gpu
-              mkdir pkg_vc14_gpu\\lib
-              mkdir pkg_vc14_gpu\\python
-              mkdir pkg_vc14_gpu\\include
-              mkdir pkg_vc14_gpu\\build
-              copy build_vc14_gpu\\libmxnet.lib pkg_vc14_gpu\\lib
-              copy build_vc14_gpu\\libmxnet.dll pkg_vc14_gpu\\build
-              xcopy python pkg_vc14_gpu\\python /E /I /Y
-              xcopy include pkg_vc14_gpu\\include /E /I /Y
-              xcopy 3rdparty\\dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
-              xcopy 3rdparty\\nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
-              del /Q *.7z
-              7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
-              '''
-            stash includes: 'vc14_gpu.7z', name: 'vc14_gpu'
-            }
-          }
-        }
-      }
-    },
-    'Build GPU MKLDNN windows':{
-      node('mxnetwindows-cpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
+          ws('workspace/build-cpu-mkldnn') {
+            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_cpu_mkldnn']) {
             init_git_win()
             bat """mkdir build_%BUILD_NAME%
               call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
               cd build_%BUILD_NAME%
               copy ${env.WORKSPACE}\\3rdparty\\mkldnn\\config_template.vcxproj.user ${env.WORKSPACE}\\config_template.vcxproj.user /y
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
+              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
             bat '''
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
                 cd build_%BUILD_NAME%
@@ -446,7 +413,7 @@ try {
               del /Q *.7z
               7z.exe a %BUILD_NAME%.7z pkg_%BUILD_NAME%\\
               '''
-            stash includes: 'vc14_gpu_mkldnn.7z', name: 'vc14_gpu_mkldnn'
+            stash includes: 'vc14_cpu_mkldnn.7z', name: 'vc14_cpu_mkldnn'
             }
           }
         }
@@ -774,7 +741,6 @@ try {
         }
       }
     },
-
     'Python 2: CPU Win':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
@@ -797,92 +763,23 @@ try {
         }
       }
     },
-    'Python 3: CPU Win': {
+    'Python 3: MKLDNN-CPU Win':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
+          ws('workspace/ut-python-cpu-mkldnn') {
             try {
               init_git_win()
-              unstash 'vc14_cpu'
-              bat '''rmdir /s/q pkg_vc14_cpu
-                7z x -y vc14_cpu.7z'''
+              unstash 'vc14_cpu_mkldnn'
+              bat '''rmdir /s/q pkg_vc14_cpu_mkldnn
+                7z x -y vc14_cpu_mkldnn.7z'''
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
+                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu_mkldnn\\python
+                del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu_mkldnn\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
             } finally {
-              collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 2: GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              init_git_win()
-              unstash 'vc14_gpu'
-              bat '''rmdir /s/q pkg_vc14_gpu
-                7z x -y vc14_gpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py2
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
-            } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
-            }
-          }
-        }
-      }
-    },
-    'Python 3: GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              init_git_win()
-              unstash 'vc14_gpu'
-              bat '''rmdir /s/q pkg_vc14_gpu
-                7z x -y vc14_gpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
-            } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')       
-            }
-          }
-        }
-      }
-    },
-    'Python 3: MKLDNN-GPU Win':{
-      node('mxnetwindows-gpu') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              init_git_win()
-              unstash 'vc14_gpu_mkldnn'
-              bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
-                7z x -y vc14_gpu_mkldnn.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
-            } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu_mkldnn.xml')
             }
           }
         }
@@ -900,7 +797,7 @@ try {
         }
       }
     },
-    'Python GPU': {
+    'Python Integration GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -912,7 +809,7 @@ try {
         }
       }
     },
-    'Caffe GPU': {
+    'Caffe Converter GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-caffe') {
           timeout(time: max_time, unit: 'MINUTES') {
