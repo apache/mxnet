@@ -62,7 +62,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
     if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-2)
     else:
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
