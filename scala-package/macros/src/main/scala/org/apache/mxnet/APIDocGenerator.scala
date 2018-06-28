@@ -106,7 +106,7 @@ private[mxnet] object APIDocGenerator{
   // Generate ScalaDoc type
   def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
     val desc = func.desc.split("\n").map({ currStr =>
-      s"  * $currStr"
+      s"  * $currStr<br>"
     })
     val params = func.listOfArgs.map({ absClassArg =>
       val currArgName = absClassArg.argName match {
@@ -182,7 +182,7 @@ private[mxnet] object APIDocGenerator{
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
+      val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     new absClassFunction(aliasName, desc.value, argList.toList, returnType)
