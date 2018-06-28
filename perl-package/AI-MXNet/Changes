@@ -1,7 +1,6 @@
 Revision history for Perl extension AI::MXNet
 
 1.3     Tue Jun 26 20:57:40 PDT 2018
-        - Miscellaneous bugfixes and improvements.
         - Major Gluon update towards parity with Python's API.
         - Miscellaneous bugfixes and improvements.
         - New Engine API.
