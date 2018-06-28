@@ -258,11 +258,11 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
-def np_softmax(x, axis=-1):
+def np_softmax(x, axis=-1, temperature=1.0):
     # fix for old numpy on Travis not supporting keepdims
     # x = x - np.max(x, axis=-1, keepdims=True)
     x = x - np.max(x, axis=axis, keepdims=True)
-    x = np.exp(x)
+    x = np.exp(x/temperature)
     # x /= np.sum(x, axis=-1, keepdims=True)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
@@ -4226,6 +4226,17 @@ def test_new_softmax():
             check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
+@with_seed()
+def test_softmax_with_temperature():
+    for ndim in range(1, 5):
+        for temp in range(1, 11):
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(-ndim, ndim)
+            data = np.random.uniform(-2, 2, size=shape)
+            sym = mx.sym.softmax(axis=axis, temperature=temp)
+            expected = np_softmax(data, axis=axis, temperature=temp)
+            check_symbolic_forward(sym, [data], [expected])
+            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 @with_seed()
 def test_log_softmax():
