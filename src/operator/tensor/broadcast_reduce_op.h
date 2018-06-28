@@ -1031,10 +1031,10 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if (dst_shape.ndim() == 2) {
-        Tensor<xpu, 2, DType> ograd =
-          inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, DType> igrad =
           outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> ograd =
+          inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, DType> data =
           inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
         ASSIGN_DISPATCH(igrad, req[0],
