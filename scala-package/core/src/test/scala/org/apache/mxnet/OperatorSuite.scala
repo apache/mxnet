@@ -234,12 +234,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       val stop = start + scala.util.Random.nextFloat() * 100
       val step = scala.util.Random.nextFloat() * 4
       val repeat = 1
-      var curr = BigDecimal(start)
-      val result = ArrayBuffer[Float]()
-      while (curr <= BigDecimal(stop)) {
-        result += curr.toFloat
-        curr += BigDecimal(step)
-      }
+      val result = (start.toDouble until stop.toDouble by step.toDouble)
+        .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)

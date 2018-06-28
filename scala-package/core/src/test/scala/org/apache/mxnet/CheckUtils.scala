@@ -30,13 +30,4 @@ object CheckUtils {
     val norm: Float = a.reduce(Math.abs(_) + Math.abs(_))
     diff / norm
   }
-
-  def almost_equal(a: Array[Float], b: Array[Float],
-                   rtol : Boolean = false) : (Float, Int) = {
-    val array = (a zip b).map { case (aElem, bElem) =>
-      if (rtol) Math.abs(aElem - bElem) / aElem else Math.abs(aElem - bElem)}
-    def f(x: Float) = -x
-    val argMax = array.indexOf(array.max)
-    (array.max, argMax)
-  }
 }
