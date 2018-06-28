@@ -75,7 +75,12 @@ try {
   node("mxnetlinux-cpu") {
     // Only send email if nightly test failed
     if (currentBuild.result == "FAILURE") {
-    emailext body: 'The broken link checker test has failed. Please view the logs at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY TEST FAILED] build ${BUILD_NUMBER}', to: '${EMAIL}'
+    	emailext body: '''https://mxnet.incubator.apache.org  broken link test summary:
+            |
+            |Please view the logs at ${BUILD_URL}
+            |
+            |${BUILD_LOG_EXCERPT, start="START - Broken links summary", end="END - Broken links summary"}''',
+        replyTo: '${EMAIL}', subject: '[BROKEN LINK CHECKER FAILED] Run ${BUILD_NUMBER}', to: '${EMAIL}'
     }
     // Remember to rethrow so the build is marked as failing
     if (err) {
