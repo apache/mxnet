@@ -391,12 +391,11 @@ mx.opt.adadelta <- function(rho = 0.90,
   adadelta <- new.env()
   
   create_exec <- function(index, weight_dim, ctx) {
-    
     weight <- mx.symbol.Variable("weight")
     grad <- mx.symbol.Variable("grad")
     acc.g <- mx.symbol.Variable("acc.g")
     acc.delta <- mx.symbol.Variable("acc.delta")
-    
+
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
       if(clip_gradient >= 0) {
