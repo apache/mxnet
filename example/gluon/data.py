@@ -88,6 +88,40 @@ def get_imagenet_iterator(root, batch_size, num_workers, data_shape=224, dtype='
     val_data = DataLoader(val_dataset, batch_size, last_batch='keep', num_workers=num_workers)
     return DataLoaderIter(train_data, dtype), DataLoaderIter(val_data, dtype)
 
+def get_caltech101_data():
+    url = "https://s3.us-east-2.amazonaws.com/mxnet-public/101_ObjectCategories.tar.gz"
+    dataset_name = "101_ObjectCategories"
+    if not os.path.isdir("data"):
+        os.makedirs(data_folder)
+    tar_path = mx.gluon.utils.download(url, path='data')
+    if (not os.path.isdir(os.path.join(data_folder, "101_ObjectCategories")) or
+        not os.path.isdir(os.path.join(data_folder, "101_ObjectCategories_test"))):
+        tar = tarfile.open(tar_path, "r:gz")
+        tar.extractall(data_folder)
+        tar.close()
+        print('Data extracted')
+    training_path = os.path.join(data_folder, dataset_name)
+    testing_path = os.path.join(data_folder, "{}_test".format(dataset_name))
+    return training_path, testing_path
+
+def get_caltech101_iterator(batch_size, num_workers, dtype):
+    def transform(image, label):
+        # resize the shorter edge to 224, the longer edge will be greater or equal to 224
+        resized = mx.image.resize_short(image, 224)
+        # center and crop an area of size (224,224)
+        cropped, crop_info = mx.image.center_crop(resized, 224)
+        # transpose the channels to be (3,224,224)
+        transposed = nd.transpose(cropped, (2, 0, 1))
+        image = mx.nd.cast(image, dtype)
+        return image, label
+
+    training_path, testing_path = get_caltech101_data()
+    dataset_train = ImageFolderDataset(root=training_path, transform=transform)
+    dataset_test = ImageFolderDataset(root=testing_path, transform=transform)
+
+    train_data = gluon.data.DataLoader(dataset_train, batch_size, shuffle=True, num_workers=num_workers)
+    test_data = gluon.data.DataLoader(dataset_test, batch_size, shuffle=False, num_workers=num_workers)
+    return DataLoaderIter(train_data), DataLoaderIter(test_data)
 
 class DummyIter(mx.io.DataIter):
     def __init__(self, batch_size, data_shape, batches = 100):

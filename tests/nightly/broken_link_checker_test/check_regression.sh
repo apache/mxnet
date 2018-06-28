@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/sh
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,13 +17,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -ex
-apt install -y software-properties-common
 
-# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
-for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sleep 300; done
+echo "Running the check_regression.sh script"
+cat blc_output.txt | uniq | grep -Eo "(http|https).* " | sort| uniq > unique_current_urls.txt
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
+cat url_list.txt unique_current_urls.txt | sort | uniq > new_url_list.txt
+regression=false
+while IFS= read -r line
+do
+	err=$(curl -Is $line | head -n 1 | grep 404)
+	if [ "$err" ]; then
+		if [ "$regression" = false ] ; then
+			echo "FAIL: REGRESSION"
+			regression=true
+		fi
+		echo "BROKEN $line $err"
+	fi
+	unset err
+done < new_url_list.txt
+mv new_url_list.txt url_list.txt
+rm -rf unique_current_urls.txt
+rm -rf blc_output.txt
+if [ $regression ]; then
+	echo "FAIL: Found Regression in broken link checker"
+	exit 1
+else
+	echo "SUCCESS: No Regression found"
+fi

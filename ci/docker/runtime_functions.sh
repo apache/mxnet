@@ -846,6 +846,13 @@ deploy_docs() {
     popd
 }
 
+# broken_link_checker
+
+broken_link_checker() {
+    set -ex
+    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
+}
+
 ##############################################################
 # MAIN
 #

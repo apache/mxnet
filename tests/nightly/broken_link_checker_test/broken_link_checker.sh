@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,13 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -ex
-apt install -y software-properties-common
+#Author: Amol Lele
 
-# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
-for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sleep 300; done
+#software-properties-common, curl, npm are installed in the docker container 'ubuntu_blc'
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
+echo "Invoking broken_link_checker.sh script"
+echo `pwd`
+cd tests/nightly/broken_link_checker_test
+echo `pwd`
+
+echo "Running test_broken_links.py"
+python test_broken_links.py
+
+echo "Running check_regression.sh"
+./check_regression.sh

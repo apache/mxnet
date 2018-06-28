@@ -17,13 +17,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
+
 set -ex
-apt install -y software-properties-common
+echo 'Installing npm...'
+apt-get update
+apt-get install -y npm
 
-# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
-for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sleep 300; done
+echo "Obtaining NodeJS version 8.x"
+curl -sL https://deb.nodesource.com/setup_8.x | bash -
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
+echo "Installing nodejs"
+apt-get install -y nodejs
+
+# Install broken link checker utility
+echo "Installing broken link checker utility"
+npm install broken-link-checker -g
+
