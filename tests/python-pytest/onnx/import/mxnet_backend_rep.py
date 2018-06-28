@@ -17,6 +17,7 @@
 
 # coding: utf-8
 """MXNet backend rep for onnx test infrastructure"""
+import numpy as np
 try:
     from onnx.backend.base import BackendRep
 except ImportError:

@@ -19,7 +19,7 @@
 """ Module for translating ONNX operators into Mxnet operatoes"""
 # pylint: disable=unused-argument,protected-access
 import numpy as np
-from . import _translation_utils as translation_utils
+from . import translation_utils
 from .... import symbol
 
 # Method definitions for the callable objects mapped in the import_helper module
@@ -130,7 +130,7 @@ def maximum(attrs, inputs, proto_obj):
         for op_input in inputs[2:]:
             mxnet_op = symbol.maximum(mxnet_op, op_input)
     else:
-        mxnet_op = symbol.maximum(inputs[0], inputs[0])
+        mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
 
 def minimum(attrs, inputs, proto_obj):
@@ -143,7 +143,7 @@ def minimum(attrs, inputs, proto_obj):
         for op_input in inputs[2:]:
             mxnet_op = symbol.minimum(mxnet_op, op_input)
     else:
-        mxnet_op = symbol.minimum(inputs[0], inputs[0])
+        mxnet_op = inputs[0]
     return mxnet_op, attrs, inputs
 
 def lesser(attrs, inputs, proto_obj):

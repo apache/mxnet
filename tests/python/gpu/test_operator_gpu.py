@@ -279,21 +279,21 @@ def test_batchnorm_with_type():
   ]
 
   ctx_list_v2_2D = [
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float64}},
   ]
 
   ctx_list_v2_1D = [
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (5, 2, 5), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10), 'type_dict': {'norm_data': np.float64}},
   ]
 
   ctx_list_v2_3D = [

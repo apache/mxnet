@@ -202,8 +202,6 @@ def fit(args, network, data_loader, **kwargs):
     # learning rate
     lr, lr_scheduler = _get_lr_scheduler(args, kv)
 
-    network = mx.symbol.load('%s-symbol.json')
-
     # create model
     model = mx.mod.Module(
         context=devs,

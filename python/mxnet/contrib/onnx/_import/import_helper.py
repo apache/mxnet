@@ -15,27 +15,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8_
+# coding: utf-8
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from ._op_translations import identity, random_uniform, random_normal
-from ._op_translations import add, subtract, multiply, divide, absolute, negative, add_n
-from ._op_translations import tanh
-from ._op_translations import ceil, floor
-from ._op_translations import concat
-from ._op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
-from ._op_translations import global_avgpooling, global_maxpooling, linalg_gemm
-from ._op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
-from ._op_translations import dropout, local_response_norm, conv, deconv
-from ._op_translations import reshape, cast, split, _slice, transpose, squeeze, flatten
-from ._op_translations import reciprocal, squareroot, power, exponent, _log, unsqueeze
-from ._op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
-from ._op_translations import reduce_prod, avg_pooling, max_pooling
-from ._op_translations import argmax, argmin, maximum, minimum
-from ._op_translations import clip, reduce_log_sum, reduce_log_sum_exp
-from ._op_translations import reduce_sum_square, reduce_l2, max_roi_pooling, instance_norm
-from ._op_translations import log_softmax, softsign, lesser, greater, equal
-from ._op_translations import logical_and, logical_or, logical_xor, logical_not
+from .op_translations import identity, random_uniform, random_normal
+from .op_translations import add, subtract, multiply, divide, absolute, negative, add_n
+from .op_translations import tanh
+from .op_translations import ceil, floor
+from .op_translations import concat
+from .op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
+from .op_translations import global_avgpooling, global_maxpooling, linalg_gemm
+from .op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
+from .op_translations import dropout, local_response_norm, conv, deconv
+from .op_translations import reshape, cast, split, _slice, transpose, squeeze, flatten
+from .op_translations import reciprocal, squareroot, power, exponent, _log, unsqueeze
+from .op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
+from .op_translations import reduce_prod, avg_pooling, max_pooling
+from .op_translations import argmax, argmin, maximum, minimum
+from .op_translations import clip, reduce_log_sum, reduce_log_sum_exp
+from .op_translations import reduce_sum_square, reduce_l2, max_roi_pooling, instance_norm
+from .op_translations import log_softmax, softsign, lesser, greater, equal
+from .op_translations import logical_and, logical_or, logical_xor, logical_not
 
 # convert_map defines maps of ONNX operator names to converter functor(callable)
 # defined in the op_translations module.
@@ -89,7 +89,6 @@ _convert_map = {
     'Squeeze'           : squeeze,
     'Unsqueeze'         : unsqueeze,
     'Flatten'           : flatten,
-    'Identity'          : identity,
     #Powers
     'Reciprocal'        : reciprocal,
     'Sqrt'              : squareroot,

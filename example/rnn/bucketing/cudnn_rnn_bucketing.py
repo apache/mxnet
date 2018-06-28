@@ -66,7 +66,7 @@ parser.add_argument('--stack-rnn', default=False,
 parser.add_argument('--dropout', type=float, default='0.0',
                     help='dropout probability (1.0 - keep probability)')
 parser.add_argument('--rnntype', type=str, default='lstm',
-                    help='rnn type: gru, lstm, rnn_tanh and rnn_relu are supported')
+                    help='rnn type: gru and lstm are supported')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -187,20 +187,6 @@ def test(args):
                     cell = mx.rnn.BidirectionalCell(
                             cell,
                             mx.rnn.GRUCell(num_hidden=args.num_hidden, prefix='%s_%dr0_'%(args.rnntype,i)),
-                            output_prefix='bi_%s_%d'%(args.rnntype,i))
-            elif args.rnntype == 'rnn_tanh':
-                cell = mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='tanh', prefix='%s_%dl0_'%(args.rnntype,i))
-                if args.bidirectional:
-                    cell = mx.rnn.BidirectionalCell(
-                            cell,
-                            mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='tanh', prefix='%s_%dr0_'%(args.rnntype,i)),
-                            output_prefix='bi_%s_%d'%(args.rnntype,i))
-            elif args.rnntype == 'rnn_relu':
-                cell = mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='relu', prefix='%s_%dl0_'%(args.rnntype,i))
-                if args.bidirectional:
-                    cell = mx.rnn.BidirectionalCell(
-                            cell,
-                            mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='relu', prefix='%s_%dr0_'%(args.rnntype,i)),
                             output_prefix='bi_%s_%d'%(args.rnntype,i))
 
             stack.add(cell)

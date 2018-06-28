@@ -31,7 +31,6 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_ceil',
     'test_floor',
     'test_concat',
-    'test_identity',
     'test_sigmoid',
     'test_relu',
     'test_constant_pad',

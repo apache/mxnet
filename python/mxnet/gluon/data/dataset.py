@@ -94,11 +94,6 @@ class Dataset(object):
             return fn(x)
         return self.transform(base_fn, lazy)
 
-    def _fork(self):
-        """Protective operations required when launching multiprocess workers."""
-        # for non file descriptor related datasets, just skip
-        pass
-
 
 class SimpleDataset(Dataset):
     """Simple Dataset wrapper for lists and arrays.
@@ -178,12 +173,8 @@ class RecordFileDataset(Dataset):
         Path to rec file.
     """
     def __init__(self, filename):
-        self.idx_file = os.path.splitext(filename)[0] + '.idx'
-        self.filename = filename
-        self._fork()
-
-    def _fork(self):
-        self._record = recordio.MXIndexedRecordIO(self.idx_file, self.filename, 'r')
+        idx_file = os.path.splitext(filename)[0] + '.idx'
+        self._record = recordio.MXIndexedRecordIO(idx_file, filename, 'r')
 
     def __getitem__(self, idx):
         return self._record.read_idx(self._record.keys[idx])
