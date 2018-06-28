@@ -71,12 +71,22 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
     }
 
     DType sum = DType(0);
-    for (index_t j = 0; j < M; ++j) {
-      sum += std::exp((in[base + j*sa] - mmax)/temperature);
-    }
+    if (temperature == 1.0) {
+      for (index_t j = 0; j < M; ++j) {
+        sum += std::exp(in[base + j*sa] - mmax);
+      }
 
-    for (index_t j = 0; j < M; ++j) {
-      out[base + j*sa] = OP::Map((in[base + j*sa] - mmax)/temperature, sum);
+      for (index_t j = 0; j < M; ++j) {
+        out[base + j*sa] = OP::Map(in[base + j*sa] - mmax, sum);
+      }
+    } else {
+      for (index_t j = 0; j < M; ++j) {
+        sum += std::exp((in[base + j*sa] - mmax)/temperature);
+      }
+
+      for (index_t j = 0; j < M; ++j) {
+        out[base + j*sa] = OP::Map((in[base + j*sa] - mmax)/temperature, sum);
+      }
     }
   }
 }
@@ -118,8 +128,14 @@ inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
       sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
     }
 
-    for (index_t j = 0; j < M; ++j) {
-      igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum)/temperature;
+    if (temperature == 1.0) {
+      for (index_t j = 0; j < M; ++j) {
+        igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
+      }
+    } else {
+      for (index_t j = 0; j < M; ++j) {
+        igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum)/temperature;
+      }      
     }
   }
 }
