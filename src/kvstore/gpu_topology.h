@@ -1038,7 +1038,6 @@ inline void ComputeTrees(const std::vector<T>&             W,
   PrintMatrix("W", W, num_elements, num_elements);
   PrintMatrix("Links", adj, num_elements, num_elements);*/
 }
-
 }  // namespace kvstore
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_GPU_TOPOLOGY_H_
