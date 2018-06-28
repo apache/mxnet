@@ -135,7 +135,7 @@ inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
     } else {
       for (index_t j = 0; j < M; ++j) {
         igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum)/temperature;
-      }      
+      }
     }
   }
 }
