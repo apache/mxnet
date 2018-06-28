@@ -1175,7 +1175,7 @@ def check_hybrid_static_memory(**kwargs):
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
 def test_hybrid_static_memory():
-    check_hybrid_static_memory()
+    check_hybrid_static_memory(use_mirror=True)
     check_hybrid_static_memory(static_alloc=True)
     check_hybrid_static_memory(static_alloc=True, static_shape=True)
 

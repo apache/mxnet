@@ -35,6 +35,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t backward_bulk_size;
   bool static_alloc;
   bool static_shape;
+  bool use_mirror;
   nnvm::Tuple<uint32_t> data_indices;
   nnvm::Tuple<uint32_t> param_indices;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
@@ -47,6 +48,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     .describe("Optimize for invariant input shapes between iterations. "
               "Must also set static_alloc to True. "
               "Change of input shapes is still allowed but slower.");
+    DMLC_DECLARE_FIELD(use_mirror)
+    .set_default(false)
+    .describe("Recompute intermediate results during backward to save memory.");
     DMLC_DECLARE_FIELD(inline_limit)
     .set_default(2)
     .describe("Maximum number of operators that can be inlined.");
