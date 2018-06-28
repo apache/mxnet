@@ -4,7 +4,7 @@ A clojure package to the MXNet Deep Learning library
 
 ## Introduction
 
-MXNet is a first class, modern deep learning library that AWS has officially picked as its chosen library. It supports multiple languages on a first class basis and is incubating as an Apache project.
+MXNet is a first class, modern deep learning library. It supports multiple languages on a first class basis and is incubating as an Apache project.
 
 The motivation for creating a Clojure package is to be able to open the deep learning library to the Clojure ecosystem and build bridges for future development and innovation for the community. It provides all the needed tools including low level and high level apis, dynamic graphs, and things like GAN and natural language support.
 
@@ -12,13 +12,11 @@ For high leverage, the Clojure package has been built on the existing Scala pack
 
 ## Current State and Plans
 
-The Clojure package is nearing the end of its first development milestone which is to achieve a close parity with the Scala package and to potentially be included into the main project for official Clojure language support.
+The Clojure package is nearing the end of its first development milestone which is to achieve a close parity with the Scala package.
 
-What is needed now is alpha testing on both OSX and Linux to discover any bugs, rough edges, and generally harden it before an official PR is opened on the main project.
+Help is needed testing and generally making the package better. A list of the pacakge status and contribution needs can be found here [Clojure Package Contribution Needs](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Package+Contribution+Needs). Please get involved :)
 
-Help with this effort is greatly appreciated and contributors will be recognized in the project README.
-
-Testing instructions can be found in the testing.md
+Testing instructions can be found in the testing.md.
 
 ## Getting Started
 
@@ -30,12 +28,9 @@ The following systems are supported:
 
 There are two ways of getting going. The first way is the easiest and that is to use the pre-built jars from Maven. The second way is to build from source. In both cases, you will need to load the prereqs and dependencies, (like opencv).
 
-It's been tested on AWS Deep Learning AMI and OSX High Sierra 10.13.4
 
 
 ### Prerequisites
-
-**If you are using the AWS Deep Learning Ubuntu or Linux AMI you should be good to go without doing anything on this step.**
 
 
 Follow the instructions from https://mxnet.incubator.apache.org/install/osx_setup.html or https://mxnet.incubator.apache.org/install/ubuntu_setup.html
@@ -45,14 +40,49 @@ and _Install MXNet dependencies_
 
 #### Cloning the repo and running from source
 
-To use the prebuilt jars, you will need to replace the native version of the line in the project dependencies with your configuration.
+To use the prebuilt jars (easiest), you will need to replace the native version of the line in the project dependencies with your configuration.
 
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.0"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.0"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.0"]`
+`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]`
 
+If you are using the prebuilt jars they may have a slightly different dependencies then building from source:
+
+*For OSX you will need:*
+
+`brew install opencv`
+
+*For Ubuntu Linux you will need:*
+
+```
+sudo add-apt-repository ppa:timsc/opencv-3.4
+sudo apt-get update
+sudo apt install libopencv-imgcodecs3.4
+```
+
+*For Arch Linux you will need:*
+
+_CPU_
+
+```
+yaourt -S openblas-lapack
+yaourt -S libcurl-compat
+export LD_PRELOAD=libcurl.so.3
+```
+_GPU_
+
+```
+wget https://archive.archlinux.org/packages/c/cuda/cuda-9.0.176-4-x86_64.pkg.tar.xz
+sudo pacman -U cuda-9.0.176-4-x86_64.pkg.tar.xz
+```
+
+If you want to see the exact versions and flags that the jars were built with, look here:
+[Scala Release Process](https://cwiki.apache.org/confluence/display/MXNET/MXNet-Scala+Release+Process)
+
+
+Check your installation with `lein test`. If that works alright then, you can try some code!
 
 ```clojure
 
@@ -74,8 +104,6 @@ See the examples/tutorial section for more.
 
 The jars from maven with the needed MXNet native binaries in it. On startup, the native libraries are extracted from the jar and copied into a temporary location on your path. On termination, they are deleted.
 
-If you want details on the flags (opencv verison and cuda version of the jars), they are documented here https://cwiki.apache.org/confluence/display/MXNET/MXNet-Scala+Release+Process
-
 
 ### Build from MXNET Source
 
@@ -85,7 +113,7 @@ Checkout the latest sha from the main package
 `cd ~/mxnet`
 
 
-`git checkout tags/1.2.0 -b release-1.2.0`
+`git checkout tags/1.2.1 -b release-1.2.1`
 
 `git submodule update --init --recursive`
 
@@ -97,7 +125,7 @@ Go here to do the base package installation https://mxnet.incubator.apache.org/i
 
  Run `make scalapkg` then `make scalainstall`
 
-then replace the correct jar for your architecture in the project.clj, example `[ml.dmlc.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.0.1-SNAPSHOT"]`
+then replace the correct jar for your architecture in the project.clj, example `[ml.dmlc.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0-SNAPSHOT"]`
 
 #### Test your installation
 
@@ -179,14 +207,8 @@ To deploy the jar to Clojars, you do `lein deploy clojars` and it will prompt yo
 
 _Note: Integration with deployment to Nexus can be enabled too for the future [https://help.sonatype.com/repomanager2/maven-and-other-build-tools/leiningen](https://help.sonatype.com/repomanager2/maven-and-other-build-tools/leiningen)_
 
-You would repeat this process out on the AWS Deep Learning AMI, once for the linux cpu and once for the linux gpu.
+You would repeat this process for all the build system types.
 
-
-### Deferred
-* Feed Forward API
-* OSX gpu support Scala - defer to adding via Scala first
-* CustomOp port - defer due to class loader issues
-* Inference package - will tackle next
 
 ## Special Thanks
 Special thanks to people that provided testing and feedback to make this possible
