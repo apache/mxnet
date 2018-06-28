@@ -93,7 +93,7 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def publish_test_coverage() {
-    sh 'curl -s https://codecov.io/bash | bash -s -'
+    sh 'curl --retry 10 -s https://codecov.io/bash | bash -s -'
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
