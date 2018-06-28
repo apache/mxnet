@@ -3,7 +3,7 @@ This example implements the baseline model in
 [Exploring the Limits of Language Modeling](https://arxiv.org/abs/1602.02410) on the
 [Google 1-Billion Word](https://github.com/ciprian-chelba/1-billion-word-language-modeling-benchmark) (GBW) dataset.
 
-This example reaches 48.9 test perplexity after 5 training epochs on a 1-layer, 2048-unit, 512-projection LSTM Language Model.
+This example reaches 48.0 test perplexity after 6 training epochs on a 1-layer, 2048-unit, 512-projection LSTM Language Model.
 It reaches 44.2 test perplexity after 35 epochs of training.
 
 The main differences with the original implementation include:
