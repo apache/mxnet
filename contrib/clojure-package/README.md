@@ -112,6 +112,7 @@ Checkout the latest sha from the main package
 `git clone --recursive https://github.com/dmlc/mxnet ~/mxnet`
 `cd ~/mxnet`
 
+If you need to checkout a particular release you can do it with:
 
 `git checkout tags/1.2.1 -b release-1.2.1`
 
