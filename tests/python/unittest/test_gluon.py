@@ -1196,6 +1196,7 @@ def check_hybrid_static_memory_switching(**kwargs):
         y.backward()
     mx.nd.waitall()
 
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11171")
 def test_hybrid_static_memory_switching():
     check_hybrid_static_memory_switching()
     check_hybrid_static_memory_switching(static_alloc=True)
