@@ -1,7 +1,7 @@
 #' Create an SGD optimizer with respective parameters.
 #' Perform SGD with momentum update
 #'
-#' @param learning.rate float, default=1e-3
+#' @param learning.rate float, default=0.01
 #'      The initial learning rate.
 #' @param momentum float, default=0
 #'      The momentumvalue
@@ -90,12 +90,13 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #' Reference: Tieleman T, Hinton G. Lecture 6.5-rmsprop: Divide the gradient by a running average of its recent magnitude[J]. COURSERA: Neural Networks for Machine Learning, 2012, 4(2).
 #' The code follows: http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
 #'
-#' @param learning.rate float, default=1e-3
+#' @param learning.rate float, default=0.002
 #'      The initial learning rate.
-#' @param gamma1 float, default=0.9
+#' @param gamma1 float, default=0.95
 #'      decay factor of moving average for gradient, gradient^2.
 #' @param gamm2 float, default=0.9
 #'      "momentum" factor.
+#' @param epsilon float, default=1e-4
 #' @param wd float, default=0.0
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
@@ -105,11 +106,11 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
 #'
-mx.opt.rmsprop <- function(learning.rate = 1e-3,
+mx.opt.rmsprop <- function(learning.rate = 0.002,
                            centered = TRUE,
-                           gamma1 = 0.9,
+                           gamma1 = 0.95,
                            gamma2 = 0.9,
-                           epsilon = 1e-8,
+                           epsilon = 1e-4,
                            wd = 0,
                            rescale.grad = 1,
                            clip_gradient = -1,
@@ -261,7 +262,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
       lr <- adam$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = adam, x = indexKey, inherits = FALSE)){
+      if (!exists(envir = adam, x = indexKey, inherits = FALSE)) {
         adam[[indexKey]] <- 0
       } else {
         indexValue <- adam[[indexKey]]
@@ -298,8 +299,8 @@ mx.opt.adam <- function(learning.rate = 1e-3,
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
 #'
-mx.opt.adagrad <- function(learning.rate = 0.01,
-                           epsilon = 1e-7,
+mx.opt.adagrad <- function(learning.rate = 0.05,
+                           epsilon = 1e-8,
                            wd = 0,
                            rescale.grad = 1,
                            clip_gradient = -1,
@@ -322,7 +323,7 @@ mx.opt.adagrad <- function(learning.rate = 0.01,
     
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
-      if(clip_gradient >= 0){
+      if(clip_gradient >= 0) {
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
@@ -344,7 +345,7 @@ mx.opt.adagrad <- function(learning.rate = 0.01,
       lr <- adagrad$lr
       ## update count
       indexKey <- paste0('ik', index)
-      if (!exists(envir = adagrad, x = indexKey, inherits = FALSE)){
+      if (!exists(envir = adagrad, x = indexKey, inherits = FALSE)) {
         adagrad[[indexKey]] <- 0
       } else {
         indexValue <- adagrad[[indexKey]]
@@ -398,7 +399,7 @@ mx.opt.adadelta <- function(rho = 0.90,
     
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
-      if(clip_gradient >= 0){
+      if(clip_gradient >= 0) {
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
@@ -462,8 +463,11 @@ mx.opt.create <- function(name, ...) {
 mx.opt.get.updater <- function(optimizer, weights, ctx) {
   
   exec_list <- lapply(seq_along(weights), function(i) {
-    if (is.null(weights[[i]])) return(NULL) else
+    if (is.null(weights[[i]])) {
+      return(NULL)
+    } else {
       optimizer$create_exec(index = i, weight_dim = dim(weights[[i]]), ctx = ctx)
+    }
   })
   
   update <- optimizer$update
@@ -471,8 +475,11 @@ mx.opt.get.updater <- function(optimizer, weights, ctx) {
   update.closure <- function(weight, grad) {
     
     weight_list <- lapply(seq_along(weight), function(i) {
-      if (!is.null(grad[[i]])) return(update(i, exec_list[[i]], weight[[i]], grad[[i]])) else
-        return(NULL)
+      if (!is.null(grad[[i]])) {
+        return(update(i, exec_list[[i]], weight[[i]], grad[[i]]))
+      } else {
+        return(NULL) 
+      }
     })
     return(weight_list)
   }
