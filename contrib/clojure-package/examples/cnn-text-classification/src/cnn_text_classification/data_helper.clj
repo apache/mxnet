@@ -125,7 +125,7 @@
 (defn build-input-data-with-embeddings [sentences embedding-size embeddings]
   (mapv (fn [sent]
           (mapv (fn [word] (or (get embeddings word)
-                               (ndarray/->vec (random/uniform 0.25 0.25 [embedding-size]))))
+                               (ndarray/->vec (random/uniform -0.25 0.25 [embedding-size]))))
                 sent))
         sentences))
 
