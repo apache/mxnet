@@ -19,7 +19,10 @@
 
 set -ex
 apt install -y software-properties-common
-add-apt-repository -y ppa:graphics-drivers
+
+# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
+for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sleep 300; done
+
 # Retrieve ppa:graphics-drivers and install nvidia-drivers.
 # Note: DEBIAN_FRONTEND required to skip the interactive setup steps
 apt update
