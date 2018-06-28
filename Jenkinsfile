@@ -656,20 +656,6 @@ try {
         }
       }
     },
-    'Python2: MKLDNN-GPU-NOCUDNN': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-python2-mkldnn-gpu-nocudnn') {
-          try {
-            init_git()
-            unpack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
-            python2_gpu_ut('ubuntu_gpu')
-            publish_test_coverage()
-          } finally {
-            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_mkldnn_gpu_nocudnn.xml')
-          }
-        }
-      }
-    },
     'Python3: MKLDNN-GPU-NOCUDNN': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
