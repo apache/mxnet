@@ -90,10 +90,10 @@ try {
         ws('workspace/nt-Installation-cpu') {
           init_git()
           docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
-          docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
+          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
           //Docker Install Test is currently disabled and tracked here: https://github.com/apache/incubator-mxnet/issues/11288
           //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_docker', false)
-          docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
+          //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
         }
       }
     },
@@ -102,7 +102,7 @@ try {
         ws('workspace/nt-Installation-gpu') {
           init_git()
           docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
-          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
+          //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
           //Docker Install Test is currently disabled and tracked here: https://github.com/apache/incubator-mxnet/issues/11288
           //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
           docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
