@@ -43,7 +43,7 @@ SOURCE="^0 Unknown Licenses"
 
 echo "-------Process The Output-------"
 
-if [[ "$OUTPUT" =~ "$SOURCE" ]]; then
+if [[ "$OUTPUT" =~ $SOURCE ]]; then
       echo "SUCCESS: There are no files with an Unknown License.";
 else
       echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!";
