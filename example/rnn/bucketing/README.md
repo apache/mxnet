@@ -9,7 +9,7 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
 ## Python
 
-- Generate the PennTreeBank language model by using LSTM:
+- Generate the Sherlock Holmes language model by using LSTM:
 
   For Python2 (CPU support): can take 2+ hours on AWS-EC2-p2.16xlarge
 
