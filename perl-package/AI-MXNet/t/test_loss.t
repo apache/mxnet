@@ -236,7 +236,7 @@ sub test_ctc_loss_train
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 1},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
             optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 20);
