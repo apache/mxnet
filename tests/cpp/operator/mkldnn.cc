@@ -1015,7 +1015,7 @@ TEST(IMPERATIVE, SumBackwardsOp) {
 }
 
 TEST(IMPERATIVE, ConcatOp) {
-  for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
+  for (int num_inputs = 2; num_inputs < 4; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatOp(num_inputs, dim);
       TestConcatOp(attrs, VerifyConcatResult);
