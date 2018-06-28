@@ -494,7 +494,7 @@ try {
     }
   } // End of stage('Build')
 
-  stage('Unit Test') {
+  stage('Tests') {
     parallel 'Python2: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python2-cpu') {
@@ -887,11 +887,8 @@ try {
           }
         }
       }
-    }
-  }
-
-  stage('Integration Test') {
-    parallel 'Onnx CPU': {
+    },
+    'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -948,19 +945,20 @@ try {
           }
         }
       }
-    },
-    'dist-kvstore tests GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
-            publish_test_coverage()
-          }
-        }
-      }
     }
+    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
+    // 'dist-kvstore tests GPU': {
+    //  node('mxnetlinux-gpu') {
+    //    ws('workspace/it-dist-kvstore') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        init_git()
+    //        unpack_lib('gpu')
+    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+    //        publish_test_coverage()
+    //      }
+    //    }
+    //  }
+    //}
   }
 
   stage('Deploy') {
