@@ -1,6 +1,6 @@
 Word Level Language Modeling
 ===========
-This example trains a multi-layer LSTM on Penn Treebank (PTB) language modeling benchmark.
+This example trains a multi-layer LSTM on Sherlock Holmes language modeling benchmark.
 
 The following techniques have been adopted for SOTA results:
 - [LSTM for LM](https://arxiv.org/pdf/1409.2329.pdf)
@@ -10,7 +10,7 @@ The following techniques have been adopted for SOTA results:
 The example requires MXNet built with CUDA.
 
 ## Data
-The PTB data is the processed version from [(Mikolov et al, 2010)](http://www.fit.vutbr.cz/research/groups/speech/publi/2010/mikolov_interspeech2010_IS100722.pdf):
+The Sherlock Holmes data is a copyright free copy of Sherlock Holmes from[(Project Gutenberg)](http://www.gutenberg.org/cache/epub/1661/pg1661.txt):
 
 ## Usage
 Example runs and the results:
@@ -25,7 +25,7 @@ usage: train.py [-h] [--data DATA] [--emsize EMSIZE] [--nhid NHID]
                 [--batch_size BATCH_SIZE] [--dropout DROPOUT] [--tied]
                 [--bptt BPTT] [--log-interval LOG_INTERVAL] [--seed SEED]
 
-PennTreeBank LSTM Language Model
+Sherlock Holmes LSTM Language Model
 
 optional arguments:
   -h, --help            show this help message and exit

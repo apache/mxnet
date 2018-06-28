@@ -19,7 +19,7 @@
 
 echo
 echo "NOTE: To continue, you need to review the licensing of the data sets used by this script"
-echo "See https://catalog.ldc.upenn.edu/ldc99t42 for the licensing"
+echo "See https://www.gutenberg.org/wiki/Gutenberg:The_Project_Gutenberg_License for the licensing"
 read -p "Please confirm you have reviewed the licensing [Y/n]:" -n 1 -r
 echo
 
@@ -37,7 +37,7 @@ if [[ ! -d "${DATA_DIR}" ]]; then
   mkdir -p ${DATA_DIR}
 fi
 
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt;
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt;
-wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.train.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.valid.txt;
+wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.test.txt;
 wget -P ${DATA_DIR} https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tinyshakespeare/input.txt;
