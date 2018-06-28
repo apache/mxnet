@@ -99,10 +99,13 @@ object NDArray {
     val outputs = ArrayBuffer.empty[NDArrayHandle]
     checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.map(_.handle).toArray, outputVars,
       outputs, updatedKwargs.size, updatedKwargs.keys.toArray, updatedKwargs.values.toArray))
-    new NDArrayFuncReturn(Option(oriOutputs).getOrElse {
+    new NDArrayFuncReturn(if (oriOutputs == null) {
       val outputArrs = outputs.map(new NDArray(_)).toArray
       addDependency(ndArgs.toArray, outputArrs)
       outputArrs
+    } else {
+      addDependency(ndArgs.toArray, oriOutputs)
+      oriOutputs
     })
   }
 
