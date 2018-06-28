@@ -62,7 +62,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
-  
+
   update <- function(index, exec_w, weight, grad) {
     
     if (!is.null(lr_scheduler)){
@@ -119,7 +119,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
   lr <- learning.rate
   count <- 0
   num_update <- 0
-  
+
   rmsprop <- new.env()
   rmsprop$lr <- lr
   rmsprop$count <- 0
@@ -168,7 +168,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
-  
+
   update <- function(index, exec_w, weight, grad) {
     if (!is.null(lr_scheduler)){
       lr_scheduler(rmsprop) ## changing lr
@@ -226,7 +226,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
   lr <- learning.rate
   count <- 0
   num_update <- 0
-  
+
   adam <- new.env()
   adam$lr <- lr
   adam$count <- 0
@@ -255,7 +255,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
-  
+
   update <- function(index, exec_w, weight, grad) {
     if (!is.null(lr_scheduler)){
       lr_scheduler(adam) ## changing lr
@@ -309,7 +309,7 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
   lr <- learning.rate
   count <- 0
   num_update <- 0
-  
+
   adagrad <- new.env()
   adagrad$lr <- lr
   adagrad$count <- 0
@@ -338,7 +338,7 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
-  
+
   update <- function(index, exec_w, weight, grad) {
     if (!is.null(lr_scheduler)) {
       lr_scheduler(adagrad) ## changing lr
@@ -418,7 +418,7 @@ mx.opt.adadelta <- function(rho = 0.90,
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
-  
+
   update <- function(index, exec_w, weight, grad) {
     
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
@@ -469,9 +469,9 @@ mx.opt.get.updater <- function(optimizer, weights, ctx) {
       optimizer$create_exec(index = i, weight_dim = dim(weights[[i]]), ctx = ctx)
     }
   })
-  
+
   update <- optimizer$update
-  
+
   update.closure <- function(weight, grad) {
     
     weight_list <- lapply(seq_along(weight), function(i) {
