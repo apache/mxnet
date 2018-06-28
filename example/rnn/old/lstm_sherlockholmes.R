@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# PennTreeBank Language Model using lstm, you can replace mx.lstm by mx.gru/ mx.rnn to use gru/rnn model
+# Sherlock Holmes Language Model using lstm, you can replace mx.lstm by mx.gru/ mx.rnn to use gru/rnn model
 # The data file can be found at:
 # https://github.com/dmlc/web-data/tree/master/mxnet/sherlockholmes
 require(hash)
