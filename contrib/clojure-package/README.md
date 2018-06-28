@@ -178,7 +178,10 @@ To run the Code Coverage tool. Run `lein cloverage`.
 The motivation section addresses this, but the main reason is high leverage is using the great work that the Scala package has already done.
 
 **How can I tell if the gpu is being used?**
-I find this command to be very handy
+
+CUDA is finding a best algorithm... As long as a Context.gpu() passed in the code as a context, GPU should be used.
+
+This command can be very handy too
 
 `nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used --format=csv -l 5
 timestamp, name, utilization.gpu [%], utilization.memory [%], memory.total [MiB], memory.free [MiB], memory.used [MiB]`

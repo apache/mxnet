@@ -2,4 +2,7 @@
 
 There are a few steps to get up and running with the dependencies on Ubuntu.
 
-Please see this issue for a handy guide: [Running on Ubuntu](https://github.com/gigasquid/clojure-mxnet/issues/2)
+See this for reference:
+
+https://github.com/apache/incubator-mxnet/issues/11303
+
