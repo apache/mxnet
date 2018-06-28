@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,11 +16,22 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-boto3==1.7.13
-botocore==1.10.13
-docutils==0.14
-jmespath==0.9.3
-joblib==0.11
-python-dateutil==2.7.2
-s3transfer==0.1.13
-six==1.11.0
+
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
+
+set -ex
+echo 'Installing npm...'
+apt-get update
+apt-get install -y npm
+
+echo "Obtaining NodeJS version 8.x"
+curl -sL https://deb.nodesource.com/setup_8.x | bash -
+
+echo "Installing nodejs"
+apt-get install -y nodejs
+
+# Install broken link checker utility
+echo "Installing broken link checker utility"
+npm install broken-link-checker -g
+

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,11 +16,18 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-boto3==1.7.13
-botocore==1.10.13
-docutils==0.14
-jmespath==0.9.3
-joblib==0.11
-python-dateutil==2.7.2
-s3transfer==0.1.13
-six==1.11.0
+
+#Author: Amol Lele
+
+#software-properties-common, curl, npm are installed in the docker container 'ubuntu_blc'
+
+echo "Invoking broken_link_checker.sh script"
+echo `pwd`
+cd tests/nightly/broken_link_checker_test
+echo `pwd`
+
+echo "Running test_broken_links.py"
+python test_broken_links.py
+
+echo "Running check_regression.sh"
+./check_regression.sh
