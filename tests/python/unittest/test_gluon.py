@@ -1387,11 +1387,11 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOForward()
         t.hybridize(**param)
-        d1.attach_grad()
-        out_grad = mx.nd.random.uniform(shape=(10))
-        with mx.autograd.record():
+        for i in range(5):
+            d1.attach_grad()
+            out_grad = mx.nd.random.uniform(shape=(10))
             res = t(d1)
-        assert_almost_equal(res.asnumpy(), d1.asnumpy())
+            assert_almost_equal(res.asnumpy(), d1.asnumpy())
 
     param = deepcopy(params[2])
     param['param_indices'] = (1)
@@ -1401,14 +1401,15 @@ def test_share_inputs_outputs():
     for param in params:
         t = TestIOBackward()
         t.hybridize(**param)
-        d1.attach_grad()
-        d2.attach_grad()
-        out_grad = mx.nd.random.uniform(shape=(10))
-        with mx.autograd.record():
-            res = t(d1, d2)
-        res.backward(out_grad=out_grad)
-        assert_almost_equal(out_grad.asnumpy(), d1.grad.asnumpy())
-        assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
+        for i in range(5):
+            d1.attach_grad()
+            d2.attach_grad()
+            out_grad = mx.nd.random.uniform(shape=(10))
+            with mx.autograd.record():
+                res = t(d1, d2)
+            res.backward(out_grad=out_grad)
+            assert_almost_equal(out_grad.asnumpy(), d1.grad.asnumpy())
+            assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
 
 
 if __name__ == '__main__':
