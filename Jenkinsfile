@@ -286,7 +286,7 @@ try {
          ws('workspace/build-mkldnn-gpu-nocudnn') {
             timeout(time: max_time, unit: 'MINUTES') {
                init_git()
-               docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_cuda', false)
+               docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
                pack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
             }
          }
