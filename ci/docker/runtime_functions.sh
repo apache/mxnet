@@ -464,7 +464,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
     make  \
         DEV=1                         \
-        USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_CUDA=1                    \
