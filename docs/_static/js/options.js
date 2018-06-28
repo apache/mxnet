@@ -43,8 +43,8 @@ $(document).ready(function () {
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
         $('button:contains(' + environSelect + ')').addClass('active');
         showContent();
-        if (window.location.href.includes("/install/index.html")) {
-            if (versionSelect.includes(defaultVersion)) {
+        if (window.location.href.indexOf("/install/index.html") >= 0) {
+            if (versionSelect.indexOf(defaultVersion) >= 0) {
                 history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
             } else {
                 history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
@@ -71,13 +71,13 @@ $(document).ready(function () {
         el.addClass('active');
         if ($(this).hasClass("versions")) {
             $('.current-version').html( $(this).text() + ' <span class="caret"></span></button>' );
-            if (!$(this).text().includes(defaultVersion)) {
-                if (!window.location.search.includes("version")) {
+            if ($(this).text().indexOf(defaultVersion) < 0) {
+                if (window.location.search.indexOf("version") < 0) {
                     history.pushState(null, null, '/install/index.html' + window.location.search.concat( '&version=' + $(this).text() ));
                 } else {
                     history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
                 }
-            } else if (window.location.search.includes("version")) {
+            } else if (window.location.search.indexOf("version") >= 0) {
                   history.pushState(null, null, '/install/index.html' + window.location.search.replace( 'version', 'prev' ));
               }
         }
