@@ -77,8 +77,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 NNVM_REGISTER_OP(reshape_like)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-template<>
-void ShapeCompute<gpu>(const nnvm::NodeAttrs& attrs,
+void ShapeComputeGPU(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
@@ -98,10 +97,9 @@ void ShapeCompute<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(shape_array)
-.set_attr<FCompute>("FCompute<gpu>", ShapeCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ShapeComputeGPU);
 
-template<>
-void SizeCompute<gpu>(const nnvm::NodeAttrs& attrs,
+void SizeComputeGPU(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
@@ -123,7 +121,7 @@ void SizeCompute<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(size_array)
-.set_attr<FCompute>("FCompute<gpu>", SizeCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SizeComputeGPU);
 
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);

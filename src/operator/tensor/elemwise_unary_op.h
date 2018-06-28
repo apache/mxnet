@@ -388,20 +388,6 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu>
-void ShapeCompute(const nnvm::NodeAttrs& attrs,
-                  const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs);
-
-template<typename xpu>
-void SizeCompute(const nnvm::NodeAttrs& attrs,
-                 const OpContext& ctx,
-                 const std::vector<TBlob>& inputs,
-                 const std::vector<OpReqType>& req,
-                 const std::vector<TBlob>& outputs);
-
 struct HardSigmoidParam : public dmlc::Parameter<HardSigmoidParam> {
   real_t alpha;
   real_t beta;

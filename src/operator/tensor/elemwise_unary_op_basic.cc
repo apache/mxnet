@@ -398,8 +398,7 @@ NNVM_REGISTER_OP(reshape_like)
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
-template<>
-void ShapeCompute<cpu>(const nnvm::NodeAttrs& attrs,
+void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
@@ -422,7 +421,7 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<FCompute>("FCompute<cpu>", ShapeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", ShapeComputeCPU)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
@@ -445,8 +444,7 @@ Example::
   })
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
-template<>
-void SizeCompute<cpu>(const nnvm::NodeAttrs& attrs,
+void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
@@ -472,7 +470,7 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<FCompute>("FCompute<cpu>", SizeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SizeComputeCPU)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
