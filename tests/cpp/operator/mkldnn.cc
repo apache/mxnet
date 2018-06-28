@@ -953,8 +953,6 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   for (auto &in_arr : in_arrs) {
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-      for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
 
       std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
       int dim = std::stoi(str_dim);
