@@ -771,7 +771,7 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
       Tensor<xpu, 2, DType> out =
         inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
       ASSIGN_DISPATCH(igrad, req[0],
-          broadcast_to(ograd, src_shape*F<OP>(data, broadcast_to(out, src_shape)));
+          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
       if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
