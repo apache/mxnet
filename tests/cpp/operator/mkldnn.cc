@@ -1022,7 +1022,7 @@ TEST(IMPERATIVE, ConcatOp) {
 }
 
 TEST(IMPERATIVE, ConcatBackwardsOp) {
-  for (int num_inputs = 2; num_inputs < 3; num_inputs++) {
+  for (int num_inputs = 2; num_inputs < 4; num_inputs++) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
       TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
