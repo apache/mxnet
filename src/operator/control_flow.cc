@@ -270,9 +270,7 @@ static inline TShape SliceFirstDim(const TShape &s) {
   if (s.ndim() > 1) {
     return TShape(s.begin() + 1, s.end());
   } else {
-    TShape ret(1);
-    ret[0] = 1;
-    return ret;
+    return TShape(mshadow::Shape1(1));
   }
 }
 
