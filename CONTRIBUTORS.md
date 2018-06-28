@@ -172,3 +172,4 @@ List of Contributors
 * [Thomas Delteil](https://github.com/ThomasDelteil)
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
+* [Lin Yuan](https://github.com/apeforest)
