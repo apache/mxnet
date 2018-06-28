@@ -154,6 +154,7 @@ class CachedOp {
       const Context& default_ctx,
       const nnvm::Graph& g,
       const OpStatePtr& state_ptr,
+      const std::vector<NDArray *> &state_arrays,
       size_t start_nid,
       size_t end_nid);
   OpStatePtr StaticForward(
