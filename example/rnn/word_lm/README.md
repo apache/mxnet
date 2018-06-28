@@ -25,7 +25,7 @@ usage: train.py [-h] [--data DATA] [--emsize EMSIZE] [--nhid NHID]
                 [--batch_size BATCH_SIZE] [--dropout DROPOUT] [--tied]
                 [--bptt BPTT] [--log-interval LOG_INTERVAL] [--seed SEED]
 
-PennTreeBank LSTM Language Model
+Sherlock Holmes LSTM Language Model
 
 optional arguments:
   -h, --help            show this help message and exit
