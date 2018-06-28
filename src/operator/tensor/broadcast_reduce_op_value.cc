@@ -264,7 +264,7 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
-MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_like)
+MXNET_OPERATOR_REGISTER_BROADCAST_LIKE(broadcast_like)
 .describe(R"code(Broadcasts the input array to be like a target array
 
 Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to

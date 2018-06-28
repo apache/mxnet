@@ -771,7 +771,7 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
       Tensor<xpu, 2, DType> out =
         inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
       ASSIGN_DISPATCH(igrad, req[0],
-          broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
+          broadcast_to(ograd, src_shape*F<OP>(data, broadcast_to(out, src_shape)));
       if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
     } else {
       const int ndim = MXNET_SPECIAL_MAX_NDIM;
@@ -1247,6 +1247,18 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
     })                                                          \
   .add_argument("data", "NDArray-or-Symbol", "The input")
 
+#define MXNET_OPERATOR_REGISTER_BROADCAST_LIKE(name)                 \
+  NNVM_REGISTER_OP(name)                                        \
+  .set_num_inputs(2)                                            \
+  .set_num_outputs(1)                                           \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
+  .set_attr<nnvm::FGradient>("FGradient",                       \
+    [](const nnvm::NodePtr& n,                                  \
+       const std::vector<nnvm::NodeEntry>& ograds) {            \
+      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
+                                 {{"keepdims", "true"}});              \
+    })                                                          \
+  .add_argument("data", "NDArray-or-Symbol", "The input")
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
