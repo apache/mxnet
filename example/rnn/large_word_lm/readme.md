@@ -11,9 +11,10 @@ The main differences with the original implementation include:
 
 Each epoch for training (excluding time for evaluation on test set) takes around 80 minutes on a p3.8xlarge instance, which comes with 4 Volta V100 GPUs.
 
-# Setup - Original Data Format
-1. Download 1-Billion Word Dataset - [Link](http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz)
+# Setup dataset and build sampler
+1. Download 1-Billion Word Dataset: [Link](http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz)
 2. Download pre-processed vocabulary file which maps tokens into ids.
+3. Build sampler with cython by running `make` in the current directory. If you do not have cython installed, run `pip install cython`
 
 # Run the Script
 ```
