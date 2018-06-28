@@ -494,7 +494,7 @@ try {
     }
   } // End of stage('Build')
 
-  stage('Unit Test') {
+  stage('Tests') {
     parallel 'Python2: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python2-cpu') {
@@ -887,11 +887,8 @@ try {
           }
         }
       }
-    }
-  }
-
-  stage('Integration Test') {
-    parallel 'Onnx CPU': {
+    },
+    'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
