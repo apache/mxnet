@@ -109,7 +109,7 @@ The jars from maven with the needed MXNet native binaries in it. On startup, the
 
 Checkout the latest sha from the main package
 
-`git clone --recursive https://github.com/dmlc/mxnet ~/mxnet`
+`git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
 `cd ~/mxnet`
 
 If you need to checkout a particular release you can do it with:
@@ -126,7 +126,7 @@ Go here to do the base package installation https://mxnet.incubator.apache.org/i
 
  Run `make scalapkg` then `make scalainstall`
 
-then replace the correct jar for your architecture in the project.clj, example `[ml.dmlc.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0-SNAPSHOT"]`
+then replace the correct jar for your architecture in the project.clj, example `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0-SNAPSHOT"]`
 
 #### Test your installation
 
