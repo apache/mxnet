@@ -890,9 +890,9 @@ float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TSh
   for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
     int center = coordinate[dim];
     int shift = kernel_shape[dim] / 2;
-    for (int i = -shift; i < shift; i++) {
+    for (int i = -shift; i < kernel_shape[dim] - shift; i++) {
       int value;
-      if (center + i < 0 || center + i >= input_shape[dim]) {
+      if (center + i < 0 || center + i >= input_shape[dim + 2]) {
         value = 0; // depends
       } else {
         TShape shifted_shape = GetShiftedCoordinate(coordinate, 2 + dim, i);
