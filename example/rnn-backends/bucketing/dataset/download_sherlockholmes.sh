@@ -16,12 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This file downloads the PTB dataset.
+# This file downloads the Sherlock Holmes dataset.
 
-mkdir -p $(cd $(dirname $0) && pwd)/ptb
+mkdir -p $(cd $(dirname $0) && pwd)/sherlockholmes
 
-cd $(cd $(dirname $0) && pwd)/ptb && \
-	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.train.txt && \
-	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.valid.txt && \
-	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/ptb/ptb.test.txt
+cd $(cd $(dirname $0) && pwd)/sherlockholmes && \
+	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.train.txt && \
+	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.valid.txt && \
+	wget https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/sherlockholmes/sherlockholmes.test.txt
 

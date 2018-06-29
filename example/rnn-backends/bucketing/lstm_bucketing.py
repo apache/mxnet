@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This file compares different RNN implementation on the PTB benchmark using the LSTM bucketing module.
+# This file compares different RNN implementation on the Sherlock Holmes dataset
+# using the LSTM bucketing module.
 # Note that this file is not exactly the same with the original source file. 
 # Specifically, the following major changes have been made: 
 #     (1) ported FusedRNNCell (from cudnn_lstm_bucketing.py) and OpenLSTMRNNCell
@@ -80,10 +81,10 @@ if __name__ == '__main__':
     
     start_label, invalid_label = 1, 0
 
-    train_sentences, vocab = tokenize_text("./dataset/ptb/ptb.train.txt", 
+    train_sentences, vocab = tokenize_text("./dataset/sherlockholmes/sherlockholmes.train.txt", 
                                            start_label=start_label,
                                            invalid_label=invalid_label)
-    valid_sentences, _ = tokenize_text("./dataset/ptb/ptb.valid.txt", vocab=vocab,
+    valid_sentences, _ = tokenize_text("./dataset/sherlockholmes/sherlockholmes.valid.txt", vocab=vocab,
                                        start_label=start_label,
                                        invalid_label=invalid_label)
 

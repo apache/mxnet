@@ -41,17 +41,17 @@ class Dictionary(object):
 class Corpus(object):
     def __init__(self, path, name):
         self.dictionary = Dictionary()
-        if name == 'ptb':
-            self.train = self.tokenize(path + 'ptb/ptb.train.txt')
-            self.valid = self.tokenize(path + 'ptb/ptb.valid.txt')
-            self.test  = self.tokenize(path + 'ptb/ptb.test.txt')
+        if name == 'sherlockholmes':
+            self.train = self.tokenize(path + 'sherlockholmes/sherlockholmes.train.txt')
+            self.valid = self.tokenize(path + 'sherlockholmes/sherlockholmes.valid.txt')
+            self.test  = self.tokenize(path + 'sherlockholmes/sherlockholmes.test.txt')
         elif name == 'wikitext-2':
             self.train = self.tokenize(path + 'wikitext-2/wiki.train.tokens')
             self.valid = self.tokenize(path + 'wikitext-2/wiki.valid.tokens')
             self.test  = self.tokenize(path + 'wikitext-2/wiki.test.tokens')
         else:
             assert 0, "Invalid dataset name %s. " \
-                      "Valid ones are ptb/wikitext-2." % name
+                      "Valid ones are sherlockholmes/wikitext-2." % name
 
     def tokenize(self, path):
         """Tokenizes a text file."""

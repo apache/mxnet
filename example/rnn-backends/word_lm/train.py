@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This file compares different RNN implementation on the PTB benchmark using the word-level language modeling.
+# This file compares different RNN implementation on the Sherlock Holmes/Wikitext-2 dataset
+# using the word-level language modeling.
 # Note that this file is not exactly the same with the original source file.
 # Specifically, the following changes have been made:
 #     (1) fixed the UserWarning on inconsistent batch_size
@@ -36,8 +37,8 @@ from mxnet.model import BatchEndParam
 parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model')
 parser.add_argument('--dataset-dir', type=str, default='./dataset/',
                     help='location of the data corpus')
-parser.add_argument('--dataset-name', type=str, default='ptb',
-                    help='name of the data corpus (ptb/wikitext-2)')
+parser.add_argument('--dataset-name', type=str, default='sherlockholmes',
+                    help='name of the data corpus (sherlockholmes/wikitext-2)')
 parser.add_argument('--emsize', type=int, default=650,
                     help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=650,
