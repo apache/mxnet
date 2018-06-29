@@ -3027,8 +3027,8 @@ def test_norm():
             in_data[abs(in_data) < epsilon] = epsilon
             for i in range(in_data_dim):
                 norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, keepdims=True)
-                npy_out = l1norm(in_data, i) if order==1 else l2norm(in_data, i)
-                npy_out_backward = np.sign(in_data) if order==1 else in_data/npy_out 
+                npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
+                npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out 
                 check_symbolic_forward(norm_sym, [in_data], [npy_out],
                                         rtol=1e-2 if dtype is np.float16 else 1e-5,
                                         atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
@@ -3040,8 +3040,8 @@ def test_norm():
                 check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-2, atol=1e-3)
                 if i < in_data_dim-1:
                     norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                    npy_out = l1norm(in_data, (i, i+1)) if order==1 else l2norm(in_data, (i, i+1))
-                    npy_out_backward = np.sign(in_data) if order==1 else in_data/npy_out 
+                    npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                    npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out 
                     check_symbolic_forward(norm_sym, [in_data], [npy_out],
                                            rtol=1e-2 if dtype is np.float16 else 1e-5,
                                            atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
