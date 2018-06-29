@@ -924,6 +924,17 @@ std::vector<TShape> GetAllCoordinates(TShape &input_shape) {
   return coordinates;
 }
 
+TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
+  TShape test_shape = {1,1,1,1,1};
+  TShape shifted_shape = GetShiftedCoordinate(test_shape, 2, 5);
+  EXPECT_EQ(1, shifted_shape[0]);
+  EXPECT_EQ(1, shifted_shape[1]);
+  EXPECT_EQ(6, shifted_shape[2]);
+  EXPECT_EQ(1, shifted_shape[3]);
+  EXPECT_EQ(1, shifted_shape[4]);
+}
+
+
 TEST(MKLDNN_NDArray, GetAllCoordinates) {
   TShape test_shape1 = {1,1,2};
   TShape test_shape2 = {1,1,2,3};
