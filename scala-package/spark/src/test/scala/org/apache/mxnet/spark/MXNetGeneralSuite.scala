@@ -21,13 +21,15 @@ import java.io.{BufferedReader, File, InputStreamReader}
 import java.nio.file.Files
 
 import scala.sys.process.Process
-
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import org.slf4j.LoggerFactory
 
 class MXNetGeneralSuite extends SharedSparkContext {
+
+  private val logger = LoggerFactory.getLogger(classOf[MXNetGeneralSuite])
 
   private var testDataDir: String = _
 
@@ -42,30 +44,38 @@ class MXNetGeneralSuite extends SharedSparkContext {
   }
 
   private def downloadTestData(): Unit = {
+    logger.info("Downloading the training data...")
     Process("wget http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon" +
       "/dataset/mxnet-spark-test/train.txt" + " -P " + testDataDir + " -q") !
   }
 
-//  override def beforeAll(): Unit = {
-//  val tempDirFile = Files.createTempDirectory(s"mxnet-spark-test-${System.currentTimeMillis()}").
-//      toFile
-//    testDataDir = tempDirFile.getPath
-//    tempDirFile.deleteOnExit()
-//    downloadTestData()
-//  }
-
-  test("Dummy test on Spark") {
-
+  override def beforeAll(): Unit = {
+  val tempDirFile = Files.createTempDirectory(s"mxnet-spark-test-${System.currentTimeMillis()}").
+      toFile
+    testDataDir = tempDirFile.getPath
+    tempDirFile.deleteOnExit()
+    downloadTestData()
   }
-//  test("run spark with MLP") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
-//    val model = buildMlp().fit(trainData)
-//    assert(model != null)
-//  }
-//
-//  test("run spark with LeNet") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
-//    val model = buildLeNet().fit(trainData)
-//    assert(model != null)
-//  }
+
+  test("run spark with MLP") {
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+      val model = buildMlp().fit(trainData)
+      assert(model != null)
+    } else {
+      logger.info("Currently not supporting CPU, skipped for now")
+    }
+  }
+
+  test("run spark with LeNet") {
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+      val model = buildLeNet().fit(trainData)
+      assert(model != null)
+    } else {
+      logger.info("Currently not supporting CPU, skipped for now")
+    }
+  }
 }
