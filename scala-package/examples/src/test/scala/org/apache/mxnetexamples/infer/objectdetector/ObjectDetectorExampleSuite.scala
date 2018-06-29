@@ -55,7 +55,7 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       FileUtils.copyURLToFile(new URL(modelBase + "synset.txt"),
         tmpFile)
     }
-    tmpFile = new File(tempDirPath + "/inputImages/dog-ssd.jpg")
+    tmpFile = new File(tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
     if (!tmpFile.exists()) {
       FileUtils.copyURLToFile(new URL(imageBase + "dog-ssd.jpg"),
         tmpFile)
@@ -63,8 +63,8 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     val modelDirPath = tempDirPath + File.separator + "resnetssd/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/dog-ssd.jpg"
-    val inputImageDir = tempDirPath + File.separator + "inputImages/"
+      "inputImages/resnetssd/dog-ssd.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/resnetssd/"
 
     var context = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&

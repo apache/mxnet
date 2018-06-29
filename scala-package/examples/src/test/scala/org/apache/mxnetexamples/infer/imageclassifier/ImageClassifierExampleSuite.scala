@@ -57,7 +57,7 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/synset.txt"),
         tmpFile)
     }
-    tmpFile = new File(tempDirPath + "/inputImages/Pug-Cookie.jpg")
+    tmpFile = new File(tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg")
     if (!tmpFile.exists()) {
       FileUtils.copyURLToFile(
         new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"),
@@ -67,8 +67,8 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/Pug-Cookie.jpg"
-    val inputImageDir = tempDirPath + File.separator + "inputImages/"
+      "inputImages/resnet18/Pug-Cookie.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/resnet18/"
 
     var context = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
