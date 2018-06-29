@@ -871,14 +871,14 @@ TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
 
 int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   TShape input_shape = in_arr.shape();
-  std::vector<int> block_sizes(input_shape.ndim());
+  std::vector<int> block_sizes(input_shape.ndim()); // number of indexes must move to move along the axis
   for (int dim = 0; dim < input_shape.ndim(); dim++)
-    block_sizes[dim] = GetBlockSize(input_shape, dim);
+    block_sizes[dim] = GetBlockSize(input_shape, dim + 1);
 
   int index = 0;
   for (int i = 0; i < coordinate.ndim(); i++)
     index += block_sizes[i] * coordinate[i];
-  return in_arr.Reorder2Default().data().dptr<mshadow::default_real_t>()[index];
+  return static_cast<float*>(in_arr.Reorder2Default().data().dptr_)[index];
 }
 
 // TODO: accept callback to handle operation
@@ -920,6 +920,20 @@ std::vector<TShape> GetAllCoordinates(TShape &input_shape) {
     coordinates = tmplist;
   }
   return coordinates;
+}
+
+TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
+  TShape test_shape = {1,1,8};
+  TShape kernel_shape = {3};
+  NDArray arr(test_shape, Context());
+  InitDefaultArray(&arr);
+  TShape coord1 = {0,0,0}; // edge
+  TShape coord2 = {0,0,7}; // edge
+  TShape coord3 = {0,0,4}; //middle
+  for (int i = 0; i < 8; i++) {
+    TShape tmp = {0,0,i};
+    EXPECT_EQ(i - 4, GetValueAtCoordinate(arr, tmp));
+  }
 }
 
 TEST(MKLDNN_NDArray, PoolAtCoordinate) {
