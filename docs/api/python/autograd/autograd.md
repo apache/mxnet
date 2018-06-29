@@ -13,7 +13,7 @@ In machine learning applications,
 of loss functions with respect to parameters.
 
 
-### Record vs Pause
+## Record vs Pause
 
 `autograd` records computation history on the fly to calculate gradients later.
 This is only enabled inside a `with autograd.record():` block.
