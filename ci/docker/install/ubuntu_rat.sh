@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,8 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -ex
 
-#mvn and svn are installed in the docker container via the nghtly test script
+echo "Install dependencies"
+apt-get update
+apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
 
 echo "download RAT"
 svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/ #>/dev/null
@@ -31,21 +34,3 @@ mvn -Dmaven.test.skip=true install #>/dev/null
 
 echo "build success, cd into target"
 cd apache-rat/target
-
-
-echo "-------Run Apache RAT check on MXNet-------"
-
-#Command has been run twice, once for the logs and once to store in the variable to parse.
-java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet
-OUTPUT="$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet)"
-SOURCE="^0 Unknown Licenses"
-
-
-echo "-------Process The Output-------"
-
-if [[ "$OUTPUT" =~ $SOURCE ]]; then
-      echo "SUCCESS: There are no files with an Unknown License.";
-else
-      echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!";
-      exit 1
-fi

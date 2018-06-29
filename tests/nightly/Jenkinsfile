@@ -73,7 +73,7 @@ try {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-RATTest') {
           init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_rat_check', false)
+          docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
         }
       }
     },
