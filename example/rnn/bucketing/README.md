@@ -3,13 +3,13 @@ RNN Example
 This folder contains RNN examples using high level mxnet.rnn interface.
 
 ## Data
-1) Review the license for the PenTreeBank dataset and ensure that you agree to it. Then uncomment the lines in the 'get_ptb_data.sh' script that download the dataset.
+1) Review the license for the Sherlock Holmes dataset and ensure that you agree to it. Then uncomment the lines in the 'get_sherlockholmes_data.sh' script that download the dataset.
 
-2) Run `get_ptb_data.sh` to download PenTreeBank data.
+2) Run `get_sherlockholmes_data.sh` to download Sherlock Holmes data.
 
 ## Python
 
-- Generate the PennTreeBank language model by using LSTM:
+- Generate the Sherlock Holmes language model by using LSTM:
 
   For Python2 (CPU support): can take 2+ hours on AWS-EC2-p2.16xlarge
 
@@ -23,11 +23,11 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
   For Python2 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python  --gpus 0,1,2,3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) 
+      $ python [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
 
   For Python3 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python3 --gpus 0,1,2,3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) 
+      $ python3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
 
 
 ### Performance Note:

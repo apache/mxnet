@@ -18,12 +18,16 @@
 # under the License.
 
 set -ex
-apt install -y software-properties-common
 
-# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
-for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sleep 300; done
+echo "Install dependencies"
+apt-get update
+apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
+echo "download RAT"
+svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/
+
+echo "cd into directory"
+cd trunk
+
+echo "mvn install"
+mvn -Dmaven.test.skip=true install

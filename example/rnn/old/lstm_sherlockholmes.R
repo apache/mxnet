@@ -15,9 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# PennTreeBank Language Model using lstm, you can replace mx.lstm by mx.gru/ mx.rnn to use gru/rnn model
+# Sherlock Holmes Language Model using lstm, you can replace mx.lstm by mx.gru/ mx.rnn to use gru/rnn model
 # The data file can be found at:
-# https://github.com/dmlc/web-data/tree/master/mxnet/ptb
+# https://github.com/dmlc/web-data/tree/master/mxnet/sherlockholmes
 require(hash)
 require(mxnet)
 require(stringr
@@ -88,10 +88,10 @@ wd=0.00001
 update.period = 1
 
 
-train <- load.data("./data/ptb.train.txt")
+train <- load.data("./data/sherlockholmes.train.txt")
 X.train <- train$X
 dic <- train$dic
-val <- load.data("./data/ptb.valid.txt", dic)
+val <- load.data("./data/sherlockholmes.valid.txt", dic)
 X.val <- val$X
 dic <- val$dic
 X.train.data <- replicate.data(X.train, seq.len)

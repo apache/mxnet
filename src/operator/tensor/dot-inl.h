@@ -1139,7 +1139,7 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
   CHECK_EQ(rhs.storage_type(), kCSRStorage);
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   if (!rhs.storage_initialized()) {
-    FillZerosCsrImpl(s, *ret);
+    Fill(s, ret->data(), req, 0);
     return;
   }
 

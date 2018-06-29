@@ -16,41 +16,16 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build and run MXNet on Ubuntu 16.04 for CPU
+# Dockerfile to run the Apache RAT license check
 
 FROM ubuntu:16.04
 
 WORKDIR /work/deps
 
-COPY install/ubuntu_core.sh /work/
-RUN /work/ubuntu_core.sh
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-COPY install/ubuntu_python.sh /work/
-RUN /work/ubuntu_python.sh
-COPY install/ubuntu_scala.sh /work/
-RUN /work/ubuntu_scala.sh
-COPY install/ubuntu_r.sh /work/
-RUN /work/ubuntu_r.sh
-COPY install/ubuntu_perl.sh /work/
-RUN /work/ubuntu_perl.sh
-COPY install/ubuntu_clang.sh /work/
-RUN /work/ubuntu_clang.sh
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
-COPY install/ubuntu_caffe.sh /work/
-RUN /work/ubuntu_caffe.sh
-COPY install/ubuntu_onnx.sh /work/
-RUN /work/ubuntu_onnx.sh
-COPY install/ubuntu_docs.sh /work/
-RUN /work/ubuntu_docs.sh
-COPY install/ubuntu_nightly_tests.sh /work/
-RUN /work/ubuntu_nightly_tests.sh
-COPY install/ubuntu_emscripten.sh /work/
-RUN /work/ubuntu_emscripten.sh
+COPY install/ubuntu_rat.sh /work/
+RUN /work/ubuntu_rat.sh
 
 ARG USER_ID=0
-
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
@@ -58,4 +33,3 @@ COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
 ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-ENV LLVM=/work/deps/emscripten-fastcomp/build/bin
