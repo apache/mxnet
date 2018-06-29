@@ -157,11 +157,19 @@ endif
 ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.so)
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
+endif
+endif
 endif
 endif
 endif
