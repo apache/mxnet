@@ -416,7 +416,7 @@ NNVM_REGISTER_OP(shape_array)
 
 Example::
 
-  shape_array([[1,2,3,4], [5,6,7,9]]) = [2,4]
+  shape_array([[1,2,3,4], [5,6,7,8]]) = [2,4]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
