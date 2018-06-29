@@ -40,10 +40,7 @@ object TrainMnist {
     val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
     mlp
   }
-
-  // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-  // Haffner. "Gradient-based learning applied to document recognition."
-  // Proceedings of the IEEE (1998)
+  
 
   def getLenet: Symbol = {
     val data = Symbol.Variable("data")
