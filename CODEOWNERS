@@ -19,7 +19,7 @@
 
 # C++ base
 /src/kvstore/     @rahul003
-/cpp-package/ @nswamy 
+/cpp-package/ @nswamy  
 
 # CMake
 CMakeLists.txt    @szha @rahul003
