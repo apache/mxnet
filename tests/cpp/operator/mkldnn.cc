@@ -885,19 +885,17 @@ int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
 // center is formated as (N,C,everything else)
 float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
-
   float max = 0;
   // assumes the kernel is the last two dim
   for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
-
     int center = coordinate[dim];
     int shift = kernel_shape[dim] / 2;
-    for (int i = 0; i < kernel_shape[dim]; i++) {
+    for (int i = -shift; i < kernel_shape[dim] - shift; i++) {
       int value;
-      if (coordinate[dim + 2] + i - shift < 0 || coordinate[dim + 2] + i - shift >= input_shape[dim + 2]) {
+      if (center + i < 0 || center + i >= input_shape[dim]) {
         value = 0; // depends
       } else {
-        TShape shifted_shape = GetShiftedCoordinate(coordinate, 2 + dim, i - shift);
+        TShape shifted_shape = GetShiftedCoordinate(coordinate, 2 + dim, i);
         value = GetValueAtCoordinate(in_arr, shifted_shape);
       }
       max = std::fmax(value, max);
@@ -922,6 +920,19 @@ std::vector<TShape> GetAllCoordinates(TShape &input_shape) {
     coordinates = tmplist;
   }
   return coordinates;
+}
+
+TEST(MKLDNN_NDArray, PoolAtCoordinate) {
+  TShape test_shape = {1,1,8};
+  TShape kernel_shape = {3};
+  NDArray arr(test_shape, Context());
+  InitDefaultArray(&arr);
+  TShape coord1 = {0,0,0}; // edge
+  TShape coord2 = {0,0,7}; // edge
+  TShape coord3 = {0,0,4}; //middle
+  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, kernel_shape));
+  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, kernel_shape));
+  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, kernel_shape));
 }
 
 TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
