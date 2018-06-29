@@ -465,6 +465,21 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
+OpAttrs GetPoolingOp(TShape kernel, TShape stride, TShape pad, int pool_type) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Pooling");
+  attrs.attrs.dict.insert({"kernel" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"stride" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"pad" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"pool_type" , std::to_string(dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
   TShape t2 = arr2.arr.shape();
@@ -787,7 +802,7 @@ int GetDim(TShape input_shape, TShape output_shape) {
 }
 
 /*
- * Calculates the size of continuous block of array inside arger concatenated array
+ * Calculates the size of continuous block of array inside larger concatenated array
  * Used to verify concat/concat backwards operator
  */
 int GetBlockSize(TShape shape, int dim) {
@@ -844,6 +859,29 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                   out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
+}
+
+// TODO: accept callback to handle operation
+// center is formated as (N,C,everything else)
+int GetSum(const NDArray &in_arr, TShape center, TShape kernel_shape) {
+  TShape input_shape = in_arr.shape();
+  std::vector block_sizes(input_shape.ndim());
+  for (int dim = 0; dim < input_shape.ndim(); dim++)
+    block_sizes[dim] = GetBlockSize(input_shape, dim);
+
+  // assumes the kernel is the last two dim
+  for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
+    int before = kernel_shape[dim] / 2; // skew
+    int after = kernel_shape[dim] % 2 == 0 ? before - 1 : before;
+  }
+
+
+}
+
+
+
+void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
+                         const std::vector<NDArray *> &out_arrs) {
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
@@ -1027,6 +1065,24 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
       OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
       TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
     }
+  }
+}
+
+std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
+  std::vector<TShape> kernels;
+  for (int i = 1; i <= max_size; i++) {
+    TShape tmp(dim);
+    for (int j = 0; j < tmp.ndim(); j++)
+      tmp[j] = i;
+    kernels.push_back(tmp);
+  }
+  return kernels;
+}
+
+TEST(IMPERATIVE, PoolingOp) {
+  for (int dim = 0; dim < 5; dim++) {
+    OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
+    TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
   }
 }
 
