@@ -3100,6 +3100,7 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
 
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11395")
 def test_sequence_last():
     check_sequence_func("last", axis=0)
     check_sequence_func("last", axis=1)
