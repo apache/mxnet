@@ -28,8 +28,6 @@ import scala.util.Random
 /**
   * An Implementation of the paper
   * Convolutional Neural Networks for Sentence Classification
-  * by Yoon Kim
-  * @author Depeng Liang
   */
 object CNNTextClassification {
 

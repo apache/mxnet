@@ -24,9 +24,6 @@ import org.apache.mxnet.{Context, Random, Shape}
 
 import scala.io.{Codec, Source}
 
-/**
- * @author Depeng Liang
- */
 object DataHelper {
 
   def cleanStr(str: String): String = {

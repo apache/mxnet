@@ -1,6 +1,6 @@
 # CNN Text Classification Example for Scala
 This is the example using Scala type-safe api doing CNN text classification. 
-Currently, I cannot reproduce the same result in the python example here. 
+This example is only for Illustration and not modeled to achieve the best accuracy.
 
 Please contribute to improve the dev accuracy of the model.
 
