@@ -231,13 +231,6 @@ __device__ void bilinear_interpolate_gradient(
   T lx = x - *x_low;
   T hy = 1. - ly, hx = 1. - lx;
 
-  // reference in forward
-  // T v1 = bottom_data[*y_low * width + *x_low];
-  // T v2 = bottom_data[*y_low * width + *x_high];
-  // T v3 = bottom_data[*y_high * width + *x_low];
-  // T v4 = bottom_data[*y_high * width + *x_high];
-  // T val = (w1 * v1 + *w2 * v2 + *w3 * v3 + *w4 * v4);
-
   *w1 = hy * hx, *w2 = hy * lx, *w3 = ly * hx, *w4 = ly * lx;
 
   return;
@@ -341,16 +334,6 @@ __global__ void RoIAlignBackwardKernel(
               offset_bottom_diff + y_high * width + x_low, static_cast<T>(g3));
           atomicAdd(
               offset_bottom_diff + y_high * width + x_high, static_cast<T>(g4));
-          /*
-          gpu_atomic_add(
-              static_cast<T>(g1), offset_bottom_diff + y_low * width + x_low);
-          gpu_atomic_add(
-              static_cast<T>(g2), offset_bottom_diff + y_low * width + x_high);
-          gpu_atomic_add(
-              static_cast<T>(g3), offset_bottom_diff + y_high * width + x_low);
-          gpu_atomic_add(
-              static_cast<T>(g4), offset_bottom_diff + y_high * width + x_high);
-          */
         }  // if
       }  // ix
     }  // iy
@@ -399,7 +382,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
           width,
           pooled_height,
           pooled_width,
-          -1,
+          param.sample_ratio,
           bottom_rois,
           top_data);
   })
@@ -467,7 +450,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         width,
         pooled_height,
         pooled_width,
-        -1,
+        param.sample_ratio,
         grad_in,
         bottom_rois);
   })

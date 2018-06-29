@@ -19,7 +19,7 @@ frontend. The compiled kernels can be used stand-alone or combined with
 
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automodule:: mxnet.rtc

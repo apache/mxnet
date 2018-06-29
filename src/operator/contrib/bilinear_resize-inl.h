@@ -51,9 +51,9 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   int height;
   int width;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
-    DMLC_DECLARE_FIELD(height).set_range(1, 1000)
+    DMLC_DECLARE_FIELD(height).set_range(1, 10000)
     .describe("output height (required)");
-    DMLC_DECLARE_FIELD(width).set_range(1, 1000)
+    DMLC_DECLARE_FIELD(width).set_range(1, 10000)
     .describe("output width (required)");
   }
 };
