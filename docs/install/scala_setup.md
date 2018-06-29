@@ -35,6 +35,40 @@ sudo ./ubuntu_scala.sh
 
 Go to the [MXNet-Scala demo project's README](https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo) and follow the directions to test the MXNet-Scala package installation.
 
+#### Maven Repository
+
+Package information can be found in the Maven Repository:
+https://mvnrepository.com/artifact/org.apache.mxnet
+
+**Linux CPU**
+```html
+<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu -->
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+</dependency>
+```
+
+**Linux GPU**
+```html
+<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu -->
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+</dependency>
+```
+
+**macOS CPU**
+```html
+<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu -->
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+</dependency>
+```
+
+**NOTE:** You may specify the version you wish to use by adding the version number to the `dependency` block. For example, to use v1.2.0 you would add `<version>1.2.0</version>`. Otherwise Maven will use the latest version available.
+
 <hr>
 
 ## Source
