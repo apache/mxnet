@@ -161,7 +161,7 @@ ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
-ifeq (,$(wildcard /usr/lib64/liblapack.so)
+ifeq (,$(wildcard /usr/lib64/liblapack.so))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
 	USE_LAPACK = 0
