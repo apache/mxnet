@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.examples.cnntextclassification
+package org.apache.mxnetexamples.cnntextclassification
 
 import java.io.File
 import java.net.URL
