@@ -33,7 +33,7 @@ private[mxnet] object CToScalaUtils {
       case "double" | "doubleorNone" => "Double"
       case "string" => "String"
       case "boolean" | "booleanorNone" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
+      case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default, $argType")
     }

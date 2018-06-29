@@ -18,9 +18,10 @@
 import mxnet as mx
 from mxnet import gluon
 import numpy as np
+import copy
 from numpy.testing import assert_allclose
 import unittest
-from mxnet.test_utils import almost_equal
+from mxnet.test_utils import almost_equal, assert_almost_equal
 
 
 def test_rnn():
@@ -28,11 +29,67 @@ def test_rnn():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+    assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight',
+                                                    'rnn_i2h_bias', 'rnn_i2h_weight']
     assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
+class TestRNNLayer(gluon.HybridBlock):
+    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
+        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
+        self.cell = cell_type(hidden_size, prefix='rnn_')
+
+    def hybrid_forward(self, F, inputs, states):
+        out, states = F.contrib.foreach(self.cell, inputs, states)
+        return out
+
+def check_contrib_rnn(cell_type, num_states):
+    batch_size = 10
+    hidden_size = 100
+    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(5, batch_size, 50))
+    state_shape = (batch_size, hidden_size)
+    states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
+    layer = TestRNNLayer(cell_type, hidden_size)
+    layer.initialize(ctx=mx.cpu(0))
+    res1 = layer(rnn_data, states)
+    params1 = layer.collect_params()
+    orig_params1 = copy.deepcopy(params1)
+
+    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
+    with mx.autograd.record():
+        res1 = layer(rnn_data, states)
+    res1.backward()
+    trainer.step(batch_size)
+
+    layer = TestRNNLayer(cell_type, hidden_size)
+    layer.initialize(ctx=mx.cpu(0))
+    layer.hybridize()
+    res2 = layer(rnn_data, states)
+    params2 = layer.collect_params()
+    for key, val in orig_params1.items():
+        params2[key].set_data(val.data())
+
+    trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
+    with mx.autograd.record():
+        res2 = layer(rnn_data, states)
+    assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+    res2.backward()
+    trainer.step(batch_size)
+
+    for key, val in params1.items():
+        weight1 = val.data()
+        weight2 = params2[key].data()
+        assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(), rtol=0.001, atol=0.0001)
+
+
+def test_contrib_rnn():
+    cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
+            (gluon.rnn.GRUCell, 1)]
+    for cell_type, num_states in cell_types:
+        check_contrib_rnn(cell_type, num_states)
 
 
 def test_lstm():
