@@ -40,7 +40,6 @@ object TrainMnist {
     val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
     mlp
   }
-  
 
   def getLenet: Symbol = {
     val data = Symbol.Variable("data")
