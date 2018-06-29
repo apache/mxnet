@@ -86,7 +86,7 @@ def add_data_aug_args(parser):
 
 def set_resnet_aug(aug):
     # standard data augmentation setting for resnet training
-    aug.set_defaults(random_crop=1, random_resized_crop=1)
+    aug.set_defaults(random_crop=0, random_resized_crop=1)
     aug.set_defaults(min_random_area=0.08)
     aug.set_defaults(max_random_aspect_ratio=4./3., min_random_aspect_ratio=3./4.)
     aug.set_defaults(brightness=0.4, contrast=0.4, saturation=0.4, pca_noise=0.1)
