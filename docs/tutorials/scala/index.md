@@ -15,5 +15,3 @@ Using MXNet-Scala is easiest with Maven. You have a couple of options for settin
 * [Character-level Language Model with MXNet-Scala](char_lstm.md)
 
 See the [tutorials](http://mxnet.incubator.apache.org/tutorials/index.html#other-languages-api-tutorials) page on MXNet.io for more.
-
-<script async defer src="https://buttons.github.io/buttons.js"></script>
