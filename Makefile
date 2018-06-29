@@ -350,7 +350,7 @@ endif
 PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
 COLL_PATH=$(ROOTDIR)/src/kvstore/collectives
-PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc
+PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc src/kvstore/collectives/src/mpi_message.pb.h
 DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
