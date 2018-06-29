@@ -880,11 +880,16 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
   int& out_stype = out_attrs->at(0);
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   bool dispatched = false;
-  if (param.ord == 2) {
-    // l2 norm on a particular axis only supports cpu
-    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-    const auto dispatch_ex =
+  // l2 norm on a particular axis only supports cpu
+  const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
+  const auto dispatch_ex =
       invalid_ctx ? DispatchMode::kFComputeFallback : DispatchMode::kFComputeEx;
+  if (!dispatched && in_stype == kDefaultStorage) {
+    // dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                     DispatchMode::kFCompute);
+  }
+  if (param.ord == 2) {
     const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
     if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
         axis.ndim() == 0 && param.ord == 2) {
@@ -1024,8 +1029,6 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
   }
   if (param.ord == 1) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
     TShape src_shape, dst_shape;
     BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -1053,7 +1056,7 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
     });
   } else if (param.ord == 2) {
     ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
-                                                              req, outputs);
+                                                                req, outputs);
   }
 }
 

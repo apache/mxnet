@@ -88,9 +88,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(sum)
 
 Example::
 
-  data = [[[1,2],[2,3],[1,3]],
-          [[1,4],[4,3],[5,2]],
-          [[7,1],[7,2],[7,3]]]
+  data = [[[1, 2], [2, 3], [1, 3]],
+          [[1, 4], [4, 3], [5, 2]],
+          [[7, 1], [7, 2], [7, 3]]]
 
   sum(data, axis=1)
   [[  4.   8.]
@@ -100,9 +100,9 @@ Example::
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
 
-  data = [[1,2,0],
-          [3,0,1],
-          [4,1,0]]
+  data = [[1, 2, 0],
+          [3, 0, 1],
+          [4, 1, 0]]
 
   csr = cast_storage(data, 'csr')
 
@@ -280,14 +280,14 @@ MXNET_ADD_SPARSE_OP_ALIAS(norm)
 
 This operator computes the norm on an NDArray with the specified axis, depending
 on the value of the ord parameter. By default, it computes the L2 norm on the entire
-array.
+array. Currently only ord=2 supports sparse ndarrays.
 
 Examples::
 
-  x = [[[1,2],
-        [3,4]],
-       [[2,2],
-        [5,6]]]
+  x = [[[1, 2],
+        [3, 4]],
+       [[2, 2],
+        [5, 6]]]
 
   norm(x, ord=2, axis=1) = [[3.1622777 4.472136 ]
                             [5.3851647 6.3245554]]
