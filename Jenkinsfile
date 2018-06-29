@@ -163,11 +163,21 @@ def python3_gpu_ut(docker_container_name) {
 }
 
 try {
-  stage("Sanity Check") {
-    node('mxnetlinux-cpu') {
-      ws('workspace/sanity') {
-        init_git()
-        docker_run('ubuntu_cpu', 'sanity_check', false)
+  stage('Sanity Check') {
+    parallel 'Lint': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-lint') {
+          init_git()
+          docker_run('ubuntu_cpu', 'sanity_check', false)
+        }
+      }
+    },
+    'RAT License': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-rat') {
+          init_git()
+          docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+        }
       }
     }
   }
