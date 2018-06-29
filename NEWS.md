@@ -13,7 +13,7 @@ All scripts to save and load parameters for a Gluon model should use the new API
 2. If you created gluon layers without a `name_scope` using MXNet 1.2.0, you must replace `save_params` with `save_parameters`. Otherwise, your models saved in 1.2.1 will fail to load back, although this worked in 1.2.0.
 3. For the other use cases, such as models created within a `name_scope` (inside a `with name_scope()` block) or models being loaded back into gluon and not `SymbolBlock`, we strongly recommend replacing `save_params` and `load_params` with `save_parameters` and `load_parameters`. Having said that, your code won't break in 1.2.1 but will give you a deprecated warning message for `save_params` and `load_params`.
 
-### Exception to Semantic Versioning
+### Incompatible API Changes
 - We are breaking semantic versioning by making a backwards incompatible change from 1.2.0 in the 1.2.1 patch release. The breaking use case is documented in point 2 above. The reason for doing this is because the 1.2.0 release broke a documented [use case](https://github.com/apache/incubator-mxnet/issues/11091) from the [gluon book](https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter07_distributed-learning/hybridize.ipynb) and this release reverts the breakage.
 
 ### Bug Fixes
