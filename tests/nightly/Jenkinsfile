@@ -69,15 +69,7 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 
 try {
   stage('NightlyTests'){
-    parallel 'RATCheck: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/nt-RATTest') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_rat_check', false)
-        }
-      }
-    },
-    'CompilationWarnings: CPU': {
+    parallel 'CompilationWarnings: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/nt-compilationTest') {
           init_git()
