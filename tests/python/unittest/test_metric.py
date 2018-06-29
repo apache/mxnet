@@ -29,6 +29,7 @@ def check_metric(metric, *args, **kwargs):
 def test_metrics():
     check_metric('acc', axis=0)
     check_metric('f1')
+    check_metric('mcc')
     check_metric('perplexity', -1)
     check_metric('pearsonr')
     check_metric('nll_loss')
@@ -121,6 +122,54 @@ def test_f1():
     fscore_total = 2. * (1 + 1) / (2 * (1 + 1) + (1 + 0) + (0 + 0))
     np.testing.assert_almost_equal(microF1.get()[1], fscore_total)
     np.testing.assert_almost_equal(macroF1.get()[1], (fscore1 + fscore2) / 2.)
+
+def test_mcc():
+    microMCC = mx.metric.create("mcc", average="micro")
+    macroMCC = mx.metric.MCC(average="macro")
+
+    assert np.isnan(microMCC.get()[1])
+    assert np.isnan(macroMCC.get()[1])
+
+    # check divide by zero
+    pred = mx.nd.array([[0.9, 0.1],
+                        [0.8, 0.2]])
+    label = mx.nd.array([0, 0])
+    microMCC.update([label], [pred])
+    macroMCC.update([label], [pred])
+    assert microMCC.get()[1] == 0.0
+    assert macroMCC.get()[1] == 0.0
+    microMCC.reset()
+    macroMCC.reset()
+
+    pred11 = mx.nd.array([[0.1, 0.9],
+                        [0.5, 0.5]])
+    label11 = mx.nd.array([1, 0])
+    pred12 = mx.nd.array([[0.85, 0.15],
+                        [1.0, 0.0]])
+    label12 = mx.nd.array([1, 0])
+    pred21 = mx.nd.array([[0.6, 0.4]])
+    label21 = mx.nd.array([0])
+    pred22 = mx.nd.array([[0.2, 0.8]])
+    label22 = mx.nd.array([1])
+    microMCC.update([label11, label12], [pred11, pred12])
+    macroMCC.update([label11, label12], [pred11, pred12])
+    assert microMCC.num_inst == 4
+    assert macroMCC.num_inst == 1
+    tp1 = 1; fp1 = 0; fn1 = 1; tn1=2
+    mcc1 = (tp1*tn1 - fp1*fn1) / np.sqrt((tp1+fp1)*(tp1+fn1)*(tn1+fp1)*(tn1+fn1))
+    np.testing.assert_almost_equal(microMCC.get()[1], mcc1)
+    np.testing.assert_almost_equal(macroMCC.get()[1], mcc1)
+
+    microMCC.update([label21, label22], [pred21, pred22])
+    macroMCC.update([label21, label22], [pred21, pred22])
+    assert microMCC.num_inst == 6
+    assert macroMCC.num_inst == 2
+    tp2 = 1; fp2 = 0; fn2 = 0; tn2=1
+    mcc2 = (tp2*tn2 - fp2*fn2) / np.sqrt((tp2+fp2)*(tp2+fn2)*(tn2+fp2)*(tn2+fn2))
+    tpT = tp1+tp2; fpT = fp1+fp2; fnT = fn1+fn2; tnT = tn1+tn2;
+    mccT = (tpT*tnT - fpT*fnT) / np.sqrt((tpT+fpT)*(tpT+fnT)*(tnT+fpT)*(tnT+fnT))
+    np.testing.assert_almost_equal(microMCC.get()[1], mccT)
+    np.testing.assert_almost_equal(macroMCC.get()[1], .5*(mcc1+mcc2))
 
 def test_perplexity():
     pred = mx.nd.array([[0.8, 0.2], [0.2, 0.8], [0, 1.]])

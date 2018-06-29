@@ -66,11 +66,8 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
-	LAST_WORD_INDEX := $(words $(RETURN_STRING))
-	# fetch the 2nd last word as MKLDNNROOT
-	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
-	MKLROOT := $(lastword $(RETURN_STRING))
+	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
+	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	export USE_MKLML = 1
 endif
 
@@ -434,11 +431,11 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc
+build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-build/src/%_gpu.o: src/%.cu
+build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
@@ -507,6 +504,7 @@ ifeq ($(USE_CPP_PACKAGE), 1)
 include cpp-package/cpp-package.mk
 endif
 
+include mkldnn.mk
 include tests/cpp/unittest.mk
 
 extra-packages: $(EXTRA_PACKAGES)
@@ -619,10 +617,9 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
-		3rdparty/mkldnn/install/*
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

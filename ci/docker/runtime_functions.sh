@@ -700,6 +700,8 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest tests/python-pytest/onnx/import/mxnet_backend_test.py
 	pytest tests/python-pytest/onnx/import/onnx_import_test.py
 	pytest tests/python-pytest/onnx/import/gluon_backend_test.py
+	pytest tests/python-pytest/onnx/export/onnx_backend_test.py
+	python tests/python-pytest/onnx/export/mxnet_export_test.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -841,6 +843,13 @@ deploy_docs() {
     make docs
 
     popd
+}
+
+# broken_link_checker
+
+broken_link_checker() {
+    set -ex
+    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
 ##############################################################
