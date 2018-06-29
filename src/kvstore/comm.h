@@ -762,8 +762,6 @@ class CommDevice : public Comm {
     std::vector<NDArray> compressed_send_buf;
     /// \brief the small buffer for compressed data in receiver
     std::vector<NDArray> compressed_recv_buf;
-    /// \brief size of allocation in case we do not actually allocate merged
-    TShape merged_size;
 
     /// \brief the merged buffer for the given storage type (could be either dense or row_sparse)
     inline NDArray& merged_buf(NDArrayStorageType stype) {
