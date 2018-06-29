@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.examples.imclassification
+package org.apache.mxnetexamples.imclassification
 
 import java.io.File
 import java.net.URL
