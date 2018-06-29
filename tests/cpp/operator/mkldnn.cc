@@ -465,13 +465,13 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
-OpAttrs GetPoolingOp(TShape kernel, TShape stride, TShape pad, int pool_type) {
+OpAttrs GetPoolingOp(TShape kernel, TShape stride, TShape pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
-  attrs.attrs.dict.insert({"kernel" , std::to_string(num_args)});
-  attrs.attrs.dict.insert({"stride" , std::to_string(num_args)});
-  attrs.attrs.dict.insert({"pad" , std::to_string(num_args)});
-  attrs.attrs.dict.insert({"pool_type" , std::to_string(dim)});
+  attrs.attrs.dict.insert({"kernel" , kernel});
+  attrs.attrs.dict.insert({"stride" , stride});
+  attrs.attrs.dict.insert({"pad" , pad});
+  attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
@@ -861,24 +861,50 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
-// TODO: accept callback to handle operation
-// center is formated as (N,C,everything else)
-int GetSum(const NDArray &in_arr, TShape center, TShape kernel_shape) {
+TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
+  CHECK(dim < coordindate.ndim());
+  TShape tmp = coordindate;
+  CHECK(tmp[dim] + amount >= 0);
+  tmp[dim] = tmp[dim] + amount;
+  return tmp;
+}
+
+int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   TShape input_shape = in_arr.shape();
   std::vector block_sizes(input_shape.ndim());
   for (int dim = 0; dim < input_shape.ndim(); dim++)
     block_sizes[dim] = GetBlockSize(input_shape, dim);
 
-  // assumes the kernel is the last two dim
-  for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
-    int before = kernel_shape[dim] / 2; // skew
-    int after = kernel_shape[dim] % 2 == 0 ? before - 1 : before;
-  }
-
-
+  int index = 0;
+  for (int i = 0; i < coordinate.ndim(); i++)
+    index += block_sizes[i] * coordinate[i];
+  return in_arr.Reorder2Default().data().dptr<mshadow::default_real_t>()[index];
 }
 
+// TODO: accept callback to handle operation
+// center is formated as (N,C,everything else)
+float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = in_arr.shape();
 
+  float max = 0;
+  // assumes the kernel is the last two dim
+  for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
+
+    int center = coordinate[dim];
+    int shift = kernel_shape[dim] / 2;
+    for (int i = 0; i < kernel_shape[dim]; i++) {
+      int value;
+      if (coordinate[dim + 2] + i - shift < 0 || coordinate[dim + 2] + i - shift >= input_shape[dim + 2]) {
+        value = 0; // depends
+      } else {
+        TShape shifted_shape = GetShiftedCoordinate(coordinate, 2 + dim, i - shift);
+        value = GetValueAtCoordinate(in_arr, shifted_shape);
+      }
+      max = std::fmax(value, max);
+    }
+  }
+  return max;
+}
 
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs) {
@@ -1080,10 +1106,14 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 }
 
 TEST(IMPERATIVE, PoolingOp) {
-  for (int dim = 0; dim < 5; dim++) {
-    OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
-    TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
-  }
+//  for (int dim = 0; dim < 5; dim++) {
+  TShape kernel = {3,3};
+  TShape stride = {1,1};
+  TShape pad = {1,1};
+  OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
+  return;
+//  TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
+//  }
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
