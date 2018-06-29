@@ -854,9 +854,6 @@ void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
   verify_fn(in_arrs, tmp_outputs);
 }
 
-void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
-  TShape t1 = arr1.arr.shape();
-  TShape t2 = arr2.arr.shape();
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
   // in_arrs is larger array, out_arr is ammler
