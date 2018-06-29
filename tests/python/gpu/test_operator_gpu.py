@@ -51,7 +51,10 @@ del test_support_vector_machine_l2_svm
 
 
 def check_countsketch(in_dim,out_dim,n):
-    sym = mx.sym.contrib.count_sketch(name='countsketch',out_dim = out_dim)
+    data = mx.sym.Variable("data")
+    h = mx.sym.Variable("h")
+    s = mx.sym.Variable("s")
+    sym = mx.sym.contrib.count_sketch(data=data, h=h, s=s, name='countsketch',out_dim = out_dim)
     shape = [(n,in_dim), (1,in_dim),(1,in_dim)]     #shape of input x, hash h and hash s
 
     arr = [mx.nd.empty(shape[i]) for i in range(3)]
@@ -62,46 +65,33 @@ def check_countsketch(in_dim,out_dim,n):
     arr[1][:] = h                                 #hash h
     s = np.random.randint(0, 2, shape[2])*2-np.ones(shape[2])
     arr[2][:] = s                                 #hash s
-    # forward
-    exe_list = [sym.bind(mx.gpu(0), arr, arr_grad)]
-    for exe in exe_list:
-        exe.forward(is_train= True)
-    out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-
+    locations = {"data": x, "h": h, "s": s}
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
-    assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-
-    # backward
+    check_symbolic_forward(sym, locations, [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
-    for exe in exe_list:
-        exe.backward([out_grad])
-
-        a = np.zeros((n,in_dim))
-        for j in np.arange(0,n):
-            for i in np.arange(0,in_dim):
-                a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
-    assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
+    a = np.zeros((n,in_dim))
+    for j in np.arange(0,n):
+        for i in np.arange(0,in_dim):
+            a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
+    check_symbolic_backward(sym, locations, [out_grad], [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10988")
-@with_seed(0)
+@with_seed()
 def test_countsketch():
-    nrepeat = 2
     minindim = 40
     maxindim = 100
     minoutdim = 5
     maxoutdim = 30
     maxn = 200
-    for repeat in range(nrepeat):
-        in_dim = np.random.randint(minindim, maxindim)
-        out_dim = np.random.randint(minoutdim, maxoutdim)
-        n = np.random.randint(1,maxn)
-        check_countsketch(in_dim, out_dim, n)
+    in_dim = np.random.randint(minindim, maxindim)
+    out_dim = np.random.randint(minoutdim, maxoutdim)
+    n = np.random.randint(1, maxn)
+    check_countsketch(in_dim, out_dim, n)
 
 
 def check_ifft(shape):
