@@ -468,9 +468,9 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
 OpAttrs GetPoolingOp(TShape kernel, TShape stride, TShape pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
-  attrs.attrs.dict.insert({"kernel" , kernel});
-  attrs.attrs.dict.insert({"stride" , stride});
-  attrs.attrs.dict.insert({"pad" , pad});
+  attrs.attrs.dict.insert({"kernel" , "3"});
+  attrs.attrs.dict.insert({"stride" , "1"});
+  attrs.attrs.dict.insert({"pad" , "1" });
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
@@ -871,7 +871,7 @@ TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
 
 int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   TShape input_shape = in_arr.shape();
-  std::vector block_sizes(input_shape.ndim());
+  std::vector<int> block_sizes(input_shape.ndim());
   for (int dim = 0; dim < input_shape.ndim(); dim++)
     block_sizes[dim] = GetBlockSize(input_shape, dim);
 
@@ -906,9 +906,62 @@ float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TSh
   return max;
 }
 
-void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
-                         const std::vector<NDArray *> &out_arrs) {
+// starts with index 2 (cause batch and channels are first)
+std::vector<TShape> GetAllCoordinates(TShape &input_shape) {
+  std::vector<TShape> coordinates;
+  coordinates.push_back(TShape(input_shape.ndim()));
+  for (int dim = 2; dim < input_shape.ndim(); dim++) {
+    std::vector<TShape> tmplist;
+    for (int i = 0; i < input_shape[dim]; i++) {
+      for (int t = 0; t < coordinates.size(); t++) {
+        TShape tmp = coordinates[t];
+        tmp[dim] = i;
+        tmplist.push_back(tmp);
+      }
+    }
+    coordinates = tmplist;
+  }
+  return coordinates;
 }
+
+TEST(MKLDNN_NDArray, GetAllCoordinates) {
+  TShape test_shape1 = {1,1,2};
+  TShape test_shape2 = {1,1,2,3};
+  TShape test_shape3 = {1,1,2,3,4};
+  EXPECT_EQ(2, GetAllCoordinates(test_shape1).size());
+  EXPECT_EQ(6, GetAllCoordinates(test_shape2).size());
+  EXPECT_EQ(24, GetAllCoordinates(test_shape3).size());
+}
+
+//void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
+//                         const std::vector<NDArray *> &out_arrs,
+//                         const OpAttrs &attrs,
+//) {
+//  TShape kernel;
+//  TShape padding;
+//  int pool_type;
+//  NDArray input = *in_arrs[0];
+//  TShape input_shape = input.shape();
+//
+//  for (int dim = 2; dim < input_shape.ndim(); dim ++) {
+//    int pad = padding[dim - 2];
+//    int shift = kernel[dim] / 2;
+//    int lower = -pad;
+//    int upper = input_shape[dim] + pad;
+//    for (int i = 0; i < input_shape[dim]; i++) {
+//      TShape coordinate = GetShiftedCoordinate()
+//      if (i - shift < lower || i + shift >= upper)
+//        continue;
+//      ASSERT_EQ(PoolAtCoordinate(input,))
+//
+//    }
+//
+//
+//  }
+//
+//
+//
+//}
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
                       const std::vector<NDArray*> &original_outputs,
@@ -1045,6 +1098,56 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
     }
   }
 }
+
+//void TestPoolingOp(const OpAttrs &attrs, bool backwards = false) {
+//  std::vector<NDArray*> inputs(attrs.num_inputs);
+//  std::vector<NDArray*> outputs(attrs.num_outputs);
+//  std::vector<OpReqType> req(attrs.num_outputs);
+//  std::vector<DispatchMode> dispatches = attrs.dispatches;
+//
+//  TestArrayShapes tas = GetTestArrayShapes();
+//  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+//
+//  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+//
+//  // concat backwards uses scaled up inputs
+//  if (backwards) {
+//    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+//    int dim = std::stoi(str_dim);
+//    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+//  }
+//
+//  for (auto &in_arr : in_arrs) {
+//    for (auto &dispatch : dispatches) {
+//      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+//
+//      std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+//      int dim = std::stoi(str_dim);
+//      if (dim >= in_arr.arr.shape().ndim())
+//        continue;
+//      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
+//                    static_cast<float>(attrs.num_inputs);
+//      for (int i = 0; i < attrs.num_outputs; i++)
+//        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
+//
+//      for (int i = 0; i < attrs.num_inputs; i++)
+//        inputs[i] = &in_arr.arr;
+//
+//      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+//        for (int i = 0; i < attrs.num_outputs; i++) {
+//          req[i] = kWriteTo;
+//          outputs[i] = &out_arrs[i][output_i].arr;
+//        }
+//
+//        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+//        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+//                                    outputs, req, dispatch, mxnet::OpStatePtr());
+//        Engine::Get()->WaitForAll();
+//        VerifyPoolingResult(inputs, outputs, );
+//      }
+//    }
+//  }
+//}
 
 TEST(IMPERATIVE, CopyOp) {
   OpAttrs attrs = GetCopyOp();
