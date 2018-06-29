@@ -933,7 +933,7 @@ pip install graphviz
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
 </div> <!-- END of Python -->
--<!-- END - Linux Python GPU Installation Instructions -->
+<!-- END - Linux Python GPU Installation Instructions -->
 
 
 <div class="r">
@@ -1905,7 +1905,7 @@ Alternatively, You can also follow the installation instructions [in this guide]
 <div class="cpu gpu">
 
 MXNet-Scala for Windows is not yet available.
-
+<br>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala -->
 
