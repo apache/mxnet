@@ -1264,9 +1264,9 @@ def test_summary():
 
     net2 = nn.Sequential()
     with net2.name_scope():
-        net2.add(nn.Embedding(10, 20))
+        net2.add(nn.Embedding(40, 30))
         net2.add(gluon.rnn.LSTM(30))
-        net2.add(nn.Dense(40, flatten=False))
+        net2.add(nn.Dense(40, flatten=False, params=net2[0].params))
     net2.initialize()
     net2.summary(mx.nd.ones((80, 32)))
 
