@@ -146,9 +146,11 @@ namespace op {
 struct ActivationParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
+struct SoftmaxParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
 }
 
 static int GetTypeSize(int dtype) {

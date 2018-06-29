@@ -32,6 +32,13 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNSoftmax(const SoftmaxParam &param) {
+  if (param.temperature != 1.0) {
+    return false;
+  }
+  return true;
+}
+
 void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const NDArray &in_data, const OpReqType &req,
                           const NDArray &out_data) {
