@@ -399,10 +399,10 @@ NNVM_REGISTER_OP(reshape_like)
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
 void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -445,10 +445,10 @@ Example::
 .add_argument("data", "NDArray-or-Symbol", "Input Array.");
 
 void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 1U);
