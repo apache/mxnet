@@ -164,7 +164,7 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
 
   red::sum::SetInitValue(smem[x]);
   for (index_t i = x; i < M; i += x_size) {
-    red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/temperature));
+    red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/temperature)));
   }
   __syncthreads();
   cuda::Reduce1D<red::sum, x_bits>(smem);
