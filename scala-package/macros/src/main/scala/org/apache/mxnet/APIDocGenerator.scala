@@ -56,8 +56,7 @@ private[mxnet] object APIDocGenerator{
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    // TODO: Add Filter to the same location in case of refactor
-    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
+    val absFuncs = absClassFunctions.map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
       s"$scalaDoc\n$defBody"
@@ -158,11 +157,12 @@ private[mxnet] object APIDocGenerator{
     val returnType = if (isSymbol) "Symbol" else "NDArray"
     _LIB.mxListAllOpNames(opNames)
     // TODO: Add '_linalg_', '_sparse_', '_image_' support
+    // TODO: Add Filter to the same location in case of refactor
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName, "org.apache.mxnet." + returnType)
-    }).toList
+    }).toList.filterNot(_.name.startsWith("_"))
   }
 
   // Create an atomic symbol function by handle and function name.
