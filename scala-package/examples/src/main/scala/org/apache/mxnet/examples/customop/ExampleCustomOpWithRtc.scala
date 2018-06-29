@@ -29,7 +29,6 @@ import scala.collection.mutable
 
 /**
   * Example of CustomOp with Rtc
-  * @author Depeng Liang
   */
 object ExampleCustomOpWithRtc {
   private val logger = LoggerFactory.getLogger(classOf[ExampleCustomOpWithRtc])

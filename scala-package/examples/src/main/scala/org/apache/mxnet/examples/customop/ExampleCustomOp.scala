@@ -29,7 +29,6 @@ import scala.collection.mutable
 
 /**
   * Example of CustomOp
-  * @author Depeng Liang
   */
 object ExampleCustomOp {
   private val logger = LoggerFactory.getLogger(classOf[ExampleCustomOp])
