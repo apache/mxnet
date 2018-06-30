@@ -164,7 +164,8 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
 
   red::sum::SetInitValue(smem[x]);
   for (index_t i = x; i < M; i += x_size) {
-    red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/static_cast<DType>(temperature))));
+    red::sum::Reduce(smem[x], static_cast<DType>(expf((in[base + i*sa] - smax)/
+    static_cast<DType>(temperature))));
   }
   __syncthreads();
   cuda::Reduce1D<red::sum, x_bits>(smem);
@@ -216,7 +217,8 @@ __global__ void softmax_gradient_kernel(DType *out, DType *ograd, DType *igrad,
   __syncthreads();
 
   for (index_t i = x; i < M; i += x_size) {
-    igrad[base + i*sa] = OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum)/static_cast<DType>(temperature);
+    igrad[base + i*sa] = OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum)/
+    static_cast<DType>(temperature);
   }
 }
 
