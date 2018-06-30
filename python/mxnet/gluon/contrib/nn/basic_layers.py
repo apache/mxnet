@@ -189,10 +189,13 @@ class SyncBatchNorm(BatchNorm):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     num_devices : int, default number of visible GPUs
+
+
     Inputs:
         - **data**: input tensor with arbitrary shape.
     Outputs:
         - **out**: output tensor with the same shape as `data`.
+
     Reference:
         .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating
         deep network training by reducing internal covariate shift." *ICML 2015*
