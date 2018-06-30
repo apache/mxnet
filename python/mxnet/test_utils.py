@@ -1283,12 +1283,12 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             if use_uniform:
                 arg_params[n] = np.random.uniform(low=-0.92, high=0.92, size=arr.shape)
             else:
-	            arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
+                arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
     for exe in exe_list:
-        for name, arr in exe.arg_dict.items():
+            for name, arr in exe.arg_dict.items():
             arr[:] = arg_params[name]
         for name, arr in exe.aux_dict.items():
             arr[:] = aux_params[name]
