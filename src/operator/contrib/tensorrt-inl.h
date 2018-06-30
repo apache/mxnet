@@ -105,33 +105,6 @@ struct TRTEngineParam {
   std::vector<std::pair<uint32_t, tensorrt::TypeIO> > binding_map;
 };
 
-OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
-                          const std::vector<TShape>& ishape,
-                          const std::vector<int>& itype);
-
-template<typename xpu>
-void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
-                const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
-                const std::vector<TBlob>& outputs);
-
-inline bool TRTInferShape(const NodeAttrs& attrs,
-                          std::vector<TShape> *in_shape,
-                          std::vector<TShape> *out_shape);
-
-inline bool TRTInferStorageType(const NodeAttrs& attrs,
-                                const int dev_mask,
-                                DispatchMode* dispatch_mode,
-                                std::vector<int> *in_storage_type,
-                                std::vector<int> *out_storage_type);
-
-inline bool TRTInferType(const NodeAttrs& attrs,
-                         std::vector<int> *in_dtype,
-                         std::vector<int> *out_dtype);
-
-inline std::vector<std::string> TRTListInputNames(const NodeAttrs& attrs);
-
-inline std::vector<std::string> TRTListOutputNames(const NodeAttrs& attrs);
-
 }  // namespace op
 }  // namespace mxnet
 

@@ -213,7 +213,7 @@ bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
  * \brief Replace subgraphs by TRT (forward only)
  */
 Graph ReplaceSubgraph(Graph&& g,
-                      std::unordered_set<nnvm::Node*> set_subgraph,
+                      const std::unordered_set<nnvm::Node*>& set_subgraph,
                       std::unordered_map<std::string, NDArray>* const params_map);
 
 std::vector<std::unordered_set<nnvm::Node*>> GetTrtCompatibleSubsets(const Graph& g,
