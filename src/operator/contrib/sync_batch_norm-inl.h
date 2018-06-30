@@ -87,7 +87,7 @@ class SharedND {
   bool meanInited = false;
 
  public:
-  SharedND(int ndev) :nDev(ndev) {
+  explicit SharedND(int ndev) :nDev(ndev) {
       memset(flag, false, MAX_GPU_NUM * sizeof(bool));
   }
 
@@ -102,7 +102,7 @@ class SharedND {
   }
 
   T Pop(int index) {
-    while (!MeanReady()) {};
+    while (!MeanReady()) {}
     flag[index] = false;
     T tmp = mean;
     ResetMean();
@@ -358,14 +358,14 @@ class SyncBatchNorm : public Operator {
       sumGrad = sumall_except_dim<1>(grad);
       sumProd = sumall_except_dim<1>(grad * data);
 
-      SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad=
+      SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad =
         globalSharedGrad.Register(param_.key, param_.ndev);
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedProd =
         globalSharedProd.Register(param_.key, param_.ndev);
 
       Tensor<cpu, 1, real_t> grad_cpu = NewTensor<cpu, real_t>(sumGrad.shape_, 0.0f);
       mshadow::Copy(grad_cpu, sumGrad, s);
-      Tensor<cpu,1, real_t> prod_cpu = NewTensor<cpu, real_t>(sumProd.shape_, 0.0f);
+      Tensor<cpu, 1, real_t> prod_cpu = NewTensor<cpu, real_t>(sumProd.shape_, 0.0f);
       mshadow::Copy(prod_cpu, sumProd, s);
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
