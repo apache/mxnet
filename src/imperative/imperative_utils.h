@@ -179,7 +179,12 @@ inline void SetShapeType(const Context& ctx,
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (outputs[i]->is_none()) {
       if (storage_type == kDefaultStorage) {
-        *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+        if (outputs.size() == inputs.size()) {
+          // TODO FIXME (Hang Zhang), find a properate way to handle multi-device ctx
+          *outputs[i] = NDArray(out_shapes[i], inputs[i]->ctx(), true, out_types[i]);
+        } else {
+          *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+        }
       } else {
         *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
       }
