@@ -76,10 +76,11 @@ Alternatively, you can use the table below to select the package that suits your
 
 
 #### pip Package Availability
+
 The following table presents the pip packages that are recommended for each version of MXNet.
 
-| | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
-|-|-|-|-|-|
+| Package / MXNet Version | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
+|-|-|-|-|-|-|
 | mxnet-cu92mkl | :white_check_mark: | :x: | :x: | :x: | :x: |
 | mxnet-cu92 | :white_check_mark: | :x: | :x: | :x: | :x: |
 | mxnet-cu90mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
