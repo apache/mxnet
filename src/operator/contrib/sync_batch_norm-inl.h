@@ -79,16 +79,15 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
 template<class T>
 class SharedND {
  private:
-  int nDev = 4;
-  bool flag[MAX_GPU_NUM];
+  int nDev;
   T mean;
+  T data[MAX_GPU_NUM];
+  bool flag[MAX_GPU_NUM];
   bool meanReady = false;
   bool meanInited = false;
 
  public:
-  T data[MAX_GPU_NUM];
-  SharedND(int ndev)
-    :nDev(ndev) {
+  SharedND(int ndev) :nDev(ndev) {
       memset(flag, false, MAX_GPU_NUM * sizeof(bool));
   }
 
@@ -103,11 +102,11 @@ class SharedND {
   }
 
   T Pop(int index) {
-    while(!MeanReady());
+    while (!MeanReady()) {};
     flag[index] = false;
     T tmp = mean;
     ResetMean();
-    return tmp;    
+    return tmp;
   }
 
   bool MeanReady() {
@@ -265,8 +264,8 @@ class SyncBatchNorm : public Operator {
       // copy to cpu
       Tensor<cpu, 1, real_t> mean_cpu = NewTensor<cpu, real_t>(mean.shape_, 0.0f);
       mshadow::Copy(mean_cpu, mean, s);
-      Tensor<cpu,1,real_t> var_cpu = NewTensor<cpu, real_t>(var.shape_, 0.0f);
-      mshadow::Copy(var_cpu,var,s);
+      Tensor<cpu, 1, real_t> var_cpu = NewTensor<cpu, real_t>(var.shape_, 0.0f);
+      mshadow::Copy(var_cpu, var, s);
       // push and pull
       sharedMean->Push(mean_cpu, myRank);
       sharedVar->Push(var_cpu, myRank);
@@ -366,7 +365,7 @@ class SyncBatchNorm : public Operator {
 
       Tensor<cpu, 1, real_t> grad_cpu = NewTensor<cpu, real_t>(sumGrad.shape_, 0.0f);
       mshadow::Copy(grad_cpu, sumGrad, s);
-      Tensor<cpu,1,real_t> prod_cpu = NewTensor<cpu, real_t>(sumProd.shape_, 0.0f);
+      Tensor<cpu,1, real_t> prod_cpu = NewTensor<cpu, real_t>(sumProd.shape_, 0.0f);
       mshadow::Copy(prod_cpu, sumProd, s);
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
@@ -397,7 +396,7 @@ class SyncBatchNorm : public Operator {
       Assign(grad_in, req[syncbatchnorm::kData],
              (grad * broadcast<1>(slope, data.shape_)) *
              broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-             broadcast<1>(gvar, data.shape_) * //(1 - scale / param_.ndev) *
+             broadcast<1>(gvar, data.shape_) *
               scale * 2.0f * (data - broadcast<1>(mean, data.shape_)) +
              broadcast<1>(gmean, data.shape_) * scale);
       Assign(gbias, req[syncbatchnorm::kBeta], sumall_except_dim<1>(grad));
