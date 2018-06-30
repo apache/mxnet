@@ -3030,6 +3030,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
                                numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
 
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11509")
 @with_seed()
 def test_norm():
     def l1norm(input_data, axis=0, keepdims=True):
