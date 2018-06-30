@@ -37,7 +37,7 @@ Go to the [MXNet-Scala demo project's README](https://github.com/apache/incubato
 
 #### Maven Repository
 
-Package information can be found in the Maven Repository:
+Latest packages can be found in the Maven Repository:
 https://mvnrepository.com/artifact/org.apache.mxnet
 
 **Linux CPU**
