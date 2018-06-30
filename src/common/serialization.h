@@ -138,7 +138,7 @@ inline void deserialize(std::tuple<Args...>* obj, const std::string& buffer, siz
 
 
 template<typename T>
-struct is_cont {
+struct is_container {
   static const bool value = !std::is_pod<T>::value;
 };
 
@@ -149,7 +149,7 @@ inline size_t serialized_size(const T& obj) {
 
 template<typename T>
 inline size_t serialized_size(const nnvm::Tuple<T>& obj) {
-  if (is_cont<T>::value) {
+  if (is_container<T>::value) {
     size_t sum_val = 4;
     for (auto& el : obj) {
       sum_val += serialized_size(el);
@@ -162,7 +162,7 @@ inline size_t serialized_size(const nnvm::Tuple<T>& obj) {
 
 template<typename T>
 inline size_t serialized_size(const std::vector<T>& obj) {
-  if (is_cont<T>::value) {
+  if (is_container<T>::value) {
     size_t sum_val = 4;
     for (T i : obj) {
       sum_val += serialized_size(i);
@@ -181,16 +181,16 @@ inline size_t serialized_size(const std::pair<K, V>& obj) {
 template<typename K, typename V>
 inline size_t serialized_size(const std::map<K, V>& obj) {
   size_t sum_val = 4;
-  if (is_cont<K>::value && is_cont<V>::value) {
+  if (is_container<K>::value && is_container<V>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.first) + serialized_size(p.second);
     }
-  } else if (is_cont<K>::value) {
+  } else if (is_container<K>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.first);
     }
     sum_val += sizeof(V) * obj.size();
-  } else if (is_cont<K>::value) {
+  } else if (is_container<K>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.second);
     }
@@ -204,16 +204,16 @@ inline size_t serialized_size(const std::map<K, V>& obj) {
 template<typename K, typename V>
 inline size_t serialized_size(const std::unordered_map<K, V>& obj) {
   size_t sum_val = 4;
-  if (is_cont<K>::value && is_cont<V>::value) {
+  if (is_container<K>::value && is_container<V>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.first) + serialized_size(p.second);
     }
-  } else if (is_cont<K>::value) {
+  } else if (is_container<K>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.first);
     }
     sum_val += sizeof(V) * obj.size();
-  } else if (is_cont<K>::value) {
+  } else if (is_container<K>::value) {
     for (auto p : obj) {
       sum_val += serialized_size(p.second);
     }
@@ -226,7 +226,7 @@ inline size_t serialized_size(const std::unordered_map<K, V>& obj) {
 
 template<typename K>
 inline size_t serialized_size(const std::set<K>& obj) {
-  if (is_cont<K>::value) {
+  if (is_container<K>::value) {
     size_t sum_val = 4;
     for (auto& el : obj) {
       sum_val += serialized_size(el);
@@ -239,7 +239,7 @@ inline size_t serialized_size(const std::set<K>& obj) {
 
 template<typename K>
 inline size_t serialized_size(const std::unordered_set<K>& obj) {
-  if (is_cont<K>::value) {
+  if (is_container<K>::value) {
     size_t sum_val = 4;
     for (auto& el : obj) {
       sum_val += serialized_size(el);
@@ -279,7 +279,7 @@ inline size_t serialized_size(const std::tuple<Args...>& obj) {
 //  SERIALIZE
 
 template<typename T>
-inline size_t serialize_cont_size(const T& obj, char** buffer) {
+inline size_t serialize_container_size(const T& obj, char** buffer) {
   uint32_t size = obj.size();
   std::memcpy(*buffer, &size, 4);
   *buffer += 4;
@@ -304,8 +304,8 @@ inline void serialize(const nnvm::Tuple<T>& obj, char** buffer) {
 
 template<typename T>
 inline void serialize(const std::vector<T>& obj, char** buffer) {
-  auto size = serialize_cont_size(obj, buffer);
-  if (is_cont<T>::value) {
+  auto size = serialize_container_size(obj, buffer);
+  if (is_container<T>::value) {
     for (auto& el : obj) {
       serialize(el, buffer);
     }
@@ -323,7 +323,7 @@ inline void serialize(const std::pair<K, V>& obj, char** buffer) {
 
 template<typename K, typename V>
 inline void serialize(const std::map<K, V>& obj, char** buffer) {
-  serialize_cont_size(obj, buffer);
+  serialize_container_size(obj, buffer);
   for (auto& p : obj) {
     serialize(p.first, buffer);
     serialize(p.second, buffer);
@@ -332,7 +332,7 @@ inline void serialize(const std::map<K, V>& obj, char** buffer) {
 
 template<typename K, typename V>
 inline void serialize(const std::unordered_map<K, V>& obj, char** buffer) {
-  serialize_cont_size(obj, buffer);
+  serialize_container_size(obj, buffer);
   for (auto& p : obj) {
     serialize(p.first, buffer);
     serialize(p.second, buffer);
@@ -341,7 +341,7 @@ inline void serialize(const std::unordered_map<K, V>& obj, char** buffer) {
 
 template<typename K>
 inline void serialize(const std::set<K>& obj, char** buffer) {
-  serialize_cont_size(obj, buffer);
+  serialize_container_size(obj, buffer);
   for (auto& el : obj) {
     serialize(el, buffer);
   }
@@ -349,7 +349,7 @@ inline void serialize(const std::set<K>& obj, char** buffer) {
 
 template<typename K>
 inline void serialize(const std::unordered_set<K>& obj, char** buffer) {
-  serialize_cont_size(obj, buffer);
+  serialize_container_size(obj, buffer);
   for (auto& el : obj) {
     serialize(el, buffer);
   }
@@ -357,7 +357,7 @@ inline void serialize(const std::unordered_set<K>& obj, char** buffer) {
 
 template<>
 inline void serialize(const std::string& obj, char** buffer) {
-  auto size = serialize_cont_size(obj, buffer);
+  auto size = serialize_container_size(obj, buffer);
   std::memcpy(*buffer, &obj[0], size);
   *buffer += size;
 }
@@ -387,7 +387,7 @@ inline void serialize(const std::tuple<Args...>& obj, char** buffer) {
 
 // Deserializer
 template<typename T>
-inline size_t deserialize_cont_size(T* obj, const std::string& buffer, size_t* curr_pos) {
+inline size_t deserialize_container_size(T* obj, const std::string& buffer, size_t* curr_pos) {
   uint32_t size = obj->size();
   std::memcpy(&size, &buffer[*curr_pos], 4);
   *curr_pos += 4;
@@ -413,9 +413,9 @@ inline void deserialize(nnvm::Tuple<T>* obj, const std::string& buffer, size_t* 
 
 template<typename T>
 inline void deserialize(std::vector<T>* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   obj->resize(size);
-  if (is_cont<T>::value) {
+  if (is_container<T>::value) {
     for (size_t i = 0; i < size; ++i) {
       deserialize((*obj)[i], buffer, curr_pos);
     }
@@ -433,7 +433,7 @@ inline void deserialize(std::pair<K, V>* obj, const std::string& buffer, size_t*
 
 template<typename K, typename V>
 inline void deserialize(std::map<K, V>* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   K first;
   for (size_t i = 0; i < size; ++i) {
     deserialize(&first, buffer, curr_pos);
@@ -444,7 +444,7 @@ inline void deserialize(std::map<K, V>* obj, const std::string& buffer, size_t* 
 template<typename K, typename V>
 inline void deserialize(std::unordered_map<K, V>* obj,
                         const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   K first;
   for (size_t i = 0; i < size; ++i) {
     deserialize(first, buffer, curr_pos);
@@ -454,7 +454,7 @@ inline void deserialize(std::unordered_map<K, V>* obj,
 
 template<typename K>
 inline void deserialize(std::set<K>* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   K first;
   for (size_t i = 0; i < size; ++i) {
     deserialize(first, buffer, curr_pos);
@@ -464,7 +464,7 @@ inline void deserialize(std::set<K>* obj, const std::string& buffer, size_t* cur
 
 template<typename K>
 inline void deserialize(std::unordered_set<K>* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   K first;
   for (size_t i = 0; i < size; ++i) {
     deserialize(first, buffer, curr_pos);
@@ -474,7 +474,7 @@ inline void deserialize(std::unordered_set<K>* obj, const std::string& buffer, s
 
 template<>
 inline void deserialize(std::string* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_cont_size(obj, buffer, curr_pos);
+  auto size = deserialize_container_size(obj, buffer, curr_pos);
   obj->resize(size);
   std::memcpy(&(obj->front()), &buffer[*curr_pos], size);
   *curr_pos += size;

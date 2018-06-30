@@ -88,18 +88,18 @@ class BidirectionalGraph {
   template <typename FVisit>
   void DFS(const std::vector<Node*>& heads, bool reverse, FVisit fvisit) {
     std::unordered_set<Node*> visited;
-    std::deque<Node*> stack(heads.begin(), heads.end());
+    std::vector<Node*> vec(heads.begin(), heads.end());
     visited.reserve(heads.size());
-    while (!stack.empty()) {
-      Node* vertex = stack.back();
-      stack.pop_back();
+    while (!vec.empty()) {
+      Node* vertex = vec.back();
+      vec.pop_back();
       if (visited.count(vertex) == 0) {
         visited.insert(vertex);
         fvisit(vertex);
         std::vector<Node*> nexts = reverse ? vertex->inputs : vertex->outputs;
         for (Node* node : nexts) {
           if (visited.count(node) == 0) {
-            stack.emplace_back(node);
+            vec.emplace_back(node);
           }
         }
       }
@@ -337,12 +337,12 @@ Graph UpdateSubgraphAttrs(Graph&& subgraph, const Graph& g,
   const auto& idx     = g.indexed_graph();
   const auto& sub_idx = subgraph.indexed_graph();
 
-  const auto shape               = g.GetAttr<nnvm::ShapeVector>("shape");
-  const auto dtype               = g.GetAttr<nnvm::DTypeVector>("dtype");
-  const auto storage_type        = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto shape_inputs        = g.GetAttr<nnvm::ShapeVector>("shape_inputs");
-  const auto dtype_inputs        = g.GetAttr<nnvm::DTypeVector>("dtype_inputs");
-  const auto storage_type_inputs = g.GetAttr<StorageTypeVector>("storage_type_inputs");
+  const auto& shape               = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& dtype               = g.GetAttr<nnvm::DTypeVector>("dtype");
+  const auto& storage_type        = g.GetAttr<StorageTypeVector>("storage_type");
+  const auto& shape_inputs        = g.GetAttr<nnvm::ShapeVector>("shape_inputs");
+  const auto& dtype_inputs        = g.GetAttr<nnvm::DTypeVector>("dtype_inputs");
+  const auto& storage_type_inputs = g.GetAttr<StorageTypeVector>("storage_type_inputs");
 
   nnvm::ShapeVector sub_shape(sub_idx.num_node_entries());
   nnvm::DTypeVector sub_dtype(sub_idx.num_node_entries());
@@ -453,7 +453,7 @@ void dispNodesSet(Graph g, std::unordered_set<nnvm::Node*> s) {
  * \brief Replace a set of nodes by a TensorRT node
  */
 Graph ReplaceSubgraph(Graph&& g,
-                      std::unordered_set<nnvm::Node*> set_subgraph,
+                      const std::unordered_set<nnvm::Node*>& set_subgraph,
                       std::unordered_map<std::string, NDArray>* const params_map) {
   // Create MXNet subgraph
   Graph subgraph;
