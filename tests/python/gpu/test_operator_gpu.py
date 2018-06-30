@@ -1242,7 +1242,7 @@ def test_svmoutput_with_type():
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list, use_uniform=True )
+    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()
