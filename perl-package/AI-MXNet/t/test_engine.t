@@ -15,30 +15,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Gluon::NN;
 use strict;
 use warnings;
-use AI::MXNet::Gluon::Block;
-use AI::MXNet::Gluon::NN::Activation;
-use AI::MXNet::Gluon::NN::BasicLayers;
-use AI::MXNet::Gluon::NN::ConvLayers;
+use AI::MXNet qw(mx);
+use Test::More tests => 2;
 
-sub import
+sub test_bulk
 {
-    my ($class, $short_name) = @_;
-    if($short_name)
-    {
-        $short_name =~ s/[^\w:]//g;
-        if(length $short_name)
+    my $x;
+    mx->engine->bulk(10, sub {
+        $x = mx->nd->ones([10]);
+        $x *= 2;
+        $x += 1;
+        $x->wait_to_read();
+        $x += 1;
+        ok(($x->aspdl == 4)->all);
+        for my $i (1..100)
         {
-            my $short_name_package =<<"EOP";
-            package $short_name;
-            \@${short_name}::ISA = ('AI::MXNet::Gluon::NN_');
-            1;
-EOP
-            eval $short_name_package;
+            $x += 1;
         }
-    }
+    });
+    ok(($x->aspdl == 104)->all);
 }
 
-1;
+test_bulk();
