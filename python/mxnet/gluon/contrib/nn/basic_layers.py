@@ -21,7 +21,7 @@
 __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
            'SyncBatchNorm']
 
-from .... import nd
+from .... import nd, test_utils
 from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
 

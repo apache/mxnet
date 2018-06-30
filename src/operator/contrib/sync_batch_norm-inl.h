@@ -28,109 +28,16 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
+#include <pthread.h>
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
-#include <pthread.h>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
-
-#define MAX_GPU_NUM 16
-
-template<class T>
-class SharedND {
-private:
-  int nDev = 4;
-  bool flag[MAX_GPU_NUM];
-  T mean;
-  bool meanReady = false;
-  bool meanInited = false;
-public:
-  T data[MAX_GPU_NUM];
-  SharedND(int ndev)
-    :nDev(ndev) {
-      //LOG(INFO) << "Creating SharedND";
-      memset(flag, false, MAX_GPU_NUM * sizeof(bool));
-  }
-
-  bool Push(T input, int index) {
-    if (flag[index] == false) {
-      data[index] = input;
-      flag[index] = true;
-      return true;
-    }
-    else {
-      //LOG(INFO) << "Error in Pushing" << index;
-      return false;
-    }
-  }
-
-  T Pop(int index) {
-    //LOG(INFO) << "Poping: " << index;
-    while(!MeanReady());//deadlock may occur 
-    flag[index] = false;
-    T tmp = mean;
-    ResetMean();
-    return tmp;    
-  }
-
-  bool MeanReady() {
-    if (meanReady) {
-      //LOG(INFO) << "meanReady";
-      return true;
-    }
-    //LOG(INFO) << "Not meanReady";
-    for (int i = 0; i < nDev; i++) {
-      if (!flag[i]) {
-        //LOG(INFO) << "flag[i] is not ready: " << i;
-        return false;
-      }
-      //LOG(INFO) << "flag[i] is ready: " << i;
-    }
-    //LOG(INFO) << "reducing the data now";
-    for (int i = 1; i < nDev; i++) {
-      data[0] += data[i];
-      //LOG(INFO) << "adding data[i]" << i;
-    }
-    //LOG(INFO) << "reducing the data finished";
-    if (!meanInited) {
-      mean = mshadow::NewTensor<cpu, real_t>(data[0].shape_, 0.0f);
-      meanInited = true;
-    }
-    mean = data[0] * 1.0f /  nDev;
-    meanReady = true;
-    //LOG(INFO) << "meanReady now";
-    return true;
-  }
-
-  void ResetMean() {
-    for (int i = 0; i < nDev; i++) {
-      if (flag[i]) return;
-    }
-    meanReady = false;
-  }
-};
-
-template<class T>
-class GlobalShared {
- public:
-  T* Register(const std::string &key, int ndev) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = registry_.find(key);
-    if (it != registry_.end()) return it->second;
-    T *newT = new T(ndev);
-    registry_[key] = newT;
-    //LOG(INFO) << "registring" << key;
-    return newT;
-  }
- private:
-  std::mutex mutex_;
-  std::map<std::string, T*> registry_;
-};
 
 namespace syncbatchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta};
@@ -167,14 +74,126 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
   }
 };
 
+#define MAX_GPU_NUM 16
+
+template<class T>
+class SharedND {
+ private:
+  int nDev = 4;
+  bool flag[MAX_GPU_NUM];
+  T mean;
+  bool meanReady = false;
+  bool meanInited = false;
+
+ public:
+  T data[MAX_GPU_NUM];
+  SharedND(int ndev)
+    :nDev(ndev) {
+      memset(flag, false, MAX_GPU_NUM * sizeof(bool));
+  }
+
+  bool Push(T input, int index) {
+    if (flag[index] == false) {
+      data[index] = input;
+      flag[index] = true;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  T Pop(int index) {
+    while(!MeanReady());
+    flag[index] = false;
+    T tmp = mean;
+    ResetMean();
+    return tmp;    
+  }
+
+  bool MeanReady() {
+    if (meanReady) {
+      return true;
+    }
+    for (int i = 0; i < nDev; i++) {
+      if (!flag[i]) {
+        return false;
+      }
+    }
+    for (int i = 1; i < nDev; i++) {
+      data[0] += data[i];
+    }
+    if (!meanInited) {
+      mean = mshadow::NewTensor<cpu, real_t>(data[0].shape_, 0.0f);
+      meanInited = true;
+    }
+    mean = data[0] * 1.0f /  nDev;
+    meanReady = true;
+    return true;
+  }
+
+  void ResetMean() {
+    for (int i = 0; i < nDev; i++) {
+      if (flag[i]) return;
+    }
+    meanReady = false;
+  }
+};
+
+template<class T>
+class GlobalSharedND {
+ public:
+  T* Register(const std::string &key, int ndev) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = registry_.find(key);
+    if (it != registry_.end()) return it->second;
+    T *newT = new T(ndev);
+    registry_[key] = newT;
+    return newT;
+  }
+ private:
+  std::mutex mutex_;
+  std::map<std::string, T*> registry_;
+};
+
+template<class T>
+class GlobalSharedRank {
+ public:
+  T* Register(const std::string &key) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = registry_.find(key);
+    if (it != registry_.end()) return it->second;
+    T *newT = new T(0);
+    registry_[key] = newT;
+    return newT;
+  }
+ private:
+  std::mutex mutex_;
+  std::map<std::string, T*> registry_;
+};
+
+class GlobalSharedBarrier {
+ public:
+  pthread_barrier_t* Register(const std::string &key, int ndev) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = registry_.find(key);
+    if (it != registry_.end()) return it->second;
+    pthread_barrier_t *newBarrier = new pthread_barrier_t();
+    pthread_barrier_init(newBarrier, NULL, ndev);
+    registry_[key] = newBarrier;
+    return newBarrier;
+  }
+ private:
+  std::mutex mutex_;
+  std::map<std::string, pthread_barrier_t*> registry_;
+};
+
 static pthread_mutex_t mm = PTHREAD_MUTEX_INITIALIZER;
-static pthread_barrier_t  globalBarrier;
-static int globalRank = 0;
-static bool flagGlobalBarrier = false;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedGrad;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedProd;
+static GlobalSharedRank<int> globalSharedRank;
+static GlobalSharedBarrier globalSharedBarrier;
+static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
+static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
+static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedGrad;
+static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedProd;
 
 template<typename xpu>
 class SyncBatchNorm : public Operator {
@@ -200,18 +219,6 @@ class SyncBatchNorm : public Operator {
       CHECK_GE(req.size(), 1U);
       CHECK_EQ(req[syncbatchnorm::kOut], kWriteTo);
     }
-    // get my rank
-    pthread_mutex_lock(&mm);
-    if (flagGlobalBarrier == false) {
-      pthread_barrier_init(&globalBarrier, NULL, param_.ndev);
-      flagGlobalBarrier = true;
-    }
-    int myRank = globalRank;
-    //LOG(INFO) << "myRank" << myRank;
-    globalRank += 1;
-    pthread_mutex_unlock(&mm);
-    pthread_barrier_wait(&globalBarrier);
-    globalRank = 0;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const real_t scale = static_cast<real_t>(in_data[syncbatchnorm::kData].shape_[1]) /
@@ -236,6 +243,14 @@ class SyncBatchNorm : public Operator {
 
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
+      // get my rank
+      pthread_barrier_t *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      int *globalRank = globalSharedRank.Register(param_.key);
+      pthread_mutex_lock(&mm);
+      int myRank = *globalRank;
+      *globalRank += 1;
+      pthread_mutex_unlock(&mm);
+      // get the mean and var
       Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
       CHECK(req[syncbatchnorm::kMean] == kNullOp || req[syncbatchnorm::kMean] == kWriteTo);
@@ -243,13 +258,11 @@ class SyncBatchNorm : public Operator {
       // E(x) and E(x^2)
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data));
-      //var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
-      //    data - broadcast<1>(mean, data.shape_)));
-      // copy to cpu
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
         globalSharedMean.Register(param_.key, param_.ndev);
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedVar =
         globalSharedVar.Register(param_.key, param_.ndev);
+      // copy to cpu
       Tensor<cpu, 1, real_t> mean_cpu = NewTensor<cpu, real_t>(mean.shape_, 0.0f);
       mshadow::Copy(mean_cpu, mean, s);
       Tensor<cpu,1,real_t> var_cpu = NewTensor<cpu, real_t>(var.shape_, 0.0f);
@@ -257,7 +270,8 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedMean->Push(mean_cpu, myRank);
       sharedVar->Push(var_cpu, myRank);
-      pthread_barrier_wait(&globalBarrier);
+      pthread_barrier_wait(globalBarrier);
+      *globalRank = 0;
       pthread_mutex_lock(&mm);
       mean_cpu = sharedMean->Pop(myRank);
       var_cpu = sharedVar->Pop(myRank);
@@ -277,11 +291,6 @@ class SyncBatchNorm : public Operator {
                                           data.shape_) * data +
              broadcast<1>(bias - (slope * moving_mean) /
                           F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
-      // Set mean and var tensors to their moving values
-      Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
-      Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
-      mean = F<mshadow_op::identity>(moving_mean);
-      var  = F<mshadow_op::identity>(moving_var);
     }
   }
 
@@ -298,18 +307,6 @@ class SyncBatchNorm : public Operator {
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(out_data.size(), 3U);
     CHECK_EQ(in_grad.size(), 3U);
-    // get my rank
-    pthread_mutex_lock(&mm);
-    if (flagGlobalBarrier == false) {
-      pthread_barrier_init(&globalBarrier, NULL, param_.ndev);
-      flagGlobalBarrier = true;
-    }
-    int myRank = globalRank;
-    //LOG(INFO) << "myRank" << myRank;
-    globalRank += 1;
-    pthread_mutex_unlock(&mm);
-    pthread_barrier_wait(&globalBarrier);
-    globalRank = 0;
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4> data, grad, grad_in;
@@ -340,12 +337,18 @@ class SyncBatchNorm : public Operator {
     if (param_.fix_gamma) slope = 1.f;
 
     if (ctx.is_train && !param_.use_global_stats) {
+      // get my rank
+      pthread_barrier_t *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      int *globalRank = globalSharedRank.Register(param_.key);
+      pthread_mutex_lock(&mm);
+      int myRank = *globalRank;
+      *globalRank += 1;
+      pthread_mutex_unlock(&mm);
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(5, mean.shape_[0]), s);
       Tensor<xpu, 1> gmean = workspace[0];
       Tensor<xpu, 1> gvar = workspace[1];
-      //Tensor<xpu, 1> gstd = workspace[1];
       // Tensor<xpu, 1> tmp = workspace[2];
 
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
@@ -368,7 +371,8 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
       sharedProd->Push(prod_cpu, myRank);
-      pthread_barrier_wait(&globalBarrier);
+      pthread_barrier_wait(globalBarrier);
+      *globalRank = 0;
       pthread_mutex_lock(&mm);
       grad_cpu = sharedGrad->Pop(myRank);
       prod_cpu = sharedProd->Pop(myRank);
@@ -379,8 +383,6 @@ class SyncBatchNorm : public Operator {
 
       gvar = (sumProd - sumGrad * mean) * slope * (-0.5f) *
         F<mshadow_op::power>(var + param_.eps, -1.5f);
-      //gstd = (sumProd - sumGrad * mean) * slope * F<mshadow_op::power>(var + param_.eps, -2.0f);
-      //gmean =  - slope / F<mshadow_op::square_root>(var + param_.eps) * sumGrad;
       gmean =  sumGrad * slope;
       gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
       // assign
