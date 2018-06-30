@@ -25,22 +25,7 @@
 # As a stand-alone program, it prints a list of unique cuda SM architectures
 import ctypes as C
 from ctypes.util import find_library
-
-def cint(init_val=0):
-    """create a C int with an optional initial value"""
-    return C.c_int(init_val)
-
-def int_addr(x):
-    """given a c_int, return it's address as an int ptr"""
-    x_addr = C.addressof(x)
-    INTP = C.POINTER(C.c_int)
-    x_int_addr = C.cast(x_addr, INTP)
-    return x_int_addr
-
-def checked_call(f, *args):
-    """call a cuda function and check for success"""
-    error_t = f(*args)
-    assert error_t == 0, "Failing cuda call %s returns %s." % (f.__name__, error_t)
+from .base import cint, int_addr, checked_call
 
 def find_cuda_lib(candidates):
     for candidate in candidates:
@@ -84,7 +69,3 @@ def unique_sm_arches():
     for device_id in range(device_count):
         archs.add(get_sm_arch(device_id))
     return sorted(archs)
-
-# print a list of unique cuda SM architectures on the system
-if __name__ == '__main__':
-    print(' '.join(str(x) for x in unique_sm_arches()))
