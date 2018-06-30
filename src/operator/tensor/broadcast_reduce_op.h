@@ -70,7 +70,7 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(NormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
-      .describe("Order of the norm. Currently ord=2 is supported.");
+      .describe("Order of the norm. Currently ord=1 and ord=2 is supported.");
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<TShape>())
       .describe(R"code(The axis or axes along which to perform the reduction.
       The default, `axis=()`, will compute over all elements into a
@@ -869,7 +869,7 @@ struct ReduceGrad {
   }
 };
 
-inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
+inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
@@ -889,18 +889,20 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                      DispatchMode::kFCompute);
   }
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
-  if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
-      axis.ndim() == 0 && param.ord == 2) {
-    // l2 norm: rsp/csr, axis = () -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
-  }
-  if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
-      (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
-    // l2 norm: csr, axis = 0/1 -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     dispatch_ex);
+  if (param.ord == 2) {
+    const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+    if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
+        axis.ndim() == 0 && param.ord == 2) {
+      // l2 norm: rsp/csr, axis = () -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
+    if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
+        (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
+      // l2 norm: csr, axis = 0/1 -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       dispatch_ex);
+    }
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
@@ -984,13 +986,13 @@ void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
 }
 
 template<typename xpu>
-void L2NormCompute(const nnvm::NodeAttrs& attrs,
+void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  CHECK_EQ(param.ord, 2) << "norm only support ord=2";
+  CHECK(param.ord == 1 || param.ord == 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
 
   TShape small;
@@ -999,13 +1001,18 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
-      ctx, inputs, req, outputs, small);
-  SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+  if (param.ord == 1) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::abs>(
+          ctx, inputs, req, outputs, small);
+  } else if (param.ord == 2) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
+        ctx, inputs, req, outputs, small);
+    SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+  }
 }
 
 template<typename xpu>
-void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
+void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
@@ -1021,8 +1028,36 @@ void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
   }
-  ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
-                                                              req, outputs);
+  if (param.ord == 1) {
+    TShape src_shape, dst_shape;
+    BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      if (dst_shape.ndim() == 2) {
+        Tensor<xpu, 2, DType> ograd =
+          inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> igrad =
+          outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> data =
+          inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
+      } else {
+        const int ndim = MXNET_SPECIAL_MAX_NDIM;
+        Tensor<xpu, ndim, DType> igrad =
+          outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> ograd =
+          inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> data =
+          inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
+      }
+    });
+  } else if (param.ord == 2) {
+    ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
+                                                                req, outputs);
+  }
 }
 
 template<typename xpu>
