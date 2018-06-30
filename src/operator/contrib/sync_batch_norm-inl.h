@@ -76,6 +76,7 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
 
 #define MAX_GPU_NUM 16
 
+// Adapt from https://github.com/brucechin/SharedTensor
 template<class T>
 class SharedND {
  private:
