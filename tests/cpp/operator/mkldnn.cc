@@ -938,15 +938,19 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
 
 TEST(MKLDNN_NDArray, PoolAtCoordinate) {
   TShape test_shape = {1,1,8};
-  TShape kernel_shape = {3};
+  TShape odd_kernel_shape = {3};
+  TShape even_kernel_shape = {4};
   NDArray arr(test_shape, Context());
   InitDefaultArray(&arr);
   TShape coord1 = {0,0,0}; // edge
   TShape coord2 = {0,0,7}; // edge
   TShape coord3 = {0,0,4}; //middle
-  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, kernel_shape));
-  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, kernel_shape));
-  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, kernel_shape));
+  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
+  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
+  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
+  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, even_kernel_shape));
+  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, even_kernel_shape));
+  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, even_kernel_shape));
 }
 
 TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
