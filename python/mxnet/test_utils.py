@@ -1251,13 +1251,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                np.dtype(np.float32): 1e-3,
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
+               np.dtype(np.int32): 0,
+               np.dtype(np.int64): 0}
     elif isinstance(tol, numbers.Number):
         tol = {np.dtype(np.float16): tol,
                np.dtype(np.float32): tol,
                np.dtype(np.float64): tol,
                np.dtype(np.uint8): tol,
-               np.dtype(np.int32): tol}
+               np.dtype(np.int32): tol,
+               np.dtype(np.int64): tol}
 
     assert len(ctx_list) > 1
     if isinstance(sym, Symbol):
