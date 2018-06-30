@@ -116,14 +116,6 @@ void TRTParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param_);
 }
 
-template <>
-void TRTCompute<cpu>(const OpStatePtr& state, const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  LOG(FATAL) << "TRTCompute not implemented on the CPU";
-}
-
 inline bool TRTInferShape(const NodeAttrs& attrs, std::vector<TShape>* in_shape,
                           std::vector<TShape>* out_shape) {
   const auto node_param = nnvm::get<TRTParam>(attrs.parsed);
@@ -187,7 +179,6 @@ NNVM_REGISTER_OP(_trt_op)
     .set_attr<nnvm::FListInputNames>("FListInputNames", TRTListInputNames)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", TRTListOutputNames)
     .set_attr<FCreateOpState>("FCreateOpState", TRTCreateState)
-    .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", TRTCompute<cpu>)
     .set_attr<FInferStorageType>("FInferStorageType", TRTInferStorageType);
 
 }  // namespace op

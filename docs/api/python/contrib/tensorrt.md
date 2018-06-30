@@ -87,7 +87,7 @@ sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, epoch)
 
 all_params = merge_dicts(arg_params, aux_params)
 ```
-This `all_params` dictionary cn be seem in use in the `simple_bind` call in `#2`.
+This `all_params` dictionary can be seen in use in the `simple_bind` call in `#2`.
 4. Once the symbol is bound, we need to feed the data and run the `forward()` method. Let's say we're using a test set data iterator called `test_iter`. We can run inference as follows:
 ```python
 for idx, dbatch in enumerate(test_iter):

@@ -40,8 +40,7 @@ namespace op {
   } \
 } while (0)
 
-template<>
-void TRTCompute<gpu>(const OpStatePtr& state, const OpContext& ctx,
+void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
                      const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
@@ -66,7 +65,7 @@ void TRTCompute<gpu>(const OpStatePtr& state, const OpContext& ctx,
 }
 
 NNVM_REGISTER_OP(_trt_op)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute);
 
 }  // namespace op
 }  // namespace mxnet

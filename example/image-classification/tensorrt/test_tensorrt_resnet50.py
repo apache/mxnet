@@ -18,13 +18,10 @@
 from __future__ import print_function
 
 import os.path
-import subprocess
 import mxnet as mx
 import numpy as np
 from time import time
 import sys
-import urllib
-
 
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
