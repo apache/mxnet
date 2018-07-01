@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,8 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
 set -evx
 
-cd contrib/clojure-package
+MXNET_HOME=${PWD}
+cd ${MXNET_HOME}/contrib/clojure-package
 lein test
