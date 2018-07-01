@@ -28,7 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-//#include <pthread.h>
+// #include <pthread.h>
 # include <condition_variable>
 #include <map>
 #include <vector>
@@ -180,8 +180,7 @@ class Barrier {
   std::size_t total_count_;
  public:
   explicit Barrier(std::size_t count) : count_{count}, total_count_{count} { }
-  void Wait()
-  {
+  void Wait() {
     std::unique_lock<std::mutex> lock{mutex_};
     if (--count_ == 0) {
       count_ = total_count_;
