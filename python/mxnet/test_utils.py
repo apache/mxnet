@@ -1206,7 +1206,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None, equal_nan=False):
+                      raise_on_err=True, ground_truth=None, equal_nan=False, use_uniform=False):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1219,7 +1219,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Standard deviation of the inner normal distribution. Used in initialization.
     grad_req : str or list of str or dict of str to str
         Gradient requirement.
-
+    use_unifrom: bool
+        Optional, When flag set to true,
+        random input data generated follows uniform distribution,
+        not normal distribution
     Examples
     --------
     >>> # create the symbol
@@ -1279,7 +1282,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     aux_params = {} if aux_params is None else aux_params
     for n, arr in exe_list[0].arg_dict.items():
         if n not in arg_params:
-            arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
+            if use_uniform:
+                arg_params[n] = np.random.uniform(low=-0.92, high=0.92, size=arr.shape)
+            else:
+                arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
