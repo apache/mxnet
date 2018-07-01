@@ -30,6 +30,8 @@ COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 COPY install/ubuntu_scala.sh /work/
 RUN /work/ubuntu_scala.sh
+COPY install/ubuntu_clojure.sh /work/
+RUN /work/ubuntu_clojure.sh
 COPY install/ubuntu_r.sh /work/
 RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/

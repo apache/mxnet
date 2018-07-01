@@ -3,17 +3,18 @@ This example implements the baseline model in
 [Exploring the Limits of Language Modeling](https://arxiv.org/abs/1602.02410) on the
 [Google 1-Billion Word](https://github.com/ciprian-chelba/1-billion-word-language-modeling-benchmark) (GBW) dataset.
 
-This example reaches **41.97 perplexity** after 5 training epochs on a 1-layer, 2048-unit, 512-projection LSTM Language Model.
-The result is slightly better than the one reported in the paper(43.7 perplexity).
+This example reaches 48.0 test perplexity after 6 training epochs on a 1-layer, 2048-unit, 512-projection LSTM Language Model.
+It reaches 44.2 test perplexity after 35 epochs of training.
+
 The main differences with the original implementation include:
 * Synchronized gradient updates instead of asynchronized updates
-* Noise candidates are sampled with replacement
 
-Each epoch for training takes around 80 minutes on a p3.8xlarge instance, which comes with 4 Volta V100 GPUs.
+Each epoch for training (excluding time for evaluation on test set) takes around 80 minutes on a p3.8xlarge instance, which comes with 4 Volta V100 GPUs.
 
-# Setup - Original Data Format
-1. Download 1-Billion Word Dataset - [Link](http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz)
+# Setup dataset and build sampler
+1. Download 1-Billion Word Dataset: [Link](http://www.statmt.org/lm-benchmark/1-billion-word-language-modeling-benchmark-r13output.tar.gz)
 2. Download pre-processed vocabulary file which maps tokens into ids.
+3. Build sampler with cython by running `make` in the current directory. If you do not have cython installed, run `pip install cython`
 
 # Run the Script
 ```
@@ -59,8 +60,7 @@ optional arguments:
 
 To reproduce the result, run
 ```
-train.py --gpus=0,1,2,3 --clip=1 --lr=0.05 --dropout=0.01 --eps=0.0001 --rescale-embed=128
+train.py --gpus=0,1,2,3 --clip=10 --lr=0.2 --dropout=0.1 --eps=1 --rescale-embed=256
 --test=/path/to/heldout-monolingual.tokenized.shuffled/news.en.heldout-00000-of-00050
 --data=/path/to/training-monolingual.tokenized.shuffled/*
-# ~42 perplexity for 5 epochs of training
 ```

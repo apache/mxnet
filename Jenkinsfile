@@ -712,6 +712,18 @@ try {
         }
       }
     },
+    'Clojure: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-clojure-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu', mx_dist_lib)
+            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
     'Perl: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-perl-cpu') {

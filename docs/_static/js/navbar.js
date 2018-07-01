@@ -4,8 +4,8 @@ var DOC_TITLE = ['/faq/', '/tutorials/', '/architecture/', '/model_zoo/'];
 var APISubmenu, versionSubmenu, docSubmenu, communitySubmenu;
 $("#burgerMenu").children().each(function () {
     if($(this).children().first().html() == 'API') APISubmenu = $(this).clone();
-    if($(this).children().first().html().startsWith('Versions')) versionSubmenu = $(this).clone();
-    if($(this).children().first().html().startsWith('Community')) communitySubmenu = $(this).clone();
+    if($(this).children().first().html().indexOf('Versions') == 0) versionSubmenu = $(this).clone();
+    if($(this).children().first().html().indexOf('Community') == 0) communitySubmenu = $(this).clone();
     if($(this).children().first().html() == 'Docs') docSubmenu= $(this).clone();
 });
 
