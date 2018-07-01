@@ -22,7 +22,7 @@ use AI::MXNet::TestUtils qw(GetMNIST_ubyte);
 use Test::More tests => 1;
 
 ## speed up the tests when gpu present
-my $gpu_present = (`perl -e 'use AI::MXNet qw(mx); print mx->nd->ones([1], ctx => mx->gpu(0))->asscalar' 2>/dev/null` eq '1');
+my $gpu_present = mx->context->num_gpus;
 
 # symbol net
 my $batch_size = 100;

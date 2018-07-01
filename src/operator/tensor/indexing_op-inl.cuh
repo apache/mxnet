@@ -27,6 +27,7 @@
 #define MXNET_OPERATOR_TENSOR_INDEXING_OP_CUH_
 #include <cub/device/device_run_length_encode.cuh>
 #include <cub/device/device_scan.cuh>
+#include "../mxnet_op.h"
 
 #if CUDA_VERSION >= 9000
 #define FULLMASK 0xFFFFFFFF

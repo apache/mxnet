@@ -95,38 +95,24 @@ TEST(MKLDNN_UTIL_FUNC, MemFormat) {
 static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-  size_t size = blob.Size();
-  for (size_t i = 0; i < size; i++) {
-    if (is_rand) {
-      data[i] = std::rand();
-    } else {
-      data[i] = i;
-    }
-  }
-}
-
-// Init arrays with negative and positive values
-static void InitNegPosArray(NDArray *arr, bool is_rand = false) {
-  const TBlob &blob = arr->data();
-  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   int size = blob.Size();
 
   for (int i = 0; i < size; i++)
     if (is_rand) {
-      data[i] = std::rand() - INT_MAX / 2;
+      data[i] = (std::rand() % 100) - 50;
     } else {
-      size_t shift = size >> 1;
+      int shift = size >> 1;
       data[i] = i - shift;
     }
 }
 
-using InitFunc = std::function<void (NDArray *arr, bool is_rand)>;
-using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs, const NDArray &arr)>;
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs,
+    const std::vector<NDArray *> &out_arrs)>;
 
 // Init arrays with the specified layout.
 static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
-                            InitFunc init_fn, bool is_rand = false) {
-    init_fn(arr, is_rand);
+                            bool is_rand = false) {
+    InitDefaultArray(arr, is_rand);
     arr->MKLDNNDataReorderAsync(pd);
     arr->WaitToRead();
 }
@@ -137,8 +123,9 @@ static void VerifyDefMem(const mkldnn::memory &mem) {
       = static_cast<mshadow::default_real_t *>(mem.get_data_handle());
   size_t size = pd.get_size() / sizeof(mshadow::default_real_t);
   size_t num_same = 0;
-  for (size_t i = 0; i < size; i++)
-    num_same += data[i] == static_cast<mshadow::default_real_t>(i);
+  int shift = size >> 1;
+  for (int i = 0; i < size; i++)
+    num_same += data[i] == static_cast<mshadow::default_real_t>(i - shift);
   EXPECT_EQ(num_same, size);
 }
 
@@ -171,6 +158,17 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
     dims[i] = s[i];
   mkldnn::memory::desc desc{dims, get_mkldnn_type(dtype), format};
   return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
+}
+
+static mkldnn::memory::primitive_desc GetExpandedMemPD(
+    mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
+  CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
+  nnvm::TShape s(pd.desc().data.ndims);
+  for (size_t i = 0; i < pd.desc().data.ndims; i++)
+    s[i] = pd.desc().data.dims[i];
+  s[dim] = static_cast<int>(s[dim] * num_input);
+  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
 
 // This function gets special MKLDNN formats without knowing the specific
@@ -334,7 +332,7 @@ TEST(MKLDNN_NDArray, GetDataReorder) {
         for (int i = 0; i < from_pd.desc().data.ndims; i++)
           printf("%d, ", from_pd.desc().data.dims[i]);
         printf("), format: %d\n", from_pd.desc().data.format);
-        InitMKLDNNArray(&arr, from_pd, InitDefaultArray);
+        InitMKLDNNArray(&arr, from_pd);
         for (auto to_pd : pds) {
           if (to_pd.get_size() / sizeof(mshadow::default_real_t) == s.Size()) {
             const mkldnn::memory *mem = arr.GetMKLDNNDataReorder(to_pd);
@@ -365,11 +363,26 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
+  int num_inputs;
+  int num_outputs;
 };
 
 OpAttrs GetCopyOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_copy");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+OpAttrs GetCopyBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_copy");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
@@ -381,28 +394,83 @@ OpAttrs GetReluOp() {
   attrs.attrs.op = Op::Get("Activation");
   attrs.attrs.dict.insert({"act_type", "relu"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
 
-OpAttrs GetLeakyReluOp() {
+OpAttrs GetReluBackwardsOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("LeakyReLU");
-  attrs.dispatches.resize(1);
+  attrs.attrs.op = Op::Get("_backward_Activation");
+  attrs.attrs.dict.insert({"act_type", "relu"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.num_inputs = 2;
+  attrs.num_outputs = 1;
+  attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
-
 
 OpAttrs GetSumOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("elemwise_add");
+  attrs.num_inputs = 2;
+  attrs.num_outputs = 1;
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
+}
+
+OpAttrs GetSumBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_add");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 2;
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+OpAttrs GetConcatOp(int num_args, int dim) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("concat");
+  attrs.num_inputs = num_args;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Concat");
+  attrs.num_inputs = 2;
+  attrs.num_outputs = num_args;
+  attrs.attrs.dict.insert({"num_args" , std::to_string(num_args)});
+  attrs.attrs.dict.insert({"dim" , std::to_string(dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
+void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
+  TShape t1 = arr1.arr.shape();
+  TShape t2 = arr2.arr.shape();
+  std::stringstream ss;
+  std::cout << "Verifying: " << arr1.desc.c_str() << " " <<
+     t1 << " with " << arr2.desc.c_str() << " " << t2 << "\n";
 }
 
 /*
@@ -425,20 +493,37 @@ OpAttrs GetSumOp() {
  *    In the inference mode, the MKLDNN memory in the weight array will be
  *    reordered to 5 dimensions.
  *
+ *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
+
+  int slice_amount = 1;
+  if (dim == 0)
+    slice_amount = num_inputs;
   for (auto shape : shapes) {
+    if (dim >= shape.ndim())
+      continue;
+    shape[dim] = shape[dim] * num_inputs;
+
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
-    init_fn(&in_arrs.back().arr, rand);
+    InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
+      if (num_inputs > 1) {
+        // preserve if matching layout else just expand on 0 dim
+        if (shape.ndim() == pd.desc().data.ndims)
+          pd = GetExpandedMemPD(pd, num_inputs, dim);
+        else
+          pd = GetExpandedMemPD(pd, num_inputs);
+      }
+
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
         continue;
 
@@ -451,8 +536,8 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
            shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
+      InitMKLDNNArray(&arr, pd);
       in_arrs.emplace_back(arr, desc);
-      InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn);
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());
@@ -463,30 +548,11 @@ std::vector<NDArrayAttrs> GetTestInputArrays(InitFunc init_fn, bool rand = false
            << shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd, init_fn);
-      in_arrs.emplace_back(arr.Slice(1, arr.shape()[0] - 1), desc);
+      InitMKLDNNArray(&arr, pd);
+      in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
     }
   }
   return in_arrs;
-}
-
-TEST(MKLDNN_NDArray, GetTestInputArrays) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  int mkldnn_count = 0, mkldnn_view_count = 0;
-  for (auto arr : in_arrs) {
-    if (arr.arr.IsView() && arr.arr.IsMKLDNNData()) {
-      mkldnn_view_count++;
-      continue;
-    }
-
-    if (arr.arr.IsMKLDNNData()) {
-      mkldnn_count++;
-      continue;
-    }
-  }
-
-  EXPECT_GT(mkldnn_view_count, 0);
-  EXPECT_GT(mkldnn_count, 0);
 }
 
 /*
@@ -506,22 +572,29 @@ TEST(MKLDNN_NDArray, GetTestInputArrays) {
  * 7. Reused reshaped/sliced NDArray.
  * 8. Reused NDArray with MKLDNN layout.
  * 9. Reused NDArray with MKLDNN layout of different dimensions.
+ *
+ * Optional num_inputs / dim args can be passed to modify input shape (used for Concat test)
  */
-std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
-                                         const std::vector<mkldnn::memory::primitive_desc> &pds,
-                                         const InitFunc init_fn) {
+std::vector<NDArrayAttrs> GetTestOutputArrays(
+    const TShape &shp,
+    const std::vector<mkldnn::memory::primitive_desc> &pds,
+    float num_inputs = 0, int dim = 0) {
+  TShape shape = shp;
+  if (num_inputs != 0)
+    shape[dim] = static_cast<int>(shape[dim] * num_inputs);
+
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
   // Type 1.
   NDArray arr(shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
-  init_fn(&in_arrs.back().arr, true);
+  InitDefaultArray(&in_arrs.back().arr, true);
 
   // Type 4.
   TShape tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  init_fn(&arr0, true);
+  InitDefaultArray(&arr0, true);
   in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
@@ -530,14 +603,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   s[0] = shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
-  init_fn(&arr1, true);
+  InitDefaultArray(&arr1, true);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-  init_fn(&arr2, true);
+  InitDefaultArray(&arr2, true);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
@@ -545,15 +618,19 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  init_fn(&arr3, true);
+  InitDefaultArray(&arr3, true);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
-
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
+    if (num_inputs != 0)
+      pd = GetExpandedMemPD(pd, num_inputs);
+
+
     // Type 2, 3.
+
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -563,7 +640,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, pd, init_fn, true);
+    InitMKLDNNArray(&in_arrs.back().arr, pd, true);
 
     // Type 8, 9.
     // Get a reused version.
@@ -571,7 +648,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, pd, init_fn, true);
+    InitMKLDNNArray(&arr, pd, true);
     desc = "Reused MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
       std::stringstream ss;
@@ -584,9 +661,51 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(const TShape &shape,
   return in_arrs;
 }
 
-void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
+  auto in_arrs = GetTestInputArrays();
+  for (int dim = 0; dim < 5; dim++) {
+    for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
+      int i = 0;
+      for (auto &arr : in_arrs) {
+        if (dim >= arr.arr.shape().ndim())
+          continue;
+        auto ex_arr = expanded_arrs[i];
+        PrintVerifyMsg(arr, ex_arr);
+        EXPECT_EQ(arr.arr.shape().Size() * num_inputs, ex_arr.arr.shape().Size());
+        EXPECT_EQ(arr.arr.shape()[dim] * num_inputs, ex_arr.arr.shape()[dim]);
+        i++;
+      }
+    }
+  }
+}
+
+TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
+  auto shapes_pds = GetTestArrayShapes();
+  std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
+  std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
+  for (auto &shape : shapes) {
+    for (int dim = 0; dim < 5; dim++) {
+      for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
+        if (shape.ndim() <= dim)
+          continue;
+        std::cout << "Extending " << shape << " dim " <<
+                  dim << " and " << num_inputs << "num_inputs\n";
+        auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
+        for (auto &out_arr : output_arrs) {
+          auto out_shape = out_arr.arr.shape();
+          EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
+          EXPECT_EQ(shape[dim] * num_inputs, out_arr.arr.shape()[dim]);
+        }
+      }
+    }
+  }
+}
+
+void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
+                      const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
-  NDArray tmp2 = arr.Reorder2Default();
+  NDArray tmp2 = out_arrs[0]->Reorder2Default();
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   TBlob d1 = tmp1.data();
   TBlob d2 = tmp2.data();
@@ -594,23 +713,25 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr)
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
-void VerifyActResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+void VerifyActResult(const std::vector<NDArray *> &in_arrs,
+                     const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
-  NDArray tmp2 = arr.Reorder2Default();
+  NDArray tmp2 = out_arrs[0]->Reorder2Default();
   TBlob blob1 = tmp1.data();
   TBlob blob2 = tmp2.data();
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
   for (size_t i = 0; i < tmp1.shape().Size(); i++) {
-    EXPECT_EQ(d1[i], std::fmax(d2[i], 0));
+    EXPECT_EQ(std::fmax(d1[i], 0), d2[i]);
   }
 }
 
-void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) {
+void VerifySumResult(const std::vector<NDArray *> &in_arrs,
+                     const std::vector<NDArray *> &out_arrs) {
   NDArray in1 = in_arrs[0]->Reorder2Default();
   NDArray in2 = in_arrs[1]->Reorder2Default();
-  NDArray out = arr.Reorder2Default();
+  NDArray out = out_arrs[0]->Reorder2Default();
   EXPECT_EQ(in1.shape().Size(), in2.shape().Size());
   EXPECT_EQ(in1.shape().Size(), out.shape().Size());
 
@@ -621,200 +742,447 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs, const NDArray &arr) 
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
-  TShape t1 = arr1.arr.shape();
-  TShape t2 = arr2.arr.shape();
+void VerifyActBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                              const std::vector<NDArray *> &out_arrs) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();  // out grads
+  NDArray tmp2 = in_arrs[1]->Reorder2Default();  // input
+  NDArray tmp3 = out_arrs[0]->Reorder2Default();  // input grads
+  TBlob blob1 = tmp1.data();
+  TBlob blob2 = tmp2.data();
+  TBlob blob3 = tmp3.data();
+  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
+  mshadow::default_real_t *d3 = static_cast<mshadow::default_real_t*>(blob3.dptr_);
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  for (size_t i = 0; i < tmp1.shape().Size(); i++) {
+    ASSERT_EQ(d2[i] > 0 ? d1[i] : 0, d3[i]);
+  }
+}
 
-  printf("Verifying: %s (", arr1.desc.c_str());
-  for (size_t i = 0; i < t1.ndim(); i++)
-    printf("%ld, ", t1[i]);
-  printf(") with %s (", arr2.desc.c_str());
-  for (size_t i = 0; i < t2.ndim(); i++)
-    printf("%ld, ", t2[i]);
-  printf(")\n");
+void VerifySumBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                               const std::vector<NDArray *> &out_arrs) {
+  NDArray out_grads = in_arrs[0]->Reorder2Default();  // out grads
+  NDArray input_grads1 = out_arrs[0]->Reorder2Default();  // input grads
+  NDArray input_grads2 = out_arrs[1]->Reorder2Default();  // input grads
+  mshadow::default_real_t *og = out_grads.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *ig1 = input_grads1.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *ig2 = input_grads2.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < out_grads.shape().Size(); i++) {
+    ASSERT_EQ(og[i], ig1[i]);
+    ASSERT_EQ(og[i], ig2[i]);
+  }
+}
+
+/*
+ * Determines axis ndarrays are concatenated by
+ * Used to verify concat/concat backwards operator
+ */
+int GetDim(TShape input_shape, TShape output_shape) {
+  CHECK(input_shape.Size() != output_shape.Size());
+  for (size_t i = 0; i < input_shape.ndim(); i++) {
+    if (input_shape[i] != output_shape[i])
+      return i;
+  }
+  return -1;
+}
+
+/*
+ * Calculates the size of continuous block of array inside arger concatenated array
+ * Used to verify concat/concat backwards operator
+ */
+int GetBlockSize(TShape shape, int dim) {
+  int block_size = 1;
+  for (int i = shape.ndim() - 1; i >= dim; i--)
+    block_size *= shape[i];
+  return block_size;
+}
+
+void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
+                        const std::vector<NDArray *> &out_arrs) {
+  int num_inputs = in_arrs.size();
+  int input_size = in_arrs[0]->shape().Size();
+  TShape input_shape = in_arrs[0]->shape();
+  NDArray output = out_arrs[0]->Reorder2Default();
+  size_t total_size = output.shape().Size();
+  EXPECT_EQ(input_size * num_inputs, total_size);
+  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
+
+  int dim = GetDim(input_shape, output.shape());
+  int block_size = GetBlockSize(input_shape, dim);
+  int num_blocks = input_size / block_size;
+  for (size_t input_num = 0; input_num < num_inputs; input_num++) {
+    NDArray tmp = in_arrs[input_num]->Reorder2Default();
+    mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
+    for (size_t block_num = 0; block_num < num_blocks; block_num++) {
+      for (size_t i = 0; i < block_size; i++)
+        ASSERT_EQ(data[block_num * block_size + i],
+                  out_data[(block_num * num_inputs + input_num) * block_size + i]);
+    }
+  }
+}
+
+void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
+                        const std::vector<NDArray *> &out_arrs) {
+  // in_arrs is larger array, out_arr is ammler
+  int num_inputs = out_arrs.size();
+  int input_size = out_arrs[0]->shape().Size();
+  TShape input_shape = out_arrs[0]->shape();
+  NDArray output = in_arrs[0]->Reorder2Default();
+  size_t total_size = output.shape().Size();
+  EXPECT_EQ(input_size * num_inputs, total_size);
+  mshadow::default_real_t *out_data = output.data().dptr<mshadow::default_real_t>();
+
+  int dim = GetDim(input_shape, output.shape());
+  int block_size = GetBlockSize(input_shape, dim);
+  int num_blocks = input_size / block_size;
+  for (size_t input_num = 0; input_num < num_inputs; input_num++) {
+    NDArray tmp = out_arrs[input_num]->Reorder2Default();
+    mshadow::default_real_t* data = tmp.data().dptr<mshadow::default_real_t>();
+    for (size_t block_num = 0; block_num < num_blocks; block_num++) {
+      for (size_t i = 0; i < block_size; i++)
+        ASSERT_EQ(data[block_num * block_size + i],
+                  out_data[(block_num * num_inputs + input_num) * block_size + i]);
+    }
+  }
+}
+
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
+  tmp.WaitToRead();
+  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  for (auto in_arr : in_arrs) {
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-        InitDefaultArray);
-    for (auto out_arr : out_arrs) {
-      if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
-        in_arr.arr = in_arr.arr.Reorder2Default();
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  for (auto &in_arr : in_arrs) {
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+      continue;
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto &out_arr : out_arrs) {
       const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
       out_arr.arr.CopyFrom(*mem);
       MKLDNNStream::Get()->Submit();
       std::vector<NDArray *> inputs(1);
       inputs[0] = &in_arr.arr;
-      VerifyCopyResult(inputs, out_arr.arr);
+      VerifyCopyResult(inputs, {&out_arr.arr});
     }
   }
 }
 
-void TestUnaryOp(const OpAttrs &attrs, InitFunc init_fn, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(1);
-  std::vector<NDArray*> outputs(1);
-  std::vector<OpReqType> req(1);
+void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
+  std::vector<NDArray*> inputs(attrs.num_inputs);
+  std::vector<NDArray*> outputs(attrs.num_outputs);
+  std::vector<OpReqType> req(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(init_fn);
-  for (auto in_arr : in_arrs) {
-    for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds, init_fn);
-      for (auto out_arr : out_arrs) {
-        req[0] = kWriteTo;
-        inputs[0] = &in_arr.arr;
-        outputs[0] = &out_arr.arr;
-        PrintVerifyMsg(in_arr, out_arr);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  for (auto &in_arr : in_arrs) {
+    for (auto &dispatch : dispatches) {
+      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+        }
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
-        out_arr.arr.WaitToRead();
-        verify_fn(inputs, *outputs[0]);
+        Engine::Get()->WaitForAll();
+        verify_fn(inputs, outputs);
       }
     }
   }
 
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(init_fn);
-    for (auto arr : in_arrs) {
+  for (auto &dispatch : dispatches) {
+    in_arrs = GetTestInputArrays();
+    for (auto &arr : in_arrs) {
       // If the array is a view, we shouldn't write data to it.
       if (arr.arr.IsView())
         continue;
-
       NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      req[0] = kWriteInplace;
-      inputs[0] = &arr.arr;
-      outputs[0] = &arr.arr;
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &arr.arr;
+      for (int i = 0; i < attrs.num_outputs; i++) {
+        req[i] = kWriteInplace;
+        outputs[i] = &arr.arr;
+      }
       PrintVerifyMsg(orig, arr);
       Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
                                   dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      inputs[0] = &orig.arr;
-      verify_fn(inputs, *outputs[0]);
+      Engine::Get()->WaitForAll();
+      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+      for (int i = 0; i < attrs.num_inputs; i++)
+        orig_inputs[i] = &orig.arr;
+      verify_fn(orig_inputs, outputs);
     }
   }
 }
 
-void TestBinaryOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
-  std::vector<NDArray*> inputs(2);
-  std::vector<NDArray*> outputs(1);
-  std::vector<OpReqType> req(1);
+void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
+            bool backwards = false) {
+  std::vector<NDArray*> inputs(attrs.num_inputs);
+  std::vector<NDArray*> outputs(attrs.num_outputs);
+  std::vector<OpReqType> req(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  for (auto in_arr1 : in_arrs) {
-    for (auto dispatch : dispatches) {
-      std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr1.arr.shape(), pds,
-          InitDefaultArray);
-      for (auto out_arr : out_arrs) {
-        req[0] = kWriteTo;
-        inputs[0] = &in_arr1.arr;
-        inputs[1] = &in_arr1.arr;
-        outputs[0] = &out_arr.arr;
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        out_arr.arr.WaitToRead();
-        verify_fn(inputs, out_arr.arr);
-      }
-    }
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+
+  // concat backwards uses scaled up inputs
+  if (backwards) {
+    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+    int dim = std::stoi(str_dim);
+    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
 
-  for (auto dispatch : dispatches) {
-    in_arrs = GetTestInputArrays(InitDefaultArray);
-    for (auto arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
+  for (auto &in_arr : in_arrs) {
+    for (auto &dispatch : dispatches) {
+      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
 
-      NDArray orig = arr.arr.Copy(arr.arr.ctx());
-      req[0] = kWriteInplace;
-      inputs[0] = &arr.arr;
-      inputs[1] = &arr.arr;
-      outputs[0] = &arr.arr;
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      arr.arr.WaitToRead();
-      std::vector<NDArray*> orig_inputs(2);
-      orig_inputs[0] = &orig;
-      orig_inputs[1] = &orig;
-      verify_fn(orig_inputs, arr.arr);
+      std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+      int dim = std::stoi(str_dim);
+      if (dim >= in_arr.arr.shape().ndim())
+        continue;
+      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
+          static_cast<float>(attrs.num_inputs);
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
+
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
+
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+        }
+
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        verify_fn(inputs, outputs);
+      }
     }
   }
 }
 
-TEST(IMPERATIVE, UnaryOp) {
+TEST(IMPERATIVE, CopyOp) {
   OpAttrs attrs = GetCopyOp();
-  TestUnaryOp(attrs, InitDefaultArray, VerifyCopyResult);
+  TestOp(attrs, VerifyCopyResult);
+}
+
+TEST(IMPERATIVE, CopyBackwardsOp) {
+  OpAttrs attrs = GetCopyBackwardsOp();
+  TestOp(attrs, VerifyCopyResult);
 }
 
 TEST(IMPERATIVE, ActOp) {
   OpAttrs attrs = GetReluOp();
-  TestUnaryOp(attrs, InitNegPosArray, VerifyActResult);
+  TestOp(attrs, VerifyActResult);
 }
 
-TEST(IMPERATIVE, BinaryOp) {
+TEST(IMPERATIVE, ActBackwardsOp) {
+  OpAttrs attrs = GetReluBackwardsOp();
+  TestOp(attrs, VerifyActBackwardsResult);
+}
+
+TEST(IMPERATIVE, SumOp) {
   OpAttrs attrs = GetSumOp();
-  TestBinaryOp(attrs, VerifySumResult);
+  TestOp(attrs, VerifySumResult);
 }
 
-void VerifySumMemory(mkldnn::memory in_mem1, mkldnn::memory in_mem2, mkldnn::memory out_mem) {
-  float *in1 = static_cast<float*>(in_mem1.get_data_handle());
-  float *in2 = static_cast<float*>(in_mem2.get_data_handle());
-  float *out = static_cast<float*>(out_mem.get_data_handle());
-  for (size_t i = 0; i < in_mem1.get_primitive_desc().get_size() / sizeof(float); i++) {
-    ASSERT_EQ(in1[i] + in2[i], out[i]);
+TEST(IMPERATIVE, SumBackwardsOp) {
+  OpAttrs attrs = GetSumBackwardsOp();
+  TestOp(attrs, VerifySumBackwardsResult);
+}
+
+TEST(IMPERATIVE, ConcatOp) {
+  for (int num_inputs = 2; num_inputs < 4; num_inputs++) {
+    for (int dim = 0; dim < 5; dim++) {
+      OpAttrs attrs = GetConcatOp(num_inputs, dim);
+      TestConcatOp(attrs, VerifyConcatResult);
+    }
+  }
+}
+
+TEST(IMPERATIVE, ConcatBackwardsOp) {
+  for (int num_inputs = 2; num_inputs < 4; num_inputs++) {
+    for (int dim = 0; dim < 5; dim++) {
+      OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
+      TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
+    }
   }
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(InitDefaultArray);
-  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(InitDefaultArray, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   for (int i = 0; i < in_arrs.size(); i++) {
     auto in_arr = in_arrs[i];
     auto in_arr2 = in_arrs2[i];
-    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds,
-                                                             InitDefaultArray);
-    if (!SupportMKLDNN(in_arr.arr) || !in_arr.arr.IsMKLDNNData() || in_arr.arr.IsView())
+    if (!SupportMKLDNN(in_arr.arr))
       continue;
-
-    for (auto out_arr : out_arrs) {
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto &out_arr : out_arrs) {
       auto in_mem1 = in_arr.arr.GetMKLDNNData();
-      auto in_mem2 = in_arr.arr.GetMKLDNNData();
-      auto out_mem = out_arr.arr.GetMKLDNNData(in_mem1->get_primitive_desc());
-
-      // TODO(alexzai) : remove this noop when by reordering in MKLDNNSum
-      if (out_mem == nullptr)
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      if (out_arr.arr.IsView())
         continue;
+      auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, in_arr);
       op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
-      VerifySumMemory(*in_mem1, *in_mem2, *out_mem);
+      VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
     }
+  }
 
-    // in place
+  // in place
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
     auto input_mem = in_arr.arr.GetMKLDNNData();
     auto input_mem2 = in_arr2.arr.GetMKLDNNData();
     NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
     PrintVerifyMsg(orig_arr, in_arr);
-    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc(), InitDefaultArray);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
-    auto old_mem = orig_arr.arr.GetMKLDNNData();
     op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
-    VerifySumMemory(*old_mem, *input_mem2, *input_mem);
+    VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
+  }
+}
+
+TEST(MKLDNN_BASE, CreateMKLDNNMem) {
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+  MKLDNNStream *stream = MKLDNNStream::Get();
+
+  // kWriteTo
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto &out_arr : out_arrs) {
+      auto in_mem = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
+      PrintVerifyMsg(in_arr, out_arr);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
+      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
+      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      CommitOutput(out_arr.arr, output_mem_t);
+      stream->Submit();
+      VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
+    }
+  }
+
+  // kWriteInPlace
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr,
+        input_mem->get_primitive_desc(), kWriteInplace, &in_arr.arr);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
+  }
+
+  // kAddTo
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto &out_arr : out_arrs) {
+      auto in_mem = in_arr.arr.GetMKLDNNData();
+      auto in_mem2 = in_arr2.arr.GetMKLDNNData();
+      NDArray orig_output = out_arr.arr.Copy(out_arr.arr.ctx());
+      orig_output.WaitToRead();
+      PrintVerifyMsg(in_arr, out_arr);
+      auto out_mem = out_arr.arr.GetMKLDNNData();
+      auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
+      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      CommitOutput(out_arr.arr, output_mem_t);
+      stream->Submit();
+      VerifyAddRequest(
+          {&in_arr.arr, &in_arr2.arr}, {&orig_output}, {&out_arr.arr}, VerifySumResult);
+    }
+  }
+
+  // kNullOp
+  for (int i = 0; i < in_arrs.size(); i++) {
+    auto in_arr = in_arrs[i];
+    auto in_arr2 = in_arrs2[i];
+    if (!SupportMKLDNN(in_arr.arr))
+      continue;
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView()) {
+      continue;
+    }
+    auto input_mem = in_arr.arr.GetMKLDNNData();
+    auto input_mem2 = in_arr2.arr.GetMKLDNNData();
+    NDArrayAttrs orig_arr(in_arr.arr.Copy(in_arr.arr.ctx()), "In Place Copy");
+    orig_arr.arr.WaitToRead();
+    PrintVerifyMsg(orig_arr, in_arr);
+    InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
+    orig_arr.arr.CopyFrom(*input_mem);
+    auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kNullOp);
+    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    CommitOutput(in_arr.arr, output_mem_t);
+    stream->Submit();
+    // original and input should be the same since noop
+    VerifyCopyResult({&orig_arr.arr}, {&in_arr.arr});
   }
 }
 

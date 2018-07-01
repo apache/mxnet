@@ -190,6 +190,7 @@ def test_trainer_reset_kv():
         trainer.step(1)
         assert trainer._kvstore.type == kv
         # load would reset kvstore
+        mx.nd.waitall()
         params.load('test_trainer_reset_kv.params')
         assert trainer._kvstore is None
         assert trainer._kv_initialized is False

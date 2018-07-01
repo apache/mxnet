@@ -18,22 +18,19 @@
 #
 # Dockerfile to build MXNet for Android ARM64/ARMv8
 
-FROM ubuntu:16.04 as ccachebuilder
-
-COPY install/ubuntu_core.sh /work/
-RUN /work/ubuntu_core.sh
-COPY install/ubuntu_ccache.sh /work/
-RUN /work/ubuntu_ccache.sh
-
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
-
-# extract ccache binary into latest context
-COPY --from=ccachebuilder /usr/local/bin/ccache /usr/local/bin/ccache
 
 RUN apt-get update && apt-get install -y \
   unzip
 
+WORKDIR /work/deps
+
+# Build x86 dependencies.
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
+# Setup Android cross-compilation environment.
 ENV CROSS_TRIPLE=aarch64-linux-android
 ENV CROSS_ROOT=/usr/${CROSS_TRIPLE}
 ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
@@ -63,7 +60,7 @@ ENV ANDROID_NDK_REVISION 15c
 ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
 ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 
-WORKDIR /work/deps
+# Build ARM dependencies.
 COPY install/android_arm64_ndk.sh /work/
 RUN /work/android_arm64_ndk.sh
 COPY install/android_arm64_openblas.sh /work/

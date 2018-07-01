@@ -1090,7 +1090,7 @@ class AdaGrad(Optimizer):
     Parameters
     ----------
     eps: float, optional
-        Small value to avoid division by 0.
+        Initial value of the history accumulator. Avoids division by 0.
 
     """
     def __init__(self, eps=1e-7, **kwargs):
@@ -1107,7 +1107,7 @@ class AdaGrad(Optimizer):
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        is_sparse = weight.stype == 'row_sparse' and grad.stype == 'row_sparse'
+        is_sparse = grad.stype == 'row_sparse'
         history = state
 
         if is_sparse:

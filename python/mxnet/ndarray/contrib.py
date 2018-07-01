@@ -55,8 +55,7 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     range_max: int
         The number of possible classes.
     ctx : Context
-        Device context of output. Default is current context. Overridden by
-        `mu.context` when `mu` is an NDArray.
+        Device context of output. Default is current context.
 
     Returns
     -------

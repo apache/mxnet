@@ -92,19 +92,28 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
 }
 
+def publish_test_coverage() {
+    sh 'curl --retry 10 -s https://codecov.io/bash | bash -s -'
+}
+
 def collect_test_results_unix(original_file_name, new_file_name) {
-    echo 'Saving python test results for ' + new_file_name
-    // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
-    sh 'cp ' + original_file_name + ' ' + new_file_name
-    archiveArtifacts artifacts: new_file_name
+    if (fileExists(original_file_name)) {
+        // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
+        // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
+        sh 'cp ' + original_file_name + ' ' + new_file_name
+        archiveArtifacts artifacts: new_file_name
+    }
 }
 
 def collect_test_results_windows(original_file_name, new_file_name) {
-    echo 'Saving python test results for ' + new_file_name
     // Rename file to make it distinguishable. Unfortunately, it's not possible to get STAGE_NAME in a parallel stage
-    bat 'xcopy ' + original_file_name + ' ' + new_file_name
-    archiveArtifacts artifacts: new_file_name
-} 
+    // Thus, we have to pick a name manually and rename the files so that they can be stored separately.
+    if (fileExists(original_file_name)) {
+        bat 'xcopy ' + original_file_name + ' ' + new_file_name + '*'
+        archiveArtifacts artifacts: new_file_name
+    }
+}
+
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
@@ -154,11 +163,21 @@ def python3_gpu_ut(docker_container_name) {
 }
 
 try {
-  stage("Sanity Check") {
-    node('mxnetlinux-cpu') {
-      ws('workspace/sanity') {
-        init_git()
-        docker_run('ubuntu_cpu', 'sanity_check', false)
+  stage('Sanity Check') {
+    parallel 'Lint': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-lint') {
+          init_git()
+          docker_run('ubuntu_cpu', 'sanity_check', false)
+        }
+      }
+    },
+    'RAT License': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-rat') {
+          init_git()
+          docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+        }
       }
     }
   }
@@ -485,7 +504,7 @@ try {
     }
   } // End of stage('Build')
 
-  stage('Unit Test') {
+  stage('Tests') {
     parallel 'Python2: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python2-cpu') {
@@ -493,6 +512,7 @@ try {
             init_git()
             unpack_lib('cpu')
             python2_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
             collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_cpu_train.xml')
@@ -508,6 +528,7 @@ try {
             init_git()
             unpack_lib('cpu')
             python3_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
             collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
@@ -522,6 +543,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_lib)
             python2_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
           }
@@ -535,6 +557,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_lib)
             python3_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
           }
@@ -549,6 +572,7 @@ try {
               init_git()
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python2_quantize_gpu.xml')
             }
@@ -564,6 +588,7 @@ try {
               init_git()
               unpack_lib('gpu', mx_lib)
               docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
             }
@@ -578,6 +603,7 @@ try {
             init_git()
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python2_ut('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
             collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
@@ -593,6 +619,7 @@ try {
             init_git()
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python2_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_mkldnn_gpu.xml')
           }
@@ -606,6 +633,7 @@ try {
             init_git()
             unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
             python3_ut_mkldnn('ubuntu_cpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
             collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
@@ -620,6 +648,7 @@ try {
             init_git()
             unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
             python3_gpu_ut('ubuntu_gpu')
+            publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu.xml')
           }
@@ -634,6 +663,7 @@ try {
               init_git()
               unpack_lib('centos7_cpu')
               docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
               collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_train.xml')
@@ -650,6 +680,7 @@ try {
               init_git()
               unpack_lib('centos7_gpu')
               docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
+              publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
             }
@@ -664,6 +695,7 @@ try {
             init_git()
             unpack_lib('cpu', mx_dist_lib)
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            publish_test_coverage()
           }
         }
       }
@@ -675,6 +707,7 @@ try {
             init_git()
             unpack_lib('gpu', mx_dist_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
+            publish_test_coverage()
           }
         }
       }
@@ -686,6 +719,7 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
+            publish_test_coverage()
           }
         }
       }
@@ -697,6 +731,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+            publish_test_coverage()
           }
         }
       }
@@ -708,6 +743,7 @@ try {
             init_git()
             unpack_lib('cmake_gpu', mx_cmake_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            publish_test_coverage()
           }
         }
       }
@@ -719,6 +755,7 @@ try {
             init_git()
             unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            publish_test_coverage()
           }
         }
       }
@@ -730,6 +767,7 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            publish_test_coverage()
           }
         }
       }
@@ -741,6 +779,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
+            publish_test_coverage()
           }
         }
       }
@@ -762,8 +801,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_cpu.xml')
+              collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python2_cpu.xml')
             }
           }
         }
@@ -785,8 +823,7 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_cpu.xml')
+              collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
             }
           }
         }
@@ -808,8 +845,8 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
             }
           }
         }
@@ -831,8 +868,8 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
             }
           }
         }
@@ -854,23 +891,21 @@ try {
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
-              // We are unable to modify test_cpu.bat, so we can't track test failures on Windows
-              // collect_test_results_windows('nosetests.xml', 'nosetests_windows_python3_mkldnn_Gpu.xml')
+              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
             }
           }
         }
       }
-    }
-  }
-
-  stage('Integration Test') {
-    parallel 'Onnx CPU': {
+    },
+    'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
+            publish_test_coverage()
           }
         }
       }
@@ -882,6 +917,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_python', true)
+            publish_test_coverage()
           }
         }
       }
@@ -893,6 +929,7 @@ try {
             init_git()
             unpack_lib('gpu')
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
+            publish_test_coverage()
           }
         }
       }
@@ -914,21 +951,24 @@ try {
             unstash 'cpp_test_score'
             unstash 'cpp_test_optimizer'
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
-          }
-        }
-      }
-    },
-    'dist-kvstore tests GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            publish_test_coverage()
           }
         }
       }
     }
+    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
+    // 'dist-kvstore tests GPU': {
+    //  node('mxnetlinux-gpu') {
+    //    ws('workspace/it-dist-kvstore') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        init_git()
+    //        unpack_lib('gpu')
+    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+    //        publish_test_coverage()
+    //      }
+    //    }
+    //  }
+    //}
   }
 
   stage('Deploy') {
@@ -953,8 +993,8 @@ try {
   }
 } finally {
   node("mxnetlinux-cpu") {
-    // Only send email if master failed
-    if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
+    // Only send email if master or release branches failed
+    if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
       emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
     }
     // Remember to rethrow so the build is marked as failing

@@ -360,11 +360,44 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         if ((lhs_stype is 'default' and rhs_stype is 'row_sparse') or
-            (lhs_stype is 'default' and rhs_stype is 'csr')):
+            (lhs_stype is 'default' and rhs_stype is 'csr') or
+            (lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (rhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=l),
                                     lambda l, r: l + r,
                                     lambda outg, l, r: (outg, outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+            test_elemwise_binary_op("elemwise_sub", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_sub(l, r, out=l),
+                                    lambda l, r: l - r,
+                                    lambda outg, l, r: (outg, -outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+
+        if ((lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (lhs_density == 0.0)):
+            test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=r),
+                                    lambda l, r: l + r,
+                                    lambda outg, l, r: (outg, outg),
+                                    lhs_grad_stype, rhs_grad_stype,
+                                    ograd_density=ograd_density,
+                                    force_lr_overlap=force_lr_overlap,
+                                    force_grad_overlap=force_grad_overlap,
+                                    lhs_density=lhs_density, rhs_density=rhs_density,
+                                    verbose=False)
+            test_elemwise_binary_op("elemwise_sub", lhs_stype, rhs_stype, shape,
+                                    lambda l, r: mx.sym.sparse.elemwise_sub(l, r, out=l),
+                                    lambda l, r: l - r,
+                                    lambda outg, l, r: (outg, -outg),
                                     lhs_grad_stype, rhs_grad_stype,
                                     ograd_density=ograd_density,
                                     force_lr_overlap=force_lr_overlap,
@@ -1245,7 +1278,7 @@ def test_sparse_dot():
                     rhs = rhs_nd.tostype(rhs_stype)
                     out = mx.nd.dot(lhs, rhs, forward_stype=forward_stype,
                                     transpose_a=trans_a, transpose_b=trans_b)
-                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-3, atol=1e-5)
                     lhs_var = mx.symbol.Variable('lhs', stype=lhs_stype)
                     rhs_var = mx.symbol.Variable('rhs', stype=rhs_stype)
                     out = mx.symbol.sparse.dot(lhs_var, rhs_var,
@@ -1262,7 +1295,7 @@ def test_sparse_dot():
         out = mx.nd.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs)
         out_dns = mx.nd.dot(lhs_dns, rhs_dns, transpose_a=trans_lhs)
         out_np = out_dns.asnumpy()
-        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-3, atol=1e-5)
 
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', stype='csr')
@@ -1291,7 +1324,7 @@ def test_sparse_dot():
         out = mx.nd.sparse.dot(lhs_nd, rhs_nd, transpose_a=trans_lhs, transpose_b=trans_rhs, forward_stype=forward_stype)
         out_dns = mx.nd.dot(lhs_nd, rhs_dns, transpose_a=trans_lhs, transpose_b=trans_rhs, forward_stype=forward_stype)
         out_np = out_dns.asnumpy()
-        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-4, atol=1e-5)
+        assert_almost_equal(out.asnumpy(), out_np, rtol=1e-3, atol=1e-5)
 
         # test symbolic forward
         lhs = mx.symbol.Variable('lhs', stype='default')
@@ -1698,14 +1731,14 @@ def test_sparse_storage_fallback():
 
 @with_seed()
 def test_sparse_elementwise_sum():
-    def check_sparse_elementwise_sum_with_shape(stype, shape, n):
+    def check_sparse_elementwise_sum_with_shape(stypes, shape, n):
         # forward
         inputs = [mx.symbol.Variable('arg%d' % i) for i in range(n)]
         out = mx.symbol.sparse.add_n(*inputs, name='esum')
         arr = []
-        arr_grad = [mx.nd.empty(shape, stype=stype) for _ in range(n)]
+        arr_grad = [mx.nd.empty(shape, stype=stype) for stype in stypes]
         densities = [0, 0.01, 0.5, 1.0]
-        for i in range(n):
+        for stype in stypes:
             arr.append(rand_ndarray(shape, stype, densities[np.random.randint(0, len(densities))]))
 
         exec1 = out.bind(default_context(),
@@ -1714,18 +1747,30 @@ def test_sparse_elementwise_sum():
         exec1.forward(is_train=True)
         out1 = exec1.outputs[0].asnumpy()
         out = sum(a.asnumpy() for a in arr)
-        assert_almost_equal(out, out1)
+        assert_almost_equal(out, out1, atol=1e-5)
 
         out_grad = mx.nd.empty(shape)
         out_grad[:] = np.random.uniform(-10, 10, shape)
         # backward
         exec1.backward([out_grad])
         for a in arr_grad:
-            assert_almost_equal(a.asnumpy(), out_grad.asnumpy())
+            assert_almost_equal(a.asnumpy(), out_grad.asnumpy(), atol=1e-5)
 
+    all_stypes = ['default', 'csr', 'row_sparse']
     for dim in range(2, 4):
         shape = tuple(np.random.randint(5, 10, size=dim))
-        check_sparse_elementwise_sum_with_shape('row_sparse', shape, np.random.randint(1, 9))
+        rsp_test_cnt = np.random.randint(1, 9)
+        check_sparse_elementwise_sum_with_shape(['row_sparse' for i in range(rsp_test_cnt)], shape, rsp_test_cnt)
+        if dim is 2:
+            check_sparse_elementwise_sum_with_shape(['default', 'csr', 'default'], shape, 3)
+            test_len = np.random.randint(5, 10)
+            # at least one default type
+            stypes = ['default']
+            for i in range(test_len):
+                pick_side = np.random.randint(2)
+                pick_type = np.random.randint(3)
+                stypes = ([all_stypes[pick_type]] if pick_side is 0 else []) + stypes + ([all_stypes[pick_type]] if pick_side is 1 else [])
+            check_sparse_elementwise_sum_with_shape(stypes, shape, test_len+1)
 
 
 @with_seed()

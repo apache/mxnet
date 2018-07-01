@@ -30,12 +30,15 @@
 namespace mxnet {
 namespace exec {
 
-Graph AttachOpResources(Graph g) {
+void AttachOpResources(
+    const Graph& g,
+    const OpExecVector& op_execs,
+    size_t start_nid,
+    size_t end_nid) {
   static auto& fresource =
       nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
   static auto& fresource_ex =
       nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
-  auto& op_execs = nnvm::get<OpExecVector>(*g.attrs.at("op_execs"));
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& vdispatch = g.GetAttr<DispatchModeVector>("dispatch_mode");
   const auto& dev_masks = g.GetAttr<DevMaskVector>("dev_mask");
@@ -43,7 +46,7 @@ Graph AttachOpResources(Graph g) {
   // Use global resource pool for each executor for now.
   std::map<Context, Resource> cached_temp;
   // Resource allocation
-  for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+  for (uint32_t nid = start_nid; nid < end_nid; ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     const Context &ctx = vctx[nid];
@@ -84,7 +87,12 @@ Graph AttachOpResources(Graph g) {
       requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
     }
   }
-  return g;
 }
+
+void AttachOpResources(const Graph& g) {
+  const auto& op_execs = g.GetAttr<OpExecVector>("op_execs");
+  AttachOpResources(g, op_execs, 0, g.indexed_graph().num_nodes());
+}
+
 }  // namespace exec
 }  // namespace mxnet

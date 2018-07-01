@@ -1,0 +1,90 @@
+// -*- mode: groovy -*-
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+
+//This is a Jenkinsfile for the broken link checker test.
+
+err = null
+
+def init_git() {
+  deleteDir()
+  retry(5) {
+    try {
+      timeout(time: 15, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -d -f'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
+    }
+  }
+}
+
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
+  command = command.replaceAll('%PLATFORM%', platform)
+  command = command.replaceAll('%FUNCTION_NAME%', function_name)
+  command = command.replaceAll('%SHARED_MEM%', shared_mem)
+
+  sh command
+}
+
+try {
+  stage('BLC'){
+    parallel 'BrokenLinkChecker: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/brokenLinkChecker') {
+		  try {
+          	init_git()
+		  	sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
+		  	docker_run('ubuntu_blc', 'broken_link_checker', false)
+		  } finally {
+		  	sh "echo Storing the new url_list.txt to S3 bucket" 
+		   	sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
+		  }
+        }
+      }
+    }
+  }
+} catch (caughtError) {
+  node("mxnetlinux-cpu") {
+    sh "echo caught ${caughtError}"
+    err = caughtError
+    currentBuild.result = "FAILURE"
+  }
+} finally {
+  node("mxnetlinux-cpu") {
+    // Only send email if nightly test failed
+    if (currentBuild.result == "FAILURE") {
+    	emailext body: '''https://mxnet.incubator.apache.org  broken link test summary:
+            |
+            |Please view the logs at ${BUILD_URL}
+            |
+            |${BUILD_LOG_EXCERPT, start="START - Broken links summary", end="END - Broken links summary"}''',
+        replyTo: '${EMAIL}', subject: '[BROKEN LINK CHECKER FAILED] Run ${BUILD_NUMBER}', to: '${EMAIL}'
+    }
+    // Remember to rethrow so the build is marked as failing
+    if (err) {
+      throw err
+    }
+  }
+}

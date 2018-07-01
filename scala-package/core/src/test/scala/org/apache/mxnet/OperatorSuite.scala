@@ -18,12 +18,12 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.CheckUtils._
-
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{Matchers, BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import org.scalacheck.Gen
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 class OperatorSuite extends FunSuite with BeforeAndAfterAll
   with Matchers with GeneratorDrivenPropertyChecks {
@@ -233,8 +233,9 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       val start = scala.util.Random.nextFloat() * 5
       val stop = start + scala.util.Random.nextFloat() * 100
       val step = scala.util.Random.nextFloat() * 4
-      val repeat = (scala.util.Random.nextFloat() * 5).toInt + 1
-      val result = (start until stop by step).flatMap(x => Array.fill[Float](repeat)(x))
+      val repeat = 1
+      val result = (start.toDouble until stop.toDouble by step.toDouble)
+        .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())
       exe.forward(isTrain = false)
