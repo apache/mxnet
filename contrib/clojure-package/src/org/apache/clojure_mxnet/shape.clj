@@ -19,7 +19,6 @@
   (:require [t6.from-scala.core :refer [$] :as $])
   (:import (org.apache.mxnet Shape)))
 
-
 (defn ->shape [v]
   (new Shape (apply $/immutable-list (map int v))))
 

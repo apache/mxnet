@@ -22,15 +22,13 @@
 ;;
 
 
-
-
 (defn
- div
- ([ndarray num-or-ndarray]
-  (util/coerce-return
-   (.$div
-    ndarray
-    (util/coerce-param
-     num-or-ndarray
-     #{"float" "org.apache.mxnet.NDArray"})))))
+  div
+  ([ndarray num-or-ndarray]
+   (util/coerce-return
+    (.$div
+     ndarray
+     (util/coerce-param
+      num-or-ndarray
+      #{"float" "org.apache.mxnet.NDArray"})))))
 

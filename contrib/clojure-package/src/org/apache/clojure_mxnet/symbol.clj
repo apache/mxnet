@@ -28,7 +28,6 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray])
   (:import (org.apache.mxnet Symbol)))
 
-
 ;; loads the generated functions into the namespace
 (do (clojure.core/load "gen/symbol"))
 
@@ -44,14 +43,14 @@
   kwarg-map: Additional attributes which must start and end with double underscores"
   ([var-name]
    (variable var-name {}))
-  ([var-name  {:keys [attrs shape lr-mult wd-mult dtype kwargs]:as opts}]
-    (Symbol/Variable var-name
-                     (when attrs (util/convert-symbol-map attrs))
-                     (when shape (mx-shape/->shape shape))
-                     (if lr-mult (float lr-mult)($/option nil))
-                     (if wd-mult (float wd-mult)($/option nil))
-                     dtype
-                     (if kwargs (util/convert-symbol-map kwargs) (util/empty-map)))))
+  ([var-name  {:keys [attrs shape lr-mult wd-mult dtype kwargs] :as opts}]
+   (Symbol/Variable var-name
+                    (when attrs (util/convert-symbol-map attrs))
+                    (when shape (mx-shape/->shape shape))
+                    (if lr-mult (float lr-mult) ($/option nil))
+                    (if wd-mult (float wd-mult) ($/option nil))
+                    dtype
+                    (if kwargs (util/convert-symbol-map kwargs) (util/empty-map)))))
 
 (defn bind
   "Bind the current symbol to get an executor.
@@ -136,80 +135,80 @@
   ([start stop  {:keys [step repeat dtype]
                  :or {step (float 1) repeat (int 1) dtype base/MX_REAL_TYPE}
                  :as opts}]
-   (Symbol/arange (float start) ($/option(float stop)) step repeat nil dtype))
+   (Symbol/arange (float start) ($/option (float stop)) step repeat nil dtype))
   ([start stop]
    (arange start stop {})))
 
 ;;; manually defined because of a conflicting arity of 2 with the auto-gen
 (defn min
- ([sym-name kwargs-map symbol-list kwargs-map-1]
-  (util/coerce-return
-   (Symbol/min
-    (util/nil-or-coerce-param sym-name #{"java.lang.String"})
-    (util/nil-or-coerce-param
-     kwargs-map
-     #{"scala.collection.immutable.Map"})
-    (util/nil-or-coerce-param symbol-list #{"scala.collection.Seq"})
-    (util/nil-or-coerce-param
-     kwargs-map-1
-     #{"scala.collection.immutable.Map"}))))
- ([sym-name attr-map kwargs-map]
-  (min sym-name attr-map (util/empty-list) kwargs-map))
- ([kwargs-map] (min nil nil (util/empty-list) kwargs-map))
- ([sym1 sym2]
-  (util/coerce-return
-   (Symbol/min
-    (util/nil-or-coerce-param
-     sym1
-     #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})
-    (util/nil-or-coerce-param
-     sym2
-     #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})))))
+  ([sym-name kwargs-map symbol-list kwargs-map-1]
+   (util/coerce-return
+    (Symbol/min
+     (util/nil-or-coerce-param sym-name #{"java.lang.String"})
+     (util/nil-or-coerce-param
+      kwargs-map
+      #{"scala.collection.immutable.Map"})
+     (util/nil-or-coerce-param symbol-list #{"scala.collection.Seq"})
+     (util/nil-or-coerce-param
+      kwargs-map-1
+      #{"scala.collection.immutable.Map"}))))
+  ([sym-name attr-map kwargs-map]
+   (min sym-name attr-map (util/empty-list) kwargs-map))
+  ([kwargs-map] (min nil nil (util/empty-list) kwargs-map))
+  ([sym1 sym2]
+   (util/coerce-return
+    (Symbol/min
+     (util/nil-or-coerce-param
+      sym1
+      #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})
+     (util/nil-or-coerce-param
+      sym2
+      #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})))))
 
 ;;; manually defined because of a conflicting arity of 2 with the auto-gen
 
 (defn max
- ([sym1 sym2]
-  (util/coerce-return
-   (Symbol/max
-    (util/nil-or-coerce-param
-     sym1
-     #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})
-    (util/nil-or-coerce-param
-     sym2
-     #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"}))))
- ([sym-name kwargs-map symbol-list kwargs-map-1]
-  (util/coerce-return
-   (Symbol/max
-    (util/nil-or-coerce-param sym-name #{"java.lang.String"})
-    (util/nil-or-coerce-param
-     kwargs-map
-     #{"scala.collection.immutable.Map"})
-    (util/nil-or-coerce-param symbol-list #{"scala.collection.Seq"})
-    (util/nil-or-coerce-param
-     kwargs-map-1
-     #{"scala.collection.immutable.Map"}))))
- ([sym-name attr-map kwargs-map]
-  (max sym-name attr-map (util/empty-list) kwargs-map))
+  ([sym1 sym2]
+   (util/coerce-return
+    (Symbol/max
+     (util/nil-or-coerce-param
+      sym1
+      #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"})
+     (util/nil-or-coerce-param
+      sym2
+      #{"ml.dmlc.mxnet.Symbol" "java.lang.Object"}))))
+  ([sym-name kwargs-map symbol-list kwargs-map-1]
+   (util/coerce-return
+    (Symbol/max
+     (util/nil-or-coerce-param sym-name #{"java.lang.String"})
+     (util/nil-or-coerce-param
+      kwargs-map
+      #{"scala.collection.immutable.Map"})
+     (util/nil-or-coerce-param symbol-list #{"scala.collection.Seq"})
+     (util/nil-or-coerce-param
+      kwargs-map-1
+      #{"scala.collection.immutable.Map"}))))
+  ([sym-name attr-map kwargs-map]
+   (max sym-name attr-map (util/empty-list) kwargs-map))
   ([kwargs-map] (max nil nil (util/empty-list) kwargs-map)))
 
 ;;; redefining to make it easier to work with
 
 (defn- coerce-infer-shape-return [ret]
   (->> ret
-          (map util/scala-vector->vec)
-          (map (fn [shapes] (map mx-shape/->vec shapes)))))
+       (map util/scala-vector->vec)
+       (map (fn [shapes] (map mx-shape/->vec shapes)))))
 
 (defn
- infer-shape
- ([sym vec-or-strings vec-of-ints vec-of-ints-1]
-  (let [ret (util/coerce-return
-             (.inferShape
-              sym
-              (util/nil-or-coerce-param vec-or-strings #{"java.lang.String<>"})
-              (util/nil-or-coerce-param vec-of-ints #{"int<>"})
-              (util/nil-or-coerce-param vec-of-ints-1 #{"int<>"})))]
-    (coerce-infer-shape-return ret)))
+  infer-shape
+  ([sym vec-or-strings vec-of-ints vec-of-ints-1]
+   (let [ret (util/coerce-return
+              (.inferShape
+               sym
+               (util/nil-or-coerce-param vec-or-strings #{"java.lang.String<>"})
+               (util/nil-or-coerce-param vec-of-ints #{"int<>"})
+               (util/nil-or-coerce-param vec-of-ints-1 #{"int<>"})))]
+     (coerce-infer-shape-return ret)))
   ([sym symbol-list-or-kwargs-map]
    (let [ret (util/coerce-return
               (.inferShape
@@ -235,5 +234,4 @@
                                (into {})))
           param-name (format "%s-%04d.params" prefix epoch)]
       (ndarray/save param-name save-map)
-      (println "Saved checkpoint to " param-name)))
-  )
+      (println "Saved checkpoint to " param-name))))
