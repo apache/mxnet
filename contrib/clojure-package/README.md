@@ -135,12 +135,9 @@ To test your installation, you should run `lein test`. This will run the test su
 
 #### Generation of NDArray and Symbol apis
 
-The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. To generate, use the `dev/generator.clj` file. These generated files are checked in as source, so the only time you would need to run them is if you are updated the clojure package with an updated scala jar and want to regenerate the code.
+The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. The files are generated as a compile time step (AOT) in the `dev.generator` namespace.
 
-To do this run the leiningen task
-`lein run generate-code`
-
-Or load in the repl and use the functions:
+You may also run this manually with the repl functions:
 
 `(generate-ndarray-file)`
 and
