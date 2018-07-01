@@ -350,10 +350,11 @@ endif
 PROTOBUF_DIR=$(ROOTDIR)/deps
 PROTOC=$(PROTOBUF_DIR)/bin/protoc
 COLL_PATH=$(ROOTDIR)/src/kvstore/collectives
-PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc src/kvstore/collectives/src/mpi_message.pb.h
+PROTO_GEN_FILE=
 DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
 ifeq ($(USE_DIST_KVSTORE), 1)
 ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
+PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc src/kvstore/collectives/src/mpi_message.pb.h
 	ifeq ($(MPI_ROOT),)
   	# Default mpi
 		MPI_ROOT := $(shell ./prepare_mpi.sh $(DEF_MPI_PATH))
@@ -465,7 +466,7 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc
+build/src/%.o: src/%.cc $(PROTO_GEN_FILE)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -493,10 +494,6 @@ build/plugin/%.o: plugin/%.cc
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
-
-build/src/kvstore/collectives/src/%.o: $(COLL_PATH)/src/%.cc $(PROTO_GEN_FILE)
-	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -656,7 +653,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
-	$(RM) $(PROTO_GEN_FILE)
+	$(RM) $(COLL_PATH)/src/mpi_message.pb.*
 	$(RM) -r $(DEF_MPI_PATH)
 else
 clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
@@ -667,7 +664,7 @@ clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) $(PROTO_GEN_FILE)
+	$(RM) $(COLL_PATH)/src/mpi_message.pb.*
 	$(RM) -r $(DEF_MPI_PATH)
 endif
 
