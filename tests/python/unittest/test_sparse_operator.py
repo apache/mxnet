@@ -1720,13 +1720,14 @@ def test_sparse_storage_fallback():
 
     shape = rand_shape_2d()
     stypes = ['default', 'csr', 'row_sparse']
-    for lhs in stypes:
-        check_operator_with_temp_resource(shape, lhs)
-        for rhs in stypes:
-            check_broadcast_add(shape, lhs, rhs)
-            check_concat(shape, lhs, rhs)
-            check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
-            check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
+    for i in range(1000):
+        for lhs in stypes:
+            check_operator_with_temp_resource(shape, lhs)
+            for rhs in stypes:
+                check_broadcast_add(shape, lhs, rhs)
+                check_concat(shape, lhs, rhs)
+                check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
+                check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 
 @with_seed()
