@@ -1053,7 +1053,7 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const gpu& gpu_dev,
   TBlob csr_indices = rhs.aux_data(csr::kIdx);
   TBlob csr_indptr = rhs.aux_data(csr::kIndPtr);
   if (!rhs.storage_initialized()) {
-    FillZerosCsrImpl(s, *ret);
+    Fill(s, ret->data(), req, 0);
     return;
   }
 

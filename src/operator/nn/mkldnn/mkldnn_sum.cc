@@ -38,10 +38,22 @@ void MKLDNNSum(const mkldnn::memory &arr1, const mkldnn::memory &arr2,
   std::vector<mkldnn::primitive::at> inputs;
   input_pds[0] = arr1.get_primitive_desc();
   input_pds[1] = arr2.get_primitive_desc();
-  CHECK(input_pds[0] == input_pds[1]);
-  inputs.push_back(arr1);
-  inputs.push_back(arr2);
-  // TODO(zhengda) I need to reorder memory here.
+  CHECK(input_pds[0] == input_pds[0]);
+  const mkldnn::memory *in_mem1 = &arr1;
+  const mkldnn::memory *in_mem2 = &arr2;
+  auto output_pd = out.get_primitive_desc();
+  if (input_pds[0] != output_pd) {
+    auto tmp_memory1 = TmpMemMgr::Get()->Alloc(output_pd);
+    auto tmp_memory2 = TmpMemMgr::Get()->Alloc(output_pd);
+    mxnet::MKLDNNCopy(arr1, tmp_memory1);
+    mxnet::MKLDNNCopy(arr2, tmp_memory2);
+    input_pds[0] = tmp_memory1->get_primitive_desc();
+    input_pds[1] = tmp_memory2->get_primitive_desc();
+    in_mem1 = tmp_memory1;
+    in_mem2 = tmp_memory2;
+  }
+  inputs.push_back(*in_mem1);
+  inputs.push_back(*in_mem2);
   mkldnn::sum::primitive_desc sum_pd(scales, input_pds);
   MKLDNNStream::Get()->RegisterPrim(mkldnn::sum(sum_pd, inputs, out));
 }

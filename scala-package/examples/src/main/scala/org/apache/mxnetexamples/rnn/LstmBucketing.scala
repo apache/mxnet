@@ -35,9 +35,9 @@ import org.apache.mxnet.module.FitParams
  */
 class LstmBucketing {
   @Option(name = "--data-train", usage = "training set")
-  private val dataTrain: String = "example/rnn/ptb.train.txt"
+  private val dataTrain: String = "example/rnn/sherlockholmes.train.txt"
   @Option(name = "--data-val", usage = "validation set")
-  private val dataVal: String = "example/rnn/ptb.valid.txt"
+  private val dataVal: String = "example/rnn/sherlockholmes.valid.txt"
   @Option(name = "--num-epoch", usage = "the number of training epoch")
   private val numEpoch: Int = 5
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")

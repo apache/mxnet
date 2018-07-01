@@ -50,6 +50,8 @@ class _BlockScope(object):
         current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
+                if not hasattr(_name.NameManager._current, "value"):
+                    _name.NameManager._current.value = _name.NameManager()
                 prefix = _name.NameManager._current.value.get(None, hint) + '_'
             if params is None:
                 params = ParameterDict(prefix)
@@ -310,23 +312,21 @@ class Block(object):
 
     def save_parameters(self, filename):
         """Save parameters to file.
-        This function is to be used to save parameters of a Gluon model, note that
-        the saved parameters are not meant to be loaded in a different language binding for now.
-        Saving parameters using `.save_parameters()` is different than
-        `.collect_params().save()` and `.save_params()`, which are deprecated ways
-        to save the parameters of a model and should be avoided.
 
-        If your model is hybridizable and you want to export a serialized version of the
-        structure of the model as well as its parameters please refer to
-        :py:meth:`HybridBlock.export`. Such model can then be loaded back in any language binding
-        or even in Gluon using a :py:class:`SymbolBlock`.
-        Refer to this tutorial for a complete overview of saving/loading models with
-        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
+        Saved parameters can only be loaded with `load_parameters`. Note that this
+        method only saves parameters, not model structure. If you want to save
+        model structures, please use :py:meth:`HybridBlock.export`.
 
         Parameters
         ----------
         filename : str
             Path to file.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
@@ -349,11 +349,7 @@ class Block(object):
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False):
-        """Load parameters from file.
-        This function is to be used to load parameters of a Gluon model that were
-        saved using the `.save_parameters()` function. Any other use is undefined behaviour.
-        Refer to this tutorial for a complete overview of saving/loading models with
-        MXNet: https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html
+        """Load parameters from file previously saved by `save_parameters`.
 
         Parameters
         ----------
@@ -366,6 +362,12 @@ class Block(object):
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this Block.
+
+        References
+        ----------
+        `Saving and Loading Gluon Models
+
+        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
@@ -502,8 +504,12 @@ class Block(object):
         ----------
         active : bool, default True
             Whether to turn hybrid on or off.
-        **kwargs : string
-            Additional flags for hybridized operator.
+        static_alloc : bool, default False
+            Statically allocate memory to improve speed. Memory usage may increase.
+        static_shape : bool, default False
+            Optimize for invariant input shapes between iterations. Must also
+            set static_alloc to True. Change of input shapes is still allowed
+            but slower.
         """
         for cld in self._children.values():
             cld.hybridize(active, **kwargs)
@@ -557,6 +563,7 @@ class Block(object):
             :class:`mxnet.ndarray.NDArray` is supported.
         """
         summary = OrderedDict()
+        seen = set()
         hooks = []
 
         def _get_shape_str(args):
@@ -605,9 +612,14 @@ class Block(object):
 
                 params = 0
                 summary[m_key]['trainable'] = 0
+                summary[m_key]['shared'] = 0
                 for p in block._reg_params.values():
                     params += p.data().size
                     summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
+                    if p in seen:
+                        summary[m_key]['shared'] += p.data().size
+                    else:
+                        seen.add(p)
                 summary[m_key]['n_params'] = params
 
             from .nn.basic_layers import Sequential, HybridSequential
@@ -618,6 +630,7 @@ class Block(object):
         summary['Input']['output_shape'] = _get_shape_str(inputs)
         summary['Input']['n_params'] = 0
         summary['Input']['trainable'] = 0
+        summary['Input']['shared'] = 0
 
         try:
             self.apply(_register_summary_hook)
@@ -629,16 +642,19 @@ class Block(object):
             print('='*80)
             total_params = 0
             trainable_params = 0
+            shared_params = 0
             for layer in summary:
                 print(line_format.format(layer,
                                          str(summary[layer]['output_shape']),
                                          summary[layer]['n_params']))
                 total_params += summary[layer]['n_params']
                 trainable_params += summary[layer]['trainable']
+                shared_params += summary[layer]['shared']
             print('='*80)
             print('Total params: ' + str(total_params))
             print('Trainable params: ' + str(trainable_params))
             print('Non-trainable params: ' + str(total_params - trainable_params))
+            print('Shared params: ' + str(shared_params))
             print('-'*80)
         finally:
             for h in hooks:
@@ -696,7 +712,7 @@ class HybridBlock(Block):
         self._out_format = None
         self._in_format = None
         self._active = False
-        self._flags = {}
+        self._flags = []
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -723,39 +739,43 @@ class HybridBlock(Block):
         return self._cached_graph
 
     def _build_cache(self, *args):
-        inputs, out = self._get_graph(*args)
-        input_names = [i.name for i in inputs]
-
+        data, out = self._get_graph(*args)
+        data_names = {data.name : i for i, data in enumerate(data)}
         params = self.collect_params()
+        input_names = out.list_inputs()
+
         param_names = set(params.keys())
-        expected_names = set(out.list_inputs())
+        expected_names = set(input_names)
         for name in expected_names:
-            assert name in param_names or name in input_names, \
+            assert name in param_names or name in data_names, \
                 "Unknown input to HybridBlock: %s"%name
 
-        used_input_names = [i for i in input_names if i in expected_names]
-        if len(used_input_names) != len(input_names):
-            unused = ', '.join(['%d-th'%i for i, name in enumerate(input_names)
+        used_data_names = [i for i in data_names if i in expected_names]
+        if len(used_data_names) != len(data_names):
+            unused = ', '.join(['%d-th'%i for name, i in data_names.items()
                                 if name not in expected_names])
             warnings.warn("The %s input to HybridBlock is not used by any "
                           "computation. Is this intended?"%unused, stacklevel=4)
 
-        used_param_names = set(i for i in param_names if i in expected_names)
+        used_param_names = [i for i in param_names if i in expected_names]
         if len(used_param_names) != len(param_names):
-            unused = ', '.join(list(param_names - used_param_names))
+            unused = ', '.join(list(param_names - set(used_param_names)))
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
 
-        used_params = {k: params[k] for k in used_param_names}
-        try:
-            param_dict = {k: v.list_data() for k, v in used_params.items()}
-        except DeferredInitializationError:
-            self._deferred_infer_shape(*args)
-            for i in used_params.values():
-                i._finish_deferred_init()
-            param_dict = {k: v.list_data() for k, v in used_params.items()}
-
-        self._cached_op = ndarray.CachedOp(out, self._flags, input_names, param_dict)
+        data_indices = []
+        param_indices = []
+        self._cached_op_args = []
+        for i, name in enumerate(input_names):
+            if name in data_names:
+                data_indices.append(i)
+                self._cached_op_args.append((True, data_names[name]))
+            else:
+                param_indices.append(i)
+                self._cached_op_args.append((False, params[name]))
+        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
+                self._flags
+        self._cached_op = ndarray.CachedOp(out, flags)
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -771,7 +791,19 @@ class HybridBlock(Block):
 
         args, fmt = _flatten(args, "input")
         assert fmt == self._in_format, "Invalid input format"
-        out = self._cached_op(*args)
+        try:
+            cargs = [args[i] if is_arg else i.data()
+                     for is_arg, i in self._cached_op_args]
+        except DeferredInitializationError:
+            self._deferred_infer_shape(*args)
+            cargs = []
+            for is_arg, i in self._cached_op_args:
+                if is_arg:
+                    cargs.append(args[i])
+                else:
+                    i._finish_deferred_init()
+                    cargs.append(i.data())
+        out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)[0]
@@ -792,7 +824,7 @@ class HybridBlock(Block):
 
     def hybridize(self, active=True, **kwargs):
         self._active = active
-        self._flags = kwargs.items()
+        self._flags = list(kwargs.items())
         self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{}" is being hybridized while still having forward hook/pre-hook. '

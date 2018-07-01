@@ -511,8 +511,7 @@ void BinaryBroadcastComputeDenseEx(const nnvm::NodeAttrs& attrs,
     // If the input is a matrix with the same shape, should be elemwise
     if (!ndim) {
       mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-      ElemwiseBinaryOp::DnsCsrDnsOp<xpu, OP>(
-        s, attrs, ctx, dns, csr, req[0], outputs[0], !reverse);
+      ElemwiseBinaryOp::DnsCsrDnsOp<OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], !reverse);
     } else {
       // broadcast(CSR, Dense(1D)) = CSR
       BinaryBroadcastCsrDnsDnsImpl<xpu, OP>(ctx, csr, dns, req[0], out,
