@@ -28,7 +28,8 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-#include <pthread.h>
+//#include <pthread.h>
+# include <condition_variable>
 #include <map>
 #include <vector>
 #include <string>
@@ -140,7 +141,7 @@ class SharedND {
 };
 
 template<class T>
-class GlobalSharedND {
+class GlobalShared {
  public:
   T* Register(const std::string &key, int ndev) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -171,6 +172,27 @@ class GlobalSharedRank {
   std::map<std::string, T*> registry_;
 };
 
+class Barrier {
+ private:
+  std::mutex mutex_;
+  std::condition_variable cv_;
+  std::size_t count_;
+  std::size_t total_count_;
+ public:
+  explicit Barrier(std::size_t count) : count_{count}, total_count_{count} { }
+  void Wait()
+  {
+    std::unique_lock<std::mutex> lock{mutex_};
+    if (--count_ == 0) {
+      count_ = total_count_;
+      cv_.notify_all();
+    } else {
+      cv_.wait(lock, [this] { return count_ == total_count_; });
+    }
+  }
+};
+
+/*
 class GlobalSharedBarrier {
  public:
   pthread_barrier_t* Register(const std::string &key, int ndev) {
@@ -186,14 +208,16 @@ class GlobalSharedBarrier {
   std::mutex mutex_;
   std::map<std::string, pthread_barrier_t*> registry_;
 };
+*/
 
 static pthread_mutex_t mm = PTHREAD_MUTEX_INITIALIZER;
 static GlobalSharedRank<int> globalSharedRank;
-static GlobalSharedBarrier globalSharedBarrier;
-static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
-static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
-static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedGrad;
-static GlobalSharedND<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedProd;
+// static GlobalSharedBarrier globalSharedBarrier;
+static GlobalShared<Barrier> globalSharedBarrier;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedGrad;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedProd;
 
 template<typename xpu>
 class SyncBatchNorm : public Operator {
@@ -244,7 +268,7 @@ class SyncBatchNorm : public Operator {
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      pthread_barrier_t *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
       int *globalRank = globalSharedRank.Register(param_.key);
       pthread_mutex_lock(&mm);
       int myRank = *globalRank;
@@ -270,7 +294,8 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedMean->Push(mean_cpu, myRank);
       sharedVar->Push(var_cpu, myRank);
-      pthread_barrier_wait(globalBarrier);
+      // pthread_barrier_wait(globalBarrier);
+      globalBarrier->Wait();
       *globalRank = 0;
       pthread_mutex_lock(&mm);
       mean_cpu = sharedMean->Pop(myRank);
@@ -338,7 +363,7 @@ class SyncBatchNorm : public Operator {
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      pthread_barrier_t *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
       int *globalRank = globalSharedRank.Register(param_.key);
       pthread_mutex_lock(&mm);
       int myRank = *globalRank;
@@ -371,7 +396,8 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
       sharedProd->Push(prod_cpu, myRank);
-      pthread_barrier_wait(globalBarrier);
+      // pthread_barrier_wait(globalBarrier);
+      globalBarrier->Wait();
       *globalRank = 0;
       pthread_mutex_lock(&mm);
       grad_cpu = sharedGrad->Pop(myRank);
