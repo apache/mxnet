@@ -32,5 +32,38 @@
         <platform>linux-x86_64-gpu</platform>
       </properties>
     </profile>
+    <profile>
+      <id>apache-release</id>
+   <!--Running the compile-backend inside a different profile did not work when used with apache-release profile for release-perform-->
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+              <execution>
+                <id>compile-mxnet-backend</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>bash</executable>
+                  <commandlineArgs>${project.parent.basedir}/dev/compile-mxnet-backend.sh ${build.platform} ${project.parent.basedir}/../</commandlineArgs>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      </profile>
   </profiles>
 </project>
