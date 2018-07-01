@@ -77,7 +77,7 @@ private[mxnet] object APIDocGenerator{
   def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
+    val absFuncs = absClassFunctions.map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
       if (isSymbol) {
         val defBody = s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): org.apache.mxnet.Symbol"
