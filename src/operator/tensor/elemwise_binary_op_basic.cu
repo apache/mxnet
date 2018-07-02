@@ -25,6 +25,7 @@
 #include <cub/cub.cuh>
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_op-inl.h"
+#include "./indexing_op.h"
 
 namespace mxnet {
 namespace op {
@@ -158,6 +159,59 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<gpu> *s,
           FillZerosRspImpl(s, output);
         }
       }
+    });
+  });
+}
+
+/*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+template<typename OP>
+void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<gpu> *s,
+                                   const nnvm::NodeAttrs &attrs,
+                                   const OpContext &ctx,
+                                   const NDArray &dns,
+                                   const NDArray &csr,
+                                   const OpReqType req,
+                                   const NDArray &output,
+                                   const bool reverse) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(dns.storage_type(), kDefaultStorage);
+  CHECK_EQ(csr.storage_type(), kCSRStorage);
+  CHECK(req != kAddTo);
+  CHECK(req != kNullOp);
+  const bool supported_op = std::is_same<OP, mshadow_op::minus>::value ||
+                            std::is_same<OP, mshadow_op::plus>::value;
+  CHECK(supported_op == true);
+  const nnvm::dim_t num_csr_rows = csr.shape()[0];
+  const nnvm::dim_t num_csr_cols = csr.shape()[1];
+  TBlob csr_data = csr.data();
+  TBlob csr_indices = csr.aux_data(csr::kIdx);
+  TBlob csr_indptr = csr.aux_data(csr::kIndPtr);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(csr_data.type_flag_, DType, {
+    MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {
+      MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {
+        MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+          if (reverse && std::is_same<OP, mshadow_op::minus>::value) {
+            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::negation, Req>, gpu>::Launch(
+              s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
+            if (!csr.storage_initialized()) { return; }
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, mshadow_op::plus>, gpu>::Launch(
+              s, kWarpSize * num_csr_rows, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+          } else {
+            if (req == kWriteTo) {
+              mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, gpu>::Launch(
+                s, output.data().Size(), output.data().dptr<DType>(), dns.data().dptr<DType>());
+            }
+            if (!csr.storage_initialized()) { return; }
+            mxnet_op::Kernel<ElemwiseDnsCsrDnsWarpKernel<Req, OP>, gpu>::Launch(
+              s, kWarpSize * num_csr_rows, output.data().dptr<DType>(),
+              output.data().dptr<DType>(), csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+              csr_indptr.dptr<CType>(), num_csr_rows, num_csr_cols);
+          }
+        });
+      });
     });
   });
 }

@@ -174,15 +174,21 @@ class CSVIter: public IIterator<DataInst> {
     for (const auto& arg : kwargs) {
       if (arg.first == "dtype") {
         dtype_has_value = true;
-        if (arg.second == "int32" || arg.second == "float32") {
-          target_dtype = (arg.second == "int32") ? mshadow::kInt32 : mshadow::kFloat32;
+        if (arg.second == "int32") {
+          target_dtype = mshadow::kInt32;
+        } else if (arg.second == "int64") {
+          target_dtype = mshadow::kInt64;
+        } else if (arg.second == "float32") {
+          target_dtype = mshadow::kFloat32;
         } else {
           CHECK(false) << arg.second << " is not supported for CSVIter";
         }
       }
     }
     if (dtype_has_value && target_dtype == mshadow::kInt32) {
-      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<int>()));
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<int32_t>()));
+    } else if (dtype_has_value && target_dtype == mshadow::kInt64) {
+      iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<int64_t>()));
     } else if (!dtype_has_value || target_dtype == mshadow::kFloat32) {
       iterator_.reset(reinterpret_cast<CSVIterBase*>(new CSVIterTyped<float>()));
     }
@@ -229,8 +235,8 @@ If ``data_csv = 'data/'`` is set, then all the files in this directory will be r
 ``reset()`` is expected to be called only after a complete pass of data.
 
 By default, the CSVIter parses all entries in the data file as float32 data type,
-if `dtype` argument is set to be 'int32' then CSVIter will parse all entries in the file
-as int32 data type.
+if `dtype` argument is set to be 'int32' or 'int64' then CSVIter will parse all entries in the file
+as int32 or int64 data type accordingly.
 
 Examples::
 

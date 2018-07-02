@@ -652,6 +652,13 @@ unittest_ubuntu_gpu_scala() {
     make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
 }
 
+unittest_ubuntu_cpu_clojure() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    ./contrib/clojure-package/ci-test.sh
+}
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
@@ -783,8 +790,26 @@ build_docs() {
 
 #Runs Apache RAT Check on MXNet Source for License Headers
 nightly_test_rat_check() {
-    set -ex
-    ./tests/nightly/apache_rat_license_check/license_check.sh
+    set -e
+    pushd .
+    
+    cd /work/deps/trunk/apache-rat/target
+
+    # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
+    exec 5>&1
+    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"
+
+
+    echo "-------Process The Output-------"
+
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!";
+        exit 1
+    else
+        echo "SUCCESS: There are no files with an Unknown License.";
+    fi
+    popd
 }
 
 #Checks MXNet for Compilation Warnings

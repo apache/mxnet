@@ -835,6 +835,7 @@ has 'global_pool' => (is => 'rw', isa => 'Bool', default => 0);
 has 'kwargs'      => (is => 'rw', init_arg => undef);
 has 'pool_type'   => (is => 'rw', isa => 'PoolType');
 has 'layout'      => (is => 'rw');
+has 'count_include_pad' => (is => 'rw', isa => 'Bool');
 method python_constructor_arguments() { [qw/pool_size strides padding/] }
 
 sub BUILD
@@ -856,7 +857,8 @@ sub BUILD
     $self->kwargs({
         kernel => $self->pool_size, stride => $self->strides, pad => $self->padding,
         global_pool => $self->global_pool, pool_type => $self->pool_type,
-        pooling_convention => $self->ceil_mode ? 'full' : 'valid'
+        pooling_convention => $self->ceil_mode ? 'full' : 'valid',
+        (defined $self->count_include_pad ? (count_include_pad => $self->count_include_pad) : ())
     });
 }
 
@@ -1116,6 +1118,8 @@ extends 'AI::MXNet::Gluon::NN::MaxPool1D';
         respectively. padding is applied on 'W' dimension.
     ceil_mode : bool, default False
         When `True`, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Input shape:
@@ -1135,6 +1139,7 @@ extends 'AI::MXNet::Gluon::NN::MaxPool1D';
 =cut
 
 has '+pool_type' => (default => 'avg');
+has '+count_include_pad' => (default => 1);
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
@@ -1167,6 +1172,8 @@ extends 'AI::MXNet::Gluon::NN::MaxPool2D';
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Input shape:
@@ -1187,6 +1194,7 @@ extends 'AI::MXNet::Gluon::NN::MaxPool2D';
 =cut
 
 has '+pool_type' => (default => 'avg');
+has '+count_include_pad' => (default => 1);
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
@@ -1220,6 +1228,8 @@ extends 'AI::MXNet::Gluon::NN::MaxPool3D';
         dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Input shape:
@@ -1242,6 +1252,8 @@ extends 'AI::MXNet::Gluon::NN::MaxPool3D';
 =cut
 
 has '+pool_type' => (default => 'avg');
+has '+count_include_pad' => (default => 1);
+
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
 package AI::MXNet::Gluon::NN::GlobalMaxPool1D;
@@ -1359,6 +1371,47 @@ extends 'AI::MXNet::Gluon::NN::AvgPool3D';
 has '+pool_size'   => (default => sub { [1, 1, 1] });
 has '+global_pool' => (default => 1);
 has '+ceil_mode'   => (default => 1);
+
+__PACKAGE__->register('AI::MXNet::Gluon::NN');
+
+package AI::MXNet::Gluon::NN::ReflectionPad2D;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::HybridBlock';
+
+=head1 NAME
+
+    AI::MXNet::Gluon::NN::ReflectionPad2D
+=cut
+
+=head1 DESCRIPTION
+
+    Pads the input tensor using the reflection of the input boundary.
+
+    Parameters
+    ----------
+    padding: int
+        An integer padding size
+
+    Examples
+    --------
+    >>> $m = nn->ReflectionPad2D(3);
+    >>> $input = mx->nd->random->normal(shape=>[16, 3, 224, 224]);
+    >>> $output = $m->($input);
+=cut
+
+has 'padding' => (is => 'rw', isa => 'Int|ArrayRef[Int]', default => 0);
+method python_constructor_arguments() { ['padding'] }
+sub BUILD
+{
+    my $self = shift;
+    $self->padding([(0)x4, ($self->padding)x4]) if not ref $self->padding;
+    confess("pading must be 8 integer long") unless @{ $self->padding } == 8;
+}
+
+method hybrid_forward(GluonClass $F, GluonInput $x)
+{
+    return $F->pad($x, mode=>'reflect', pad_width=>$self->padding);
+}
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');
 
