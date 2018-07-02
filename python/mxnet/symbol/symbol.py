@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types
+from ..base import mx_uint, py_str, string_types, integer_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -47,7 +47,8 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange"]
+           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
+           "histogram"]
 
 
 class Symbol(SymbolBase):
@@ -1981,6 +1982,22 @@ class Symbol(SymbolBase):
         """
         return op.flatten(self, *args, **kwargs)
 
+    def shape_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`shape_array`.
+
+        The arguments are the same as for :py:func:`shape_op`, with
+        this array as data.
+        """
+        return op.shape_array(self, *args, **kwargs)
+
+    def size_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`size_array`.
+
+        The arguments are the same as for :py:func:`size_array`, with
+        this array as data.
+        """
+        return op.size_array(self, *args, **kwargs)
+
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
 
@@ -2863,5 +2880,30 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              name=name, dtype=dtype)
+
+def histogram(a, bins=10, range=None, **kwargs):
+    """Compute the histogram of the input data.
+
+    Parameters
+    ----------
+    a : NDArray
+        Input data. The histogram is computed over the flattened array.
+    bins : int or sequence of scalars
+        If bins is an int, it defines the number of equal-width bins in the
+        given range (10, by default). If bins is a sequence, it defines the bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+    range : (float, float), required if bins is an integer
+        The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()).
+        Values outside the range are ignored. The first element of the range must be less than or
+        equal to the second. range affects the automatic bin computation as well, the range will
+        be equally divided by the number of bins.
+    """
+    if isinstance(bins, Symbol):
+        return _internal._histogram(data=a, bins=bins, **kwargs)
+    elif isinstance(bins, integer_types):
+        if range is None:
+            raise ValueError("null range is not supported in symbol mode")
+        return _internal._histogram(data=a, bin_cnt=bins, range=range, **kwargs)
+    raise ValueError("bins argument should be either an integer or an NDArray")
 
 _set_symbol_class(Symbol)

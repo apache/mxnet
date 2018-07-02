@@ -1,4 +1,4 @@
-# MXNet Documentation
+# Building and Updating MXNet Documentation
 
 The website is hosted at http://mxnet.incubator.apache.org/.
 http://mxnet.io redirects to this site and advised to use links with http://mxnet.incubator.apache.org/ instead of http://mxnet.io/.
@@ -8,9 +8,11 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 ## How to Build the MXNet Website for Development and QA
 
-* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies)
-* [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions)
-* [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build)
+Using `make docs` from the MXNet root is the quickest way to generate the MXNet API docs and the website. This method automatically generates each API, [except the Perl and R APIs](#other-build-processes).
+
+* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies) - required before you do any building of the docs
+* [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions) - build your local branch
+* [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) - build the latest commits to the official branches
 
 
 ## File Structure
@@ -49,6 +51,12 @@ The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf
 ## Build Versioning Website
 
 **IMPORTANT**: Refer to [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) for a working site build with the versions dropdown in the UI.
+
+
+## Other Build Processes
+
+* Perl API docs are maintained separately at [metacpan](https://metacpan.org/release/AI-MXNet).
+* R API docs building must be triggered manually. The function for generating these automatically was disabled in the nightly builds. You may run the R docs build process in a local docs build by uncommenting the [function call in mxdoc.py](https://github.com/apache/incubator-mxnet/blob/master/docs/mxdoc.py#L378).
 
 
 ## Troubleshooting

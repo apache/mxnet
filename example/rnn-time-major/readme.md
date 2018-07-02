@@ -7,18 +7,18 @@ As example of Batch-major RNN is available in MXNet [RNN Bucketing example](http
 	
 ## Running the example
 - Prerequisite: an instance with GPU compute resources is required to run MXNet RNN
-- Make the shell script ```get_ptb_data.sh``` executable:
+- Make the shell script ```get_sherlockholmes_data.sh``` executable:
     ```bash 
-    chmod +x get_ptb_data.sh
+    chmod +x get_sherlockholmes_data.sh
     ```
-- Run ```get_ptb_data.sh``` to download the PTB dataset, and follow the instructions to review the license:
+- Run ```get_sherlockholmes_data.sh``` to download the sherlockholmes dataset, and follow the instructions to review the license:
     ```bash
-    ./get_ptb_data.sh
+    ./get_sherlockholmes_data.sh
     ```
-    The PTB data sets will be downloaded into ./data directory, and available for the example to train on.
+    The sherlockholmes data sets will be downloaded into ./data directory, and available for the example to train on.
 - Run the example:
     ```bash
-    python python rnn_cell_demo.py
+    python rnn_cell_demo.py
     ```
     
     If everything goes well, console will plot training speed and perplexity that you can compare to the batch major RNN.

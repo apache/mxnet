@@ -242,7 +242,9 @@ struct HistogramKernel {
                                              const CType* source,
                                              const nnvm::dim_t num_elems) {
     if (tid < num_elems) {
-      atomicAdd(&target[source[tid]], 1);
+      if (source[tid] >= 0) {
+        atomicAdd(&target[source[tid]], IType(1));
+      }
     }
   }
 };

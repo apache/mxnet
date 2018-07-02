@@ -1051,6 +1051,28 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                           const char **name);
+
+/*!
+ * \brief Get the input symbols of the graph.
+ * \param sym The graph.
+ * \param inputs The input symbols of the graph.
+ * \param input_size the number of input symbols returned.
+ */
+MXNET_DLL int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **inputs,
+                                      int *input_size);
+
+/*!
+ * \brief Cut a subgraph whose nodes are marked with a subgraph attribute.
+ * The input graph will be modified. A variable node will be created for each
+ * edge that connects to nodes outside the subgraph. The outside nodes that
+ * connect to the subgraph will be returned.
+ * \param sym The graph.
+ * \param inputs The nodes that connect to the subgraph.
+ * \param input_size The number of such nodes.
+ */
+MXNET_DLL int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **inputs,
+                                  int *input_size);
+
 /*!
  * \brief Get the detailed information about atomic symbol.
  * \param creator the AtomicSymbolCreator.
