@@ -87,7 +87,8 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], use_slice=True)
 
     # test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9384
-    # check_rsp_push_pull('local')
+    for i in range(5000):
+        check_rsp_push_pull('local')
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
