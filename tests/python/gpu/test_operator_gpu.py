@@ -1726,7 +1726,6 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
-#@unittest.skip("JIRA issue: https://issues.apache.org/jira/projects/MXNET/issues/MXNET-130")
 @with_seed()
 def test_multi_proposal_op():
     # paramters
