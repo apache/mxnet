@@ -19,9 +19,6 @@
 
 set -evx
 
-## Keep the code style consistent using cljfmt
-## Note: we intentionally skip the ./src/org/apache/clojure_mxnet/gen from the list
-lein cljfmt fix `find ./src/org/apache/clojure_mxnet -type f -iname "*.clj" | grep -v "/gen/"`
+lein cljfmt fix `find ./src/org/apache/clojure_mxnet -type f -iname "*.clj" | grep -v /gen/`
 
-## And for the test directory
-lein cljfmt fix `find ./test -type f -iname "*.clj"`
+lein cljfmt fix `find ./test -type f -iname "*.clj" | grep -v /test/good-test`
