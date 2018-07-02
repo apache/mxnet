@@ -29,7 +29,6 @@ The following systems are supported:
 There are two ways of getting going. The first way is the easiest and that is to use the pre-built jars from Maven. The second way is to build from source. In both cases, you will need to load the prereqs and dependencies, (like opencv).
 
 
-
 ### Prerequisites
 
 
@@ -170,6 +169,16 @@ _Note: There is an error thrown in the generated code due to some loading issues
 ## Code Coverage
 
 To run the Code Coverage tool. Run `lein cloverage`.
+
+## Tools to keep style consistent
+
+To keep the style consistent for the project we include the script that make it easier.
+There are two script in the base of the project and in each examples.
+
+To run it just see the following file. `lein-cljfmt-check` and `lein-cljfmt-fix`.
+The first command will run and check and confirm if the code needed to be updated to reflect the community style guide.
+The second command will apply the change and fix any inconsistent indentation in place. This is recommendd to be done
+before the submit a new pull request so we can keep the style consistent throughout the project.
 
 ## FAQ
 
