@@ -19,4 +19,4 @@
 
 set -evx
 
-lein cljfmt check `find . -type f -iname "*.clj"`
+lein cljfmt fix `find . -type f -iname "*.clj"`
