@@ -1742,7 +1742,7 @@ def test_multi_proposal_op():
     num_anchors = len(scales) * len(ratios)
     count_anchors = H * W * num_anchors
 
-    def get_new_data(batch_size, ctx, with_nms=False):
+    def get_new_data(batch_size, ctx):
         '''
         cls_prob: (batch_size, 2 * num_anchors, H, W)
         bbox_pred: (batch_size, 4 * num_anchors, H, W)
@@ -1765,7 +1765,7 @@ def test_multi_proposal_op():
             im_info[i, :] = [im_size[0], im_size[1], im_scale]
         return cls_prob, bbox_pred, im_info
 
-    def check_proposal_consistency(op, batch_size):
+    def check_proposal_consistency(op, batch_size, with_nms=False):
         '''
         op is mx.nd.contrib.Proposal or mx.nd.contrib.MultiProposal
         '''
@@ -1813,7 +1813,7 @@ def test_multi_proposal_op():
         else:
             # no 100% gurantee with nms
             assert(np.sum(np.abs(score_cpu_np - score_gpu_np) < 1e-3) >= 10)
-            assert(np.sum(np.abs(rois_cpu_np - rois_gpu_np) < 1e-3) >= 40))
+            assert(np.sum(np.abs(rois_cpu_np - rois_gpu_np) < 1e-3) >= 40)
 
     check_proposal_consistency(mx.nd.contrib.Proposal, 1)
     check_proposal_consistency(mx.nd.contrib.MultiProposal, 5)
