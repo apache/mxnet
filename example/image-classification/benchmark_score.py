@@ -89,7 +89,6 @@ if __name__ == '__main__':
                         if not logged_fp16_warning:
                             logging.info('Model definition for {} does not support float16'.format(net))
                             logged_fp16_warning = True
-                        break
                     else:
                         speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
                         logging.info('batch size %2d, dtype %s, images/sec: %f', b, dtype, speed)
