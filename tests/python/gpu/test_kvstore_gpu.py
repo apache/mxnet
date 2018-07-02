@@ -108,6 +108,7 @@ def test_rsp_push_pull():
     key  = "MXNET_KVSTORE_USETREE"
     for val in envs:
         with EnvManager(key, val):
+            check_rsp_push_pull('local')
             check_rsp_push_pull('device')
             check_rsp_push_pull('device', is_push_cpu=False)
 

@@ -26,6 +26,9 @@
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "../common/utils.h"
+#include "../operator/mxnet_op.h"
+#include "../operator/tensor/elemwise_binary_op-inl.h"
+#include "../operator/tensor/elemwise_sum.h"
 
 namespace mxnet {
 namespace ndarray {
@@ -165,6 +168,102 @@ void ElementwiseSumRsp(mshadow::Stream<cpu>* s,
   });
 }
 
+void ElementwiseSumDnsCsrDnsImpl(mshadow::Stream<cpu>* s,
+                                 const Resource& rsc,
+                                 const std::vector<NDArray>& nds,
+                                 NDArray* out) {
+  using namespace mxnet::op;
+  using namespace mxnet::op::mxnet_op;
+  const TBlob& out_data = out->data();
+  MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
+    Kernel<Sum, cpu>::Launch(
+      s, out_data.Size(), out_data.dptr<DType>(), kWriteTo, nds[0].data().dptr<DType>(),
+      nds[2].data().dptr<DType>());
+    const TBlob& csr_data = nds[1].data();
+    const TBlob& csr_indices = nds[1].aux_data(csr::kIdx);
+    const TBlob& csr_indptr = nds[1].aux_data(csr::kIndPtr);
+    const nnvm::dim_t num_rows = nds[1].shape()[0];
+    const nnvm::dim_t num_cols = nds[1].shape()[1];
+    MSHADOW_IDX_TYPE_SWITCH(csr_indices.type_flag_, IType, {  // indices type
+      MSHADOW_IDX_TYPE_SWITCH(csr_indptr.type_flag_, CType, {  // indptr type
+        if (nds[1].storage_initialized()) {
+          Kernel<ElemwiseDnsCsrDnsKernel<kWriteTo, mshadow_op::plus>, cpu>::Launch(
+            s, num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
+            csr_data.dptr<DType>(), csr_indices.dptr<IType>(),
+            csr_indptr.dptr<CType>(), num_rows, num_cols);
+        }
+      });
+    });
+  });
+}
+
+void ElementwiseSumContainsDnsImpl(mshadow::Stream<cpu>* s,
+                                   const Resource& rsc,
+                                   const std::vector<NDArray>& nds,
+                                   NDArray* out) {
+  using namespace mxnet::op;
+  using namespace mxnet::op::mxnet_op;
+  const TBlob& out_data = out->data();
+  MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
+    Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+    for (size_t i = 0; i < nds.size(); ++i) {
+      const NDArray& nd = nds[i];
+      const nnvm::dim_t num_rows = nd.shape()[0];
+      const nnvm::dim_t num_cols = nd.shape()[1];
+      const TBlob& nd_data = nd.data();
+
+      if (i == 0) {
+        if (nd.storage_type() == kDefaultStorage) {
+          Kernel<op_with_req<mshadow_op::identity, kWriteTo>, cpu>::Launch(
+            s, out_data.Size(), out_data.dptr<DType>(), nd_data.dptr<DType>());
+          continue;
+        } else {
+          Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+        }
+      }
+
+      switch (nd.storage_type()) {
+        case kDefaultStorage: {
+          Kernel<op_with_req<mshadow_op::plus, kWriteTo>, cpu>::Launch(
+            s, out_data.Size(), out_data.dptr<DType>(), out_data.dptr<DType>(),
+            nd_data.dptr<DType>());
+          break;
+        }
+        case kCSRStorage: {
+          const TBlob& nd_indices = nd.aux_data(csr::kIdx);
+          const TBlob& nd_indptr = nd.aux_data(csr::kIndPtr);
+          MSHADOW_IDX_TYPE_SWITCH(nd_indices.type_flag_, IType, {  // indices type
+            MSHADOW_IDX_TYPE_SWITCH(nd_indptr.type_flag_, CType, {  // indptr type
+              if (nd.storage_initialized()) {
+                Kernel<ElemwiseDnsCsrDnsKernel<kWriteTo, mshadow_op::plus>, cpu>::Launch(
+                  s, num_rows, out_data.dptr<DType>(), out_data.dptr<DType>(),
+                  nd_data.dptr<DType>(), nd_indices.dptr<IType>(),
+                  nd_indptr.dptr<CType>(), num_rows, num_cols);
+              }
+            });
+          });
+          break;
+        }
+        case kRowSparseStorage: {
+          const TBlob& nd_indices = nd.aux_data(rowsparse::kIdx);
+          MSHADOW_IDX_TYPE_SWITCH(nd_indices.type_flag_, IType, {  // indices type
+            if (nd.storage_initialized()) {
+              const nnvm::dim_t nz_rows = nd_indices.Size();
+              Kernel<ElemwiseDnsRspDnsKernel<kWriteTo, mshadow_op::plus>, cpu>::Launch(
+                s, nz_rows * num_cols, out_data.dptr<DType>(),
+                out_data.dptr<DType>(), nd_data.dptr<DType>(), nd_indices.dptr<IType>(),
+                num_rows, nz_rows, num_cols);
+            }
+          });
+          break;
+        }
+        default:
+          LOG(FATAL) << "unknown storage type " << nd.storage_type() << "encountered...";
+      }
+    }
+  });
+}
+
 /*!
  * \brief Parallel cpu impl of elemwise sum for sparse tensors.
  * Currently only support row sparse sum.
@@ -175,8 +274,15 @@ void ElementwiseSum<cpu>(mshadow::Stream<cpu>* s,
                          const std::vector<NDArray>& nds,
                          NDArray* out) {
   if (nds.empty()) return;
-  if (nds[0].storage_type() == kRowSparseStorage) {
+  if (common::ContainsOnlyStorage(nds, kRowSparseStorage)) {
     ElementwiseSumRsp(s, rsc, nds, out);
+  } else if (nds.size() == 3U && nds[0].storage_type() == kDefaultStorage &&
+             nds[1].storage_type() == kCSRStorage && nds[2].storage_type() == kDefaultStorage &&
+             out->storage_type() == kDefaultStorage) {
+    ElementwiseSumDnsCsrDnsImpl(s, rsc, nds, out);
+  } else if (nds.size() > 4U && common::ContainsStorageType(nds, kDefaultStorage) &&
+             out->storage_type() == kDefaultStorage) {
+    ElementwiseSumContainsDnsImpl(s, rsc, nds, out);
   } else {
     LOG(FATAL) << "ElementwiseSum<cpu> has not been implemented for storage_type = << "
                << nds[0].storage_type();

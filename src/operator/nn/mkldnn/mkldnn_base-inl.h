@@ -318,6 +318,7 @@ enum OutDataOp {
 };
 
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
+void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.
@@ -490,6 +491,13 @@ class OpCheck {
            const std::vector<mxnet::OpReqType> &req,
            const std::vector<mxnet::NDArray> &outputs_);
 };
+
+bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
+                       const int dev_mask,
+                       bool support_mkldnn,
+                       DispatchMode *dispatch_mode,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs);
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
     static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);  \
