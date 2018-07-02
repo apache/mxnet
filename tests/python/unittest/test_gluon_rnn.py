@@ -23,6 +23,7 @@ import unittest
 from mxnet.test_utils import almost_equal
 from common import assert_raises_cudnn_disabled
 
+
 @assert_raises_cudnn_disabled()
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
