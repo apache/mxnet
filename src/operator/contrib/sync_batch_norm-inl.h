@@ -28,7 +28,6 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-// #include <pthread.h>
 # include <condition_variable>
 #include <map>
 #include <vector>
@@ -75,22 +74,28 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
   }
 };
 
-#define MAX_GPU_NUM 16
-
-// Adapt from https://github.com/brucechin/SharedTensor
+// Modified from https://github.com/brucechin/SharedTensor
 template<class T>
 class SharedND {
  private:
   int nDev;
   T mean;
-  T data[MAX_GPU_NUM];
-  bool flag[MAX_GPU_NUM];
+  T *data;
+  bool *flag;
   bool meanReady = false;
   bool meanInited = false;
+  std::mutex mutex_;
 
  public:
   explicit SharedND(int ndev) :nDev(ndev) {
-      memset(flag, false, MAX_GPU_NUM * sizeof(bool));
+      flag = new bool[ndev];
+      data = new T[ndev];
+      memset(flag, false, ndev * sizeof(bool));
+  }
+
+  ~SharedND() {
+    delete [] flag;
+    delete [] data;
   }
 
   bool Push(T input, int index) {
@@ -104,6 +109,7 @@ class SharedND {
   }
 
   T Pop(int index) {
+    std::lock_guard<std::mutex> lock(mutex_);
     while (!MeanReady()) {}
     flag[index] = false;
     T tmp = mean;
@@ -159,13 +165,17 @@ class GlobalShared {
 template<class T>
 class GlobalSharedRank {
  public:
-  T* Register(const std::string &key) {
+  T Register(const std::string &key, int ndev) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = registry_.find(key);
-    if (it != registry_.end()) return it->second;
+    if (it != registry_.end()) {
+      T* tmpT = it->second;
+      *tmpT = (*tmpT == ndev - 1) ? 0 : *tmpT + 1;
+      return *tmpT;
+    }
     T *newT = new T(0);
     registry_[key] = newT;
-    return newT;
+    return *newT;
   }
  private:
   std::mutex mutex_;
@@ -191,27 +201,8 @@ class Barrier {
   }
 };
 
-/*
-class GlobalSharedBarrier {
- public:
-  pthread_barrier_t* Register(const std::string &key, int ndev) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = registry_.find(key);
-    if (it != registry_.end()) return it->second;
-    pthread_barrier_t *newBarrier = new pthread_barrier_t();
-    pthread_barrier_init(newBarrier, NULL, ndev);
-    registry_[key] = newBarrier;
-    return newBarrier;
-  }
- private:
-  std::mutex mutex_;
-  std::map<std::string, pthread_barrier_t*> registry_;
-};
-*/
-
-static pthread_mutex_t mm = PTHREAD_MUTEX_INITIALIZER;
+// Global variables for Synchronizations
 static GlobalSharedRank<int> globalSharedRank;
-// static GlobalSharedBarrier globalSharedBarrier;
 static GlobalShared<Barrier> globalSharedBarrier;
 static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
 static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
@@ -268,11 +259,7 @@ class SyncBatchNorm : public Operator {
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
       Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
-      int *globalRank = globalSharedRank.Register(param_.key);
-      pthread_mutex_lock(&mm);
-      int myRank = *globalRank;
-      *globalRank += 1;
-      pthread_mutex_unlock(&mm);
+      int myRank = globalSharedRank.Register(param_.key, param_.ndev);
       // get the mean and var
       Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
@@ -293,13 +280,9 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedMean->Push(mean_cpu, myRank);
       sharedVar->Push(var_cpu, myRank);
-      // pthread_barrier_wait(globalBarrier);
       globalBarrier->Wait();
-      *globalRank = 0;
-      pthread_mutex_lock(&mm);
       mean_cpu = sharedMean->Pop(myRank);
       var_cpu = sharedVar->Pop(myRank);
-      pthread_mutex_unlock(&mm);
       // copy back to gpu
       mshadow::Copy(mean, mean_cpu, s);
       mshadow::Copy(var, var_cpu, s);
@@ -363,11 +346,7 @@ class SyncBatchNorm : public Operator {
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
       Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
-      int *globalRank = globalSharedRank.Register(param_.key);
-      pthread_mutex_lock(&mm);
-      int myRank = *globalRank;
-      *globalRank += 1;
-      pthread_mutex_unlock(&mm);
+      int myRank = globalSharedRank.Register(param_.key, param_.ndev);
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(5, mean.shape_[0]), s);
@@ -395,13 +374,9 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
       sharedProd->Push(prod_cpu, myRank);
-      // pthread_barrier_wait(globalBarrier);
       globalBarrier->Wait();
-      *globalRank = 0;
-      pthread_mutex_lock(&mm);
       grad_cpu = sharedGrad->Pop(myRank);
       prod_cpu = sharedProd->Pop(myRank);
-      pthread_mutex_unlock(&mm);
       // copy back to gpu
       mshadow::Copy(sumGrad, grad_cpu, s);
       mshadow::Copy(sumProd, prod_cpu, s);
