@@ -267,21 +267,6 @@ TEST(GpuTopology, TestEwisemult) {
     ASSERT_EQ(y[i], correct_y[i]);
 }
 
-// ewiseaddTest
-TEST(GpuTopology, TestEwiseadd) {
-  std::vector<int> x(8, 1);
-  std::vector<int> y(8, 0);
-  std::iota(y.begin(), y.end(), 0);
-  int alpha = 5;
-  std::vector<int> correct_y(8, 0);
-  std::iota(correct_y.begin(), correct_y.end(), 5);
-  mxnet::kvstore::ewiseadd(x, alpha, &y);
-
-  ASSERT_EQ(y.size(), correct_y.size());
-  for (unsigned i = 0; i < y.size(); ++i)
-    ASSERT_EQ(y[i], correct_y[i]);
-}
-
 // FindBestMoveTest
 TEST(GpuTopology, TestFindBestMove) {
   std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1,
@@ -496,10 +481,9 @@ TEST(GpuTopology, TestUpdateWeight) {
     ASSERT_EQ(W[i], correct_W[i]);
   }
 }
-// Backtrack
-// BacktrackGenerateBinaryTree
+
 // ComputeTreesFromRoot
-TEST(GpuTopology, TestComputeTreesFromRoot) {
+TEST(GpuTopology, TestComputeTreesFromRoot1) {
   std::vector<float> W = {0, 2, 2, 3, 3, 1, 1, 1,
                           2, 0, 3, 2, 1, 3, 1, 1,
                           2, 3, 0, 3, 1, 1, 2, 1,
@@ -522,6 +506,51 @@ TEST(GpuTopology, TestComputeTreesFromRoot) {
 
   ASSERT_EQ(topo.size(), correct_topo_size);
   ASSERT_EQ(scan.size(), correct_scan_size);
+}
+
+// IsConnected
+// Test on graph that is "disconnected" by NVLink
+TEST(GpuTopology, TestIsConnected1) {
+  std::vector<float> W = {0, 0, 2, 0,
+                          0, 0, 0, 2,
+                          2, 0, 0, 0,
+                          0, 2, 0, 0};
+  int num_gpus = 4;
+
+  bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
+
+  bool correct_connected = false;
+  ASSERT_EQ(connected, correct_connected);
+}
+
+// IsConnected
+// Test on graph that is "disconnected" by NVLink
+TEST(GpuTopology, TestIsConnected2) {
+  std::vector<float> W = {1, 1, 2, 1,
+                          1, 1, 1, 2,
+                          2, 1, 1, 1,
+                          1, 2, 1, 1};
+  int num_gpus = 4;
+
+  bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
+
+  bool correct_connected = false;
+  ASSERT_EQ(connected, correct_connected);
+}
+
+// IsConnected
+// Test on graph that is "disconnected" by NVLink
+TEST(GpuTopology, TestIsConnected3) {
+  std::vector<float> W = {1, 1, 2, 2,
+                          1, 1, 1, 2,
+                          2, 1, 1, 1,
+                          2, 2, 1, 1};
+  int num_gpus = 4;
+
+  bool connected = mxnet::kvstore::IsConnected(W, num_gpus);
+
+  bool correct_connected = true;
+  ASSERT_EQ(connected, correct_connected);
 }
 
 // ComputeTreesTest with backtracking

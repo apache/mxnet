@@ -33,6 +33,7 @@
 #include <limits>
 #include <random>
 #include <stack>
+#include <queue>
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
@@ -82,6 +83,39 @@ inline void PrintTopo(const std::string& str, const std::vector<size_t>& topo_ro
   }
 }
 
+// Uses BFS to find whether undirected graph is connected or not given its
+// adjacency matrix
+// Note: only consider matrix values > 1, because we care about whether it is
+// connected using only NVLink connections
+template <typename T>
+inline bool IsConnected(const std::vector<T>& matrix,
+                        int                   num_gpus) {
+  int source = 0;
+  std::vector<bool> visited(num_gpus, false);
+  std::queue<int> work_list;
+
+  work_list.push(source);
+  visited[source] = true;
+  while (!work_list.empty()) {
+    int curr = work_list.front();
+    work_list.pop();
+
+    for (int i = 0; i < num_gpus; ++i) {
+      int neighbour = matrix[curr*num_gpus + i];
+      if (i != curr && neighbour > 1 && visited[i] == false) {
+        visited[i] = true;
+        work_list.push(i);
+      }
+    }
+  }
+
+  for (int i = 0; i < num_gpus; ++i) {
+    if (visited[i] == false)
+      return false;
+  }
+  return true;
+}
+
 // Generate adjacency matrix with row/col numbering from 0, 1, ..., n_gpu
 // @input:  devs is a vector of GPU contexts
 // @output: matrix is adjacency matrix of link topology graph
@@ -129,9 +163,11 @@ inline void GetP2PWeight(const std::vector<Context>& devs,
       max_value = max[i];
   }
 
-  // If all GPUs have at least 1 NVLink connection, then we can use NVLink only
+  // If all GPUs are  connected by NVLink, then we can use NVLink only
   // to communicate instead of going over PCI-E
-  if (max_value > 0) {
+  bool connected = IsConnected(*matrix, num_gpus);
+
+  if (connected) {
     for (auto& matrix_value : *matrix) {
       matrix_value = (matrix_value == 1) ? 0 : matrix_value;
     }
