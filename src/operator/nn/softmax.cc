@@ -79,7 +79,6 @@ The resulting array contains elements in the range (0,1) and the elements along 
 
 .. math::
    softmax(\mathbf{z/t})_j = \frac{e^{z_j/t}}{\sum_{k=1}^K e^{z_k/t}}
-   softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
 
 for :math:`j = 1, ..., K`
 
