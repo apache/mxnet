@@ -287,7 +287,7 @@ For example::
     })
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")
-.add_argument("target", "NDArray-or-Symbol", "The target array")
+.add_argument("target", "NDArray-or-Symbol", "The target array");
 
 // backward op for broadcast.
 NNVM_REGISTER_OP(_broadcast_backward)
