@@ -264,7 +264,7 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
-MXNET_OPERATOR_REGISTER_BROADCAST_LIKE(broadcast_like)
+NNVM_REGISTER_OP(broadcast_like)
 .describe(R"code(Broadcasts the input array to be like a target array
 
 Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
@@ -275,8 +275,19 @@ For example::
    broadcast_like([[1,2,3]], target=[[0, 0, 0], [0, 0, 0]]) = [[ 1.,  2.,  3.],
                                                                [ 1.,  2.,  3.]]
 )code" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n,
+       const std::vector<nnvm::NodeEntry>& ograds) {
+      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+                                 {{"keepdims", "true"}});
+    })
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_argument("target", "NDArray-or-Symbol", "The target array")
 
 // backward op for broadcast.
 NNVM_REGISTER_OP(_broadcast_backward)

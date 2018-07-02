@@ -346,7 +346,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   for (index_t i = 0; i < ishape.ndim(); ++i) {
     if (oshape[i] != 0) {
       CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
-        << "Array cannot be broadcasted from " << ishape << " to " << oshape; 
+        << "Array cannot be broadcasted from " << ishape << " to " << oshape;
     } else {
       oshape[i] = ishape[i];
     }
@@ -354,7 +354,6 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
-
 
 inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
                                         TShape *new_big, TShape *new_small) {
@@ -1247,18 +1246,6 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
     })                                                          \
   .add_argument("data", "NDArray-or-Symbol", "The input")
 
-#define MXNET_OPERATOR_REGISTER_BROADCAST_LIKE(name)                 \
-  NNVM_REGISTER_OP(name)                                        \
-  .set_num_inputs(2)                                            \
-  .set_num_outputs(1)                                           \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
-  .set_attr<nnvm::FGradient>("FGradient",                       \
-    [](const nnvm::NodePtr& n,                                  \
-       const std::vector<nnvm::NodeEntry>& ograds) {            \
-      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
-                                 {{"keepdims", "true"}});              \
-    })                                                          \
-  .add_argument("data", "NDArray-or-Symbol", "The input")
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
