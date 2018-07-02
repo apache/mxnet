@@ -79,16 +79,20 @@ Alternatively, you can use the table below to select the package that suits your
 
 The following table presents the pip packages that are recommended for each version of MXNet.
 
+<!-- Must find sol'n for both github and website; image in the meantime
 | Package / MXNet Version | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
 |-|-|-|-|-|-|
-| mxnet-cu92mkl | :white_check_mark: | :x: | :x: | :x: | :x: |
-| mxnet-cu92 | :white_check_mark: | :x: | :x: | :x: | :x: |
+| mxnet-cu92mkl | :white_check_mark:<i class="fas fa-check"></i> | :x: | :x: | :x: | :x: |
+| mxnet-cu92 | :white_check_mark:<i class="fas fa-check"></i> | :x: | :x: | :x: | :x: |
 | mxnet-cu90mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
 | mxnet-cu90 | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
 | mxnet-cu80mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | mxnet-cu80 | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | mxnet-mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | mxnet | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+-->
+
+![pip package table](https://user-images.githubusercontent.com/5974205/42119928-362ad5ba-7bc7-11e8-97de-dba8fd099c90.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
@@ -296,3 +300,6 @@ You are more than welcome to contribute easy installation scripts for other oper
 * [Tutorials](../tutorials/index.html)
 * [How To](../faq/index.html)
 * [Architecture](../architecture/index.html)
+
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
