@@ -14,22 +14,34 @@ Community contributions to MXNet have added many new valuable features and funct
 * topic
 
 
-## MXNet APIs
+## New MXNet APIs
 
 * Clojure
 * Gluon
-* Keras-MXNet
 * Scala
+
 
 ## Toolkits to Extend MXNet
 
 * Gluon CV
 * Gluon NLP
 
-## Models & Model Serving
+
+## Model Serving
+
+* MXNet Model Server (MMS)
+
+
+## Model Zoos
+
+* Gluon Model Zoo
+* ONNX Model Zoo
 
 
 ## MXNet as a Backend
 
+* Keras-MXNet
 
 ## Learning MXNet and other Educational Resources
+
+* Gluon 60 Minute Crash Course
