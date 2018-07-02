@@ -63,7 +63,7 @@ data = mx.sym.Variable('data') # (batch_size, num_channel = 1, height, width)
 flattened_data = mx.sym.flatten(data=data) # (batch_size, num_channel * height * width)
 visible_layer_bias = mx.sym.Variable('visible_layer_bias', init=mx.init.Normal(sigma=.01))
 hidden_layer_bias = mx.sym.Variable('hidden_layer_bias', init=mx.init.Normal(sigma=.01))
-interaction = mx.sym.Variable('interaction_weight', init=mx.init.Normal(sigma=.01))
+interaction_weight = mx.sym.Variable('interaction_weight', init=mx.init.Normal(sigma=.01))
 aux_hidden_layer_sample = mx.sym.Variable('aux_hidden_layer_sample', init=mx.init.Normal(sigma=.01))
 aux_hidden_layer_prob_1 = mx.sym.Variable('aux_hidden_layer_prob_1', init=mx.init.Constant(0))
 
@@ -74,7 +74,7 @@ rbm = mx.sym.Custom(
     flattened_data,
     visible_layer_bias,
     hidden_layer_bias,
-    interaction,
+    interaction_weight,
     aux_hidden_layer_sample,
     aux_hidden_layer_prob_1,
     num_hidden=num_hidden,
@@ -113,7 +113,7 @@ showcase_rbm = mx.sym.Custom(
     flattened_data,
     visible_layer_bias,
     hidden_layer_bias,
-    interaction,
+    interaction_weight,
     num_hidden=num_hidden,
     k=showcase_gibbs_sampling_steps,
     for_training=False,
