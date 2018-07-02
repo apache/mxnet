@@ -163,6 +163,7 @@ def container_run(platform: str,
                '-e', 'CCACHE_TEMPDIR=/tmp/ccache',  # temp dir should be local and not shared
                '-e', "CCACHE_DIR=/work/ccache",  # this path is inside the container as /work/ccache is mounted
                '-e', "CCACHE_LOGFILE=/tmp/ccache.log",  # a container-scoped log, useful for ccache verification.
+               '--init', # Handle sigterm / sigkills, for instance those triggered by Jenkins after timeouts.
                tag]
     runlist.extend(command)
     cmd = ' '.join(runlist)
