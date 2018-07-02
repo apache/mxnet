@@ -64,8 +64,10 @@ enum OpReqType {
  * \sa Resource
  */
 struct OpContext {
+  /*! \brief whether there is a backward phase to compute gradients. */
+  bool need_grad;
   /*! \brief whether it is training phase */
-  int is_train;
+  bool is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
   /*! \brief the callback when operation completes, used by asynchronize ops */
@@ -98,7 +100,12 @@ enum class ExecType {
    *  In current implementation, copy operator is specially handled by executor.
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
-  kCrossDeviceCopy
+  kCrossDeviceCopy,
+  /*!
+   * \brief A subgraph execution should happen in the main thread, instead of
+   *  in the execution engine.
+   */
+  kSubgraphExec,
 };
 
 /*! \brief the dispatch mode of the operator */

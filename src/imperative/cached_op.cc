@@ -818,7 +818,7 @@ OpStatePtr CachedOp::DynamicForward(
   return op_state;
 }
 
-void CachedOp::Forward(
+OpStatePtr CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
@@ -858,6 +858,7 @@ void CachedOp::Forward(
         std::move(attrs), inputs, outputs, op_state,
         &save_inputs(), &save_outputs());
   }
+  return op_state;
 }
 
 
