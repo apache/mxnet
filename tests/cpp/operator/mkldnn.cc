@@ -978,8 +978,10 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs,
                          const OpAttrs &attrs) {
   const auto& param = nnvm::get<mxnet::op::PoolingParam>(attrs.attrs.parsed);
-  TShape kernel = param.kernel;
-  TShape padding = param.pad;
+//  TShape kernel = param.kernel;
+//  TShape padding = param.pad;
+  TShape kernel = {1};
+  TShape padding = {0};
   int pool_type; // max
   NDArray input = out_arrs[0]->Reorder2Default();
   NDArray output = out_arrs[0]->Reorder2Default();
