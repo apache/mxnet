@@ -977,7 +977,7 @@ TEST(MKLDNN_NDArray, GetAllCoordinates) {
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs,
                          const OpAttrs &attrs) {
-  auto &param = nnvm::get<mxnet::op::PoolingParam>(attrs.attrs.parsed);
+  const auto& param = nnvm::get<mxnet::op::PoolingParam>(attrs.attrs.parsed);
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   int pool_type; // max
