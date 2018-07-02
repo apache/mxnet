@@ -1285,6 +1285,15 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   API_END();
 }
 
+int MXCUDNNIsEnabled(bool *curr) {
+  API_BEGIN();
+#if MXNET_USE_CUDNN
+  *curr = true;
+#else
+  *curr = false;
+#endif
+  API_END();
+}
 
 int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shared_id) {
   API_BEGIN();

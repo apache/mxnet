@@ -2317,6 +2317,13 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
 MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
 
+/*!
+ * \brief Check if cudnn is enabled for MXNet
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXCUDNNIsEnabled(bool* curr);
+
 
 #ifdef __cplusplus
 }

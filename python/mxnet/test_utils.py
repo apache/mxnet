@@ -30,6 +30,7 @@ import errno
 import logging
 import bz2
 import zipfile
+import ctypes
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -48,6 +49,8 @@ from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
+from .base import _LIB, check_call
+
 
 
 def default_context():
@@ -66,6 +69,14 @@ def default_dtype():
     """Get default data type for regression test."""
     # _TODO: get default dtype from environment variable
     return np.float32
+
+
+def cudnn_enabled():
+    """Check if cudnn enabled for the MXNet installation
+    """
+    curr = ctypes.c_bool()
+    check_call(_LIB.MXCUDNNIsEnabled(ctypes.byref(curr)))
+    return curr.value
 
 
 def get_atol(atol=None):

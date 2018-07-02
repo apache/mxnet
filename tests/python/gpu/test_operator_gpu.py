@@ -25,14 +25,14 @@ import mxnet as mx
 import numpy as np
 import unittest
 from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, cudnn_enabled
 from mxnet.base import MXNetError
 from mxnet import autograd
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
 from test_operator import *
 from test_optimizer import *
 from test_random import *
@@ -1614,6 +1614,7 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
     check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))

@@ -20,13 +20,14 @@ import mxnet as mx
 import numpy as np
 import random
 import shutil
+from mxnet.base import MXNetError
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 
 import models
 from contextlib import contextmanager
-from nose.tools import make_decorator
+from nose.tools import make_decorator, assert_raises
 import tempfile
 
 def assertRaises(expected_exception, func, *args, **kwargs):
@@ -92,6 +93,18 @@ def random_seed(seed=None):
         np.random.seed(next_seed)
         mx.random.seed(next_seed)
         random.seed(next_seed)
+
+
+def assert_raises_cudnn_disabled():
+    def test_helper(orig_test):
+        @make_decorator(orig_test)
+        def test_new(*args, **kwargs):
+            if mx.test_utils.cudnn_enabled() or mx.context.current_context().device_type == 'cpu':
+                orig_test(*args, **kwargs)
+            else:
+                assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
+        return test_new
+    return test_helper
 
 
 def with_seed(seed=None):
