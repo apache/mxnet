@@ -887,6 +887,8 @@ int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
 float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = 0;
+  CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within in_arr bounds";
+  CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within in_arr bounds";
 
   // assumes the kernel is the last two dim
   for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
@@ -968,8 +970,8 @@ TEST(MKLDNN_NDArray, PoolAtCoordinate) {
     TShape coord2 = {0,0,7}; // edge
     TShape coord3 = {0,0,4}; // middle
     TShape coord4 = {0,1,0}; // edge
-    TShape coord5 = {0,2,7}; // edge
-    TShape coord6 = {0,3,4}; // middle
+    TShape coord5 = {0,1,7}; // edge
+    TShape coord6 = {0,1,4}; // middle
     EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
     EXPECT_EQ(0, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
     EXPECT_EQ(0, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
