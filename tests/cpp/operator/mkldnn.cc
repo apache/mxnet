@@ -974,36 +974,6 @@ TEST(MKLDNN_NDArray, GetAllCoordinates) {
   EXPECT_EQ(24, GetAllCoordinates(test_shape3).size());
 }
 
-TEST(MKLDNN_NDArray, VerifyPoolingResult) {
-  OpAttrs attrs;
-  attrs.attrs.op = Op::Get("Pooling");
-  attrs.attrs.dict.insert({"kernel" , "1"});
-  attrs.attrs.dict.insert({"stride" , "1"});
-  attrs.attrs.dict.insert({"pad" , "0" });
-  attrs.attrs.dict.insert({"pool_type" , "max"});
-  TShape test_shape = {1,1,2};
-
-  std::vector<NDArray *> in_arrs(1);
-  std::vector<NDArray *> out_arrs(1);
-
-  // test base
-  NDArray arr(test_shape, Context());
-  NDArray expected_output(test_shape, Context());
-  mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-  expected_data[0] = 0;
-  expected_data[0] = 1;
-
-  // test kernel
-  in_arrs[0] = arr;
-  out_arrs[0] = expected_output;
-  VerifyPoolingResult(in_arrs, out_arrs, attrs);
-
-  //test padding
-
-  //test stride
-
-}
-
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs,
                          const OpAttrs &attrs) {
@@ -1032,6 +1002,36 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
       ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
     }
   }
+}
+
+TEST(MKLDNN_NDArray, VerifyPoolingResult) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Pooling");
+  attrs.attrs.dict.insert({"kernel" , "1"});
+  attrs.attrs.dict.insert({"stride" , "1"});
+  attrs.attrs.dict.insert({"pad" , "0" });
+  attrs.attrs.dict.insert({"pool_type" , "max"});
+  TShape test_shape = {1,1,2};
+
+  std::vector<NDArray *> in_arrs(1);
+  std::vector<NDArray *> out_arrs(1);
+
+  // test base
+  NDArray arr(test_shape, Context());
+  NDArray expected_output(test_shape, Context());
+  mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+  expected_data[0] = 0;
+  expected_data[0] = 1;
+
+  // test kernel
+  in_arrs[0] = &arr;
+  out_arrs[0] = &expected_output;
+  VerifyPoolingResult(in_arrs, out_arrs, attrs);
+
+  //test padding
+
+  //test stride
+
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
