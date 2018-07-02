@@ -31,7 +31,7 @@
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../src/operator/nn/mkldnn/pooling-inl.h"
+#include "../../src/operator/nn/pooling-inl.h"
 
 using namespace mxnet;
 
