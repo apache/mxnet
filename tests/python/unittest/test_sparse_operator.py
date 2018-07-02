@@ -1531,6 +1531,11 @@ def test_sparse_unary_with_numerics():
                                 output_grad_stype=output_grad_stype,
                                 backward_is_use_output=backward_is_use_output)
 
+        for output_grad_stype in [None, "csr", "default"]:
+            check_sparse_simple(name, 'csr', mxnet_func, forward_numpy_call, backward_numpy_call,
+                                output_grad_stype=output_grad_stype,
+                                backward_is_use_output=backward_is_use_output)
+
     check_sparse_function('relu',
                           lambda x: mx.sym.relu(x),
                           lambda x: np.maximum(x, 0.0),

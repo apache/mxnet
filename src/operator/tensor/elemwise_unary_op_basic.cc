@@ -70,7 +70,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 // relu
-MXNET_OPERATOR_REGISTER_UNARY(relu)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
 MXNET_ADD_SPARSE_OP_ALIAS(relu)
 .describe(R"code(Computes rectified linear.
 
@@ -81,11 +81,9 @@ The storage type of ``relu`` output depends upon the input storage type:
 
    - relu(default) = default
    - relu(row_sparse) = row_sparse
+   - relu(csr) = csr
 
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::ComputeEx<cpu, mshadow_op::relu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu,
