@@ -282,8 +282,6 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
         ctx_list = [mx.cpu(i) for i in range(num_devices)]
 
     input1.attach_grad()
-    #input2.attach_grad()
-
     inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
     for xi in inputs2:
         xi.attach_grad()
@@ -297,8 +295,6 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
         mx.autograd.backward(loss2)
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
-    #print('output1', output1)
-    #print('output2', output2)
     # assert forwarding
     _assert_tensor_close(input1, input2)
     _assert_tensor_close(output1, output2)
@@ -307,8 +303,6 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     _assert_tensor_close(_find_bn(bn1).running_var.data(ctx_list[0]),
                          _find_bn(bn2).running_var.data(ctx_list[0]))
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    #print('input1.grad:', input1.grad)
-    #print('input1.grad:', input2grad)
     _assert_tensor_close(input1.grad, input2grad)
 
 def testSyncBN():

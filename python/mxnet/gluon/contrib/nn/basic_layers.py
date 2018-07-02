@@ -160,6 +160,11 @@ class SyncBatchNorm(BatchNorm):
     We follow the sync-onece implmentation described in the paper [2]_ .
     Parameters
     ----------
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    num_devices : int, default number of visible GPUs
     momentum: float, default 0.9
         Momentum for the moving average.
     epsilon: float, default 1e-5
@@ -184,11 +189,6 @@ class SyncBatchNorm(BatchNorm):
         Initializer for the moving mean.
     moving_variance_initializer: str or `Initializer`, default 'ones'
         Initializer for the moving variance.
-    in_channels : int, default 0
-        Number of channels (feature maps) in input data. If not specified,
-        initialization will be deferred to the first time `forward` is called
-        and `in_channels` will be inferred from the shape of input data.
-    num_devices : int, default number of visible GPUs
 
 
     Inputs:

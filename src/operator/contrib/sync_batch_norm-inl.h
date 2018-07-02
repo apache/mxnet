@@ -28,7 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
-# include <condition_variable>
+#include <condition_variable>
 #include <map>
 #include <vector>
 #include <string>
@@ -78,30 +78,30 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
 template<class T>
 class SharedND {
  private:
-  int nDev;
-  T mean;
-  T *data;
-  bool *flag;
-  bool meanReady = false;
-  bool meanInited = false;
+  int num_devices_;
+  T mean_;
+  T *data_;
+  bool *flag_;
+  bool mean_ready_ = false;
+  bool mean_inited_ = false;
   std::mutex mutex_;
 
  public:
-  explicit SharedND(int ndev) :nDev(ndev) {
-      flag = new bool[ndev];
-      data = new T[ndev];
-      memset(flag, false, ndev * sizeof(bool));
+  explicit SharedND(int ndev) :num_devices_(ndev) {
+      flag_ = new bool[ndev];
+      data_ = new T[ndev];
+      memset(flag_, false, ndev * sizeof(bool));
   }
 
   ~SharedND() {
-    delete [] flag;
-    delete [] data;
+    delete [] flag_;
+    delete [] data_;
   }
 
   bool Push(T input, int index) {
-    if (flag[index] == false) {
-      data[index] = input;
-      flag[index] = true;
+    if (flag_[index] == false) {
+      data_[index] = input;
+      flag_[index] = true;
       return true;
     } else {
       return false;
@@ -111,38 +111,38 @@ class SharedND {
   T Pop(int index) {
     std::lock_guard<std::mutex> lock(mutex_);
     while (!MeanReady()) {}
-    flag[index] = false;
-    T tmp = mean;
+    flag_[index] = false;
+    T tmp = mean_;
     ResetMean();
     return tmp;
   }
 
   bool MeanReady() {
-    if (meanReady) {
+    if (mean_ready_) {
       return true;
     }
-    for (int i = 0; i < nDev; i++) {
-      if (!flag[i]) {
+    for (int i = 0; i < num_devices_; i++) {
+      if (!flag_[i]) {
         return false;
       }
     }
-    for (int i = 1; i < nDev; i++) {
-      data[0] += data[i];
+    for (int i = 1; i < num_devices_; i++) {
+      data_[0] += data_[i];
     }
-    if (!meanInited) {
-      mean = mshadow::NewTensor<cpu, real_t>(data[0].shape_, 0.0f);
-      meanInited = true;
+    if (!mean_inited_) {
+      mean_ = mshadow::NewTensor<cpu, real_t>(data_[0].shape_, 0.0f);
+      mean_inited_ = true;
     }
-    mean = data[0] * 1.0f /  nDev;
-    meanReady = true;
+    mean_ = data_[0] * 1.0f /  num_devices_;
+    mean_ready_ = true;
     return true;
   }
 
   void ResetMean() {
-    for (int i = 0; i < nDev; i++) {
-      if (flag[i]) return;
+    for (int i = 0; i < num_devices_; i++) {
+      if (flag_[i]) return;
     }
-    meanReady = false;
+    mean_ready_ = false;
   }
 };
 
@@ -156,6 +156,12 @@ class GlobalShared {
     T *newT = new T(ndev);
     registry_[key] = newT;
     return newT;
+  }
+  ~GlobalShared() {
+    for (auto it = registry_.begin(); it != registry_.end(); it++) {
+      T *ptr = it->second;
+      delete [] ptr;
+    }
   }
  private:
   std::mutex mutex_;
@@ -176,6 +182,12 @@ class GlobalSharedRank {
     T *newT = new T(0);
     registry_[key] = newT;
     return *newT;
+  }
+  ~GlobalSharedRank() {
+    for (auto it = registry_.begin(); it != registry_.end(); it++) {
+      T *ptr = it->second;
+      delete [] ptr;
+    }
   }
  private:
   std::mutex mutex_;
