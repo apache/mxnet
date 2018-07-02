@@ -1007,9 +1007,9 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs,
                          const OpAttrs &attrs) {
-  auto &param = nnvm::get<PoolingParam>(attrs.attrs.parsed);
+  auto &param = nnvm::get<mxnet::op::PoolingParam>(attrs.attrs.parsed);
   TShape kernel = param.kernel;
-  TShape padding = param.padding;
+  TShape padding = param.pad;
   int pool_type; // max
   NDArray input = out_arrs[0]->Reorder2Default();
   NDArray output = out_arrs[0]->Reorder2Default();
