@@ -135,8 +135,7 @@ def imdecode(buf, *args, **kwargs):
     <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
-        if sys.version_info[0] == 3 \
-                and not (isinstance(buf, bytes) or isinstance(buf, np.ndarray)):
+        if sys.version_info[0] == 3 and not isinstance(buf, (bytes, np.ndarray)):
             raise ValueError('buf must bytes or numpy.ndarray,'
                              'if you input str,please convert it to bytes')
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
