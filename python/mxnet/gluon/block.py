@@ -327,14 +327,17 @@ class Block(object):
         ndarray.save(filename, arg_dict)
 
     def save_params(self, filename):
-        """[Deprecated] Please use save_parameters.
+        """[Deprecated] Please use save_parameters. Note that if you want load
+        from SymbolBlock later, please use export instead.
 
         Save parameters to file.
 
         filename : str
             Path to file.
         """
-        warnings.warn("save_params is deprecated. Please use save_parameters.")
+        warnings.warn("save_params is deprecated. Please use save_parameters. "
+                      "Note that if you want load from SymbolBlock later, please "
+                      "use export instead.")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)
         except ValueError as e:
