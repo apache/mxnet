@@ -82,6 +82,20 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     WikiText103
 ```
 
+#### Parallel
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.parallel
+
+.. autosummary::
+    :nosignatures:
+    
+    DataParallelModel
+    DataParallelLoss
+    Barrier
+
+```
+
 ## API Reference
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
@@ -105,6 +119,10 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.data.text
+    :members:
+    :imported-members:
+
+.. automodule:: mxnet.gluon.contrib.parallel
     :members:
     :imported-members:
 
