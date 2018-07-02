@@ -741,6 +741,7 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()
 def test_pooling_versions():
     def test_pooling_versions_helper(pool_op_list, data, kernel, pool_type, pad, stride, pooling_convention='valid',
