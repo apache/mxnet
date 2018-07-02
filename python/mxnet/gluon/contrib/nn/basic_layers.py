@@ -21,10 +21,10 @@
 __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
            'SyncBatchNorm']
 
+import warnings
 from .... import nd, test_utils
 from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
-import warnings
 
 class Concurrent(Sequential):
     """Lays `Block`s concurrently.
