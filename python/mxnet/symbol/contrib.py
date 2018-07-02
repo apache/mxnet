@@ -173,6 +173,10 @@ def foreach(body, data, init_states, name="foreach"):
     as the first output of foreach; states from the last execution of body
     are the second output of foreach.
 
+    foreach can output only output data or states. If a user only wants states,
+    the body function can return ([], states). Similarly, if a user only wants
+    output data, the body function can return (out, []).
+
     The computation done by this operator is equivalent to the pseudo code below
     when the input data is NDArray:
 
