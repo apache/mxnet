@@ -173,3 +173,4 @@ List of Contributors
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
 * [Lin Yuan](https://github.com/apeforest)
+* [Kou Ding](https://github.com/chinakook)

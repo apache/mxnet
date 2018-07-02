@@ -741,6 +741,7 @@ def test_pooling_with_type():
     check_consistency(sym, ctx_list)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()
 def test_pooling_versions():
     def test_pooling_versions_helper(pool_op_list, data, kernel, pool_type, pad, stride, pooling_convention='valid',
@@ -1233,7 +1234,6 @@ def test_embedding_with_type():
     test_embedding_helper(data_types, weight_types, 0, 5)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8288")
 @with_seed()
 def test_svmoutput_with_type():
     sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
@@ -1243,7 +1243,7 @@ def test_svmoutput_with_type():
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
                 {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()

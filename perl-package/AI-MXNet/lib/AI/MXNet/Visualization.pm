@@ -340,6 +340,18 @@ method plot_network(
         {
             $attr{fillcolor} = $cm[3];
         }
+        elsif($op eq 'Flatten')
+        {
+            $label = $op;
+        }
+        elsif($op eq 'Dropout')
+        {
+            $label = "$op ($node->{attrs}{p})";
+        }
+        elsif($op eq 'Reshape')
+        {
+            $label = "$op $node->{attrs}{shape}";
+        }
         elsif($op eq 'Activation' or $op eq 'LeakyReLU')
         {
             $label = "$op\n$node->{attrs}{act_type}";
