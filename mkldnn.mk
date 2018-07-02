@@ -32,9 +32,9 @@ endif
 
 .PHONY: mkldnn mkldnn_clean
 
-mkldnn_build: $(MKLDNNROOT)/lib/libmkldnn.so
+mkldnn_build: $(MKLDNN_LIBFILE)
 
-$(MKLDNNROOT)/lib/libmkldnn.so:
+$(MKLDNN_LIBFILE):
 	mkdir -p $(MKLDNNROOT)
 	cd $(MKLDNN_SUBMODDIR) && rm -rf external && cd scripts && ./prepare_mkl.sh && cd .. && cp -a external/*/* $(MKLDNNROOT)/.
 	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF

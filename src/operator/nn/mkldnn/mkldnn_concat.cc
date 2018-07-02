@@ -107,7 +107,7 @@ void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   std::vector<const mkldnn::memory *> data_mem;
   data_md.reserve(num_in_data);
   data_mem.reserve(num_in_data);
-  for (int i =0; i < num_in_data; i++) {
+  for (int i = 0; i < num_in_data; i++) {
     const mkldnn::memory *tmp_mem = in_data[i].GetMKLDNNData();
     mkldnn::memory::primitive_desc tmp_pd = tmp_mem->get_primitive_desc();
     data_md.push_back(tmp_pd);
@@ -138,11 +138,11 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   mkldnn::memory::dims offsets = {0, 0, 0, 0};
   for (int i = 0; i < num_in_data; i++) {
     mkldnn::memory::dims diff_src_tz
-        = {static_cast<int>(inputs[i+1].shape()[0]),
-          static_cast<int>(inputs[i+1].shape()[1]),
-          static_cast<int>(inputs[i+1].shape()[2]),
-          static_cast<int>(inputs[i+1].shape()[3])};
-    auto diff_src_mpd = inputs[i+1].GetMKLDNNData()->get_primitive_desc();
+        = {static_cast<int>(outputs[i].shape()[0]),
+          static_cast<int>(outputs[i].shape()[1]),
+          static_cast<int>(outputs[i].shape()[2]),
+          static_cast<int>(outputs[i].shape()[3])};
+    auto diff_src_mpd = outputs[i].GetMKLDNNData()->get_primitive_desc();
     auto gradi_mem_ = CreateMKLDNNMem(outputs[i], diff_src_mpd, req[i]);
     // create view from gy to gxs[i]
     std::shared_ptr<mkldnn::view::primitive_desc> view_pd;

@@ -42,6 +42,10 @@ from typing import *
 
 CCACHE_MAXSIZE = '500G'
 
+def under_ci() -> bool:
+    """:return: True if we run in Jenkins."""
+    return 'JOB_NAME' in os.environ
+
 def get_platforms(path: Optional[str] = "docker"):
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.build.*"))
@@ -268,7 +272,7 @@ def main() -> int:
 
     args = parser.parse_args()
     def use_cache():
-        return args.cache or 'JOB_NAME' in os.environ # we are in Jenkins
+        return args.cache or under_ci()
 
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)

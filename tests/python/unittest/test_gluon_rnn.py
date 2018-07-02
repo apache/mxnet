@@ -178,6 +178,54 @@ def test_stack():
 
 
 @assert_raises_cudnn_disabled()
+def test_hybridstack():
+    cell = gluon.rnn.HybridSequentialRNNCell()
+    for i in range(5):
+        if i == 1:
+            cell.add(gluon.rnn.ResidualCell(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
+        else:
+            cell.add(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_'%i))
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+    outputs, _ = cell.unroll(3, inputs)
+    outputs = mx.sym.Group(outputs)
+    keys = sorted(cell.collect_params().keys())
+    for i in range(5):
+        assert 'rnn_stack%d_h2h_weight'%i in keys
+        assert 'rnn_stack%d_h2h_bias'%i in keys
+        assert 'rnn_stack%d_i2h_weight'%i in keys
+        assert 'rnn_stack%d_i2h_bias'%i in keys
+    assert outputs.list_outputs() == ['rnn_stack4_t0_out_output', 'rnn_stack4_t1_out_output', 'rnn_stack4_t2_out_output']
+
+    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+    assert outs == [(10, 100), (10, 100), (10, 100)]
+
+    # Test HybridSequentialRNNCell nested in nn.HybridBlock, SequentialRNNCell will fail in this case
+    class BidirectionalOfSequential(gluon.HybridBlock):
+        def __init__(self):
+            super(BidirectionalOfSequential, self).__init__()
+
+            with self.name_scope():
+                cell0 = gluon.rnn.HybridSequentialRNNCell()
+                cell0.add(gluon.rnn.LSTMCell(100))
+                cell0.add(gluon.rnn.LSTMCell(100))
+
+                cell1 = gluon.rnn.HybridSequentialRNNCell()
+                cell1.add(gluon.rnn.LSTMCell(100))
+                cell1.add(gluon.rnn.LSTMCell(100))
+
+                self.rnncell = gluon.rnn.BidirectionalCell(cell0, cell1)
+
+        def hybrid_forward(self, F, x):
+            return self.rnncell.unroll(3, x, layout="NTC", merge_outputs=True)
+
+    x = mx.nd.random.uniform(shape=(10, 3, 100))
+    net = BidirectionalOfSequential()
+    net.collect_params().initialize()
+    outs, _ = net(x)
+
+    assert outs.shape == (10, 3, 200)
+
+
 def test_bidirectional():
     cell = gluon.rnn.BidirectionalCell(
             gluon.rnn.LSTMCell(100, prefix='rnn_l0_'),
@@ -203,8 +251,32 @@ def test_zoneout():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
+def test_unroll_layout():
+    cell = gluon.rnn.HybridSequentialRNNCell()
+    for i in range(5):
+        if i == 1:
+            cell.add(gluon.rnn.ResidualCell(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_' % i)))
+        else:
+            cell.add(gluon.rnn.LSTMCell(100, prefix='rnn_stack%d_'%i))
+    cell.collect_params().initialize()
+    inputs = [mx.nd.random.uniform(shape=(10,50)) for _ in range(3)]
+    outputs, _ = cell.unroll(3, inputs, layout='TNC')
+    assert outputs[0].shape == (10, 100)
+    assert outputs[1].shape == (10, 100)
+    assert outputs[2].shape == (10, 100)
+
+    outputs, _ = cell.unroll(3, inputs, layout='NTC')
+    assert outputs[0].shape == (10, 100)
+    assert outputs[1].shape == (10, 100)
+    assert outputs[2].shape == (10, 100)
+
+
 def check_rnn_forward(layer, inputs, deterministic=True):
-    inputs.attach_grad()
+    if isinstance(inputs, mx.nd.NDArray):
+        inputs.attach_grad()
+    else:
+        for x in inputs:
+            x.attach_grad()
     layer.collect_params().initialize()
     with mx.autograd.record():
         out = layer.unroll(3, inputs, merge_outputs=False)[0]
@@ -213,7 +285,10 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         out.backward()
 
     np_out = out.asnumpy()
-    np_dx = inputs.grad.asnumpy()
+    if isinstance(inputs, mx.nd.NDArray):
+        np_dx = inputs.grad.asnumpy()
+    else:
+        np_dx = np.stack([x.grad.asnumpy() for x in inputs], axis=1)
 
     layer.hybridize()
 
@@ -223,9 +298,14 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         out = layer.unroll(3, inputs, merge_outputs=True)[0]
         out.backward()
 
+    if isinstance(inputs, mx.nd.NDArray):
+        input_grads = inputs.grad.asnumpy()
+    else:
+        input_grads = np.stack([x.grad.asnumpy() for x in inputs], axis=1)
+
     if deterministic:
         mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
-        mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
+        mx.test_utils.assert_almost_equal(np_dx, input_grads, rtol=1e-3, atol=1e-5)
 
 
 @assert_raises_cudnn_disabled()
@@ -233,6 +313,13 @@ def test_rnn_cells():
     check_rnn_forward(gluon.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
     check_rnn_forward(gluon.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
     check_rnn_forward(gluon.rnn.GRUCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
+
+    check_rnn_forward(gluon.rnn.LSTMCell(100, input_size=200),
+                      [mx.nd.ones((8, 200)), mx.nd.ones((8, 200)), mx.nd.ones((8, 200))])
+    check_rnn_forward(gluon.rnn.RNNCell(100, input_size=200),
+                      [mx.nd.ones((8, 200)), mx.nd.ones((8, 200)), mx.nd.ones((8, 200))])
+    check_rnn_forward(gluon.rnn.GRUCell(100, input_size=200),
+                      [mx.nd.ones((8, 200)), mx.nd.ones((8, 200)), mx.nd.ones((8, 200))])
 
     bilayer = gluon.rnn.BidirectionalCell(gluon.rnn.LSTMCell(100, input_size=200),
                                        gluon.rnn.LSTMCell(100, input_size=200))

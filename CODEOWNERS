@@ -13,12 +13,13 @@
 
 # Language bindings
 /R-package/       @thirdwing
-/scala-package/   @yzhliu
+/scala-package/   @yzhliu @nswamy
 /perl-package/    @sergeykolychev
 /python/          @szha
 
 # C++ base
 /src/kvstore/     @rahul003
+/cpp-package/ @nswamy  
 
 # CMake
 CMakeLists.txt    @szha @rahul003

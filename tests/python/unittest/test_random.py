@@ -24,6 +24,7 @@ import numpy as np
 import random as rnd
 from common import setup_module, with_seed, random_seed, teardown
 import scipy.stats as ss
+import unittest
 
 def same(a, b):
     return np.sum(a != b) == 0
@@ -358,6 +359,7 @@ def test_parallel_random_seed_setting_for_context():
             assert same(samples_sym[i - 1], samples_sym[i])
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11487")
 def test_sample_multinomial():
     for dtype in ['uint8', 'int32', 'float16', 'float32', 'float64']: # output array types
         for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
