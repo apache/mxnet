@@ -2062,7 +2062,7 @@ def test_broadcast():
         axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
         shape = target_shape.copy()
         size = tuple([shape[ele] for ele in axis])
-        target_array = rand_ndarray(shape=target_shape, style='default')
+        target_array = rand_ndarray(shape=target_shape, stype='default')
         for ele in axis:
             shape[ele] = 1
         a = mx.symbol.Variable('a')
