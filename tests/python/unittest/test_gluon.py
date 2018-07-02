@@ -1362,6 +1362,16 @@ def test_hybrid_static_memory_recording():
         net(x)
     net(x)
 
+def test_hybrid_memmonger():
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=True, ctx=mx.context.current_context())
+    net.hybridize(use_memmonger=True)
+
+    x = mx.nd.random.uniform(shape=(64, 3, 224, 224))
+    with mx.autograd.record(True):
+        net(x)
+    net(x)
+
 
 if __name__ == '__main__':
     import nose

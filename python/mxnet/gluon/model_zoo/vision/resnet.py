@@ -80,7 +80,7 @@ class BasicBlockV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        x = F.Activation(residual+x, act_type='relu')
+        x = F.Activation(residual+x, act_type='relu', __mirror_stage__='True')
 
         return x
 
@@ -128,7 +128,7 @@ class BottleneckV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        x = F.Activation(x + residual, act_type='relu')
+        x = F.Activation(x + residual, act_type='relu', __mirror_stage__='True')
         return x
 
 

@@ -188,8 +188,7 @@ CachedOp::CachedOp(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
 
-    int use_mirror = config_.use_mirror;
-    auto need_mirror = [use_mirror](const nnvm::Node& node) -> int {
+    auto mirror_fn = [](const nnvm::Node& node) -> int {
       static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
       static auto& fresource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
       static auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -203,18 +202,12 @@ CachedOp::CachedOp(
         }
       }
       if (get_node_attr(node, "__force_mirroring__", false)) return true;
-      if (!use_mirror) return false;
-      if (fcreate_op_state.count(node.op())) return false;
-      for (const auto& e : node.inputs) {
-        if (e.node->is_variable()) return false;
-      }
-      LOG(INFO) << node.op()->name;
-      return true;
+      return false;
     };
 
     grad_graph_ = pass::Gradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
-        exec::AggregateGradient, need_mirror, nullptr,
+        exec::AggregateGradient, mirror_fn, nullptr,
         zero_ops, "_copy");
   }
 
