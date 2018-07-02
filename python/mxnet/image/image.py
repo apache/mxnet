@@ -21,13 +21,14 @@
 
 from __future__ import absolute_import, print_function
 
+import sys
 import os
 import random
 import logging
 import json
 import warnings
 import numpy as np
-import sys
+
 
 try:
     import cv2
