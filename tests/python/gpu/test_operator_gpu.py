@@ -422,6 +422,7 @@ def test_batchnorm_versions():
 
 
 @with_seed(1234)
+@assert_raises_cudnn_disabled()
 def test_convolution_with_type():
     sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
@@ -1316,6 +1317,7 @@ def check_rnn_consistency(cell1, cell2):
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnn():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
 
@@ -1327,6 +1329,7 @@ def test_rnn():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_forget_bias():
     forget_bias = 2.0
     fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
@@ -1348,6 +1351,7 @@ def test_lstm_forget_bias():
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
 
@@ -1359,6 +1363,7 @@ def test_gru():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_bidirectional():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
             bidirectional=True)
@@ -1377,6 +1382,7 @@ def test_bidirectional():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
         fused = mx.rnn.FusedRNNCell(
@@ -1558,6 +1564,7 @@ def test_deformable_convolution_options():
                                                name='deformable_conv')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
             mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',

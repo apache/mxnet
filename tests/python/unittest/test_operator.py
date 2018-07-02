@@ -25,7 +25,7 @@ import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
@@ -103,6 +103,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
@@ -116,6 +117,7 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -138,6 +140,7 @@ def test_gru_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnntanh_sym():
     T, N, I, H = 5, 32, 800, 800
 
@@ -152,6 +155,7 @@ def test_rnntanh_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnntanh_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -173,6 +177,7 @@ def test_rnntanh_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnnrelu_sym():
     T, N, I, H = 5, 32, 200, 200
 
