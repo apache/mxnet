@@ -68,14 +68,14 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
       inputImagePath, context)
 
-    assert(output(0)(0)._1 === "car")
-
     val outputList = SSDClassifierExample.runObjectDetectionBatch(
       modelDirPath + "resnet50_ssd_model",
       inputImageDir, context)
 
+    Process("rm -rf " + modelDirPath + " " + inputImageDir) !
+
+    assert(output(0)(0)._1 === "car")
     assert(output(0)(0)._1 === "car")
 
-    Process("rm -rf " + modelDirPath + " " + inputImageDir) !
   }
 }

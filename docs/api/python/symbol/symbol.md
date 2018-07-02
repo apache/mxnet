@@ -191,6 +191,8 @@ Composite multiple symbols into a new one by an operator.
     :nosignatures:
 
     Symbol.astype
+    Symbol.shape_array
+    Symbol.size_array
     Symbol.reshape
     Symbol.reshape_like
     Symbol.flatten
@@ -373,6 +375,8 @@ Composite multiple symbols into a new one by an operator.
     :nosignatures:
 
     cast
+    shape_array
+    size_array
     reshape
     reshape_like
     flatten

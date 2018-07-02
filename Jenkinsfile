@@ -93,7 +93,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def publish_test_coverage() {
-    sh 'curl --retry 10 -s https://codecov.io/bash | bash -s -'
+    // Fall back to our own copy of the bash helper if it failed to download the public version
+    sh '(curl --retry 10 -s https://codecov.io/bash | bash -s -) || (curl --retry 10 -s https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data/codecov-bash.txt | bash -s -)'
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
@@ -707,6 +708,18 @@ try {
             init_git()
             unpack_lib('gpu', mx_dist_lib)
             docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
+    'Clojure: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-clojure-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu', mx_dist_lib)
+            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
             publish_test_coverage()
           }
         }
