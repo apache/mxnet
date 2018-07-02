@@ -887,6 +887,7 @@ int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
 float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = 0;
+
   // assumes the kernel is the last two dim
   for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
     int center = coordinate[dim];
@@ -938,20 +939,44 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
 }
 
 TEST(MKLDNN_NDArray, PoolAtCoordinate) {
-  TShape test_shape = {1,1,8};
-  TShape odd_kernel_shape = {3};
-  TShape even_kernel_shape = {4};
-  NDArray arr(test_shape, Context());
-  InitDefaultArray(&arr);
-  TShape coord1 = {0,0,0}; // edge
-  TShape coord2 = {0,0,7}; // edge
-  TShape coord3 = {0,0,4}; //middle
-  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
-  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
-  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
-  EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, even_kernel_shape));
-  EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, even_kernel_shape));
-  EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, even_kernel_shape));
+
+  // one channel
+  {
+    TShape test_shape = {1,1,8};
+    TShape odd_kernel_shape = {3};
+    TShape even_kernel_shape = {4};
+    NDArray arr(test_shape, Context());
+    InitDefaultArray(&arr);
+    TShape coord1 = {0,0,0}; // edge
+    TShape coord2 = {0,0,7}; // edge
+    TShape coord3 = {0,0,4}; // middle
+    EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
+    EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
+    EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
+    EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, even_kernel_shape));
+    EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, even_kernel_shape));
+    EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, even_kernel_shape));
+  }
+
+  // two channels
+  {
+    TShape test_shape = {1,2,8};
+    TShape odd_kernel_shape = {3};
+    NDArray arr(test_shape, Context());
+    InitDefaultArray(&arr);
+    TShape coord1 = {0,0,0}; // edge
+    TShape coord2 = {0,0,7}; // edge
+    TShape coord3 = {0,0,4}; // middle
+    TShape coord4 = {0,1,0}; // edge
+    TShape coord5 = {0,2,7}; // edge
+    TShape coord6 = {0,3,4}; // middle
+    EXPECT_EQ(0, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
+    EXPECT_EQ(0, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
+    EXPECT_EQ(0, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
+    EXPECT_EQ(1, PoolAtCoordinate(arr, coord4, odd_kernel_shape));
+    EXPECT_EQ(7, PoolAtCoordinate(arr, coord5, odd_kernel_shape));
+    EXPECT_EQ(5, PoolAtCoordinate(arr, coord6, odd_kernel_shape));
+  }
 }
 
 TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
@@ -986,6 +1011,9 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   NDArray output = out_arrs[0]->Reorder2Default();
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   TShape input_shape = input.shape();
+  int num_batches = input_shape[0];
+  int num_channels = input_shape[1];
+
 
   for (int dim = 2; dim < input_shape.ndim(); dim ++) {
     int pad = padding[dim - 2];
