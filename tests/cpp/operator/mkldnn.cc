@@ -31,6 +31,7 @@
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../src/operator/nn/mkldnn/pooling-inl.h"
 
 using namespace mxnet;
 
@@ -973,35 +974,65 @@ TEST(MKLDNN_NDArray, GetAllCoordinates) {
   EXPECT_EQ(24, GetAllCoordinates(test_shape3).size());
 }
 
-//void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
-//                         const std::vector<NDArray *> &out_arrs,
-//                         const OpAttrs &attrs,
-//) {
-//  TShape kernel;
-//  TShape padding;
-//  int pool_type;
-//  NDArray input = *in_arrs[0];
-//  TShape input_shape = input.shape();
-//
-//  for (int dim = 2; dim < input_shape.ndim(); dim ++) {
-//    int pad = padding[dim - 2];
-//    int shift = kernel[dim] / 2;
-//    int lower = -pad;
-//    int upper = input_shape[dim] + pad;
-//    for (int i = 0; i < input_shape[dim]; i++) {
-//      TShape coordinate = GetShiftedCoordinate()
-//      if (i - shift < lower || i + shift >= upper)
-//        continue;
-//      ASSERT_EQ(PoolAtCoordinate(input,))
-//
-//    }
-//
-//
-//  }
-//
-//
-//
-//}
+TEST(MKLDNN_NDArray, VerifyPoolingResult) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Pooling");
+  attrs.attrs.dict.insert({"kernel" , "1"});
+  attrs.attrs.dict.insert({"stride" , "1"});
+  attrs.attrs.dict.insert({"pad" , "0" });
+  attrs.attrs.dict.insert({"pool_type" , "max"});
+  TShape test_shape = {1,1,2};
+
+  std::vector<NDArray *> in_arrs(1);
+  std::vector<NDArray *> out_arrs(1);
+
+  // test base
+  NDArray arr(test_shape, Context());
+  NDArray expected_output(test_shape, Context());
+  mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+  expected_data[0] = 0;
+  expected_data[0] = 1;
+
+  // test kernel
+  in_arrs[0] = arr;
+  out_arrs[0] = expected_output;
+  VerifyPoolingResult(in_arrs, out_arrs, attrs);
+
+  //test padding
+
+  //test stride
+
+}
+
+void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
+                         const std::vector<NDArray *> &out_arrs,
+                         const OpAttrs &attrs) {
+  auto &param = nnvm::get<PoolingParam>(attrs.attrs.parsed);
+  TShape kernel = param.kernel;
+  TShape padding = param.padding;
+  int pool_type; // max
+  NDArray input = out_arrs[0]->Reorder2Default();
+  NDArray output = out_arrs[0]->Reorder2Default();
+  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
+  TShape input_shape = input.shape();
+
+  for (int dim = 2; dim < input_shape.ndim(); dim ++) {
+    int pad = padding[dim - 2];
+    int shift = kernel[dim] / 2;
+    int lower = -pad;
+    int upper = input_shape[dim] + pad;
+
+    // starts with 3rd dim
+    // should increment by stride amount
+    int out_ptr = 0;
+    for (int i = 0; i < input_shape[dim]; i++) {
+      TShape coordinate = GetShiftedCoordinate(input_shape, dim, i);
+      if (i - shift < lower || i + shift >= upper)
+        continue;
+      ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+    }
+  }
+}
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
                       const std::vector<NDArray*> &original_outputs,
