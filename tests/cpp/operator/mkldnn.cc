@@ -1011,6 +1011,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   attrs.attrs.dict.insert({"stride" , "1"});
   attrs.attrs.dict.insert({"pad" , "0" });
   attrs.attrs.dict.insert({"pool_type" , "max"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
   TShape test_shape = {1,1,2};
 
   std::vector<NDArray *> in_arrs(1);
@@ -1021,7 +1022,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   NDArray expected_output(test_shape, Context());
   mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
   expected_data[0] = 0;
-  expected_data[0] = 1;
+  expected_data[1] = 1;
 
   // test kernel
   in_arrs[0] = &arr;
