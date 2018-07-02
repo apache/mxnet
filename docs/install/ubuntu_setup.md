@@ -1,6 +1,6 @@
 # Installing MXNet on Ubuntu
 
-The following installation instructions are for installing MXNet on computers running **Ubuntu 12 to Ubuntu 16.04**. Support for later versions of Ubuntu is [not yet available](#contributions).
+The following installation instructions are for installing MXNet on computers running **Ubuntu 16.04**. Support for later versions of Ubuntu is [not yet available](#contributions).
 <hr>
 
 ## Contents
