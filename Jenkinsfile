@@ -502,7 +502,18 @@ try {
           }
         }
       }
+    },
+    'Android / ARMv7':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/androidv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('android_armv7', 'build_android_armv7', false)
+          }
+        }
+      }
     }
+
   } // End of stage('Build')
 
   stage('Tests') {

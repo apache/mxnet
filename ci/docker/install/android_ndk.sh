@@ -29,8 +29,10 @@ unzip ./android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
 cd android-ndk-r${ANDROID_NDK_REVISION} && \
 ./build/tools/make_standalone_toolchain.py \
     --stl=libc++ \
-    --arch arm64 \
-    --api 21 \
+    --arch ${ANDROID_NDK_ARCH}\
+    --api ${ANDROID_NDK_API}\
     --install-dir=${CROSS_ROOT} && \
 
+find ${CROSS_ROOT} -exec chmod a+r '{}' \; && \
+find ${CROSS_ROOT} -executable -exec chmod a+x '{}' \;
 popd
