@@ -157,17 +157,17 @@ def test_rnntanh_bidirectional():
 
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_tanh',
                                 bidirectional=True, get_next_state=True, prefix='')
-    
+
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'),
                 mx.rnn.RNNCell(H, activation='tanh', prefix='r0_'),
-                output_prefix='bi_rnntanh_0_'))    
+                output_prefix='bi_rnntanh_0_'))
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'),
                 mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
                 output_prefix='bi_rnntanh_1_'))
-    
+
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
@@ -194,12 +194,12 @@ def test_rnnrelu_bidirectional():
 
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_relu',
                                 bidirectional=True, get_next_state=True, prefix='')
-    
+
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='relu', prefix='l0_'),
                 mx.rnn.RNNCell(H, activation='relu', prefix='r0_'),
-                output_prefix='bi_rnnrelu_0_'))    
+                output_prefix='bi_rnnrelu_0_'))
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='relu', prefix='l1_'),
                 mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
@@ -3073,7 +3073,7 @@ def test_norm():
                                             atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
                     # check gradient
                     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-2, atol=1e-3)
-                        
+
 
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
