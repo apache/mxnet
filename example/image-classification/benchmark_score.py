@@ -92,4 +92,4 @@ if __name__ == '__main__':
                         break
                     else:
                         speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
-                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dtype, speed)
+                        logging.info('batch size %2d, dtype %s, images/sec: %f', b, dtype, speed)
