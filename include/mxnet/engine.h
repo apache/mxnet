@@ -84,12 +84,12 @@ enum class FnProperty {
   kCopyToGPU,
   /*! \brief Prioritized sync operation on CPU */
   kCPUPrioritized,
-  /*! \brief Prioritized sync operation on GPU */
-  kGPUPrioritized,
   /*! \brief Asynchronous function call */
   kAsync,
   /*! \brief Delete variable call */
-  kDeleteVar
+  kDeleteVar,
+  /*! \brief Prioritized sync operation on GPU */
+  kGPUPrioritized
 };  // enum class FnProperty
 
 /*!
