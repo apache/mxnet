@@ -1364,6 +1364,56 @@ def test_hybrid_static_memory_recording():
     net(x)
 
 
+def test_share_inputs_outputs():
+    class TestIOBackward(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestIOBackward, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, in1, in2):
+            return in1 + in2
+
+    class TestIOForward(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestIOForward, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, in1):
+            return in1
+
+    d1 = mx.nd.arange(10)
+    d2 = mx.nd.arange(10)
+
+    params=[{'inline_limit':0},
+            {'inline_limit':0, 'static_alloc':True},
+            {'inline_limit':0, 'static_alloc':True, 'static_shape':True}]
+    # Test the case that inputs and outputs of a forward graph share NDArrays.
+    for param in params:
+        t = TestIOForward()
+        t.hybridize(**param)
+        for i in range(5):
+            d1.attach_grad()
+            out_grad = mx.nd.random.uniform(shape=(10))
+            res = t(d1)
+            assert_almost_equal(res.asnumpy(), d1.asnumpy())
+
+    param = deepcopy(params[2])
+    param['param_indices'] = (1)
+    param['data_indices'] = (0)
+    params.append(param)
+    # Test the case that inputs and outputs of a backward graph share NDArrays.
+    for param in params:
+        t = TestIOBackward()
+        t.hybridize(**param)
+        for i in range(5):
+            d1.attach_grad()
+            d2.attach_grad()
+            out_grad = mx.nd.random.uniform(shape=(10))
+            with mx.autograd.record():
+                res = t(d1, d2)
+            res.backward(out_grad=out_grad)
+            assert_almost_equal(out_grad.asnumpy(), d1.grad.asnumpy())
+            assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
