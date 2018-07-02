@@ -16,6 +16,7 @@ Community contributions to MXNet have added many new valuable features and funct
 * [Model Serving](#model-serving)
 * [Model Zoos](#model-zoos)
 * [MXNet as a Backend](#mxnet-as-a-backend)
+* [Contributions](#contributions)
 
 ## Learning MXNet and other Educational Resources
 
@@ -51,3 +52,8 @@ Community contributions to MXNet have added many new valuable features and funct
 ## MXNet as a Backend
 
 * [Keras-MXNet](https://github.com/awslabs/keras-apache-mxnet) - design with Keras2 and train with MXNet as the backend for 2x or more speed improvement.
+
+
+## Contributions
+
+Do you know of a project or resource in the MXNet ecosystem that should be listed here? Or would you like to get involved by providing your own contribution? Check out the [guide for contributing to MXNet](contribute.html), and browse the [design proposals](https://cwiki.apache.org/confluence/display/MXNET/Design+Proposals) to see what others are working on. You might find something you would like to help with or use those design docs as a template for your own proposal. Use one of the [developer communication channels](https://mxnet.incubator.apache.org/community/contribute.html#mxnet-dev-communications) if you would like to know more, or [create a GitHub issue](https://github.com/apache/incubator-mxnet/issues/new) if you would like to propose something for the MXNet ecosystem.
