@@ -1,9 +1,9 @@
 (ns org.apache.clojure-mxnet.symbol
-  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
-                            min repeat reverse set sort take to-array empty sin
-                            get apply shuffle])
-  (:require [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet Symbol)))
+    (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                              min repeat reverse set sort take to-array empty sin
+                              get apply shuffle])
+    (:require [org.apache.clojure-mxnet.util :as util])
+    (:import (org.apache.mxnet Symbol)))
 
 ;; Do not edit - this is auto-generated
 
@@ -24,13 +24,15 @@
 ;;
 
 
+
+
 (defn
-  div
-  ([sym sym-or-object]
-   (util/coerce-return
-    (.$div
-     sym
-     (util/nil-or-coerce-param
-      sym-or-object
-      #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
+ div
+ ([sym sym-or-object]
+  (util/coerce-return
+   (.$div
+    sym
+    (util/nil-or-coerce-param
+     sym-or-object
+     #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
 
