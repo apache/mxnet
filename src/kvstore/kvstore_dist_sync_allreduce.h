@@ -62,42 +62,42 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
   void Push(const std::vector<int>& keys,
             const std::vector<NDArray>& values,
             int priority) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void Pull(const std::vector<int>& keys,
             const std::vector<NDArray*>& values,
             int priority) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void PullRowSparse(const std::vector<int>& keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void Push(const std::vector<std::string>& str_keys,
             const std::vector<NDArray>& values,
             int priority) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void Pull(const std::vector<std::string>& str_keys,
             const std::vector<NDArray*>& values,
             int priority) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void SetGradientCompression(const std::vector<std::pair<std::string, std::string> >
                               & kwargs) override {
-    LOG(WARNING) << "Not supported in KVStore with type " << type_ << ".";
+    LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
   void PushPull(const std::vector<int> &keys,

@@ -345,7 +345,7 @@ class KVStore(object):
         Examples
         --------
         >>> # allreduce a single key-value pair on 2 nodes
-        >>> shape = (1, 3)
+        >>> shape = (2, 3)
         >>> in_ = mx.nd.ones(shape)
         >>> out_ = mx.nd.zeros(shape)
         >>> kv.pushpull('key', in_, out_, 0)
@@ -399,13 +399,14 @@ class KVStore(object):
             other push actions.
 
         Examples:
+        ---------
         >>> if kv.rank == 0:
         >>>   value = mx.nd.ones(shape)
         >>> else:
         >>>   value = mx.nd.zeros(shape)
         >>> kv.broadcast('key', value, 0)
         >>> if kv.rank != 0:
-        >>>   print value.asnumpy
+        >>>   print value.asnumpy()
         >>> [[ 1.  1.  1.]
             [ 1.  1.  1.]]
         """
