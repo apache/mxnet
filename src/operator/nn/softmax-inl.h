@@ -174,7 +174,7 @@ __global__ void softmax_compute_kernel(DType *in, DType *out, index_t M, int axi
   __syncthreads();
 
   for (index_t i = x; i < M; i += x_size) {
-    out[base + i*sa] = OP::Map((in[base + i*sa] - smax)/temperature, ssum);
+    out[base + i*sa] = OP::Map((in[base + i*sa] - smax)/static_cast<DType>(temperature), ssum);
   }
 }
 
