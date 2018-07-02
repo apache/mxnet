@@ -24,6 +24,7 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
 from .... import nd, test_utils
 from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
+import warnings
 
 class Concurrent(Sequential):
     """Lays `Block`s concurrently.
@@ -216,7 +217,9 @@ class SyncBatchNorm(BatchNorm):
                         'ndev': num_devices, 'key': self.prefix}
 
     def _get_num_devices(self):
-        # Caution: if not using all the GPUs, please mannually set num_devices
+        warnings.warn("Caution using SyncBatchNorm: "
+                      "if not using all the GPUs, please mannually set num_devices",
+                      UserWarning)
         num_devices = len(test_utils.list_gpus())
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
