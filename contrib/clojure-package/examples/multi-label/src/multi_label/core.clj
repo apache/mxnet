@@ -30,7 +30,6 @@
            (java.util NoSuchElementException))
   (:gen-class))
 
-
 (def data-dir "data/")
 (def batch-size 100)
 (def num-epoch 1)
@@ -101,8 +100,8 @@
                                              (vals)
                                              last)]
                               (util/list-map
-                                        {"softmax1_label" (mx-shape/->shape shape)
-                                         "softmax2_label" (mx-shape/->shape shape)})))
+                               {"softmax1_label" (mx-shape/->shape shape)
+                                "softmax2_label" (mx-shape/->shape shape)})))
                           (provideData []
                             (.provideData data-iter)))))
 
@@ -153,7 +152,7 @@
                           (update :batch-num inc))))
                   {:sum [0 0] :batch-num 0})]
         (println "Multi-accuracy " acc)
-        (println "Multi-accuracy "(mapv #(/ % (:batch-num acc)) (:sum acc)))))))
+        (println "Multi-accuracy " (mapv #(/ % (:batch-num acc)) (:sum acc)))))))
 
 (defn -main [& args]
   (let [[dev dev-num] args
@@ -163,7 +162,6 @@
     (println "Training...")
     (println "Running with context devices of" devs)
     (train devs)))
-
 
 (comment
   (train [(context/cpu)]))

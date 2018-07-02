@@ -42,7 +42,6 @@
         (.append sb (new String bs 0 i))))
     (.toString sb)))
 
-
 (defn get-float [b]
   (-> 0
       (bit-or (bit-shift-left (bit-and (aget b 0) 0xff) 0))
@@ -70,31 +69,27 @@
       (println "Finished")
       {:num-embed dim :word2vec word2vec})))
 
-
 (defn clean-str [s]
   (-> s
-    (string/replace #"^A-Za-z0-9(),!?'`]" " ")
-    (string/replace #"'s" " 's")
-    (string/replace #"'ve" " 've")
-    (string/replace #"n't" " n't")
-    (string/replace #"'re" " 're")
-    (string/replace #"'d" " 'd")
-    (string/replace #"'ll" " 'll")
-    (string/replace #"," " , ")
-    (string/replace #"!" " ! ")
-    (string/replace #"\(" " ( ")
-    (string/replace #"\)" " ) ")
-    (string/replace #"\?" " ? ")
-    (string/replace #" {2,}" " ")
-    (string/trim)))
-
-
- ;; Loads MR polarity data from files, splits the data into words and generates labels.
+      (string/replace #"^A-Za-z0-9(),!?'`]" " ")
+      (string/replace #"'s" " 's")
+      (string/replace #"'ve" " 've")
+      (string/replace #"n't" " n't")
+      (string/replace #"'re" " 're")
+      (string/replace #"'d" " 'd")
+      (string/replace #"'ll" " 'll")
+      (string/replace #"," " , ")
+      (string/replace #"!" " ! ")
+      (string/replace #"\(" " ( ")
+      (string/replace #"\)" " ) ")
+      (string/replace #"\?" " ? ")
+      (string/replace #" {2,}" " ")
+      (string/trim)));; Loads MR polarity data from files, splits the data into words and generates labels.
  ;; Returns split sentences and labels.
 (defn load-mr-data-and-labels [path max-examples]
   (println "Loading all the movie reviews from " path)
   (let [positive-examples (mapv #(string/trim %) (-> (slurp (str path "/rt-polarity.pos"))
-                                                    (string/split #"\n")))
+                                                     (string/split #"\n")))
         negative-examples (mapv #(string/trim %) (-> (slurp (str path "/rt-polarity.neg"))
                                                      (string/split #"\n")))
         positive-examples (into [] (if max-examples (take max-examples positive-examples) positive-examples))
@@ -118,10 +113,7 @@
                     (if (pos? diff)
                       (into s (repeat diff padding-word))
                       s)))
-          sentences)))
-
-
- ;; Map sentences and labels to vectors based on a pretrained embeddings
+          sentences)));; Map sentences and labels to vectors based on a pretrained embeddings
 (defn build-input-data-with-embeddings [sentences embedding-size embeddings]
   (mapv (fn [sent]
           (mapv (fn [word] (or (get embeddings word)
