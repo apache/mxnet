@@ -1175,7 +1175,7 @@ def check_hybrid_static_memory(**kwargs):
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
 def test_hybrid_static_memory():
-    check_hybrid_static_memory(use_mirror=True)
+    check_hybrid_static_memory(use_memmonger=True)
     check_hybrid_static_memory(static_alloc=True)
     check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
@@ -1358,16 +1358,6 @@ def test_hybrid_static_memory_recording():
     net.hybridize(static_alloc=True)
 
     x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
-    with mx.autograd.record(True):
-        net(x)
-    net(x)
-
-def test_hybrid_memmonger():
-    net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(use_memmonger=True)
-
-    x = mx.nd.random.uniform(shape=(64, 3, 224, 224))
     with mx.autograd.record(True):
         net(x)
     net(x)
