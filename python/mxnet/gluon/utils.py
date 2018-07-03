@@ -175,7 +175,7 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download an given URL
 
     Parameters
@@ -192,6 +192,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         but doesn't match.
     retries : integer, default 5
         The number of times to attempt the download in case of failure or non 200 return codes
+    verify_ssl : bool, default True
+        Verify SSL certificates.
 
     Returns
     -------
@@ -217,7 +219,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
             # pylint: disable=W0703
             try:
                 print('Downloading %s from %s...'%(fname, url))
-                r = requests.get(url, stream=True)
+                r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError("Failed downloading url %s"%url)
                 with open(fname, 'wb') as f:
