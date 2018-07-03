@@ -632,34 +632,36 @@ inline void GetIndexRange(const TShape& dshape,
       }
     }
 
-    if (param_begin[i].has_value()) {
-      b = param_begin[i].value();
-      if (b < 0) {
-        b += len;
-        CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
-                       << b - len << " exceeds limit of " << len;
+    if (len) {
+      if (param_begin[i].has_value()) {
+        b = param_begin[i].value();
+        if (b < 0) {
+          b += len;
+          CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
+                         << b - len << " exceeds limit of " << len;
+        }
+      } else if (s < 0) {
+        b = len - 1;
       }
-    } else if (s < 0) {
-      b = len - 1;
-    }
-
-    if (len != 0) {
       CHECK_LT(b, len) << "slicing with begin[" << i << "]="
                        << b << " exceends limit of " << len;
-    }
 
-    if (param_end[i].has_value()) {
-      e = param_end[i].value();
-      if (e < 0) {
-        e += len;
-        CHECK_GE(e, 0) << "slicing with end[" << i << "]="
-                       << e - len << " exceeds limit of " << len;
+      if (param_end[i].has_value()) {
+        e = param_end[i].value();
+        if (e < 0) {
+          e += len;
+          CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                         << e - len << " exceeds limit of " << len;
+        }
+      } else if (s < 0) {
+        e = -1;
       }
-    } else if (s < 0) {
-      e = -1;
+      CHECK_LE(e, len) << "slicing with end[" << i << "]="
+                       << e << " exceeds limit of " << len;
+    } else {
+      b = 0;
+      e = 0;
     }
-    CHECK_LE(e, len) << "slicing with end[" << i << "]="
-                     << e << " exceeds limit of " << len;
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
@@ -677,21 +679,11 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
   if (s > 0) {
     CHECK_LE(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
                    << e << ", and step[" << i << "]=" << s << " is invalid";
-    if (e == b) {
-      // for partial shape infer
-      (*oshape)[i] = 0;
-    } else {
-      (*oshape)[i] = (e - b - 1) / s + 1;
-    }
+    (*oshape)[i] = (e - b - 1) / s + 1;
   } else {
     CHECK_LE(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
                    << e << ", and step[" << i << "]=" << s << " is invalid";
-    if (e == b) {
-      // for partial shape infer
-      (*oshape)[i] = 0;
-    } else {
-      (*oshape)[i] = (b - e - 1) / (-s) + 1;
-    }
+    (*oshape)[i] = (b - e - 1) / (-s) + 1;
   }
 }
 
@@ -715,7 +707,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   });
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return oshape.ndim() != 0 && oshape.Size() != 0;
+  return !shape_is_none(dshape) && !shape_is_none(oshape);
 }
 
 template<int ndim, int req, typename xpu>
@@ -1103,18 +1095,25 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const TShape& ishape
   if (*begin < 0) {
     *begin += axis_size;
   }
-  if (!static_cast<bool>(param.end)) {
-    *end = axis_size;
-  } else {
-    *end = param.end.value();
-    if (*end < 0) {
-      *end += axis_size;
+  if (axis_size) {
+    if (!static_cast<bool>(param.end)) {
+      *end = axis_size;
+    } else {
+      *end = param.end.value();
+      if (*end < 0) {
+        *end += axis_size;
+      }
     }
+    CHECK(*end <= axis_size) << "Invalid end for end=" << *end << " as axis_size is " << axis_size;
+    CHECK((*begin < *end))
+      << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+  } else {
+    *begin = 0;
+    *end = 0;
   }
-  CHECK((*end <= axis_size) && (*end >= 0))
+  CHECK(*end >= 0)
     << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
-  CHECK((*begin < *end) && (*begin >= 0))
-    << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+  CHECK(*begin >= 0) << "Invalid begin for begin=" << param.begin;
 }
 
 inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
