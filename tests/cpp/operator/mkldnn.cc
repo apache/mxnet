@@ -1043,14 +1043,16 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
 }
 
 TEST(MKLDNN_NDArray, VerifyPoolingResult) {
-  TShape test_shape = {1,1,2};
+  TShape test_shape = {1,1,3};
 
   std::vector<NDArray *> in_arrs(1);
   std::vector<NDArray *> out_arrs(1);
   NDArray arr(test_shape, Context());
+  InitDefaultArray(&arr);
   mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
   EXPECT_EQ(0, input_data[0]);
   EXPECT_EQ(1, input_data[1]);
+  EXPECT_EQ(1, input_data[2]);
 
   // test base
   {
@@ -1065,6 +1067,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     mshadow::default_real_t *expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = 0;
     expected_data[1] = 1;
+    expected_data[2] = 2;
     in_arrs[0] = &arr;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
