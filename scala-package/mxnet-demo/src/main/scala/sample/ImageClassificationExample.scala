@@ -30,30 +30,24 @@ import org.apache.commons.io._
 import scala.collection.mutable.ListBuffer
 
 /**
-  * Example showing usage of Infer package to do inference on resnet-152 model
+  * Example showing usage of Infer package to do inference on resnet-18 model
   * Follow instructions in README.md to run this example.
   */
 object ImageClassificationExample {
 
-  def downloadImage() : String = {
+  def downloadUrl() : (String, String) = {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     printf("tempDirPath: %s".format(tempDirPath))
     val imgPath = tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg"
-    val tmpFile = new File(imgPath)
+    var tmpFile = new File(imgPath)
     if (!tmpFile.exists()) {
       FileUtils.copyURLToFile(
         new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"),
         tmpFile
       )
     }
-    imgPath
-  }
-
-  def downloadModel() : String = {
-    val tempDirPath = System.getProperty("java.io.tmpdir")
-    printf("tempDirPath: %s".format(tempDirPath))
     val baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models"
-    var tmpFile = new File(tempDirPath + "/resnet18/resnet-18-symbol.json")
+    tmpFile = new File(tempDirPath + "/resnet18/resnet-18-symbol.json")
     if (!tmpFile.exists()) {
       FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-symbol.json"),
         tmpFile)
@@ -68,9 +62,8 @@ object ImageClassificationExample {
       FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/synset.txt"),
         tmpFile)
     }
-    tempDirPath + "/resnet18/resnet-18"
+    (imgPath, tempDirPath + "/resnet18/resnet-18")
   }
-
 
   def main(args: Array[String]): Unit = {
 
@@ -79,8 +72,7 @@ object ImageClassificationExample {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       context = Context.gpu()
     }
-    val inputImagePath = downloadImage()
-    val modelPathPrefix = downloadModel()
+    val (inputImagePath, modelPathPrefix) = downloadUrl()
 
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)

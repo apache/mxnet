@@ -33,7 +33,12 @@ bash bin/demo.sh
 ```
 It will load the library automatically and run the example
 ### Image Classification using Inference API
-We also provide an example to do image classification.
+We also provide an example to do image classification, which downloads a ImageNet trained resnet18 model and runs inference on a cute puppy to return the classification result as
+```Bash
+Classes with top 5 probability = Vector((n02110958 pug, pug-dog,0.49161583), (n02108422 bull mastiff,0.40025946), (n02108089 boxer,0.04657662), (n04409515 tennis ball,0.028773671), (n02109047 Great Dane,0.009004086)) 
+```
+You can review the complete example [here](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier)
+
 you can run using the command shown below:
 ```Bash
 java -Xmx8G  -cp $CLASSPATH sample.ImageClassificationExample
