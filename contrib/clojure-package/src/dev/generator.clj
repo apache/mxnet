@@ -23,7 +23,6 @@
   (:import (org.apache.mxnet NDArray Symbol))
   (:gen-class))
 
-
 (defn clojure-case
   [string]
   (-> string
@@ -53,7 +52,6 @@
        count
        pos?))
 
-
 (defn increment-param-name [pname]
   (if-let [num-str (re-find #"-\d" pname)]
     (str (first (clojure.string/split pname #"-")) "-" (inc (Integer/parseInt (last (clojure.string/split num-str #"-")))))
@@ -65,7 +63,6 @@
                                                   n)))
           []
           params))
-
 
 ;;;;;;; symbol
 
@@ -86,7 +83,7 @@
                             "scala.Enumeration$Value"
                             "org.apache.mxnet.Context"
                             "scala.Tuple2"
-                            "scala.collection.Traversable"} )
+                            "scala.collection.Traversable"})
 
 ;;; min and max have a conflicting arity of 2 with the auto gen signatures
 (def symbol-filter-name-set #{"max" "min"})
@@ -103,11 +100,10 @@
         pos?)))
 
 (def symbol-public-to-hand-gen (filter is-symbol-hand-gen? symbol-public-no-default))
-(def symbol-public-to-gen (->> (remove  #(contains?(->>  symbol-public-to-hand-gen
+(def symbol-public-to-gen (->> (remove  #(contains? (->>  symbol-public-to-hand-gen
                                                           (mapv :name)
                                                           (mapv str)
                                                           (set)) (str (:name %))) symbol-public-no-default)))
-
 
 (count symbol-public-to-hand-gen) ;=> 35 mostly bind!
 (count symbol-public-to-gen) ;=> 307
@@ -115,18 +111,16 @@
 (into #{} (map :name symbol-public-to-hand-gen));=>  #{arange bind ones zeros simpleBind Variable}
 
 (defn public-by-name-and-param-count [public-reflect-info]
- (->> public-reflect-info
-      (group-by :name)
-      (map (fn [[k v]] [k (group-by #(count (:parameter-types %)) v)]))
-      (into {})))
-
+  (->> public-reflect-info
+       (group-by :name)
+       (map (fn [[k v]] [k (group-by #(count (:parameter-types %)) v)]))
+       (into {})))
 
 (defn symbol-vector-args []
   `(if (map? ~'kwargs-map-or-vec-or-sym) (~'util/empty-list) (~'util/coerce-param ~'kwargs-map-or-vec-or-sym #{"scala.collection.Seq"})))
 
 (defn symbol-map-args []
   `(if (map? ~'kwargs-map-or-vec-or-sym) (util/convert-symbol-map ~'kwargs-map-or-vec-or-sym) nil))
-
 
 (defn add-symbol-arities [params function-name]
   (if (= ["sym-name" "kwargs-map" "symbol-list" "kwargs-map-1"] (mapv str params))
@@ -158,27 +152,23 @@
                     (into ['sym] pnames))
            function-body (if (= #{:public :static} (:flags (first info)))
                            `(~'util/coerce-return (~(symbol (str "Symbol/" op-name)) ~@coerced-params))
-                           `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'sym ~@coerced-params)
-                             ))]
+                           `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'sym ~@coerced-params)))]
        (when (not (and (> param-count 1) (has-variadic? params)))
-         `[(
-            ~params
-            ~function-body
-            )
+         `[(~params
+            ~function-body)
            ~@(add-symbol-arities params function-name)])))
    op-values))
 
-
 (def all-symbol-functions
- (for [operation  (sort (public-by-name-and-param-count symbol-public-to-gen))]
-   (let [[op-name op-values] operation
-         function-name (-> op-name
-                           str
-                           scala/decode-scala-symbol
-                           clojure-case
-                           symbol)]
-     `(~'defn ~function-name
-       ~@(remove nil? (gen-symbol-function-arity op-name op-values function-name))))))
+  (for [operation  (sort (public-by-name-and-param-count symbol-public-to-gen))]
+    (let [[op-name op-values] operation
+          function-name (-> op-name
+                            str
+                            scala/decode-scala-symbol
+                            clojure-case
+                            symbol)]
+      `(~'defn ~function-name
+               ~@(remove nil? (gen-symbol-function-arity op-name op-values function-name))))))
 
 (def license
   (str
@@ -207,9 +197,9 @@
     (.write w license)
     (.write w "\n\n")
     (.write w "\n\n")
-  (doseq [f functions]
-    (clojure.pprint/pprint f w)
-    (.write w "\n"))))
+    (doseq [f functions]
+      (clojure.pprint/pprint f w)
+      (.write w "\n"))))
 
 (def symbol-gen-ns "(ns org.apache.clojure-mxnet.symbol
     (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
@@ -218,18 +208,15 @@
     (:require [org.apache.clojure-mxnet.util :as util])
     (:import (org.apache.mxnet Symbol)))")
 
-
 (defn generate-symbol-file []
   (println "Generating symbol file")
   (write-to-file all-symbol-functions symbol-gen-ns "src/org/apache/clojure_mxnet/gen/symbol.clj"))
-
 
 ;;;;;;;;NDARRAY
 
 
 (def ndarray-reflect-info (->> (:members (r/reflect NDArray))
-                                (map #(into {} %))))
-
+                               (map #(into {} %))))
 
 (def ndarray-public (filter (fn [x] (-> x :flags :public)) ndarray-reflect-info))
 
@@ -241,7 +228,7 @@
                              "org.apache.mxnet.Context"
                              "scala.Enumeration$Value"
                              "scala.Tuple2"
-                             "scala.collection.Traversable"} )
+                             "scala.collection.Traversable"})
 
 (defn is-ndarray-hand-gen? [info]
   (->> (map str (:parameter-types info))
@@ -250,20 +237,16 @@
        count
        pos?))
 
-
 (def ndarray-public-to-hand-gen (filter is-ndarray-hand-gen? ndarray-public-no-default))
-(def ndarray-public-to-gen (->> (remove  #(contains?(->>  ndarray-public-to-hand-gen
-                                                          (mapv :name)
-                                                          (mapv str)
-                                                          (set)) (str (:name %))) ndarray-public-no-default)))
-
+(def ndarray-public-to-gen (->> (remove  #(contains? (->>  ndarray-public-to-hand-gen
+                                                           (mapv :name)
+                                                           (mapv str)
+                                                           (set)) (str (:name %))) ndarray-public-no-default)))
 
 (count ndarray-public-to-hand-gen) ;=> 15
 (count ndarray-public-to-gen) ;=> 486
 
 (map :name ndarray-public-to-hand-gen)
-
-
 
 (defn gen-ndarray-function-arity [op-name op-values]
   (for [[param-count info] op-values]
@@ -285,31 +268,26 @@
                    (into ['ndarray] pnames))
           function-body (if (= #{:public :static} (:flags (first info)))
                           `(~'util/coerce-return (~(symbol (str "NDArray/" op-name)) ~@coerced-params))
-                          `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'ndarray ~@coerced-params)
-                            ))]
+                          `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'ndarray ~@coerced-params)))]
       (when (not (and (> param-count 1) (has-variadic? params)))
-        `(
-          ~params
-          ~function-body
-          )))))
-
+        `(~params
+          ~function-body)))))
 
 (def all-ndarray-functions
- (for [operation  (sort (public-by-name-and-param-count ndarray-public-to-gen))]
-   (let [[op-name op-values] operation
-         function-name (-> op-name
-                           str
-                           scala/decode-scala-symbol
-                           clojure-case
-                           symbol)]
-     `(~'defn ~function-name
-       ~@(remove nil? (gen-ndarray-function-arity op-name op-values))))))
+  (for [operation  (sort (public-by-name-and-param-count ndarray-public-to-gen))]
+    (let [[op-name op-values] operation
+          function-name (-> op-name
+                            str
+                            scala/decode-scala-symbol
+                            clojure-case
+                            symbol)]
+      `(~'defn ~function-name
+               ~@(remove nil? (gen-ndarray-function-arity op-name op-values))))))
 
 (def ndarray-gen-ns "(ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle])
   (:import (org.apache.mxnet NDArray Shape)))")
-
 
 (defn generate-ndarray-file []
   (println "Generating ndarray file")
@@ -327,4 +305,4 @@
   (generate-ndarray-file)
 
   ;; This generates a file with the bulk of the symbol functions
-  (generate-symbol-file)  )
+  (generate-symbol-file))

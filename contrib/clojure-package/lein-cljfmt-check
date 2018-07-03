@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env sh
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,8 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
 set -evx
 
-cd contrib/clojure-package
-lein test
+lein cljfmt check `find ./src/org/apache/clojure_mxnet -depth 1 -type f -iname "*.clj" | grep -v /gen/`
+
+lein cljfmt check `find ./test -type f -iname "*.clj" | grep -v /test/good-test`

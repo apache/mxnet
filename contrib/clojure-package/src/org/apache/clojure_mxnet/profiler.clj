@@ -26,7 +26,7 @@
    -fileName, optional The name of output trace file. Default is profile.json."
   [kwargs]
   (Profiler/profilerSetConfig
-   (util/convert-io-map kwargs) ))
+   (util/convert-io-map kwargs)))
 
 (defn profiler-set-state
   "Set up the profiler state to record operator.

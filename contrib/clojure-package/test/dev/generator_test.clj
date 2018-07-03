@@ -30,7 +30,7 @@
 (defn ndarray-reflect-info [name]
   (->> gen/ndarray-public-no-default
        (filter #(= name (str (:name %))))
-                            first))
+       first))
 
 (defn symbol-reflect-info [name]
   (->> gen/symbol-public-no-default
@@ -49,7 +49,6 @@
     (is (= transformed-params (gen/symbol-transform-param-name params)))
     (is (= transformed-params (gen/symbol-transform-param-name
                                (:parameter-types (symbol-reflect-info "floor")))))))
-
 
 (deftest test-ndarray-transform-param-name
   (let [params ["scala.collection.immutable.Map"
@@ -116,13 +115,13 @@
               sym-name
               nil
               (if
-                  (clojure.core/map? kwargs-map-or-vec-or-sym)
+               (clojure.core/map? kwargs-map-or-vec-or-sym)
                 (util/empty-list)
                 (util/coerce-param
                  kwargs-map-or-vec-or-sym
                  #{"scala.collection.Seq"}))
               (if
-                  (clojure.core/map? kwargs-map-or-vec-or-sym)
+               (clojure.core/map? kwargs-map-or-vec-or-sym)
                 (org.apache.clojure-mxnet.util/convert-symbol-map
                  kwargs-map-or-vec-or-sym)
                 nil))))
@@ -132,13 +131,13 @@
               nil
               nil
               (if
-                  (clojure.core/map? kwargs-map-or-vec-or-sym)
+               (clojure.core/map? kwargs-map-or-vec-or-sym)
                 (util/empty-list)
                 (util/coerce-param
                  kwargs-map-or-vec-or-sym
                  #{"scala.collection.Seq"}))
               (if
-                  (clojure.core/map? kwargs-map-or-vec-or-sym)
+               (clojure.core/map? kwargs-map-or-vec-or-sym)
                 (org.apache.clojure-mxnet.util/convert-symbol-map
                  kwargs-map-or-vec-or-sym)
                 nil))))
@@ -170,17 +169,17 @@
 (deftest test-gen-ndarray-function-arity
   (let [op-name (symbol "$div")
         op-values {1 [{:name (symbol "$div")
-                        :return-type "org.apache.mxnet.NDArray,"
-                        :declaring-class "org.apache.mxnet.NDArray,"
-                        :parameter-types ["float"],
-                        :exception-types [],
-                        :flags #{:public}}
-                       {:name (symbol "$div")
-                        :return-type "org.apache.mxnet.NDArray,"
-                        :declaring-class "org.apache.mxnet.NDArray,"
-                        :parameter-types ["org.apache.mxnet.NDArray"],
-                        :exception-types [],
-                        :flags #{:public}}]}]
+                       :return-type "org.apache.mxnet.NDArray,"
+                       :declaring-class "org.apache.mxnet.NDArray,"
+                       :parameter-types ["float"],
+                       :exception-types [],
+                       :flags #{:public}}
+                      {:name (symbol "$div")
+                       :return-type "org.apache.mxnet.NDArray,"
+                       :declaring-class "org.apache.mxnet.NDArray,"
+                       :parameter-types ["org.apache.mxnet.NDArray"],
+                       :exception-types [],
+                       :flags #{:public}}]}]
     (is (= '(([ndarray num-or-ndarray]
               (util/coerce-return
                (.$div
@@ -192,19 +191,19 @@
 
 (deftest test-write-to-file
   (testing "symbol"
-   (let [fname "test/test-symbol.clj"
-         _ (gen/write-to-file [(first gen/all-symbol-functions)]
-                              gen/symbol-gen-ns
-                              fname)
-         good-contents (slurp "test/good-test-symbol.clj")
-         contents (slurp fname)]
-     (is (= good-contents contents))))
+    (let [fname "test/test-symbol.clj"
+          _ (gen/write-to-file [(first gen/all-symbol-functions)]
+                               gen/symbol-gen-ns
+                               fname)
+          good-contents (slurp "test/good-test-symbol.clj")
+          contents (slurp fname)]
+      (is (= good-contents contents))))
 
   (testing "ndarray"
-   (let [fname "test/test-ndarray.clj"
-         _ (gen/write-to-file [(first gen/all-ndarray-functions)]
-                              gen/ndarray-gen-ns
-                              fname)
-         good-contents (slurp "test/good-test-ndarray.clj")
-         contents (slurp fname)]
-     (is (= good-contents contents)))))
+    (let [fname "test/test-ndarray.clj"
+          _ (gen/write-to-file [(first gen/all-ndarray-functions)]
+                               gen/ndarray-gen-ns
+                               fname)
+          good-contents (slurp "test/good-test-ndarray.clj")
+          contents (slurp fname)]
+      (is (= good-contents contents)))))

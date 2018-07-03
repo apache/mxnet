@@ -32,7 +32,6 @@
             [org.apache.clojure-mxnet.context :as context])
   (:gen-class))
 
-
 ;; based off of https://medium.com/@julsimon/generative-adversarial-networks-on-apache-mxnet-part-1-b6d39e6b5df1
 
 
@@ -57,7 +56,7 @@
 (comment
 
   ;;This is for figuring out the convolution and deconvolution layers to convert the image sizes
-  
+
   (defn conv-output-size [input-size kernel-size padding stride]
     (float (inc (/ (- (+ input-size (* 2 padding)) kernel-size) stride))))
 
@@ -85,7 +84,6 @@
 (def eps (float (+ 1e-5  1e-12)))
 (def lr  0.0005) ;; learning rate
 (def beta1 0.5)
-
 
 (def label (sym/variable "label"))
 
@@ -130,26 +128,24 @@
       label [(ndarray/ones [batch-size 100 1 1])]]
   (def my-iter (mx-io/ndarray-iter data)))
 
-
 (defn save-img-gout [i n x]
   (do
     (viz/im-sav {:title (str "gout-" i "-" n)
-             :output-path output-path
-             :x x
-             :flip false})))
+                 :output-path output-path
+                 :x x
+                 :flip false})))
 
 (defn save-img-diff [i n x]
   (do (viz/im-sav {:title (str "diff-" i "-" n)
-            :output-path output-path
-               :x x
-               :flip false})))
+                   :output-path output-path
+                   :x x
+                   :flip false})))
 
 (defn save-img-data [i n batch]
   (do (viz/im-sav {:title (str "data-" i "-" n)
-               :output-path output-path
-               :x (first (mx-io/batch-data batch))
-               :flip false})))
-
+                   :output-path output-path
+                   :x (first (mx-io/batch-data batch))
+                   :flip false})))
 
 (defn calc-diff [i n diff-d]
   (let [diff (ndarray/copy diff-d)
@@ -161,8 +157,6 @@
 
       (save-img-diff i n calc-diff))))
 
-
-
 (defn train [devs]
   (let [mod-d  (-> (m/module (discriminator) {:contexts devs :data-names ["data"] :label-names ["label"]})
                    (m/bind {:data-shapes (mx-io/provide-data mnist-iter)
@@ -171,55 +165,53 @@
                    (m/init-params {:initializer (init/normal 0.02)})
                    (m/init-optimizer {:optimizer (opt/adam {:learning-rate lr :wd 0.0 :beta1 beta1})}))
         mod-g (-> (m/module (generator) {:contexts devs :data-names ["rand"] :label-names nil})
-                   (m/bind {:data-shapes (mx-io/provide-data rand-noise-iter)})
-                   (m/init-params {:initializer (init/normal 0.02)})
-                   (m/init-optimizer {:optimizer (opt/adam {:learning-rate lr :wd 0.0 :beta1 beta1})}))]
+                  (m/bind {:data-shapes (mx-io/provide-data rand-noise-iter)})
+                  (m/init-params {:initializer (init/normal 0.02)})
+                  (m/init-optimizer {:optimizer (opt/adam {:learning-rate lr :wd 0.0 :beta1 beta1})}))]
 
     (println "Training for " num-epoch " epochs...")
     (doseq [i (range num-epoch)]
-     (mx-io/reduce-batches mnist-iter
-                           (fn [n batch]
-                             (let [rbatch (mx-io/next rand-noise-iter)
-                                   out-g (-> mod-g
-                                             (m/forward rbatch)
-                                             (m/outputs))
+      (mx-io/reduce-batches mnist-iter
+                            (fn [n batch]
+                              (let [rbatch (mx-io/next rand-noise-iter)
+                                    out-g (-> mod-g
+                                              (m/forward rbatch)
+                                              (m/outputs))
                                    ;; update the discriminiator on the fake
-                                   grads-f  (mapv #(ndarray/copy (first %)) (-> mod-d
-                                                                                (m/forward {:data (first out-g) :label [(ndarray/zeros [batch-size])]})
-                                                                                (m/backward)
-                                                                                (m/grad-arrays)))
+                                    grads-f  (mapv #(ndarray/copy (first %)) (-> mod-d
+                                                                                 (m/forward {:data (first out-g) :label [(ndarray/zeros [batch-size])]})
+                                                                                 (m/backward)
+                                                                                 (m/grad-arrays)))
                                    ;; update the discrimintator on the real
-                                   grads-r (-> mod-d
-                                               (m/forward {:data (mx-io/batch-data batch) :label [(ndarray/ones [batch-size])]})
-                                               (m/backward)
-                                               (m/grad-arrays))
-                                   _ (mapv (fn [real fake] (let [r (first real)]
-                                                             (ndarray/set r (ndarray/+ r fake)))) grads-r grads-f)
-                                   _ (m/update mod-d)
+                                    grads-r (-> mod-d
+                                                (m/forward {:data (mx-io/batch-data batch) :label [(ndarray/ones [batch-size])]})
+                                                (m/backward)
+                                                (m/grad-arrays))
+                                    _ (mapv (fn [real fake] (let [r (first real)]
+                                                              (ndarray/set r (ndarray/+ r fake)))) grads-r grads-f)
+                                    _ (m/update mod-d)
                                    ;; update the generator
-                                   diff-d (-> mod-d
-                                              (m/forward {:data (first out-g) :label [(ndarray/ones [batch-size])]})
-                                              (m/backward)
-                                              (m/input-grads))
-                                   _ (-> mod-g
-                                         (m/backward (first diff-d))
-                                         (m/update))]
-                               (when (zero? (mod n 100))
-                                 (println "iteration = " i  "number = " n)
-                                 (save-img-gout i n (ndarray/copy (ffirst out-g)))
-                                 (save-img-data i n batch)
-                                 (calc-diff i n (ffirst diff-d)))
-                               (inc n)))))))
+                                    diff-d (-> mod-d
+                                               (m/forward {:data (first out-g) :label [(ndarray/ones [batch-size])]})
+                                               (m/backward)
+                                               (m/input-grads))
+                                    _ (-> mod-g
+                                          (m/backward (first diff-d))
+                                          (m/update))]
+                                (when (zero? (mod n 100))
+                                  (println "iteration = " i  "number = " n)
+                                  (save-img-gout i n (ndarray/copy (ffirst out-g)))
+                                  (save-img-data i n batch)
+                                  (calc-diff i n (ffirst diff-d)))
+                                (inc n)))))))
 
 (defn -main [& args]
   (let [[dev dev-num] args
         devs (if (= dev ":gpu")
                (mapv #(context/gpu %) (range (Integer/parseInt (or dev-num "1"))))
                (mapv #(context/cpu %) (range (Integer/parseInt (or dev-num "1")))))]
-     (println "Running with context devices of" devs)
+    (println "Running with context devices of" devs)
     (train devs)))
 
 (comment
-  (train [(context/cpu)])
-
-  )
+  (train [(context/cpu)]))
