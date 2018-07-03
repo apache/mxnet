@@ -1009,7 +1009,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   int pool_type; // max
-  NDArray input = out_arrs[0]->Reorder2Default();
+  NDArray input = in_arrs[0]->Reorder2Default();
   NDArray output = out_arrs[0]->Reorder2Default();
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   TShape input_shape = input.shape();
