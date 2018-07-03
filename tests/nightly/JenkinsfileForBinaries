@@ -78,6 +78,15 @@ try {
         }
       }
     }
+    parallel 'CPU: Build allreduce KVStore': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu') {
+          init_git()
+          docker_run('ubuntu_base_cpu', 'build_ubuntu_cpu_allreduce_kvstore', false)
+          pack_lib('cpu', mx_lib)
+        }
+      }
+    }
   }
 
   stage('NightlyTests'){
@@ -95,7 +104,7 @@ try {
         ws('workspace/nt-KVStoreTest') {
           init_git()
           unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
         }
       }
     }
