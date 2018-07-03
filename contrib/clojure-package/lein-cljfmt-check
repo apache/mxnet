@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -evx
+set -vx
 
 lein cljfmt check `find ./src/org/apache/clojure_mxnet -depth 1 -type f -iname "*.clj" | grep -v /gen/`
 
