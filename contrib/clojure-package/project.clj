@@ -36,7 +36,7 @@
   :plugins [[lein-codox "0.10.3" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]]
   :codox {:namespaces [#"^org\.apache\.clojure-mxnet\.(?!gen).*"]}
-  :aliases {"generate-code" ["run" "-m" "dev.generator"]}
+  :aot [dev.generator]
   :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"
                               ;; If a repository contains releases only setting
                               ;; :snapshots to false will speed up dependencies.
