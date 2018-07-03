@@ -870,7 +870,7 @@ TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
   return tmp;
 }
 
-int GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
+float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   TShape input_shape = in_arr.shape();
   std::vector<int> block_sizes(input_shape.ndim()); // number of indexes must move to move along the axis
   for (int dim = 0; dim < input_shape.ndim(); dim++)
@@ -895,9 +895,9 @@ float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TSh
     int center = coordinate[dim];
     int shift = kernel_shape[dim] / 2;
     for (int i = -shift; i < kernel_shape[dim] - shift; i++) {
-      int value;
+      float value = -std::numeric_limits<float>::max();
       if (center + i < 0 || center + i >= input_shape[dim + 2]) {
-        value = 0; // depends
+        value = -std::numeric_limits<float>::max(); // depends
       } else {
         TShape shifted_shape = GetShiftedCoordinate(coordinate, 2 + dim, i);
         value = GetValueAtCoordinate(in_arr, shifted_shape);
