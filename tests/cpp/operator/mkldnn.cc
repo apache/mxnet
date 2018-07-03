@@ -1092,7 +1092,6 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
 
-
   //test padding
   {
     OpAttrs attrs;
@@ -1112,7 +1111,6 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
 
-
   //test stride
   {
     OpAttrs attrs;
@@ -1130,7 +1128,6 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
-
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
