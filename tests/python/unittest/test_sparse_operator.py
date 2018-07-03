@@ -1547,6 +1547,12 @@ def test_sparse_unary_with_numerics():
                           lambda output, outg: outg * assign_each(output, lambda x: x * (1.0 - x)),
                           backward_is_use_output=True)
 
+    check_sparse_function('sign',
+                          lambda x: mx.sym.sign(x),
+                          lambda x: np.sign(x),
+                          lambda output, outg: outg * assign_each(output, lambda x: 0),
+                          backward_is_use_output=True)
+
 
 @with_seed()
 def test_sparse_nd_zeros():

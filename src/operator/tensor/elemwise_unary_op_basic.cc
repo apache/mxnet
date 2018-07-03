@@ -583,7 +583,7 @@ The storage type of ``abs`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_op::sign>);
 
 // sign
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sign, cpu, mshadow_op::sign)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sign, cpu, mshadow_op::sign)
 MXNET_ADD_SPARSE_OP_ALIAS(sign)
 .describe(R"code(Returns element-wise sign of the input.
 
@@ -595,6 +595,7 @@ The storage type of ``sign`` output depends upon the input storage type:
 
    - sign(default) = default
    - sign(row_sparse) = row_sparse
+   - sign(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
