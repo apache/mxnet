@@ -31,10 +31,10 @@ namespace op {
 template<typename xpu, typename LOP, typename ROP>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
 BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
-                                    const OpContext& ctx,
-                                    const std::vector<TBlob>& inputs,
-                                    const std::vector<OpReqType>& req,
-                                    const std::vector<TBlob>& outputs) {
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
   using namespace broadcast;
   TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
