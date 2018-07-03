@@ -1016,23 +1016,30 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   int num_batches = input_shape[0];
   int num_channels = input_shape[1];
 
+  TShape ptr(input_shape.ndim());
+  for (int batch_num = 0; batch_num < num_batches; batch_num++) {
+    ptr[0] = batch_num;
+    for (int channel_num = 0; channel_num < num_channels; channel_num++) {
+      ptr[1] = channel_num;
+      for (int dim = 2; dim < input_shape.ndim(); dim ++) {
+        int pad = padding[dim - 2];
+        int shift = kernel[dim] / 2;
+        int lower = -pad;
+        int upper = input_shape[dim] + pad;
 
-  for (int dim = 2; dim < input_shape.ndim(); dim ++) {
-    int pad = padding[dim - 2];
-    int shift = kernel[dim] / 2;
-    int lower = -pad;
-    int upper = input_shape[dim] + pad;
-
-    // starts with 3rd dim
-    // should increment by stride amount
-    int out_ptr = 0;
-    for (int i = 0; i < input_shape[dim]; i++) {
-      TShape coordinate = GetShiftedCoordinate(input_shape, dim, i);
-      if (i - shift < lower || i + shift >= upper)
-        continue;
-      ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+        // starts with 3rd dim
+        // should increment by stride amount
+        int out_ptr = 0;
+        for (int i = 0; i < input_shape[dim]; i++) {
+          TShape coordinate = GetShiftedCoordinate(ptr, dim, i);
+          if (i - shift < lower || i + shift >= upper)
+            continue;
+          ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+        }
+      }
     }
   }
+
 }
 
 TEST(MKLDNN_NDArray, VerifyPoolingResult) {
