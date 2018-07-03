@@ -4293,13 +4293,14 @@ def test_new_softmax():
 @with_seed()
 def test_softmax_with_temperature():
     for ndim in range(1, 5):
+        shape = np.random.randint(1, 5, size=ndim)
+        data = np.random.uniform(-2, 2, size=shape)
         for temp in range(1, 11):
-            shape = np.random.randint(1, 5, size=ndim)
-            axis = np.random.randint(-ndim, ndim)
-            data = np.random.uniform(-2, 2, size=shape)
-            sym = mx.sym.softmax(axis=axis, temperature=temp)
-            expected = np_softmax(data, axis=axis, temperature=temp)
-            check_symbolic_forward(sym, [data], [expected])
+            sym = mx.sym.softmax(axis=0, temperature=temp)
+            expected_fwd = np_softmax(data, axis=0, temperature=temp)
+            expected_bwd = np.zeros(shape)
+            check_symbolic_forward(sym, [data], [expected_fwd], rtol=0.05, atol=1e-3)
+            check_symbolic_backward(sym, [data], [np.ones(shape)], [expected_bwd], rtol=0.05, atol=1e-3)
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 @with_seed()
