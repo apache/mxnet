@@ -683,7 +683,7 @@ The storage type of ``floor`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // trunc
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(trunc, cpu, mshadow_op::trunc)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(trunc, cpu, mshadow_op::trunc)
 MXNET_ADD_SPARSE_OP_ALIAS(trunc)
 .describe(R"code(Return the element-wise truncated value of the input.
 
@@ -698,6 +698,7 @@ The storage type of ``trunc`` output depends upon the input storage type:
 
    - trunc(default) = default
    - trunc(row_sparse) = row_sparse
+   - trunc(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
