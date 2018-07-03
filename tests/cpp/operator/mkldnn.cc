@@ -1114,6 +1114,22 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
 
 
   //test stride
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "1"});
+    attrs.attrs.dict.insert({"stride" , "2"});
+    attrs.attrs.dict.insert({"pad" , "0" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,1};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = 0;
+    in_arrs[0] = &arr;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
 
 }
 
