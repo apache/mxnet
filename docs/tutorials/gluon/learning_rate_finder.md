@@ -68,7 +68,6 @@ class Learner():
         # Update parameters
         if take_step: self.trainer.step(data.shape[0])  
         # Set and return loss.
-        # Although notice this is still an MXNet NDArray to avoid blocking
         self.iteration_loss = mx.nd.mean(loss).asscalar()
         return self.iteration_loss
 
