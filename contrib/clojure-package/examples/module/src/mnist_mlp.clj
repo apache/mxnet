@@ -116,7 +116,6 @@
     (let [score (m/score mod {:eval-data test-data :eval-metric (eval-metric/accuracy)})]
       (println "High level predict score is " score))))
 
-
 (defn run-predication-and-calc-accuracy-manually [devs]
   ;;; Gathers all the predictions at once with `predict-every-batch`
   ;;; then cycles thorugh the batches and manually calculates the accuracy stats
@@ -128,23 +127,23 @@
     (m/fit mod {:train-data train-data :eval-data test-data :num-epoch num-epoch})
     (let [preds (m/predict-every-batch mod {:eval-data test-data})
           stats (mx-io/reduce-batches test-data
-                         (fn [r b]
-                           (let [pred-label (->> (ndarray/argmax-channel (first (get preds (:index r))))
-                                                 (ndarray/->vec)
-                                                 (mapv int))
-                                 label (->> (mx-io/batch-label b)
-                                            (first)
-                                            (ndarray/->vec)
-                                            (mapv int))
-                                 acc-sum (apply + (mapv (fn [pl l] (if (= pl l) 1 0))
-                                                        pred-label label))]
-                             (-> r
-                                 (update :index inc)
-                                 (update :acc-cnt (fn [v] (+ v (count pred-label))))
-                                 (update :acc-sum (fn [v] (+ v
-                                                             (apply + (mapv (fn [pl l] (if (= pl l) 1 0))
-                                                                            pred-label label))))))))
-                         {:acc-sum 0 :acc-cnt 0 :index 0})]
+                                      (fn [r b]
+                                        (let [pred-label (->> (ndarray/argmax-channel (first (get preds (:index r))))
+                                                              (ndarray/->vec)
+                                                              (mapv int))
+                                              label (->> (mx-io/batch-label b)
+                                                         (first)
+                                                         (ndarray/->vec)
+                                                         (mapv int))
+                                              acc-sum (apply + (mapv (fn [pl l] (if (= pl l) 1 0))
+                                                                     pred-label label))]
+                                          (-> r
+                                              (update :index inc)
+                                              (update :acc-cnt (fn [v] (+ v (count pred-label))))
+                                              (update :acc-sum (fn [v] (+ v
+                                                                          (apply + (mapv (fn [pl l] (if (= pl l) 1 0))
+                                                                                         pred-label label))))))))
+                                      {:acc-sum 0 :acc-cnt 0 :index 0})]
       (println "Stats: " stats)
       (println "Accuracy: " (/ (:acc-sum stats)
                                (* 1.0 (:acc-cnt stats)))))))
@@ -159,19 +158,19 @@
     ;;; note only one function for training
     (m/fit mod {:train-data train-data :eval-data test-data :num-epoch num-epoch})
     (mx-io/reduce-batches test-data
-                        (fn [r b]
-                          (let [preds (m/predict-batch mod b)
-                                pred-label (->> (ndarray/argmax-channel (first preds))
-                                                (ndarray/->vec)
-                                                (mapv int))
-                                label (->> (mx-io/batch-label b)
-                                           (first)
-                                           (ndarray/->vec)
-                                           (mapv int))
-                                acc (/ (apply + (mapv (fn [pl l] (if (= pl l) 1 0)) pred-label label))
-                                       (* 1.0 (count pred-label)))]
-                            (println "Batch " r " acc: " acc)
-                            (inc r))))))
+                          (fn [r b]
+                            (let [preds (m/predict-batch mod b)
+                                  pred-label (->> (ndarray/argmax-channel (first preds))
+                                                  (ndarray/->vec)
+                                                  (mapv int))
+                                  label (->> (mx-io/batch-label b)
+                                             (first)
+                                             (ndarray/->vec)
+                                             (mapv int))
+                                  acc (/ (apply + (mapv (fn [pl l] (if (= pl l) 1 0)) pred-label label))
+                                         (* 1.0 (count pred-label)))]
+                              (println "Batch " r " acc: " acc)
+                              (inc r))))))
 
 (defn run-all [devs]
   (run-intermediate-level-api :devs devs)
@@ -189,7 +188,6 @@
     (println "Running Module MNIST example")
     (println "Running with context devices of" devs)
     (run-all devs)))
-
 
 (comment
 
@@ -236,5 +234,4 @@
   ;;=> Stats:  {:acc-sum 9494, :acc-cnt 10000, :index 1000}
   ;;=> Accuracy:  0.9494
 )
-
 

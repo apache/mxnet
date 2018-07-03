@@ -31,14 +31,14 @@
 
 ;;; Load the MNIST datasets
 (def train-data (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
-                                       :label (str data-dir "train-labels-idx1-ubyte")
-                                       :label-name "softmax_label"
-                                       :input-shape [784]
-                                       :batch-size 10
-                                       :shuffle true
-                                       :flat true
-                                       :silent false
-                                       :seed 10}))
+                                   :label (str data-dir "train-labels-idx1-ubyte")
+                                   :label-name "softmax_label"
+                                   :input-shape [784]
+                                   :batch-size 10
+                                   :shuffle true
+                                   :flat true
+                                   :silent false
+                                   :seed 10}))
 
 (def test-data (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
                                   :label (str data-dir "t10k-labels-idx1-ubyte")
@@ -131,10 +131,10 @@
 
 (let [save-prefix "my-model"]
   (doseq [epoch-num (range 3)]
-        (mx-io/do-batches train-data (fn [batch
+    (mx-io/do-batches train-data (fn [batch
                                           ;; do something
-                                          ]))
-        (m/save-checkpoint mod {:prefix save-prefix :epoch epoch-num :save-opt-states true})))
+]))
+    (m/save-checkpoint mod {:prefix save-prefix :epoch epoch-num :save-opt-states true})))
 
 ;; INFO  ml.dmlc.mxnet.module.Module: Saved checkpoint to my-model-0000.params
 ;; INFO  ml.dmlc.mxnet.module.Module: Saved optimizer state to my-model-0000.states
@@ -155,8 +155,8 @@
 ;;To get current parameters, use `params`
 
 (let [[arg-params aux-params] (m/params new-mod)]
-     {:arg-params arg-params
-      :aux-params aux-params})
+  {:arg-params arg-params
+   :aux-params aux-params})
 
 ;; {:arg-params
 ;;  {"fc3_bias"
@@ -188,32 +188,5 @@
                 :fit-params (-> (m/fit-params {:begin-epoch 1}))})
 
 ;;Create fit-params, and then use it to set `begin-epoch` so that fit() knows to resume from a saved epoch.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
