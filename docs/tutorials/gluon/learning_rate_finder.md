@@ -3,19 +3,19 @@
 
 Setting the learning rate for stochastic gradient descent (SGD) is crucially important when training neural network because it controls both the speed of convergence and the ultimate performance of the network. Set the learning too low and you could be twiddling your thumbs for quite some time as the parameters update very slowly. Set it too high and the updates will skip over optimal solutions, or worse the optimizer might not converge at all!
 
-Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We take a look at the central idea of the paper, cyclical learning rate schedules, in the tutorial called 'Advanced Learning Rate Schedules', but in this tutorial we implement a 'Learning Rate Finder' in MXNet with the Gluon API that you can use while training your own networks.
+Leslie Smith from the U.S. Naval Research Laboratory presented a method for finding a good learning rate in a paper called ["Cyclical Learning Rates for Training Neural Networks"](https://arxiv.org/abs/1506.01186). We implement this method in MXNet (with the Gluon API) and create a 'Learning Rate Finder' which you can use while training your own networks. We take a look at the central idea of the paper, cyclical learning rate schedules, in the ['Advanced Learning Rate Schedules'](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules_advanced.html) tutorial.
 
 ## Simple Idea
 
 Given an initialized network, a defined loss and a training dataset we take the following steps:
 
-1. train one batch at a time (a.k.a. an iteration)
-2. start with a very small learning rate (e.g. 0.000001) and slowly increase it every iteration
-3. record the training loss and continue until we see the training loss diverge
+1. Train one batch at a time (a.k.a. an iteration)
+2. Start with a very small learning rate (e.g. 0.000001) and slowly increase it every iteration
+3. Record the training loss and continue until we see the training loss diverge
 
 We then analyse the results by plotting a graph of the learning rate against the training loss as seen below (taking note of the log scales).
 
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_finder/finder_plot.png) <!--notebook-skip-line-->
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/lr_finder/finder_plot_w_annotations.png" width="500px"/> <!--notebook-skip-line-->
 
 As expected, for very small learning rates we don't see much change in the loss as the parameter updates are negligible. At a learning rate of 0.001, we start to see the loss fall. Setting the initial learning rate here is reasonable, but we still have the potential to learn faster. We observe a drop in the loss up until 0.1 where the loss appears to diverge. We want to set the initial learning rate as high as possible before the loss becomes unstable, so we choose a learning rate of 0.05.
 
@@ -33,9 +33,9 @@ mx.random.seed(42)
 class Learner():
     def __init__(self, net, data_loader, ctx):
         """
-        net: network (mx.gluon.Block)
-        data_loader: training data loader (mx.gluon.data.DataLoader)
-        ctx: context (mx.gpu or mx.cpu)
+        :param net: network (mx.gluon.Block)
+        :param data_loader: training data loader (mx.gluon.data.DataLoader)
+        :param ctx: context (mx.gpu or mx.cpu)
         """
         self.net = net
         self.data_loader = data_loader
@@ -49,8 +49,9 @@ class Learner():
         
     def iteration(self, lr=None, take_step=True):
         """
-        lr: learning rate to use for iteration (float)
-        take_step: take trainer step to update weights (boolean)
+        :param lr: learning rate to use for iteration (float)
+        :param take_step: take trainer step to update weights (boolean)
+        :return: iteration loss (float)
         """
         # Update learning rate if different this iteration
         if lr and (lr != self.trainer.learning_rate):
@@ -68,7 +69,7 @@ class Learner():
         if take_step: self.trainer.step(data.shape[0])  
         # Set and return loss.
         # Although notice this is still an MXNet NDArray to avoid blocking
-        self.iteration_loss = mx.nd.mean(loss)
+        self.iteration_loss = mx.nd.mean(loss).asscalar()
         return self.iteration_loss
 
     def close(self):
@@ -123,16 +124,17 @@ from matplotlib import pyplot as plt
 class LRFinder():
     def __init__(self, learner):
         """
-        learner: able to take single iteration with given learning rate and return loss
+        :param learner: able to take single iteration with given learning rate and return loss
            and save and load parameters of the network (Learner)
         """
         self.learner = learner
         
     def find(self, lr_start=1e-6, lr_multiplier=1.1, smoothing=0.3):
         """
-        lr_start: learning rate to start search (float)
-        lr_multiplier: factor the learning rate is multiplied by at each step of search (float)
-        smoothing: amount of smoothing applied to loss for stopping criteria (float)
+        :param lr_start: learning rate to start search (float)
+        :param lr_multiplier: factor the learning rate is multiplied by at each step of search (float)
+        :param smoothing: amount of smoothing applied to loss for stopping criteria (float)
+        :return: learning rate and loss pairs (list of (float, float) tuples)
         """
         # Used to initialize weights; pass data, but don't take step.
         # Would expect for new model with lazy weight initialization
@@ -149,7 +151,7 @@ class LRFinder():
         stopping_criteria = LRFinderStoppingCriteria(smoothing)
         while True:
             # Run iteration, and block until loss is calculated.
-            loss = self.learner.iteration(lr).asscalar()
+            loss = self.learner.iteration(lr)
             self.results.append((lr, loss))
             if stopping_criteria(loss):
                 break
@@ -157,7 +159,7 @@ class LRFinder():
         # Restore params (as finder changed them)
         self.learner.net.load_params("lr_finder.params", ctx=self.learner.ctx)
         self.learner.trainer.load_states("lr_finder.state")
-        self.plot()
+        return self.results
         
     def plot(self):
         lrs = [e[0] for e in self.results]
@@ -184,8 +186,8 @@ You can define the `LRFinderStoppingCriteria` as you wish, but empirical testing
 class LRFinderStoppingCriteria():
     def __init__(self, smoothing=0.3, min_iter=20):
         """
-        smoothing: applied to running mean which is used for thresholding (float)
-        min_iter: minimum number of iterations before early stopping can occur (int)
+        :param smoothing: applied to running mean which is used for thresholding (float)
+        :param min_iter: minimum number of iterations before early stopping can occur (int)
         """
         self.smoothing = smoothing
         self.min_iter = min_iter
@@ -195,7 +197,8 @@ class LRFinderStoppingCriteria():
         
     def __call__(self, loss):
         """
-        loss: from single iteration (float)
+        :param loss: from single iteration (float)
+        :return: indicator to stop (boolean)
         """
         self.counter += 1
         if self.first_loss is None:
@@ -218,6 +221,7 @@ net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
 lr_finder = LRFinder(learner)
 lr_finder.find(lr_start=1e-6)
+lr_finder.plot()
 ```
 
 
@@ -234,8 +238,8 @@ lr = 0.05
 for iter_idx in range(500):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
-        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss.asscalar()))
-print("Final Loss: {:.5g}".format(learner.iteration_loss.asscalar()))
+        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
+print("Final Loss: {:.5g}".format(learner.iteration_loss))
 ```
 
 Iteration: 0, Loss: 2.785 <!--notebook-skip-line-->
@@ -265,8 +269,8 @@ lr = 0.5
 for iter_idx in range(500):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
-        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss.asscalar()))
-print("Final Loss: {:.5g}".format(learner.iteration_loss.asscalar()))
+        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
+print("Final Loss: {:.5g}".format(learner.iteration_loss))
 ```
 
 Iteration: 0, Loss: 2.6469 <!--notebook-skip-line-->
@@ -296,8 +300,8 @@ lr = 0.005
 for iter_idx in range(500):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
-        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss.asscalar()))
-print("Final Loss: {:.5g}".format(learner.iteration_loss.asscalar()))
+        print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
+print("Final Loss: {:.5g}".format(learner.iteration_loss))
 ```
 
 Iteration: 0, Loss: 2.605 <!--notebook-skip-line-->
@@ -317,6 +321,6 @@ Although we get quite similar results to when we set the learning rate at 0.05 (
 
 ## Wrap Up
 
-Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in this tutorial too.
+Give Learning Rate Finder a try on your current projects, and experiment with the different learning rate schedules found in the tutorials [here](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules.html) and [here](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules_advanced.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
