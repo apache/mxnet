@@ -234,8 +234,8 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
   int N = small.shape_.Size(), M = rshape.Size();
   seq_reduce_compute<Reducer, ndim, DType, OP>(
-      N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
-      big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+    N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
+    big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>

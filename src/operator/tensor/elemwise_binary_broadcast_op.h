@@ -559,7 +559,7 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
 template<typename xpu, typename LOP, typename ROP>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
 BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
-                                    const OpContext& ctx,
+                               const OpContext& ctx,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs);
