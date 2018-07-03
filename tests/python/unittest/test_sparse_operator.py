@@ -1586,6 +1586,12 @@ def test_sparse_unary_with_numerics():
                           None,
                           skip_grad=True)
 
+    check_sparse_function('ceil',
+                          lambda x: mx.sym.ceil(x),
+                          lambda x: np.ceil(x),
+                          None,
+                          skip_grad=True)
+
 
 @with_seed()
 def test_sparse_nd_zeros():

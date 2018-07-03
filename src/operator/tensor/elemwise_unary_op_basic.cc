@@ -643,7 +643,7 @@ The storage type of ``rint`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(ceil, cpu, mshadow_op::ceil)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(ceil, cpu, mshadow_op::ceil)
 MXNET_ADD_SPARSE_OP_ALIAS(ceil)
 .describe(R"code(Returns element-wise ceiling of the input.
 
@@ -657,6 +657,7 @@ The storage type of ``ceil`` output depends upon the input storage type:
 
    - ceil(default) = default
    - ceil(row_sparse) = row_sparse
+   - ceil(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
