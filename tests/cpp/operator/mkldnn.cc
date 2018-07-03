@@ -1050,8 +1050,8 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   NDArray arr(test_shape, Context());
   InitDefaultArray(&arr);
   mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
-  EXPECT_EQ(0, input_data[0]);
-  EXPECT_EQ(1, input_data[1]);
+  EXPECT_EQ(-1, input_data[0]);
+  EXPECT_EQ(0, input_data[1]);
   EXPECT_EQ(1, input_data[2]);
 
   // test base
@@ -1065,9 +1065,9 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.op->attr_parser(&attrs.attrs);
     NDArray expected_output(test_shape, Context());
     mshadow::default_real_t *expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = 0;
-    expected_data[1] = 1;
-    expected_data[2] = 2;
+    expected_data[0] = -1;
+    expected_data[1] = 0;
+    expected_data[2] = 1;
     in_arrs[0] = &arr;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
@@ -1082,10 +1082,11 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "0" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,1};
+    TShape expected_shape = {1,1,2};
     NDArray expected_output(expected_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = 1;
+    expected_data[0] = 0;
+    expected_data[1] = 1;
     in_arrs[0] = &arr;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
@@ -1101,11 +1102,11 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "1" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2};
-    NDArray expected_output(expected_shape, Context());
+    NDArray expected_output(test_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = 0;
-    expected_data[0] = 1;
+    expected_data[1] = 0;
+    expected_data[2] = 1;
     in_arrs[0] = &arr;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
