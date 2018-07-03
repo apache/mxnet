@@ -28,8 +28,6 @@ from nose.tools import assert_raises
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from mxnet.base import MXNetError
 from mxnet import autograd
-from mxnet.gluon import nn
-from mxnet.gluon.utils import split_and_load
 from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -1915,82 +1913,6 @@ def test_softmax_activation():
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
-
-
-def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
-    def _assert_tensor_close(a, b, atol=1e-3, rtol=1e-3):
-        npa, npb = a.asnumpy(), b.asnumpy()
-        assert np.allclose(npa, npb, rtol=rtol, atol=atol), \
-            'Tensor close check failed\n{}\n{}\nadiff={}, rdiff={}'.format(
-                a, b, np.abs(npa - npb).max(), np.abs((npa - npb) / np.fmax(npa, 1e-5)).max())
-
-    def _find_bn(module):
-        if isinstance(module, (nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
-            return module
-        elif isinstance(module.module, (nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
-            return module.module
-
-        raise RuntimeError('BN not found')
-
-    def _syncParameters(bn1, bn2):
-        ctx = input.context
-        bn2.gamma.set_data(bn1.gamma.data(mx.gpu(0)))
-        bn2.beta.set_data(bn1.beta.data(ctx))
-        bn2.running_mean.set_data(bn1.running_mean.data(ctx))
-        bn2.running_var.set_data(bn1.running_var.data(ctx))
-
-    input1 = input.copy()
-    input2 = input.copy()
-
-    # using the same values for gamma and beta
-    #_syncParameters(_find_bn(bn1), _find_bn(bn2))
-
-    if cuda:
-        input1 = input.as_in_context(mx.gpu(0))
-        bn1.collect_params().reset_ctx(mx.gpu(0))
-        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
-    else:
-        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
-
-    input1.attach_grad()
-    inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
-    for xi in inputs2:
-        xi.attach_grad()
-
-    with mx.autograd.record():
-        output1 = bn1(input1)
-        output2  = [bn2(xi) for xi in inputs2]
-        loss1 = (output1 ** 2).sum()
-        loss2 = [(output ** 2).sum() for output in output2]
-        mx.autograd.backward(loss1)
-        mx.autograd.backward(loss2)
-
-    output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
-    # assert forwarding
-    _assert_tensor_close(input1, input2)
-    _assert_tensor_close(output1, output2)
-    _assert_tensor_close(_find_bn(bn1).running_mean.data(ctx_list[0]),
-                         _find_bn(bn2).running_mean.data(ctx_list[0]))
-    _assert_tensor_close(_find_bn(bn1).running_var.data(ctx_list[0]),
-                         _find_bn(bn2).running_var.data(ctx_list[0]))
-    input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    _assert_tensor_close(input1.grad, input2grad)
-
-def testSyncBN():
-    ndev = 4
-
-    bn = nn.BatchNorm(in_channels=1)
-    sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
-
-    bn.initialize()
-    ctx_list = [mx.gpu(0) for _ in range(ndev)]
-    sync_bn.initialize(ctx=ctx_list)
-
-    # check with unsync version
-    for i in range(10):
-        _checkBatchNormResult(bn, sync_bn, mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                              num_devices=ndev, cuda=True)
-
 
 if __name__ == '__main__':
     import nose
