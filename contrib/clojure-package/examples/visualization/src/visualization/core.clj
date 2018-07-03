@@ -25,10 +25,7 @@
     #_(sym/convolution "conv1" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
     #_(sym/batch-norm "bn1" {:data data})
     #_(sym/activation "relu1" {:data data :act-type "relu"})
-    #_(sym/pooling "mp1" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]})
-
-
-    #_(sym/convolution "conv2" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
+    #_(sym/pooling "mp1" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]}) #_(sym/convolution "conv2" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
     #_(sym/batch-norm "bn2" {:data data})
     #_(sym/activation "relu2" {:data data :act-type "relu"})
     #_(sym/pooling "mp2" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]})
@@ -39,12 +36,11 @@
 
 (defn test-viz []
   (let [dot (viz/plot-network (get-symbol)
-                          {"data" [1 1 28 28]}
-                          {:title "foo" :node-attrs {:shape "oval" :fixedsize "false"}})]
+                              {"data" [1 1 28 28]}
+                              {:title "foo" :node-attrs {:shape "oval" :fixedsize "false"}})]
     (viz/render dot "testviz" "./")))
 
 (defn -main [& args]
   (do (test-viz)
       (println "Check for the testviz.pdf file in the project directory")))
-
 

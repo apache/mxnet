@@ -53,7 +53,6 @@
         (is (test-util/approx= 1e-6 (ndarray/->vec lhs-grad) (ndarray/->vec lhs-grad2)))
         (is (test-util/approx= 1e-6 (ndarray/->vec rhs-grad) (ndarray/->vec rhs-grad2)))))))
 
-
 (deftest test-reshape
   (let [x (sym/variable "x")
         y (sym/fully-connected {:data x :num-hidden 4})

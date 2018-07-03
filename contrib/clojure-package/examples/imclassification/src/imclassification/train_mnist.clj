@@ -111,5 +111,4 @@
     (start devs)))
 
 (comment
-  (start [(context/cpu)])
-  )
+  (start [(context/cpu)]))

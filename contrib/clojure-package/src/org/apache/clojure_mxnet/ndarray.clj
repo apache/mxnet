@@ -26,7 +26,6 @@
             [t6.from-scala.core :refer [$] :as $])
   (:import (org.apache.mxnet NDArray)))
 
-
 ;; loads the generated functions into the namespace
 (do (clojure.core/load "gen/ndarray"))
 
@@ -80,7 +79,6 @@
   ([source-vec shape-vec]
    (array source-vec shape-vec {})))
 
-
 (defn arange
   "Returns evenly spaced values within a given interval.
    Values are generated within the half-open interval [`start`, `stop`). In other
@@ -88,14 +86,14 @@
   ([start stop  {:keys [step repeat ctx dtype]
                  :or {step (float 1) repeat (int 1) ctx (mx-context/default-context) dtype base/MX_REAL_TYPE}
                  :as opts}]
-   (NDArray/arange (float start) ($/option(float stop)) step repeat ctx dtype))
+   (NDArray/arange (float start) ($/option (float stop)) step repeat ctx dtype))
   ([start stop]
    (arange start stop {})))
 
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
   ([ndarray i]
-         (.slice ndarray (int i)))
+   (.slice ndarray (int i)))
   ([ndarray start stop]
    (.slice ndarray (int start) (int stop))))
 
@@ -103,7 +101,6 @@
   "Copy the content of current array to other"
   [source-ndarray target-ndarray]
   (.copyTo source-ndarray target-ndarray))
-
 
 (defn save
   "Save list of NDArray or dict of str->NDArray to binary file
@@ -139,7 +136,7 @@
   (.asInContext ndarray ctx))
 
 (defn as-type
-   "Return a copied numpy array of current array with specified type."
+  "Return a copied numpy array of current array with specified type."
   [ndarray dtype]
   (.asType ndarray dtype))
 

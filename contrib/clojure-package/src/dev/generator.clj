@@ -220,6 +220,7 @@
 
 
 (defn generate-symbol-file []
+  (println "Generating symbol file")
   (write-to-file all-symbol-functions symbol-gen-ns "src/org/apache/clojure_mxnet/gen/symbol.clj"))
 
 
@@ -311,14 +312,14 @@
 
 
 (defn generate-ndarray-file []
+  (println "Generating ndarray file")
   (write-to-file all-ndarray-functions ndarray-gen-ns  "src/org/apache/clojure_mxnet/gen/ndarray.clj"))
 
-(defn -main [& args]
-  (do
-    (println "Generating the core ndarray api from the Scala classes")
-    (generate-ndarray-file)
-    (println "Generating the core symbol api from the Scala classes")
-    (generate-symbol-file)))
+;;; autogen the files
+(do
+  (generate-ndarray-file)
+  (generate-symbol-file))
+
 
 (comment
 
