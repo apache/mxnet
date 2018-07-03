@@ -17,16 +17,5 @@
 #!/bin/bash
 CURR_DIR=$(cd $(dirname $0)/../; pwd)
 
-# model dir
-MODEL_PATH_PREFIX=$1
-# input image
-INPUT_IMG=$2
-# which input image dir
-INPUT_DIR=$3
-
 CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/classes/lib/*
-java -Xmx8G  -cp $CLASSPATH \
-  sample.ImageClassificationExample \
-  	--model-path-prefix $MODEL_PATH_PREFIX \
-	--input-image $INPUT_IMG \
-	--input-dir $INPUT_DIR \
+java -Xmx8G  -cp $CLASSPATH sample.ImageClassificationExample

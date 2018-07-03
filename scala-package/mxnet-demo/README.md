@@ -33,14 +33,16 @@ bash bin/demo.sh
 ```
 It will load the library automatically and run the example
 ### Image Classification using Inference API
-We also provide an example to do image classification. Please use the following bash script to download the data required:
+We also provide an example to do image classification.
+you can run using the command shown below:
 ```Bash
-bash bin/download_res18.sh
+java -Xmx8G  -cp $CLASSPATH sample.ImageClassificationExample
 ```
-Then you can run using the script as follows:
+or script as follows:
 ```Bash
-bash bin/run_im.sh target/resnet18/resnet-18 target/kitten.jpg target/images/ 
+bash bin/run_im.sh
 ```
+
 If you want to test run on GPU, you can set a environment variable as follows:
 ```Bash
 export SCALA_TEST_ON_GPU=1
