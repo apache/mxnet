@@ -409,6 +409,7 @@ OpAttrs GetReluOp() {
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -424,6 +425,7 @@ OpAttrs GetReluBackwardsOp() {
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
