@@ -22,3 +22,5 @@ set -vx
 lein cljfmt check `find ./src/org/apache/clojure_mxnet -depth 1 -type f -iname "*.clj" | grep -v /gen/`
 
 lein cljfmt check `find ./test -type f -iname "*.clj" | grep -v /test/good-test`
+
+lein cljfmt check `find ./examples -type f -iname "*.clj" | grep -v /scripts/`
