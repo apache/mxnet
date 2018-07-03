@@ -9,16 +9,10 @@
     <name>MXNet Scala Demo</name>
     <packaging>pom</packaging>
 
-    <properties>
-        <mxnet.profile>osx-x86_64-cpu</mxnet.profile>
-        <mxnet.version>1.2.0</mxnet.version>
-        <scala.version>2.12.5</scala.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.mxnet</groupId>
-            <artifactId>mxnet-full_${scala.version}-${mxnet.profile}</artifactId>
+            <artifactId>mxnet-full_${mxnet.scalaprofile}-${mxnet.profile}</artifactId>
             <version>${mxnet.version}</version>
         </dependency>
         <dependency>
