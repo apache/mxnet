@@ -30,16 +30,15 @@ ifeq ($(UNAME_S), Windows)
 	SCALA_PKG_PROFILE := windows
 else
 	ifeq ($(UNAME_S), Darwin)
-		SCALA_PKG_PROFILE := osx-x86_64
+		SCALA_PKG_PROFILE := osx-x86_64-cpu
 	else
 		SCALA_PKG_PROFILE := linux-x86_64
+		ifeq ($(USE_CUDA), 1)
+        	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
+        else
+        	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
+        endif
 	endif
-endif
-
-ifeq ($(USE_CUDA), 1)
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
-else
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 endif
 
 scalademo:
