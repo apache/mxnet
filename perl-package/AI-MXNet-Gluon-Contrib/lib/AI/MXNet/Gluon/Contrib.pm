@@ -1,4 +1,3 @@
-#!/bin/bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,27 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-MXNET_HOME=${PWD}
-export PERL5LIB=${MXNET_HOME}/perl5/lib/perl5
+use strict;
+use warnings;
+use AI::MXNet;
+use AI::MXNet::Gluon::Contrib::NN::BasicLayers;
+our $VERSION = '1.3';
 
-cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
-perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make install || exit -1
-
-cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
-perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make install || exit -1
-
-cd ${MXNET_HOME}/perl-package/AI-MXNet/
-perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make test TEST_VERBOSE=1 || exit -1 # Add debug output to test log
-make install || exit -1
-
-cd ${MXNET_HOME}/perl-package/AI-MXNet-Gluon-Contrib/
-perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make install || exit -1
-
-cd ${MXNET_HOME}/perl-package/AI-MXNet-Gluon-ModelZoo/
-perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
-make test TEST_VERBOSE=1 || exit -1
-
+1;

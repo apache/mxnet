@@ -25,28 +25,21 @@ use ExtUtils::MakeMaker 6.30;
 
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "Perl interface to MXNet machine learning library",
+  "ABSTRACT" => "Perl interface to MXNet Gluon Contrib",
   "AUTHOR" => "Sergey Kolychev <sergeykolychev.github\@gmail.com>",
   "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
   },
-  "DISTNAME" => "AI-MXNet",
+  "DISTNAME" => "AI-MXNet-Gluon-Contrib",
   "EXE_FILES" => [],
   "LICENSE" => "apache_2_0",
-  "NAME" => "AI::MXNet",
+  "NAME" => "AI::MXNet::Gluon::Contrib",
   "PREREQ_PM" => {
-    "AI::MXNetCAPI" => "1.3",
-    "AI::NNVMCAPI" => "1.3",
-    "Function::Parameters" => "1.0705",
-    "Hash::Ordered" => "0.012",
-    "Mouse" => "v2.1.0",
-    "PDL" => "2.007",
-    "PDL::CCS" => "1.23.4",
-    "GraphViz" => "2.14"
+    "AI::MXNet" => "1.31",
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.31",
+  "VERSION" => "1.3",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -54,14 +47,7 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
-  "AI::MXNetCAPI" => "1.3",
-  "AI::NNVMCAPI" => "1.3",
-  "Function::Parameters" => "1.0705",
-  "Hash::Ordered" => "0.012",
-  "Mouse" => "v2.1.0",
-  "PDL" => "2.007",
-  "PDL::CCS" => "1.23.4",
-  "GraphViz" => "2.14"
+  "AI::MXNet" => "1.31"
 );
 
 
@@ -75,6 +61,3 @@ delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
   unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
 
 WriteMakefile(%WriteMakefileArgs);
-
-
-
