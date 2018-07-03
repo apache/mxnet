@@ -892,7 +892,7 @@ float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TSh
 
   // assumes the kernel is the last two dim
   for (int dim = 0; dim < kernel_shape.ndim(); dim++) {
-    int center = coordinate[dim];
+    int center = coordinate[dim + 2];
     int shift = kernel_shape[dim] / 2;
     for (int i = -shift; i < kernel_shape[dim] - shift; i++) {
       float value = -std::numeric_limits<float>::max();
