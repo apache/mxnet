@@ -603,7 +603,7 @@ The storage type of ``sign`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow_op::sign_grad>);
 
 // round
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(round, cpu, mshadow_op::round)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
 MXNET_ADD_SPARSE_OP_ALIAS(round)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.
 
@@ -615,12 +615,13 @@ The storage type of ``round`` output depends upon the input storage type:
 
   - round(default) = default
   - round(row_sparse) = row_sparse
+  - round(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // rint
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(rint, cpu, mshadow_op::rint)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(rint, cpu, mshadow_op::rint)
 MXNET_ADD_SPARSE_OP_ALIAS(rint)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.
 
@@ -636,6 +637,7 @@ The storage type of ``rint`` output depends upon the input storage type:
 
    - rint(default) = default
    - rint(row_sparse) = row_sparse
+   - rint(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);

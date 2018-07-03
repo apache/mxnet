@@ -1472,6 +1472,28 @@ def test_sparse_retain():
 
 @with_seed()
 def test_sparse_unary_with_numerics():
+    def check_sparse_nograd(name, stype, mxnet_func, forward_numpy_call):
+        expected_result_type = stype
+        shape = (3, 4)
+        data = mx.symbol.Variable("data")
+
+        y = mxnet_func(data)
+        if stype == 'default':
+            xa = np.random.uniform(low=-1.0, high=1.0, size=shape)
+            xa_np = xa
+        else:
+            xa = create_sparse_array(shape, stype, data_init=None, rsp_indices=[1],
+                                     modifier_func=lambda a: a - 0.5,
+                                     shuffle_csr_indices=True)
+            xa_np = xa.asnumpy()
+
+        output_np = forward_numpy_call(xa_np)
+
+        outputs = check_symbolic_forward(y, [xa], [output_np])
+        output = outputs[0]
+
+        assert output.stype == expected_result_type
+
     def check_sparse_simple(name, stype, mxnet_func, forward_numpy_call,
                             backward_numpy_call, output_grad_stype=None,
                             backward_is_use_output=False):
@@ -1524,17 +1546,22 @@ def test_sparse_unary_with_numerics():
         assert inp_grad.stype == expected_grad_result_type
 
     def check_sparse_function(name, mxnet_func, forward_numpy_call, backward_numpy_call,
-                              backward_is_use_output=False):
-        check_sparse_simple(name, 'default', mxnet_func, forward_numpy_call, backward_numpy_call)
-        for output_grad_stype in [None, "row_sparse", "default"]:
-            check_sparse_simple(name, 'row_sparse', mxnet_func, forward_numpy_call, backward_numpy_call,
-                                output_grad_stype=output_grad_stype,
-                                backward_is_use_output=backward_is_use_output)
+                              backward_is_use_output=False, skip_grad=False):
+        if skip_grad:
+            check_sparse_nograd(name, 'default', mxnet_func, forward_numpy_call)
+            check_sparse_nograd(name, 'row_sparse', mxnet_func, forward_numpy_call)
+            check_sparse_nograd(name, 'csr', mxnet_func, forward_numpy_call)
+        else:
+            check_sparse_simple(name, 'default', mxnet_func, forward_numpy_call, backward_numpy_call)
+            for output_grad_stype in [None, "row_sparse", "default"]:
+                check_sparse_simple(name, 'row_sparse', mxnet_func, forward_numpy_call, backward_numpy_call,
+                                    output_grad_stype=output_grad_stype,
+                                    backward_is_use_output=backward_is_use_output)
 
-        for output_grad_stype in [None, "csr", "default"]:
-            check_sparse_simple(name, 'csr', mxnet_func, forward_numpy_call, backward_numpy_call,
-                                output_grad_stype=output_grad_stype,
-                                backward_is_use_output=backward_is_use_output)
+            for output_grad_stype in [None, "csr", "default"]:
+                check_sparse_simple(name, 'csr', mxnet_func, forward_numpy_call, backward_numpy_call,
+                                    output_grad_stype=output_grad_stype,
+                                    backward_is_use_output=backward_is_use_output)
 
     check_sparse_function('relu',
                           lambda x: mx.sym.relu(x),
@@ -1552,6 +1579,12 @@ def test_sparse_unary_with_numerics():
                           lambda x: np.sign(x),
                           lambda output, outg: outg * assign_each(output, lambda x: 0),
                           backward_is_use_output=True)
+
+    check_sparse_function('round',
+                          lambda x: mx.sym.round(x),
+                          lambda x: np.round(x),
+                          None,
+                          skip_grad=True)
 
 
 @with_seed()
