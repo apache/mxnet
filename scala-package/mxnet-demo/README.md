@@ -50,3 +50,11 @@ Clean up for Maven package is simple, you can run the pre-configed `Makefile` as
 ```Bash
 make scalaclean
 ```
+
+## Q & A
+If you are facing opencv issue on Ubuntu, please try as follows to install opencv 3.4 (required by 1.2.0 package)
+```Bash
+sudo add-apt-repository ppa:timsc/opencv-3.4
+sudo apt-get update
+sudo apt install libopencv-imgcodecs3.4
+```
