@@ -33,7 +33,6 @@
            (org.apache.mxnet Initializer Optimizer NDArray DataBatch
                              Context EvalMetric Monitor Callback$Speedometer DataDesc)))
 
-
 (defn module
   "Module is a basic module that wrap a symbol.
    sym : Symbol definition.
@@ -131,7 +130,7 @@
 (s/def ::force-init boolean?)
 (s/def ::allow-extra boolean?)
 (s/def ::init-params-opts (s/keys :opt-un [::initializer ::arg-params ::aux-params
-                                          ::force-init ::allow-extra]))
+                                           ::force-init ::allow-extra]))
 
 (defn init-params
   " Initialize the parameters and auxiliary states.
@@ -190,7 +189,6 @@
   ([mod]
    (init-optimizer mod {})))
 
-
 (defn forward
   "Forward computation.
    data-batch -  input data of form io/data-batch either map or DataBatch
@@ -205,7 +203,6 @@
       (util/->option is-train))))
   ([mod data-batch-map]
    (forward mod data-batch-map nil)))
-
 
 (s/def ::ndarray #(instance? NDArray %))
 (s/def ::out-grads (s/nilable (s/coll-of ::ndarray)))
@@ -298,7 +295,6 @@
      (.saveCheckpoint prefix (int epoch) save-opt-states)))
   ([mod prefix epoch]
    (save-checkpoint mod {:prefix prefix :epoch epoch})))
-
 
 (s/def ::load-optimizer-states boolean?)
 (s/def ::data-names (s/coll-of string? :kind vector?))
@@ -419,7 +415,6 @@
   (doto mod
     (.installMonitor monitor)))
 
-
 (defn borrow-optimizer
   "Borrow optimizer from a shared module. Used in bucketing, where exactly the same
    optimizer (esp. kvstore) is used.
@@ -446,10 +441,8 @@
   (doto mod
     (.loadOptimzerStates fname)))
 
-
 (s/def ::eval-metric #(instance? EvalMetric %))
 (s/def ::labels (s/coll-of ::ndarray :kind vector?))
-
 
 (defn update-metric
   "Evaluate and accumulate evaluation metric on outputs of the last forward computation.
@@ -462,7 +455,6 @@
   (doto mod
     (.updateMetric eval-metric (util/vec->indexed-seq labels))))
 
-
 (s/def ::begin-epoch int?)
 (s/def ::validation-metric ::eval-metric)
 (s/def ::monitor #(instance? Monitor %))
@@ -471,7 +463,6 @@
                                           ::arg-params ::aux-params ::allow-missing ::force-rebind
                                           ::force-init ::begin-epoch ::validation-metric ::monitor
                                           ::batch-end-callback]))
-
 
 ;; callbacks are not supported for now
 (defn fit-params
@@ -490,22 +481,21 @@
           begin-epoch 0}}]
    (util/validate! ::fit-params-opts opts "Invalid fit param opts")
    (doto (new FitParams)
-      (.setEvalMetric eval-metric)
-      (.setKVStore kvstore)
-      (.setOptimizer optimizer)
-      (.setInitializer initializer)
-      (.setArgParams (some-> arg-params (util/convert-map)))
-      (.setAuxParams (some-> aux-params (util/convert-map)))
-      (.setAllowMissing allow-missing)
-      (.setForceRebind force-rebind)
-      (.setForceInit force-init)
-      (.setBeginEpoch (int begin-epoch))
-      (.setValidationMetric validation-metric)
-      (.setMonitor monitor)
-      (.setBatchEndCallback batch-end-callback)))
+     (.setEvalMetric eval-metric)
+     (.setKVStore kvstore)
+     (.setOptimizer optimizer)
+     (.setInitializer initializer)
+     (.setArgParams (some-> arg-params (util/convert-map)))
+     (.setAuxParams (some-> aux-params (util/convert-map)))
+     (.setAllowMissing allow-missing)
+     (.setForceRebind force-rebind)
+     (.setForceInit force-init)
+     (.setBeginEpoch (int begin-epoch))
+     (.setValidationMetric validation-metric)
+     (.setMonitor monitor)
+     (.setBatchEndCallback batch-end-callback)))
   ([]
    (new FitParams)))
-
 
 (s/def ::mx-data-iter #(instance? MXDataIter %))
 (s/def ::ndarray-iter #(instance? NDArrayIter %))
@@ -514,7 +504,6 @@
 (s/def ::num-epoch int?)
 (s/def ::fit-params #(instance? FitParams %))
 (s/def ::fit-options (s/keys :req-un [::train-data] :opt-un [::eval-data ::num-epoch ::fit-params]))
-
 
 ;;; High Level API
 
@@ -556,8 +545,8 @@
    - num-epoch Number of epochs to run training.
    - f-params Extra parameters for training (See fit-params)."
   [mod {:keys [train-data eval-data num-epoch fit-params] :as opts
-        `            :or {num-epoch 1
-                          fit-params (new FitParams)}}]
+        `:or {num-epoch 1
+              fit-params (new FitParams)}}]
   (util/validate! ::fit-options opts "Invalid options for fit")
   (let [fmod (-> mod
                  (bind {:data-shapes (mx-io/provide-data train-data)
@@ -576,37 +565,37 @@
         val-metric (or (util/option->value (.validationMetric fit-params)) (eval-metric/accuracy))]
     (doseq [i (range num-epoch)]
       (let [tic (System/currentTimeMillis)]
-       (mx-io/reduce-batches train-data
-                             (fn [batch-num batch]
-                               (-> fmod
-                                   (forward batch)
-                                   (backward)
-                              (update)
-                              (update-metric eval-metric (mx-io/batch-label batch)))
-                               (when-let [cb (util/option->value (.batchEndCallback fit-params))]
-                                 (callback/invoke cb i batch-num eval-metric))
-                               (.dispose batch)
-                          (inc batch-num)))
-       (println "Epoch " i " Train-" (eval-metric/get eval-metric))
-       (println "Epoch " i " Time cost-" (- (System/currentTimeMillis) tic))
+        (mx-io/reduce-batches train-data
+                              (fn [batch-num batch]
+                                (-> fmod
+                                    (forward batch)
+                                    (backward)
+                                    (update)
+                                    (update-metric eval-metric (mx-io/batch-label batch)))
+                                (when-let [cb (util/option->value (.batchEndCallback fit-params))]
+                                  (callback/invoke cb i batch-num eval-metric))
+                                (.dispose batch)
+                                (inc batch-num)))
+        (println "Epoch " i " Train-" (eval-metric/get eval-metric))
+        (println "Epoch " i " Time cost-" (- (System/currentTimeMillis) tic))
 
        ;;sync across kvstores
-       (get-params fmod)
-       (when-let [cb (util/option->value (.epochEndCallback fit-params))]
-         (callback/invoke cb i 0 val-metric))
+        (get-params fmod)
+        (when-let [cb (util/option->value (.epochEndCallback fit-params))]
+          (callback/invoke cb i 0 val-metric))
 
        ;; evaluation on the validation set
-       (when eval-data
-         (let [res (score fmod {:eval-data eval-data :eval-metric eval-metric :epoch i})]
-          (println "Epoch " i " Validation- " res)))))
+        (when eval-data
+          (let [res (score fmod {:eval-data eval-data :eval-metric eval-metric :epoch i})]
+            (println "Epoch " i " Validation- " res)))))
     fmod)
   ;; old way if the problem with the sizes get resolved in DataDesc
   #_(doto mod
-    (.fit
-     train-data
-     (util/->option eval-data)
-     (int num-epoch)
-     fit-params)))
+      (.fit
+       train-data
+       (util/->option eval-data)
+       (int num-epoch)
+       fit-params)))
 
 (s/def ::eval-data ::train-data)
 (s/def ::num-batch integer?)
@@ -621,7 +610,7 @@
   (util/validate! ::mx-io/data-batch data-batch "Invalid data batch")
   (util/coerce-return (.predict mod (if (map? data-batch)
                                       (mx-io/data-batch data-batch)
-                                          data-batch))))
+                                      data-batch))))
 
 (defn predict
   "Run prediction and collect the outputs.
@@ -638,7 +627,6 @@
              reset true}}]
   (util/validate! ::predict-opts opts "Invalid opts for predict")
   (util/scala-vector->vec (.predict mod eval-data (int num-batch) reset)))
-
 
 (s/def ::predict-every-batch-opts (s/keys :req-un [::eval-data] :opt-un [::num-batch ::reset]))
 
@@ -660,10 +648,7 @@
   (util/validate! ::predict-every-batch-opts opts "Invalid opts for predict-every-batch")
   (mapv util/scala-vector->vec (util/scala-vector->vec (.predictEveryBatch mod eval-data (int num-batch) reset))))
 
-
-
 (s/def ::score-opts (s/keys :req-un [::eval-data ::eval-metric] :opt-un [::num-batch ::reset ::epoch]))
-
 
 (defn exec-group [mod]
   (.execGroup mod))
@@ -676,16 +661,13 @@
   (r/reflect DataDesc)
   (new DataDesc)
 
-        (.setEpochEndCallback (if epoch-end-callback
-                              (util/->option epoch-end-callback)
-                              (util/->option nil)))
-      (.setBatchEndCallback (if batch-end-callback
-                              (util/->option batch-end-callback)
-                              (util/->option nil)))
+  (.setEpochEndCallback (if epoch-end-callback
+                          (util/->option epoch-end-callback)
+                          (util/->option nil)))
+  (.setBatchEndCallback (if batch-end-callback
+                          (util/->option batch-end-callback)
+                          (util/->option nil)))
 
-      (fit-params {:allow-missing true})
-      (fit-params {})
-
-  )
-
+  (fit-params {:allow-missing true})
+  (fit-params {}))
 

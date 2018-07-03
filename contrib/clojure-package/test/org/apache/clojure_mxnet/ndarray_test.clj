@@ -46,13 +46,13 @@
 
 (deftest test-set-scalar-value
   (is (= [10.0 10.0] (-> (ndarray/empty [2 1])
-                      (ndarray/set 10)
-                      (->vec)))))
+                         (ndarray/set 10)
+                         (->vec)))))
 
 (deftest test-copy-from-vector
   (is (= [1.0 2.0 3.0 4.0] (-> (ndarray/empty [4 1])
-                            (ndarray/set [1 2 3 4])
-                            (->vec)))))
+                               (ndarray/set [1 2 3 4])
+                               (->vec)))))
 
 (deftest test-plus
   (let [ndzeros (zeros [2 1])
@@ -103,12 +103,12 @@
 
 (deftest test-clip
   (let [nda (-> (ndarray/empty [3 2])
-                  (ndarray/set [1 2 3 4 5 6]))]
+                (ndarray/set [1 2 3 4 5 6]))]
     (is (= [2.0 2.0 3.0 4.0 5.0 5.0] (->vec (ndarray/clip nda 2 5))))))
 
 (deftest test-sqrt
   (let [nda (-> (ndarray/empty [4 1])
-                  (ndarray/set [0 1 4 9]))]
+                (ndarray/set [0 1 4 9]))]
     (is (= [0.0 1.0 2.0 3.0] (->vec (ndarray/sqrt nda))))))
 
 (deftest test-rsqrt
@@ -137,7 +137,6 @@
         res (ndarray/dot nda1 nda2)]
     (is (= [1 1] (mx-shape/->vec (shape res))))
     (is (= [11.0] (->vec res)))))
-
 
 (deftest test-arrange
   (let [start 0
@@ -179,7 +178,6 @@
       (is (= [2 1] (-> nda shape mx-shape/->vec)))
       (is (= [27.0 3125.0] (->vec nda))))))
 
-
 (deftest test-equal
   (let [nda1 (ndarray/array [1 2 3 5] [2 2])
         nda2 (ndarray/array [1 4 3 6] [2 2])]
@@ -189,7 +187,6 @@
 
     (is (= [2 2] (-> (ndarray/equal nda1 3) shape mx-shape/->vec)))
     (is (= [0.0 0.0 1.0 0.0] (->vec (ndarray/equal nda1 3))))))
-
 
 (deftest test-not-equal
   (let [nda1 (ndarray/array [1 2 3 5] [2 2])
@@ -210,7 +207,6 @@
 
     (is (= [2 2] (-> (ndarray/> nda1 2) shape mx-shape/->vec)))
     (is (= [0.0 0.0 1.0 1.0] (->vec (ndarray/> nda1 2))))))
-
 
 (deftest test-greater-equal
   (let [nda1 (ndarray/array [1 2 4 5] [2 2])
@@ -241,7 +237,6 @@
 
     (is (= [2 2] (-> (ndarray/< nda1 2) shape mx-shape/->vec)))
     (is (= [1.0 1.0 0.0 0.0] (->vec (ndarray/<= nda1 2))))))
-
 
 (deftest test-choose-element-0index
   (let [nda (ndarray/array [1 2 3 4 6 5] [2 3])
@@ -330,7 +325,6 @@
         argmax (ndarray/argmax-channel nda)]
     (is (= [2] (-> argmax shape mx-shape/->vec)))
     (is (= [1.0 0.0] (->vec argmax)))))
-
 
 (deftest test-concatenate-axis-0
   (let [nda1 (ndarray/array [1 2 4 3 3 3] [2 3])
