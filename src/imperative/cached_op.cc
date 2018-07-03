@@ -330,8 +330,7 @@ void SetBackwardInputEid(const std::vector<uint32_t>& bwd_in_dep,
     auto ograd = ograd_entries[i];
     if (idx.exist(ograd.node.get())) {
       bwd_input_eid->push_back(idx.entry_id(ograd));
-    }
-    else {
+    } else {
       bwd_input_eid->push_back(std::numeric_limits<uint32_t>::max());
     }
   }
