@@ -18,7 +18,6 @@
 (ns org.apache.clojure-mxnet.context
   (:import (org.apache.mxnet Context)))
 
-
 (defn cpu
   ([device-id]
    (new Context "cpu" device-id))
