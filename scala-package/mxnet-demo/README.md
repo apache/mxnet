@@ -1,5 +1,5 @@
 # MXNet Scala Sample Project
-
+This is an project created to use Maven-published Scala package with two Scala examples.
 ## Setup
 User are required to use `mvn package` to build the package,
  which are shown below:
@@ -22,16 +22,29 @@ This will load the default parameter for all the environment variable.
  If you want to run with GPU on Linux, just simply add `USE_CUDA=1` when you run the make file
 
 ## Run
-The Scala file is being exectuted using Java. You can execute the helloWorld example as follows:
+### Hello World
+The Scala file is being executed using Java. You can execute the helloWorld example as follows:
 ```Bash
 java -Xmx8G  -cp $CLASSPATH sample.HelloWorld
 ```
 However, you have to define the Classpath before you run the demo code. More information can be found in the `demo.sh` And you can run the bash script as follows:
 ```Bash
-bash demo.sh
+bash bin/demo.sh
 ```
 It will load the library automatically and run the example
-
+### Image Classification using Inference API
+We also provide an example to do image classification. Please use the following bash script to download the data required:
+```Bash
+bash bin/download_res18.sh
+```
+Then you can run using the script as follows:
+```Bash
+bash bin/run_im.sh target/resnet18/resnet-18 target/kitten.jpg target/images/ 
+```
+If you want to test run on GPU, you can set a environment variable as follows:
+```Bash
+export SCALA_TEST_ON_GPU=1
+```
 ## Clean up
 Clean up for Maven package is simple, you can run the pre-configed `Makefile` as:
 ```Bash
