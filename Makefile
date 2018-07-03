@@ -358,7 +358,7 @@ PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc src/kvstore/collect
 	endif
  CFLAGS += -DMXNET_USE_ALLREDUCE_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(COLL_PATH)/include -I$(COLL_PATH)/src
  LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
- LDFLAGS += -L$(PROTOBUF_DIR)/lib -Wl,-rpath=$(PROTOBUF_DIR)/lib -lprotobuf
+ LDFLAGS += $(PROTOBUF_DIR)/lib/libprotobuf.a
 endif
 endif
 
