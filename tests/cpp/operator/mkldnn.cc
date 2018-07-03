@@ -1048,6 +1048,9 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   std::vector<NDArray *> in_arrs(1);
   std::vector<NDArray *> out_arrs(1);
   NDArray arr(test_shape, Context());
+  mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
+  EXPECT_EQ(0, input_data[0]);
+  EXPECT_EQ(1, input_data[1]);
 
   // test base
   {
@@ -1087,8 +1090,24 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
 
 
   //test padding
-  TShape expected_shape = {1,1,2};
-  NDArray expected_output(expected_shape, Context());
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "2"});
+    attrs.attrs.dict.insert({"stride" , "1"});
+    attrs.attrs.dict.insert({"pad" , "1" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,2};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = 0;
+    expected_data[0] = 1;
+    in_arrs[0] = &arr;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
 
   //test stride
 
