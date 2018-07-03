@@ -1604,6 +1604,12 @@ def test_sparse_unary_with_numerics():
                           None,
                           skip_grad=True)
 
+    check_sparse_function('fix',
+                          lambda x: mx.sym.fix(x),
+                          lambda x: np.fix(x),
+                          None,
+                          skip_grad=True)
+
 
 @with_seed()
 def test_sparse_nd_zeros():

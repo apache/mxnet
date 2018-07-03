@@ -704,7 +704,7 @@ The storage type of ``trunc`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // fix
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(fix, cpu, mshadow_op::fix)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(fix, cpu, mshadow_op::fix)
 MXNET_ADD_SPARSE_OP_ALIAS(fix)
 .describe(R"code(Returns element-wise rounded value to the nearest \
 integer towards zero of the input.
@@ -717,6 +717,7 @@ The storage type of ``fix`` output depends upon the input storage type:
 
    - fix(default) = default
    - fix(row_sparse) = row_sparse
+   - fix(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
