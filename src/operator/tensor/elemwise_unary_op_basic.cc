@@ -663,7 +663,7 @@ The storage type of ``ceil`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // floor
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(floor, cpu, mshadow_op::floor)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(floor, cpu, mshadow_op::floor)
 MXNET_ADD_SPARSE_OP_ALIAS(floor)
 .describe(R"code(Returns element-wise floor of the input.
 
@@ -677,6 +677,7 @@ The storage type of ``floor`` output depends upon the input storage type:
 
    - floor(default) = default
    - floor(row_sparse) = row_sparse
+   - floor(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);

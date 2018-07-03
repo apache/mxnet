@@ -1592,6 +1592,12 @@ def test_sparse_unary_with_numerics():
                           None,
                           skip_grad=True)
 
+    check_sparse_function('floor',
+                          lambda x: mx.sym.floor(x),
+                          lambda x: np.floor(x),
+                          None,
+                          skip_grad=True)
+
 
 @with_seed()
 def test_sparse_nd_zeros():
