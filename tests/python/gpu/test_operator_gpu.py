@@ -1947,15 +1947,18 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     input1 = input.copy()
     input2 = input.copy()
 
+    if cuda:
+        input1 = input.as_in_context(mx.gpu(0))
+        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
+    else:
+        ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+
+    bn1.initialize(ctx=ctx_list[0])
+    bn2.initialize(ctx=ctx_list)
+
     # using the same values for gamma and beta
     #_syncParameters(_find_bn(bn1), _find_bn(bn2))
 
-    if cuda:
-        input1 = input.as_in_context(mx.gpu(0))
-        bn1.collect_params().reset_ctx(mx.gpu(0))
-        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
-    else:
-        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
 
     input1.attach_grad()
     inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
@@ -1982,14 +1985,11 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     _assert_tensor_close(input1.grad, input2grad)
 
 def testSyncBN():
-    ndev = 4
+    ndev = 2
 
     bn = nn.BatchNorm(in_channels=1)
     sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
 
-    bn.initialize()
-    ctx_list = [mx.gpu(0) for _ in range(ndev)]
-    sync_bn.initialize(ctx=ctx_list)
 
     # check with unsync version
     for i in range(10):
