@@ -56,7 +56,11 @@ private[mxnet] object APIDocGenerator{
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    // Defines Operators that should not generated
+    val notGenerated = Set("Custom")
+    // TODO: Add Filter to the same location in case of refactor
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
+      .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
