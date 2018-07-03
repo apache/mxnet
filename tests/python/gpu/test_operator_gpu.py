@@ -1948,9 +1948,9 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     if cuda:
         input1 = input.as_in_context(mx.gpu(0))
         bn1.collect_params().reset_ctx(mx.gpu(0))
-        ctx_list = [mx.gpu(i) for i in range(num_devices)]
+        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
     else:
-        ctx_list = [mx.gpu(i) for i in range(num_devices)]
+        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
 
     input1.attach_grad()
     inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
@@ -1983,7 +1983,7 @@ def testSyncBN():
     sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
 
     bn.initialize()
-    ctx_list = [mx.gpu(i) for i in range(ndev)]
+    ctx_list = [mx.gpu(0) for _ in range(ndev)]
     sync_bn.initialize(ctx=ctx_list)
 
     # check with unsync version
