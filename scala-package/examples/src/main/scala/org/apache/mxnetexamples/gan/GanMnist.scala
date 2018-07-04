@@ -102,7 +102,8 @@ object GanMnist {
     labelArr.zip(predArr).map { case (l, p) => Math.abs(l - p) }.sum / label.shape(0)
   }
 
-  def test(dataPath : String, context : Context, outputPath : String, numEpoch : Int): Float = {
+  def runTraining(dataPath : String, context : Context,
+                  outputPath : String, numEpoch : Int): Float = {
     val lr = 0.0005f
     val beta1 = 0.5f
     val batchSize = 100
@@ -186,7 +187,7 @@ object GanMnist {
       assert(dataPath != null)
       val context = if (anst.gpu == -1) Context.cpu() else Context.gpu(anst.gpu)
 
-      test(dataPath, context, anst.outputPath, 100)
+      runTraining(dataPath, context, anst.outputPath, 100)
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
