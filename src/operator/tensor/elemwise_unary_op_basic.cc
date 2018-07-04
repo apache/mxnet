@@ -917,7 +917,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
                                                   unary_bwd<mshadow_op::log1p_grad>);
 
 // expm1
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(expm1, cpu, mshadow_op::expm1)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(expm1, cpu, mshadow_op::expm1)
 MXNET_ADD_SPARSE_OP_ALIAS(expm1)
 .describe(R"code(Returns ``exp(x) - 1`` computed element-wise on the input.
 
@@ -927,6 +927,7 @@ The storage type of ``expm1`` output depends upon the input storage type:
 
    - expm1(default) = default
    - expm1(row_sparse) = row_sparse
+   - expm1(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
