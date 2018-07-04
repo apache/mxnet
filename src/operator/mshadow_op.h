@@ -697,6 +697,12 @@ struct product {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief calculate gradient of redres with respect to redsrc,
   * redres: reduced result, redsrc: one of reduction element
@@ -762,6 +768,12 @@ struct nansum {
     residual = (t - dst) - y;
     dst = t;
   }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -799,6 +811,12 @@ struct nanprod {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -812,6 +830,61 @@ struct nanprod {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
     SetInitValue(initv);
+  }
+};
+
+/*! \brief compute l2 norm */
+struct nrm2 {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares, volatile DType src) { // NOLINT(*)
+    sum_of_squares += src * src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+    if (src !=  0) {
+      DType abs = mshadow_op::abs::Map(src);
+      if (scale < abs) {
+        sum_of_squares = 1 + sum_of_squares * (scale / abs) * (scale / abs);
+        scale = abs;
+      } else {
+        sum_of_squares = sum_of_squares + (abs / scale) * (abs / scale);
+      }
+    }
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares) { // NOLINT(*)
+    sum_of_squares = std::sqrt(sum_of_squares);
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares, volatile DType& scale) { // NOLINT(*)
+    sum_of_squares = scale * std::sqrt(sum_of_squares);
+  }
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return redsrc / redres;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares) { // NOLINT(*)
+    sum_of_squares = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
+    SetInitValue(sum_of_squares);
+    scale = 0;
   }
 };
 
