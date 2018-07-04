@@ -130,7 +130,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
                                                   unary_bwd<mshadow_op::arccos_grad>);
 
 // arctan
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arctan, cpu, mshadow_op::arctan)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctan, cpu, mshadow_op::arctan)
 MXNET_ADD_SPARSE_OP_ALIAS(arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 
@@ -143,6 +143,7 @@ The storage type of ``arctan`` output depends upon the input storage type:
 
    - arctan(default) = default
    - arctan(row_sparse) = row_sparse
+   - arctan(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
