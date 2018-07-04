@@ -997,6 +997,17 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap,
                                        density=density, ograd_density=ograd_density)
 
+        # tanh
+        check_sparse_mathematical_core("tanh", stype,
+                                       lambda x: mx.sym.sparse.tanh(x),
+                                       lambda x: np.tanh(x),
+                                       lambda x: 1. - np.tanh(x) ** 2,
+                                       data_init=0.5, grad_init=1,
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap, density=density,
+                                       ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -1048,17 +1059,6 @@ def test_sparse_mathematical_core():
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap,
                                            density=density, ograd_density=ograd_density)
-
-            # tanh
-            check_sparse_mathematical_core("tanh", stype,
-                                           lambda x: mx.sym.sparse.tanh(x),
-                                           lambda x: np.tanh(x),
-                                           lambda x: 1. - np.tanh(x) ** 2,
-                                           data_init=0.5, grad_init=1,
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap, density=density,
-                                           ograd_density=ograd_density)
 
             # arcsinh
             check_sparse_mathematical_core("arcsinh", stype,

@@ -226,7 +226,7 @@ The storage type of ``cosh`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>);
 
 // tanh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(tanh, cpu, mshadow_op::tanh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tanh, cpu, mshadow_op::tanh)
 MXNET_ADD_SPARSE_OP_ALIAS(tanh)
 .describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 
@@ -237,6 +237,7 @@ The storage type of ``tanh`` output depends upon the input storage type:
 
    - tanh(default) = default
    - tanh(row_sparse) = row_sparse
+   - tanh(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
