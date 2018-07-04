@@ -192,7 +192,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_radians,
                                                   unary_bwd<mshadow_op::radians_grad>);
 
 // sinh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sinh, cpu, mshadow_op::sinh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sinh, cpu, mshadow_op::sinh)
 MXNET_ADD_SPARSE_OP_ALIAS(sinh)
 .describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
 
@@ -203,6 +203,7 @@ The storage type of ``sinh`` output depends upon the input storage type:
 
    - sinh(default) = default
    - sinh(row_sparse) = row_sparse
+   - sinh(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
