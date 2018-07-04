@@ -32,3 +32,11 @@ def test_download_successful():
     mx.gluon.utils.download("https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
                             path=tmpfile)
     assert os.path.getsize(tmpfile) > 100
+
+def test_download_ssl_verify():
+    with warnings.catch_warnings(record=True) as warnings_:
+        mx.gluon.utils.download(
+            "https://mxnet.incubator.apache.org/", verify_ssl=False)
+        assert any(
+            str(w.message[0]).startswith('Unverified HTTPS request')
+            for w in warnings_)
