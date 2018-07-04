@@ -277,7 +277,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
                                                   unary_bwd<mshadow_op::arccosh_grad>);
 
 // arctanh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arctanh, cpu, mshadow_op::arctanh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctanh, cpu, mshadow_op::arctanh)
 MXNET_ADD_SPARSE_OP_ALIAS(arctanh)
 .describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, \
 computed element-wise.
@@ -286,6 +286,7 @@ The storage type of ``arctanh`` output depends upon the input storage type:
 
    - arctanh(default) = default
    - arctanh(row_sparse) = row_sparse
+   - arctanh(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });

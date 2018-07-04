@@ -1018,6 +1018,17 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap, density=density,
                                        ograd_density=ograd_density)
 
+        # arctanh
+        check_sparse_mathematical_core("arctanh", stype,
+                                       lambda x: mx.sym.sparse.arctanh(x),
+                                       lambda x: np.arctanh(x),
+                                       lambda x: -1./(x**2 - 1.),
+                                       data_init=0.5,
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap, density=density,
+                                       ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -1075,17 +1086,6 @@ def test_sparse_mathematical_core():
                                            lambda x: mx.sym.sparse.arccosh(x),
                                            lambda x: np.arccosh(x),
                                            lambda x: 1./(x**2 - 1.)**(1./2.),
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap, density=density,
-                                           ograd_density=ograd_density)
-
-            # arctanh
-            check_sparse_mathematical_core("arctanh", stype,
-                                           lambda x: mx.sym.sparse.arctanh(x),
-                                           lambda x: np.arctanh(x),
-                                           lambda x: -1./(x**2 - 1.),
-                                           data_init=0.5,
                                            output_grad_stype=output_grad_stype,
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap, density=density,
