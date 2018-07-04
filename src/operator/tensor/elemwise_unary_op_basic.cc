@@ -747,7 +747,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
                                                unary_bwd<mshadow_op::square_grad>);
 
 // sqrt
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sqrt, cpu, mshadow_op::square_root)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sqrt, cpu, mshadow_op::square_root)
 MXNET_ADD_SPARSE_OP_ALIAS(sqrt)
 .describe(R"code(Returns element-wise square-root value of the input.
 
@@ -762,6 +762,7 @@ The storage type of ``sqrt`` output depends upon the input storage type:
 
    - sqrt(default) = default
    - sqrt(row_sparse) = row_sparse
+   - sqrt(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
