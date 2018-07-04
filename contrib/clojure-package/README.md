@@ -235,3 +235,4 @@ Special thanks to people that provided testing and feedback to make this possibl
 - Burin Choomnuan
 - Avram Aelony
 - Jim Dunn
+- Kovas Boguta
