@@ -897,7 +897,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>);
 
 // log1p
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(log1p, cpu, mshadow_op::log1p)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(log1p, cpu, mshadow_op::log1p)
 MXNET_ADD_SPARSE_OP_ALIAS(log1p)
 .describe(R"code(Returns element-wise ``log(1 + x)`` value of the input.
 
@@ -908,6 +908,7 @@ The storage type of ``log1p`` output depends upon the input storage type:
 
    - log1p(default) = default
    - log1p(row_sparse) = row_sparse
+   - log1p(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
