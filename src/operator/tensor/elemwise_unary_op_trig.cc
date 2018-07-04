@@ -67,7 +67,7 @@ The storage type of ``cos`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>);
 
 // tan
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(tan, cpu, mshadow_op::tan)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tan, cpu, mshadow_op::tan)
 MXNET_ADD_SPARSE_OP_ALIAS(tan)
 .describe(R"code(Computes the element-wise tangent of the input array.
 
@@ -80,6 +80,7 @@ The storage type of ``tan`` output depends upon the input storage type:
 
    - tan(default) = default
    - tan(row_sparse) = row_sparse
+   - tan(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
