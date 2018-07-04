@@ -976,6 +976,17 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap,
                                        density=density, ograd_density=ograd_density)
 
+        # radians
+        check_sparse_mathematical_core("radians", stype,
+                                       lambda x: mx.sym.sparse.radians(x),
+                                       lambda x: np.radians(x),
+                                       lambda x: assign_each(x, lambda a: np.pi / 180.),
+                                       data_init=0.6, grad_init=1,
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap,
+                                       density=density, ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -1016,17 +1027,6 @@ def test_sparse_mathematical_core():
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap, density=density,
                                            ograd_density=ograd_density)
-
-            # radians
-            check_sparse_mathematical_core("radians", stype,
-                                           lambda x: mx.sym.sparse.radians(x),
-                                           lambda x: np.radians(x),
-                                           lambda x: assign_each(x, lambda a: np.pi / 180.),
-                                           data_init=0.6, grad_init=1,
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap,
-                                           density=density, ograd_density=ograd_density)
 
             # sinh
             check_sparse_mathematical_core("sinh", stype,
