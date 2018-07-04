@@ -834,6 +834,17 @@ def test_sparse_mathematical_core():
                                        density=density, ograd_density=ograd_density,
                                        verbose=False)
 
+        # cbrt
+        check_sparse_mathematical_core("cbrt", stype,
+                                       lambda x: mx.sym.sparse.cbrt(x),
+                                       lambda x: np.cbrt(x),
+                                       lambda x: 1.0/(3.0 * np.cbrt(x) * np.cbrt(x)),
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap,
+                                       density=density, ograd_density=ograd_density,
+                                       verbose=False)
+
         # rint
         check_sparse_mathematical_core("rint", stype,
                                        lambda x: mx.sym.sparse.rint(x),

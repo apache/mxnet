@@ -791,7 +791,8 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
   _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>);
 
 // cbrt
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(cbrt, cpu, mshadow_op::cube_root)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(cbrt, cpu, mshadow_op::cube_root)
+MXNET_ADD_SPARSE_OP_ALIAS(cbrt)
 .describe(R"code(Returns element-wise cube-root value of the input.
 
 .. math::
@@ -800,6 +801,12 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(cbrt, cpu, mshadow_op::cube_root)
 Example::
 
    cbrt([1, 8, -125]) = [1, 2, -5]
+
+The storage type of ``cbrt`` output depends upon the input storage type:
+
+   - cbrt(default) = default
+   - cbrt(row_sparse) = row_sparse
+   - cbrt(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
