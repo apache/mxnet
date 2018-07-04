@@ -210,6 +210,11 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
             fname = path
     assert retries >= 0, "Number of retries should be at least 0"
 
+    if not verify_ssl:
+        warnings.warn(
+            'Unverified HTTPS request is being made (verify_ssl=False). '
+            'Adding certificate verification is strongly advised.')
+
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
