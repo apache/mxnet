@@ -245,7 +245,7 @@ The storage type of ``tanh`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<mshadow_op::tanh_grad>);
 
 // arcsinh
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arcsinh, cpu, mshadow_op::arcsinh)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsinh, cpu, mshadow_op::arcsinh)
 MXNET_ADD_SPARSE_OP_ALIAS(arcsinh)
 .describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, \
 computed element-wise.
@@ -254,6 +254,7 @@ The storage type of ``arcsinh`` output depends upon the input storage type:
 
    - arcsinh(default) = default
    - arcsinh(row_sparse) = row_sparse
+   - arcsinh(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });

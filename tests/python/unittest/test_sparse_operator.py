@@ -1008,6 +1008,16 @@ def test_sparse_mathematical_core():
                                        force_overlap=force_overlap, density=density,
                                        ograd_density=ograd_density)
 
+        # arcsinh
+        check_sparse_mathematical_core("arcsinh", stype,
+                                       lambda x: mx.sym.sparse.arcsinh(x),
+                                       lambda x: np.arcsinh(x),
+                                       lambda x: 1./(x**2 + 1.)**(1./2.),
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap, density=density,
+                                       ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -1059,16 +1069,6 @@ def test_sparse_mathematical_core():
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap,
                                            density=density, ograd_density=ograd_density)
-
-            # arcsinh
-            check_sparse_mathematical_core("arcsinh", stype,
-                                           lambda x: mx.sym.sparse.arcsinh(x),
-                                           lambda x: np.arcsinh(x),
-                                           lambda x: 1./(x**2 + 1.)**(1./2.),
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap, density=density,
-                                           ograd_density=ograd_density)
 
             # arccosh
             check_sparse_mathematical_core("arccosh", stype,
