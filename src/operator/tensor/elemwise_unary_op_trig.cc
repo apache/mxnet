@@ -152,7 +152,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
                                                   unary_bwd<mshadow_op::arctan_grad>);
 
 // degrees
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(degrees, cpu, mshadow_op::degrees)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(degrees, cpu, mshadow_op::degrees)
 MXNET_ADD_SPARSE_OP_ALIAS(degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 
@@ -163,6 +163,7 @@ The storage type of ``degrees`` output depends upon the input storage type:
 
    - degrees(default) = default
    - degrees(row_sparse) = row_sparse
+   - degrees(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
