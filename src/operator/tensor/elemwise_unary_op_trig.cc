@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 // sin
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sin, cpu, mshadow_op::sin)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sin, cpu, mshadow_op::sin)
 MXNET_ADD_SPARSE_OP_ALIAS(sin)
 .describe(R"code(Computes the element-wise sine of the input array.
 
@@ -42,6 +42,7 @@ The storage type of ``sin`` output depends upon the input storage type:
 
    - sin(default) = default
    - sin(row_sparse) = row_sparse
+   - sin(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });

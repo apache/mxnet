@@ -923,6 +923,16 @@ def test_sparse_mathematical_core():
                                         force_overlap=force_overlap, density=density,
                                         ograd_density=ograd_density)
 
+        # sin
+        check_sparse_mathematical_core("sin", stype,
+                                       lambda x: mx.sym.sparse.sin(x),
+                                       lambda x: np.sin(x),
+                                       lambda x: np.cos(x),
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap,
+                                       density=density, ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -958,16 +968,6 @@ def test_sparse_mathematical_core():
                                            lambda x: mx.sym.sparse.cos(x),
                                            lambda x: np.cos(x),
                                            lambda x: -np.sin(x),
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap,
-                                           density=density, ograd_density=ograd_density)
-
-            # sin
-            check_sparse_mathematical_core("sin", stype,
-                                           lambda x: mx.sym.sparse.sin(x),
-                                           lambda x: np.sin(x),
-                                           lambda x: np.cos(x),
                                            output_grad_stype=output_grad_stype,
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap,
