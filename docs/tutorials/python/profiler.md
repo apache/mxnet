@@ -49,9 +49,7 @@ While it is possible to use `NDArray.waitall()` before and after operations to g
 
 ## The correct way to profile
 
-The correct way to measure running time of MXNet models is to use MXNet profiler. In the rest of this tutorial, we will learn how to use the MXNet profiler to measure the running time and memory consumption of MXNet models.
-
-To use the profiler, you need to build MXNet with `USE_PROFILER=1`. Check the [installation](http://mxnet.incubator.apache.org/install/index.html) page for more information on how to install MXNet from source. After building with `USE_PROFILER=1` and installing, you can import the profiler and configure it from Python code.
+The correct way to measure running time of MXNet models is to use MXNet profiler. In the rest of this tutorial, we will learn how to use the MXNet profiler to measure the running time and memory consumption of MXNet models. You can import the profiler and configure it from Python code.
 
 ```python
 from mxnet import profiler
