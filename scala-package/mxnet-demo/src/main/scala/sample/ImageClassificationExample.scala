@@ -35,33 +35,33 @@ import scala.collection.mutable.ListBuffer
   */
 object ImageClassificationExample {
 
-  def downloadUrl() : (String, String) = {
+  def downloadUrl(url: String, filePath: String) : Unit = {
+    var tmpFile = new File(filePath)
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(url), tmpFile)
+    }
+  }
+
+  def downloadModelImage() : (String, String) = {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     printf("tempDirPath: %s".format(tempDirPath))
     val imgPath = tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg"
-    var tmpFile = new File(imgPath)
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(
-        new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"),
-        tmpFile
-      )
-    }
+    val imgURL = "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"
+    downloadUrl(imgURL, imgPath)
+
     val baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models"
-    tmpFile = new File(tempDirPath + "/resnet18/resnet-18-symbol.json")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-symbol.json"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnet18/resnet-18-0000.params")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-0000.params"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnet18/synset.txt")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/synset.txt"),
-        tmpFile)
-    }
+    var tmpPath = tempDirPath + "/resnet18/resnet-18-symbol.json"
+    var tmpUrl = baseUrl + "/resnet-18/resnet-18-symbol.json"
+    downloadUrl(tmpUrl, tmpPath)
+
+    tmpPath = tempDirPath + "/resnet18/resnet-18-0000.params"
+    tmpUrl = baseUrl + "/resnet-18/resnet-18-0000.params"
+    downloadUrl(tmpUrl, tmpPath)
+
+    tmpPath = tempDirPath + "/resnet18/synset.txt"
+    tmpUrl = baseUrl + "/resnet-18/synset.txt"
+    downloadUrl(tmpUrl, tmpPath)
+
     (imgPath, tempDirPath + "/resnet18/resnet-18")
   }
 
@@ -72,7 +72,7 @@ object ImageClassificationExample {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       context = Context.gpu()
     }
-    val (inputImagePath, modelPathPrefix) = downloadUrl()
+    val (inputImagePath, modelPathPrefix) = downloadModelImage()
 
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)
