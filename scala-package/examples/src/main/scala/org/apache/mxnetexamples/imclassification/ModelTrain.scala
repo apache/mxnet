@@ -30,7 +30,7 @@ object ModelTrain {
           network: Symbol, dataLoader: (String, Int, KVStore) => (DataIter, DataIter),
           kvStore: String, numEpochs: Int, modelPrefix: String = null, loadEpoch: Int = -1,
           lr: Float = 0.1f, lrFactor: Float = 1f, lrFactorEpoch: Float = 1f,
-          clipGradient: Float = 0f, monitorSize: Int = -1): Unit = {
+          clipGradient: Float = 0f, monitorSize: Int = -1): Accuracy = {
     // kvstore
     var kv = KVStore.create(kvStore)
 
@@ -96,15 +96,17 @@ object ModelTrain {
     if (monitorSize > 0) {
       model.setMonitor(new Monitor(monitorSize))
     }
+    val acc = new Accuracy()
     model.fit(trainData = train,
               evalData = validation,
-              evalMetric = new Accuracy(),
+              evalMetric = acc,
               kvStore = kv,
               batchEndCallback = new Speedometer(batchSize, 50),
               epochEndCallback = checkpoint)
     if (kv != null) {
       kv.dispose()
     }
+    acc
   }
   // scalastyle:on parameterNum
 }

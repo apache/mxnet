@@ -53,7 +53,7 @@ def get_parser():
                         help='report interval')
     parser.add_argument('--seed', type=int, default=1,
                         help='random seed')
-    parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint/cp',
+    parser.add_argument('--checkpoint-dir', type=str, default='./checkpoint',
                         help='dir for checkpoint')
     parser.add_argument('--lr', type=float, default=0.1,
                         help='initial learning rate')
@@ -68,18 +68,21 @@ def evaluate(mod, data_iter, epoch, log_interval):
     start = time.time()
     total_L = 0.0
     nbatch = 0
+    density = 0
     mod.set_states(value=0)
     for batch in data_iter:
         mod.forward(batch, is_train=False)
         outputs = mod.get_outputs(merge_multi_context=False)
         states = outputs[:-1]
-        total_L += outputs[-1][0].asscalar()
+        total_L += outputs[-1][0]
         mod.set_states(states=states)
         nbatch += 1
+        # don't include padding data in the test perplexity
+        density += batch.data[1].mean()
         if (nbatch + 1) % log_interval == 0:
-            logging.info("Eval batch %d loss : %.7f" % (nbatch, total_L / nbatch))
+            logging.info("Eval batch %d loss : %.7f" % (nbatch, (total_L / density).asscalar()))
     data_iter.reset()
-    loss = total_L / nbatch
+    loss = (total_L / density).asscalar()
     ppl = math.exp(loss) if loss < 100 else 1e37
     end = time.time()
     logging.info('Iter[%d]\t\t CE loss %.7f, ppl %.7f. Eval duration = %.2f seconds ' % \

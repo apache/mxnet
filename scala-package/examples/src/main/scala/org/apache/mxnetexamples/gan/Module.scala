@@ -26,9 +26,6 @@ import org.apache.mxnet.Initializer
 import org.apache.mxnet.DataBatch
 import org.apache.mxnet.Random
 
-/**
- * @author Depeng Liang
- */
 class GANModule(
               symbolGenerator: Symbol,
               symbolEncoder: Symbol,

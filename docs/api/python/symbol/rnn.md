@@ -317,7 +317,7 @@ conversion transparently based on the provided cells.
 
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. autoclass:: mxnet.rnn.BaseRNNCell

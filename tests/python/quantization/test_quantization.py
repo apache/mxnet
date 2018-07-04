@@ -25,6 +25,7 @@ from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, s
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
+import unittest
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -485,6 +486,7 @@ def test_quantize_sym_with_calib():
 
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11456")
 def test_get_optimal_thresholds():
     # Given an ndarray with elements following a uniform distribution, the optimal threshold
     # for quantizing the ndarray should be either abs(min(nd)) or abs(max(nd)).

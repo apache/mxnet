@@ -93,7 +93,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def publish_test_coverage() {
-    sh 'curl -s https://codecov.io/bash | bash -s -'
+    // Fall back to our own copy of the bash helper if it failed to download the public version
+    sh '(curl --retry 10 -s https://codecov.io/bash | bash -s -) || (curl --retry 10 -s https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data/codecov-bash.txt | bash -s -)'
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
@@ -163,11 +164,21 @@ def python3_gpu_ut(docker_container_name) {
 }
 
 try {
-  stage("Sanity Check") {
-    node('mxnetlinux-cpu') {
-      ws('workspace/sanity') {
-        init_git()
-        docker_run('ubuntu_cpu', 'sanity_check', false)
+  stage('Sanity Check') {
+    parallel 'Lint': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-lint') {
+          init_git()
+          docker_run('ubuntu_cpu', 'sanity_check', false)
+        }
+      }
+    },
+    'RAT License': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/sanity-rat') {
+          init_git()
+          docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+        }
       }
     }
   }
@@ -491,10 +502,21 @@ try {
           }
         }
       }
+    },
+    'Android / ARMv7':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/androidv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('android_armv7', 'build_android_armv7', false)
+          }
+        }
+      }
     }
+
   } // End of stage('Build')
 
-  stage('Unit Test') {
+  stage('Tests') {
     parallel 'Python2: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-python2-cpu') {
@@ -702,6 +724,18 @@ try {
         }
       }
     },
+    'Clojure: CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-clojure-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu', mx_dist_lib)
+            docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
     'Perl: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-perl-cpu') {
@@ -859,7 +893,7 @@ try {
                 C:\\mxnet\\test_gpu.bat"""
             } finally {
               collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')       
+              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
             }
           }
         }
@@ -887,11 +921,8 @@ try {
           }
         }
       }
-    }
-  }
-
-  stage('Integration Test') {
-    parallel 'Onnx CPU': {
+    },
+    'Onnx CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -948,19 +979,20 @@ try {
           }
         }
       }
-    },
-    'dist-kvstore tests GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
-            publish_test_coverage()
-          }
-        }
-      }
     }
+    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
+    // 'dist-kvstore tests GPU': {
+    //  node('mxnetlinux-gpu') {
+    //    ws('workspace/it-dist-kvstore') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        init_git()
+    //        unpack_lib('gpu')
+    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+    //        publish_test_coverage()
+    //      }
+    //    }
+    //  }
+    //}
   }
 
   stage('Deploy') {
@@ -985,8 +1017,8 @@ try {
   }
 } finally {
   node("mxnetlinux-cpu") {
-    // Only send email if master failed
-    if (currentBuild.result == "FAILURE" && env.BRANCH_NAME == "master") {
+    // Only send email if master or release branches failed
+    if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
       emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
     }
     // Remember to rethrow so the build is marked as failing

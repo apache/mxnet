@@ -68,9 +68,7 @@ endif
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
-ifneq ($(USE_BLAS), mkl)
 	export USE_MKLML = 1
-endif
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -158,12 +156,20 @@ endif
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
-ifeq (,$(wildcard /lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
+endif
+endif
 endif
 endif
 endif
