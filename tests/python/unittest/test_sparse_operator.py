@@ -943,6 +943,17 @@ def test_sparse_mathematical_core():
                                        density=density,
                                        ograd_density=ograd_density)
 
+        # arcsin
+        check_sparse_mathematical_core("arcsin", stype,
+                                       lambda x: mx.sym.sparse.arcsin(x),
+                                       lambda x: np.arcsin(x),
+                                       lambda x: 1. / (1. - x ** 2) ** (1. / 2.),
+                                       data_init=0.5, grad_init=0.5,
+                                       output_grad_stype=output_grad_stype,
+                                       input_grad_stype=input_grad_stype,
+                                       force_overlap=force_overlap,
+                                       density=density, ograd_density=ograd_density)
+
         if stype != "csr":
             # rsqrt
             check_sparse_mathematical_core("rsqrt", stype,
@@ -968,17 +979,6 @@ def test_sparse_mathematical_core():
                                            lambda x: mx.sym.sparse.cos(x),
                                            lambda x: np.cos(x),
                                            lambda x: -np.sin(x),
-                                           output_grad_stype=output_grad_stype,
-                                           input_grad_stype=input_grad_stype,
-                                           force_overlap=force_overlap,
-                                           density=density, ograd_density=ograd_density)
-
-            # arcsin
-            check_sparse_mathematical_core("arcsin", stype,
-                                           lambda x: mx.sym.sparse.arcsin(x),
-                                           lambda x: np.arcsin(x),
-                                           lambda x: 1. / (1. - x ** 2) ** (1. / 2.),
-                                           data_init=0.5, grad_init=0.5,
                                            output_grad_stype=output_grad_stype,
                                            input_grad_stype=input_grad_stype,
                                            force_overlap=force_overlap,

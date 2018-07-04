@@ -88,7 +88,7 @@ The storage type of ``tan`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>);
 
 // arcsin
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(arcsin, cpu, mshadow_op::arcsin)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsin, cpu, mshadow_op::arcsin)
 MXNET_ADD_SPARSE_OP_ALIAS(arcsin)
 .describe(R"code(Returns element-wise inverse sine of the input array.
 
@@ -102,6 +102,7 @@ The storage type of ``arcsin`` output depends upon the input storage type:
 
    - arcsin(default) = default
    - arcsin(row_sparse) = row_sparse
+   - arcsin(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
