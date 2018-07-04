@@ -503,16 +503,6 @@ class KVStoreDist : public KVStoreLocal {
   }
 
   /**
-   * \brief check if the keys are all unique
-   */
-  void CheckUnique(const std::vector<int>& keys) {
-    auto keys_copy = keys;
-    auto last = std::unique(keys_copy.begin(), keys_copy.end());
-    CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
-             static_cast<size_t>(keys.size()));
-  }
-
-  /**
    * \brief convert to pskv for parameter server
    * \param key
    * \param num_arr_elems number of elements in the value for key

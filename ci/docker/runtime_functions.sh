@@ -533,9 +533,7 @@ build_ubuntu_cpu_allreduce_kvstore() {
 
     make  \
         DEV=1                         \
-        USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         USE_DIST_KVSTORE=1            \
         USE_ALLREDUCE_DIST_KVSTORE=1  \
         -j$(nproc)

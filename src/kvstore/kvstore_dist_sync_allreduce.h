@@ -242,16 +242,6 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
     }
   }
 
-  /**
-   * \brief check if the keys are all unique
-   */
-  void CheckUnique(const std::vector<int>& keys) {
-    auto keys_copy = keys;
-    auto last = std::unique(keys_copy.begin(), keys_copy.end());
-    CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
-             static_cast<size_t>(keys.size()));
-  }
-
  private:
   std::unordered_map<int, NDArray> comm_buf_;
 };
