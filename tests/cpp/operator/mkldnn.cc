@@ -466,12 +466,12 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
-OpAttrs GetPoolingOp(TShape kernel, TShape stride, TShape pad) {
+OpAttrs GetPoolingOp(int kernel, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
-  attrs.attrs.dict.insert({"kernel" , "3"});
-  attrs.attrs.dict.insert({"stride" , "1"});
-  attrs.attrs.dict.insert({"pad" , "1" });
+  attrs.attrs.dict.insert({"kernel" , std::to_string(kernel)});
+  attrs.attrs.dict.insert({"stride" , std::to_string(stride)});
+  attrs.attrs.dict.insert({"pad" , std::to_string(pad)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
@@ -1266,55 +1266,56 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
-//void TestPoolingOp(const OpAttrs &attrs, bool backwards = false) {
-//  std::vector<NDArray*> inputs(attrs.num_inputs);
-//  std::vector<NDArray*> outputs(attrs.num_outputs);
-//  std::vector<OpReqType> req(attrs.num_outputs);
-//  std::vector<DispatchMode> dispatches = attrs.dispatches;
-//
-//  TestArrayShapes tas = GetTestArrayShapes();
-//  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-//
-//  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-//
-//  // concat backwards uses scaled up inputs
-//  if (backwards) {
-//    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-//    int dim = std::stoi(str_dim);
-//    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
-//  }
-//
-//  for (auto &in_arr : in_arrs) {
-//    for (auto &dispatch : dispatches) {
-//      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-//
+void TestPoolingOp(const OpAttrs &attrs, VerifyFunc verify_fn,
+                  bool backwards = false) {
+  std::vector<NDArray*> inputs(attrs.num_inputs);
+  std::vector<NDArray*> outputs(attrs.num_outputs);
+  std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+
+  // concat backwards uses scaled up inputs
+  if (backwards) {
+    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
+    int dim = std::stoi(str_dim);
+    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+  }
+
+  for (auto &in_arr : in_arrs) {
+    for (auto &dispatch : dispatches) {
+      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+
 //      std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
 //      int dim = std::stoi(str_dim);
 //      if (dim >= in_arr.arr.shape().ndim())
 //        continue;
 //      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
 //                    static_cast<float>(attrs.num_inputs);
-//      for (int i = 0; i < attrs.num_outputs; i++)
-//        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
-//
-//      for (int i = 0; i < attrs.num_inputs; i++)
-//        inputs[i] = &in_arr.arr;
-//
-//      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-//        for (int i = 0; i < attrs.num_outputs; i++) {
-//          req[i] = kWriteTo;
-//          outputs[i] = &out_arrs[i][output_i].arr;
-//        }
-//
-//        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-//        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-//                                    outputs, req, dispatch, mxnet::OpStatePtr());
-//        Engine::Get()->WaitForAll();
-//        VerifyPoolingResult(inputs, outputs, );
-//      }
-//    }
-//  }
-//}
+      for (int i = 0; i < attrs.num_outputs; i++)
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+
+      for (int i = 0; i < attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
+
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+        }
+
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                    outputs, req, dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        verify_fn(inputs, outputs);
+      }
+    }
+  }
+}
 
 TEST(IMPERATIVE, CopyOp) {
   OpAttrs attrs = GetCopyOp();
@@ -1376,14 +1377,17 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 }
 
 TEST(IMPERATIVE, PoolingOp) {
-//  for (int dim = 0; dim < 5; dim++) {
-  TShape kernel = {3,3};
-  TShape stride = {1,1};
-  TShape pad = {1,1};
-  OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
-  return;
-//  TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
-//  }
+
+  // TODO: change kernel, stride, pad
+  for (int kernel = 1; kernel < 2; kernel++) {
+    for (int stride = 1; stride < 2; stride++) {
+      for (int pad = 0; pad < 1; pad++) {
+        OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
+        TestConcatOp(attrs, VerifyPoolingResult, false);
+      }
+    }
+
+  }
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
