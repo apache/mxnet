@@ -1138,7 +1138,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.op->attr_parser(&attrs.attrs);
     NDArray expected_output(test_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = 0;
+    expected_data[0] = -1;
     expected_data[1] = 0;
     expected_data[2] = 1;
     in_arrs[0] = &arr;
