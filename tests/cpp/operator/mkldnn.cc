@@ -1266,7 +1266,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
-void TestPoolingOp(const OpAttrs &attrs, VerifyFunc verify_fn,
+void TestPoolingOp(const OpAttrs &attrs,
                   bool backwards = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
@@ -1311,7 +1311,7 @@ void TestPoolingOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        verify_fn(inputs, outputs);
+        VerifyPoolingResult(inputs, outputs, attrs);
       }
     }
   }
@@ -1383,7 +1383,7 @@ TEST(IMPERATIVE, PoolingOp) {
     for (int stride = 1; stride < 2; stride++) {
       for (int pad = 0; pad < 1; pad++) {
         OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
-        TestConcatOp(attrs, VerifyPoolingResult, false);
+        TestPoolingOp(attrs, false);
       }
     }
 
