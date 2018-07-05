@@ -1015,6 +1015,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   NDArray output = out_arrs[0]->Reorder2Default();
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   TShape input_shape = input.shape();
+  CHECK(input_shape.ndim() > 2);
   int num_batches = input_shape[0];
   int num_channels = input_shape[1];
 
@@ -1288,6 +1289,9 @@ void TestPoolingOp(const OpAttrs &attrs,
   }
 
   for (auto &in_arr : in_arrs) {
+    // can only pool only 3D and 4D inputs
+    if (in_arr.arr.shape().ndim() <= 2)
+      continue;
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
 
