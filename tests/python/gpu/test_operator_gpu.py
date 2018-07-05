@@ -461,7 +461,7 @@ def test_convolution_with_type():
 def check_consistency_NxM(sym_list, ctx_list):
     # e.g. if sym_list=[sym1, sym2] and ctx_list=[ctx1, ctx2, ctx3], then resulting lists are:
     # sym_list=[sym1, sym1, sym1, sym2, sym2, sym2] and ctx_list=[ctx1, ctx2, ctx3, ctx1, ctx2, ctx3]
-    check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list))
+    check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
@@ -1736,7 +1736,6 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
-@unittest.skip("JIRA issue: https://issues.apache.org/jira/projects/MXNET/issues/MXNET-130")
 @with_seed()
 def test_multi_proposal_op():
     # paramters
@@ -1745,7 +1744,6 @@ def test_multi_proposal_op():
     ratios = (0.5, 1, 2)
     rpn_pre_nms_top_n = 12000
     rpn_post_nms_top_n = 2000
-    threshold = 0.7
     rpn_min_size = feature_stride
 
     feat_len = (1000 + 15) // 16
@@ -1776,7 +1774,7 @@ def test_multi_proposal_op():
             im_info[i, :] = [im_size[0], im_size[1], im_scale]
         return cls_prob, bbox_pred, im_info
 
-    def check_proposal_consistency(op, batch_size):
+    def check_proposal_consistency(op, batch_size, with_nms=False):
         '''
         op is mx.nd.contrib.Proposal or mx.nd.contrib.MultiProposal
         '''
@@ -1790,7 +1788,7 @@ def test_multi_proposal_op():
                 ratios = ratios,
                 rpn_pre_nms_top_n = rpn_pre_nms_top_n,
                 rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = threshold,
+                threshold = 0.7 if with_nms else 1.0,
                 rpn_min_size = rpn_min_size, output_score = True)
 
         gpu_ctx = mx.gpu(0)
@@ -1809,7 +1807,7 @@ def test_multi_proposal_op():
                 ratios = ratios,
                 rpn_pre_nms_top_n = rpn_pre_nms_top_n,
                 rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = threshold,
+                threshold = 0.7 if with_nms else 1.0,
                 rpn_min_size = rpn_min_size, output_score = True)
 
         rois_cpu_np = rois_cpu.asnumpy()
@@ -1818,11 +1816,18 @@ def test_multi_proposal_op():
         score_cpu_np = score_cpu.asnumpy()
         score_gpu_np = score_gpu.asnumpy()
 
-        assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
-        assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+        if not with_nms:
+            assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
+            assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+        else:
+            # no 100% gurantee with nms
+            assert(np.sum(np.abs(score_cpu_np - score_gpu_np) < 1e-3) >= 10)
+            assert(np.sum(np.abs(rois_cpu_np - rois_gpu_np) < 1e-3) >= 40)
 
     check_proposal_consistency(mx.nd.contrib.Proposal, 1)
-    check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
+    check_proposal_consistency(mx.nd.contrib.MultiProposal, 5)
+    check_proposal_consistency(mx.nd.contrib.Proposal, 1, with_nms=True)
+    check_proposal_consistency(mx.nd.contrib.MultiProposal, 5, with_nms=True)
 
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.

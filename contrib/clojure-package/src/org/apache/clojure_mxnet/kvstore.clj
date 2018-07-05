@@ -40,7 +40,6 @@
   [kvstore]
   (.dispose kvstore))
 
-
 (s/def ::ks (s/or :string string?
                   :vec-of-string (s/coll-of string? :kind vector?)))
 (s/def ::ndarray #(instance? NDArray %))
@@ -83,10 +82,10 @@
    (util/validate! ::priority priority "Invalid priority")
    (let [store-vals (if (vector? vs) vs [vs])
          store-keys (if (vector? ks) ks (into [] (repeat (count store-vals) ks)))]
-    (doto kvstore
-      (.push (into-array store-keys)
-             (into-array store-vals)
-             (int priority)))))
+     (doto kvstore
+       (.push (into-array store-keys)
+              (into-array store-vals)
+              (int priority)))))
   ([kvstore ks vs]
    (push kvstore ks vs 0)))
 
@@ -113,10 +112,10 @@
    (util/validate! ::priority priority "Invalid priority")
    (let [store-vals (if (vector? outs) outs [outs])
          store-keys (if (vector? ks) ks (into [] (repeat (count store-vals) ks)))]
-    (doto kvstore
-      (.pull (into-array store-keys)
-             (into-array store-vals)
-             (int priority)))))
+     (doto kvstore
+       (.pull (into-array store-keys)
+              (into-array store-vals)
+              (int priority)))))
   ([kvstore ks outs]
    (pull kvstore ks outs 0)))
 
@@ -182,7 +181,6 @@
   (util/validate! ::body body "Invalid body")
   (doto kvstore
     (.sendCommandToServers (int head) body)))
-
 
 (s/def ::fname string?)
 

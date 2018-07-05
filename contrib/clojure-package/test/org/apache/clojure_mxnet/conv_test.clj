@@ -57,10 +57,7 @@
     (sym/convolution "conv1" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
     (sym/batch-norm "bn1" {:data data})
     (sym/activation "relu1" {:data data :act-type "relu"})
-    (sym/pooling "mp1" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]})
-
-
-    (sym/convolution "conv2" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
+    (sym/pooling "mp1" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]}) (sym/convolution "conv2" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
     (sym/batch-norm "bn2" {:data data})
     (sym/activation "relu2" {:data data :act-type "relu"})
     (sym/pooling "mp2" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]})
@@ -69,10 +66,8 @@
     (sym/fully-connected "fc2" {:data data :num-hidden 10})
     (sym/softmax-output "softmax" {:data data})))
 
-
-
 (deftest test-conv []
-  (let [mod (m/module (get-symbol) )]
+  (let [mod (m/module (get-symbol))]
     ;;; note only one function for training
     (m/fit mod {:train-data train-data :eval-data test-data :num-epoch num-epoch
                 :fit-params (m/fit-params {:optimizer (optimizer/sgd {:learning-rate 0.1
@@ -90,5 +85,4 @@
 (comment
 
   (require '[clojure.reflect :as r])
-  (r/reflect train-data)
-  )
+  (r/reflect train-data))

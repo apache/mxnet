@@ -43,7 +43,7 @@ class MacrosSuite extends FunSuite with BeforeAndAfterAll {
     )
 
     for (idx <- input.indices) {
-      val result = CToScalaUtils.argumentCleaner(input(idx), "org.apache.mxnet.Symbol")
+      val result = CToScalaUtils.argumentCleaner("Sample", input(idx), "org.apache.mxnet.Symbol")
       assert(result._1 === output(idx)._1 && result._2 === output(idx)._2)
     }
   }
