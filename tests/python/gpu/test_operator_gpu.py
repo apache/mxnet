@@ -1937,9 +1937,9 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
 
         raise RuntimeError('BN not found')
 
-    def _syncParameters(bn1, bn2):
+    def _syncParameters(bn1, bn2, ctx):
         ctx = input.context
-        bn2.gamma.set_data(bn1.gamma.data(mx.gpu(0)))
+        bn2.gamma.set_data(bn1.gamma.data(ctx))
         bn2.beta.set_data(bn1.beta.data(ctx))
         bn2.running_mean.set_data(bn1.running_mean.data(ctx))
         bn2.running_var.set_data(bn1.running_var.data(ctx))
@@ -1957,7 +1957,7 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     bn2.initialize(ctx=ctx_list)
 
     # using the same values for gamma and beta
-    #_syncParameters(_find_bn(bn1), _find_bn(bn2))
+    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
 
 
     input1.attach_grad()
@@ -1982,6 +1982,8 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     _assert_tensor_close(_find_bn(bn1).running_var.data(ctx_list[0]),
                          _find_bn(bn2).running_var.data(ctx_list[0]))
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+    print('input1.grad', input1.grad)
+    print('input2grad', input2grad)
     _assert_tensor_close(input1.grad, input2grad)
 
 def testSyncBN():
@@ -1989,7 +1991,6 @@ def testSyncBN():
 
     bn = nn.BatchNorm(in_channels=1)
     sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
-
 
     # check with unsync version
     for i in range(10):
