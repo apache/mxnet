@@ -1023,7 +1023,7 @@ void VerifyPool1D(const NDArray &input,
   int upper = input_shape[0] + pad;
   // starts with 3rd dim
   // should increment by stride amount
-  for (int i = 0; i < input_shape[0]; i++) {
+  for (int i = 0; i < input_shape[2]; i++) {
     TShape coordinate = GetShiftedCoordinate(ptr, 2, i);
     if (i - shift < lower || i + shift >= upper)
       continue;
