@@ -21,8 +21,8 @@ use warnings;
 use PDL;
 use PDL::Types ();
 use PDL::CCS::Nd;
-use AI::MXNetCAPI 1.2;
-use AI::NNVMCAPI 1.2;
+use AI::MXNetCAPI 1.3;
+use AI::NNVMCAPI 1.3;
 use AI::MXNet::Types;
 use Time::HiRes;
 use Scalar::Util qw(blessed);
@@ -169,9 +169,16 @@ sub zip
 
 sub enumerate
 {
-    my ($sub, @arrays) = @_;
-    my $len = @{ $arrays[0] };
-    zip($sub, [0..$len-1], @arrays);
+    if('CODE' eq ref $_[0])
+    {
+        # continue supporting the callback style
+        my $code = shift;
+        my $len = @{ $_[0] };
+        $code->(@$_) for AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
+        return;
+    }
+    my $len = @{ $_[0] };
+    return AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
 }
 
 =head2 product

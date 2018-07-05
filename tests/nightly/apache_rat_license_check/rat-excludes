@@ -50,8 +50,10 @@ im2col.h
 pool.h
 README.rst
 dataset.cPickle
-
 rcnn/*
 image-classification/*
 rat-excludes
 apache-rat-tasks/*
+moderngpu/*
+deformable_im2col.cuh
+deformable_im2col.h

@@ -22,6 +22,8 @@
 
 set -ex
 
+NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
+
 clean_repo() {
     set -ex
     git clean -xfd
@@ -206,7 +208,6 @@ build_amzn_linux_cpu() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
 }
 
 build_arm64() {
@@ -223,16 +224,17 @@ build_arm64() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
 }
 
 build_android_armv7() {
     set -ex
     cd /work/build
+#        -DCMAKE_SYSTEM_NAME=Android\
+#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
+#        -DCMAKE_SYSTEM_VERSION=21\
     cmake \
+        -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
@@ -247,10 +249,6 @@ build_android_armv7() {
         -G Ninja /work/mxnet
     ninja -v
     report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
 }
 
 build_android_arm64() {
@@ -261,8 +259,7 @@ build_android_arm64() {
 # build with CMake in Android.
 #        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
 #        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
-#        -DCMAKE_SYSTEM_NAME=Android \
-#
+#        -DCMAKE_SYSTEM_VERSION=21\
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -543,9 +540,9 @@ unittest_ubuntu_python2_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    nosetests-2.7 --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
-    nosetests-2.7 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu() {
@@ -555,8 +552,8 @@ unittest_ubuntu_python3_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
@@ -566,8 +563,8 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    nosetests-3.4 --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
 
 unittest_ubuntu_python2_gpu() {
@@ -577,7 +574,7 @@ unittest_ubuntu_python2_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 tutorialtest_ubuntu_python3_gpu() {
@@ -589,7 +586,7 @@ tutorialtest_ubuntu_python3_gpu() {
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python3
     cd /work/mxnet/tests/tutorials
-    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 tutorialtest_ubuntu_python2_gpu() {
@@ -601,7 +598,7 @@ tutorialtest_ubuntu_python2_gpu() {
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python2
     cd /work/mxnet/tests/tutorials
-    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -611,7 +608,7 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -623,7 +620,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-2.7 --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -635,7 +632,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_ubuntu_cpu_scala() {
@@ -646,8 +643,15 @@ unittest_ubuntu_cpu_scala() {
 
 unittest_ubuntu_gpu_scala() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
     make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+}
+
+unittest_ubuntu_cpu_clojure() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    ./contrib/clojure-package/ci-test.sh
 }
 
 unittest_ubuntu_cpugpu_perl() {
@@ -681,14 +685,14 @@ unittest_ubuntu_gpu_R() {
 unittest_centos7_cpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    python3.6 -m "nose" --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    python3.6 -m "nose" --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -698,6 +702,8 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest tests/python-pytest/onnx/import/mxnet_backend_test.py
 	pytest tests/python-pytest/onnx/import/onnx_import_test.py
 	pytest tests/python-pytest/onnx/import/gluon_backend_test.py
+	pytest tests/python-pytest/onnx/export/onnx_backend_test.py
+	python tests/python-pytest/onnx/export/mxnet_export_test.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -742,7 +748,7 @@ test_ubuntu_cpu_python2() {
     cd /work/mxnet/python
     pip install -e .
     cd /work/mxnet
-    python -m "nose" --with-timer --verbose tests/python/unittest
+    python -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-timer --verbose tests/python/unittest
     popd
 }
 
@@ -758,7 +764,7 @@ test_ubuntu_cpu_python3() {
     pip3 install nose nose-timer
     pip3 install -e .
     cd /work/mxnet
-    python3 -m "nose" --with-timer --verbose tests/python/unittest
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-timer --verbose tests/python/unittest
 
     popd
 }
@@ -779,8 +785,26 @@ build_docs() {
 
 #Runs Apache RAT Check on MXNet Source for License Headers
 nightly_test_rat_check() {
-    set -ex
-    ./tests/nightly/apache_rat_license_check/license_check.sh
+    set -e
+    pushd .
+    
+    cd /work/deps/trunk/apache-rat/target
+
+    # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
+    exec 5>&1
+    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"
+
+
+    echo "-------Process The Output-------"
+
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!";
+        exit 1
+    else
+        echo "SUCCESS: There are no files with an Unknown License.";
+    fi
+    popd
 }
 
 #Checks MXNet for Compilation Warnings
@@ -839,6 +863,13 @@ deploy_docs() {
     make docs
 
     popd
+}
+
+# broken_link_checker
+
+broken_link_checker() {
+    set -ex
+    ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
 ##############################################################

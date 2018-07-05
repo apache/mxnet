@@ -92,7 +92,7 @@ class CachedOp {
   std::vector<nnvm::NodeEntry> Gradient(
       const nnvm::NodePtr& node,
       const std::vector<nnvm::NodeEntry>& ograds) const;
-  void Forward(
+  OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
@@ -154,6 +154,7 @@ class CachedOp {
       const Context& default_ctx,
       const nnvm::Graph& g,
       const OpStatePtr& state_ptr,
+      const std::vector<NDArray *> &state_arrays,
       size_t start_nid,
       size_t end_nid);
   OpStatePtr StaticForward(

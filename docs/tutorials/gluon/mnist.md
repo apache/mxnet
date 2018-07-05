@@ -77,7 +77,7 @@ In an MLP, the outputs of most FC layers are fed into an activation function, wh
 The following code declares three fully connected layers with 128, 64 and 10 neurons each.
 The last fully connected layer often has its hidden size equal to the number of output classes in the dataset. Furthermore, these FC layers uses ReLU activation for performing an element-wise ReLU transformation on the FC layer output.
 
-To do this, we will use [Sequential layer](http://mxnet.io/api/python/gluon.html#mxnet.gluon.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
+To do this, we will use [Sequential layer](http://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
 
 ```python
 # define network
@@ -90,13 +90,13 @@ with net.name_scope():
 
 #### Initialize parameters and optimizer
 
-The following source code initializes all parameters received from parameter dict using [Xavier](http://mxnet.io/api/python/optimization.html#mxnet.initializer.Xavier) initializer
+The following source code initializes all parameters received from parameter dict using [Xavier](http://mxnet.io/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initializer
 to train the MLP network we defined above.
 
 For our training, we will make use of the stochastic gradient descent (SGD) optimizer. In particular, we'll be using mini-batch SGD. Standard SGD processes train data one example at a time. In practice, this is very slow and one can speed up the process by processing examples in small batches. In this case, our batch size will be 100, which is a reasonable choice. Another parameter we select here is the learning rate, which controls the step size the optimizer takes in search of a solution. We'll pick a learning rate of 0.02, again a reasonable choice. Settings such as batch size and learning rate are what are usually referred to as hyper-parameters. What values we give them can have a great impact on training performance.
 
-We will use [Trainer](http://mxnet.io/api/python/gluon.html#trainer) class to apply the
-[SGD optimizer](http://mxnet.io/api/python/optimization.html#mxnet.optimizer.SGD) on the
+We will use [Trainer](http://mxnet.io/api/python/gluon/gluon.html#trainer) class to apply the
+[SGD optimizer](http://mxnet.io/api/python/optimization/optimization.html#mxnet.optimizer.SGD) on the
 initialized parameters.
 
 ```python
@@ -112,7 +112,7 @@ Typically, one runs the training until convergence, which means that we have lea
 
 We will take following steps for training:
 
-- Define [Accuracy evaluation metric](http://mxnet.io/api/python/metric.html#mxnet.metric.Accuracy) over training data.
+- Define [Accuracy evaluation metric](http://mxnet.io/api/python/metric/metric.html#mxnet.metric.Accuracy) over training data.
 - Loop over inputs for every epoch.
 - Forward input through network to get output.
 - Compute loss with output and label inside record scope.
@@ -121,7 +121,7 @@ We will take following steps for training:
 
 Loss function takes (output, label) pairs and computes a scalar loss for each sample in the mini-batch. The scalars measure how far each output is from the label.
 There are many predefined loss functions in gluon.loss. Here we use
-[softmax_cross_entropy_loss](http://mxnet.io/api/python/gluon.html#mxnet.gluon.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
+[softmax_cross_entropy_loss](http://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.loss.softmax_cross_entropy_loss) for digit classification. We will compute loss and do backward propagation inside
 training scope which is defined by `autograd.record()`.
 
 ```python

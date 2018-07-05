@@ -77,6 +77,52 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 NNVM_REGISTER_OP(reshape_like)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+void ShapeComputeGPU(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  cudaMemcpyAsync(out_data.dptr_,
+                  in_data.shape_.data(),
+                  in_data.ndim() * sizeof(int64_t),
+                  cudaMemcpyHostToDevice,
+                  mshadow::Stream<gpu>::GetStream(s));
+}
+
+NNVM_REGISTER_OP(shape_array)
+.set_attr<FCompute>("FCompute<gpu>", ShapeComputeGPU);
+
+void SizeComputeGPU(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  const index_t size_var = in_data.Size();
+  cudaMemcpyAsync(out_data.dptr_,
+                  &size_var,
+                  1U * sizeof(int64_t),
+                  cudaMemcpyHostToDevice,
+                  mshadow::Stream<gpu>::GetStream(s));
+}
+
+NNVM_REGISTER_OP(size_array)
+.set_attr<FCompute>("FCompute<gpu>", SizeComputeGPU);
+
 NNVM_REGISTER_OP(Cast)
 .set_attr<FCompute>("FCompute<gpu>", CastCompute<gpu>);
 

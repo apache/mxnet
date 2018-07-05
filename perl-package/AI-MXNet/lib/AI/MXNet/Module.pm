@@ -38,6 +38,22 @@ use List::Util qw(max);
 use Data::Dumper ();
 use Mouse;
 
+func _create_sparse_kvstore(Maybe[Str|AI::MXNet::KVStore] $kvstore)
+{
+    # always update on kvstore
+    my $update_on_kvstore = 1;
+    my $kv;
+    if(blessed $kvstore)
+    {
+        $kv = $kvstore;
+    }
+    else
+    {
+        $kv = AI::MXNet::KVStore->create($kvstore);
+    }
+    return ($kv, $update_on_kvstore);
+}
+
 func _create_kvstore(
     Maybe[Str|AI::MXNet::KVStore] $kvstore,
     Int                           $num_device,
