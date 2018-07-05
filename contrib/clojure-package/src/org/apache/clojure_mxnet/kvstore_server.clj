@@ -21,13 +21,11 @@
             [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet KVStoreServer)))
 
-
 (s/def ::env-map (s/map-of string? string?))
 
 (defn init [env-map]
   (util/validate! ::env-map env-map "Invalid environment map")
   (KVStoreServer/init (util/convert-map env-map)))
-
 
 (s/def ::die-if-others-go-out-timeout int?)
 

@@ -21,7 +21,6 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.shape :as mx-shape]))
 
-
 ;; need to revisit to get all functions
 
 (defn ->vec [nd-array]
@@ -96,7 +95,7 @@
    (do
      (let [kwargs-shapes (zipmap (keys kwargs)
                                  (mapv (fn [v] (if (vector? v) (mx-shape/->shape v) v)) (vals kwargs)))]
-      (.reshape executor partial-shaping allow-up-sizing (util/convert-map kwargs-shapes)))
+       (.reshape executor partial-shaping allow-up-sizing (util/convert-map kwargs-shapes)))
      executor))
   ([executor kwargs]
    (reshape executor kwargs {})))

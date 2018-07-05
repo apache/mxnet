@@ -39,7 +39,6 @@
               out (io/output-stream file)]
     (io/copy in out)))
 
-
 (defn get-image [url show?]
   (let [fname "test-image.jpg"
         _ (download url fname)
@@ -54,8 +53,8 @@
                            pixels)]
     (when show? (img/show image))
     (-> rgb-pixels
-               (flatten)
-               (ndarray/array [1 num-channels h w]))))
+        (flatten)
+        (ndarray/array [1 num-channels h w]))))
 
 (defn predict [img-url show?]
   (let [mod (m/load-checkpoint {:prefix (str model-dir "/resnet-152") :epoch 0})
@@ -110,6 +109,5 @@
   ;;  {:prob 0.023329297, :label "n02083346 canine, canid"})
 
   (feature-extraction) ;=> [1 2048]
-
-  )
+)
 

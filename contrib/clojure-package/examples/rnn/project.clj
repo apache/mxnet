@@ -17,6 +17,7 @@
 
 (defproject rnn "0.1.0-SNAPSHOT"
   :description "RNN example"
-  :main rnn.train-char-rnn
+  :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.0-SNAPSHOT"]])
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.0-SNAPSHOT"]]
+  :main rnn.train-char-rnn)

@@ -33,7 +33,6 @@
         (m/init-optimizer {:optimizer (optimizer-fn)})
         (m/update))))
 
-
 (deftest test-optimizer-update
   (let [opts [["sgd" optimizer/sgd]
               ["dcasgd" optimizer/dcasgd]

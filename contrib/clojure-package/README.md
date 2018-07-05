@@ -135,12 +135,9 @@ To test your installation, you should run `lein test`. This will run the test su
 
 #### Generation of NDArray and Symbol apis
 
-The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. To generate, use the `dev/generator.clj` file. These generated files are checked in as source, so the only time you would need to run them is if you are updated the clojure package with an updated scala jar and want to regenerate the code.
+The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. The files are generated as a compile time step (AOT) in the `dev.generator` namespace.
 
-To do this run the leiningen task
-`lein run generate-code`
-
-Or load in the repl and use the functions:
+You may also run this manually with the repl functions:
 
 `(generate-ndarray-file)`
 and
@@ -170,6 +167,16 @@ _Note: There is an error thrown in the generated code due to some loading issues
 ## Code Coverage
 
 To run the Code Coverage tool. Run `lein cloverage`.
+
+## Tools to keep style consistent
+
+To keep the style consistent for the project we include the script that make it easier.
+There are two script in the base of the project and in each examples.
+
+To run it just see the following file. `lein-cljfmt-check` and `lein-cljfmt-fix`.
+The first command will run and check and confirm if the code needed to be updated to reflect the community style guide.
+The second command will apply the change and fix any inconsistent indentation in place. This is recommendd to be done
+before the submit a new pull request so we can keep the style consistent throughout the project.
 
 ## FAQ
 

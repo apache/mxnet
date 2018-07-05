@@ -71,7 +71,6 @@
         content (sym/group [relu1-1])]
     {:style style :content content}))
 
-
 (defn get-executor [style content model-path input-size ctx]
   (let [out (sym/group [style content])
         ;; make executor
@@ -83,12 +82,12 @@
         ;;; I'm not sure this is being set properly
         pretrained (do (ndarray/load model-path))
         arg-map (into {} (mapv (fn [[k v]]
-                           (let [pretrained-key (str "arg:" k)]
-                             (if (and (get pretrained pretrained-key) (not= "data" k))
-                               (do (ndarray/set v (get pretrained pretrained-key))
-                                   [k v])
-                               [k v])))
-                         arg-map))
+                                 (let [pretrained-key (str "arg:" k)]
+                                   (if (and (get pretrained pretrained-key) (not= "data" k))
+                                     (do (ndarray/set v (get pretrained pretrained-key))
+                                         [k v])
+                                     [k v])))
+                               arg-map))
         exec (sym/bind out ctx arg-map grad-map)
         outs (executor/outputs exec)]
     {:executor exec
