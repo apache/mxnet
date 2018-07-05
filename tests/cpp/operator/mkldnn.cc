@@ -888,7 +888,7 @@ float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
 // center is formated as (N,C,everything else)
 float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
-  float max = 0;
+  float max = -std::numeric_limits<float>::max();
   CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within in_arr bounds";
   CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within in_arr bounds";
 
