@@ -39,7 +39,7 @@
   (sym/fully-connected "fc2" {:data data :num-hidden 64})
   (sym/softmax-output "out" {:data data}))
 
-net ;=> #object[ml.dmlc.mxnet.Symbol 0x38c72806 "ml.dmlc.mxnet.Symbol@38c72806"]
+net ;=> #object[org.apache.mxnet.Symbol 0x5c78c8c2 "org.apache.mxnet.Symbol@5c78c8c2"] 
 
 ;; Each symbol takes a (unique) string name. NDArray and Symbol both represent a single tensor. Operators represent the computation between tensors. Operators take symbol (or NDArray) as inputs and might also additionally accept other hyperparameters such as the number of hidden neurons (num_hidden) or the activation type (act_type) and produce the output.
 
