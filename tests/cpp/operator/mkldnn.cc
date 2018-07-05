@@ -1018,20 +1018,79 @@ void VerifyPool1D(const NDArray &input,
   ptr[2] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   int out_ptr = 0;
-  int pad = padding[0];
-  int shift = kernel[0] / 2;
-  int stride_step = stride[0];
-  int lower = -pad;
-  int upper = input_shape[3] + pad;
-  
-  for (int i = lower; i < upper - kernel[0]; i = i + stride_step) {
-    int center = i + shift;
+  int lower = -padding[0];
+  int upper = input_shape[3] + padding[0];
+  for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
+    int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
     out_ptr++;
   }
-
 }
+
+void VerifyPool2D(const NDArray &input,
+                  const NDArray &output,
+                  const TShape padding,
+                  const TShape kernel,
+                  const TShape stride,
+                  int batch_num,
+                  int channel_num) {
+  TShape input_shape = input.shape();
+  TShape ptr(input_shape.ndim());
+  ptr[0] = batch_num;
+  ptr[1] = channel_num;
+  ptr[2] = 0;
+  ptr[3] = 0;
+  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
+  int out_ptr = 0;
+  int lower = -padding[0];
+  int upper = input_shape[3] + padding[0];
+  for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
+    int center = i + kernel[0] / 2;
+    TShape coordinate = GetShiftedCoordinate(ptr, 3, center);
+    for (int j = lower; j < upper - kernel[1]; j = j + stride[1]) {
+      int center = j + kernel[1] / 2;
+      TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
+      ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+      out_ptr++;
+    }
+  }
+}
+
+void VerifyPool3D(const NDArray &input,
+                  const NDArray &output,
+                  const TShape padding,
+                  const TShape kernel,
+                  const TShape stride,
+                  int batch_num,
+                  int channel_num) {
+  TShape input_shape = input.shape();
+  TShape ptr(input_shape.ndim());
+  ptr[0] = batch_num;
+  ptr[1] = channel_num;
+  ptr[2] = 0;
+  ptr[3] = 0;
+  ptr[4] = 0;
+  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
+  int out_ptr = 0;
+  int lower = -padding[0];
+  int upper = input_shape[3] + padding[0];
+  for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
+    int center = i + kernel[0] / 2;
+    TShape coordinate = GetShiftedCoordinate(ptr, 3, center);
+    for (int j = lower; j < upper - kernel[1]; j = j + stride[1]) {
+      int center = j + kernel[1] / 2;
+      TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
+      for (int k = lower; k < upper - kernel[2]; k = k + stride[2]) {
+        int center = j + kernel[2] / 2;
+        TShape coordinate = GetShiftedCoordinate(coordinate, 5, center);
+        ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+        out_ptr++;
+      }
+    }
+  }
+}
+
 
 
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
@@ -1051,32 +1110,17 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   int num_batches = input_shape[0];
   int num_channels = input_shape[1];
 
-  TShape ptr(input_shape.ndim());
 
   for (int batch_num = 0; batch_num < num_batches; batch_num++) {
-    ptr[0] = batch_num;
     for (int channel_num = 0; channel_num < num_channels; channel_num++) {
-      ptr[1] = channel_num;
-      VerifyPool1D(input, output, padding, kernel, stride, batch_num, channel_num);
-//      for (int dim = 2; dim < input_shape.ndim(); dim ++) {
-//        int pad = padding[dim - 2];
-//        int shift = kernel[dim-2] / 2;
-//        int lower = -pad;
-//        int upper = input_shape[dim] + pad;
-//
-//        // starts with 3rd dim
-//        // should increment by stride amount
-//        int out_ptr = 0;
-//        for (int i = 0; i < input_shape[dim]; i++) {
-//          TShape coordinate = GetShiftedCoordinate(ptr, dim, i);
-//          if (i - shift < lower || i + shift >= upper)
-//            continue;
-//          ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
-//        }
-//      }
+      if (input_shape.ndim() == 3)
+        VerifyPool1D(input, output, padding, kernel, stride, batch_num, channel_num);
+      if (input_shape.ndim() == 4)
+        VerifyPool2D(input, output, padding, kernel, stride, batch_num, channel_num);
+      if (input_shape.ndim() == 5)
+        VerifyPool3D(input, output, padding, kernel, stride, batch_num, channel_num);
     }
   }
-
 }
 
 TEST(MKLDNN_NDArray, VerifyPoolingResult) {
