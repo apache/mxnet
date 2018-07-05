@@ -90,6 +90,19 @@ def build_scala_docs(app):
     for doc_file in scaladocs:
         _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
 
+def build_clojure_docs(app):
+    """build clojure doc and then move the outdir"""
+    clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
+    # scaldoc fails on some apis, so exit 0 to pass the check
+    _run_cmd('cd ' + clojure-path + '; lein codox')
+    dest_path = app.builder.outdir + '/api/clojure/docs'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/targets/doc'
+    cljojuredocs = ['intro.html', 'index.html', 'org.apache.clojure-mxnet*']
+    for doc_file in clojuredocs:
+        _run_cmd('cd ' + clojure_doc_path_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
     if len(table) < 3:
@@ -374,6 +387,7 @@ def setup(app):
         app.connect("builder-inited", build_mxnet)
     app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
+    app.connect("builder-inited", build_clojure_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)
