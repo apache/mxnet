@@ -1008,6 +1008,7 @@ void VerifyPool1D(const NDArray &input,
                   const NDArray &output,
                   const TShape padding,
                   const TShape kernel,
+                  const TShape stride,
                   int batch_num,
                   int channel_num) {
   TShape input_shape = input.shape();
@@ -1019,15 +1020,18 @@ void VerifyPool1D(const NDArray &input,
   int out_ptr = 0;
   int pad = padding[0];
   int shift = kernel[0] / 2;
+  int stride_step = stride[0];
   int lower = -pad;
-  int upper = input_shape[0] + pad;
+  int upper = input_shape[3] + pad;
+
+  int first_step = - lower;
   // starts with 3rd dim
   // should increment by stride amount
-  for (int i = 0; i < input_shape[2]; i++) {
-    TShape coordinate = GetShiftedCoordinate(ptr, 2, i);
-    if (i - shift < lower || i + shift >= upper)
-      continue;
+  for (int i = lower; i < upper - kernel[0]; i = i + stride_step) {
+    int center = i + shift;
+    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+    out_ptr++;
   }
 
 }
@@ -1040,6 +1044,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   param.Init(attrs.attrs.dict);
   TShape kernel = param.kernel;
   TShape padding = param.pad;
+  TShape stride = param.stride;
   int pool_type; // max
   NDArray input = in_arrs[0]->Reorder2Default();
   NDArray output = out_arrs[0]->Reorder2Default();
@@ -1055,7 +1060,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
     ptr[0] = batch_num;
     for (int channel_num = 0; channel_num < num_channels; channel_num++) {
       ptr[1] = channel_num;
-      VerifyPool1D(input, output, padding, kernel, batch_num, channel_num);
+      VerifyPool1D(input, output, padding, kernel, stride, batch_num, channel_num);
 //      for (int dim = 2; dim < input_shape.ndim(); dim ++) {
 //        int pad = padding[dim - 2];
 //        int shift = kernel[dim-2] / 2;
