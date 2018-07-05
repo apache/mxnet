@@ -1422,7 +1422,6 @@ def test_grad_graph_change():
     array = mx.nd.arange(3)
     index = mx.nd.array([2])
     array.attach_grad()
-    # index.attach_grad()
     model = Model()
     model.hybridize(inline_limit=0)
     with mx.autograd.record(train_mode=True):
