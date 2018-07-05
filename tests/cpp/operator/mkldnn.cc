@@ -1014,6 +1014,7 @@ void VerifyPool1D(const NDArray &input,
   TShape ptr(input_shape.ndim());
   ptr[0] = batch_num;
   ptr[1] = channel_num;
+  ptr[2] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   int out_ptr = 0;
   int pad = padding[0];
