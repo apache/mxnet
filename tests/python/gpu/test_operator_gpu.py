@@ -1949,7 +1949,7 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
 
     if cuda:
         input1 = input.as_in_context(mx.gpu(0))
-        ctx_list = [mx.gpu(0) for _ in range(num_devices)]
+        ctx_list = [mx.gpu(i) for i in range(num_devices)]
     else:
         ctx_list = [mx.cpu(0) for _ in range(num_devices)]
 

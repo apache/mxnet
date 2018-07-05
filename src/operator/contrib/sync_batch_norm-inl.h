@@ -372,7 +372,7 @@ class SyncBatchNorm : public Operator {
       Tensor<xpu, 1> sumGrad = workspace[3];
       Tensor<xpu, 1> sumProd = workspace[4];
       sumGrad = sumall_except_dim<1>(grad);
-      sumProd = sumall_except_dim<1>(grad * data);
+      sumProd = sumall_except_dim<1>(grad * (data - broadcast<1>(mean, data.shape_)));
 
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad =
         globalSharedGrad.Register(param_.key, param_.ndev);
@@ -393,7 +393,7 @@ class SyncBatchNorm : public Operator {
       mshadow::Copy(sumGrad, grad_cpu, s);
       mshadow::Copy(sumProd, prod_cpu, s);
 
-      gvar = (sumProd - sumGrad * mean) * slope * (-0.5f) *
+      gvar = -1.0f * sumProd * slope *
         F<mshadow_op::power>(var + param_.eps, -1.5f);
       gmean =  sumGrad * slope;
       gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
@@ -408,9 +408,9 @@ class SyncBatchNorm : public Operator {
       }
       Assign(grad_in, req[syncbatchnorm::kData],
              (grad * broadcast<1>(slope, data.shape_)) *
-             broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-             broadcast<1>(gvar, data.shape_) *
-              scale * (data - broadcast<1>(mean, data.shape_)) +
+               broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
+             broadcast<1>(gvar, data.shape_) * // (1.0f - 1.0f * scale / param_.ndev) *
+               scale * (data - broadcast<1>(mean, data.shape_)) +
              broadcast<1>(gmean, data.shape_) * scale);
       Assign(gbias, req[syncbatchnorm::kBeta], sumall_except_dim<1>(grad));
     } else {
