@@ -15,6 +15,7 @@ All scripts to save and load parameters for a Gluon model should use the new API
 
 ### Incompatible API Changes
 - We are breaking semantic versioning by making a backwards incompatible change from 1.2.0 in the 1.2.1 patch release. The breaking use case is documented in point 2 above. The reason for doing this is because the 1.2.0 release broke a documented [use case](https://github.com/apache/incubator-mxnet/issues/11091) from the [gluon book](https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter07_distributed-learning/hybridize.ipynb) and this release reverts the breakage.
+- We did break the promise with semantic versioning due to the API behavior change in 1.2.0 and the backward incompatible change between 1.2.0 and 1.2.1 patch release. The breaking use case is documented in point 2 above. The reason for doing this is because the 1.2.0 release broke a documented [use case](https://github.com/apache/incubator-mxnet/issues/11091) from the [gluon book](https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter07_distributed-learning/hybridize.ipynb) and this release reverts the breakage. As a community, we apologize for the inconvenience caused and will continue to strive to uphold semantic versioning.
 
 ### Bug Fixes
 - Fixed MKLDNN bugs (#10613, #10021, #10616, #10764, #10591, #10731, #10918, #10706, #10651, #10979).
