@@ -45,7 +45,7 @@ Operator *SyncBatchNormProp::CreateOperatorEx(Context ctx, std::vector<TShape> *
 
 DMLC_REGISTER_PARAMETER(SyncBatchNormParam);
 
-MXNET_REGISTER_OP_PROPERTY(SyncBatchNorm, SyncBatchNormProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_SyncBatchNorm, SyncBatchNormProp)
 .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
@@ -102,7 +102,7 @@ Reference:
 .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
 .add_arguments(SyncBatchNormParam::__FIELDS__());
 
-NNVM_REGISTER_OP(SyncBatchNorm)
+NNVM_REGISTER_OP(_contrib_SyncBatchNorm)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;

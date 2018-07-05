@@ -1987,7 +1987,7 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     _assert_tensor_close(input1.grad, input2grad)
 
 def testSyncBN():
-    ndev = 2
+    ndev = 1 if len(mxnet.test_utils.list_gpus()) >= 2 else 1
 
     bn = nn.BatchNorm(in_channels=1)
     sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
@@ -1996,7 +1996,6 @@ def testSyncBN():
     for i in range(10):
         _checkBatchNormResult(bn, sync_bn, mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                               num_devices=ndev, cuda=True)
-
 
 if __name__ == '__main__':
     import nose

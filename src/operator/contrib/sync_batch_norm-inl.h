@@ -70,7 +70,8 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
       .describe("The count of GPU devices");
     DMLC_DECLARE_FIELD(key)
       .set_default("")
-      .describe("Hash key for synchronization");
+      .describe("Hash key for synchronization, please set the same hash key for same layer, "
+                "Block.prefix is typically used as in :class:`gluon.nn.contrib.SyncBatchNorm`.");
   }
 };
 
@@ -270,7 +271,7 @@ class SyncBatchNorm : public Operator {
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = globalSharedBarrier.Register(param_.key, param_.ndev);
       int myRank = globalSharedRank.Register(param_.key, param_.ndev);
       // get the mean and var
       Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
@@ -292,7 +293,7 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedMean->Push(mean_cpu, myRank);
       sharedVar->Push(var_cpu, myRank);
-      globalBarrier->Wait();
+      global_barrier->Wait();
       mean_cpu = sharedMean->Pop(myRank);
       var_cpu = sharedVar->Pop(myRank);
       // copy back to gpu
@@ -357,7 +358,7 @@ class SyncBatchNorm : public Operator {
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *globalBarrier = globalSharedBarrier.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = globalSharedBarrier.Register(param_.key, param_.ndev);
       int myRank = globalSharedRank.Register(param_.key, param_.ndev);
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
@@ -386,7 +387,7 @@ class SyncBatchNorm : public Operator {
       // push and pull
       sharedGrad->Push(grad_cpu, myRank);
       sharedProd->Push(prod_cpu, myRank);
-      globalBarrier->Wait();
+      global_barrier->Wait();
       grad_cpu = sharedGrad->Pop(myRank);
       prod_cpu = sharedProd->Pop(myRank);
       // copy back to gpu
@@ -509,7 +510,7 @@ class SyncBatchNormProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "SyncBatchNorm";
+    return "_contrib_SyncBatchNorm";
   }
 
   std::vector<int> DeclareBackwardDependency(

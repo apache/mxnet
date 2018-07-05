@@ -225,5 +225,5 @@ class SyncBatchNorm(BatchNorm):
         return num_devices
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
-                               name='fwd', **self._kwargs)
+        return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
+                                       name='fwd', **self._kwargs)
