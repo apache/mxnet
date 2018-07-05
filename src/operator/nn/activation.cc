@@ -62,7 +62,6 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
-  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNN(inputs[0])) {
@@ -71,7 +70,7 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  ActivationComputeImpl<cpu>(param, ctx, inputs[0].data(), req[0], outputs[0].data());
+  FallBackCompute(ActivationComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -90,8 +89,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
      MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
-  ActivationGradComputeImpl<cpu>(param, ctx, inputs[0].data(), inputs[1].data(),
-                                 req[0], outputs[0].data());
+  FallBackCompute(ActivationGradComputeImpl<cpu>, attrs, ctx, inputs, req, outputs);
 }
 #endif
 

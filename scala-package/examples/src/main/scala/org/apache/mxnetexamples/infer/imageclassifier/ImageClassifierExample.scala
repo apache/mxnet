@@ -31,9 +31,9 @@ import scala.collection.mutable.ListBuffer
 /**
   * <p>
   * Example inference showing usage of the Infer package on a resnet-152 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet\
-  * blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/inferexample\
-  * imageclassifier/" target="_blank">Instructions to run this example</a>
+  * @see <pre><a href="https://github.com/apache/incubator-mxnet/tree/master/s
+    cala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/im
+    ageclassifier" target="_blank">Instructions to run this example</a></pre>
   */
 object ImageClassifierExample {
 
@@ -99,7 +99,9 @@ object ImageClassifierExample {
         batch = ListBuffer[String]()
       }
     }
-    output += batch.toList
+    if (batch.length > 0) {
+      output += batch.toList
+    }
     output.toList
   }
 

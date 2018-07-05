@@ -21,7 +21,7 @@ from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, teardown
 from collections import namedtuple
 
 

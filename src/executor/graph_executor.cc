@@ -39,6 +39,7 @@ namespace exec {
 
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
+  need_grad_ = false;
 }
 
 GraphExecutor::~GraphExecutor() {
@@ -257,11 +258,11 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 
   nnvm::Graph g;
   g.outputs = symbol.outputs;
-  bool need_grad = false;
+  need_grad_ = false;
   for (OpReqType req : grad_req_types) {
-    if (req != kNullOp) need_grad = true;
+    if (req != kNullOp) need_grad_ = true;
   }
-  if (!need_grad) return g;
+  if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
@@ -912,7 +913,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   }
 
   g = AttachOpExecs(g);
-  g = AttachOpResources(g);
+  AttachOpResources(g);
   graph_ = std::move(g);
 
   if (shared_exec != nullptr) {
@@ -1043,6 +1044,117 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   FinishInitGraph(symbol, g, shared_exec, feed_dict);
 }
 
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ * For runtime reshaping, variable length sequences, etc.
+ * The returned executor shares state with the current one,
+ * and cannot be used in parallel with it.
+ */
+Executor* GraphExecutor::Reshape(const bool partial_shaping,
+                                 const bool allow_up_sizing,
+                                 const Context& default_ctx,
+                                 const std::map<std::string, Context>& ctx_map,
+                                 const std::unordered_map<std::string, TShape>&
+                                   provided_arg_shapes,
+                                 std::vector<NDArray>* in_args,
+                                 std::vector<NDArray>* arg_grads,
+                                 std::vector<NDArray>* aux_states) {
+  nnvm::Graph g;
+  g.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+    graph_.outputs.begin() + num_forward_outputs_);
+  nnvm::Symbol symbol;
+  symbol.outputs = g.outputs;
+  const nnvm::IndexedGraph& idx = g.indexed_graph();
+  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string& name = idx[nid].source->attrs.name;
+    auto it = provided_arg_shapes.find(name);
+    if (provided_arg_shapes.end() != it) {
+      arg_shapes[i] = it->second;
+    }
+  }
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+  if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
+    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
+                          g.GetAttr<nnvm::ShapeVector>("shape"));
+  }
+  const nnvm::ShapeVector& shape_vec = g.GetAttr<nnvm::ShapeVector>("shape");
+  std::vector<OpReqType> grad_req_types;
+  size_t grad_top = 0;
+  const size_t num_args = in_arg_map_.size();
+  const size_t num_aux = aux_state_map_.size();
+  in_args->reserve(num_args);
+  grad_req_types.reserve(num_args);
+  arg_grads->reserve(num_args);
+  aux_states->reserve(num_aux);
+  for (uint32_t nid : idx.input_nodes()) {
+    std::string name = idx[nid].source->attrs.name;
+    const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
+    if (idx.mutable_input_nodes().count(nid) == 0) {
+      NDArray& arr = in_arg_map_.at(name);
+      auto it = arg_grad_map_.find(name);
+      if (partial_shaping || provided_arg_shapes.count(name) || new_shape == arr.shape()) {
+        if (new_shape.Size() > arr.shape().Size()) {
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          in_args->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
+          if (it != arg_grad_map_.end()) {
+            NDArray& darr = it->second;
+            arg_grads->emplace_back(new_shape, darr.ctx(), false, darr.dtype());
+            grad_req_types.push_back(grad_store_.at(grad_top++).first);
+          } else {
+            arg_grads->emplace_back();
+            grad_req_types.push_back(kNullOp);
+          }
+        } else {
+          in_args->push_back(arr.Reshape(new_shape));
+          if (it != arg_grad_map_.end()) {
+            NDArray& darr = it->second;
+            arg_grads->push_back(darr.Reshape(new_shape));
+            grad_req_types.push_back(grad_store_.at(grad_top++).first);
+          } else {
+            arg_grads->emplace_back();
+            grad_req_types.push_back(kNullOp);
+          }
+        }
+      } else {
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
+      }
+    } else {
+      NDArray& arr = aux_state_map_.at(name);
+      if (partial_shaping || new_shape == arr.shape()) {
+        if (new_shape.Size() > arr.shape().Size()) {
+          CHECK(allow_up_sizing) << "New shape of arg: " << name << " is larger than original."
+            << "First making a big executor and then down sizing it "
+            << "is more efficient than the reverse."
+            << "If you really want to up size, set allow_up_sizing=True "
+            << "to enable allocation of new arrays.";
+          aux_states->emplace_back(new_shape, arr.ctx(), false, arr.dtype());
+        } else {
+          aux_states->push_back(arr.Reshape(new_shape));
+        }
+      } else {
+        LOG(FATAL) << "Shape of unspecifie arg: " << name << " changed. "
+          << "This can cause the new executor to not share parameters "
+          << "with the old one. Please check for error in network."
+          << "If this is intended, set partial_shaping=True to suppress this warning.";
+      }
+    }
+  }
+  auto exec = new GraphExecutor();
+  exec->Init(symbol, default_ctx, ctx_map,
+             *in_args, *arg_grads, grad_req_types, *aux_states,
+             this);
+  return exec;
+}
 /*!
  * \brief This function is triggered by both simple_bind
  * and bind flows.
@@ -1480,6 +1592,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
     opnode.exec->op_ctx.is_train = is_train;
+    opnode.exec->op_ctx.need_grad = need_grad_;
   }
 
   // Push Ops
@@ -1498,11 +1611,15 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
     opnode.exec->op_ctx.is_train = is_train;
+    opnode.exec->op_ctx.need_grad = need_grad_;
     if (opnode.exec->exec_type() == ExecType::kCrossDeviceCopy) {
       CHECK_EQ(inode.inputs.size(), 1U);
       CHECK_EQ(opnode.exec->in_array.size(), 1U);
       CHECK_EQ(opnode.exec->out_array.size(), 1U);
       CopyFromTo(opnode.exec->in_array[0], &(opnode.exec->out_array[0]));
+    } else if (opnode.exec->exec_type() == ExecType::kSubgraphExec) {
+      // If the node contains a subgraph, we can't execute it in the engine.
+      opnode.exec->Run(opnode.exec->op_ctx.run_ctx, false);
     } else if (opnode.cached_opr != nullptr) {
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0, profiling);

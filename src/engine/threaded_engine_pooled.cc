@@ -71,10 +71,14 @@ class ThreadedEnginePooled : public ThreadedEngine {
     streams_.reset(new StreamManager<kMaxNumGpus, kNumStreamsPerGpu>());
     task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
     io_task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
-    thread_pool_.reset(new ThreadPool(kNumWorkingThreads, [this]() {
-      ThreadWorker(task_queue_); }));
-    io_thread_pool_.reset(new ThreadPool(1, [this]() {
-      ThreadWorker(io_task_queue_); }));
+    thread_pool_.reset(new ThreadPool(kNumWorkingThreads,
+                                      [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
+                                        ThreadWorker(task_queue_, ready_event); },
+                                      true));
+    io_thread_pool_.reset(new ThreadPool(1,
+                                         [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
+                                           ThreadWorker(io_task_queue_, ready_event); },
+                                         true));
   }
 
  protected:
@@ -113,8 +117,10 @@ class ThreadedEnginePooled : public ThreadedEngine {
    *
    * The method to pass to thread pool to parallelize.
    */
-  void ThreadWorker(std::shared_ptr<dmlc::ConcurrentBlockingQueue<OprBlock*>> task_queue) {
+  void ThreadWorker(std::shared_ptr<dmlc::ConcurrentBlockingQueue<OprBlock*>> task_queue,
+                    const std::shared_ptr<dmlc::ManualEvent>& ready_event) {
     OprBlock* opr_block;
+    ready_event->signal();
     while (task_queue->Pop(&opr_block)) {
       DoExecute(opr_block);
     }

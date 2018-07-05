@@ -169,6 +169,15 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.square
 ```
 
+### Joining arrays
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    concat
+```
+
 ### Indexing
 
 ```eval_rst

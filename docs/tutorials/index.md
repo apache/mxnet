@@ -38,9 +38,14 @@ Select API:&nbsp;
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
-    * [Checkpointing and Model Serialization (a.k.a. saving and loading)](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+    * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
+    * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
+    * [Learning Rate Finder](/tutorials/gluon/learning_rate_finder.html)
+    * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
+    * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
+    * [Profiling MXNet Models](/tutorials/python/profiler.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -68,6 +73,7 @@ Select API:&nbsp;
             * [AutoGrad API with Python control flow](http://gluon-crash-course.mxnet.io/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
         * Data
             * [Datasets and DataLoaders](/tutorials/gluon/datasets.html)
+            * [Applying Data Augmentation](/tutorials/gluon/data_augmentation.html)
             * [Data Augmentation with Masks (for Object Segmentation)](https://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
 </div> <!--end of gluon-->
 
@@ -88,6 +94,7 @@ Select API:&nbsp;
     * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
+    * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -104,7 +111,10 @@ Select API:&nbsp;
             * [Key-Value Store API](/tutorials/python/kvstore.html)
     * Module APIs
         * [Module API](/tutorials/basic/module.html)
-        * [Data Iterators](/tutorials/basic/data.html)
+        * Data
+            * [Data Iterators](/tutorials/basic/data.html)
+            * [Applying Data Augmentation](/tutorials/python/data_augmentation.html)
+            * [Types of Data Augmentation](/tutorials/python/types_of_data_augmentation.html)
 </div> <!--end of module-->
 
 <hr>

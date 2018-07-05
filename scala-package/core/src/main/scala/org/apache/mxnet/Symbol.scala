@@ -101,7 +101,6 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     var index: Int = -1
     for ((output, i) <- listOutputs().view.zipWithIndex) {
       if (output == name) {
-        require(index == -1, s"There are multiple outputs with name $name")
         index = i
       }
     }
@@ -823,8 +822,12 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
   }
 }
 
+/**
+  * Symbol Object extends from SymbolBase for abstract function signatures
+  * Main code will be generated during compile time through Macros
+  */
 @AddSymbolFunctions(false)
-object Symbol {
+object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()

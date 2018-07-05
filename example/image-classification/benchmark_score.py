@@ -27,7 +27,7 @@ import time
 import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
-def get_symbol(network, batch_size):
+def get_symbol(network, batch_size, dtype):
     image_shape = (3,299,299) if network == 'inception-v3' else (3,224,224)
     num_layers = 0
     if 'resnet' in network:
@@ -37,14 +37,15 @@ def get_symbol(network, batch_size):
         num_layers = int(network.split('-')[1])
         network = 'vgg'
     net = import_module('symbols.'+network)
-    sym = net.get_symbol(num_classes = 1000,
-                         image_shape = ','.join([str(i) for i in image_shape]),
-                         num_layers  = num_layers)
+    sym = net.get_symbol(num_classes=1000,
+                         image_shape=','.join([str(i) for i in image_shape]),
+                         num_layers=num_layers,
+                         dtype=dtype)
     return (sym, [('data', (batch_size,)+image_shape)])
 
-def score(network, dev, batch_size, num_batches):
+def score(network, dev, batch_size, num_batches, dtype):
     # get mod
-    sym, data_shape = get_symbol(network, batch_size)
+    sym, data_shape = get_symbol(network, batch_size, dtype)
     mod = mx.mod.Module(symbol=sym, context=dev)
     mod.bind(for_training     = False,
              inputs_need_grad = False,
@@ -74,11 +75,17 @@ if __name__ == '__main__':
     devs.append(mx.cpu())
 
     batch_sizes = [1, 2, 4, 8, 16, 32]
-
     for net in networks:
         logging.info('network: %s', net)
         for d in devs:
             logging.info('device: %s', d)
             for b in batch_sizes:
-                speed = score(network=net, dev=d, batch_size=b, num_batches=10)
-                logging.info('batch size %2d, image/sec: %f', b, speed)
+                for dtype in ['float32', 'float16']:
+                    if d == mx.cpu() and dtype == 'float16':
+                        #float16 is not supported on CPU
+                        continue
+                    elif net in ['inception-bn', 'alexnet'] and dt == 'float16':
+                        logging.info('{} does not support float16'.format(net))
+                    else:
+                        speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
+                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dtype, speed)

@@ -24,7 +24,7 @@ import argparse
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, assert_exception
 from test_kvstore import compute_expected_2bit_quantization
 
 def check_diff(A, x, rank=None):
@@ -350,6 +350,20 @@ def test_sync_init(gpu_tests=False):
         check_init(kv, init_test_keys_device_big, big_shape, device=True)
     print('worker ' + str(kv.rank) + ' is initialized')
 
+def test_gluon_trainer_reset():
+    params = mx.gluon.ParameterDict()
+    x = params.get('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
+    params.initialize(ctx=mx.cpu(0), init='zeros')
+    trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+    params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
+    row_id = mx.nd.arange(0, 4)
+    w = x.row_sparse_data(row_id)
+    assert trainer._kv_initialized and trainer._update_on_kvstore
+    # load would fail to reset kvstore since update_on_kvstore is True
+    assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_reset')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
     parser.add_argument('--nrepeat', type=int, default=7)
@@ -357,13 +371,16 @@ if __name__ == "__main__":
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
-    if opt.type == 'all' or  opt.type == 'init':
+    if opt.type == 'gluon':
+        test_gluon_trainer_reset()
+    if opt.type == 'all' or opt.type == 'init':
         test_sync_init(opt.gpu)
-    kv = init_kv()
-    if opt.type == 'all' or  opt.type == 'default':
+    if opt.type == 'all' or opt.type == 'default':
+        kv = init_kv()
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
     # dont run non compressed tests after this as kvstore compression will be set here
-    if opt.type == 'all' or  opt.type == 'compressed':
+    if opt.type == 'all' or opt.type == 'compressed':
+        kv = init_kv()
         kv, threshold = init_kv_compressed(kv)
         test_sync_2bit_compression(threshold, opt.nrepeat)

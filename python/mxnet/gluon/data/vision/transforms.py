@@ -196,7 +196,7 @@ class RandomResizedCrop(Block):
         - **out**: output tensor with (H x W x C) shape.
     """
     def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0/4.0, 4.0/3.0),
-                 interpolation=2):
+                 interpolation=1):
         super(RandomResizedCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
@@ -233,7 +233,7 @@ class CenterCrop(Block):
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
     """
-    def __init__(self, size, interpolation=2):
+    def __init__(self, size, interpolation=1):
         super(CenterCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
@@ -250,6 +250,9 @@ class Resize(Block):
     ----------
     size : int or tuple of (W, H)
         Size of output image.
+    keep_ratio : bool
+        Whether to resize the short edge or both edges to `size`,
+        if size is give as an integer.
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
@@ -268,14 +271,28 @@ class Resize(Block):
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
     """
-    def __init__(self, size, interpolation=2):
+    def __init__(self, size, keep_ratio=False, interpolation=1):
         super(Resize, self).__init__()
-        if isinstance(size, numeric_types):
-            size = (size, size)
-        self._args = tuple(size) + (interpolation,)
+        self._keep = keep_ratio
+        self._size = size
+        self._interpolation = interpolation
 
     def forward(self, x):
-        return image.imresize(x, *self._args)
+        if isinstance(self._size, numeric_types):
+            if not self._keep:
+                wsize = self._size
+                hsize = self._size
+            else:
+                h, w, _ = x.shape
+                if h > w:
+                    wsize = self._size
+                    hsize = int(h * wsize / w)
+                else:
+                    hsize = self._size
+                    wsize = int(w * hsize / h)
+        else:
+            wsize, hsize = self._size
+        return image.imresize(x, wsize, hsize, self._interpolation)
 
 
 class RandomFlipLeftRight(HybridBlock):

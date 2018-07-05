@@ -987,11 +987,6 @@ MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
                                  int num_flags,
                                  const char** keys,
                                  const char** vals,
-                                 int num_inputs,
-                                 const char** input_names,
-                                 int num_params,
-                                 const char** param_names,
-                                 NDArrayHandle* params,
                                  CachedOpHandle *out);
 /*!
  * \brief free cached operator
@@ -1056,6 +1051,28 @@ MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
  */
 MXNET_DLL int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator creator,
                                           const char **name);
+
+/*!
+ * \brief Get the input symbols of the graph.
+ * \param sym The graph.
+ * \param inputs The input symbols of the graph.
+ * \param input_size the number of input symbols returned.
+ */
+MXNET_DLL int MXSymbolGetInputSymbols(SymbolHandle sym, SymbolHandle **inputs,
+                                      int *input_size);
+
+/*!
+ * \brief Cut a subgraph whose nodes are marked with a subgraph attribute.
+ * The input graph will be modified. A variable node will be created for each
+ * edge that connects to nodes outside the subgraph. The outside nodes that
+ * connect to the subgraph will be returned.
+ * \param sym The graph.
+ * \param inputs The nodes that connect to the subgraph.
+ * \param input_size The number of such nodes.
+ */
+MXNET_DLL int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **inputs,
+                                  int *input_size);
+
 /*!
  * \brief Get the detailed information about atomic symbol.
  * \param creator the AtomicSymbolCreator.
@@ -1436,13 +1453,15 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param excluded_symbols array of symbols to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
+ * \param quantized_dtype the quantized destination type for input data.
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
                                SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
                                const SymbolHandle *excluded_symbols,
                                const mx_uint num_offline,
-                               const char **offline_params);
+                               const char **offline_params,
+                               const char *quantized_dtype);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1654,6 +1673,47 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    NDArrayHandle** aux_states,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
+
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ *
+ * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+ * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param num_in_args length of in_args
+ * \param in_args in args array
+ * \param arg_grads arg grads handle array
+ * \param num_aux_states length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return a new executor
+ */
+MXNET_DLL int MXExecutorReshape(int partial_shaping,
+                                int allow_up_sizing,
+                                int dev_type,
+                                int dev_id,
+                                mx_uint num_map_keys,
+                                const char** map_keys,
+                                const int* map_dev_types,
+                                const int* map_dev_ids,
+                                const mx_uint num_provided_arg_shapes,
+                                const char** provided_arg_shape_names,
+                                const mx_uint* provided_arg_shape_data,
+                                const mx_uint* provided_arg_shape_idx,
+                                mx_uint* num_in_args,
+                                NDArrayHandle** in_args,
+                                NDArrayHandle** arg_grads,
+                                mx_uint* num_aux_states,
+                                NDArrayHandle** aux_states,
+                                ExecutorHandle shared_exec,
+                                ExecutorHandle *out);
 /*!
  * \brief set a call back to notify the completion of operation
  */

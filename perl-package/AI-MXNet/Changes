@@ -1,5 +1,12 @@
 Revision history for Perl extension AI::MXNet
 
+1.3     Tue Jun 26 20:57:40 PDT 2018
+        - Major Gluon update towards parity with Python's API.
+        - Miscellaneous bugfixes and improvements.
+        - New Engine API.
+        - Module::reshape moved to C++ backend.
+        - Examples were updated to work on multi-gpu boxes
+
 1.23    Thu Apr 19 15:38:10 PDT 2018
         - Support for image operations on symbols and ndarrays.
 

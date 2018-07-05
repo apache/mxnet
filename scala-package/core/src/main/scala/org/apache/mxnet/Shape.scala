@@ -17,6 +17,8 @@
 
 package org.apache.mxnet
 
+import scala.annotation.varargs
+
 /**
  * Shape of [[NDArray]] or other data
  */
@@ -28,6 +30,7 @@ class Shape(dims: Traversable[Int]) extends Serializable {
   }
 
   def apply(dim: Int): Int = shape(dim)
+  def get(dim: Int): Int = apply(dim)
   def size: Int = shape.size
   def length: Int = shape.length
   def drop(dim: Int): Shape = new Shape(shape.drop(dim))
@@ -56,4 +59,5 @@ class Shape(dims: Traversable[Int]) extends Serializable {
 object Shape {
   def apply(dims: Int *): Shape = new Shape(dims: _*)
   def apply(dims: Traversable[Int]): Shape = new Shape(dims)
+  @varargs def create(dims: Int*): Shape = new Shape(dims)
 }

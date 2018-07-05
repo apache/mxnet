@@ -23,6 +23,8 @@ import org.apache.mxnet.optimizer.SGD
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+
+import scala.annotation.varargs
 import scala.collection.mutable.ArrayBuffer
 
 object BaseModule {
@@ -469,6 +471,15 @@ abstract class BaseModule {
   def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit
 
   /**
+   * Forward computation.
+   * @param dataBatch a batch of data.
+   * @param isTrain Whether it is for training or not.
+   */
+  def forward(dataBatch: DataBatch, isTrain: Boolean): Unit = {
+    forward(dataBatch, Option(isTrain))
+  }
+
+  /**
    * Backward computation.
    * @param outGrads Gradient on the outputs to be propagated back.
    *                 This parameter is only needed when bind is called
@@ -548,6 +559,25 @@ abstract class BaseModule {
            forTraining: Boolean = true, inputsNeedGrad: Boolean = false,
            forceRebind: Boolean = false, sharedModule: Option[BaseModule] = None,
            gradReq: String = "write"): Unit
+
+
+ /**
+  * Bind the symbols to construct executors.
+  * This is necessary before one can perform computation with the module.
+  * @param forTraining Default is `True`. Whether the executors should be bind for training.
+  * @param inputsNeedGrad  Default is `False`.
+  *                        Whether the gradients to the input data need to be computed.
+  *                        Typically this is not needed.
+  *                        But this might be needed when implementing composition of modules.
+  * @param forceRebind Default is `False`. This function does nothing
+  *                    if the executors are already binded. But with this `True`,
+  *                    the executors will be forced to rebind.
+  * @param dataShape Typically is `DataIter.provideData`.
+  */
+  @varargs def bind(forTraining: Boolean, inputsNeedGrad: Boolean,
+                    forceRebind: Boolean, dataShape: DataDesc*): Unit = {
+    bind(dataShape.toVector, None, forTraining, inputsNeedGrad, forceRebind, None)
+  }
 
   // Install and initialize optimizers.
   def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),

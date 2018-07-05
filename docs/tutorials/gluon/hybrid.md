@@ -87,7 +87,7 @@ net(x)
 Hybrid execution can be activated by simply calling `.hybridize()` on the top
 level layer. The first forward call after activation will try to build a
 computation graph from `hybrid_forward` and cache it. On subsequent forward
-calls the cached graph instead of `hybrid_forward` will be invoked:
+calls the cached graph, instead of `hybrid_forward`, will be invoked:
 
 ```python
 net.hybridize()
@@ -105,23 +105,35 @@ Hybridize will speed up execution and save memory. If the top level layer is
 not a `HybridBlock`, you can still call `.hybridize()` on it and Gluon will try
 to hybridize its children layers instead.
 
-## Serializing trained model for deployment
-
-Models implemented as `HybridBlock` can be easily serialized for deployment
-using other language front-ends like C, C++ and Scala. To this end, we simply
-forward the model with symbolic variables instead of NDArrays and save the
-output Symbol(s):
+`hybridize` also accepts several options for performance tuning. For example, you
+can do
 
 ```python
-x = mx.sym.var('data')
-y = net(x)
-print(y)
-y.save('model.json')
-net.save_params('model.params')
+net.hybridize(static_alloc=True)
+# or
+net.hybridize(static_alloc=True, static_shape=True)
 ```
 
-If your network outputs more than one value, you can use `mx.sym.Group` to
-combine them into a grouped Symbol and then save. The saved json and params
-files can then be loaded with C, C++ and Scala interface for prediction.
+Please refer to the [API manual](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=hybridize#mxnet.gluon.Block.hybridize)
+for details.
+
+## Serializing trained model for deployment
+
+Models implemented as `HybridBlock` can be easily serialized. The serialized
+model can be loaded back later or used for deployment
+with other language front-ends like C, C++ and Scala. To this end, we simply
+use `export` and `SymbolBlock.imports`:
+
+```python
+net.export('model', epoch=1)
+```
+
+Two files `model-symbol.json` and `model-0001.params` are saved on disk.
+You can use other language bindings to load them. You can also load them back
+to gluon with `SymbolBlock`:
+
+```python
+net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.params')
+```
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

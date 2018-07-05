@@ -510,6 +510,93 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   API_END();
 }
 
+int MXExecutorReshape(int partial_shaping,
+                      int allow_up_sizing,
+                      int dev_type,
+                      int dev_id,
+                      mx_uint num_map_keys,
+                      const char** map_keys,
+                      const int* map_dev_types,
+                      const int* map_dev_ids,
+                      const mx_uint num_provided_arg_shapes,
+                      const char** provided_arg_shape_names,
+                      const mx_uint* provided_arg_shape_data,
+                      const mx_uint* provided_arg_shape_idx,
+                      mx_uint* num_in_args,
+                      NDArrayHandle** in_args,
+                      NDArrayHandle** arg_grads,
+                      mx_uint* num_aux_states,
+                      NDArrayHandle** aux_states,
+                      ExecutorHandle shared_exec,
+                      ExecutorHandle *out) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  // create shape map for in_args and aux_states
+  std::unordered_map<std::string, TShape> kwargs(num_provided_arg_shapes);
+  for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
+    auto p = kwargs.emplace(provided_arg_shape_names[i],
+        TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
+          provided_arg_shape_data+provided_arg_shape_idx[i+1]));
+    CHECK(p.second) << "Duplicate shapes are provided for argument "
+      << provided_arg_shape_names[i] << " in reshape of executor";
+  }
+
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  std::map<std::string, Context> ctx_map;
+  for (mx_uint i = 0; i < num_map_keys; ++i) {
+    ctx_map[std::string(map_keys[i])] = Context::Create(
+        static_cast<Context::DeviceType>(map_dev_types[i]), map_dev_ids[i]);
+  }
+  std::vector<NDArray> in_arg_vec;
+  std::vector<NDArray> arg_grad_vec;
+  std::vector<NDArray> aux_state_vec;
+
+  Executor* exec = static_cast<Executor*>(shared_exec);
+  *out = exec->Reshape(partial_shaping, allow_up_sizing, ctx, ctx_map, kwargs,
+                       &in_arg_vec, &arg_grad_vec, &aux_state_vec);
+
+  ret->ret_handles.clear();
+  ret->ret_handles.reserve(in_arg_vec.size()+arg_grad_vec.size()+aux_state_vec.size());
+
+  size_t nd_idx = 0;
+  for (const auto& nd : in_arg_vec) {
+    if (nd.is_none()) {
+      LOG(FATAL) << "Input argument NDArray cannot be un-allocated";
+    }
+    ret->ret_handles.push_back(new NDArray(nd));
+  }
+  if (in_arg_vec.size() > 0) {
+    *num_in_args = in_arg_vec.size();
+    *in_args = &(ret->ret_handles[nd_idx]);
+    nd_idx = ret->ret_handles.size();
+  }
+
+  for (const auto& nd : arg_grad_vec) {
+    if (nd.is_none()) {
+      ret->ret_handles.push_back(nullptr);
+    } else {
+      ret->ret_handles.push_back(new NDArray(nd));
+    }
+  }
+  if (arg_grad_vec.size() > 0) {
+    *arg_grads = &(ret->ret_handles[nd_idx]);
+    nd_idx = ret->ret_handles.size();
+  }
+
+  for (const auto& nd : aux_state_vec) {
+    if (nd.is_none()) {
+      LOG(FATAL) << "Auxiliary argument NDArray cannot be un-allocated";
+    }
+    ret->ret_handles.push_back(new NDArray(nd));
+  }
+  if (aux_state_vec.size() > 0) {
+    *num_aux_states = aux_state_vec.size();
+    *aux_states = &(ret->ret_handles[nd_idx]);
+    nd_idx = ret->ret_handles.size();
+  }
+  API_END_HANDLE_ERROR(delete out);
+}
+
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
                                  void* callback_handle) {

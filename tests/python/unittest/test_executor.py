@@ -17,7 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 
 def reldiff(a, b):
@@ -159,6 +159,14 @@ def test_reshape():
     # test base exec forward
     exe.forward(is_train=False)
     assert np.all(exe.outputs[0].asnumpy() == 4)
+
+    # test sharing ndarray depending on new_shape
+    new_exe = exe.reshape(allow_up_sizing=True, x=(6,4))
+    # data ndarray is not shared between exe and new_exe
+    new_exe.arg_arrays[0][:] = 0
+    assert np.all(exe.arg_arrays[0].asnumpy() == 1)
+    # weight ndarray is shared between exe and new_exe
+    assert np.all(new_exe.arg_arrays[1].asnumpy() == 1)
 
 
 if __name__ == "__main__":

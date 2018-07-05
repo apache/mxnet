@@ -1,0 +1,49 @@
+;;
+;; Licensed to the Apache Software Foundation (ASF) under one or more
+;; contributor license agreements.  See the NOTICE file distributed with
+;; this work for additional information regarding copyright ownership.
+;; The ASF licenses this file to You under the Apache License, Version 2.0
+;; (the "License"); you may not use this file except in compliance with
+;; the License.  You may obtain a copy of the License at
+;;
+;;    http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+;;
+
+digraph foo{
+	data [label=data  fixedsize=false style=filled height=0.8034 fillcolor="#8dd3c7" shape=oval width=1.3]
+	conv1 [label="Convolution\n3x3/2x2, 32"  fixedsize=false style=filled height=0.8034 fillcolor="#fb8072" shape=oval width=1.3]
+	bn1 [label=bn1  fixedsize=false style=filled height=0.8034 fillcolor="#bebada" shape=oval width=1.3]
+	relu1 [label="Activation
+relu"  fixedsize=false style=filled height=0.8034 fillcolor="#ffffb3" shape=oval width=1.3]
+	mp1 [label="Pooling
+max, 2x2/2x2"  fixedsize=false style=filled height=0.8034 fillcolor="#80b1d3" shape=oval width=1.3]
+	conv2 [label="Convolution\n3x3/2x2, 32"  fixedsize=false style=filled height=0.8034 fillcolor="#fb8072" shape=oval width=1.3]
+	bn2 [label=bn2  fixedsize=false style=filled height=0.8034 fillcolor="#bebada" shape=oval width=1.3]
+	relu2 [label="Activation
+relu"  fixedsize=false style=filled height=0.8034 fillcolor="#ffffb3" shape=oval width=1.3]
+	mp2 [label="Pooling
+max, 2x2/2x2"  fixedsize=false style=filled height=0.8034 fillcolor="#80b1d3" shape=oval width=1.3]
+	fl [label=fl  fixedsize=false style=filled height=0.8034 fillcolor="#fdb462" shape=oval width=1.3]
+	fc2 [label="FullyConnected
+10"  fixedsize=false style=filled height=0.8034 fillcolor="#fb8072" shape=oval width=1.3]
+	softmax_label [label=softmax_label  fixedsize=false style=filled height=0.8034 fillcolor="#8dd3c7" shape=oval width=1.3]
+	softmax [label=softmax  fixedsize=false style=filled height=0.8034 fillcolor="#fccde5" shape=oval width=1.3]
+		conv1 -> data [ arrowtail=open dir=back label="1x28x28"]
+		bn1 -> conv1 [ arrowtail=open dir=back label="32x13x13"]
+		relu1 -> bn1 [ arrowtail=open dir=back label="32x13x13"]
+		mp1 -> relu1 [ arrowtail=open dir=back label="32x13x13"]
+		conv2 -> mp1 [ arrowtail=open dir=back label="32x6x6"]
+		bn2 -> conv2 [ arrowtail=open dir=back label="32x2x2"]
+		relu2 -> bn2 [ arrowtail=open dir=back label="32x2x2"]
+		mp2 -> relu2 [ arrowtail=open dir=back label="32x2x2"]
+		fl -> mp2 [ arrowtail=open dir=back label="32x1x1"]
+		fc2 -> fl [ arrowtail=open dir=back label="32"]
+		softmax -> fc2 [ arrowtail=open dir=back label="10"]
+		softmax -> softmax_label [ arrowtail=open dir=back label=""]
+}

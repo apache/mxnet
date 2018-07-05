@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context

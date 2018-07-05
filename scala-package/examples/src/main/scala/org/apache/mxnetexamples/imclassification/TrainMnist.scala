@@ -21,8 +21,8 @@ import org.apache.mxnet._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
-import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object TrainMnist {
   private val logger = LoggerFactory.getLogger(classOf[TrainMnist])
@@ -31,6 +31,7 @@ object TrainMnist {
   def getMlp: Symbol = {
     val data = Symbol.Variable("data")
 
+    // val fc1 = Symbol.FullyConnected(name = "relu")()(Map("data" -> data, "act_type" -> "relu"))
     val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
     val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
     val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
@@ -39,10 +40,6 @@ object TrainMnist {
     val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
     mlp
   }
-
-  // LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
-  // Haffner. "Gradient-based learning applied to document recognition."
-  // Proceedings of the IEEE (1998)
 
   def getLenet: Symbol = {
     val data = Symbol.Variable("data")
@@ -93,6 +90,19 @@ object TrainMnist {
       "part_index" -> kv.`rank`.toString))
 
     (train, eval)
+  }
+
+  def test(dataPath : String) : Float = {
+    val (dataShape, net) = (Shape(784), getMlp)
+    val devs = Array(Context.cpu(0))
+    val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+    val Acc = ModelTrain.fit(dataDir = dataPath,
+      batchSize = 128, numExamples = 60000, devs = devs,
+      network = net, dataLoader = getIterator(dataShape),
+      kvStore = "local", numEpochs = 10)
+    logger.info("Finish test fit ...")
+    val (_, num) = Acc.get
+    num(0)
   }
 
 

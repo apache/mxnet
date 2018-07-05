@@ -21,12 +21,16 @@
 FROM dockcross/base:latest
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
-# The cross-compiling emulator
 RUN apt-get update && apt-get install -y \
-  qemu-user \
-  qemu-user-static \
   unzip
 
+WORKDIR /work/deps
+
+# Build x86 dependencies.
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
+# Setup Android cross-compilation environment.
 ENV CROSS_TRIPLE=aarch64-linux-android
 ENV CROSS_ROOT=/usr/${CROSS_TRIPLE}
 ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
@@ -51,13 +55,22 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.schema-version="1.0"
 
 ENV ARCH aarch64
+ENV ANDROID_NDK_REVISION 17b
+ENV ANDROID_NDK_API 27
+ENV ANDROID_NDK_ARCH arm64
+WORKDIR /work/deps
+COPY install/android_ndk.sh /work/deps
+RUN /work/deps/android_ndk.sh
+
+
+WORKDIR /work/deps
+COPY install/android_ndk.sh /work/
+RUN /work/android_ndk.sh
 
 ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
 ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 
-WORKDIR /work/deps
-COPY install/android_arm64_ndk.sh /work/
-RUN /work/android_arm64_ndk.sh
+# Build ARM dependencies.
 COPY install/android_arm64_openblas.sh /work/
 RUN /work/android_arm64_openblas.sh
 ENV CPLUS_INCLUDE_PATH /work/deps/OpenBLAS

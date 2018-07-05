@@ -43,7 +43,6 @@
 #include "../mxnet_op.h"
 #include "./sort_op.h"
 #include "./init_op.h"
-#include "./matrix_op-inl.h"
 #include "../../engine/openmp.h"
 
 namespace mxnet {
@@ -269,6 +268,12 @@ inline bool EmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
         type_assign(&weight_grad_stype, target_stype)) {
       dispatched = dispatch_mode_assign(dispatch_mode, target_mode);
     }
+  }
+  // Print user friendly error message to notify misuses of sparse_grad
+  if (weight_grad_stype != target_stype) {
+    LOG(FATAL) << "Cannot use sparse_grad = " << sparse_grad
+               << ", while stype of gradients w.r.t embedding weight is "
+               << common::stype_string(weight_grad_stype);
   }
   return dispatched;
 }
@@ -593,7 +598,11 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
         uint64_t shape_out_prod =
           static_cast<uint64_t>(grad_out.shape_[0])*
           static_cast<uint64_t>(grad_out.shape_[1]);
-        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+
+        static bool default_addtakegrad =
+            dmlc::GetEnv("MXNET_FORCE_ADDTAKEGRAD", false);
+        if (!default_addtakegrad || (shape_out_prod < (uint64_t)16384 &&
+                                     shape_in_prod < (uint64_t)16384)) {
           AddTakeGrad(grad_in, data, grad_out);
         } else {
           AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);

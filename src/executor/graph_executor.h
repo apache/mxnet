@@ -107,6 +107,16 @@ class GraphExecutor : public Executor {
             const nnvm::NodeEntryMap<NDArray>& feed_dict
               = nnvm::NodeEntryMap<NDArray>());
 
+  Executor* Reshape(const bool partial_shaping,
+                    const bool allow_up_sizing,
+                    const Context& default_ctx,
+                    const std::map<std::string, Context>& ctx_map,
+                    const std::unordered_map<std::string, TShape>&
+                      provided_arg_shapes,
+                    std::vector<NDArray>* in_args,
+                    std::vector<NDArray>* arg_grads,
+                    std::vector<NDArray>* aux_states) override;
+
  protected:
   friend class mxnet::Imperative;
   // Information about operational node
@@ -203,6 +213,8 @@ class GraphExecutor : public Executor {
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
 
+  // indicate whether there is a backward graph for gradients.
+  bool need_grad_;
   // internal graph
   nnvm::Graph graph_;
   // operator node

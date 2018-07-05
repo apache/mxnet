@@ -126,6 +126,8 @@ MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
 MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
 
+MXNET_BINARY_MATH_OP_NC(prelu_grad, a > DType(0) ? DType(0) : a);
+
 MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
                         DType(static_cast<float>(a) * static_cast<float>(b)));
 

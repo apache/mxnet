@@ -28,14 +28,17 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.ref.WeakReference
 
 /**
- * NDArray API of mxnet
- */
+  * NDArray Object extends from NDArrayBase for abstract function signatures
+  * Main code will be generated during compile time through Macros
+  */
 @AddNDArrayFunctions(false)
-object NDArray {
+object NDArray extends NDArrayBase {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
+
+  val api = NDArrayAPI
 
   private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
     froms.foreach { from =>
@@ -63,12 +66,12 @@ object NDArray {
     val ndArgs = ArrayBuffer.empty[NDArray]
     val posArgs = ArrayBuffer.empty[String]
     args.foreach {
-      case arr: NDArray =>
-        ndArgs.append(arr)
-      case arrFunRet: NDArrayFuncReturn =>
-        arrFunRet.arr.foreach(ndArgs.append(_))
-      case arg =>
-        posArgs.append(arg.toString)
+        case arr: NDArray =>
+          ndArgs.append(arr)
+        case arrFunRet: NDArrayFuncReturn =>
+          arrFunRet.arr.foreach(ndArgs.append(_))
+        case arg =>
+          posArgs.append(arg.toString)
     }
 
     require(posArgs.length <= function.arguments.length,
@@ -78,6 +81,7 @@ object NDArray {
       (Option(kwargs).getOrElse(Map.empty[String, String])
         ++ function.arguments.slice(0, posArgs.length).zip(posArgs) - "out"
       ).map { case (k, v) => k -> v.toString }
+
 
     val (oriOutputs, outputVars) =
       if (kwargs != null && kwargs.contains("out")) {
@@ -533,6 +537,10 @@ object NDArray {
     val handleRef = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayLoadFromRawBytes(bytes, handleRef))
     new NDArray(handleRef.value)
+  }
+
+  private def _crop_assign(kwargs: Map[String, Any] = null)(args: Any*) : NDArrayFuncReturn = {
+    genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
   // TODO: imdecode

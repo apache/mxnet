@@ -152,4 +152,4 @@ private[mxnet] object Base {
   }
 }
 
-private[mxnet] class MXNetError(val err: String) extends Exception(err)
+class MXNetError(val err: String) extends Exception(err)

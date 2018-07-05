@@ -64,8 +64,10 @@ enum OpReqType {
  * \sa Resource
  */
 struct OpContext {
+  /*! \brief whether there is a backward phase to compute gradients. */
+  bool need_grad;
   /*! \brief whether it is training phase */
-  int is_train;
+  bool is_train;
   /*! \brief RunContext related resources */
   RunContext run_ctx;
   /*! \brief the callback when operation completes, used by asynchronize ops */
@@ -98,7 +100,12 @@ enum class ExecType {
    *  In current implementation, copy operator is specially handled by executor.
    *  This flag is used for special case treatment and future extension of different copy ops.
    */
-  kCrossDeviceCopy
+  kCrossDeviceCopy,
+  /*!
+   * \brief A subgraph execution should happen in the main thread, instead of
+   *  in the execution engine.
+   */
+  kSubgraphExec,
 };
 
 /*! \brief the dispatch mode of the operator */
@@ -126,24 +133,35 @@ class OpStatePtr {
   template<typename T, typename... Args>
   static OpStatePtr Create(Args&&... args) {
     OpStatePtr ret;
-    ret.ptr_ = std::make_shared<OpState>();
-    ret.ptr_->var_ = Engine::Get()->NewVariable();
-    ret.ptr_->state_.construct<T>(std::forward<Args>(args)...);
+    auto state = new T(std::forward<Args>(args)...);
+    auto var = Engine::Get()->NewVariable();
+    ret.ptr_.reset(
+      new OpState(var, state),
+      [](OpState* p) {
+        Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), p->var);
+        delete reinterpret_cast<T*>(p->state);
+        delete p;
+      });
 
     return ret;
   }
   /* \brief Get engine variable associated with this state */
   engine::VarHandle get_var() const {
-    return ptr_->var_;
+    return ptr_->var;
   }
   /* \brief Get state of type T */
   template<typename T>
   T& get_state() const {
-    return dmlc::get<T>(ptr_->state_);
+    return *reinterpret_cast<T*>(ptr_->state);
   }
   /* \brief clear state */
   void reset() {
     ptr_.reset();
+  }
+  /* \brief checks whether the managed object is managed only by the current
+            OpStatePtr instance */
+  bool unique() const {
+    return ptr_.unique();
   }
   /* \brief Whether state is empty */
   explicit operator bool() const {
@@ -153,16 +171,12 @@ class OpStatePtr {
  private:
   /* \brief state structure */
   struct OpState {
-    OpState() {}
+    engine::VarHandle var;
+    void* state;
+
+    OpState(engine::VarHandle var_, void* state_) : var(var_), state(state_) {}
     OpState(const OpState& other) = delete;
     OpState& operator=(const OpState& other) = delete;
-
-    ~OpState() {
-      Engine::Get()->DeleteVariable([](RunContext s) {}, Context::CPU(), var_);
-    }
-
-    engine::VarHandle var_;
-    dmlc::any state_;
   };
   /* \brief shared pointer to state */
   std::shared_ptr<OpState> ptr_;

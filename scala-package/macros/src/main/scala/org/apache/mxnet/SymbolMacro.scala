@@ -22,7 +22,7 @@ import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.OperatorBuildUtils
+import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
@@ -41,7 +41,7 @@ private[mxnet] object SymbolImplMacros {
     impl(c)(annottees: _*)
   }
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    newAPIImpl(c)(annottees: _*)
+    typedAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
 
@@ -82,7 +82,7 @@ private[mxnet] object SymbolImplMacros {
   /**
     * Implementation for Dynamic typed API Symbol.api.<functioname>
     */
-  private def newAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typedAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -104,6 +104,7 @@ private[mxnet] object SymbolImplMacros {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
+      impl += "var args = Seq[org.apache.mxnet.Symbol]()"
       symbolfunction.listOfArgs.foreach({ symbolarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
@@ -118,17 +119,28 @@ private[mxnet] object SymbolImplMacros {
         else {
           argDef += s"${currArgName} : ${symbolarg.argType}"
         }
-        var base = "map(\"" + symbolarg.argName + "\") = " + currArgName
-        if (symbolarg.isOptional) {
-          base = "if (!" + currArgName + ".isEmpty)" + base + ".get"
+        // Symbol arg implementation
+        val returnType = "org.apache.mxnet.Symbol"
+        val base =
+        if (symbolarg.argType.equals(s"Array[$returnType]")) {
+          if (symbolarg.isOptional) s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
+          else s"args = $currArgName.toSeq"
+        } else {
+          if (symbolarg.isOptional) {
+            // scalastyle:off
+            s"if (!$currArgName.isEmpty) map(" + "\"" + symbolarg.argName + "\"" + s") = $currArgName.get"
+            // scalastyle:on
+          }
+          else "map(\"" + symbolarg.argName + "\"" + s") = $currArgName"
         }
+
         impl += base
       })
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
       // scalastyle:off
       // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
-      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, Seq(), map.toMap)"
+      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, args, map.toMap)"
       // scalastyle:on
       // Combine and build the function string
       val returnType = "org.apache.mxnet.Symbol"
@@ -178,65 +190,6 @@ private[mxnet] object SymbolImplMacros {
     result
   }
 
-  // Convert C++ Types to Scala Types
-  def typeConversion(in : String, argType : String = "") : String = {
-    in match {
-      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => "org.apache.mxnet.Symbol"
-      case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => "Array[org.apache.mxnet.Symbol]"
-      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
-      case "int" | "intorNone" | "int(non-negative)" => "Int"
-      case "long" | "long(non-negative)" => "Long"
-      case "double" | "doubleorNone" => "Double"
-      case "string" => "String"
-      case "boolean" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
-      case default => throw new IllegalArgumentException(
-        s"Invalid type for args: $default, $argType")
-    }
-  }
-
-
-  /**
-    * By default, the argType come from the C++ API is a description more than a single word
-    * For Example:
-    *   <C++ Type>, <Required/Optional>, <Default=>
-    * The three field shown above do not usually come at the same time
-    * This function used the above format to determine if the argument is
-    * optional, what is it Scala type and possibly pass in a default value
-    * @param argType Raw arguement Type description
-    * @return (Scala_Type, isOptional)
-    */
-  def argumentCleaner(argType : String) : (String, Boolean) = {
-    val spaceRemoved = argType.replaceAll("\\s+", "")
-    var commaRemoved : Array[String] = new Array[String](0)
-    // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
-    if (spaceRemoved.charAt(0)== '{') {
-      val endIdx = spaceRemoved.indexOf('}')
-      commaRemoved = spaceRemoved.substring(endIdx + 1).split(",")
-      commaRemoved(0) = "string"
-    } else {
-      commaRemoved = spaceRemoved.split(",")
-    }
-    // Optional Field
-    if (commaRemoved.length >= 3) {
-      // arg: Type, optional, default = Null
-      require(commaRemoved(1).equals("optional"))
-      require(commaRemoved(2).startsWith("default="))
-      (typeConversion(commaRemoved(0), argType), true)
-    } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType)
-      val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
-      (tempType, tempOptional)
-    } else {
-      throw new IllegalArgumentException(
-        s"Unrecognized arg field: $argType, ${commaRemoved.length}")
-    }
-
-  }
-
-
   // List and add all the atomic symbol functions to current module.
   private def initSymbolModule(): List[SymbolFunction] = {
     val opNames = ListBuffer.empty[String]
@@ -277,7 +230,8 @@ private[mxnet] object SymbolImplMacros {
     }
     // scalastyle:on println
     val argList = argNames zip argTypes map { case (argName, argType) =>
-        val typeAndOption = argumentCleaner(argType)
+        val typeAndOption =
+          CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
         new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new SymbolFunction(aliasName, argList.toList)

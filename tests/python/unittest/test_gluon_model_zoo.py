@@ -19,7 +19,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 
 def eprint(*args, **kwargs):
