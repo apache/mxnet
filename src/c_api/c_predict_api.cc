@@ -372,6 +372,26 @@ int MXPredSetInput(PredictorHandle handle,
   API_END();
 }
 
+int MXPredSetInputGPU(PredictorHandle handle,
+                      const char* key,
+                      const mx_float* gpu_data,
+                      mx_uint size,
+                      int dev_id) {
+  MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
+  API_BEGIN();
+  auto it = p->key2arg.find(key);
+  if (it == p->key2arg.end()) {
+    LOG(FATAL) << "cannot find input key " << key;
+  }
+  NDArray& nd = p->arg_arrays[it->second];
+  TShape shape = nd.shape();
+  CHECK_EQ(shape.Size(), size) << "Input size mismatch.";
+  TBlob blob((void*)gpu_data, shape, gpu::kDevMask, mshadow::DataType<float>::kFlag, dev_id);  // NOLINT(*)
+  NDArray arr(blob, dev_id);
+  nd.SyncCopyFromNDArray(arr);
+  API_END();
+}
+
 int MXPredForward(PredictorHandle handle) {
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
