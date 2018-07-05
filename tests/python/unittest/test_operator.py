@@ -5743,26 +5743,26 @@ def test_slice():
 def test_slice_partial_infer():
     var1 = mx.sym.var(name="data", shape=(0,20))
     var2 = mx.sym.slice(var1,begin=(None, None), end=(None,10))
-    assert (var2.infer_shape_partial()[1][0] == (0L, 10L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (0, 10)), var2.infer_shape_partial()[1]
 
     var2 = mx.sym.slice(var1,begin=(None, 3), end=(None,10))
-    assert (var2.infer_shape_partial()[1][0] == (0L, 7L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (0, 7)), var2.infer_shape_partial()[1]
 
     var2 = mx.sym.slice(var1,begin=(None, 3), end=(5,10))
-    assert (var2.infer_shape_partial()[1][0] == (0L, 7L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (0, 7)), var2.infer_shape_partial()[1]
 
     var2 = mx.sym.slice(var1,begin=(2, 3), end=(None,10))
-    assert (var2.infer_shape_partial()[1][0] == (0L, 7L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (0, 7)), var2.infer_shape_partial()[1]
 
     var1 = mx.sym.var(name="data", shape=(10, 0))
     var2 = mx.sym.slice(var1,begin=(1, None), end=(3,None))
-    assert (var2.infer_shape_partial()[1][0] == (2L, 0L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (2, 0)), var2.infer_shape_partial()[1]
 
     var2 = mx.symbol.slice_axis(data=var1, axis=0, begin=0, end=5)
-    assert (var2.infer_shape_partial()[1][0] == (5L, 0L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (5, 0)), var2.infer_shape_partial()[1]
 
     var2 = mx.symbol.slice_axis(data=var1, axis=1, begin=0, end=5)
-    assert (var2.infer_shape_partial()[1][0] == (10L, 0L)), var2.infer_shape_partial()[1]
+    assert (var2.infer_shape_partial()[1][0] == (10, 0)), var2.infer_shape_partial()[1]
 
 
 @with_seed()
