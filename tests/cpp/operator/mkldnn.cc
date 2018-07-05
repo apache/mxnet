@@ -910,24 +910,6 @@ float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TSh
   return max;
 }
 
-// starts with index 2 (cause batch and channels are first)
-//std::vector<TShape> GetAllCoordinates(TShape &input_shape) {
-//  std::vector<TShape> coordinates;
-//  coordinates.push_back(TShape(input_shape.ndim()));
-//  for (int dim = 2; dim < input_shape.ndim(); dim++) {
-//    std::vector<TShape> tmplist;
-//    for (int i = 0; i < input_shape[dim]; i++) {
-//      for (int t = 0; t < coordinates.size(); t++) {
-//        TShape tmp = coordinates[t];
-//        tmp[dim] = i;
-//        tmplist.push_back(tmp);
-//      }
-//    }
-//    coordinates = tmplist;
-//  }
-//  return coordinates;
-//}
-
 TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
   TShape test_shape = {1,1,8};
   TShape kernel_shape = {3};
@@ -992,17 +974,6 @@ TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
   EXPECT_EQ(1, shifted_shape[3]);
   EXPECT_EQ(1, shifted_shape[4]);
 }
-
-
-//TEST(MKLDNN_NDArray, GetAllCoordinates) {
-//  TShape test_shape1 = {1,1,2};
-//  TShape test_shape2 = {1,1,2,3};
-//  TShape test_shape3 = {1,1,2,3,4};
-//  EXPECT_EQ(2, GetAllCoordinates(test_shape1).size());
-//  EXPECT_EQ(6, GetAllCoordinates(test_shape2).size());
-//  EXPECT_EQ(24, GetAllCoordinates(test_shape3).size());
-//}
-
 
 void VerifyPool1D(const NDArray &input,
                   const NDArray &output,
@@ -1090,8 +1061,6 @@ void VerifyPool3D(const NDArray &input,
     }
   }
 }
-
-
 
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
                          const std::vector<NDArray *> &out_arrs,
