@@ -1526,7 +1526,7 @@ def test_batchnorm_training():
                 test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
                 check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
-    stypes = ['row_sparse', 'default']
+    stypes = ['default']
     for stype in stypes:
         check_batchnorm_training(stype)
 
