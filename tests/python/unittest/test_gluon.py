@@ -1174,7 +1174,7 @@ def check_hybrid_static_memory(**kwargs):
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11171")
+@with_seed()
 def test_hybrid_static_memory():
     check_hybrid_static_memory()
     check_hybrid_static_memory(static_alloc=True)
@@ -1197,7 +1197,7 @@ def check_hybrid_static_memory_switching(**kwargs):
         y.backward()
     mx.nd.waitall()
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11171")
+@with_seed()
 def test_hybrid_static_memory_switching():
     check_hybrid_static_memory_switching()
     check_hybrid_static_memory_switching(static_alloc=True)
