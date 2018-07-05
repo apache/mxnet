@@ -95,14 +95,18 @@ def random_seed(seed=None):
         random.seed(next_seed)
 
 
-def assert_raises_cudnn_disabled():
+def assert_raises_cudnn_disabled(assertion_error=False):
     def test_helper(orig_test):
         @make_decorator(orig_test)
         def test_new(*args, **kwargs):
             if mx.test_utils.cudnn_enabled() or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
-                assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
+                if assertion_error:
+                    errors = (MXNetError, RuntimeError, AssertionError)
+                else:
+                    errors = (MXNetError, RuntimeError)
+                assert_raises(errors, orig_test, *args, **kwargs)
         return test_new
     return test_helper
 

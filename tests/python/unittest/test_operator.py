@@ -2391,6 +2391,7 @@ def test_flip():
 
 
 @with_seed()
+@assert_raises_cudnn_disabled(assertion_error=True)
 def test_stn():
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net
