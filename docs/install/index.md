@@ -2,18 +2,18 @@
 
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
-  <div class="dropdown">
-    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
-    <span class="caret"></span></button>
-    <ul class="dropdown-menu opt-group">
-      <li class="opt active versions"><a href="#">v1.2.1</a></li>
-      <li class="opt versions"><a href="#">v1.1.0</a></li>
-      <li class="opt versions"><a href="#">v1.0.0</a></li>
-      <li class="opt versions"><a href="#">v0.12.1</a></li>
-      <li class="opt versions"><a href="#">v0.11.0</a></li>
-      <li class="opt versions"><a href="#">master</a></li>
-    </ul>
-  </div>
+<div class="dropdown">
+  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
+  <span class="caret"></span></button>
+  <ul class="dropdown-menu opt-group">
+    <li class="opt active versions"><a href="#">v1.2.1</a></li>
+    <li class="opt versions"><a href="#">v1.1.0</a></li>
+    <li class="opt versions"><a href="#">v1.0.0</a></li>
+    <li class="opt versions"><a href="#">v0.12.1</a></li>
+    <li class="opt versions"><a href="#">v0.11.0</a></li>
+    <li class="opt versions"><a href="#">master</a></li>
+  </ul>
+</div>
 
 <script type="text/javascript" src='../_static/js/options.js'></script>
 
@@ -1846,6 +1846,7 @@ You can also run distributed deep learning with *MXNet* on AWS using [Cloudforma
 </div> <!-- END - Cloud Python Installation Instructions -->
 
 
+<!-- DEVICES -->
 <div class="devices">
   <div class="raspberry-pi">
 
@@ -1853,9 +1854,43 @@ MXNet supports the Debian based Raspbian ARM based operating system so you can r
 
 These instructions will walk through how to build MXNet for the Raspberry Pi and install the Python bindings for the library.
 
+You can do a dockerized cross compilation build on your local machine or a native build on-device.
+
 The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory.
 
-**Install MXNet**
+**Cross compilation build (Experimental)**
+
+## Docker installation
+**Step 1**  Install Docker on your machine by following the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
+
+*Note* - You can install Community Edition (CE)
+
+**Step 2** [Optional] Post installation steps to manage Docker as a non-root user.
+
+Follow the four steps in this [docker documentation](https://docs.docker.com/engine/installation/linux/linux-postinstall/#manage-docker-as-a-non-root-user) to allow managing docker containers without *sudo*.
+
+## Build
+
+The following command will build a container with dependencies and tools and then compile MXNet for
+ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this
+file to your Raspberry Pi.
+
+```bash
+ci/build.py -p armv7
+```
+
+## Install
+
+Create a virtualenv and install the package we created previously.
+
+```bash
+virtualenv -p `which python3` mxnet_py3
+source mxnet_py3/bin/activate
+pip install mxnet-x.x.x-py2.py3-none-any.whl
+```
+
+
+**Native Build**
 
 Installing MXNet is a two-step process:
 
@@ -1874,35 +1909,46 @@ On Raspbian versions Wheezy and later, you need the following dependencies:
 
 - A C++ compiler that supports C++ 11. The C++ compiler compiles and builds MXNet source code. Supported compilers include the following:
 
-- [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/)
+- [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/). Make sure to use gcc 4 and not 5 or 6 as there
+  are known bugs with these compilers.
 
 Install these dependencies using the following commands in any directory:
 
 ```bash
     sudo apt-get update
-    sudo apt-get -y install git cmake build-essential g++-4.8 c++-4.8 liblapack* libblas* libopencv*
+    sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev virtualenv
 ```
 
-Clone the MXNet source code repository using the following ```git``` command in your home directory:
+Clone the MXNet source code repository using the following `git` command in your home directory:
 ```bash
     git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd incubator-mxnet
 ```
 
-If you aren't processing images with MXNet on the Raspberry Pi, you can minimize the size of the compiled library by building MXNet without the Open Source Computer Vision (OpenCV) library with the following commands:
+Build:
 ```bash
-    export USE_OPENCV = 0
-    make
+    mkdir -p build && cd build
+    cmake \
+        -DUSE_SSE=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=ON \
+        -DUSE_OPENMP=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -GNinja ..
+    ninja -j1
 ```
+Some compilation units require memory close to 1GB, so it's recommended that you enable swap as
+explained below and be cautious about increasing the number of jobs when building (-j)
 
-Otherwise, you can build the complete MXNet library with the following command:
-```bash
-    make
-```
+Executing these commands start the build process, which can take up to a couple hours, and creates a file called `libmxnet.so` in the build directory.
 
-Executing either of these commands start the build process, which can take up to a couple hours, and creates a file called ```libmxnet.so``` in the mxnet/lib directory.
-
-If you are getting build errors in which the compiler is being killed, it is likely that the compiler is running out of memory (especially if you are on Raspberry Pi 1, 2 or Zero, which have less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024, then running:
+If you are getting build errors in which the compiler is being killed, it is likely that the
+compiler is running out of memory (especially if you are on Raspberry Pi 1, 2 or Zero, which have
+less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by
+editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024,
+then running:
 ```bash
   sudo /etc/init.d/dphys-swapfile stop
   sudo /etc/init.d/dphys-swapfile start
@@ -1921,6 +1967,12 @@ To install Python bindings run the following commands in the MXNet directory:
 
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
+Alternatively you can create a whl package installable with pip with the following command:
+```bash
+ci/docker/runtime_functions.sh build_wheel python/ $(realpath build)
+```
+
+
 You are now ready to run MXNet on your Raspberry Pi device. You can get started by following the tutorial on [Real-time Object Detection with MXNet On The Raspberry Pi](http://mxnet.io/tutorials/embedded/wine_detector.html).
 
 *Note - Because the complete MXNet library takes up a significant amount of the Raspberry Pi's limited RAM, when loading training data or large models into memory, you might have to turn off the GUI and terminate running processes to free RAM.*
@@ -1928,7 +1980,9 @@ You are now ready to run MXNet on your Raspberry Pi device. You can get started 
 </div> <!-- End of raspberry pi -->
 
 
-<div class="nvidia-jetson-tx2">
+<div class="nvidia-jetson">
+
+# Nvidia Jetson TX family
 
 MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices.
 
@@ -1965,7 +2019,7 @@ Install these dependencies using the following commands in any directory:
     sudo pip install graphviz jupyter
 ```
 
-Clone the MXNet source code repository using the following ```git``` command in your home directory:
+Clone the MXNet source code repository using the following `git` command in your home directory:
 ```bash
     git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd incubator-mxnet
@@ -1986,7 +2040,7 @@ Now you can build the complete MXNet library with the following command:
     make -j $(nproc)
 ```
 
-Executing this command creates a file called ```libmxnet.so``` in the mxnet/lib directory.
+Executing this command creates a file called `libmxnet.so` in the mxnet/lib directory.
 
 **Step 2** Install MXNet Python Bindings
 
@@ -2022,8 +2076,8 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 # Validate MXNet Installation
 
 <div class="linux macos">
-  <div class="python">
-    <div class="cpu">
+<div class="python">
+<div class="cpu">
 
 <div class="pip build-from-source">
 
@@ -2078,16 +2132,16 @@ Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each
 array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
 ```
-</div>
-</div>
-</div>
+</div><!-- linux macos -->
+</div><!-- python -->
+</div><!-- cpu -->
 
 <!-- Validate Windows CPU pip install -->
 
 <div class="windows">
-  <div class="python">
-    <div class="cpu">
-      <div class="pip">
+<div class="python">
+<div class="cpu">
+<div class="pip">
 
 Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
@@ -2108,8 +2162,8 @@ array([[ 3.,  3.,  3.],
 <!-- Mac OS GPU installation validation -->
 
 <div class="macos">
-  <div class="python">
-    <div class="gpu">
+<div class="python">
+<div class="gpu">
 
 <div class="pip virtualenv docker">
 </br>
@@ -2124,6 +2178,7 @@ Will be available soon.
 From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
 
 </div>
+
 </div>
 </div>
 </div>
@@ -2131,8 +2186,8 @@ From the MXNet root directory run: `python example/image-classification/train_mn
 <!-- Windows GPU installation validation -->
 
 <div class="windows">
-  <div class="python">
-    <div class="gpu">
+<div class="python">
+<div class="gpu">
 
 <div class="virtualenv docker">
 </br>
@@ -2147,15 +2202,16 @@ Will be available soon.
 From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
 
 </div>
-</div>
-</div>
-</div>
+
+</div><!-- windows -->
+</div><!-- python -->
+</div><!-- gpu -->
 
 <!-- Validation for GPU machines -->
 
 <div class="linux">
-  <div class="python">
-    <div class="gpu">
+<div class="python">
+<div class="gpu">
 
 <div class="pip build-from-source">
 
@@ -2210,9 +2266,9 @@ Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*
 array([[ 3.,  3.,  3.],
        [ 3.,  3.,  3.]], dtype=float32)
 ```
-</div>
-</div>
-</div>
+</div><!-- linux -->
+</div><!-- python -->
+</div><!-- gpu -->
 
 
 
@@ -2221,8 +2277,8 @@ array([[ 3.,  3.,  3.],
 
 <!-- Linux Clean up -->
 <div class="linux">
-  <div class="python">
-    <div class="cpu">
+<div class="python">
+<div class="cpu">
 
 <div class="pip build-from-source">
 
@@ -2261,8 +2317,8 @@ root@4919c4f58cac:/# exit
 
 <!-- MacOS Clean up -->
 <div class="macos">
-  <div class="python">
-    <div class="cpu">
+<div class="python">
+<div class="cpu">
 
 <div class="pip build-from-source">
 
@@ -2357,8 +2413,8 @@ array([[ 3.,  3.,  3.],
 <!-- Example R code for CPU -->
 
 <div class="linux macos windows">
-  <div class="r">
-    <div class="cpu">
+<div class="r">
+<div class="cpu">
 
 Run a short *MXNet* R program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
@@ -2384,8 +2440,8 @@ You should see the following output:
 <!-- Example R code for GPU -->
 
 <div class="linux macos windows">
-  <div class="r">
-    <div class="gpu">
+<div class="r">
+<div class="gpu">
 
 Run a short *MXNet* R program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
 
@@ -2411,40 +2467,42 @@ You should see the following output:
 
 
 <div class="linux">
-  <div class="scala">
-    <div class="cpu gpu">
-      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
-    </div>
-  </div>
+<div class="scala">
 
-  <div class="julia perl cpp">
-    <div class="cpu gpu">
+<div class="cpu gpu">
+      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
+</div>
+
+</div><!-- scala -->
+
+<div class="julia perl cpp">
+<div class="cpu gpu">
 
 Will be available soon.
 
-</div>
-</div>
-</div>
+</div><!-- cpu gpu -->
+</div><!-- julia perl cpp -->
+</div><!-- linux -->
 
 <div class="macos">
-  <div class="scala">
-    <div class="cpu gpu">
+<div class="scala">
+<div class="cpu gpu">
       Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
-    </div>
-  </div>
-  <div class="julia perl cpp">
-    <div class="cpu gpu">
+</div><!-- cpu gpu-->
+</div><!-- scala -->
+<div class="julia perl cpp">
+<div class="cpu gpu">
 
 Will be available soon.
 
-</div>
-</div>
-</div>
+</div><!-- cpu gpu -->
+</div><!-- julia perl cpp -->
+</div><!-- macos -->
 
 <!-- Windows MXNet Installation validation -->
 <div class="windows">
-  <div class="python">
-    <div class="cpu">
+<div class="python">
+<div class="cpu">
 
 <div class="build-from-source virtualenv docker">
 <br/>
@@ -2463,19 +2521,6 @@ Will be available soon.
 </div>
 </div>
 <!-- End Windows Installation validation -->
-
-<div class="devices">
-  <div class="raspberry-pi">
-
-Will be available soon.
-
-</div>
-<div class="nvidia-jetson-tx2">
-
-Will be available soon.
-
-</div>
-</div>
 
 <br/>
 <!-- Download -->
