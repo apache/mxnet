@@ -954,10 +954,10 @@ TEST(MKLDNN_NDArray, PoolAtCoordinate) {
     TShape coord1 = {0,0,0}; // edge
     TShape coord2 = {0,0,7}; // edge
     TShape coord3 = {0,0,4}; // middle
-    EXPECT_EQ(-4, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
+    EXPECT_EQ(-3, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
     EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
     EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(-4, PoolAtCoordinate(arr, coord1, even_kernel_shape));
+    EXPECT_EQ(-3, PoolAtCoordinate(arr, coord1, even_kernel_shape));
     EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, even_kernel_shape));
     EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, even_kernel_shape));
   }
@@ -975,7 +975,7 @@ TEST(MKLDNN_NDArray, PoolAtCoordinate) {
     TShape coord5 = {0,1,7}; // edge
     TShape coord6 = {0,1,4}; // middle
     EXPECT_EQ(-7, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(0, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
+    EXPECT_EQ(-1, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
     EXPECT_EQ(-3, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
     EXPECT_EQ(1, PoolAtCoordinate(arr, coord4, odd_kernel_shape));
     EXPECT_EQ(7, PoolAtCoordinate(arr, coord5, odd_kernel_shape));
