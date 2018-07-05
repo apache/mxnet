@@ -1026,7 +1026,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
       ptr[1] = channel_num;
       for (int dim = 2; dim < input_shape.ndim(); dim ++) {
         int pad = padding[dim - 2];
-        int shift = kernel[dim] / 2;
+        int shift = kernel[dim-2] / 2;
         int lower = -pad;
         int upper = input_shape[dim] + pad;
 
