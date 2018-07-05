@@ -3,7 +3,7 @@ MXNet Change Log
 ## 1.2.1
 ### Deprecations
 The [usage](https://github.com/apache/incubator-mxnet/issues/11091) of `save_params` described in the [gluon book](https://github.com/zackchase/mxnet-the-straight-dope/blob/master/chapter07_distributed-learning/hybridize.ipynb) did not reflect the intended usage of the API and led MXNet users to depend on the unintended usage of `save_params` and `load_params`. In 1.2.0 release an internal bug fix was made which broke the unintended usage use case and users scripts.
-To correct the API change, the behavior of `save_params`/`load_params` API has been reverted to the behavior of MXNet v1.1.0 in v1.2.1. The intended and correct use are now supported with the new APIs `save_parameters` and `load_parameters`.
+To correct the API change, the behavior of `save_params` API has been reverted to the behavior of MXNet v1.1.0 in v1.2.1. The intended and correct use are now supported with the new APIs `save_parameters` and `load_parameters`.
 With v1.2.1, usage of `save_params` and `load_params` APIs will resume their former functionality and a deprecation warning will appear.
 All scripts to save and load parameters for a Gluon model should use the new APIs: `save_parameters` and `load_parameters`. If your model is hybridizable and you want to export a serialized structure of the model as well as parameters you should migrate your code to use `export` API and the newly added `imports` API instead of `save_params` and `load_params` API. Please refer to the [Saving and Loading Gluon Models Tutorial](http://mxnet.incubator.apache.org/versions/1.2.0/tutorials/gluon/save_load_params.html) for more information.
 
