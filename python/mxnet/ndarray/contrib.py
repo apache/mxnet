@@ -191,3 +191,130 @@ def foreach(body, data, init_states):
     if not_data_list and len(outputs) == 1:
         outputs = outputs[0]
     return (outputs, states)
+
+
+def while_loop(loop_vars, cond, func, max_iterations):
+    """Run a while loop with user-defined computation and loop condition.
+
+    This operator simulates a while loop which iterately does customized computation
+    as long as the condition is satisfied.
+
+    `loop_vars` is a list of NDArrays on which the computation uses.
+
+    `cond` is a user-defined function as the loop condition.
+    It consumes `loop_vars`, and produces a scalar MXNet NDArray,
+    indicating the termination of the loop.
+    The loop ends when `cond` returns false (zero).
+    The `cond` is variadic, and its signature should be
+    `cond(*loop_vars) => NDArray`.
+
+    `func` is a user-defined function as the loop body.
+    It also consumes `loop_vars`, and produces `step_output` and `new_loop_vars` at each step.
+    The number of elements, shape, dtype of each element in `step_output` should be consistent.
+    The `new_loop_vars` should be consistent with `loop_vars` on each step.
+    The `func` is variadic, and its signature should be
+    `cond(*loop_vars) => (List[NDArray] step_output, List[NDArray] new_loop_vars)`.
+
+    `max_iterations` is a scalar that defines the maximum number of iterations allowed.
+
+    This function returns a list of NDArrays of length `|step_output| + |loop_vars|`.
+    The i-th element in the first `|step_output|` ones of the list represent
+    the i-th `step_output` at all step, stacked along axis 0.
+    The i-th element in the last `|loop_vars|` ones of the list
+    represent the final state of each loop variable.
+
+    Warning: when `cond` is never satisfied, we assume `step_output` is empty.
+    TODO(Junru): the output shape along axis 0 is not consistent to the symbloic version.
+    Should we mention this in our doc?
+
+    Parameters
+    ----------
+    loop_vars: list of NDArrays.
+        The initial values of the loop variables.
+    cond: a Python function.
+        The loop condition.
+    func: a Python function.
+        The loop body.
+    max_iteration: a python int.
+        Maximum number of iterations.
+
+    Returns
+    -------
+    outputs: a list of NDArrays of length `|step_output| + |loop_vars|`.
+        The first `|step_output|` NDArrays are outputs.
+        The last `|loop_vars|` NDArrays are the final state of loop variables.
+    TODO(Junru): change the output format
+
+    Examples
+    --------
+    TODO(Junru): run this
+    >>> cond = lambda i, s: i <= 5
+    >>> func = lambda i, s: (i + 1, s + i)
+    >>> loop_vars = (mx.nd.array([1], dtype="int64"), mx.nd.array([0], dtype="int64"))
+    >>> outputs = mx.nd.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
+    """
+    def _to_python_scalar(inputs, type, name):
+        """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
+        to the given type
+        """
+        if isinstance(inputs, ndarray.NDArray):
+            inputs = inputs.asscalar()
+        try:
+            inputs = type(inputs)
+        except:
+            raise ValueError("Cannot convert %s to python %s" % (name, type.__name__))
+        return inputs
+
+    def _to_ndarray_tuple(inputs, name):
+        """Converts "inputs", possibly a single mxnet NDArray, a list of mxnet NDArray,
+        a tuple of mxnet NDArray, into a tuple of NDArray
+        """
+        if isinstance(inputs, list):
+            inputs = tuple(inputs)
+        if isinstance(inputs, ndarray.NDArray):
+            inputs = (inputs, )
+        if not isinstance(inputs, tuple):
+            raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
+        for item in inputs:
+            if not isinstance(item, ndarray.NDArray):
+                raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
+        return inputs
+
+    def _func_wrapper(loop_vars):
+        """This wrapper unifies
+             "func: loop_vars -> new_loop_vars"
+         and "func: loop_vars -> (step_output, new_loop_vars)"
+        into "func: loop_vars -> (None or tuple of step_outputs, tuple of new_loop_vars)
+        """
+        step_output, new_loop_vars = func(*loop_vars)
+        if step_output is None:
+            step_output = []
+        if new_loop_vars is None:
+            new_loop_vars = []
+        step_output = _to_ndarray_tuple(step_output, "step_output")
+        new_loop_vars = _to_ndarray_tuple(new_loop_vars, "new_loop_vars")
+        if len(loop_vars) != len(new_loop_vars):
+            raise ValueError("The length of loop_vars should be consistent during the loop")
+        return step_output, new_loop_vars
+
+    max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
+    loop_vars = _to_ndarray_tuple(loop_vars, "loop_vars")
+    # It should be work as fine if loop_vars are empty I guess,
+    # but it is semantically unnecessary to include this case.
+    if len(loop_vars) == 0:
+        raise ValueError("loop_vars should contain at least one element")
+
+    steps = 0
+    outputs = []
+    while steps < max_iterations and \
+            _to_python_scalar(cond(*loop_vars), bool, "Return value of cond"): # loop condition
+        step_output, loop_vars = _func_wrapper(loop_vars)
+        outputs.append(step_output)
+        steps += 1
+        if len(outputs) != steps or len(step_output) != len(outputs[0]):
+            raise ValueError("step_output are inconsistent on each step")
+    try:
+        outputs = list(ndarray.op.stack(*item) for item in zip(*outputs))
+    except ValueError:
+        raise ValueError("step_outputs are inconsistent on each step")
+    return outputs, list(loop_vars)
