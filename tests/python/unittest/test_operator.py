@@ -71,6 +71,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
 
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
@@ -84,6 +85,7 @@ def test_lstm_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_bidirectional():
     T, N, I, H = 5, 20, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',

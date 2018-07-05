@@ -212,7 +212,6 @@ def test_residual_bidirectional():
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
 
 
-@assert_raises_cudnn_disabled()
 def test_stack():
     cell = gluon.rnn.SequentialRNNCell()
     for i in range(5):
@@ -235,7 +234,6 @@ def test_stack():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-@assert_raises_cudnn_disabled()
 def test_hybridstack():
     cell = gluon.rnn.HybridSequentialRNNCell()
     for i in range(5):
@@ -366,7 +364,6 @@ def check_rnn_forward(layer, inputs, deterministic=True):
         mx.test_utils.assert_almost_equal(np_dx, input_grads, rtol=1e-3, atol=1e-5)
 
 
-@assert_raises_cudnn_disabled()
 def test_rnn_cells():
     check_rnn_forward(gluon.rnn.LSTMCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
     check_rnn_forward(gluon.rnn.RNNCell(100, input_size=200), mx.nd.ones((8, 3, 200)))
