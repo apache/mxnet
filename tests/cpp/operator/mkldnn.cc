@@ -469,6 +469,8 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
 OpAttrs GetPoolingOp(int kernel, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"kernel" , std::to_string(kernel)});
   attrs.attrs.dict.insert({"stride" , std::to_string(stride)});
   attrs.attrs.dict.insert({"pad" , std::to_string(pad)});
