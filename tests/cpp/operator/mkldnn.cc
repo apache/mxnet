@@ -1104,8 +1104,8 @@ void VerifyPool2D(const NDArray &input,
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = -padding[1]; j < input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
-      TShape coordinate = GetShiftedCoordinate(coordinate, 3, center);
-      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+      TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
+      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate1, kernel), out_data[out_ptr]);
       out_ptr++;
     }
   }
@@ -1132,11 +1132,11 @@ void VerifyPool3D(const NDArray &input,
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = -padding[1]; j < input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
-      TShape coordinate = GetShiftedCoordinate(coordinate, 3, center);
+      TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
       for (int k = -padding[2]; k < input_shape[4] + padding[2] - kernel[2]; k = k + stride[2]) {
         int center = j + kernel[2] / 2;
-        TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
-        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+        TShape coordinate2 = GetShiftedCoordinate(coordinate1, 4, center);
+        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate2, kernel), out_data[out_ptr]);
         out_ptr++;
       }
     }
