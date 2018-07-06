@@ -407,8 +407,19 @@ def cast(attrs, inputs, proto_obj):
 
 def split(attrs, inputs, proto_obj):
     """Splits an array along a particular axis into multiple sub-arrays."""
+    split_list = attrs.get('split') if 'split' in attrs else []
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
+    if 'axis' not in attrs:
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'axis': 0})
+
+    if not split_list:
+        num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
+    else:
+        raise NotImplementedError("Operator {} in MXNet does not support variable splits.".format('split'))
+
+    new_attrs['num_outputs'] = num_outputs
+
     return 'split', new_attrs, inputs
 
 def _slice(attrs, inputs, proto_obj):
