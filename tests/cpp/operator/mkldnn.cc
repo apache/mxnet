@@ -1455,7 +1455,7 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 TEST(IMPERATIVE, PoolingOp) {
   // TODO: change kernel, stride, pad
   for (int kernel = 1; kernel < 4; kernel++) {
-    for (int stride = 1; stride < 2; stride++) {
+    for (int stride = 1; stride < 3; stride++) {
       for (int pad = 0; pad < 1; pad++) {
         OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
         TestPoolingOp(attrs, false);
