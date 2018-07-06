@@ -466,22 +466,27 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
+std::string CreateShapeString(int value, int dim) {
+  std::stringstream ss;
+  ss << "(";
+  for (int i = 0; i < dim; i++) {
+    ss << value;
+    if (i != dim - 1) ss << ",";
+  }
+  ss << ")";
+  return ss.str();
+}
+
+
 OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
   attrs.num_inputs = 1;
   attrs.num_outputs = 1;
   TShape kernel_shape(dim);
-  std::stringstream ss;
-  ss << "(";
-  for (int i = 0; i < dim; i++) {
-    ss << kernel;
-    if (i != dim - 1) ss << ",";
-  }
-  ss << ")";
-  attrs.attrs.dict.insert({"kernel" , ss.str()});
-  attrs.attrs.dict.insert({"stride" , std::to_string(stride)});
-  attrs.attrs.dict.insert({"pad" , std::to_string(pad)});
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad,dim)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
