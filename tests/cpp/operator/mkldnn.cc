@@ -912,7 +912,6 @@ bool IsInArray(const NDArray &arr, const TShape coord) {
 float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = -std::numeric_limits<float>::max();
-  int center = coordinate[2];
   int shift = kernel_shape[0] / 2;
   for (int i = -shift; i < kernel_shape[0] - shift; i++) {
     float value = -std::numeric_limits<float>::max();
@@ -927,11 +926,8 @@ float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, cons
 float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = -std::numeric_limits<float>::max();
-  int center1 = coordinate[2];
   int shift1 = kernel_shape[0] / 2;
-  int center2 = coordinate[3];
   int shift2 = kernel_shape[1] / 2;
-
   for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
     TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
     for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
@@ -940,6 +936,28 @@ float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, cons
       if (IsInArray(in_arr, shifted_shape))
         value = GetValueAtCoordinate(in_arr, shifted_shape);
       max = std::fmax(value, max);
+    }
+  }
+  return max;
+}
+
+float MaxPoolAtCoordinate3D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = in_arr.shape();
+  float max = -std::numeric_limits<float>::max();
+  int shift1 = kernel_shape[0] / 2;
+  int shift2 = kernel_shape[1] / 2;
+  int shift3 = kernel_shape[2] / 2;
+  for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
+    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
+    for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
+      shifted_shape = GetShiftedCoordinate(shifted_shape, 3, j);
+      for (int k = -shift3; k < kernel_shape[2] - shift3; k++) {
+        float value = -std::numeric_limits<float>::max();
+        shifted_shape = GetShiftedCoordinate(shifted_shape, 4, k);
+        if (IsInArray(in_arr, shifted_shape))
+          value = GetValueAtCoordinate(in_arr, shifted_shape);
+        max = std::fmax(value, max);
+      }
     }
   }
   return max;
@@ -955,10 +973,8 @@ float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const 
     return MaxPoolAtCoordinate1D(in_arr, coordinate, kernel_shape);
   if (kernel_shape.ndim() == 2)
     return MaxPoolAtCoordinate2D(in_arr, coordinate, kernel_shape);
-//  if (kernel_shape.ndim() == 3)
-//    return MaxPoolAtCoordinate3D(in_arr, coordinate, kernel_shape);
-
-
+  if (kernel_shape.ndim() == 3)
+    return MaxPoolAtCoordinate3D(in_arr, coordinate, kernel_shape);
   return -1;
 }
 
@@ -1019,21 +1035,20 @@ TEST(NN_NDArray, MaxPoolAtCoordinate) {
   // 2d shape
   {
     TShape test_shape = {1,1,3,3};
-    TShape odd_kernel_shape = {2,2};
+    TShape kernel_shape = {2,2};
     NDArray arr(test_shape, Context());
     InitDefaultArray(&arr);
     TShape coord1 = {0,0,0,0}; // edge
-    TShape coord2 = {0,0,0,1}; // edge
-    TShape coord3 = {0,0,4}; // middle
-    TShape coord4 = {0,1,0}; // edge
-    TShape coord5 = {0,1,7}; // edge
-    TShape coord6 = {0,1,4}; // middle
-    EXPECT_EQ(-7, MaxPoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(-1, MaxPoolAtCoordinate(arr, coord2, odd_kernel_shape));
-    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord4, odd_kernel_shape));
-    EXPECT_EQ(7, MaxPoolAtCoordinate(arr, coord5, odd_kernel_shape));
-    EXPECT_EQ(5, MaxPoolAtCoordinate(arr, coord6, odd_kernel_shape));
+    TShape coord2 = {0,0,0,2}; // edge
+    TShape coord3 = {0,0,2,0}; // edge
+    TShape coord4 = {0,0,0,2}; // edge
+    TShape coord5 = {0,0,1,1}; // center
+
+    EXPECT_EQ(0, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
+    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
+    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
+    EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord4, kernel_shape));
+    EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
   }
 }
 
