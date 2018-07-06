@@ -1413,6 +1413,21 @@ def test_share_inputs_outputs():
             assert_almost_equal(out_grad.asnumpy(), d1.grad.asnumpy())
             assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
 
+
+def test_grad_graph_change():
+    class Model(mx.gluon.HybridBlock):
+        def hybrid_forward(self, F, array, index):
+            row = array.take(index)
+            return row, index
+    array = mx.nd.arange(3)
+    index = mx.nd.array([2])
+    array.attach_grad()
+    model = Model()
+    model.hybridize(inline_limit=0)
+    with mx.autograd.record(train_mode=True):
+        row, _ = model(array, index)
+    row.backward()
+            
 def check_layer_forward_withinput(net, x):
     x_hybrid = x.copy()
     x.attach_grad()
@@ -2460,7 +2475,7 @@ def test_slice_activation_reshape_activation():
             shape = (64, 16, 64, -1)
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
-
+			
 
 if __name__ == '__main__':
     import nose
