@@ -74,7 +74,9 @@ class NameAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         name = re.split("\.py:|\.", values)
         if len(name) != 2:
-            raise ValueError("Invalid argument format")
+            raise ValueError("Invalid argument format for test. Format: "
+                             "<file-name>.<test-name> or"
+                             " <directory>/<file>:<test-name>")
         setattr(namespace, "test_path", find_test_path(name[0]))
         setattr(namespace, "test_name", name[1])
 
