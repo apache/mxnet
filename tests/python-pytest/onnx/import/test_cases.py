@@ -18,6 +18,7 @@
 """Test Cases to be run for the import module"""
 
 IMPLEMENTED_OPERATORS_TEST = [
+    'test_split_equal'
     'test_random_uniform',
     'test_random_normal',
     'test_add',
