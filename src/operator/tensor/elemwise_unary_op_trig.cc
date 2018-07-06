@@ -30,7 +30,6 @@ namespace op {
 
 // sin
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sin, cpu, mshadow_op::sin)
-MXNET_ADD_SPARSE_OP_ALIAS(sin)
 .describe(R"code(Computes the element-wise sine of the input array.
 
 The input should be in radians (:math:`2\pi` rad equals 360 degrees).
@@ -68,7 +67,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tan, cpu, mshadow_op::tan)
-MXNET_ADD_SPARSE_OP_ALIAS(tan)
 .describe(R"code(Computes the element-wise tangent of the input array.
 
 The input should be in radians (:math:`2\pi` rad equals 360 degrees).
@@ -89,7 +87,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshad
 
 // arcsin
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsin, cpu, mshadow_op::arcsin)
-MXNET_ADD_SPARSE_OP_ALIAS(arcsin)
 .describe(R"code(Returns element-wise inverse sine of the input array.
 
 The input should be in the range `[-1, 1]`.
@@ -131,7 +128,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
 
 // arctan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctan, cpu, mshadow_op::arctan)
-MXNET_ADD_SPARSE_OP_ALIAS(arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 
 The output is in the closed interval :math:`[-\pi/2, \pi/2]`
@@ -153,7 +149,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
 
 // degrees
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(degrees, cpu, mshadow_op::degrees)
-MXNET_ADD_SPARSE_OP_ALIAS(degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 
 .. math::
@@ -173,7 +168,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_degrees,
 
 // radians
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(radians, cpu, mshadow_op::radians)
-MXNET_ADD_SPARSE_OP_ALIAS(radians)
 .describe(R"code(Converts each element of the input array from degrees to radians.
 
 .. math::
@@ -193,7 +187,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_radians,
 
 // sinh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sinh, cpu, mshadow_op::sinh)
-MXNET_ADD_SPARSE_OP_ALIAS(sinh)
 .describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
 
 .. math::
@@ -227,7 +220,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow
 
 // tanh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tanh, cpu, mshadow_op::tanh)
-MXNET_ADD_SPARSE_OP_ALIAS(tanh)
 .describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 
 .. math::
@@ -246,7 +238,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<msha
 
 // arcsinh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsinh, cpu, mshadow_op::arcsinh)
-MXNET_ADD_SPARSE_OP_ALIAS(arcsinh)
 .describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, \
 computed element-wise.
 
@@ -278,7 +269,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
 
 // arctanh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctanh, cpu, mshadow_op::arctanh)
-MXNET_ADD_SPARSE_OP_ALIAS(arctanh)
 .describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, \
 computed element-wise.
 

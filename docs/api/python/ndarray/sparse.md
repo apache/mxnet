@@ -246,6 +246,7 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
+    CSRNDArray.abs
     CSRNDArray.clip
     CSRNDArray.sign
 ```
@@ -403,6 +404,7 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
+    RowSparseNDArray.abs
     RowSparseNDArray.clip
     RowSparseNDArray.sign
 ```
@@ -581,10 +583,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __neg__, sum, mean, norm, square, __getitem__, __setitem__, check_format, clip, sign
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __neg__, sum, mean, norm, square, __getitem__, __setitem__, check_format, abs, clip, sign
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, norm, __getitem__, __setitem__, check_format, retain, clip, sign
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, norm, __getitem__, __setitem__, check_format, retain, abs, clip, sign
 
 .. automodule:: mxnet.ndarray.sparse
     :members:
