@@ -93,8 +93,7 @@ def build_scala_docs(app):
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
     clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
-    # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + clojure-path + '; lein codox')
+    _run_cmd('cd ' + clojure_path + '; lein codox')
     dest_path = app.builder.outdir + '/api/clojure/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
