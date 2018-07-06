@@ -73,6 +73,8 @@ class NameAction(argparse.Action):
     """Parses command line argument to get test file and test name"""
     def __call__(self, parser, namespace, values, option_string=None):
         name = re.split("\.py:|\.", values)
+        if len(name) != 2:
+            raise ValueError("Invalid argument format")
         setattr(namespace, "test_path", find_test_path(name[0]))
         setattr(namespace, "test_name", name[1])
 
