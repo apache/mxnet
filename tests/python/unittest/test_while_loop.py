@@ -51,7 +51,7 @@ def test_simple_add():
             max_iterations=10,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -65,7 +65,7 @@ def test_simple_add():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -81,7 +81,7 @@ def test_simple_add():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -97,7 +97,7 @@ def test_simple_add():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         (outputs, ), (result_i, result_s) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -112,7 +112,7 @@ def test_simple_add():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         (outputs, ), (result_i, result_s, _) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -128,7 +128,7 @@ def test_simple_add():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize()
+            model.hybridize(inline_limit=0)
         _, (result_i, result_s, _) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -255,6 +255,10 @@ def test_while_loop_for_foreach():
         return lambda loop_vars, _: loop_vars[0] < length
 
     def case_0():
+        # This is a simple testcase that all loop steps are independent'
+        # It basically scans the array and outputs itself
+        # There is 1 output
+        # There is 1 state: i
         def _simple_func(loop, free):
             (i, ), (scanned, ) = loop, free
             in_ = scanned.take(i).squeeze(axis=0)
@@ -274,6 +278,9 @@ def test_while_loop_for_foreach():
         )
 
     def case_1(**params):
+        # This is a simple testcase that simulates a cumulative sum
+        # There is 1 output
+        # There is 1 state: s
         step_funcs = [
             lambda a, b, s: a * 1.5 + b * 2.5 - s * 3.5,
             lambda a, b, s: a * 1.5 - s * 3.5 + b * 2.5,
@@ -313,6 +320,9 @@ def test_while_loop_for_foreach():
                 )
 
     def case_2(**params):
+        # This is a testcase that involves non-differentiable operators
+        # There is 1 output
+        # There is 2 states: i, s
         # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda in_, s, f_1: (in_ * 2) * s * f_1,
@@ -357,6 +367,9 @@ def test_while_loop_for_foreach():
                 )
 
     def case_3(length, **params):
+        # This is a testcase for multiple non-differentiable operators and different ways of slicing
+        # There are 2 outputs
+        # There are 3 states: i, s_0, s_1
         # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
@@ -370,12 +383,18 @@ def test_while_loop_for_foreach():
         ]
         def make_func(step_func):
             """This simulates:
-            def compute(s, inputs, f_1, length):
-                outputs = []
+            def compute(input_0, input_1, s_0, s_1, f_0, length):
+                output_0 = []
+                output_1 = []
                 for i in range(length):
-                    s += inputs[i] * 2 + f_1
-                    outputs.append(s)
-                return outputs, s
+                    i_0 = input_0[i]
+                    i_1 = input_1[length - 1 - i]
+                    out = i_0 + (i_1 * 2) + s_0 + (s_1 * 2) + f_0
+                    s_0 = (s_0 + out) * 1.05
+                    s_1 = (s_1 - out * 0.5) * 0.95
+                    output_0.append(out)
+                    output_1.append(out * 1.5)
+                return outputs, s_0, s_1
             """
             def step(loop, free):
                 (i, s_0, s_1), (sc_0, sc_1, f_0, _) = loop, free
@@ -383,6 +402,62 @@ def test_while_loop_for_foreach():
                 i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
                 out = step_func(i_0, i_1, s_0, s_1, f_0)
                 return ([out, out * 1.5], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95])
+            return step
+        case_id = 0
+        for is_train in [True, False]:
+            for step_func in step_funcs:
+                case_id += 1
+                print "Case", case_id
+                _verify_while_loop(
+                    func=make_func(step_func),
+                    max_iterations=1000,
+                    is_train=is_train,
+                    is_for=True,
+                    **params
+                )
+
+    def case_4(length, single_shape, **params):
+        # It is for the case that inputs & outputs are the same
+        # There are 3 outputs
+        # There are 4 states: i, s_0, s_1, s_2
+        # i is used in both differentiable (take) and non-differentiable (+) occasions
+        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
+        step_funcs = [
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * f_0 * s_0,
+        ]
+        def make_func(step_func):
+            """This simulates:
+            def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
+                # here s_2 remains untouched
+                output_0 = []
+                output_1 = []
+                output_2 = []
+                for i in range(length):
+                    i_0 = input_0[i]
+                    i_1 = input_1[length - 1 - i]
+                    out = i_0 + (i_1 * 2) + s_0 + (s_1 * 2) + f_0
+                    s_0 = (s_0 + out) * 1.05
+                    s_1 = (s_1 - out * 0.5) * 0.95
+                    output_0.append(out)
+                    output_1.append(f_0)
+                    output_2.append(out * 1.5)
+                return outputs, s_0, s_1, s_2
+            """
+            def step(loop, free):
+                (i, s_0, s_1, s_2), (sc_0, sc_1, f_0, _) = loop, free
+                i_0 = sc_0.take(i).squeeze(axis=0)
+                i_1 = sc_1.take(i).squeeze(axis=0)
+                out = step_func(i_0, i_1, s_0, s_1, f_0)
+                # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
+                out = out * i.broadcast_to(single_shape)
+                return ([out, f_0, out * 1.5], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
             return step
         case_id = 0
         for is_train in [True, False]:
@@ -480,8 +555,46 @@ def test_while_loop_for_foreach():
         free_var_shapes=[
             (30, 2),        # sc_0
             (30, 2),        # sc_1
-            (2, ),          # f_1
-            (3, 4, 5, 6),   # f_2, unused
+            (2, ),          # f_0
+            (3, 4, 5, 6),   # f_1, unused
+        ],
+    )
+    # Case 4.1.*
+    print("Testing Case 4.1")
+    case_4(
+        length=4,
+        cond=make_for_cond(length=4),
+        single_shape=[5],
+        loop_var_shapes=[
+            (1, ),          # i
+            (5, ),          # s_0
+            (5, ),          # s_1
+            (23, 6, 8),     # s_2
+        ],
+        free_var_shapes=[
+            (30, 5),        # sc_0
+            (30, 5),        # sc_1
+            (5, ),          # f_0
+            (3, 4, 5, 6),   # f_1, unused
+        ],
+    )
+    # Case 4.2.*
+    print("Testing Case 4.2")
+    case_4(
+        length=5,
+        cond=make_for_cond(length=5),
+        single_shape=[5],
+        loop_var_shapes=[
+            (1, ),          # i
+            (5, ),          # s_0
+            (5, ),          # s_1
+            (23, 6, 8),     # s_2
+        ],
+        free_var_shapes=[
+            (30, 5),        # sc_0
+            (30, 5),        # sc_1
+            (5, ),          # f_0
+            (3, 4, 5, 6),   # f_1, unused
         ],
     )
 
