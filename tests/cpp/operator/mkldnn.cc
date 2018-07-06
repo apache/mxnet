@@ -1268,7 +1268,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   EXPECT_EQ(0, input_data2[2]);
   EXPECT_EQ(1, input_data2[3]);
 
-  // test 2d shape kernel
+  // test 2d shape base
   {
     OpAttrs attrs;
     attrs.attrs.op = Op::Get("Pooling");
@@ -1277,7 +1277,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "(0,0)" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2};
+    TShape expected_shape = {1,1,4};
     NDArray expected_output(expected_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = -2;
@@ -1288,6 +1288,25 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
+
+  // test 2d shape kernel
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "(2,2)"});
+    attrs.attrs.dict.insert({"stride" , "(1,1)"});
+    attrs.attrs.dict.insert({"pad" , "(0,0)" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,1};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = 1;
+    in_arrs[0] = &arr2d;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
@@ -1453,14 +1472,12 @@ void TestPoolingOp(const OpAttrs &attrs,
   TShape stride = param.stride;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-
   // concat backwards uses scaled up inputs
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
     in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
-
   for (auto &in_arr : in_arrs) {
     // can only pool only 3D and 4D inputs
     TShape input_shape = in_arr.arr.shape();
