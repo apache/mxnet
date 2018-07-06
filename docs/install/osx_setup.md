@@ -137,14 +137,6 @@ Run the following commands to install the MXNet dependencies and build the MXNet
     make rpkg
 ```
 
-**Note:** R-package is a folder in the MXNet source.
-
-These commands create the MXNet R package as a tar.gz file that you can install as an R package. To install the R package, run the following command, use your MXNet version number:
-
-```bash
-	R CMD INSTALL mxnet_current_r.tar.gz
-```
-
 ## Install the MXNet Package for Julia
 The MXNet package for Julia is hosted in a separate repository, MXNet.jl, which is available on [GitHub](https://github.com/dmlc/MXNet.jl). To use Julia binding it with an existing libmxnet installation, set the ```MXNET_HOME``` environment variable by running the following command:
 

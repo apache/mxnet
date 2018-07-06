@@ -987,10 +987,23 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 
 **Build and install the MXNet R binding**
 
+You will need to first install R. MXNet requires R version >3.3 and we can fetch that from CRAN package repository.
+```bash
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+$ sudo add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
+$ sudo apt-get update
+$ sudo apt-get install r-base r-base-dev
+```
 
+You will then need to install packages needed for building and installing MXNet R bindings which includes curl, openssl, XML, Cairo and devtools. You can install them with the following commands.
+```bash
+$ sudo apt-get install libcurl4-openssl-dev libssl-dev libxml2-dev libcairo2-dev libxt-dev
+$ sudo Rscript -e "install.packages('curl', repo = 'https://cran.rstudio.com')"
+```
+
+You can then build the MXNet R package with the following command.
 ```bash
 $ make rpkg
-$ R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 </div> <!-- END of CPU -->
