@@ -26,20 +26,22 @@ import os
 import random
 import argparse
 import re
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 DEFAULT_NUM_TRIALS = 10000
 DEFAULT_VERBOSITY = 2
 
 def run_test_trials(args):
     test_path = args.test_path + ":" + args.test_name
-    print("testing: " + test_path)
+    logging.info("Testing: %s", test_path)
 
     new_env = os.environ.copy()
     new_env["MXNET_TEST_COUNT"] = str(args.num_trials)
     
     if args.seed is None:
-        print("Using random seed")
+        logging.info("No test seed provided, using random seed")
     else:
         new_env["MXNET_TEST_SEED"] = str(args.seed)
 
@@ -48,7 +50,7 @@ def run_test_trials(args):
     code = subprocess.call(["nosetests", verbosity, test_path], 
                            env = new_env)
     
-    print("nosetests completed with return code " + str(code))
+    logging.info("Nosetests terminated with exit code %d", code)
 
 def find_test_path(test_file):
     """Searches for the test file and returns the path if found
