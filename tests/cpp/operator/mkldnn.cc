@@ -885,7 +885,6 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
 TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
   CHECK(dim < coordindate.ndim());
   TShape tmp = coordindate;
-  CHECK(tmp[dim] + amount >= 0);
   tmp[dim] = tmp[dim] + amount;
   return tmp;
 }
@@ -962,6 +961,8 @@ float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const 
     return MaxPoolAtCoordinate1D(in_arr, coordinate, kernel_shape);
   if (kernel_shape.ndim() == 2)
     return MaxPoolAtCoordinate2D(in_arr, coordinate, kernel_shape);
+//  if (kernel_shape.ndim() == 3)
+//    return MaxPoolAtCoordinate3D(in_arr, coordinate, kernel_shape);
 
 
   return -1;
