@@ -19,6 +19,6 @@
 
 set -ex
 
-apt update
+apt update || true
 apt install -y \
     unzip
