@@ -1134,7 +1134,7 @@ void VerifyPool3D(const NDArray &input,
       int center = j + kernel[1] / 2;
       TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
       for (int k = -padding[2]; k < input_shape[4] + padding[2] - kernel[2]; k = k + stride[2]) {
-        int center = j + kernel[2] / 2;
+        int center = k + kernel[2] / 2;
         TShape coordinate2 = GetShiftedCoordinate(coordinate1, 4, center);
         ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate2, kernel), out_data[out_ptr]);
         out_ptr++;
