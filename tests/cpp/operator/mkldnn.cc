@@ -1307,6 +1307,50 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
 
+  // test 2d shape padding
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "(2,2)"});
+    attrs.attrs.dict.insert({"stride" , "(1,1)"});
+    attrs.attrs.dict.insert({"pad" , "(1,1)" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,9};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = -2;
+    expected_data[1] = -1;
+    expected_data[2] = -1;
+    expected_data[3] = 0;
+    expected_data[4] = 1;
+    expected_data[5] = 1;
+    expected_data[6] = 0;
+    expected_data[7] = 1;
+    expected_data[8] = 1;
+    in_arrs[0] = &arr2d;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
+  // test 2d shape stride
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "(1,1)"});
+    attrs.attrs.dict.insert({"stride" , "(2,2)"});
+    attrs.attrs.dict.insert({"pad" , "(0,0)" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,1};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = -2;
+    in_arrs[0] = &arr2d;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
