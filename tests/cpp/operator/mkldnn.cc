@@ -1041,14 +1041,14 @@ TEST(MKLDNN_NDArray, MaxPoolAtCoordinate) {
     TShape coord1 = {0,0,0,0}; // edge
     TShape coord2 = {0,0,0,2}; // edge
     TShape coord3 = {0,0,2,0}; // edge
-    TShape coord4 = {0,0,0,2}; // edge
+    TShape coord4 = {0,0,2,2}; // edge
     TShape coord5 = {0,0,1,1}; // center
 
     EXPECT_EQ(-4, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
     EXPECT_EQ(-2, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
     EXPECT_EQ(2, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
     EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord4, kernel_shape));
-    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
+    EXPECT_EQ(0, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
   }
 }
 
@@ -1275,7 +1275,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.op = Op::Get("Pooling");
     attrs.attrs.dict.insert({"kernel" , "(1,1)"});
     attrs.attrs.dict.insert({"stride" , "(1,1)"});
-    attrs.attrs.dict.insert({"pad" , "(0,)" });
+    attrs.attrs.dict.insert({"pad" , "(0,0)" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
     TShape expected_shape = {1,1,2};
