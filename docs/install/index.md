@@ -1001,7 +1001,7 @@ $ sudo apt-get install libcurl4-openssl-dev libssl-dev libxml2-dev libcairo2-dev
 $ sudo Rscript -e "install.packages('curl', repo = 'https://cran.rstudio.com')"
 ```
 
-You can then build the MXNet R package with the following command.
+You can then build and install the MXNet R package with the following command.
 ```bash
 $ make rpkg
 ```
