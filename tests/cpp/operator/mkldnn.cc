@@ -1350,7 +1350,7 @@ void TestPoolingOp(const OpAttrs &attrs,
 
   for (auto &in_arr : in_arrs) {
     // can only pool only 3D and 4D inputs
-    if (in_arr.arr.shape().ndim() <= 2)
+    if (in_arr.arr.shape().ndim() != kernel.ndim() + 2)
       continue;
     TShape input_shape = in_arr.arr.shape();
     for (auto &dispatch : dispatches) {
@@ -1449,7 +1449,7 @@ TEST(IMPERATIVE, PoolingOp) {
   for (int kernel = 1; kernel < 4; kernel++) {
     for (int stride = 1; stride < 3; stride++) {
       for (int pad = 0; pad < 2; pad++) {
-        if (ceil(kernel / 2.) <= pad)
+        if (ceil(kernel / 2.) < pad)
           continue;
         OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
         TestPoolingOp(attrs, false);
