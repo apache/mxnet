@@ -466,12 +466,15 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   return attrs;
 }
 
-OpAttrs GetPoolingOp(int kernel, int stride, int pad) {
+OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
   attrs.num_inputs = 1;
   attrs.num_outputs = 1;
-  attrs.attrs.dict.insert({"kernel" , std::to_string(kernel)});
+  TShape kernel_shape(dim);
+  for (int i = 0; i < dim; i++)
+    kernel_shape[i] = kernel;
+  attrs.attrs.dict.insert({"kernel" , kernel_shape});
   attrs.attrs.dict.insert({"stride" , std::to_string(stride)});
   attrs.attrs.dict.insert({"pad" , std::to_string(pad)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
@@ -1350,9 +1353,9 @@ void TestPoolingOp(const OpAttrs &attrs,
 
   for (auto &in_arr : in_arrs) {
     // can only pool only 3D and 4D inputs
-    if (in_arr.arr.shape().ndim() != kernel.ndim() + 2)
-      continue;
     TShape input_shape = in_arr.arr.shape();
+    if (input_shape.ndim() != kernel.ndim() + 2)
+      continue;
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
       std::vector<float> scale_vector(in_arr.arr.shape().ndim());
@@ -1446,13 +1449,15 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 
 TEST(IMPERATIVE, PoolingOp) {
   // TODO: change kernel, stride, pad
-  for (int kernel = 1; kernel < 4; kernel++) {
-    for (int stride = 1; stride < 3; stride++) {
-      for (int pad = 0; pad < 2; pad++) {
-        if (ceil(kernel / 2.) < pad)
-          continue;
-        OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
-        TestPoolingOp(attrs, false);
+  for (int dim = 1; dim < 4; dim++) {
+    for (int kernel = 1; kernel < 4; kernel++) {
+      for (int stride = 1; stride < 3; stride++) {
+        for (int pad = 0; pad < 2; pad++) {
+          if (ceil(kernel / 2.) < pad)
+            continue;
+          OpAttrs attrs = GetPoolingOp(kernel, dim, stride, pad);
+          TestPoolingOp(attrs, false);
+        }
       }
     }
   }
