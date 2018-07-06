@@ -1187,11 +1187,13 @@ def check_hybrid_static_memory_switching(**kwargs):
 
     x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
     net(x)
+    x.attach_grad()
     with mx.autograd.record():
         y = net(x)
         y.backward()
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     net(x)
+    x.attach_grad()
     with mx.autograd.record():
         y = net(x)
         y.backward()
