@@ -1153,7 +1153,6 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   TShape stride = param.stride;
   NDArray input = in_arrs[0]->Reorder2Default();
   NDArray output = out_arrs[0]->Reorder2Default();
-//  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   TShape input_shape = input.shape();
   CHECK(input_shape.ndim() == kernel.ndim() + 2);
   int num_batches = input_shape[0];
@@ -1285,7 +1284,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     expected_data[1] = -1;
     expected_data[2] = 0;
     expected_data[3] = 1;
-    in_arrs[0] = &arr;
+    in_arrs[0] = &arr2d;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
