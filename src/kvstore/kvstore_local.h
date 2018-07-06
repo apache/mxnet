@@ -34,6 +34,7 @@
 #include <functional>
 #include <algorithm>
 #include "./comm.h"
+#include "./comm_tree.h"
 #include "./kvstore_utils.h"
 #include "../ndarray/ndarray_function.h"
 
@@ -56,7 +57,12 @@ class KVStoreLocal : public KVStore {
    */
   explicit KVStoreLocal(bool use_device_comm) : KVStore() {
     if (use_device_comm) {
-      comm_ = new CommDevice();
+      bool tree = dmlc::GetEnv("MXNET_KVSTORE_USETREE", 0) & MXNET_USE_CUDA;
+      if (tree) {
+        comm_ = new CommDeviceTree();
+      } else {
+        comm_ = new CommDevice();
+      }
     } else {
       comm_ = new CommCPU();
     }
