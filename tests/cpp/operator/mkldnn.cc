@@ -710,8 +710,8 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
           continue;
         std::cout << "Extending " << shape << " dim " <<
                   dim << " and " << num_inputs << "num_inputs\n";
-        std::vector<float> scale_vector(in_arr.arr.shape().ndim());
-        for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
+        std::vector<float> scale_vector(shape.ndim());
+        for (int i = 0; i < shape.ndim(); i++)
           scale_vector[i] = 1;
         scale_vector[dim] = num_inputs;
         auto output_arrs = GetTestOutputArrays(shape, pds, scale_vector);
@@ -889,9 +889,7 @@ float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   return static_cast<float*>(in_arr.Reorder2Default().data().dptr_)[index];
 }
 
-// TODO: accept callback to handle operation
-// center is formated as (N,C,everything else)
-float PoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
+float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = -std::numeric_limits<float>::max();
   CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within in_arr bounds";
@@ -929,7 +927,7 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
   }
 }
 
-TEST(MKLDNN_NDArray, PoolAtCoordinate) {
+TEST(NN_NDArray, MaxPoolAtCoordinate) {
 
   // one channel
   {
@@ -941,12 +939,12 @@ TEST(MKLDNN_NDArray, PoolAtCoordinate) {
     TShape coord1 = {0,0,0}; // edge
     TShape coord2 = {0,0,7}; // edge
     TShape coord3 = {0,0,4}; // middle
-    EXPECT_EQ(-3, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
-    EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(-3, PoolAtCoordinate(arr, coord1, even_kernel_shape));
-    EXPECT_EQ(3, PoolAtCoordinate(arr, coord2, even_kernel_shape));
-    EXPECT_EQ(1, PoolAtCoordinate(arr, coord3, even_kernel_shape));
+    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord1, odd_kernel_shape));
+    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord2, odd_kernel_shape));
+    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord3, odd_kernel_shape));
+    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord1, even_kernel_shape));
+    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord2, even_kernel_shape));
+    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord3, even_kernel_shape));
   }
 
   // two channels
@@ -961,12 +959,12 @@ TEST(MKLDNN_NDArray, PoolAtCoordinate) {
     TShape coord4 = {0,1,0}; // edge
     TShape coord5 = {0,1,7}; // edge
     TShape coord6 = {0,1,4}; // middle
-    EXPECT_EQ(-7, PoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(-1, PoolAtCoordinate(arr, coord2, odd_kernel_shape));
-    EXPECT_EQ(-3, PoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(1, PoolAtCoordinate(arr, coord4, odd_kernel_shape));
-    EXPECT_EQ(7, PoolAtCoordinate(arr, coord5, odd_kernel_shape));
-    EXPECT_EQ(5, PoolAtCoordinate(arr, coord6, odd_kernel_shape));
+    EXPECT_EQ(-7, MaxPoolAtCoordinate(arr, coord1, odd_kernel_shape));
+    EXPECT_EQ(-1, MaxPoolAtCoordinate(arr, coord2, odd_kernel_shape));
+    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord3, odd_kernel_shape));
+    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord4, odd_kernel_shape));
+    EXPECT_EQ(7, MaxPoolAtCoordinate(arr, coord5, odd_kernel_shape));
+    EXPECT_EQ(5, MaxPoolAtCoordinate(arr, coord6, odd_kernel_shape));
   }
 }
 
@@ -999,7 +997,7 @@ void VerifyPool1D(const NDArray &input,
   for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
-    ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+    ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
     out_ptr++;
   }
 }
@@ -1027,7 +1025,7 @@ void VerifyPool2D(const NDArray &input,
     for (int j = lower; j < upper - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
       TShape coordinate = GetShiftedCoordinate(coordinate, 3, center);
-      ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
       out_ptr++;
     }
   }
@@ -1060,7 +1058,7 @@ void VerifyPool3D(const NDArray &input,
       for (int k = lower; k < upper - kernel[2]; k = k + stride[2]) {
         int center = j + kernel[2] / 2;
         TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
-        ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
         out_ptr++;
       }
     }
