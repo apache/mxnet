@@ -472,9 +472,14 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   attrs.num_inputs = 1;
   attrs.num_outputs = 1;
   TShape kernel_shape(dim);
-  for (int i = 0; i < dim; i++)
-    kernel_shape[i] = kernel;
-  attrs.attrs.dict.insert({"kernel" , kernel_shape});
+  std::stringstream ss;
+  ss << "(";
+  for (int i = 0; i < dim; i++) {
+    ss << kernel;
+    if (i != dim - 1) ss << ",";
+  }
+  ss << ")";
+  attrs.attrs.dict.insert({"kernel" , ss.str()});
   attrs.attrs.dict.insert({"stride" , std::to_string(stride)});
   attrs.attrs.dict.insert({"pad" , std::to_string(pad)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
