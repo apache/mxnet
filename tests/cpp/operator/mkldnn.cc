@@ -992,10 +992,10 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
   }
 }
 
-TEST(NN_NDArray, MaxPoolAtCoordinate) {
+TEST(MKLDNN_NDArray, MaxPoolAtCoordinate) {
 
   // one channel
-  {MaxPoolAtCoordinate
+  {
     TShape test_shape = {1,1,8};
     TShape odd_kernel_shape = {3};
     TShape even_kernel_shape = {4};
@@ -1260,13 +1260,13 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
 
-//  TShape test_shape2d = {1,1,3,3};
-//  NDArray arr(test_shape, Context());
-//  InitDefaultArray(&arr);
-//  mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
-//  EXPECT_EQ(-1, input_data[0]);
-//  EXPECT_EQ(0, input_data[1]);
-//  EXPECT_EQ(1, input_data[2]);
+  TShape test_shape2d = {1,1,2,2};
+  NDArray arr2d(test_shape, Context());
+  InitDefaultArray(&arr);
+  mshadow::default_real_t *input_data2 = arr.data().dptr<mshadow::default_real_t>();
+//  EXPECT_EQ(-1, input_data2[0]);
+//  EXPECT_EQ(0, input_data2[1]);
+//  EXPECT_EQ(1, input_data2[2]);
 //
 //  // test 2d shape
 //  {
