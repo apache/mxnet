@@ -416,7 +416,8 @@ def split(attrs, inputs, proto_obj):
     if not split_list:
         num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
     else:
-        raise NotImplementedError("Operator {} in MXNet does not support variable splits.".format('split'))
+        raise NotImplementedError("Operator {} in MXNet does not support variable splits."
+                                  .format('split'))
 
     new_attrs['num_outputs'] = num_outputs
 
