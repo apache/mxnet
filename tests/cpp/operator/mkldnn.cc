@@ -933,7 +933,7 @@ float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, cons
     for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
       float value = -std::numeric_limits<float>::max();
       TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
-      if (IsInArray(in_arr, shifted_shape))
+      if (IsInArray(in_arr, shifted_shape1))
         value = GetValueAtCoordinate(in_arr, shifted_shape1);
       max = std::fmax(value, max);
     }
