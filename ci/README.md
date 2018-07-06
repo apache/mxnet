@@ -54,7 +54,7 @@ The artifacts are located in the build/ directory in the project root. In case
 
 ## Add a platform
 
-To add a platform, you should add the appropiate dockerfile in
+To add a platform, you should add the appropriate dockerfile in
 docker/Dockerfile.build.<platform> and add a shell function named
 build_<platform> to the file docker/runtime_functions.sh with build
 instructions for that platform.
@@ -63,3 +63,9 @@ instructions for that platform.
 Due to current limitations of the CMake build system creating artifacts in the
 source 3rdparty folder of the parent mxnet sources concurrent builds of
 different platforms is NOT SUPPORTED.
+
+## ccache
+For all builds a directory from the host system is mapped where ccache will store cached 
+compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
+significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
+variable. All ccache instances are currently set to be 10 Gigabytes max in size.

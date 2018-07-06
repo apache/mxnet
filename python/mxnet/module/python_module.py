@@ -138,7 +138,7 @@ class PythonModule(BaseModule):
         """
         pass
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
         Subclass should override this method if needed.
 
@@ -152,6 +152,9 @@ class PythonModule(BaseModule):
             # since we do not need labels, we are probably not a module with a loss
             # function or predictions, so just ignore this call
             return
+
+        if pre_sliced:
+            raise RuntimeError("PythonModule does not support presliced labels")
 
         # by default we expect our outputs are some scores that could be evaluated
         eval_metric.update(labels, self.get_outputs())

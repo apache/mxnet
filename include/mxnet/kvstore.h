@@ -229,6 +229,7 @@ class KVStore {
     CHECK(updater) << "invalid updater";
     updater_ = updater;
   }
+
   /*!
    * \brief set an updater with string keys
    *

@@ -27,7 +27,7 @@ The following example shows recognized object classes with corresponding probabi
 
 For this tutorial, you can get the model and sample input image by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
 
-From the `scala-package/examples/scripts/inferexample/imageclassifier/` folder run:
+From the `scala-package/examples/scripts/infer/imageclassifier/` folder run:
 
 ```bash
 ./get_resnet_data.sh

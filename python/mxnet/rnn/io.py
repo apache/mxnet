@@ -27,7 +27,8 @@ import numpy as np
 from ..io import DataIter, DataBatch, DataDesc
 from .. import ndarray
 
-def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', start_label=0):
+def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n',
+                     start_label=0, unknown_token=None):
     """Encode sentences and (optionally) build a mapping
     from string tokens to integer indices. Unknown keys
     will be added to vocabulary.
@@ -46,6 +47,9 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         of sentence by default.
     start_label : int
         lowest index.
+    unknown_token: str
+        Symbol to represent unknown token.
+        If not specified, unknown token will be skipped.
 
     Returns
     -------
@@ -65,9 +69,11 @@ def encode_sentences(sentences, vocab=None, invalid_label=-1, invalid_key='\n', 
         coded = []
         for word in sent:
             if word not in vocab:
-                assert new_vocab, "Unknown token %s"%word
+                assert (new_vocab or unknown_token), "Unknown token %s"%word
                 if idx == invalid_label:
                     idx += 1
+                if unknown_token:
+                    word = unknown_token
                 vocab[word] = idx
                 idx += 1
             coded.append(vocab[word])

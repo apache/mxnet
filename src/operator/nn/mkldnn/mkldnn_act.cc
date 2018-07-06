@@ -161,15 +161,15 @@ void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 
   NDArray in_buffer = in_data;
+  MKLDNNStream *stream = MKLDNNStream::Get();
+
   if (in_data.IsView() && in_data.IsMKLDNNData())
     in_buffer = in_data.Reorder2Default();
 
   auto input_mem = in_buffer.GetMKLDNNData();
   MKLDNNActForward &fwd = GetActForward(param, ctx, in_buffer, *input_mem);
-  auto out_mem = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_primitive_desc(),
-                                 req);
+  auto out_mem = CreateMKLDNNMem(out_data, fwd.fwd_pd.dst_primitive_desc(), req, &in_buffer);
   fwd.SetNewMem(*input_mem, *out_mem.second);
-  MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(fwd.GetFwd());
   CommitOutput(out_data, out_mem);
   stream->Submit();
@@ -184,14 +184,22 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
     return;
   }
 
+  NDArray out_buffer = out_grad;
+  if (out_grad.IsView() && out_grad.IsMKLDNNData())
+    out_buffer = out_grad.Reorder2Default();
+
+  NDArray in_buffer = in_data;
+  if (in_data.IsView() && in_data.IsMKLDNNData())
+    in_buffer = in_data.Reorder2Default();
+
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
-  auto diff_dst_memory = out_grad.GetMKLDNNData();
-  auto input_mem = in_data.GetMKLDNNData();
+  auto diff_dst_memory = out_buffer.GetMKLDNNData();
+  auto input_mem = in_buffer.GetMKLDNNData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
   // descriptor. Otherwise, the perf will suffer.
   if (input_mem->get_primitive_desc() != diff_dst_memory->get_primitive_desc())
-    input_mem = in_data.GetMKLDNNDataReorder(diff_dst_memory->get_primitive_desc());
+    input_mem = in_buffer.GetMKLDNNDataReorder(diff_dst_memory->get_primitive_desc());
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   mkldnn::memory::desc diff_md = diff_dst_memory->get_primitive_desc().desc();
@@ -201,7 +209,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
   auto alg = GetMKLDNNActAlgo(param);
   mkldnn_output_t diff_src_memory;
 
-  MSHADOW_REAL_TYPE_SWITCH(in_data.dtype(), DType, {
+  MSHADOW_REAL_TYPE_SWITCH(in_buffer.dtype(), DType, {
     DType alpha = 0;
     mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
                                           alg, data_md, alpha);

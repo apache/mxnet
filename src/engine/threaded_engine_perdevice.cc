@@ -76,6 +76,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     if (is_worker_) return;
     gpu_worker_nthreads_ = common::GetNumThreadsPerGPU();
     cpu_worker_nthreads_ = dmlc::GetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
+    gpu_copy_nthreads_ = dmlc::GetEnv("MXNET_GPU_COPY_NTHREADS", 2);
     // create CPU task
     int cpu_priority_nthreads = dmlc::GetEnv("MXNET_CPU_PRIORITY_NTHREADS", 4);
     cpu_priority_worker_.reset(new ThreadWorkerBlock<kPriorityQueue>());
@@ -128,8 +129,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         const FnProperty prop = opr_block->opr->prop;
         const bool is_copy = (prop == FnProperty::kCopyFromGPU ||
                               prop == FnProperty::kCopyToGPU);
-        const size_t nthread = gpu_worker_nthreads_;
         if (is_copy) {
+          const size_t nthread = gpu_copy_nthreads_;
           auto ptr = gpu_copy_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
             // Signify to kernel that GPU is being used, so reserve cores as necessary
             OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
@@ -150,6 +151,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
             }
           }
         } else {
+          const size_t nthread = gpu_worker_nthreads_;
           auto ptr = gpu_normal_workers_.Get(ctx.dev_id, [this, ctx, is_copy, nthread]() {
             // Signify to kernel that GPU is being used, so reserve cores as necessary
             OpenMP::Get()->set_reserve_cores(GetReserveCoreCount(true));
@@ -194,6 +196,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
   size_t cpu_worker_nthreads_;
   /*! \brief number of concurrent thread each gpu worker uses */
   size_t gpu_worker_nthreads_;
+  /*! \brief number of concurrent thread each gpu copy worker uses */
+  size_t gpu_copy_nthreads_;
   // cpu worker
   common::LazyAllocArray<ThreadWorkerBlock<kWorkerQueue> > cpu_normal_workers_;
   // cpu priority worker

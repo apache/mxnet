@@ -77,6 +77,78 @@ def test_broadcast():
     output = bkd_rep.run([input1, input2])
     npt.assert_almost_equal(output[0], numpy_op)
 
+@with_seed()
+def test_greater():
+    """Test for logical greater in onnx operators."""
+    input1 = np.random.rand(1, 3, 4, 5).astype("float32")
+    input2 = np.random.rand(1, 5).astype("float32")
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=(1, 3, 4, 5)),
+              helper.make_tensor_value_info("input2", TensorProto.FLOAT, shape=(1, 5))]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 3, 4, 5))]
+
+    nodes = [helper.make_node("Greater", ["input1", "input2"], ["output"])]
+
+    graph = helper.make_graph(nodes,
+                              "greater_test",
+                              inputs,
+                              outputs)
+
+    greater_model = helper.make_model(graph)
+    
+    bkd_rep = mxnet_backend.prepare(greater_model)
+    numpy_op = np.greater(input1, input2).astype(np.float32)
+    output = bkd_rep.run([input1, input2])
+    npt.assert_almost_equal(output[0], numpy_op)
+
+@with_seed()
+def test_lesser():
+    """Test for logical greater in onnx operators."""
+    input1 = np.random.rand(1, 3, 4, 5).astype("float32")
+    input2 = np.random.rand(1, 5).astype("float32")
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=(1, 3, 4, 5)),
+              helper.make_tensor_value_info("input2", TensorProto.FLOAT, shape=(1, 5))]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 3, 4, 5))]
+
+    nodes = [helper.make_node("Less", ["input1", "input2"], ["output"])]
+
+    graph = helper.make_graph(nodes,
+                              "lesser_test",
+                              inputs,
+                              outputs)
+
+    greater_model = helper.make_model(graph)
+    
+    bkd_rep = mxnet_backend.prepare(greater_model)
+    numpy_op = np.less(input1, input2).astype(np.float32)
+    output = bkd_rep.run([input1, input2])
+    npt.assert_almost_equal(output[0], numpy_op)
+    
+@with_seed()
+def test_equal():
+    """Test for logical greater in onnx operators."""
+    input1 = np.random.rand(1, 3, 4, 5).astype("float32")
+    input2 = np.random.rand(1, 5).astype("float32")
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=(1, 3, 4, 5)),
+              helper.make_tensor_value_info("input2", TensorProto.FLOAT, shape=(1, 5))]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 3, 4, 5))]
+
+    nodes = [helper.make_node("Equal", ["input1", "input2"], ["output"])]
+
+    graph = helper.make_graph(nodes,
+                              "equal_test",
+                              inputs,
+                              outputs)
+
+    greater_model = helper.make_model(graph)
+    
+    bkd_rep = mxnet_backend.prepare(greater_model)
+    numpy_op = np.equal(input1, input2).astype(np.float32)
+    output = bkd_rep.run([input1, input2])
+    npt.assert_almost_equal(output[0], numpy_op)
+
 def test_super_resolution_example():
     """Test the super resolution example in the example/onnx folder"""
     sys.path.insert(0, os.path.join(CURR_PATH, '../../../../example/onnx/'))

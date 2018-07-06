@@ -675,7 +675,7 @@ class Conv3DTranspose(_Conv):
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
     def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
-                 pool_type, **kwargs):
+                 pool_type, count_include_pad=None, **kwargs):
         super(_Pooling, self).__init__(**kwargs)
         if strides is None:
             strides = pool_size
@@ -687,6 +687,8 @@ class _Pooling(HybridBlock):
             'kernel': pool_size, 'stride': strides, 'pad': padding,
             'global_pool': global_pool, 'pool_type': pool_type,
             'pooling_convention': 'full' if ceil_mode else 'valid'}
+        if count_include_pad is not None:
+            self._kwargs['count_include_pad'] = count_include_pad
 
     def _alias(self):
         return 'pool'
@@ -863,6 +865,8 @@ class AvgPool1D(_Pooling):
         respectively. padding is applied on 'W' dimension.
     ceil_mode : bool, default False
         When `True`, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Inputs:
@@ -879,13 +883,13 @@ class AvgPool1D(_Pooling):
           equation.
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
-                 ceil_mode=False, **kwargs):
+                 ceil_mode=False, count_include_pad=True, **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
         assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(AvgPool1D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
 
 class AvgPool2D(_Pooling):
@@ -907,6 +911,8 @@ class AvgPool2D(_Pooling):
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Inputs:
@@ -926,13 +932,13 @@ class AvgPool2D(_Pooling):
           equation.
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0,
-                 ceil_mode=False, layout='NCHW', **kwargs):
+                 ceil_mode=False, layout='NCHW', count_include_pad=True, **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
         assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(AvgPool2D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
 
 class AvgPool3D(_Pooling):
@@ -955,6 +961,8 @@ class AvgPool3D(_Pooling):
         dimension.
     ceil_mode : bool, default False
         When True, will use ceil instead of floor to compute the output shape.
+    count_include_pad : bool, default True
+        When 'False', will exclude padding elements when computing the average value.
 
 
     Inputs:
@@ -975,13 +983,13 @@ class AvgPool3D(_Pooling):
           equation.
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
-                 ceil_mode=False, layout='NCDHW', **kwargs):
+                 ceil_mode=False, layout='NCDHW', count_include_pad=True, **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
         assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(AvgPool3D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'avg', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
 
 class GlobalMaxPool1D(_Pooling):

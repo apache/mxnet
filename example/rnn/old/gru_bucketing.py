@@ -23,7 +23,7 @@ import numpy as np
 import mxnet as mx
 
 from gru import gru_unroll
-from bucket_io import BucketSentenceIter, default_build_vocab
+from bucket_io import BucketSentenceIter, default_build_vocab, DummyIter
 
 def Perplexity(label, pred):
     label = label.T.reshape((-1,))
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     #contexts = [mx.context.gpu(i) for i in range(1)]
     contexts = mx.context.cpu()
 
-    vocab = default_build_vocab("./data/ptb.train.txt")
+    vocab = default_build_vocab("./data/sherlockholmes.train.txt")
 
     def sym_gen(seq_len):
         return gru_unroll(num_lstm_layer, seq_len, len(vocab),
@@ -60,9 +60,9 @@ if __name__ == '__main__':
 
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
 
-    data_train = BucketSentenceIter("./data/ptb.train.txt", vocab,
+    data_train = BucketSentenceIter("./data/sherlockholmes.train.txt", vocab,
                                     buckets, batch_size, init_h)
-    data_val = BucketSentenceIter("./data/ptb.valid.txt", vocab,
+    data_val = BucketSentenceIter("./data/sherlockholmes.valid.txt", vocab,
                                   buckets, batch_size, init_h)
 
     if dummy_data:

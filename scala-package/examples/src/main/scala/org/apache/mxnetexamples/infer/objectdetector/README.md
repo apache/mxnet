@@ -28,7 +28,7 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 ### Download Artifacts
 #### Step 1
 You can download the files using the script `get_ssd_data.sh`. It will download and place the model files in a `model` folder and the test image files in a `image` folder in the current directory.
-From the `scala-package/examples/scripts/inferexample/imageclassifier/` folder run:
+From the `scala-package/examples/scripts/infer/imageclassifier/` folder run:
 
 ```bash
 ./get_resnet_data.sh

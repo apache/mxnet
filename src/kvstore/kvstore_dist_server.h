@@ -103,7 +103,8 @@ class Executor {
       lk.unlock();
 
       if (blk.f) {
-        blk.f(); blk.p->set_value();
+        blk.f();
+        blk.p->set_value();
       } else {
         blk.p->set_value(); break;
       }
