@@ -1922,7 +1922,7 @@ def test_context_num_gpus():
     assert mx.context.num_gpus() > 0
 
 
-def _check_batchnorm_result(bn1, bn2, input, num_devices=1, cuda=False):
+def _check_batchnorm_result(input, num_devices=1, cuda=False):
     def _assert_tensor_close(a, b, atol=1e-3, rtol=1e-3):
         npa, npb = a.asnumpy(), b.asnumpy()
         assert np.allclose(npa, npb, rtol=rtol, atol=atol), \
@@ -1952,6 +1952,10 @@ def _check_batchnorm_result(bn1, bn2, input, num_devices=1, cuda=False):
         ctx_list = [mx.gpu(i) for i in range(num_devices)]
     else:
         ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+
+    nch = input.shape[1]
+    bn1 = nn.BatchNorm(in_channels=nch)
+    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)
@@ -1987,17 +1991,19 @@ def _check_batchnorm_result(bn1, bn2, input, num_devices=1, cuda=False):
     _assert_tensor_close(input1.grad, input2grad)
 
 def test_sync_batchnorm():
-    ndev = 1 if len(mxnet.test_utils.list_gpus()) >= 2 else 1
-
-    bn = nn.BatchNorm(in_channels=1)
-    sync_bn = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=1, num_devices=ndev)
+    def get_num_devices():
+        for i in range(100):
+            try:
+                mx.nd.zeros((1,), ctx=mx.gpu(i))
+            except:
+                return i
+    ndev = 1 if get_num_devices() >= 2 else 1
 
     # check with unsync version
     for i in range(10):
-        _check_batchnorm_result(bn, sync_bn, mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                              num_devices=ndev, cuda=True)
+        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+                                num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
-    testSyncBN()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

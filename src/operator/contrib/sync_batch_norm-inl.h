@@ -236,8 +236,10 @@ class Barrier {
 };
 
 // Global variables for Synchronizations
-static GlobalSharedRank<int> global_shared_rank;
-static GlobalShared<Barrier> global_shared_barrier;
+static GlobalSharedRank<int> global_shared_rank_forward;
+static GlobalSharedRank<int> global_shared_rank_backward;
+static GlobalShared<Barrier> global_shared_barrier_forward;
+static GlobalShared<Barrier> global_shared_barrier_backward;
 static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_mean;
 static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_var;
 static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_grad;
@@ -292,8 +294,8 @@ class SyncBatchNorm : public Operator {
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *global_barrier = global_shared_barrier.Register(param_.key, param_.ndev);
-      int myRank = global_shared_rank.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = global_shared_barrier_forward.Register(param_.key, param_.ndev);
+      int myRank = global_shared_rank_forward.Register(param_.key, param_.ndev);
       // get the mean and var
       Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
@@ -378,8 +380,8 @@ class SyncBatchNorm : public Operator {
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *global_barrier = global_shared_barrier.Register(param_.key, param_.ndev);
-      int myRank = global_shared_rank.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = global_shared_barrier_backward.Register(param_.key, param_.ndev);
+      int myRank = global_shared_rank_backward.Register(param_.key, param_.ndev);
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(5, mean.shape_[0]), s);
