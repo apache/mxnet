@@ -454,9 +454,10 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
             # other elements belong to `final_state`
             num_out_data = len(outputs)
             num_outputs = len(outputs) + len(final_state)
-            # nnvm graph does not allow inputs and outputs overlap
-            id_new_graph_vars = {id(x) for x in new_graph_vars}
-            make_identity = lambda x: symbol.op.identity(x) if id(x) in id_new_graph_vars else x
+            # nnvm cut-graph does not allow inputs and outputs overlap
+            # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
+            all_input_names = symbol.Group(outputs + final_state).list_inputs()
+            make_identity = lambda x: symbol.op.identity(x) if x.name in all_input_names else x
             # group all outputs of graph_func
             graph = symbol.Group(list(map(make_identity, outputs + final_state)))
         return graph, num_out_data, num_outputs
