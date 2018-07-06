@@ -1079,7 +1079,7 @@ void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
   NDArray output = out_arrs[0]->Reorder2Default();
 //  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   TShape input_shape = input.shape();
-  CHECK(input_shape.ndim() > 2);
+  CHECK(input_shape.ndim() == kernel.ndim() + 2);
   int num_batches = input_shape[0];
   int num_channels = input_shape[1];
 
