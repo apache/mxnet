@@ -92,6 +92,8 @@ def build_scala_docs(app):
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
+    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
+    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
     clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
     _run_cmd('cd ' + clojure_path + '; lein codox')
     dest_path = app.builder.outdir + '/api/clojure/docs'
