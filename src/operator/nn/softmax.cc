@@ -27,6 +27,7 @@
 #include "../tensor/elemwise_binary_op.h"
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
+#include "../../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -49,7 +50,6 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::softmax_fwd>, attrs, ctx,
                   inputs, req, outputs);
 }
-#endif
 
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
@@ -67,9 +67,18 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   else
 #endif
     wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, static_cast<NDArrayStorageType>((*in_attrs)[0]),
-                             dispatch_mode, wanted_mode);
+
+  bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
+      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
+   }
+  if (!dispatched){
+      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+   }
+ 
+  return dispatched;
 }
+#endif
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
 .describe(R"code(Applies the softmax function.
