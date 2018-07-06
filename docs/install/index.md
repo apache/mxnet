@@ -998,7 +998,7 @@ $ sudo apt-get install r-base r-base-dev
 You will then need to install packages needed for building and installing MXNet R bindings which includes curl, openssl, XML, Cairo and devtools. You can install them with the following commands.
 ```bash
 $ sudo apt-get install libcurl4-openssl-dev libssl-dev libxml2-dev libcairo2-dev libxt-dev
-$ sudo Rscript -e "install.packages('curl', repo = 'https://cran.rstudio.com')"
+$ sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 ```
 
 You can then build and install the MXNet R package with the following command.
