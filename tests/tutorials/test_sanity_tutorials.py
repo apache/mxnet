@@ -38,7 +38,7 @@ whitelist = ['c++/basics.md',
              'r/symbol.md',
              'scala/char_lstm.md',
              'scala/mnist.md',
-             'scala/README.md',
+             'scala/index.md',
              'scala/mxnet_scala_on_intellij.md']
 whitelist_set = set(whitelist)
 
@@ -79,5 +79,3 @@ def test_tutorial_tested():
         friendly_name = '/'.join(tutorial.split('/')[-2:]).split('.')[0]
         if friendly_name not in tested_tutorials and friendly_name+".md" not in whitelist_set:
             assert False, "{} has not been added to the tests/tutorials/test_tutorials.py test_suite".format(friendly_name)
-
-
