@@ -1529,7 +1529,8 @@ void TestPoolingOp(const OpAttrs &attrs,
         if (i < 2)
           scale_vector[i] = 1;
         else
-          scale_vector[i] = CalculateWidth(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) / input_shape[i];
+          scale_vector[i] = CalculateWidth(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
+              static_cast<float>(input_shape[i]);
       }
 
       for (int i = 0; i < attrs.num_outputs; i++)
