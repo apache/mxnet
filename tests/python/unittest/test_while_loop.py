@@ -453,10 +453,10 @@ def test_while_loop_for_foreach():
             def step(loop, free):
                 (i, s_0, s_1, s_2), (sc_0, sc_1, f_0, _) = loop, free
                 i_0 = sc_0.take(i).squeeze(axis=0)
-                i_1 = sc_1.take(i).squeeze(axis=0)
+                i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
                 out = step_func(i_0, i_1, s_0, s_1, f_0)
                 # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
-                out = out * i.broadcast_to(single_shape)
+                out = out * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
                 return ([out, f_0, out * 1.5], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
             return step
         case_id = 0
@@ -583,17 +583,17 @@ def test_while_loop_for_foreach():
     case_4(
         length=5,
         cond=make_for_cond(length=5),
-        single_shape=[5],
+        single_shape=[5, 12],
         loop_var_shapes=[
             (1, ),          # i
-            (5, ),          # s_0
-            (5, ),          # s_1
+            (5, 12),        # s_0
+            (5, 12),        # s_1
             (23, 6, 8),     # s_2
         ],
         free_var_shapes=[
-            (30, 5),        # sc_0
-            (30, 5),        # sc_1
-            (5, ),          # f_0
+            (30, 5, 12),    # sc_0
+            (30, 5, 12),    # sc_1
+            (5, 12),        # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
     )
