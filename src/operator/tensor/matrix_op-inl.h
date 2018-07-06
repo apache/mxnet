@@ -2176,7 +2176,8 @@ struct DepthToSpaceParam : public dmlc::Parameter<DepthToSpaceParam> {
   int blockSize;
   DMLC_DECLARE_PARAMETER(DepthToSpaceParam) {
     DMLC_DECLARE_FIELD(blockSize)
-      .describe("The size of chunks that need to be taken from depth and spread across to the shape dimension of the tensor");
+      .describe("The size of chunks that need to be taken from depth and spread across to the "
+          "shape dimension of the tensor");
   }
 };
 
@@ -2195,7 +2196,8 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_shape[1], 0)
       << "Depth dimension:1 cannot be 0";
   CHECK_EQ(in_shape[1]%(block*block), 0)
-    << "Cannot perform Depth To Space operation on the specified tensor. Dimension:1(depth dimension) should be a multiple of 'block^2' ";
+    << "Cannot perform Depth To Space operation on the specified tensor. "
+        "Dimension:1(depth dimension) should be a multiple of 'block^2' ";
   CHECK_NE(in_shape[0], 0)
       << "Operation requires a 4D tensor. Size of dimension:0 cannot be 0";
   CHECK_NE(in_shape[2], 0)
@@ -2203,12 +2205,12 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_shape[3], 0)
       << "Operation requires a 4D tensor. Size of dimension:3 cannot be 0";
 
-  expected_out[0]=in_shape[0];
-  expected_out[1]=in_shape[1]/(block*block);
+  expected_out[0] = in_shape[0];
+  expected_out[1] = in_shape[1]/(block*block);
   uint16_t i = 2;
   while (i < expected_out.ndim()) {
-	expected_out[i] = in_shape[i] * block;
-	++i;
+  expected_out[i] = in_shape[i] * block;
+  ++i;
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, expected_out);
@@ -2235,8 +2237,7 @@ template<int req>
 struct depth_to_space_forward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int block, const int* size, const int* __restrict__ offset_arr) {
-
+      const int block, const int* size, const int* offset_arr) {
     int inp_index = 0, idx = i, next_idx_val, dim_size;
     dim_size = block;
     UPDATE_INDEX_USING_OFFSET(2)
@@ -2258,7 +2259,7 @@ template<int req>
 struct compute_offset_for_depth_to_space {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* offset_arr, DType* size, const int block,
-                                    const int32_t size0, const int32_t size1, const int32_t size2, const int32_t size3) {
+      const int32_t size0, const int32_t size1, const int32_t size2, const int32_t size3) {
     size[0] = size0;
     size[1] = size1;
     size[2] = size2;
@@ -2289,7 +2290,8 @@ void DepthToSpaceOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   int block = param.blockSize;
 
-  mshadow::Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t)*10), s);
+  mshadow::Tensor<xpu, 1, char> workspace = ctx.requested[0]
+      .get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t)*10), s);
   char* workspace_curr_ptr = workspace.dptr_;
   int32_t* offset_arr = reinterpret_cast<int32_t*>(workspace_curr_ptr);
   int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t)*6);
@@ -2297,22 +2299,22 @@ void DepthToSpaceOpForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<compute_offset_for_depth_to_space<req_type>, xpu>::Launch(
-            s, 1, offset_arr, size, block, in_data.shape_[0], in_data.shape_[1], in_data.shape_[2], in_data.shape_[3]);
+            s, 1, offset_arr, size, block, in_data.shape_[0], in_data.shape_[1],
+            in_data.shape_[2], in_data.shape_[3]);
 
         Kernel<depth_to_space_forward<req_type>, xpu>::Launch(
             s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
             block, size, offset_arr);
-
       });
   });
-
 }
 
 struct SpaceToDepthParam : public dmlc::Parameter<SpaceToDepthParam> {
   int blockSize;
   DMLC_DECLARE_PARAMETER(SpaceToDepthParam) {
     DMLC_DECLARE_FIELD(blockSize)
-      .describe("The size of chunks that need to be taken from space and combined to depth dimension of the tensor");
+      .describe("The size of chunks that need to be taken from space and combined to depth "
+          "dimension of the tensor");
   }
 };
 
@@ -2335,14 +2337,16 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_shape[2], 0)
       << "Operation requires a 4D tensor. Size of dimension:2 cannot be 0";
   CHECK_EQ(in_shape[2]%block, 0)
-      << "Cannot perform Depth To Space operation on the specified tensor. Dimension:2(1st Space dimension) should be a multiple of 'block' ";
+      << "Cannot perform Depth To Space operation on the specified tensor. "
+          "Dimension:2(1st Space dimension) should be a multiple of 'block' ";
   CHECK_NE(in_shape[3], 0)
       << "Operation requires a 4D tensor. Size of dimension:3 cannot be 0";
   CHECK_EQ(in_shape[3]%block, 0)
-      << "Cannot perform Depth To Space operation on the specified tensor. Dimension:3(2nd space dimension) should be a multiple of 'block' ";
+      << "Cannot perform Depth To Space operation on the specified tensor. "
+          "Dimension:3(2nd space dimension) should be a multiple of 'block' ";
 
-  expected_out[0]=in_shape[0];
-  expected_out[1]=in_shape[1]*(block*block);
+  expected_out[0] = in_shape[0];
+  expected_out[1] = in_shape[1]*(block*block);
   uint16_t i = 2;
   while (i < expected_out.ndim()) {
   expected_out[i] = in_shape[i] / block;
@@ -2368,8 +2372,8 @@ template<int req>
 struct space_to_depth_forward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int block, const int* size, const int* __restrict__ offset_arr) {
-
+                                  const int block, const int* size,
+                                  const int* offset_arr) {
     int inp_index = 0, idx = i, next_idx_val, dim_size;
     dim_size = size[3]/block;
     UPDATE_INDEX_USING_OFFSET(4)
@@ -2395,7 +2399,8 @@ template<int req>
 struct compute_offset_for_space_to_depth {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* offset_arr, DType* size, const int block,
-                                    const int32_t size0, const int32_t size1, const int32_t size2, const int32_t size3) {
+                                    const int32_t size0, const int32_t size1,
+                                    const int32_t size2, const int32_t size3) {
     size[0] = size0;
     size[1] = size1;
     size[2] = size2;
@@ -2426,7 +2431,8 @@ void SpaceToDepthOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   int block = param.blockSize;
 
-  mshadow::Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t)*10), s);
+  mshadow::Tensor<xpu, 1, char> workspace = ctx.requested[0]
+      .get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t)*10), s);
   char* workspace_curr_ptr = workspace.dptr_;
   int32_t* offset_arr = reinterpret_cast<int32_t*>(workspace_curr_ptr);
   int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t)*6);
@@ -2434,15 +2440,14 @@ void SpaceToDepthOpForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<compute_offset_for_space_to_depth<req_type>, xpu>::Launch(
-            s, 1, offset_arr, size, block, in_data.shape_[0], in_data.shape_[1], in_data.shape_[2], in_data.shape_[3]);
+            s, 1, offset_arr, size, block, in_data.shape_[0], in_data.shape_[1],
+            in_data.shape_[2], in_data.shape_[3]);
 
         Kernel<space_to_depth_forward<req_type>, xpu>::Launch(
             s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
             block, size, offset_arr);
-
       });
   });
-
 }
 
 }  // namespace op
