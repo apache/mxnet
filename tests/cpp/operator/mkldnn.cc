@@ -1262,8 +1262,8 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
 
   TShape test_shape2d = {1,1,2,2};
   NDArray arr2d(test_shape, Context());
-  InitDefaultArray(&arr);
-  mshadow::default_real_t *input_data2 = arr.data().dptr<mshadow::default_real_t>();
+  InitDefaultArray(&arr2d);
+  mshadow::default_real_t *input_data2 = arr2d.data().dptr<mshadow::default_real_t>();
   EXPECT_EQ(-2, input_data2[0]);
   EXPECT_EQ(-1, input_data2[1]);
   EXPECT_EQ(0, input_data2[2]);
