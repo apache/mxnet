@@ -1044,11 +1044,11 @@ TEST(MKLDNN_NDArray, MaxPoolAtCoordinate) {
     TShape coord4 = {0,0,0,2}; // edge
     TShape coord5 = {0,0,1,1}; // center
 
-    EXPECT_EQ(0, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
-    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
-    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
+    EXPECT_EQ(-4, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
+    EXPECT_EQ(-2, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
+    EXPECT_EQ(2, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
     EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord4, kernel_shape));
-    EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
+    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
   }
 }
 
