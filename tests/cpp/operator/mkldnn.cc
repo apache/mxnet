@@ -902,6 +902,14 @@ float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   return static_cast<float*>(in_arr.Reorder2Default().data().dptr_)[index];
 }
 
+bool IsInArray(const NDArray &arr, const TShape coord) {
+  TShape shape = arr.shape();
+  for (int i = 0; i < coord.ndim(); i++) {
+    if (coord[i] < 0 || coord[i] >= shape[i]) return false;
+  }
+  return true;
+}
+
 float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = -std::numeric_limits<float>::max();
@@ -909,10 +917,10 @@ float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, cons
   int shift = kernel_shape[0] / 2;
   for (int i = -shift; i < kernel_shape[0] - shift; i++) {
     float value = -std::numeric_limits<float>::max();
-    if (center + i < 0 || center + i >= input_shape[2]) {
+    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
+    if (!IsInArray(in_arr, shifted_shape)) {
       value = -std::numeric_limits<float>::max(); // depends
     } else {
-      TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
       value = GetValueAtCoordinate(in_arr, shifted_shape);
     }
     max = std::fmax(value, max);
@@ -920,15 +928,41 @@ float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, cons
   return max;
 }
 
-
-float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
+float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
   TShape input_shape = in_arr.shape();
   float max = -std::numeric_limits<float>::max();
+  int center1 = coordinate[2];
+  int shift1 = kernel_shape[0] / 2;
+  int center2 = coordinate[3];
+  int shift2 = kernel_shape[1] / 2;
+
+  for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
+    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
+    for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
+      float value = -std::numeric_limits<float>::max();
+      shifted_shape = GetShiftedCoordinate(shifted_shape, 3, j);
+      if (!IsInArray(in_arr, shifted_shape)) {
+        value = -std::numeric_limits<float>::max(); // depends
+      } else {
+        value = GetValueAtCoordinate(in_arr, shifted_shape);
+      }
+      max = std::fmax(value, max);
+    }
+  }
+  return max;
+}
+
+// coordinate is center rounded up (2 kernel would be make index 1 the center)
+float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = in_arr.shape();
   CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within in_arr bounds";
   CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within in_arr bounds";
 
   if (kernel_shape.ndim() == 1)
     return MaxPoolAtCoordinate1D(in_arr, coordinate, kernel_shape);
+  if (kernel_shape.ndim() == 2)
+    return MaxPoolAtCoordinate2D(in_arr, coordinate, kernel_shape);
+
 
   return -1;
 }
