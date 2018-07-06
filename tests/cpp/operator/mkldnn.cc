@@ -932,9 +932,9 @@ float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, cons
     TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
     for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
       float value = -std::numeric_limits<float>::max();
-      shifted_shape = GetShiftedCoordinate(shifted_shape, 3, j);
+      TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
       if (IsInArray(in_arr, shifted_shape))
-        value = GetValueAtCoordinate(in_arr, shifted_shape);
+        value = GetValueAtCoordinate(in_arr, shifted_shape1);
       max = std::fmax(value, max);
     }
   }
@@ -950,12 +950,12 @@ float MaxPoolAtCoordinate3D(const NDArray &in_arr, const TShape coordinate, cons
   for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
     TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
     for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
-      shifted_shape = GetShiftedCoordinate(shifted_shape, 3, j);
+      TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
       for (int k = -shift3; k < kernel_shape[2] - shift3; k++) {
         float value = -std::numeric_limits<float>::max();
-        shifted_shape = GetShiftedCoordinate(shifted_shape, 4, k);
-        if (IsInArray(in_arr, shifted_shape))
-          value = GetValueAtCoordinate(in_arr, shifted_shape);
+        TShape shifted_shape2 = GetShiftedCoordinate(shifted_shape1, 4, k);
+        if (IsInArray(in_arr, shifted_shape2))
+          value = GetValueAtCoordinate(in_arr, shifted_shape2);
         max = std::fmax(value, max);
       }
     }
@@ -995,7 +995,7 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
 TEST(NN_NDArray, MaxPoolAtCoordinate) {
 
   // one channel
-  {
+  {MaxPoolAtCoordinate
     TShape test_shape = {1,1,8};
     TShape odd_kernel_shape = {3};
     TShape even_kernel_shape = {4};
@@ -1044,7 +1044,7 @@ TEST(NN_NDArray, MaxPoolAtCoordinate) {
     TShape coord4 = {0,0,0,2}; // edge
     TShape coord5 = {0,0,1,1}; // center
 
-    EXPECT_EQ(0, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
+    EXPECT_EQ(0, (arr, coord1, kernel_shape));
     EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
     EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
     EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord4, kernel_shape));
@@ -1260,7 +1260,32 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
 
-  TShape test_shape2d = {1,1,3};
+//  TShape test_shape2d = {1,1,3,3};
+//  NDArray arr(test_shape, Context());
+//  InitDefaultArray(&arr);
+//  mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
+//  EXPECT_EQ(-1, input_data[0]);
+//  EXPECT_EQ(0, input_data[1]);
+//  EXPECT_EQ(1, input_data[2]);
+//
+//  // test 2d shape
+//  {
+//    OpAttrs attrs;
+//    attrs.attrs.op = Op::Get("Pooling");
+//    attrs.attrs.dict.insert({"kernel" , "(1,1)"});
+//    attrs.attrs.dict.insert({"stride" , "(1,1)"});
+//    attrs.attrs.dict.insert({"pad" , "(0,)" });
+//    attrs.attrs.dict.insert({"pool_type" , "max"});
+//    attrs.attrs.op->attr_parser(&attrs.attrs);
+//    TShape expected_shape = {1,1,2};
+//    NDArray expected_output(expected_shape, Context());
+//    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+//    expected_data[0] = -1;
+//    expected_data[1] = 1;
+//    in_arrs[0] = &arr;
+//    out_arrs[0] = &expected_output;
+//    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+//  }
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
