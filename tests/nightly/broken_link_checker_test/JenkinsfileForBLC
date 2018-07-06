@@ -53,7 +53,7 @@ try {
     parallel 'BrokenLinkChecker: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/brokenLinkChecker') {
-          timeout(time: 60, unit: 'MINUTES') {
+          timeout(time: 40, unit: 'MINUTES') {
             try {
               init_git()
               sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
