@@ -3033,10 +3033,20 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
 
 @with_seed()
 def test_norm():
+    try:
+        import scipy
+        assert scipy.__version__ >= 0.1
+        from scipy.linalg import norm as sp_norm
+    except:
+        print("Could not import scipy.linalg.norm or scipy is too old. "
+              "Falling back to numpy.linalg.norm which is not numerically stable.")
+        from numpy.linalg import norm as sp_norm
+
     def l1norm(input_data, axis=0, keepdims=True):
         return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
-    def l2norm(input_data, axis=0, keepdims=True): 
-        return np.linalg.norm(input_data, axis=axis, keepdims=keepdims)
+
+    def l2norm(input_data, axis=0, keepdims=True):
+        return sp_norm(input_data, axis=axis, keepdims=keepdims)
 
     ctx = default_context()
     data = mx.symbol.Variable('data')
