@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-set -ex
-
-apt update || true
-apt install -y \
-    unzip
+#!/bin/bash
+CURR_DIR=$(cd $(dirname $0)/../; pwd)
+CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/classes/lib/*
+java -Xmx8G  -cp $CLASSPATH sample.HelloWorld
