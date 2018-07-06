@@ -1997,7 +1997,7 @@ def test_sync_batchnorm():
                 mx.nd.zeros((1,), ctx=mx.gpu(i))
             except:
                 return i
-    ndev = 1 if get_num_devices() >= 2 else 1
+    ndev = 1 #if get_num_devices() >= 2 else 1
 
     # check with unsync version
     for i in range(10):
