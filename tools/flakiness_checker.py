@@ -25,6 +25,7 @@ import sys
 import os
 import random
 import argparse
+import re
 
 
 DEFAULT_NUM_TRIALS = 500
@@ -32,21 +33,23 @@ DEFAULT_NUM_TRIALS = 500
 def run_test_trials(test_file, test_name, num_trials, seed):
     test_path = test_file + ":" + test_name
     
-    new_env = os.environ
+    new_env = os.environ.copy()
     new_env["MXNET_TEST_COUNT"] = str(num_trials)
     if seed is None:
         print("Using random seed")
     else:
         new_env["MXNET_TEST_SEED"] = seed
 
-    code = subprocess.call(["nosetests", "-s","--verbose",test_path], env = new_env)
+    code = subprocess.call(["nosetests", "-s","--verbose",test_path], 
+                           env = new_env)
+    
     print("nosetests completed with return code " + str(code))
 
 def find_test_path(test_file):
     test_file += ".py"
-    test_path = test_file
-    top = str(subprocess.check_output(["git", "rev-parse", "--show-toplevel"]),
-            errors= "strict").strip()
+    test_path = os.path.basename(test_file)
+    top = str(subprocess.check_output(["git", "rev-parse",
+              "--show-toplevel"]), errors= "strict").strip()
 
     for (path, names, files) in os.walk(top):
         if test_file in files:
@@ -54,12 +57,12 @@ def find_test_path(test_file):
             return test_path
     raise FileNotFoundError("Could not find " + test_file)
 
-
 class NameAction(argparse.Action):
     """Parses command line argument to get test file and test name"""
     def __call__(self, parser, namespace, values, option_string=None):
-        name = values.split(".")
-        setattr(namespace, "test_path", find_test_path(name[0]))
+        name = re.split("\.py:|\.", values)
+        setattr(namespace, "test_path",
+                find_test_path(os.path.basename(name[0])))
         setattr(namespace, "test_name", name[1])
 
 def parse_args():
@@ -67,15 +70,17 @@ def parse_args():
     
     parser.add_argument("test", action=NameAction,
                         help="file name and and function name of test, "
-                        "provided in the format: file_name.test_name")
+                        "provided in the format: <path-to-file>:<test-name> "
+                        "or <file-name>.<test-name>")
     
-    parser.add_argument("-n", "--num-trials",
+    parser.add_argument("-n", "--num-trials", metavar="N",
                         default=DEFAULT_NUM_TRIALS, type=int,
                         help="number of test trials, passed as "
                         "MXNET_TEST_COUNT, defaults to 500")
 
     parser.add_argument("-s", "--seed",
-                        help="random seed, passed as MXNET_TEST_SEED")            
+                        help="test seed, passed as MXNET_TEST_SEED, "
+                        "defaults to random seed")            
     
     args = parser.parse_args()
     return args
@@ -83,5 +88,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    print(args.test_path)
+    print(args.test_name)
 
     run_test_trials(args.test_path, args.test_name, args.num_trials, args.seed)
