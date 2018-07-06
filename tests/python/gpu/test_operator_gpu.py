@@ -1998,5 +1998,6 @@ def testSyncBN():
                               num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    testSyncBN()
+    #import nose
+    #nose.runmodule()

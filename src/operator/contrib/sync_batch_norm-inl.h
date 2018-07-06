@@ -84,24 +84,49 @@ class SharedND {
   T *data_;
   bool *flag_;
   bool mean_ready_ = false;
-  bool mean_inited_ = false;
+  bool data_inited_ = false;
   std::mutex mutex_;
 
  public:
   explicit SharedND(int ndev) :num_devices_(ndev) {
-      flag_ = new bool[ndev];
-      data_ = new T[ndev];
-      memset(flag_, false, ndev * sizeof(bool));
+    flag_ = new bool[ndev];
+    data_ = new T[ndev];
+    memset(flag_, false, ndev * sizeof(bool));
   }
 
   ~SharedND() {
+    mshadow::FreeSpace(&mean_);
+    for (int i = 0; i < num_devices_; i++) {
+      mshadow::FreeSpace(&data_[i]);
+    }
     delete [] flag_;
     delete [] data_;
   }
 
-  bool Push(T input, int index) {
+  void Init(mshadow::Shape<1> shape) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!data_inited_) {
+      for (int i = 0; i < num_devices_; i++) {
+        data_[i] = mshadow::NewTensor<cpu, real_t>(shape, 0.0f);
+      }
+      mean_ = mshadow::NewTensor<cpu, real_t>(shape, 0.0f);
+      data_inited_ = true;
+    }
+  }
+
+  T* Retrieve(mshadow::Shape<1> shape, int index) {
+    if (!data_inited_) {
+      Init(shape);
+    }
     if (flag_[index] == false) {
-      data_[index] = input;
+      return &data_[index];
+    } else {
+      return nullptr;
+    }
+  }
+
+  bool SetReady(int index) {
+    if (flag_[index] == false) {
       flag_[index] = true;
       return true;
     } else {
@@ -129,10 +154,6 @@ class SharedND {
     }
     for (int i = 1; i < num_devices_; i++) {
       data_[0] += data_[i];
-    }
-    if (!mean_inited_) {
-      mean_ = mshadow::NewTensor<cpu, real_t>(data_[0].shape_, 0.0f);
-      mean_inited_ = true;
     }
     mean_ = data_[0] * 1.0f /  num_devices_;
     mean_ready_ = true;
@@ -215,12 +236,12 @@ class Barrier {
 };
 
 // Global variables for Synchronizations
-static GlobalSharedRank<int> globalSharedRank;
-static GlobalShared<Barrier> globalSharedBarrier;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedMean;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedVar;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedGrad;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> globalSharedProd;
+static GlobalSharedRank<int> global_shared_rank;
+static GlobalShared<Barrier> global_shared_barrier;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_mean;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_var;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_grad;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_prod;
 
 template<typename xpu>
 class SyncBatchNorm : public Operator {
@@ -271,8 +292,8 @@ class SyncBatchNorm : public Operator {
     // whether use global statistics
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *global_barrier = globalSharedBarrier.Register(param_.key, param_.ndev);
-      int myRank = globalSharedRank.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = global_shared_barrier.Register(param_.key, param_.ndev);
+      int myRank = global_shared_rank.Register(param_.key, param_.ndev);
       // get the mean and var
       Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
@@ -282,20 +303,19 @@ class SyncBatchNorm : public Operator {
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data));
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
-        globalSharedMean.Register(param_.key, param_.ndev);
+        global_shared_mean.Register(param_.key, param_.ndev);
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedVar =
-        globalSharedVar.Register(param_.key, param_.ndev);
-      // copy to cpu
-      Tensor<cpu, 1, real_t> mean_cpu = NewTensor<cpu, real_t>(mean.shape_, 0.0f);
-      mshadow::Copy(mean_cpu, mean, s);
-      Tensor<cpu, 1, real_t> var_cpu = NewTensor<cpu, real_t>(var.shape_, 0.0f);
-      mshadow::Copy(var_cpu, var, s);
-      // push and pull
-      sharedMean->Push(mean_cpu, myRank);
-      sharedVar->Push(var_cpu, myRank);
+        global_shared_var.Register(param_.key, param_.ndev);
+      // copy to cpu, push and pull
+      Tensor<cpu, 1, real_t>* mean_cpu_ptr = sharedMean->Retrieve(mean.shape_, myRank);
+      Tensor<cpu, 1, real_t>* var_cpu_ptr = sharedVar->Retrieve(mean.shape_, myRank);
+      mshadow::Copy(*mean_cpu_ptr, mean, s);
+      mshadow::Copy(*var_cpu_ptr, var, s);
+      sharedMean->SetReady(myRank);
+      sharedVar->SetReady(myRank);
       global_barrier->Wait();
-      mean_cpu = sharedMean->Pop(myRank);
-      var_cpu = sharedVar->Pop(myRank);
+      Tensor<cpu, 1, real_t> mean_cpu = sharedMean->Pop(myRank);
+      Tensor<cpu, 1, real_t> var_cpu = sharedVar->Pop(myRank);
       // copy back to gpu
       mshadow::Copy(mean, mean_cpu, s);
       mshadow::Copy(var, var_cpu, s);
@@ -358,8 +378,8 @@ class SyncBatchNorm : public Operator {
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get my rank
-      Barrier *global_barrier = globalSharedBarrier.Register(param_.key, param_.ndev);
-      int myRank = globalSharedRank.Register(param_.key, param_.ndev);
+      Barrier *global_barrier = global_shared_barrier.Register(param_.key, param_.ndev);
+      int myRank = global_shared_rank.Register(param_.key, param_.ndev);
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(5, mean.shape_[0]), s);
@@ -374,22 +394,20 @@ class SyncBatchNorm : public Operator {
       Tensor<xpu, 1> sumProd = workspace[4];
       sumGrad = sumall_except_dim<1>(grad);
       sumProd = sumall_except_dim<1>(grad * (data - broadcast<1>(mean, data.shape_)));
-
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad =
-        globalSharedGrad.Register(param_.key, param_.ndev);
+        global_shared_grad.Register(param_.key, param_.ndev);
       SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedProd =
-        globalSharedProd.Register(param_.key, param_.ndev);
-
-      Tensor<cpu, 1, real_t> grad_cpu = NewTensor<cpu, real_t>(sumGrad.shape_, 0.0f);
-      mshadow::Copy(grad_cpu, sumGrad, s);
-      Tensor<cpu, 1, real_t> prod_cpu = NewTensor<cpu, real_t>(sumProd.shape_, 0.0f);
-      mshadow::Copy(prod_cpu, sumProd, s);
-      // push and pull
-      sharedGrad->Push(grad_cpu, myRank);
-      sharedProd->Push(prod_cpu, myRank);
+        global_shared_prod.Register(param_.key, param_.ndev);
+      // copy to cpu, push and pull
+      Tensor<cpu, 1, real_t>* grad_cpu_ptr = sharedGrad->Retrieve(sumGrad.shape_, myRank);
+      Tensor<cpu, 1, real_t>* prod_cpu_ptr = sharedProd->Retrieve(sumGrad.shape_, myRank);
+      mshadow::Copy(*grad_cpu_ptr, sumGrad, s);
+      mshadow::Copy(*prod_cpu_ptr, sumProd, s);
+      sharedGrad->SetReady(myRank);
+      sharedProd->SetReady(myRank);
       global_barrier->Wait();
-      grad_cpu = sharedGrad->Pop(myRank);
-      prod_cpu = sharedProd->Pop(myRank);
+      Tensor<cpu, 1, real_t> grad_cpu = sharedGrad->Pop(myRank);
+      Tensor<cpu, 1, real_t> prod_cpu = sharedProd->Pop(myRank);
       // copy back to gpu
       mshadow::Copy(sumGrad, grad_cpu, s);
       mshadow::Copy(sumProd, prod_cpu, s);
