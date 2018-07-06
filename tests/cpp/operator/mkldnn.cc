@@ -596,10 +596,11 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 std::vector<NDArrayAttrs> GetTestOutputArrays(
     const TShape &shp,
     const std::vector<mkldnn::memory::primitive_desc> &pds,
-    float num_inputs = 0, int dim = 0) {
+    std::vector<float>scale = {1}) {
   TShape shape = shp;
-  if (num_inputs != 0)
-    shape[dim] = static_cast<int>(shape[dim] * num_inputs);
+
+  for (int dim = 0; dim < scale.size(); dim++)
+    shape[dim] = static_cast<int>(shape[dim] * scale[dim]);
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
@@ -643,8 +644,8 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
-    if (num_inputs != 0)
-      pd = GetExpandedMemPD(pd, num_inputs);
+    for (int dim = 0; dim < scale.size(); dim++)
+      pd = GetExpandedMemPD(pd, scale[dim], dim);
 
 
     // Type 2, 3.
@@ -709,7 +710,11 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
           continue;
         std::cout << "Extending " << shape << " dim " <<
                   dim << " and " << num_inputs << "num_inputs\n";
-        auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
+        std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+        for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
+          scale_vector[i] = 1;
+        scale_vector[dim] = num_inputs;
+        auto output_arrs = GetTestOutputArrays(shape, pds, scale_vector);
         for (auto &out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
           EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
@@ -1294,8 +1299,14 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         continue;
       float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
           static_cast<float>(attrs.num_inputs);
+
+      std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+      for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
+        scale_vector[i] = 1;
+      scale_vector[dim] = scale;
+
       for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
 
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
@@ -1316,6 +1327,10 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
+int CalculateWidth(int width, int kernel, int padding, int stride) {
+  return (width - kernel + 2 * padding) / (stride + 1);
+}
+
 void TestPoolingOp(const OpAttrs &attrs,
                   bool backwards = false) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
@@ -1325,6 +1340,12 @@ void TestPoolingOp(const OpAttrs &attrs,
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  mxnet::op::PoolingParam param;
+  param.Init(attrs.attrs.dict);
+  TShape kernel = param.kernel;
+  TShape padding = param.pad;
+  TShape stride = param.stride;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
 
@@ -1339,17 +1360,19 @@ void TestPoolingOp(const OpAttrs &attrs,
     // can only pool only 3D and 4D inputs
     if (in_arr.arr.shape().ndim() <= 2)
       continue;
+    TShape input_shape = in_arr.arr.shape();
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+      std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+      for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
+        if (i < 2)
+          scale_vector[i] = 1;
+        else
+          scale_vector[i] = CalculateWidth(input_shape[i], kernel[i], padding[i], stride[i]);
+      }
 
-//      std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-//      int dim = std::stoi(str_dim);
-//      if (dim >= in_arr.arr.shape().ndim())
-//        continue;
-//      float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
-//                    static_cast<float>(attrs.num_inputs);
       for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
 
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
@@ -1430,16 +1453,14 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 }
 
 TEST(IMPERATIVE, PoolingOp) {
-
   // TODO: change kernel, stride, pad
-  for (int kernel = 1; kernel < 2; kernel++) {
+  for (int kernel = 1; kernel < 3; kernel++) {
     for (int stride = 1; stride < 2; stride++) {
       for (int pad = 0; pad < 1; pad++) {
         OpAttrs attrs = GetPoolingOp(kernel, stride, pad);
         TestPoolingOp(attrs, false);
       }
     }
-
   }
 }
 
