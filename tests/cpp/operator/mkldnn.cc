@@ -1023,10 +1023,10 @@ void VerifyPool2D(const NDArray &input,
   int upper = input_shape[3] + padding[0];
   for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
-    TShape coordinate = GetShiftedCoordinate(ptr, 3, center);
+    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = lower; j < upper - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
-      TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
+      TShape coordinate = GetShiftedCoordinate(coordinate, 3, center);
       ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
       out_ptr++;
     }
@@ -1053,13 +1053,13 @@ void VerifyPool3D(const NDArray &input,
   int upper = input_shape[3] + padding[0];
   for (int i = lower; i < upper - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
-    TShape coordinate = GetShiftedCoordinate(ptr, 3, center);
+    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = lower; j < upper - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
-      TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
+      TShape coordinate = GetShiftedCoordinate(coordinate, 3, center);
       for (int k = lower; k < upper - kernel[2]; k = k + stride[2]) {
         int center = j + kernel[2] / 2;
-        TShape coordinate = GetShiftedCoordinate(coordinate, 5, center);
+        TShape coordinate = GetShiftedCoordinate(coordinate, 4, center);
         ASSERT_EQ(PoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
         out_ptr++;
       }
