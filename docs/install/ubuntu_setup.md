@@ -265,6 +265,15 @@ For more details about installing and using MXNet with Julia, see the [MXNet Jul
 <hr>
 
 
+## Install the MXNet Package for Scala
+
+To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
+
+Further information is in the [MXNet-Scala Setup Instructions](./scala_setup.md).
+
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
+
+
 ### Install the MXNet Package for Perl
 
 Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
