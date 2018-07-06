@@ -1922,7 +1922,7 @@ def test_context_num_gpus():
     assert mx.context.num_gpus() > 0
 
 
-def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
+def _check_batchnorm_result(bn1, bn2, input, num_devices=1, cuda=False):
     def _assert_tensor_close(a, b, atol=1e-3, rtol=1e-3):
         npa, npb = a.asnumpy(), b.asnumpy()
         assert np.allclose(npa, npb, rtol=rtol, atol=atol), \
@@ -1986,7 +1986,7 @@ def _checkBatchNormResult(bn1, bn2, input, num_devices=1, cuda=False):
     print('input2grad', input2grad)
     _assert_tensor_close(input1.grad, input2grad)
 
-def testSyncBN():
+def test_sync_batchnorm():
     ndev = 1 if len(mxnet.test_utils.list_gpus()) >= 2 else 1
 
     bn = nn.BatchNorm(in_channels=1)
@@ -1994,7 +1994,7 @@ def testSyncBN():
 
     # check with unsync version
     for i in range(10):
-        _checkBatchNormResult(bn, sync_bn, mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+        _check_batchnorm_result(bn, sync_bn, mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                               num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
