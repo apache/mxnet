@@ -28,41 +28,50 @@ import argparse
 import re
 
 
-DEFAULT_NUM_TRIALS = 500
+DEFAULT_NUM_TRIALS = 10000
+DEFAULT_VERBOSITY = 2
 
-def run_test_trials(test_file, test_name, num_trials, seed):
-    test_path = test_file + ":" + test_name
-    
+def run_test_trials(args):
+    test_path = args.test_path + ":" + args.test_name
+    print("testing: " + test_path)
+
     new_env = os.environ.copy()
-    new_env["MXNET_TEST_COUNT"] = str(num_trials)
-    if seed is None:
+    new_env["MXNET_TEST_COUNT"] = str(args.num_trials)
+    
+    if args.seed is None:
         print("Using random seed")
     else:
-        new_env["MXNET_TEST_SEED"] = seed
+        new_env["MXNET_TEST_SEED"] = str(args.seed)
 
-    code = subprocess.call(["nosetests", "-s","--verbose",test_path], 
+    verbosity = "--verbosity=" + str(args.verbosity)
+
+    code = subprocess.call(["nosetests", verbosity, test_path], 
                            env = new_env)
     
     print("nosetests completed with return code " + str(code))
 
 def find_test_path(test_file):
+    """Searches for the test file and returns the path if found
+    As a default, the currend working directory is the top of the search.
+    If a directory was provided as part of the argument, the directory will be
+    joined with cwd unless it was an absolute path, in which case, the
+    absolute path will be used instead. 
+    """
     test_file += ".py"
-    test_path = os.path.basename(test_file)
-    top = str(subprocess.check_output(["git", "rev-parse",
-              "--show-toplevel"]), errors= "strict").strip()
+    test_path = os.path.split(test_file)
+    top = os.path.join(os.getcwd(), test_path[0])
 
-    for (path, names, files) in os.walk(top):
-        if test_file in files:
-            test_path = path + "/" + test_path
-            return test_path
-    raise FileNotFoundError("Could not find " + test_file)
+    for (path, dirs, files) in os.walk(top):
+        if test_path[1] in files:
+            return  os.path.join(path, test_path[1])
+    raise FileNotFoundError("Could not find " + test_path[1] + 
+                            "in directory: " + top)
 
 class NameAction(argparse.Action):
     """Parses command line argument to get test file and test name"""
     def __call__(self, parser, namespace, values, option_string=None):
         name = re.split("\.py:|\.", values)
-        setattr(namespace, "test_path",
-                find_test_path(os.path.basename(name[0])))
+        setattr(namespace, "test_path", find_test_path(name[0]))
         setattr(namespace, "test_name", name[1])
 
 def parse_args():
@@ -70,25 +79,28 @@ def parse_args():
     
     parser.add_argument("test", action=NameAction,
                         help="file name and and function name of test, "
-                        "provided in the format: <path-to-file>:<test-name> "
-                        "or <file-name>.<test-name>")
+                        "provided in the format: <file-name>:<test-name> "
+                        "or <directory>/<file>:<test-name>")
     
     parser.add_argument("-n", "--num-trials", metavar="N",
                         default=DEFAULT_NUM_TRIALS, type=int,
                         help="number of test trials, passed as "
                         "MXNET_TEST_COUNT, defaults to 500")
 
-    parser.add_argument("-s", "--seed",
+    parser.add_argument("-s", "--seed", type=int,
                         help="test seed, passed as MXNET_TEST_SEED, "
-                        "defaults to random seed")            
-    
+                        "defaults to random seed") 
+
+    parser.add_argument("-v", "--verbosity",
+                        default=DEFAULT_VERBOSITY, type=int,
+                        help="logging level, passed to nosetests")
+
+
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
     args = parse_args()
-    print(args.test_path)
-    print(args.test_name)
 
-    run_test_trials(args.test_path, args.test_name, args.num_trials, args.seed)
+    run_test_trials(args)
