@@ -1491,7 +1491,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
 }
 
 int CalculateWidth(int width, int kernel, int padding, int stride) {
-  return (width - kernel + 2 * padding) / (stride + 1);
+  return (width - kernel + 2 * padding) / stride  + 1;
 }
 
 void TestPoolingOp(const OpAttrs &attrs,
