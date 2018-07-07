@@ -32,28 +32,32 @@ parser.add_argument('--num_hidden', type=int, default=500, help='number of hidde
 parser.add_argument('--k', type=int, default=20, help='number of Gibbs sampling steps used in the PCD algorithm')
 parser.add_argument('--batch_size', type=int, default=10, help='batch size')
 parser.add_argument('--num_epoch', type=int, default=10, help='number of epochs')
-parser.add_argument('--learning_rate', type=float, default=0.1, help='learning rate for the stochastic gradient descent')
-args = parser.parse_args()
+parser.add_argument('--learning_rate', type=float, default=0.1, help='learning rate for stochastic gradient descent') # The optimizer rescales this with `1 / batch_size`
+parser.add_argument('--ais_batch_size', type=int, default=100, help='batch size for AIS to estimate the log-likelihood')
+parser.add_argument('--ais_num_batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
+parser.add_argument('--ais_intermediate_steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
+parser.add_argument('--ais_burn_in_steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
 
-num_hidden = args.num_hidden
-k = args.k # PCD-k
-batch_size = args.batch_size
-num_epoch = args.num_epoch
-learning_rate = args.learning_rate # The optimizer rescales this with `1 / batch_size`
+args = parser.parse_args()
 
 
 ### Prepare data
 
 mnist = mx.test_utils.get_mnist() # Each pixel has a value in [0, 1].
-mnist_data = mnist['train_data']
-img_height = mnist_data.shape[2]
-img_width = mnist_data.shape[3]
+mnist_train_data = mnist['train_data']
+mnist_test_data = mnist['test_data']
+img_height = mnist_train_data.shape[2]
+img_width = mnist_train_data.shape[3]
 num_visible = img_width * img_height
 
-# The iterator generates arrays with shape (batch_size, num_channel = 1, height = 28, width = 28)
+# The iterators generate arrays with shape (batch_size, num_channel = 1, height = 28, width = 28)
 train_iter = mx.io.NDArrayIter(
-    data={'data': mnist_data},
-    batch_size=batch_size,
+    data={'data': mnist_train_data},
+    batch_size=args.batch_size,
+    shuffle=True)
+test_iter = mx.io.NDArrayIter(
+    data={'data': mnist_test_data},
+    batch_size=args.batch_size,
     shuffle=True)
 
 
@@ -77,25 +81,31 @@ rbm = mx.sym.Custom(
     interaction_weight,
     aux_hidden_layer_sample,
     aux_hidden_layer_prob_1,
-    num_hidden=num_hidden,
-    k=k,
+    num_hidden=args.num_hidden,
+    k=args.k,
     for_training=True,
     op_type='BinaryRBM',
     name='rbm')
 model = mx.mod.Module(symbol=rbm, context=ctx, data_names=['data'], label_names=None)
 model.bind(data_shapes=train_iter.provide_data)
 model.init_params()
-model.init_optimizer(optimizer='sgd', optimizer_params={'learning_rate': learning_rate, 'momentum': 0})
+model.init_optimizer(optimizer='sgd', optimizer_params={'learning_rate': args.learning_rate})
 
-for epoch in range(num_epoch):
+for epoch in range(args.num_epoch):
     train_iter.reset()
     for batch in train_iter:
         model.forward(batch)
         model.backward()
         model.update()
     mx.nd.waitall()
-    print("Epoch %d complete" % (epoch,))
-
+    test_iter.reset()
+    params = model.get_params()[0]
+    l = binary_rbm.estimate_log_likelihood(
+        params['visible_layer_bias'].as_in_context(ctx), 
+        params['hidden_layer_bias'].as_in_context(ctx), 
+        params['interaction_weight'].as_in_context(ctx),
+        args.ais_batch_size, args.ais_num_batch, args.ais_intermediate_steps, args.ais_burn_in_steps, test_iter, ctx)
+    print("Epoch %d completed with test log-likelihood %f and partition function %f" % (epoch, l[0], l[1]))
 
 ### Show some samples. Each sample is obtained by 1000 steps of Gibbs sampling starting from a real data.
 
@@ -114,7 +124,7 @@ showcase_rbm = mx.sym.Custom(
     visible_layer_bias,
     hidden_layer_bias,
     interaction_weight,
-    num_hidden=num_hidden,
+    num_hidden=args.num_hidden,
     k=showcase_gibbs_sampling_steps,
     for_training=False,
     op_type='BinaryRBM',

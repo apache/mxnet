@@ -174,3 +174,80 @@ class BinaryRBMBlock(mx.gluon.HybridBlock):
                 k=self.k,
                 for_training=self.for_training,
                 op_type='BinaryRBM')
+
+def estimate_log_likelihood(visible_layer_bias, hidden_layer_bias, interaction_weight, ais_batch_size, ais_num_batch, ais_intermediate_steps, ais_burn_in_steps, data, ctx):
+    # The base-rate RBM with no hidden layer. The visible layer bias is set to the same with the given RBM.
+    # This is not the only possible choice but simple and works well.
+    base_rate_visible_layer_bias = visible_layer_bias
+    base_rate_visible_prob_1 = base_rate_visible_layer_bias.sigmoid()
+    log_base_rate_z = base_rate_visible_layer_bias.exp().log1p().sum()
+
+    def log_intermediate_unnormalized_prob(visible_layer_sample, beta):
+        p = mx.nd.dot(
+                visible_layer_sample, 
+                (1 - beta) * base_rate_visible_layer_bias + beta * visible_layer_bias)
+        if beta != 0:
+            p += mx.nd.linalg.gemm(
+                    visible_layer_sample,
+                    interaction_weight,
+                    hidden_layer_bias.tile(reps=(visible_layer_sample.shape[0], 1)),
+                    transpose_b=False,
+                    alpha=beta,
+                    beta=beta).exp().log1p().sum(axis=1)
+        return p
+
+    def sample_base_rbm():
+        rands = mx.nd.random.uniform(shape=(ais_batch_size, base_rate_visible_prob_1.shape[0]), ctx=ctx)
+        return rands < base_rate_visible_prob_1.tile(reps=(ais_batch_size, 1))
+
+    def sample_intermediate_visible_layer(visible_layer_sample, beta):
+        for _ in range(ais_burn_in_steps):
+            hidden_prob_1 = mx.nd.linalg.gemm(
+                visible_layer_sample,
+                interaction_weight,
+                hidden_layer_bias.tile(reps=(visible_layer_sample.shape[0], 1)),
+                transpose_b=False,
+                alpha=beta,
+                beta=beta)
+            hidden_prob_1.sigmoid(out=hidden_prob_1)
+            hidden_layer_sample = mx.nd.random.uniform(shape=hidden_prob_1.shape, ctx=ctx) < hidden_prob_1
+            visible_prob_1 = mx.nd.linalg.gemm(
+                hidden_layer_sample,
+                interaction_weight,
+                visible_layer_bias.tile(reps=(hidden_layer_sample.shape[0], 1)),
+                transpose_b=True,
+                alpha=beta,
+                beta=beta) + (1 - beta) * base_rate_visible_layer_bias
+            visible_prob_1.sigmoid(out=visible_prob_1)
+            visible_layer_sample = mx.nd.random.uniform(shape=visible_prob_1.shape, ctx=ctx) < visible_prob_1
+        return visible_layer_sample
+
+    def array_from_batch(batch):
+        if isinstance(batch, mx.io.DataBatch):
+            return batch.data[0].as_in_context(ctx).flatten()
+        else: # batch is an instance of list in the case of gluon DataLoader
+            return batch[0].as_in_context(ctx).flatten()
+
+    importance_weight_sum = 0
+    num_ais_samples = ais_num_batch * ais_batch_size
+    for _ in range(ais_num_batch):
+        log_importance_weight = 0
+        visible_layer_sample = sample_base_rbm()
+        for n in range(1, ais_intermediate_steps + 1):
+            beta = 1. * n / ais_intermediate_steps
+            log_importance_weight += \
+                log_intermediate_unnormalized_prob(visible_layer_sample, beta) - \
+                log_intermediate_unnormalized_prob(visible_layer_sample, (n - 1.) / ais_intermediate_steps)
+            visible_layer_sample = sample_intermediate_visible_layer(visible_layer_sample, beta)
+        importance_weight_sum += log_importance_weight.exp().sum()
+    log_z = (importance_weight_sum / num_ais_samples).log() + log_base_rate_z
+
+    log_likelihood = 0
+    num_data = 0
+    for batch in data:
+        batch_array = array_from_batch(batch)
+        log_likelihood += log_intermediate_unnormalized_prob(batch_array, 1) - log_z
+        num_data += batch_array.shape[0]
+    log_likelihood = log_likelihood.sum() / num_data
+
+    return log_likelihood.asscalar(), log_z.asscalar()
