@@ -1001,12 +1001,12 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
     if mean is True:
         mean = nd.array([123.68, 116.28, 103.53])
     elif mean is not None:
-        assert (isinstance(mean, np.ndarray) or isinstance(mean, nd.NDArray)) and mean.shape[0] in [1, 3]
+        assert isinstance(mean, np.ndarray, nd.NDArray) and mean.shape[0] in [1, 3]
 
     if std is True:
         std = nd.array([58.395, 57.12, 57.375])
     elif std is not None:
-        assert (isinstance(std, np.ndarray) or isinstance(std, nd.NDArray)) and std.shape[0] in [1, 3]
+        assert isinstance(std, np.ndarray, nd.NDArray) and std.shape[0] in [1, 3]
 
     if mean is not None or std is not None:
         auglist.append(ColorNormalizeAug(mean, std))
