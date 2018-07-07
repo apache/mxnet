@@ -1448,7 +1448,7 @@ def test_conv2d_16c():
     chn_list = [16, 256]
     kernel_list = [1, 3]
     #kernel_list.append(224)
-    batch_size = 32
+    batch_size = 16
     class Net(gluon.HybridBlock):
         def __init__(self,
                      chn_num,
@@ -1474,7 +1474,7 @@ def test_group_conv2d_16c():
     grp_list = [16]
     input_size_list = np.random.randint(low=3, high=65, size=10).tolist()
     kernel_list = [1, 3]
-    batch_size = 32
+    batch_size = 16
     class Net(gluon.HybridBlock):
         def __init__(self,
                      chn_num,
@@ -1557,13 +1557,13 @@ def test_batchnorm_16c():
 
 @with_seed()
 def test_concat():
-    chn_list = [16, 1024]
-    shapes = [64, 32, 3]
+    chn_list = [64, 16]
+    shapes = [7, 5, 3]
     input_num = np.random.randint(low=2, high=11)
     shape_list = []
     for i in range(len(shapes)):
         shape_list.append((shapes[i], shapes[i]))
-    batch_size = 32
+    batch_size = 16
     class Net(gluon.HybridBlock):
         def __init__(self,
                      check_dim,
@@ -1581,12 +1581,14 @@ def test_concat():
         def hybrid_forward(self, F, x):
             return self.concat(x)
 
-    for i in range(len(chn_list)):
+    for s in range(len(shape_list)):
         shape = (batch_size,) + (3,) + shape_list[i]
         x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
-        for axis in range(4):
-            net = Net(axis, input_num, chn_list[i], 1)
-            check_layer_forward_withinput(net, x)
+        for i in range(len(chn_list)):
+            for axis in range(4):
+                net = Net(axis, input_num, chn_list[i], 1)
+                check_layer_forward_withinput(net, x)
+
 
 @with_seed()
 def test_reshape_conv():
@@ -1713,7 +1715,7 @@ def test_reshape_dense():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                channel0 = np.random.randint(1, 65)
+                channel0 = np.random.randint(1, 17)
                 self.dense0 = nn.Dense(channel0)
 
         def hybrid_forward(self, F, x):
@@ -1721,7 +1723,7 @@ def test_reshape_dense():
             out = self.dense0(x_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
@@ -1732,7 +1734,7 @@ def test_slice_dense():
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                channel0 = np.random.randint(1, 65)
+                channel0 = np.random.randint(1, 17)
                 self.dense0 = nn.Dense(channel0)
                 self.slice = slice
 
@@ -1742,8 +1744,8 @@ def test_slice_dense():
             out = self.dense0(x_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
-    slice = [[0, 64, 50, 0], [8, 128, 64, 64]]
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    slice = [[0, 16, 50, 0], [8, 32, 64, 64]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
@@ -1754,7 +1756,7 @@ def test_slice_dense_slice_dense():
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 channel0 = 50
-                channel1 = np.random.randint(1, 65)
+                channel1 = np.random.randint(1, 33)
                 self.dense0 = nn.Dense(channel0)
                 self.dense1 = nn.Dense(channel1)
                 self.slice = slice
@@ -1766,8 +1768,8 @@ def test_slice_dense_slice_dense():
             out = self.dense1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
-    slice = [[0, 64, 50, 0], [8, 128, 64, 64]]
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    slice = [[0, 16, 50, 0], [8, 32, 64, 64]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
@@ -1777,7 +1779,7 @@ def test_reshape_dense_reshape_dense():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                channel0 = np.random.randint(1, 65)
+                channel0 = np.random.randint(1, 17)
                 channel1 = np.random.randint(1, 65)
                 self.dense0 = nn.Dense(channel0)
                 self.dense1 = nn.Dense(channel1)
@@ -1789,7 +1791,7 @@ def test_reshape_dense_reshape_dense():
             out = self.dense1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
@@ -1800,8 +1802,8 @@ def test_slice_dense_reshape_dense():
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                channel0 = np.random.randint(1, 65)
-                channel1 = np.random.randint(1, 65)
+                channel0 = np.random.randint(1, 17)
+                channel1 = np.random.randint(1, 17)
                 self.dense0 = nn.Dense(channel0)
                 self.dense1 = nn.Dense(channel1)
                 self.slice = slice
@@ -1813,8 +1815,8 @@ def test_slice_dense_reshape_dense():
             out = self.dense1(y_reshape)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
-    slice = [[0, 64, 50, 0], [8, 128, 64, 64]]
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
+    slice = [[0, 16, 50, 0], [8, 32, 64, 64]]
     net = Net(slice)
     check_layer_forward_withinput(net, x)
 
@@ -1827,7 +1829,7 @@ def test_reshape_dense_slice_dense():
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
                 channel0 = 64
-                channel1 = np.random.randint(1, 65)
+                channel1 = np.random.randint(1, 17)
                 self.dense0 = nn.Dense(channel0)
                 self.dense1 = nn.Dense(channel1)
 
@@ -1838,7 +1840,7 @@ def test_reshape_dense_slice_dense():
             out = self.dense1(y_slice)
             return out
 
-    x = mx.nd.random.uniform(shape=(16, 128, 64, 64))
+    x = mx.nd.random.uniform(shape=(16, 32, 64, 64))
     net = Net()
     check_layer_forward_withinput(net, x)
 
