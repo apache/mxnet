@@ -1076,11 +1076,12 @@ void VerifyPool1D(const NDArray &input,
   ptr[1] = channel_num;
   ptr[2] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int out_ptr = 0;
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
-    ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
+    ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[start_ptr+out_ptr]);
     out_ptr++;
   }
   ASSERT_EQ(output_shape[2], out_ptr);
@@ -1101,14 +1102,15 @@ void VerifyPool2D(const NDArray &input,
   ptr[2] = 0;
   ptr[3] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int out_ptr = 0;
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = -padding[1]; j <= input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
       int center = j + kernel[1] / 2;
       TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
-      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate1, kernel), out_data[out_ptr]);
+      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate1, kernel), out_data[start_ptr+out_ptr]);
       out_ptr++;
     }
   }
@@ -1131,7 +1133,8 @@ void VerifyPool3D(const NDArray &input,
   ptr[3] = 0;
   ptr[4] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int out_ptr = 0;
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
@@ -1141,7 +1144,7 @@ void VerifyPool3D(const NDArray &input,
       for (int k = -padding[2]; k <= input_shape[4] + padding[2] - kernel[2]; k = k + stride[2]) {
         int center = k + kernel[2] / 2;
         TShape coordinate2 = GetShiftedCoordinate(coordinate1, 4, center);
-        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate2, kernel), out_data[out_ptr]);
+        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate2, kernel), out_data[start_ptr+out_ptr]);
         out_ptr++;
       }
     }
