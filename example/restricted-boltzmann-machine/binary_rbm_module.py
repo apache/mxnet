@@ -33,6 +33,7 @@ parser.add_argument('--k', type=int, default=20, help='number of Gibbs sampling 
 parser.add_argument('--batch_size', type=int, default=10, help='batch size')
 parser.add_argument('--num_epoch', type=int, default=10, help='number of epochs')
 parser.add_argument('--learning_rate', type=float, default=0.1, help='learning rate for stochastic gradient descent') # The optimizer rescales this with `1 / batch_size`
+parser.add_argument('--momentum', type=float, default=0, help='momentum for the stochastic gradient descent')
 parser.add_argument('--ais_batch_size', type=int, default=100, help='batch size for AIS to estimate the log-likelihood')
 parser.add_argument('--ais_num_batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
 parser.add_argument('--ais_intermediate_steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
@@ -89,7 +90,7 @@ rbm = mx.sym.Custom(
 model = mx.mod.Module(symbol=rbm, context=ctx, data_names=['data'], label_names=None)
 model.bind(data_shapes=train_iter.provide_data)
 model.init_params()
-model.init_optimizer(optimizer='sgd', optimizer_params={'learning_rate': args.learning_rate})
+model.init_optimizer(optimizer='sgd', optimizer_params={'learning_rate': args.learning_rate, 'momentum': args.momentum})
 
 for epoch in range(args.num_epoch):
     train_iter.reset()
