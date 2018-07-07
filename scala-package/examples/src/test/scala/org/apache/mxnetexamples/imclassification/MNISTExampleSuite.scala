@@ -35,11 +35,7 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[MNISTExampleSuite])
 
   test("Example CI: Test MNIST Training") {
-    // This test is CPU only
-    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      logger.info("CPU test only, skipped...")
-    } else {
+
       logger.info("Downloading mnist model")
       val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
       val tempDirPath = System.getProperty("java.io.tmpdir")
@@ -60,7 +56,5 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
       Process("rm -rf " + modelDirPath) !
 
       assert(output >= 0.95f)
-    }
-
   }
 }
