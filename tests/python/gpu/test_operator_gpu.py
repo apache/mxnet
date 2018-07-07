@@ -1483,6 +1483,8 @@ def test_deformable_convolution_with_type():
 
 @with_seed()
 def test_deformable_convolution_options():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3}
     # 2D convolution
 
     # Pad > 0
@@ -1495,13 +1497,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                #  'deformable_offset': (2, 18, 7, 7),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Stride > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
@@ -1513,13 +1511,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                # 'deformable_conv_offset': (2, 18, 3, 3),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Dilate > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
@@ -1531,13 +1525,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                # 'deformable_conv_offset': (2, 18, 3, 3),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Deformable group > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
