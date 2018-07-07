@@ -162,12 +162,12 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
 }
 
 static mkldnn::memory::primitive_desc GetExpandedMemPD(
-    mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
+    mkldnn::memory::primitive_desc pd, float scale, int dim = 0) {
   CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
-  s[dim] = static_cast<int>(s[dim] * num_input);
+  s[dim] = static_cast<int>(s[dim] * scale);
   return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
                   static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
@@ -660,9 +660,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
     for (int dim = 0; dim < scale.size(); dim++)
       pd = GetExpandedMemPD(pd, scale[dim], dim);
 
-
     // Type 2, 3.
-
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -1536,6 +1534,11 @@ void TestPoolingOp(const OpAttrs &attrs,
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
+
+    // skip if not default layout since memory layout must match
+    if (in_arr.arr.IsMKLDNNData())
+      continue;
+
     for (auto &dispatch : dispatches) {
       std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
       std::vector<float> scale_vector(in_arr.arr.shape().ndim());
