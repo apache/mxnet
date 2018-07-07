@@ -41,13 +41,13 @@ object ExampleMultiTask {
 
   def buildNetwork(): Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected("fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation("relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected("fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation("relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected("fc3")()(Map("data" -> act2, "num_hidden" -> 10))
-    val sm1 = Symbol.SoftmaxOutput("softmax1")()(Map("data" -> fc3))
-    val sm2 = Symbol.SoftmaxOutput("softmax2")()(Map("data" -> fc3))
+    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128)
+    val act1 = Symbol.api.Activation(data = Some(fc1), act_type = "relu")
+    val fc2 = Symbol.api.FullyConnected(data = Some(act1), num_hidden = 64)
+    val act2 = Symbol.api.Activation(data = Some(fc2), act_type = "relu")
+    val fc3 = Symbol.api.FullyConnected(data = Some(act2), num_hidden = 10)
+    val sm1 = Symbol.api.SoftmaxOutput(data = Some(fc3))
+    val sm2 = Symbol.api.SoftmaxOutput(data = Some(fc3))
 
     val softmax = Symbol.Group(sm1, sm2)
 
@@ -133,7 +133,7 @@ object ExampleMultiTask {
 
       for (i <- labels.indices) {
         val (pred, label) = (preds(i), labels(i))
-        val predLabel = NDArray.argmax_channel(pred)
+        val predLabel = NDArray.api.argmax_channel(data = pred)
         require(label.shape == predLabel.shape,
           s"label ${label.shape} and prediction ${predLabel.shape}" +
           s"should have the same length.")
@@ -266,7 +266,7 @@ object ExampleMultiTask {
             executor.backward()
 
             val norm = Math.sqrt(paramsGrads.map { case (idx, name, grad, optimState) =>
-              val l2Norm = NDArray.norm(grad / batchSize).toScalar
+              val l2Norm = NDArray.api.norm(data = (grad / batchSize)).toScalar
               l2Norm * l2Norm
             }.sum).toFloat
 
