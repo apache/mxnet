@@ -1070,6 +1070,7 @@ void VerifyPool1D(const NDArray &input,
                   int batch_num,
                   int channel_num) {
   TShape input_shape = input.shape();
+  TShape output_shape = output.shape();
   TShape ptr(input_shape.ndim());
   ptr[0] = batch_num;
   ptr[1] = channel_num;
@@ -1082,7 +1083,7 @@ void VerifyPool1D(const NDArray &input,
     ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[out_ptr]);
     out_ptr++;
   }
-  ASSERT_EQ(output.shape().Size(), out_ptr);
+  ASSERT_EQ(output_shape[2], out_ptr);
 }
 
 void VerifyPool2D(const NDArray &input,
@@ -1093,6 +1094,7 @@ void VerifyPool2D(const NDArray &input,
                   int batch_num,
                   int channel_num) {
   TShape input_shape = input.shape();
+  TShape output_shape = output.shape();
   TShape ptr(input_shape.ndim());
   ptr[0] = batch_num;
   ptr[1] = channel_num;
@@ -1110,7 +1112,7 @@ void VerifyPool2D(const NDArray &input,
       out_ptr++;
     }
   }
-  ASSERT_EQ(output.shape().Size(), out_ptr);
+  ASSERT_EQ(output_shape[2] * output_shape[3], out_ptr);
 }
 
 void VerifyPool3D(const NDArray &input,
@@ -1121,6 +1123,7 @@ void VerifyPool3D(const NDArray &input,
                   int batch_num,
                   int channel_num) {
   TShape input_shape = input.shape();
+  TShape output_shape = output.shape();
   TShape ptr(input_shape.ndim());
   ptr[0] = batch_num;
   ptr[1] = channel_num;
@@ -1143,7 +1146,7 @@ void VerifyPool3D(const NDArray &input,
       }
     }
   }
-  ASSERT_EQ(output.shape().Size(), out_ptr);
+  ASSERT_EQ(output_shape[2] * output_shape[3] * output_shape[4], out_ptr);
 }
 
 void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
