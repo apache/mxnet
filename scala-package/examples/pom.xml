@@ -134,6 +134,15 @@
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
           </argLine>
         </configuration>
+        <executions>
+          <execution>
+            <id>test</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.scalastyle</groupId>
