@@ -482,7 +482,7 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
   attrs.num_inputs = 1;
-  attrs.num_outputs = 1;
+  attrs.num_outputs = 2;
   TShape kernel_shape(dim);
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
