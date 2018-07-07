@@ -1100,10 +1100,10 @@ void VerifyPool2D(const NDArray &input,
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
   int out_ptr = 0;
   for (int i = -padding[0]; i < input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
-    int center = i + ceil(kernel[0] / 2.);
+    int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
     for (int j = -padding[1]; j < input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
-      int center = j + ceil(kernel[1] / 2.);
+      int center = j + kernel[1] / 2;
       TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
       ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate1, kernel), out_data[out_ptr]);
       out_ptr++;
@@ -1277,7 +1277,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "(0,0)" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,4};
+    TShape expected_shape = {1,1,2,2};
     NDArray expected_output(expected_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = -2;
@@ -1298,7 +1298,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "(0,0)" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,1};
+    TShape expected_shape = {1,1,1,1};
     NDArray expected_output(expected_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = 1;
@@ -1337,7 +1337,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     attrs.attrs.dict.insert({"pad" , "(0,0)" });
     attrs.attrs.dict.insert({"pool_type" , "max"});
     attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,1};
+    TShape expected_shape = {1,1,1,1};
     NDArray expected_output(expected_shape, Context());
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = -2;
