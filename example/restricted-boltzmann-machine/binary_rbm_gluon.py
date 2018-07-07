@@ -35,16 +35,16 @@ def get_non_auxiliary_params(rbm):
 ### Set hyperparameters
 
 parser = argparse.ArgumentParser(description='Restricted Boltzmann machine learning MNIST')
-parser.add_argument('--num_hidden', type=int, default=500, help='number of hidden units')
+parser.add_argument('--num-hidden', type=int, default=500, help='number of hidden units')
 parser.add_argument('--k', type=int, default=20, help='number of Gibbs sampling steps used in the PCD algorithm')
-parser.add_argument('--batch_size', type=int, default=10, help='batch size')
-parser.add_argument('--num_epoch', type=int, default=10, help='number of epochs')
-parser.add_argument('--learning_rate', type=float, default=0.1, help='learning rate for stochastic gradient descent') # The optimizer rescales this with `1 / batch_size`
+parser.add_argument('--batch-size', type=int, default=10, help='batch size')
+parser.add_argument('--num-epoch', type=int, default=10, help='number of epochs')
+parser.add_argument('--learning-rate', type=float, default=0.1, help='learning rate for stochastic gradient descent') # The optimizer rescales this with `1 / batch_size`
 parser.add_argument('--momentum', type=float, default=0, help='momentum for the stochastic gradient descent')
-parser.add_argument('--ais_batch_size', type=int, default=100, help='batch size for AIS to estimate the log-likelihood')
-parser.add_argument('--ais_num_batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
-parser.add_argument('--ais_intermediate_steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
-parser.add_argument('--ais_burn_in_steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
+parser.add_argument('--ais-batch-size', type=int, default=100, help='batch size for AIS to estimate the log-likelihood')
+parser.add_argument('--ais-num-batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
+parser.add_argument('--ais-intermediate-steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
+parser.add_argument('--ais-burn-in-steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
 
 args = parser.parse_args()
 
