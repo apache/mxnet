@@ -244,6 +244,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 def test_while_loop_for_foreach():
+    # TODO(Junru): remove all those python prints
 
     def make_true_cond():
         return lambda loop_vars, _: (loop_vars[0] < 1e9).prod()
@@ -282,6 +283,7 @@ def test_while_loop_for_foreach():
         # There is 1 output
         # There is 1 state: s
         step_funcs = [
+            lambda a, b, s: s,
             lambda a, b, s: a * 1.5 + b * 2.5 - s * 3.5,
             lambda a, b, s: a * 1.5 - s * 3.5 + b * 2.5,
             lambda a, b, s: b * 2.5 + a * 1.5 - s * 3.5,
@@ -337,6 +339,9 @@ def test_while_loop_for_foreach():
             lambda in_, s, f_1: s * f_1 * (2 * in_),
             lambda in_, s, f_1: f_1 * (2 * in_) * s,
             lambda in_, s, f_1: f_1 * s * (2 * in_),
+            lambda in_, s, f_1: in_,
+            lambda in_, s, f_1: s,
+            lambda in_, s, f_1: f_1,
         ]
         def make_func(step_func):
             """This simulates:
@@ -380,6 +385,11 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * f_0 * (s_1 * 2),
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * s_0 * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_1,
+            lambda i_0, i_1, s_0, s_1, f_0: s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: s_1,
+            lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
         def make_func(step_func):
             """This simulates:
@@ -431,6 +441,11 @@ def test_while_loop_for_foreach():
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * f_0 * (s_1 * 2),
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * s_0 * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_1,
+            lambda i_0, i_1, s_0, s_1, f_0: s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: s_1,
+            lambda i_0, i_1, s_0, s_1, f_0: f_0,
         ]
         def make_func(step_func):
             """This simulates:
@@ -443,12 +458,13 @@ def test_while_loop_for_foreach():
                     i_0 = input_0[i]
                     i_1 = input_1[length - 1 - i]
                     out = i_0 + (i_1 * 2) + s_0 + (s_1 * 2) + f_0
+                    out = out * i * i_0 * i_1
                     s_0 = (s_0 + out) * 1.05
                     s_1 = (s_1 - out * 0.5) * 0.95
                     output_0.append(out)
                     output_1.append(f_0)
                     output_2.append(out * 1.5)
-                return outputs, s_0, s_1, s_2
+                return output_0, output_1, output_2, s_0, s_1, s_2
             """
             def step(loop, free):
                 (i, s_0, s_1, s_2), (sc_0, sc_1, f_0, _) = loop, free
@@ -457,7 +473,135 @@ def test_while_loop_for_foreach():
                 out = step_func(i_0, i_1, s_0, s_1, f_0)
                 # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
                 out = out * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
+                out = out * i_0 * i_1
                 return ([out, f_0, out * 1.5], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
+            return step
+        case_id = 0
+        for is_train in [True, False]:
+            for step_func in step_funcs:
+                case_id += 1
+                print "Case", case_id
+                _verify_while_loop(
+                    func=make_func(step_func),
+                    max_iterations=1000,
+                    is_train=is_train,
+                    is_for=True,
+                    **params
+                )
+
+    def case_5(length, single_shape, **params):
+        # It is for the case that inputs & outputs are the same
+        # There are 0 outputs
+        # There are 4 states: i, s_0, s_1, s_2
+        # i is used in both differentiable (take) and non-differentiable (+) occasions
+        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
+        step_funcs = [
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_1,
+            lambda i_0, i_1, s_0, s_1, f_0: s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: s_1,
+            lambda i_0, i_1, s_0, s_1, f_0: f_0,
+        ]
+        def make_func(step_func):
+            """This simulates:
+            def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
+                # here s_2 remains untouched
+                output_0 = []
+                output_1 = []
+                output_2 = []
+                for i in range(length):
+                    i_0 = input_0[i]
+                    i_1 = input_1[length - 1 - i]
+                    out = i_0 + (i_1 * 2) + s_0 + (s_1 * 2) + f_0
+                    out = out * i * i_0 * i_1
+                    s_0 = (s_0 + out) * 1.05
+                    s_1 = (s_1 - out * 0.5) * 0.95
+                    output_0.append(out)
+                    output_1.append(f_0)
+                    output_2.append(out * 1.5)
+                return output_0, output_1, output_2, s_0, s_1, s_2
+            """
+            def step(loop, free):
+                (i, s_0, s_1, s_2), (sc_0, sc_1, f_0, _) = loop, free
+                i_0 = sc_0.take(i).squeeze(axis=0)
+                i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
+                out = step_func(i_0, i_1, s_0, s_1, f_0)
+                # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
+                out = out * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
+                out = out * i_0 * i_1
+                return ([], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
+            return step
+        case_id = 0
+        for is_train in [True, False]:
+            for step_func in step_funcs:
+                case_id += 1
+                print "Case", case_id
+                _verify_while_loop(
+                    func=make_func(step_func),
+                    max_iterations=1000,
+                    is_train=is_train,
+                    is_for=True,
+                    **params
+                )
+
+    def case_6(length, single_shape, **params):
+        # It is for the case that inputs & outputs are the same
+        # There are 3 outputs
+        # There are 4 states: i, s_0, s_1, s_2
+        # i is used in both differentiable (take) and non-differentiable (+) occasions
+        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
+        step_funcs = [
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * (s_1 * 2) * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * s_0 * f_0 * (s_1 * 2),
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * s_0 * f_0,
+            lambda i_0, i_1, s_0, s_1, f_0: (i_1 * 2) * i_0 * (s_1 * 2) * f_0 * s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_0,
+            lambda i_0, i_1, s_0, s_1, f_0: i_1,
+            lambda i_0, i_1, s_0, s_1, f_0: s_0,
+            lambda i_0, i_1, s_0, s_1, f_0: s_1,
+            lambda i_0, i_1, s_0, s_1, f_0: f_0,
+        ]
+        def make_func(step_func):
+            """This simulates:
+            def compute(input_0, input_1, s_0, s_1, s_2, f_0, length):
+                # here s_2 remains untouched
+                output_0 = []
+                output_1 = []
+                output_2 = []
+                for i in range(length):
+                    i_0 = input_0[i]
+                    i_1 = input_1[length - 1 - i]
+                    out = i_0 + (i_1 * 2) + s_0 + (s_1 * 2) + f_0
+                    out = out * i * i_0 * i_1
+                    s_0 = (s_0 + out) * 1.05
+                    s_1 = (s_1 - out * 0.5) * 0.95
+                    output_0.append(out)
+                    output_1.append(f_0)
+                    output_2.append(out * 1.5)
+                return output_0, output_1, output_2, s_0, s_1, s_2
+            """
+            def step(loop, free):
+                (i, s_0, s_1, s_2), (sc_0, sc_1, f_0, _) = loop, free
+                F = mx.sym if isinstance(i, mx.sym.Symbol) else mx.nd
+                i_0 = sc_0.take(i).squeeze(axis=0)
+                i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
+                out_0 = step_func(i_0, i_1, s_0, s_1, f_0)
+                out_0 = out_0 * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
+                out_1 = step_func(i_1, s_0, f_0, s_1, i_0)
+                out_1 = out_1 * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
+                return ([F.dot(out_0, s_2), f_0, F.dot(s_2, out_1) * 1.5], [i + 1, (s_0 + out_1) * 1.05, (s_1 - out_0 * 0.5) * 0.95, s_2])
             return step
         case_id = 0
         for is_train in [True, False]:
@@ -597,6 +741,173 @@ def test_while_loop_for_foreach():
             (3, 4, 5, 6),   # f_1, unused
         ],
     )
+    # Case 5.1.*
+    print("Testing Case 5.1")
+    case_5(
+        length=4,
+        cond=make_for_cond(length=4),
+        single_shape=[5],
+        loop_var_shapes=[
+            (1, ),          # i
+            (5, ),          # s_0
+            (5, ),          # s_1
+            (23, 6, 8),     # s_2
+        ],
+        free_var_shapes=[
+            (30, 5),        # sc_0
+            (30, 5),        # sc_1
+            (5, ),          # f_0
+            (3, 4, 5, 6),   # f_1, unused
+        ],
+    )
+    # Case 5.2.*
+    print("Testing Case 5.2")
+    case_5(
+        length=5,
+        cond=make_for_cond(length=5),
+        single_shape=[3, 4, 2],
+        loop_var_shapes=[
+            (1, ),          # i
+            (3, 4, 2),      # s_0
+            (3, 4, 2),      # s_1
+            (23, 6, 8),     # s_2
+        ],
+        free_var_shapes=[
+            (30, 3, 4, 2),  # sc_0
+            (30, 3, 4, 2),  # sc_1
+            (3, 4, 2),      # f_0
+            (3, 4, 5, 6),   # f_1, unused
+        ],
+    )
+    # Case 6.*
+    print("Testing Case 6")
+    case_6(
+        length=5,
+        cond=make_for_cond(length=5),
+        single_shape=[5, 3],
+        loop_var_shapes=[
+            (1, ),          # i
+            (5, 3),         # s_0
+            (5, 3),         # s_1
+            (3, 5),         # s_2
+        ],
+        free_var_shapes=[
+            (30, 5, 3),     # sc_0
+            (30, 5, 3),     # sc_1
+            (5, 3),         # f_0
+            (3, 4, 5, 6),   # f_1, unused
+        ],
+    )
+
+
+def test_while_loop_nested():
+    # TODO(Junru): It will be great if someone could help address the issue
+    # https://github.com/apache/incubator-mxnet/issues/11599, so that I could
+    # write stronger (and weirder) testcases.
+
+    def _to_np_list(arrays):
+        return [x.asnumpy() if x is not None else x for x in arrays]
+
+    def _array(shape):
+        return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
+
+    def inner_cond(i, j, x_sum, sc):
+        return j < 10
+
+    def inner_body(i, j, x_sum, sc):
+        x_ij = sc.take(j).squeeze(axis=0)
+        return (x_ij, x_ij), (i, j + 1, x_sum, sc)
+
+    def outer_cond(i, j, x_sum, sc):
+        return i < 10
+
+    def outer_body(i, j, x_sum, sc):
+        F = mx.sym if isinstance(i, mx.sym.Symbol) else mx.nd
+        (x_ij, x_ji), (i_p, j_p, x_sum_p, sc_p) = F.contrib.while_loop(
+            cond=inner_cond,
+            func=inner_body,
+            loop_vars=(i, j, x_sum, sc),
+            max_iterations=10,
+        )
+        return (x_ij, x_ji), (i_p + 1, j_p - 10, x_sum_p, sc_p)
+
+    def make_loop(i, j, x_sum, sc):
+        F = mx.sym if isinstance(i, mx.sym.Symbol) else mx.nd
+        (x_ij, x_ji), (new_i, new_j, x_sum_p, sc_p) = F.contrib.while_loop(
+            cond=outer_cond,
+            func=outer_body,
+            loop_vars=(i, j, x_sum, sc),
+            max_iterations=10,
+        )
+        return new_i, new_j, x_sum_p, sc_p, x_ij, x_ji
+
+    args = {
+        "i": mx.nd.array([0]),
+        "j": mx.nd.array([0]),
+        "x_sum": _array([5, 3]),
+        "sc": _array([10, 10, 5, 3]),
+    }
+    args_grad = {
+        "x_sum": _array([5, 3]),
+        "sc": _array([10, 10, 5, 3]),
+    }
+    out_grad = [
+        _array([1]),
+        _array([1]),
+        _array([5, 3]),
+        _array([10, 10, 5, 3]),
+        _array([10, 10, 10, 5, 3]),
+        _array([10, 10, 10, 5, 3]),
+    ]
+    def _get_imp_result(is_train, args, args_grad, out_grad):
+        args = {k: v.copy() for k, v in args.items()}
+        args_grad = {k: v.copy() for k, v in args_grad.items()}
+        i, j, x_sum, sc = [args[x] for x in ["i", "j", "x_sum", "sc"]]
+        if is_train:
+            x_sum.attach_grad()
+            sc.attach_grad()
+        with mx.autograd.record(train_mode=is_train):
+            results = make_loop(i, j, x_sum, sc)
+            cat_res = mx.nd.concat(*[x.reshape(-1) for x in results], dim=0)
+        if not is_train:
+            return _to_np_list(results), []
+        cat_grad = mx.nd.concat(*[x.reshape(-1) for x in out_grad], dim=0)
+        assert cat_grad.shape == cat_res.shape
+        cat_res.backward(out_grad=cat_grad)
+        grads = [x_sum.grad, sc.grad]
+        return _to_np_list(results), _to_np_list(grads)
+
+    def _get_sym_result(is_train, args, args_grad, out_grad):
+        args = {k: v.copy() for k, v in args.items()}
+        args_grad = {k: v.copy() for k, v in args_grad.items()}
+        i, j, x_sum, sc = [
+            mx.sym.var("i"),
+            mx.sym.var("j"),
+            mx.sym.var("x_sum"),
+            mx.sym.var("sc"),
+        ]
+        result_sym = mx.sym.Group(make_loop(i, j, x_sum, sc))
+        executor = result_sym.bind(
+            ctx=default_context(),
+            args=args,
+            args_grad=args_grad,
+        )
+        results = executor.forward(is_train=is_train)
+        if not is_train:
+            return _to_np_list(results), []
+        executor.backward(out_grads=out_grad)
+        grads = [executor.grad_dict["x_sum"], executor.grad_dict["sc"]]
+        return _to_np_list(results), _to_np_list(grads)
+
+    for is_train in [True, False]:
+        imp_out, imp_grad = _get_imp_result(is_train=is_train, args=args, args_grad=args_grad, out_grad=out_grad)
+        sym_out, sym_grad = _get_sym_result(is_train=is_train, args=args, args_grad=args_grad, out_grad=out_grad)
+        assert len(imp_out) == len(sym_out)
+        assert len(imp_grad) == len(sym_grad)
+        for x, y in zip(imp_out, sym_out):
+            assert_almost_equal(x, y)
+        for x, y in zip(imp_grad, sym_grad):
+            assert_almost_equal(x, y, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == '__main__':
@@ -604,3 +915,4 @@ if __name__ == '__main__':
     # nose.runmodule()
     test_simple_add()
     test_while_loop_for_foreach()
+    test_while_loop_nested()
