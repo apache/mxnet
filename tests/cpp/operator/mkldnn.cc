@@ -656,6 +656,9 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
+    
+    if (scale.size() > pd.desc().data.ndims)
+      continue;
 
     for (int dim = 0; dim < scale.size(); dim++)
       pd = GetExpandedMemPD(pd, scale[dim], dim);
