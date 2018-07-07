@@ -1076,7 +1076,7 @@ void VerifyPool1D(const NDArray &input,
   ptr[1] = channel_num;
   ptr[2] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * input_shape[0] + channel_num * input_shape[1];
+  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
@@ -1101,7 +1101,7 @@ void VerifyPool2D(const NDArray &input,
   ptr[2] = 0;
   ptr[3] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * input_shape[0] + channel_num * input_shape[1];
+  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
@@ -1131,7 +1131,7 @@ void VerifyPool3D(const NDArray &input,
   ptr[3] = 0;
   ptr[4] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int out_ptr = batch_num * input_shape[0] + channel_num * input_shape[1];
+  int out_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
     TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
