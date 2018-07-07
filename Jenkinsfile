@@ -966,7 +966,8 @@ try {
             publish_test_coverage()
           }
         }
-      },
+      }
+    },
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
