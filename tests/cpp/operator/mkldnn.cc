@@ -656,7 +656,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
-    
+
     if (scale.size() > pd.desc().data.ndims)
       continue;
 
@@ -1357,6 +1357,45 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
     expected_data[0] = -2;
     in_arrs[0] = &arr2d;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
+  TShape test_shape3d = {1,1,2,2,2};
+  NDArray arr3d(test_shape3d, Context());
+  InitDefaultArray(&arr3d);
+  mshadow::default_real_t *input_data3 = arr3d.data().dptr<mshadow::default_real_t>();
+  EXPECT_EQ(-4, input_data3[0]);
+  EXPECT_EQ(-3, input_data3[1]);
+  EXPECT_EQ(-2, input_data3[2]);
+  EXPECT_EQ(-1, input_data3[3]);
+  EXPECT_EQ(0, input_data3[4]);
+  EXPECT_EQ(1, input_data3[5]);
+  EXPECT_EQ(2, input_data3[6]);
+  EXPECT_EQ(3, input_data3[7]);
+  EXPECT_EQ(4, input_data3[8]);
+
+  // test 3d shape base
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "(1,1,1)"});
+    attrs.attrs.dict.insert({"stride" , "(1,1,1)"});
+    attrs.attrs.dict.insert({"pad" , "(0,0,0)" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,2,2,2};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = -4;
+    expected_data[1] = -3;
+    expected_data[2] = -2;
+    expected_data[3] = -1;
+    expected_data[4] = 0;
+    expected_data[5] = 1;
+    expected_data[6] = 2;
+    expected_data[7] = 3;
+    in_arrs[0] = &arr3d;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
