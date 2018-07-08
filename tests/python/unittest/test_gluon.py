@@ -1448,7 +1448,7 @@ def test_conv2d_16c():
     chn_list = [16, 256]
     kernel_list = [1, 3]
     #kernel_list.append(224)
-    batch_size = 16
+    batch_size = 8
     class Net(gluon.HybridBlock):
         def __init__(self,
                      chn_num,
@@ -1474,7 +1474,7 @@ def test_group_conv2d_16c():
     grp_list = [16]
     input_size_list = np.random.randint(low=3, high=65, size=10).tolist()
     kernel_list = [1, 3]
-    batch_size = 16
+    batch_size = 8
     class Net(gluon.HybridBlock):
         def __init__(self,
                      chn_num,
@@ -1505,7 +1505,7 @@ def test_deconv2d_16c():
     out_chn_list = [512, 256, 128, 64, 32, 16, 3]
     kernel_list = [1, 3, 5, 7]
     in_shape = [4, 8, 16, 32, 64, 224]
-    batch_size = 32
+    batch_size = 8
     class Net(gluon.HybridBlock):
         def __init__(self, chn_num, kernel, **kwargs):
             super(Net, self).__init__(**kwargs)
@@ -1530,7 +1530,7 @@ def test_batchnorm_16c():
     shape_list = []
     for i in range(len(shape)):
         shape_list.append((shape[i], shape[i]))
-    batch_size = 32
+    batch_size = 8
     class Net(gluon.HybridBlock):
         def __init__(self,
                      chn_num,
@@ -1563,7 +1563,7 @@ def test_concat():
     shape_list = []
     for i in range(len(shapes)):
         shape_list.append((shapes[i], shapes[i]))
-    batch_size = 16
+    batch_size = 8
     class Net(gluon.HybridBlock):
         def __init__(self,
                      check_dim,
@@ -1634,13 +1634,13 @@ def test_slice_conv():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
+                self.conv0 = nn.Conv2D(16, (3, 3))
 
         def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 2, 0, 0), end=(32, 5, 224, 224))
+            x_slice = x.slice(begin=(0, 2, 0, 0), end=(4, 5, 32, 32))
             out = self.conv0(x_slice)
             return out
-    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x = mx.nd.random.uniform(shape=(8, 6, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
@@ -1651,16 +1651,16 @@ def test_slice_conv_slice_conv():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
-                self.conv1 = nn.Conv2D(256, (3, 3))
+                self.conv0 = nn.Conv2D(16, (1, 1))
+                self.conv1 = nn.Conv2D(16, (1, 1))
 
         def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=(0, 2, 0, 0), end=(32, 5, 224, 224))
+            x_slice = x.slice(begin=(0, 0, 0, 0), end=(4, 3, 16, 16))
             y = self.conv0(x_slice)
-            y_slice = y.slice(begin=(0, 32, 0, 0), end=(32, 64, 222, 222))
+            y_slice = y.slice(begin=(0, 1, 0, 0), end=(4, 4, 16, 16))
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x = mx.nd.random.uniform(shape=(8, 6, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
@@ -1695,16 +1695,16 @@ def test_reshape_conv_slice_conv():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
-                self.conv1 = nn.Conv2D(256, (3, 3))
+                self.conv0 = nn.Conv2D(16, (1, 1))
+                self.conv1 = nn.Conv2D(16, (1, 1))
 
         def hybrid_forward(self, F, x):
-            x_reshape = x.reshape((0, 0, 448, 112))
+            x_reshape = x.reshape((0, 0, 64, 16))
             y = self.conv0(x_reshape)
-            y_slice = y.slice(begin=(0, 32, 0, 0), end=(32, 64, 446, 110))
+            y_slice = y.slice(begin=(0, 0, 0, 0), end=(4, 3, 16, 16))
             out = self.conv1(y_slice)
             return out
-    x = mx.nd.random.uniform(shape=(32, 6, 224, 224))
+    x = mx.nd.random.uniform(shape=(8, 3, 32, 32))
     net = Net()
     check_layer_forward_withinput(net, x)
 
