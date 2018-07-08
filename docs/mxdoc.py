@@ -99,10 +99,8 @@ def build_clojure_docs(app):
     dest_path = app.builder.outdir + '/api/clojure/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/targets/doc'
-    cljojuredocs = ['intro.html', 'index.html', 'org.apache.clojure-mxnet*']
-    for doc_file in clojuredocs:
-        _run_cmd('cd ' + clojure_doc_path_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+    clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/target/doc'
+    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path)
 
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
