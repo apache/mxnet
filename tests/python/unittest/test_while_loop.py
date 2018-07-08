@@ -23,9 +23,10 @@ from numpy.testing import assert_allclose
 import unittest
 from mxnet.test_utils import almost_equal, default_context
 from numpy.testing import assert_allclose as assert_almost_equal  # This is more restrictive
+from mxnet.base import _as_list
 
 
-def test_simple_add():
+def test_while_loop_simple_forward():
 
     class _TestBlock(gluon.HybridBlock):
 
@@ -244,7 +245,6 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 def test_while_loop_for_foreach():
-    # TODO(Junru): remove all those python prints
 
     def make_true_cond():
         return lambda loop_vars, _: (loop_vars[0] < 1e9).prod()
@@ -313,7 +313,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     is_train=is_train,
@@ -339,9 +338,6 @@ def test_while_loop_for_foreach():
             lambda in_, s, f_1: s * f_1 * (2 * in_),
             lambda in_, s, f_1: f_1 * (2 * in_) * s,
             lambda in_, s, f_1: f_1 * s * (2 * in_),
-            lambda in_, s, f_1: in_,
-            lambda in_, s, f_1: s,
-            lambda in_, s, f_1: f_1,
         ]
         def make_func(step_func):
             """This simulates:
@@ -362,7 +358,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     max_iterations=1000,
@@ -417,7 +412,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     max_iterations=1000,
@@ -480,7 +474,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     max_iterations=1000,
@@ -543,7 +536,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     max_iterations=1000,
@@ -607,7 +599,6 @@ def test_while_loop_for_foreach():
         for is_train in [True, False]:
             for step_func in step_funcs:
                 case_id += 1
-                print "Case", case_id
                 _verify_while_loop(
                     func=make_func(step_func),
                     max_iterations=1000,
@@ -617,10 +608,8 @@ def test_while_loop_for_foreach():
                 )
 
     # Case 0: the simpest case
-    print("Testing Case 0")
     case_0()
     # Case 1.1.*
-    print("Testing Case 1.1")
     case_1(
         cond=make_true_cond(),
         loop_var_shapes=[
@@ -633,7 +622,6 @@ def test_while_loop_for_foreach():
         max_iterations=23,
     )
     # Case 1.2.*
-    print("Testing Case 1.2")
     case_1(
         cond=make_true_cond(),
         loop_var_shapes=[
@@ -646,7 +634,6 @@ def test_while_loop_for_foreach():
         max_iterations=31,
     )
     # Case 1.3.*
-    print("Testing Case 1.3")
     case_1(
         cond=make_false_cond(),
         loop_var_shapes=[
@@ -659,7 +646,6 @@ def test_while_loop_for_foreach():
         max_iterations=20,
     )
     # Case 2.1.*
-    print("Testing Case 2.1")
     case_2(
         cond=make_for_cond(length=31),
         loop_var_shapes=[
@@ -673,7 +659,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 2.2.*
-    print("Testing Case 2.2")
     case_2(
         cond=make_for_cond(length=25),
         loop_var_shapes=[
@@ -687,7 +672,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 3.*
-    print("Testing Case 3")
     case_3(
         length=11,
         cond=make_for_cond(length=11),
@@ -704,7 +688,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 4.1.*
-    print("Testing Case 4.1")
     case_4(
         length=4,
         cond=make_for_cond(length=4),
@@ -723,7 +706,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 4.2.*
-    print("Testing Case 4.2")
     case_4(
         length=5,
         cond=make_for_cond(length=5),
@@ -742,7 +724,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 5.1.*
-    print("Testing Case 5.1")
     case_5(
         length=4,
         cond=make_for_cond(length=4),
@@ -761,7 +742,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 5.2.*
-    print("Testing Case 5.2")
     case_5(
         length=5,
         cond=make_for_cond(length=5),
@@ -780,7 +760,6 @@ def test_while_loop_for_foreach():
         ],
     )
     # Case 6.*
-    print("Testing Case 6")
     case_6(
         length=5,
         cond=make_for_cond(length=5),
@@ -812,14 +791,14 @@ def test_while_loop_nested():
         return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
 
     def inner_cond(i, j, x_sum, sc):
-        return j < 10
+        return j < 2
 
     def inner_body(i, j, x_sum, sc):
         x_ij = sc.take(j).squeeze(axis=0)
         return (x_ij, x_ij), (i, j + 1, x_sum, sc)
 
     def outer_cond(i, j, x_sum, sc):
-        return i < 10
+        return i < 2
 
     def outer_body(i, j, x_sum, sc):
         F = mx.sym if isinstance(i, mx.sym.Symbol) else mx.nd
@@ -827,9 +806,9 @@ def test_while_loop_nested():
             cond=inner_cond,
             func=inner_body,
             loop_vars=(i, j, x_sum, sc),
-            max_iterations=10,
+            max_iterations=2,
         )
-        return (x_ij, x_ji), (i_p + 1, j_p - 10, x_sum_p, sc_p)
+        return (x_ij, x_ji), (i_p + 1, j_p - 2, x_sum_p, sc_p)
 
     def make_loop(i, j, x_sum, sc):
         F = mx.sym if isinstance(i, mx.sym.Symbol) else mx.nd
@@ -837,7 +816,7 @@ def test_while_loop_nested():
             cond=outer_cond,
             func=outer_body,
             loop_vars=(i, j, x_sum, sc),
-            max_iterations=10,
+            max_iterations=2,
         )
         return new_i, new_j, x_sum_p, sc_p, x_ij, x_ji
 
@@ -856,13 +835,13 @@ def test_while_loop_nested():
         _array([1]),
         _array([5, 3]),
         _array([10, 10, 5, 3]),
-        _array([10, 10, 10, 5, 3]),
-        _array([10, 10, 10, 5, 3]),
+        _array([2, 2, 10, 5, 3]),
+        _array([2, 2, 10, 5, 3]),
     ]
     def _get_imp_result(is_train, args, args_grad, out_grad):
         args = {k: v.copy() for k, v in args.items()}
         args_grad = {k: v.copy() for k, v in args_grad.items()}
-        i, j, x_sum, sc = [args[x] for x in ["i", "j", "x_sum", "sc"]]
+        i, j, x_sum, sc = [args[x].copy() for x in ["i", "j", "x_sum", "sc"]]
         if is_train:
             x_sum.attach_grad()
             sc.attach_grad()
@@ -910,9 +889,91 @@ def test_while_loop_nested():
             assert_almost_equal(x, y, rtol=1e-5, atol=1e-5)
 
 
+def test_while_loop_rnn():
+    def _array(shape):
+        return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
+
+    cell_types = [mx.rnn.LSTMCell]
+    num_params = [2]
+
+    batch_size = 2
+    hidden_dim = 3
+    input_dim = 4
+    seq_len = 3
+
+    for cell, n_param in zip(cell_types, num_params):
+        # using while_loop
+        params = mx.rnn.RNNParams()
+        data = mx.sym.var("data")
+        iter_i = mx.sym.var("i")
+        def _cond(*states):
+            i = states[0]
+            return i < seq_len
+        def _func(*states):
+            i = states[0]
+            states = states[1:]
+            in_ = data.take(i).squeeze(axis=0)
+            rnn = cell(hidden_dim, prefix='', params=params)
+            next_hidden, next_states = rnn(in_, states)
+            return [next_hidden], [i + 1] + list(next_states)
+        states = [mx.sym.var("s_" + str(i)) for i in range(n_param)]
+        result = mx.sym.contrib.while_loop(
+                    cond=_cond,
+                    func=_func,
+                    loop_vars=[iter_i] + states,
+                    max_iterations=seq_len
+                )
+        result = mx.sym.Group(result[0] + result[1][1: ])
+        arg_shapes, _, _ = result.infer_shape(
+            data=(seq_len, batch_size, input_dim),
+            s_0=(batch_size, hidden_dim),
+        )
+        rnn_inputs = result.list_inputs()
+        args = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
+        args_grad = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
+        e_1 = result.bind(ctx=default_context(),
+            args={name: array.copy() for name, array in args.items()},
+            args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
+        )
+        # using unrolled rnn
+        rnn = cell(hidden_dim, prefix='')
+        unroll_outs = []
+        for inputs in mx.sym.split(data, num_outputs=seq_len, axis=0, squeeze_axis=True):
+            h, states = rnn(inputs, states)
+            unroll_outs.append(mx.sym.expand_dims(h, axis=0))
+        unroll_outs = _as_list(mx.sym.concat(*unroll_outs, dim=0))
+        unroll_outs.extend(states)
+        result = mx.sym.Group(unroll_outs)
+        e_2 = result.bind(ctx=default_context(),
+            args={name: array.copy() for name, array in args.items() if name != "i"},
+            args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
+        )
+        for case_id in range(5):
+            out_grads = [_array(arr.shape) for arr in e_1.outputs]
+            args = {name: array.copy() for name, array in args.items()}
+            e_1.forward(is_train=True, **args)
+            e_1.backward(out_grads)
+            args = {name: array.copy() for name, array in args.items() if name != "i"}
+            e_2.forward(is_train=True, **args)
+            e_2.backward(out_grads)
+            assert len(e_1.outputs) == len(e_2.outputs)
+            for x, y in zip(e_1.outputs, e_2.outputs):
+                x = x.asnumpy()
+                y = y.asnumpy()
+                assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
+            grad_keys = list(e_2.grad_dict.keys())
+            e_1_grad = [e_1.grad_dict[x] for x in grad_keys]
+            e_2_grad = [e_2.grad_dict[x] for x in grad_keys]
+            for x, y in zip(e_1_grad, e_2_grad):
+                x = x.asnumpy()
+                y = y.asnumpy()
+                assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
+
+
 if __name__ == '__main__':
     # import nose
     # nose.runmodule()
-    test_simple_add()
+    test_while_loop_simple_forward()
     test_while_loop_for_foreach()
     test_while_loop_nested()
+    test_while_loop_rnn()
