@@ -839,10 +839,8 @@ class ColorNormalizeAug(Augmenter):
     """
     def __init__(self, mean, std):
         super(ColorNormalizeAug, self).__init__(mean=mean, std=std)
-        self.mean = nd.array(mean) if (mean is not None) and \
-            (not isinstance(mean, nd.NDArray)) else None
-        self.std = nd.array(std) if (std is not None) and \
-            (not isinstance(std, nd.NDArray)) else None
+        self.mean = mean if mean is None or isinstance(mean, nd.NDArray) else nd.array(mean)
+        self.std = std if std is None or isinstance(std, nd.NDArray) else nd.array(std)
 
     def __call__(self, src):
         """Augmenter body"""
