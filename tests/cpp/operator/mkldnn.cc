@@ -482,7 +482,7 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
   attrs.num_inputs = 1;
-  attrs.num_outputs = 2;
+  attrs.num_outputs = kernel == 2 ? 2 : 1;
   TShape kernel_shape(dim);
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
@@ -1395,6 +1395,24 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     expected_data[6] = 2;
     expected_data[7] = 3;
     in_arrs[0] = &arr3d;
+    out_arrs[0] = &expected_output;
+    VerifyPoolingResult(in_arrs, out_arrs, attrs);
+  }
+
+  // test 2d shape kernel
+  {
+    OpAttrs attrs;
+    attrs.attrs.op = Op::Get("Pooling");
+    attrs.attrs.dict.insert({"kernel" , "(2,2,2)"});
+    attrs.attrs.dict.insert({"stride" , "(1,1,1)"});
+    attrs.attrs.dict.insert({"pad" , "(0,0,0)" });
+    attrs.attrs.dict.insert({"pool_type" , "max"});
+    attrs.attrs.op->attr_parser(&attrs.attrs);
+    TShape expected_shape = {1,1,1,1};
+    NDArray expected_output(expected_shape, Context());
+    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
+    expected_data[0] = 1;
+    in_arrs[0] = &arr2d;
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
