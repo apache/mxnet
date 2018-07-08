@@ -159,6 +159,39 @@ class Predictor(object):
                 mx_uint(v.size)))
         _check_call(_LIB.MXPredForward(self.handle))
 
+    def reshape(self, input_shapes):
+        """Change the input shape of the predictor.
+
+        Parameters
+        ----------
+        input_shapes : dict of str to tuple
+            The new shape of input data.
+
+        Examples
+        --------
+        >>> predictor.reshape({'data':data_shape_tuple})
+        """
+        indptr = [0]
+        sdata = []
+        keys = []
+        for k, v  in input_shapes.items():
+            if not isinstance(v, tuple):
+                raise ValueError("Expect input_shapes to be dict str->tuple")
+            keys.append(c_str(k))
+            sdata.extend(v)
+            indptr.append(len(sdata))
+
+        new_handle = PredictorHandle()
+        _check_call(_LIB.MXPredReshape(
+            mx_uint(len(indptr) - 1),
+            c_array(ctypes.c_char_p, keys),
+            c_array(mx_uint, indptr),
+            c_array(mx_uint, sdata),
+            self.handle,
+            ctypes.byref(new_handle)))
+        _check_call(_LIB.MXPredFree(self.handle))
+        self.handle = new_handle
+
     def get_output(self, index):
         """Get the index-th output.
 
