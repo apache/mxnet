@@ -25,7 +25,8 @@ from common import setup_module, with_seed, teardown
 
 import sys, os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append("../../../amalgamation/python/")
+amalgamation_path = os.path.join(curr_path, '..', '..', '..', 'amalgamation', 'python')
+sys.path.append(amalgamation_path)
 from mxnet_predict import Predictor, load_ndarray_file
 
 @with_seed()
