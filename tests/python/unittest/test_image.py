@@ -153,7 +153,6 @@ class TestImage(unittest.TestCase):
         for batch in test_iter:
             pass
 
-
     def test_augmenters(self):
         # ColorNormalizeAug
         mean = np.random.rand(3) * 255
