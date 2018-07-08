@@ -51,17 +51,17 @@ def c_array(ctype, values):
 def _find_lib_path():
     """Find mxnet library."""
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(curr_path, '..', '..', 'lib')
-    dll_path = [curr_path, api_path]
-    dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path] + \
-        [os.path.join(p, 'libmxnet_predict.so') for p in dll_path] + \
-        [os.path.join(p, 'libmxnet.dll') for p in dll_path] + \
-        [os.path.join(p, 'libmxnet_predict.dll') for p in dll_path]
-    lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
-    if len(lib_path) == 0:
-        raise RuntimeError('Cannot find the files.\n' +
-                           'List of candidates:\n' + str('\n'.join(dll_path)))
-    return lib_path
+    amalgamation_lib_path = os.path.join(curr_path, '../../lib/libmxnet_predict.so')
+    if os.path.exists(amalgamation_lib_path) and os.path.isfile(amalgamation_lib_path):
+        lib_path = [amalgamation_lib_path]
+        return lib_path
+    else:
+        # from python/setup.py
+        libinfo_py = os.path.join(curr_path, '../../python/mxnet/libinfo.py')
+        libinfo = {'__file__': libinfo_py}
+        exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinfo)
+        lib_path = libinfo['find_lib_path']()
+        return lib_path
 
 
 def _load_lib():
