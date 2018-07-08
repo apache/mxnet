@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
-from common import assertRaises
+from common import assertRaises, with_seed
 import shutil
 import tempfile
 import unittest
@@ -153,6 +153,7 @@ class TestImage(unittest.TestCase):
         for batch in test_iter:
             pass
 
+    @with_seed()
     def test_augmenters(self):
         # ColorNormalizeAug
         mean = np.random.rand(3) * 255
