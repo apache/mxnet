@@ -1373,7 +1373,6 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
   EXPECT_EQ(1, input_data3[5]);
   EXPECT_EQ(2, input_data3[6]);
   EXPECT_EQ(3, input_data3[7]);
-  EXPECT_EQ(4, input_data3[8]);
 
   // test 3d shape base
   {
