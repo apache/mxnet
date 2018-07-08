@@ -1673,8 +1673,7 @@ std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
 }
 
 TEST(IMPERATIVE, PoolingOp) {
-  // TODO: change kernel, stride, pad
-  for (int dim = 1; dim < 4; dim++) {
+  for (int dim = 2; dim < 4; dim++) {
     for (int kernel = 1; kernel < 4; kernel++) {
       for (int stride = 1; stride < 3; stride++) {
         for (int pad = 0; pad < 2; pad++) {
