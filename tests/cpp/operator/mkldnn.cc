@@ -883,6 +883,9 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+/*
+ * Return new TShape that is shifted on by amount on dim
+ */
 TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
   CHECK(dim < coordindate.ndim());
   TShape tmp = coordindate;
@@ -890,8 +893,11 @@ TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
   return tmp;
 }
 
-float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
-  TShape input_shape = in_arr.shape();
+/*
+ * Get value inside arr indexing along axis
+ */
+float GetValueAtCoordinate(const NDArray &arr, const TShape coordinate) {
+  TShape input_shape = arr.shape();
   std::vector<int> block_sizes(input_shape.ndim()); // number of indexes must move to move along the axis
   for (int dim = 0; dim < input_shape.ndim(); dim++)
     block_sizes[dim] = GetBlockSize(input_shape, dim + 1);
@@ -899,9 +905,12 @@ float GetValueAtCoordinate(const NDArray &in_arr, const TShape coordinate) {
   int index = 0;
   for (int i = 0; i < coordinate.ndim(); i++)
     index += block_sizes[i] * coordinate[i];
-  return static_cast<float*>(in_arr.Reorder2Default().data().dptr_)[index];
+  return static_cast<float*>(arr.Reorder2Default().data().dptr_)[index];
 }
 
+/*
+ * Checks if coordinate is in arr
+ */
 bool IsInArray(const NDArray &arr, const TShape coord) {
   TShape shape = arr.shape();
   for (int i = 0; i < coord.ndim(); i++) {
@@ -910,22 +919,28 @@ bool IsInArray(const NDArray &arr, const TShape coord) {
   return true;
 }
 
-float MaxPoolAtCoordinate1D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = in_arr.shape();
+/*
+ * Perform a 1D pool on arr at coordinate
+ */
+float MaxPoolAtCoordinate1D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = arr.shape();
   float max = -std::numeric_limits<float>::max();
   int shift = kernel_shape[0] / 2;
   for (int i = -shift; i < kernel_shape[0] - shift; i++) {
     float value = -std::numeric_limits<float>::max();
     TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
-    if (IsInArray(in_arr, shifted_shape))
-      value = GetValueAtCoordinate(in_arr, shifted_shape);
+    if (IsInArray(arr, shifted_shape))
+      value = GetValueAtCoordinate(arr, shifted_shape);
     max = std::fmax(value, max);
   }
   return max;
 }
 
-float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = in_arr.shape();
+/*
+ * Perform a 2D pool on arr at coordinate
+ */
+float MaxPoolAtCoordinate2D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = arr.shape();
   float max = -std::numeric_limits<float>::max();
   int shift1 = kernel_shape[0] / 2;
   int shift2 = kernel_shape[1] / 2;
@@ -934,16 +949,19 @@ float MaxPoolAtCoordinate2D(const NDArray &in_arr, const TShape coordinate, cons
     for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
       float value = -std::numeric_limits<float>::max();
       TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
-      if (IsInArray(in_arr, shifted_shape1))
-        value = GetValueAtCoordinate(in_arr, shifted_shape1);
+      if (IsInArray(arr, shifted_shape1))
+        value = GetValueAtCoordinate(arr, shifted_shape1);
       max = std::fmax(value, max);
     }
   }
   return max;
 }
 
-float MaxPoolAtCoordinate3D(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = in_arr.shape();
+/*
+ * Perform a 3D pool on arr at coordinate
+ */
+float MaxPoolAtCoordinate3D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = arr.shape();
   float max = -std::numeric_limits<float>::max();
   int shift1 = kernel_shape[0] / 2;
   int shift2 = kernel_shape[1] / 2;
@@ -955,8 +973,8 @@ float MaxPoolAtCoordinate3D(const NDArray &in_arr, const TShape coordinate, cons
       for (int k = -shift3; k < kernel_shape[2] - shift3; k++) {
         float value = -std::numeric_limits<float>::max();
         TShape shifted_shape2 = GetShiftedCoordinate(shifted_shape1, 4, k);
-        if (IsInArray(in_arr, shifted_shape2))
-          value = GetValueAtCoordinate(in_arr, shifted_shape2);
+        if (IsInArray(arr, shifted_shape2))
+          value = GetValueAtCoordinate(arr, shifted_shape2);
         max = std::fmax(value, max);
       }
     }
@@ -964,18 +982,20 @@ float MaxPoolAtCoordinate3D(const NDArray &in_arr, const TShape coordinate, cons
   return max;
 }
 
-// coordinate is center rounded up (2 kernel would be make index 1 the center)
-float MaxPoolAtCoordinate(const NDArray &in_arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = in_arr.shape();
-  CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within in_arr bounds";
-  CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within in_arr bounds";
+/*
+ * Pools at specified coordinate
+ */
+float MaxPoolAtCoordinate(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
+  TShape input_shape = arr.shape();
+  CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within arr bounds";
+  CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within arr bounds";
 
   if (kernel_shape.ndim() == 1)
-    return MaxPoolAtCoordinate1D(in_arr, coordinate, kernel_shape);
+    return MaxPoolAtCoordinate1D(arr, coordinate, kernel_shape);
   if (kernel_shape.ndim() == 2)
-    return MaxPoolAtCoordinate2D(in_arr, coordinate, kernel_shape);
+    return MaxPoolAtCoordinate2D(arr, coordinate, kernel_shape);
   if (kernel_shape.ndim() == 3)
-    return MaxPoolAtCoordinate3D(in_arr, coordinate, kernel_shape);
+    return MaxPoolAtCoordinate3D(arr, coordinate, kernel_shape);
   return -1;
 }
 
@@ -994,7 +1014,6 @@ TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
 }
 
 TEST(MKLDNN_NDArray, MaxPoolAtCoordinate) {
-
   // one channel
   {
     TShape test_shape = {1,1,8};
@@ -1659,17 +1678,6 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
       TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
     }
   }
-}
-
-std::vector<TShape> GetInputKernelShapes(int dim, int max_size) {
-  std::vector<TShape> kernels;
-  for (int i = 1; i <= max_size; i++) {
-    TShape tmp(dim);
-    for (int j = 0; j < tmp.ndim(); j++)
-      tmp[j] = i;
-    kernels.push_back(tmp);
-  }
-  return kernels;
 }
 
 TEST(IMPERATIVE, PoolingOp) {
