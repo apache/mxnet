@@ -496,7 +496,7 @@ struct WhileLoopParam : public dmlc::Parameter<WhileLoopParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(2)
     .describe("Number of input arguments, including cond and func as two symbol inputs.");
     DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
-    .describe("The number of outputs of the subgraph, including outputs from the function body, and all loop variables.");
+    .describe("The number of outputs of the subgraph.");
     DMLC_DECLARE_FIELD(num_out_data).set_lower_bound(0)
     .describe("The number of outputs from the function body.");
     DMLC_DECLARE_FIELD(max_iterations).set_lower_bound(1)
@@ -562,37 +562,43 @@ class WhileLoopState: public LoopState {
     return x == -1;
   }
   template <typename T>
-  static bool fill_value(T &x, T &y, bool x_empty, bool y_empty) {
-    if (x == y || (x_empty && y_empty)) {
+  static bool fill_value(T *x, T *y, bool x_empty, bool y_empty) {
+    if (*x == *y || (x_empty && y_empty)) {
       return true;
     }
     if (!x_empty && !y_empty) {
       return false;
     }
     if (x_empty) {
-      x = y;
+      *x = *y;
     }
     if (y_empty) {
-      y = x;
+      *y = *x;
     }
     return true;
   }
   template <typename T>
-  static bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs, std::vector<T> *in, std::vector<T> *subg_in, std::function<bool(const T &)> is_empty) {
+  static bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
+                         std::vector<T> *in,
+                         std::vector<T> *subg_in,
+                         std::function<bool(const T &)> is_empty) {
     for (size_t i = 0; i < input_locs.ndim(); ++i) {
       T &x = in->at(input_locs[i]);
       T &y = subg_in->at(i);
-      fill_value(x, y, is_empty(x), is_empty(y));
+      fill_value(&x, &y, is_empty(x), is_empty(y));
     }
     return true;
   }
   template <typename T>
-  static bool sync_in_out(const WhileLoopParam& params, std::vector<T> *in, std::vector<T> *out, std::function<bool(const T &)> is_empty) {
+  static bool sync_in_out(const WhileLoopParam& params,
+                          std::vector<T> *in,
+                          std::vector<T> *out,
+                          std::function<bool(const T &)> is_empty) {
     for (int i = params.num_out_data; i < params.num_outputs; ++i) {
       // each out->at(i) is a params, loop_var
       T &x = in->at(params.func_input_locs[params.func_var_locs[i - params.num_out_data]]);
       T &y = out->at(i);
-      fill_value(x, y, is_empty(x), is_empty(y));
+      fill_value(&x, &y, is_empty(x), is_empty(y));
     }
     return true;
   }
@@ -608,7 +614,7 @@ T _asscalar(const NDArray &a) {
 
 bool as_bool_scalar(const NDArray &a) {
   MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
-    return bool(_asscalar<DType>(a));
+    return static_cast<bool>(_asscalar<DType>(a));
   });
   CHECK(false) << "Unknown dtype";
   return false;
@@ -639,7 +645,10 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   const auto to_ptr_vec = [](std::vector<NDArray> &in, std::vector<NDArray*> *out) {
     out->clear();
     out->reserve(in.size());
-    std::transform(std::begin(in), std::end(in), std::back_inserter(*out), [](NDArray &a) {return &a;});
+    std::transform(std::begin(in),
+                   std::end(in),
+                   std::back_inserter(*out),
+                   [](NDArray &a) {return &a;});
   };
   // sanity checks
   CHECK_EQ(inputs.size() + 2U, (size_t) params.num_args);
@@ -648,7 +657,8 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
     CHECK_EQ(params.max_iterations, outputs[i].shape()[0]);
   for (const auto &arr : outputs)
-    CHECK_EQ(arr.storage_type(), kDefaultStorage) << "The while_loop operator doesn't support the sparse format";
+    CHECK_EQ(arr.storage_type(), kDefaultStorage)
+          << "The while_loop operator doesn't support the sparse format";
   // construct inputs and outputs for cond
   std::vector<NDArray> cond_inputs, cond_outputs = {NDArray()};
   WhileLoopState::extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
@@ -732,8 +742,9 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   for (auto x : _req) {
     CHECK_NE(x, kWriteInplace);
   }
-  for (auto x: _outputs) {
-    CHECK_EQ(x.storage_type(), kDefaultStorage) << "The while_loop operator doesn't support the sparse format";
+  for (auto x : _outputs) {
+    CHECK_EQ(x.storage_type(), kDefaultStorage)
+          << "The while_loop operator doesn't support the sparse format";
   }
   std::vector<NDArray> outputs;
   std::vector<OpReqType> req;
@@ -762,7 +773,8 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   std::vector<OpReqType> iter_req(req.size());
   for (int i = params.num_out_data; i < params.num_outputs; ++i)
     ograds[i] = inputs[i];
-  for (int step = (int) state.n_iterations - 1; step >= 0; --step) {
+  const int n_iter = state.n_iterations;
+  for (int step = n_iter - 1; step >= 0; --step) {
     // ograds[ : num_out_data] = inputs[ : num_out_data][step]
     // ograds[num_out_data: ] is maintained in the end of each loop
     std::transform(std::begin(inputs),
@@ -784,7 +796,7 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
         for ( ; i < loc; ++i) {
           // locs other that var_locs
           igrads[i] = outputs[i];
-          iter_req[i] = (step + 1 == (int) state.n_iterations || req[i] == kNullOp)
+          iter_req[i] = (step + 1 == n_iter || req[i] == kNullOp)
                       ? req[i]
                       : kAddTo;
         }
@@ -797,8 +809,7 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
                       ? req[i]
                       : kWriteTo;
           ++i;
-        }
-        else {
+        } else {
           break;
         }
       }
@@ -903,12 +914,13 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  ShapeVector cond_out_shape{TShape(1U)}; // this means: [(1, )]
+  ShapeVector cond_out_shape{TShape(1U)};  // this means: [(1, )]
   ShapeVector func_out_shape(params.num_outputs);
   CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, params.cond_input_locs, 0, false);
   CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
-  bool succ_1 = infer_subg(attrs.subgraphs[1], &func_out_shape, params.func_input_locs, params.num_out_data, true);
+  bool succ_1 = infer_subg(attrs.subgraphs[1], &func_out_shape, \
+                           params.func_input_locs, params.num_out_data, true);
   CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
   return succ_0 && succ_1;
 }
@@ -956,10 +968,12 @@ static bool WhileLoopStorageType(const nnvm::NodeAttrs& attrs,
   DispatchMode func_mode = DispatchMode::kUndefined;
   *dispatch_mode = DispatchMode::kFComputeEx;
   CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
-  bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, &cond_mode, &cond_in_attrs, &cond_out_attrs);
+  bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, \
+                                     &cond_mode, &cond_in_attrs, &cond_out_attrs);
   CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
   CHECK(WhileLoopState::sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
-  bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, &func_mode, &func_in_attrs, out_attrs);
+  bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, \
+                                     &func_mode, &func_in_attrs, out_attrs);
   CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
   CHECK(WhileLoopState::sync_in_in(params.func_input_locs, in_attrs, &func_in_attrs, is_udf));
   return succ_0 && succ_1;

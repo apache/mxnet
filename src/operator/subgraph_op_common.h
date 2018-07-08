@@ -24,6 +24,8 @@
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <vector>
+#include <utility>
+#include <string>
 #include "../imperative/cached_op.h"
 #include "../imperative/imperative_utils.h"
 
