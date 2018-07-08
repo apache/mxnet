@@ -1103,7 +1103,7 @@ void VerifyPool2D(const NDArray &input,
   ptr[2] = 0;
   ptr[3] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int start_ptr = batch_num * GetBlockSize(output_shape, 1) + channel_num * GetBlockSize(output_shape, 2);
   int out_ptr = 0;
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
@@ -1134,7 +1134,7 @@ void VerifyPool3D(const NDArray &input,
   ptr[3] = 0;
   ptr[4] = 0;
   mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
+  int start_ptr = batch_num * GetBlockSize(output_shape, 1) + channel_num * GetBlockSize(output_shape, 2);
   int out_ptr = 0;
   for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
     int center = i + kernel[0] / 2;
@@ -1398,7 +1398,7 @@ TEST(MKLDNN_NDArray, VerifyPoolingResult) {
     out_arrs[0] = &expected_output;
     VerifyPoolingResult(in_arrs, out_arrs, attrs);
   }
-  
+
 }
 
 void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
