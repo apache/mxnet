@@ -51,10 +51,12 @@ def c_array(ctype, values):
 def _find_lib_path():
     """Find mxnet library."""
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(curr_path, '../../lib/')
+    api_path = os.path.join(curr_path, '..', '..', 'lib')
     dll_path = [curr_path, api_path]
     dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path] + \
-        [os.path.join(p, 'libmxnet_predict.so') for p in dll_path]
+        [os.path.join(p, 'libmxnet_predict.so') for p in dll_path] + \
+        [os.path.join(p, 'libmxnet.dll') for p in dll_path] + \
+        [os.path.join(p, 'libmxnet_predict.dll') for p in dll_path]
     lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
     if len(lib_path) == 0:
         raise RuntimeError('Cannot find the files.\n' +
