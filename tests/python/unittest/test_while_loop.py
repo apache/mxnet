@@ -324,7 +324,6 @@ def test_while_loop_for_foreach():
         # This is a testcase that involves non-differentiable operators
         # There is 1 output
         # There is 2 states: i, s
-        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda in_, s, f_1: (in_ * 2) * s * f_1,
             lambda in_, s, f_1: (in_ * 2) * f_1 * s,
@@ -370,7 +369,6 @@ def test_while_loop_for_foreach():
         # This is a testcase for multiple non-differentiable operators and different ways of slicing
         # There are 2 outputs
         # There are 3 states: i, s_0, s_1
-        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
@@ -425,7 +423,6 @@ def test_while_loop_for_foreach():
         # There are 3 outputs
         # There are 4 states: i, s_0, s_1, s_2
         # i is used in both differentiable (take) and non-differentiable (+) occasions
-        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
@@ -465,7 +462,6 @@ def test_while_loop_for_foreach():
                 i_0 = sc_0.take(i).squeeze(axis=0)
                 i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
                 out = step_func(i_0, i_1, s_0, s_1, f_0)
-                # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
                 out = out * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
                 out = out * i_0 * i_1
                 return ([out, f_0, out * 1.5], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
@@ -487,7 +483,6 @@ def test_while_loop_for_foreach():
         # There are 0 outputs
         # There are 4 states: i, s_0, s_1, s_2
         # i is used in both differentiable (take) and non-differentiable (+) occasions
-        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
@@ -527,7 +522,6 @@ def test_while_loop_for_foreach():
                 i_0 = sc_0.take(i).squeeze(axis=0)
                 i_1 = sc_1.take(length - 1 - i).squeeze(axis=0)
                 out = step_func(i_0, i_1, s_0, s_1, f_0)
-                # # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
                 out = out * i.reshape([1] * len(single_shape)).broadcast_to(single_shape)
                 out = out * i_0 * i_1
                 return ([], [i + 1, (s_0 + out) * 1.05, (s_1 - out * 0.5) * 0.95, s_2])
@@ -549,7 +543,6 @@ def test_while_loop_for_foreach():
         # There are 3 outputs
         # There are 4 states: i, s_0, s_1, s_2
         # i is used in both differentiable (take) and non-differentiable (+) occasions
-        # TODO(Junru): turn `*`` back to `+` when @zheng-da fix cached_op
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
@@ -780,9 +773,6 @@ def test_while_loop_for_foreach():
 
 
 def test_while_loop_nested():
-    # TODO(Junru): It will be great if someone could help address the issue
-    # https://github.com/apache/incubator-mxnet/issues/11599, so that I could
-    # write stronger (and weirder) testcases.
 
     def _to_np_list(arrays):
         return [x.asnumpy() if x is not None else x for x in arrays]

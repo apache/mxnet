@@ -367,7 +367,6 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
     The i-th element in the last `|loop_vars|` ones of the list
     represent the final state of each loop variable.
 
-    TODO(Junru): writing style: use Symbol or symbol?
     Parameters
     ----------
     loop_vars: list of Symbol.
@@ -381,18 +380,16 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
 
     Returns
     -------
-    outputs: a list of Symbol of length `|step_output| + |loop_vars|`.
-        The first `|step_output|` Symbols are outputs.
-        The last `|loop_vars|` Symbols are the final state of loop variables.
-    TODO(Junru): change the output format
+    outputs: a tuple of two lists, which both contains 0, 1 or more Symbols.
+        The first list contains the stacked output from each step,
+        The second list contains the final state.
 
     Examples
     --------
-    TODO(Junru): run this
     >>> cond = lambda i, s: i <= 5
-    >>> func = lambda i, s: (i + 1, s + i)
+    >>> func = lambda i, s: ([i + s], [i + 1, s + i])
     >>> loop_vars = (mx.sym.var('i'), mx.sym.var('s'))
-    >>> outputs = mx.sym.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
+    >>> outputs, states = mx.sym.contrib.while_loop(cond, func, loop_vars, max_iterations=10)
     """
     def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,

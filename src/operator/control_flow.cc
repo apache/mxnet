@@ -620,14 +620,6 @@ bool as_bool_scalar(const NDArray &a) {
   return false;
 }
 
-// TODO(Junru): delete it
-void print_scalar(const NDArray &a) {
-  MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
-    DType typed_result = _asscalar<DType>(a);
-    std::cout << a.dtype() << " " << typed_result << std::endl;
-  });
-}
-
 static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
@@ -706,21 +698,6 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
     size_t j = params.func_var_locs[i - params.num_out_data];
     mxnet::CopyFromTo(func_inputs[j], &outputs[i]);
-  }
-}
-
-// TODO(Junru): delete helper func
-void _print_shape(const TShape &s) {
-  std::cout << "[";
-  for (auto i : s) {
-    std::cout << " " << i;
-  }
-  std::cout << " ]" << std::endl;
-}
-
-void _ps(const std::vector<TShape> &shapes) {
-  for (const TShape &s : shapes) {
-    _print_shape(s);
   }
 }
 

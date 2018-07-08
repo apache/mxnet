@@ -223,9 +223,9 @@ def while_loop(loop_vars, cond, func, max_iterations):
     The i-th element in the last `|loop_vars|` ones of the list
     represent the final state of each loop variable.
 
-    Warning: when `cond` is never satisfied, we assume `step_output` is empty.
-    TODO(Junru): the output shape along axis 0 is not consistent to the symbloic version.
-    Should we mention this in our doc?
+    Warning 1: when `cond` is never satisfied, we assume `step_output` is empty.
+    Warning 2: The output shape along axis 0 is currently `max_iteration`,
+    which not consistent to the symbloic version.
 
     Parameters
     ----------
@@ -240,18 +240,16 @@ def while_loop(loop_vars, cond, func, max_iterations):
 
     Returns
     -------
-    outputs: a list of NDArrays of length `|step_output| + |loop_vars|`.
-        The first `|step_output|` NDArrays are outputs.
-        The last `|loop_vars|` NDArrays are the final state of loop variables.
-    TODO(Junru): change the output format
+    outputs: a tuple of two lists, which both contains 0, 1 or more NDArrays.
+        The first list contains the stacked output from each step,
+        The second list contains the final state.
 
     Examples
     --------
-    TODO(Junru): run this
     >>> cond = lambda i, s: i <= 5
-    >>> func = lambda i, s: (i + 1, s + i)
-    >>> loop_vars = (mx.nd.array([1], dtype="int64"), mx.nd.array([0], dtype="int64"))
-    >>> outputs = mx.nd.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
+    >>> func = lambda i, s: ([i + s], [i + 1, s + i])
+    >>> loop_vars = (mx.nd.array([0], dtype="int64"), mx.nd.array([1], dtype="int64"))
+    >>> outputs, states = mx.nd.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
     """
     def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
