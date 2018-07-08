@@ -394,16 +394,16 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
     >>> loop_vars = (mx.sym.var('i'), mx.sym.var('s'))
     >>> outputs = mx.sym.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
     """
-    def _to_python_scalar(inputs, type, name):
+    def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
         to the given type
         """
         if hasattr(inputs, "asscalar"):
             inputs = inputs.asscalar()
         try:
-            inputs = type(inputs)
+            inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type.__name__))
+            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
     def _to_symbol_tuple(inputs, name):
@@ -468,8 +468,10 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
         # 2) for each graph, determine in which indices their inputs reside in `inputs`
         # 3) for each variable in the input of `graph`, find which index it is
         inputs = []             # List[Symbol], result of 1)
-        locs = []               # List[Tuple(List[Int], List[Int])], a list of tuples, where tuples are results of 2) and 3)
-        input_id_to_loc = {}    # Dict[int, int], given id(sym), input_id_to_loc maps it to a `loc`, where inputs[loc] = sym
+        locs = []               # List[Tuple(List[Int], List[Int])], a list of tuples,
+                                # where tuples are results of 2) and 3)
+        input_id_to_loc = {}    # Dict[int, int], given id(sym), input_id_to_loc maps it
+                                # to a `loc`, where inputs[loc] = sym
         for graph in graphs:
             # input_syms: all inputs to the `graph`
             name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
@@ -519,7 +521,8 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
     func_g, num_out_data, num_outputs = \
         _create_subgraph(loop_vars, _func_wrapper, name + "_func")
     # find symbols used in either cond_g or func_g
-    input_syms, ((cond_input_locs, _), (func_input_locs, func_var_locs)) = _union_inputs(cond_g, func_g)
+    input_syms, ((cond_input_locs, _), (func_input_locs, func_var_locs)) = \
+        _union_inputs(cond_g, func_g)
     for i_th, loc in enumerate(func_var_locs):
         if loc == -1:
             raise ValueError("The %d-th loop_var doesn't involve into the computation" % i_th)

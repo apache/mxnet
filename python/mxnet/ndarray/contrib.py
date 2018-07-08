@@ -253,16 +253,16 @@ def while_loop(loop_vars, cond, func, max_iterations):
     >>> loop_vars = (mx.nd.array([1], dtype="int64"), mx.nd.array([0], dtype="int64"))
     >>> outputs = mx.nd.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
     """
-    def _to_python_scalar(inputs, type, name):
+    def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
         to the given type
         """
         if isinstance(inputs, ndarray.NDArray):
             inputs = inputs.asscalar()
         try:
-            inputs = type(inputs)
+            inputs = type_(inputs)
         except:
-            raise ValueError("Cannot convert %s to python %s" % (name, type.__name__))
+            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
     def _to_ndarray_tuple(inputs, name):
