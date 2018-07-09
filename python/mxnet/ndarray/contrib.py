@@ -213,7 +213,7 @@ def while_loop(loop_vars, cond, func, max_iterations):
     The number of elements, shape, dtype of each element in `step_output` should be consistent.
     The `new_loop_vars` should be consistent with `loop_vars` on each step.
     The `func` is variadic, and its signature should be
-    `cond(*loop_vars) => (List[NDArray] step_output, List[NDArray] new_loop_vars)`.
+    `func(*loop_vars) => (List[NDArray] step_output, List[NDArray] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 

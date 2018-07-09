@@ -52,7 +52,7 @@ def test_while_loop_simple_forward():
             max_iterations=10,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -66,7 +66,7 @@ def test_while_loop_simple_forward():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -82,7 +82,7 @@ def test_while_loop_simple_forward():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         _, result = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -98,7 +98,7 @@ def test_while_loop_simple_forward():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         (outputs, ), (result_i, result_s) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -113,7 +113,7 @@ def test_while_loop_simple_forward():
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         (outputs, ), (result_i, result_s, _) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -122,14 +122,14 @@ def test_while_loop_simple_forward():
         assert all(outputs.asnumpy() == np.arange(1, 1001).reshape(1000, 1))
         assert result_i.asscalar() == 1001
         assert result_s.asscalar() == 500500
-        # Case 2.3: very corner case
+        # Case 2.3: a corner case, in which loop body is never executed
         model = _TestBlock(
             cond=lambda i, s, false: false,
             func=lambda i, s, false: (i, (i + 1, s + i, false)),
             max_iterations=1000,
         )
         if hybridize:
-            model.hybridize(inline_limit=0)
+            model.hybridize()
         _, (result_i, result_s, _) = model(
             mx.nd.array([1], dtype="int64"), # i
             mx.nd.array([0], dtype="int64"), # s
@@ -422,7 +422,7 @@ def test_while_loop_for_foreach():
         # It is for the case that inputs & outputs are the same
         # There are 3 outputs
         # There are 4 states: i, s_0, s_1, s_2
-        # i is used in both differentiable (take) and non-differentiable (+) occasions
+        # i is used in both non-differentiable (take) and differentiable (+) occasions
         step_funcs = [
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * (s_1 * 2) * f_0,
             lambda i_0, i_1, s_0, s_1, f_0: i_0 * (i_1 * 2) * s_0 * f_0 * (s_1 * 2),
@@ -962,9 +962,5 @@ def test_while_loop_rnn():
 
 
 if __name__ == '__main__':
-    # import nose
-    # nose.runmodule()
-    test_while_loop_simple_forward()
-    test_while_loop_for_foreach()
-    test_while_loop_nested()
-    test_while_loop_rnn()
+    import nose
+    nose.runmodule()

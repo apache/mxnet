@@ -616,7 +616,7 @@ bool as_bool_scalar(const NDArray &a) {
   MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
     return static_cast<bool>(_asscalar<DType>(a));
   });
-  CHECK(false) << "Unknown dtype";
+  LOG(FATAL) << "Unknown dtype";
   return false;
 }
 
