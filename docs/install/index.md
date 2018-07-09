@@ -1072,6 +1072,27 @@ $ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/
 
 **Build and install the MXNet R binding**
 
+You will need to first install R. MXNet requires R version >3.3 and we can fetch that from CRAN package repository.
+```bash
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+$ sudo add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
+$ sudo apt-get update
+$ sudo apt-get install r-base r-base-dev
+```
+
+You will then need to install packages needed for building and installing MXNet R bindings which includes curl, openssl, XML, Cairo and devtools. You can install them with the following commands.
+```bash
+$ sudo apt-get install libcurl4-openssl-dev libssl-dev libxml2-dev libcairo2-dev libxt-dev
+$ sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+```
+
+If you have multiple versions of ``libblas`` installed on your system you are likely to encounter errors of the form ''/usr/lib/libblas.so.3: undefined symbol: gotoblas`` in the previous step. You can get around it by selecting a different version of the library with the following commands and then rerun the previous step.
+```bash
+sudo update-alternatives --config libblas.so.3 
+sudo update-alternatives --config liblapack.so.3
+```
+
+You can then build and install the MXNet R package with the following command.
 ```bash
 $ make rpkg
 ```
