@@ -704,7 +704,7 @@ struct product {
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief finalize reduction */
@@ -785,7 +785,7 @@ struct nansum {
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     DType t1 = dst_val + src_val;
     DType e = t1 - src_val;
     DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
@@ -842,7 +842,7 @@ struct nanprod {
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     Reduce(dst_val, src_val);
   }
   /*! \brief finalize reduction */
@@ -878,7 +878,7 @@ struct nrm2 {
   /*! \brief do stable reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
-    if (src !=  0) {
+    if (src != 0) {
       DType abs = mshadow_op::abs::Map(src);
       if (scale < abs) {
         sum_of_squares = 1 + sum_of_squares * (scale / abs) * (scale / abs);
@@ -895,10 +895,10 @@ struct nrm2 {
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq, volatile DType dst_scale, volatile DType& src_ssq, volatile DType& src_scale) { // NOLINT(*)
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq, volatile DType& dst_scale, volatile DType& src_ssq, volatile DType& src_scale) { // NOLINT(*)
     if (dst_scale != 0 && dst_scale >= src_scale) {
       dst_ssq = dst_ssq + src_ssq * (src_scale / dst_scale) * (src_scale / dst_scale);
-    } else if (src_scale !=0 && dst_scale < src_scale) {
+    } else if (src_scale != 0 && dst_scale < src_scale) {
       dst_ssq = src_ssq + dst_ssq * (dst_scale / src_scale) * (dst_scale / src_scale);
       dst_scale = src_scale;
     }
