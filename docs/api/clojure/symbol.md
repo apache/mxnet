@@ -13,7 +13,7 @@ Topics:
 
 We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
 
-To follow along with this documentation, you can use this namespace to with the needed requires:
+To follow along with this documentation, you can use this namespace to with the following requirements:
 
 ```clojure
 (ns docs.symbol

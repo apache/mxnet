@@ -1,7 +1,8 @@
 # Symbolic Configuration and Execution in Pictures
 
 This topic explains symbolic construction and execution in pictures.
-We recommend that you also read [Symbolic API](symbol.md).
+
+We recommend that you read the [Symbolic API](symbol.md) as another useful reference.
 
 ## Compose Symbols
 
