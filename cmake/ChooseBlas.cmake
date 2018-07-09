@@ -18,6 +18,15 @@
 set(BLAS "Open" CACHE STRING "Selected BLAS library")
 set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
 
+function(switch_lapack enable)
+  if(${enable})
+    message(STATUS "Enabling lapack functionality")
+    add_definitions(-DMXNET_USE_LAPACK=1)
+  else()
+    message(WARNING "Lapack functionality not available")
+  endif()
+endfunction()
+
 if(USE_MKL_IF_AVAILABLE)
   message(STATUS "Trying to find MKL library due to USE_MKL_IF_AVAILABLE=True...")
 
@@ -28,7 +37,7 @@ if(USE_MKL_IF_AVAILABLE)
   if(MKL_FOUND)
     message(STATUS "MKL library found, checking if USE_MKLDNN...")
 
-	  if(USE_MKLDNN)
+    if(USE_MKLDNN)
       message(STATUS "USE_MKLDNN=True, setting to use OpenBLAS")
       set(BLAS "open")
     else()
@@ -45,8 +54,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   message(STATUS "Using Atlas for BLAS")
 
   set(Atlas_NEED_LAPACK ${USE_LAPACK})
-
-  include(${CMAKE_CURRENT_LIST_DIR}/Modules/FindAtlas.cmake)
+  find_package(Atlas REQUIRED)
 
   include_directories(SYSTEM ${Atlas_INCLUDE_DIRS})
   list(APPEND mshadow_LINKER_LIBS ${Atlas_LIBRARIES})
@@ -54,9 +62,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
 
-  if(USE_LAPACK AND Atlas_LAPACK_FOUND)
-    add_definitions(-DMXNET_USE_LAPACK=1)
-  endif()
+  switch_lapack(${USE_LAPACK} AND ${Atlas_LAPACK_FOUND})
 
   return()
 endif()
@@ -66,7 +72,7 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
 
   set(OpenBLAS_NEED_LAPACK ${USE_LAPACK})
 
-  include(${CMAKE_CURRENT_LIST_DIR}/Modules/FindOpenBLAS.cmake)
+  find_package(OpenBLAS REQUIRED)
 
   include_directories(SYSTEM ${OpenBLAS_INCLUDE_DIRS})
   list(APPEND mshadow_LINKER_LIBS ${OpenBLAS_LIBRARIES})
@@ -74,17 +80,13 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
 
-  if(USE_LAPACK AND OpenBLAS_LAPACK_FOUND)
-    add_definitions(-DMXNET_USE_LAPACK=1)
-  endif()
+  switch_lapack(${USE_LAPACK} AND ${OpenBLAS_LAPACK_FOUND})
 
   return()
 endif()
 
 if(BLAS MATCHES "[Mm][Kk][Ll]")
   message(STATUS "Using MKL for BLAS")
-
-  # todo(lebeg): include(${CMAKE_CURRENT_LIST_DIR}/Modules/FindMKL.cmake)
 
   find_package(MKL REQUIRED)
 
@@ -96,14 +98,13 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
 
   if(USE_LAPACK)
     include(CheckFunctionExists)
-    check_function_exists("cheev_" LAPACK_FOUND)
+    set(CMAKE_REQUIRED_LIBRARIES ${MKL_LIBRARIES})
+    check_function_exists("cgees_" LAPACK_FOUND)
 
-    if(LAPACK_FOUND)
-      add_definitions(-DMXNET_USE_LAPACK=1)
-    endif()
+    switch_lapack(${LAPACK_FOUND} OR False)
+
+    return()
   endif()
-
-  return()
 endif()
 
 if(BLAS MATCHES "[Aa][Pp][Pp][Ll][Ee]")
@@ -116,23 +117,18 @@ if(BLAS MATCHES "[Aa][Pp][Pp][Ll][Ee]")
 
   # Accelerate framework documentation
   # https://developer.apple.com/documentation/accelerate?changes=_2
+  set(Accelerate_NEED_LAPACK ${USE_LAPACK})
   find_package(Accelerate REQUIRED)
+
   include_directories(SYSTEM ${Accelerate_INCLUDE_DIR})
   list(APPEND mshadow_LINKER_LIBS ${Accelerate_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
 
-  if(USE_LAPACK)
-    # Apples vecLib should contain lapack functionalities included in the Accelerate framework, but we will double check
-    # https://developer.apple.com/documentation/accelerate/veclib?changes=_2
-    include(CheckFunctionExists)
-    check_function_exists("cheev_" LAPACK_FOUND)
-
-    if(LAPACK_FOUND)
-      add_definitions(-DMXNET_USE_LAPACK=1)
-    endif()
-  endif()
-
+  switch_lapack(${USE_LAPACK} AND ${Accelerate_LAPACK_FOUND})
   return()
+
 endif()
+
+message(FATAL_ERROR "BLAS ${BLAS} not recognized")

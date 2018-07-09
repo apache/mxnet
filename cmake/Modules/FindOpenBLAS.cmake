@@ -107,16 +107,21 @@ if(OpenBLAS_NEED_LAPACK)
   message(STATUS "Looking for lapack support...")
 
   find_path(OpenBLAS_LAPACK_INCLUDE_DIR
-            NAMES clapack.h
+            NAMES lapacke.h
             PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
-  # lapack if present in OpenBLAS build is included into the libopenblas. But it requires gfortran to be linked
-  # dynamically.
-  # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
-  # Static linking goes with openblas, but fortran needs to be linked dynamically:
-  # https://github.com/xianyi/OpenBLAS/issues/460#issuecomment-61293128
-  find_library(OpenBLAS_LAPACK_LIBRARY
-               NAMES gfortran
-               PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
+
+  if(UNIX AND NOT APPLE)
+    # lapack if present in OpenBLAS build is included into the libopenblas. But it requires gfortran to be linked
+    # dynamically.
+    # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
+    # Static linking goes with openblas, but fortran needs to be linked dynamically:
+    # https://github.com/xianyi/OpenBLAS/issues/460#issuecomment-61293128
+    find_library(OpenBLAS_LAPACK_LIBRARY
+                 NAMES gfortran
+                 PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
+  else()
+    set(OpenBLAS_LAPACK_LIBRARY OpenBLAS_LIBRARY)
+  endif()
 
   set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LIBRARY})
   include(CheckFunctionExists)

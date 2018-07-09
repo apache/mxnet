@@ -19,20 +19,44 @@
 #
 # The following are set after configuration is done:
 #  Accelerate_FOUND
-#  Accelerate_INCLUDE_DIRS
+#  Accelerate_LAPACK_FOUND
+#  Accelerate_INCLUDE_DIR
 #  Accelerate_LIBRARIES
 
 file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
-set(Accelerate_INCLUDE_SEARCH_PATHS
-  /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current
-  ${Accelerate_HOME}
-)
 
-find_path(Accelerate_CBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Accelerate_INCLUDE_SEARCH_PATHS} PATH_SUFFIXES Headers)
+set(Accelerate_INCLUDE_SEARCH_PATHS
+    /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current
+    ${Accelerate_HOME}
+    )
+
+find_path(Accelerate_CBLAS_INCLUDE_DIR
+          NAMES cblas.h
+          PATHS ${Accelerate_INCLUDE_SEARCH_PATHS}
+          PATH_SUFFIXES Headers)
 
 set(LOOKED_FOR
     Accelerate_CBLAS_INCLUDE_DIR
-)
+    )
+
+if(Accelerate_NEED_LAPACK)
+  message(STATUS "Looking for lapack support...")
+
+  # Apples vecLib should contain lapack functionalities included in the Accelerate framework, but we will double check
+  # https://developer.apple.com/documentation/accelerate/veclib?changes=_2
+  include(CheckFunctionExists)
+  set(CMAKE_REQUIRED_LIBRARIES "-framework Accelerate")
+  check_function_exists("cgees_" LAPACK_FOUND)
+
+  if(LAPACK_FOUND)
+    set(Accelerate_LAPACK_FOUND True)
+    message(STATUS "Lapack found")
+  else()
+    set(Accelerate_LAPACK_FOUND False)
+    message(WARNING "Accelerate lapack support could not be identified, lapack functionality will not be available")
+  endif()
+
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Accelerate DEFAULT_MSG ${LOOKED_FOR})
@@ -42,6 +66,6 @@ if(Accelerate_FOUND)
   set(Accelerate_LIBRARIES "-framework Accelerate")
   mark_as_advanced(${LOOKED_FOR})
 
-  message(STATUS "Found Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_BLAS_LIBRARY})")
+  message(STATUS "Found Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_LIBRARIES})")
 endif(Accelerate_FOUND)
 

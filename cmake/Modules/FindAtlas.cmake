@@ -97,7 +97,7 @@ if(Atlas_NEED_LAPACK)
 
   set(CMAKE_REQUIRED_LIBRARIES ${Atlas_LAPACK_LIBRARY})
   include(CheckFunctionExists)
-  check_function_exists("cheev_" LAPACK_FOUND)
+  check_function_exists("cgees_" LAPACK_FOUND)
 
   if(LAPACK_FOUND)
     set(Atlas_LAPACK_FOUND True)
