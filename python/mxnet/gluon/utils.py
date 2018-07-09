@@ -202,6 +202,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     """
     if path is None:
         fname = url.split('/')[-1]
+        # Empty filenames are invalid
+        assert fname, 'Can\'t construct file-name from this URL. ' \
+            'Please set the `path` option manually.'
     else:
         path = os.path.expanduser(path)
         if os.path.isdir(path):
