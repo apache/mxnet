@@ -84,7 +84,7 @@ static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
                                         alg, data_md, alpha);
     return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
   });
-  LOG(INFO) << "Unsupported data type for MKLDNN activation";
+  LOG(FATAL) << "Unsupported data type for MKLDNN activation";
   mkldnn::eltwise_forward::desc desc = mkldnn::eltwise_forward::desc(
       mkldnn::prop_kind::forward_training, alg, data_md, 0.0);
   return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
