@@ -919,7 +919,8 @@ def test_while_loop_rnn():
             s_0=(batch_size, hidden_dim),
         )
         rnn_inputs = result.list_inputs()
-        args = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
+        args = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs) if name != "i"}
+        args["i"] = mx.nd.zeros([1])
         args_grad = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
         e_1 = result.bind(ctx=default_context(),
             args={name: array.copy() for name, array in args.items()},
@@ -938,7 +939,7 @@ def test_while_loop_rnn():
             args={name: array.copy() for name, array in args.items() if name != "i"},
             args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
         )
-        for case_id in range(5):
+        for case_id in range(100):
             out_grads = [_array(arr.shape) for arr in e_1.outputs]
             args = {name: array.copy() for name, array in args.items()}
             e_1.forward(is_train=True, **args)
