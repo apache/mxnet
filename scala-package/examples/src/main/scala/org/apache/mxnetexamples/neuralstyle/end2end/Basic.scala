@@ -74,11 +74,6 @@ object Basic {
         shape = Some(Shape(shape(1), shape(2) * shape(3))))
       val gram = Symbol.api.FullyConnected(data = Some(x), weight = Some(x),
         no_bias = Some(true), num_hidden = shape(1))
-//      val x = Symbol.Reshape()()(Map("data" -> style.get(i),
-//          "shape" -> Shape(shape(1), shape(2) * shape(3))))
-//      // use fully connected to quickly do dot(x, x^T)
-//      val gram = Symbol.FullyConnected()()(Map("data" -> x, "weight" -> x,
-//          "no_bias" -> true, "num_hidden" -> shape(1)))
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
     }
@@ -92,11 +87,9 @@ object Basic {
       gramLoss = gramLoss :+ Symbol.api.sum(Some(
         Symbol.api.square(Some(gvar - gram.get(i)))
       ))
-//      gramLoss = gramLoss :+ Symbol.sum()(Symbol.square()(gvar - gram.get(i))())()
     }
     val cvar = Symbol.Variable("target_content")
     val contentLoss = Symbol.api.sum(Some(Symbol.api.square(Some(cvar - content))))
-//    val contentLoss = Symbol.sum()(Symbol.square()(cvar - content)())()
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 
