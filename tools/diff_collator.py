@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Output a list of differences between current git branch and master
 
@@ -7,6 +24,7 @@ This script will performs a retrieves and output a list of changes
 based on the output of git diff. For each changes, the file, line numbers
 and top-level funtcion name is provided.
 """
+
 import os
 import subprocess
 import sys
@@ -21,14 +39,18 @@ def parser(diff_output):
     changes = []
 
     for file_diff in diff_output.split("diff --git")[1:]:
-        changes +=  parse_file(file_diff)
+        changes.append(parse_file(file_diff))
 
     return changes
 
 def parse_file(file_diff):
-    changes = []
+    """ Parse changes to a single file
+    git diff 
+    """
+    changes = {}
     lines = file_diff.splitlines()
     file_name  = lines[0].split()[-1][2:]
+    logging.info("Parsing: %s", file_name)
 
     for line in file_diff.splitlines():
         if line.startswith("@"):
@@ -53,14 +75,20 @@ def parse_file(file_diff):
             else:
                 func_name = tokens[-1].split("(")[0]
 
-            changes.append((file_name, func_name, (start, end)))
+            if func_name not in changes:
+                changes[func_name] = []
+            changes[func_name].append((start, end))
 
-    return changes
+    return (file_name, changes)
 
 def output_changes(changes):
-    for c in changes:
-        print(c)
-            
+    for file_name, chunks in changes:
+        print(file_name)
+        for func_name, ranges in chunks.items():
+            print("\t{}".format(func_name))
+            for (start, end) in ranges:
+                print("\t\t{} {}".format(start, end))
+    
 def parse_args():
     arg_parser = argparse.ArgumentParser()
 
@@ -78,15 +106,16 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.commits is  not None:
-        git_diff_output = subprocess.check_output(["git", "diff",
+        diff_output = subprocess.check_output(["git", "diff",
             "--unified=0", args.commits[0], args.commits[1]])
     elif args.branches is not None:
         diff_target = args.branches[0] + "..." + args.branches[1]
-        git_diff_output = subprocess.check_output(["git", "diff",
-            "--unified=0", diff_target])
+        diff_output = subprocess.check_output(["git", "diff",
+                                              "--unified=0", diff_target])
     else:
-        git_diff_output = subprocess.check_output(["git", "diff", "--unified=0"])
+        diff_output = subprocess.check_output(["git", "diff", "--unified=0",
+                                               "master...HEAD"])
 
-    changes = parser(git_diff_output)
+    changes = parser(diff_output)
     output_changes(changes)
 
