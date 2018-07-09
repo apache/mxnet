@@ -1,7 +1,7 @@
 # NDArray API
 
 
-The ndarray api contains tensor operations similar to `numpy.ndarray`. The syntax is also similar, except for some additional calls for dealing with I/O and multiple devices.
+The NDArray API contains tensor operations similar to `numpy.ndarray`. The syntax is also similar, except for some additional calls for dealing with I/O and multiple devices.
 
 Topics:
 
@@ -9,7 +9,7 @@ Topics:
 * [NDArray Operations](#ndarray-operations)
 * [NDArray API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.ndarray.html)
 
-To follow along with this documentation, you can use this namespace to with the needed requires:
+To follow along with this documentation, you can use this namespace with the needed requires:
 
 ```clojure
 (ns docs.ndarray
@@ -29,7 +29,7 @@ Create `mxnet.ndarray` as follows:
 (def c (ndarray/array [1 2 3 4 5 6] [2 3])) ;; array with contents of a shape 2 x 3
 ```
 
-There are also ways to convert to a vec or get the shape as an object or vec
+There are also ways to convert a NDArray to a vec or get the shape or the NDArray as an object or vec as follows:
 
 ```clojure
 (ndarray/->vec c) ;=> [1.0 2.0 3.0 4.0 5.0 6.0]
@@ -40,7 +40,7 @@ There are also ways to convert to a vec or get the shape as an object or vec
 
 ## NDArray Operations
 
-We provide some basic ndarray operations, like arithmetic and slice operations.
+There are some basic NDArray operations, like arithmetic and slice operations.
 
 ### Arithmetic Operations
 
@@ -58,7 +58,7 @@ We provide some basic ndarray operations, like arithmetic and slice operations.
 (ndarray/->vec a) ;=>  [2.0 2.0 2.0 2.0 2.0]
 ```
 
-Other arithmetic operations are similar
+Other arithmetic operations are similar.
 
 
 ### Slice Operations

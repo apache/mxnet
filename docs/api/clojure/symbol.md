@@ -26,7 +26,7 @@ To follow along with this documentation, you can use this namespace to with the 
 
 ## How to Compose Symbols
 
-The symbolic API provides a way to configure computation graphs.
+The Symbolic API provides a way to configure computation graphs.
 You can configure the graphs either at the level of neural network layer operations or as fine-grained operations.
 
 The following example configures a two-layer neural network.
@@ -39,7 +39,7 @@ The following example configures a two-layer neural network.
 (def net (sym/softmax-output "out" {:data fc2}))
 ```
 
-You could also combine this more dynamically with:
+This can also be combined more dynamically with the `as->` Clojure threading form.
 
 ```clojure
 (as-> (sym/variable "data") data
@@ -74,7 +74,7 @@ MXNet provides well-optimized symbols for layers commonly used in deep learning 
 
 ## Group Multiple Symbols
 
-To construct neural networks with multiple loss layers, we can use mxnet.sym.Group to group multiple symbols together. The following example groups two outputs:
+To construct neural networks with multiple loss layers, we can use `group` to group multiple symbols together. The following example groups two outputs:
 
 ```clojure
 (def net (sym/variable "data"))
@@ -88,7 +88,7 @@ To construct neural networks with multiple loss layers, we can use mxnet.sym.Gro
 ```
 
 ## Serialization
- There are two ways to save and load the symbols. You can use the mxnet.Symbol.save and mxnet.Symbol.load functions to serialize the Symbol objects. The advantage of using save and load functions is that it is language agnostic and cloud friendly. The symbol is saved in JSON format. You can also get a JSON string directly using mxnet.Symbol.toJson. Refer to API documentation for more details.
+You can use the [`save`](docs/org.apache.clojure-mxnet.symbol.html#var-save) and [`load`](docs/org.apache.clojure-mxnet.symbol.html#var-load) functions to serialize the Symbol objects. The advantage of using save and load functions is that it is language agnostic and cloud friendly. The symbol is saved in JSON format. You can also get a JSON string directly using mxnet.Symbol.toJson. Refer to API documentation for more details.
 
  The following example shows how to save a symbol to a file, load it back, and compare two symbols using a JSON string. You can also save to S3 as well
 
@@ -130,7 +130,7 @@ _To do this you must have the correct native library jar defined as a dependency
 
 ## Multiple Outputs
 
-;;To construct neural networks with multiple loss layers, we can use mxnet.sym.Group to group multiple symbols together. The following example groups two outputs:
+To construct neural networks with multiple loss layers, we can use mxnet.sym.Group to group multiple symbols together. The following example groups two outputs:
 
 ```clojure
 (def net (sym/variable "data"))
@@ -143,7 +143,7 @@ _To do this you must have the correct native library jar defined as a dependency
 ```
 
 After you get the ```group```, you can bind on ```group``` instead.
-The resulting executor will have two outputs, one for linerarregressionoutput_output and one for softmax_output.
+The resulting executor will have two outputs, one for `linerarregressionoutput_output` and one for `softmax_output`.
 
 ## Next Steps
 * See [NDArray API](ndarray.md) for vector/matrix/tensor operations.

@@ -1,5 +1,5 @@
 # Module API
-The module API provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Module wraps a Symbol and one or more Executors. It has both a high level and intermediate level api.
+The module API provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Module wraps a Symbol and one or more Executors. It has both a high level and intermediate level API.
 
 
 Topics:
@@ -122,9 +122,9 @@ You can pass in batch-end callbacks using batch-end-callback and epoch-end callb
 (first (ndarray/->vec (first results))) ;=>0.08261358
 ```
 
-The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the `predict` function.
+The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the [`predict`](docs/org.apache.clojure-mxnet.module.html#var-fit-params) function.
 
-When prediction results might be too large to fit in memory, use the `predict-every-batch` API.
+When prediction results might be too large to fit in memory, use the [`predict-every-batch`](docs/org.apache.clojure-mxnet.module.html#predict-every-batch) API.
 
 ```clojure
 (let [preds (m/predict-every-batch mod {:eval-data test-data})]
@@ -142,12 +142,12 @@ If you need to evaluate on a test set and don’t need the prediction output, ca
 (m/score mod {:eval-data test-data :eval-metric (eval-metric/accuracy)}) ;=>["accuracy" 0.2227]
 ```
 
-This runs predictions on each batch in the provided data iterator and computes the evaluation score using the provided eval metric. The evaluation results are stored in metric so that you can query later.
+This runs predictions on each batch in the provided data iterator and computes the evaluation score using the provided eval metric. The evaluation results are stored in `eval-metric` object itself so that you can query later.
 
 
 ## Saving and Loading
 
-To save the module parameters in each training epoch, use a `checkpoint` function:
+To save the module parameters in each training epoch, use the `save-checkpoint` function:
 
 ```clojure
 (let [save-prefix "my-model"]
@@ -174,7 +174,7 @@ To load the saved module parameters, call the `load-checkpoint` function:
 new-mod ;=> #object[org.apache.mxnet.module.Module 0x5304d0f4 "org.apache.mxnet.module.Module@5304d0f4"]
 ```
 
-To initialize parameters, Bind the symbols to construct executors first with bind function. Then, initialize the parameters and auxiliary states by calling `init-params` function.
+To initialize parameters, Bind the symbols to construct executors first with `bind` function. Then, initialize the parameters and auxiliary states by calling `init-params` function.
 
 ```clojure
 (-> new-mod
@@ -207,16 +207,16 @@ To get current parameters, use `params`
 
 ```
 
-To assign parameter and aux state values, use `set-params` function.
+To assign parameter and aux state values, use the `set-params` function.
 
 ```clojure
 (m/set-params new-mod {:arg-params (m/arg-params new-mod) :aux-params (m/aux-params new-mod)})
 ;=> #object[org.apache.mxnet.module.Module 0x5304d0f4 "org.apache.mxnet.module.Module@5304d0f4"]
 ```
 
-To resume training from a saved checkpoint, instead of calling `set-params`, directly call `fit`, passing the loaded parameters, so that `fit` knows to start from those parameters instead of initializing randomly
+To resume training from a saved checkpoint, pass the loaded parameters to the `fit` function. This will prevent `fit` from initialzing randomly.
 
-Create fit-params, and then use it to set `begin-epoch` so that fit() knows to resume from a saved epoch.
+Create fit-params and then use it to set `begin-epoch` so that `fit` knows to resume from a saved epoch.
 
 ```clojure
 ;; reset the training data before calling fit or you will get an error
