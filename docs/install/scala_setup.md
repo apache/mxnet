@@ -53,19 +53,19 @@ https://mvnrepository.com/artifact/org.apache.mxnet
 
 **Linux GPU**
 ```html
-<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu -->
+<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu -->
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
 </dependency>
 ```
 
 **macOS CPU**
 ```html
-<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu -->
+<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu -->
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
 </dependency>
 ```
 
