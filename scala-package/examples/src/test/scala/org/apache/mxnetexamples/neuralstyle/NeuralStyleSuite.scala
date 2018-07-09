@@ -22,7 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.apache.mxnetexamples.neuralstyle.end2end.BoostInference
+import org.apache.mxnetexamples.neuralstyle.end2end.{BoostInference, BoostTrain}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -43,24 +43,59 @@ class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("Example CI: Test Boost Inference") {
+  override def beforeAll(): Unit = {
     logger.info("Downloading vgg model")
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
     val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/NeuralStyle/"
     downloadUrl(baseUrl + "IMG_4343.jpg", tempDirPath + "/NS/IMG_4343.jpg")
+    downloadUrl(baseUrl + "starry_night.jpg", tempDirPath + "/NS/starry_night.jpg")
     downloadUrl(baseUrl + "model.zip", tempDirPath + "/NS/model.zip")
+    downloadUrl(baseUrl + "vgg19.params", tempDirPath + "/NS/vgg19.params")
+    // TODO: Need to confirm with Windows
+    Process(s"unzip $tempDirPath/NS/model.zip -d $tempDirPath/NS/") !
+
+    Process(s"mkdir $tempDirPath/NS/images") !
+
+    for (i <- 0 until 20) {
+      Process(s"cp $tempDirPath/NS/IMG_4343.jpg $tempDirPath/NS/images/img$i.jpg") !
+    }
+  }
+
+  test("Example CI: Test Boost Inference") {
+    val tempDirPath = System.getProperty("java.io.tmpdir")
     var ctx = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       ctx = Context.gpu()
     }
-
-    // TODO: Need to confirm with Windows
-    Process("unzip " + tempDirPath + "/NS/model.zip -d "
-      + tempDirPath + "/NS/") !
-
     BoostInference.runInference(tempDirPath + "/NS/model", tempDirPath + "/NS", 2,
       tempDirPath + "/NS/IMG_4343.jpg", ctx)
+  }
+
+  test("Example CI: Test Boost Training") {
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      val ctx = Context.gpu()
+      BoostTrain.runTraining(tempDirPath + "/NS/images", tempDirPath + "/NS/vgg19.params", ctx,
+        tempDirPath + "/NS/starry_night.jpg", tempDirPath + "/NS")
+    } else {
+      logger.info("GPU test only, skip CPU...")
+    }
+  }
+
+  test("Example CI: Test Neural Style") {
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      val ctx = Context.gpu()
+      NeuralStyle.runTraining("vgg19", tempDirPath + "/NS/IMG_4343.jpg",
+        tempDirPath + "/NS/starry_night.jpg",
+        ctx, tempDirPath + "/NS/vgg19.params", tempDirPath + "/NS",
+        1f, 20f, 0.01f, 1, 10f, 60, 600, 50, 0.0005f)
+    } else {
+      logger.info("GPU test only, skip CPU")
+    }
   }
 }

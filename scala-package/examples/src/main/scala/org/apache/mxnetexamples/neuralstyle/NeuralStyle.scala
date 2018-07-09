@@ -155,6 +155,104 @@ object NeuralStyle {
     Math.sqrt(array.map(x => x * x).sum.toDouble).toFloat
   }
 
+  //scalastyle:off
+  def runTraining(model : String, contentImage : String, styleImage: String, dev : Context,
+                   modelPath : String, outputDir : String, styleWeight : Float,
+                  contentWeight : Float, tvWeight : Float, gaussianRadius : Int,
+                  lr: Float, maxNumEpochs: Int, maxLongEdge: Int,
+                  saveEpochs : Int, stopEps: Float) : Unit = {
+
+    val contentNp = preprocessContentImage(contentImage, maxLongEdge, dev)
+    val styleNp = preprocessStyleImage(styleImage, contentNp.shape, dev)
+    val size = (contentNp.shape(2), contentNp.shape(3))
+
+    val (style, content) = ModelVgg19.getSymbol
+    val (gram, gScale) = styleGramSymbol(size, style)
+    var modelExecutor = ModelVgg19.getExecutor(gram, content, modelPath, size, dev)
+
+    modelExecutor.data.set(styleNp)
+    modelExecutor.executor.forward()
+
+    val styleArray = modelExecutor.style.map(_.copyTo(Context.cpu()))
+    modelExecutor.data.set(contentNp)
+    modelExecutor.executor.forward()
+    val contentArray = modelExecutor.content.copyTo(Context.cpu())
+
+    // delete the executor
+    modelExecutor = null
+
+    val (styleLoss, contentLoss) = getLoss(gram, content)
+    modelExecutor = ModelVgg19.getExecutor(
+      styleLoss, contentLoss, modelPath, size, dev)
+
+    val gradArray = {
+      var tmpGA = Array[NDArray]()
+      for (i <- 0 until styleArray.length) {
+        modelExecutor.argDict(s"target_gram_$i").set(styleArray(i))
+        tmpGA = tmpGA :+ NDArray.ones(Shape(1), dev) * (styleWeight / gScale(i))
+      }
+      tmpGA :+ NDArray.ones(Shape(1), dev) * contentWeight
+    }
+
+    modelExecutor.argDict("target_content").set(contentArray)
+
+    // train
+    val img = Random.uniform(-0.1f, 0.1f, contentNp.shape, dev)
+    val lrFS = new FactorScheduler(step = 10, factor = 0.9f)
+
+    saveImage(contentNp, s"${outputDir}/input.jpg", gaussianRadius)
+    saveImage(styleNp, s"${outputDir}/style.jpg", gaussianRadius)
+
+    val optimizer = new Adam(
+      learningRate = lr,
+      wd = 0.005f,
+      lrScheduler = lrFS)
+    val optimState = optimizer.createState(0, img)
+
+    logger.info(s"start training arguments")
+
+    var oldImg = img.copyTo(dev)
+    val clipNorm = img.shape.toVector.reduce(_ * _)
+    val tvGradExecutor = getTvGradExecutor(img, dev, tvWeight)
+    var eps = 0f
+    var trainingDone = false
+    var e = 0
+    while (e < maxNumEpochs && !trainingDone) {
+      modelExecutor.data.set(img)
+      modelExecutor.executor.forward()
+      modelExecutor.executor.backward(gradArray)
+
+      val gNorm = NDArray.norm(modelExecutor.dataGrad).toScalar
+      if (gNorm > clipNorm) {
+        modelExecutor.dataGrad.set(modelExecutor.dataGrad * (clipNorm / gNorm))
+      }
+      tvGradExecutor match {
+        case Some(executor) => {
+          executor.forward()
+          optimizer.update(0, img,
+            modelExecutor.dataGrad + executor.outputs(0),
+            optimState)
+        }
+        case None =>
+          optimizer.update(0, img, modelExecutor.dataGrad, optimState)
+      }
+      eps = (NDArray.norm(oldImg - img) / NDArray.norm(img)).toScalar
+      oldImg.set(img)
+      logger.info(s"epoch $e, relative change $eps")
+
+      if (eps < stopEps) {
+        logger.info("eps < args.stop_eps, training finished")
+        trainingDone = true
+      }
+      if ((e + 1) % saveEpochs == 0) {
+        saveImage(img, s"${outputDir}/tmp_${e + 1}.jpg", gaussianRadius)
+      }
+      e = e + 1
+    }
+    saveImage(img, s"${outputDir}/out.jpg", gaussianRadius)
+    logger.info("Finish fit ...")
+  }
+
   def main(args: Array[String]): Unit = {
     val alle = new NeuralStyle
     val parser: CmdLineParser = new CmdLineParser(alle)
@@ -164,95 +262,10 @@ object NeuralStyle {
         && alle.modelPath != null && alle.outputDir != null)
 
       val dev = if (alle.gpu >= 0) Context.gpu(alle.gpu) else Context.cpu(0)
-      val contentNp = preprocessContentImage(alle.contentImage, alle.maxLongEdge, dev)
-      val styleNp = preprocessStyleImage(alle.styleImage, contentNp.shape, dev)
-      val size = (contentNp.shape(2), contentNp.shape(3))
-
-      val (style, content) = ModelVgg19.getSymbol
-      val (gram, gScale) = styleGramSymbol(size, style)
-      var modelExecutor = ModelVgg19.getExecutor(gram, content, alle.modelPath, size, dev)
-
-      modelExecutor.data.set(styleNp)
-      modelExecutor.executor.forward()
-
-      val styleArray = modelExecutor.style.map(_.copyTo(Context.cpu()))
-      modelExecutor.data.set(contentNp)
-      modelExecutor.executor.forward()
-      val contentArray = modelExecutor.content.copyTo(Context.cpu())
-
-      // delete the executor
-      modelExecutor = null
-
-      val (styleLoss, contentLoss) = getLoss(gram, content)
-      modelExecutor = ModelVgg19.getExecutor(
-          styleLoss, contentLoss, alle.modelPath, size, dev)
-
-      val gradArray = {
-        var tmpGA = Array[NDArray]()
-        for (i <- 0 until styleArray.length) {
-          modelExecutor.argDict(s"target_gram_$i").set(styleArray(i))
-          tmpGA = tmpGA :+ NDArray.ones(Shape(1), dev) * (alle.styleWeight / gScale(i))
-        }
-        tmpGA :+ NDArray.ones(Shape(1), dev) * alle.contentWeight
-      }
-
-      modelExecutor.argDict("target_content").set(contentArray)
-
-      // train
-      val img = Random.uniform(-0.1f, 0.1f, contentNp.shape, dev)
-      val lr = new FactorScheduler(step = 10, factor = 0.9f)
-
-      saveImage(contentNp, s"${alle.outputDir}/input.jpg", alle.guassianRadius)
-      saveImage(styleNp, s"${alle.outputDir}/style.jpg", alle.guassianRadius)
-
-      val optimizer = new Adam(
-          learningRate = alle.lr,
-          wd = 0.005f,
-          lrScheduler = lr)
-      val optimState = optimizer.createState(0, img)
-
-      logger.info(s"start training arguments $alle")
-
-      var oldImg = img.copyTo(dev)
-      val clipNorm = img.shape.toVector.reduce(_ * _)
-      val tvGradExecutor = getTvGradExecutor(img, dev, alle.tvWeight)
-      var eps = 0f
-      var trainingDone = false
-      var e = 0
-      while (e < alle.maxNumEpochs && !trainingDone) {
-        modelExecutor.data.set(img)
-        modelExecutor.executor.forward()
-        modelExecutor.executor.backward(gradArray)
-
-        val gNorm = NDArray.norm(modelExecutor.dataGrad).toScalar
-        if (gNorm > clipNorm) {
-          modelExecutor.dataGrad.set(modelExecutor.dataGrad * (clipNorm / gNorm))
-        }
-        tvGradExecutor match {
-          case Some(executor) => {
-            executor.forward()
-            optimizer.update(0, img,
-                modelExecutor.dataGrad + executor.outputs(0),
-                optimState)
-          }
-          case None =>
-            optimizer.update(0, img, modelExecutor.dataGrad, optimState)
-        }
-        eps = (NDArray.norm(oldImg - img) / NDArray.norm(img)).toScalar
-        oldImg.set(img)
-        logger.info(s"epoch $e, relative change $eps")
-
-        if (eps < alle.stopEps) {
-          logger.info("eps < args.stop_eps, training finished")
-          trainingDone = true
-        }
-        if ((e + 1) % alle.saveEpochs == 0) {
-          saveImage(img, s"${alle.outputDir}/tmp_${e + 1}.jpg", alle.guassianRadius)
-        }
-        e = e + 1
-      }
-      saveImage(img, s"${alle.outputDir}/out.jpg", alle.guassianRadius)
-      logger.info("Finish fit ...")
+      runTraining(alle.model, alle.contentImage, alle.styleImage, dev, alle.modelPath,
+        alle.outputDir, alle.styleWeight, alle.contentWeight, alle.tvWeight,
+        alle.gaussianRadius, alle.lr, alle.maxNumEpochs, alle.maxLongEdge,
+        alle.saveEpochs, alle.stopEps)
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
@@ -292,6 +305,6 @@ class NeuralStyle {
   private val outputDir: String = null
   @Option(name = "--save-epochs", usage = "save the output every n epochs")
   private val saveEpochs: Int = 50
-  @Option(name = "--guassian-radius", usage = "the gaussian blur filter radius")
-  private val guassianRadius: Int = 1
+  @Option(name = "--gaussian-radius", usage = "the gaussian blur filter radius")
+  private val gaussianRadius: Int = 1
 }
