@@ -8,34 +8,50 @@ Community contributions to MXNet have added many new valuable features and funct
 [![Promo image](https://cdn-images-1.medium.com/max/800/1*PwIMdZM7tpt3rmcyhlk2FQ.png)](https://medium.com/apache-mxnet/announcing-keras-mxnet-v2-2-4b8404568e75)
 #### [Keras-MXNet v2.2 released!](https://medium.com/apache-mxnet/announcing-keras-mxnet-v2-2-4b8404568e75)
 
+
 ## Contents
 
 * [Learning MXNet and other Educational Resources](#learning-mxnet-and-other-educational-resources)
 * [New MXNet APIs](#new-mxnet-apis)
 * [Toolkits to Extend MXNet](#toolkits-to-extend-mxnet)
+* [Debugging and Visualization](#debugging-and-visualization)
 * [Model Serving](#model-serving)
 * [Model Zoos](#model-zoos)
 * [MXNet as a Backend](#mxnet-as-a-backend)
 * [Contributions](#contributions)
 
+
 ## Learning MXNet and other Educational Resources
 
 * [Gluon 60 Minute Crash Course](https://gluon-crash-course.mxnet.io/) - deep learning practitioners can learn Gluon quickly with these six 10-minute tutorials.
+    - [YouTube Series](https://www.youtube.com/playlist?list=PLkEvNnRk8uVmVKRDgznk3o3LxmjFRaW7s)
 * [The Straight Dope](https://gluon.mxnet.io/) - a series of notebooks designed to teach deep learning using the Gluon Python API for MXNet.
 
 
-## New MXNet APIs
+## MXNet APIs
 
 * [Clojure API](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) - use MXNet with Clojure.
+* [C++ API](../api/c++/index.html) - not be confused with the C++ backend, this API allows C++ programmers to train networks in C++.
 * [Gluon Python Interface](../gluon/index.html) - train complex models imperatively and then deploy with a symbolic graph.
+* [Julia API](../api/julia/index.html) *(Community Supported)* - train models with multiple GPUs using Julia.
+* [Module Python API](../api/python/index.html) - backed by the Symbol API, you can define your network in a declarative fashion.
 * [ONNX-MXnet API](../api/python/contrib/onnx.html) - train and use Open Neural Network eXchange (ONNX) model files.
+* [Perl API](../api/perl/index.html) *(Community Supported)* - train models with multiple GPUs using Perl.
+* [R API](https://mxnet.incubator.apache.org/api/r/index.html) *(Community Supported)* - train models with multiple GPUs using R.
 * [Scala Infer API](../api/scala/infer.html) - model loading and inference functionality.
 
 
 ## Toolkits to Extend MXNet
 
+* [NVIDIA DALI](https://github.com/NVIDIA/DALI/tree/master/examples/mxnet) - a collection of highly optimized building blocks and an execution engine to accelerate input data pre-processing for deep learning applications.
 * [Gluon CV](https://gluon-cv.mxnet.io/) - state-of-the-art deep learning algorithms in computer vision.
 * [Gluon NLP](https://gluon-nlp.mxnet.io/) - state-of-the-art deep learning models in natural language processing.
+* [Sockeye](https://github.com/awslabs/sockeye) - a sequence-to-sequence framework for Neural Machine Translation
+
+
+## Debugging and Visualization
+
+* [MXBoard](https://github.com/awslabs/mxboard) - lets you to visually inspect and interpret your MXNet runs and graphs using the TensorBoard software.
 
 
 ## Model Serving
