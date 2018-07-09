@@ -122,7 +122,7 @@ def test(ctx, data_iter, best, mode='validation', num_iter=-1):
     preds = []
     labels = [mx.nd.array(data_iter.labels, ctx=ctx[0]).reshape((-1,1))]
     for _ in tqdm(range(batches), desc='Testing in {} mode'.format(mode)):
-        l_tree, l_sent, r_tree, r_sent, label = data_iter.next()
+        l_tree, l_sent, r_tree, r_sent, label = next(data_iter)
         z = net(mx.nd, l_sent, r_sent, l_tree, r_tree)
         preds.append(z)
 
@@ -166,7 +166,7 @@ def train(epoch, ctx, train_data, dev_data):
         labels = [mx.nd.array(train_data.labels, ctx=ctx[0]).reshape((-1,1))]
         for j in tqdm(range(num_batches), desc='Training epoch {}'.format(i)):
             # get next batch
-            l_tree, l_sent, r_tree, r_sent, label = train_data.next()
+            l_tree, l_sent, r_tree, r_sent, label = next(train_data)
             # use autograd to record the forward calculation
             with ag.record():
                 # forward calculation. the output is log probability

@@ -17,6 +17,7 @@
 
 """MovieLens data handling: download, parse, and expose as DataIter
 """
+from __future__ import print_function
 
 import os
 import mxnet as mx

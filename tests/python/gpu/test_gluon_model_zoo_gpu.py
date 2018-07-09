@@ -57,7 +57,7 @@ def test_inference():
             label_name         = 'softmax_label',
             rand_crop          = False,
             rand_mirror        = False)
-        data_batch = dataIter.next()
+        data_batch = next(dataIter)
         data = data_batch.data[0]
         label = data_batch.label[0]
         gpu_data = data.as_in_context(mx.gpu())
@@ -120,7 +120,7 @@ def test_training():
         label_name         = 'softmax_label',
         rand_crop          = False,
         rand_mirror        = False)
-    data_batch = dataIter.next()
+    data_batch = next(dataIter)
     data = data_batch.data[0]
     label = data_batch.label[0]
     gpu_data = data.as_in_context(mx.gpu())

@@ -359,7 +359,7 @@ def test_ImageRecordIter_seed_augmentation():
         random_h=10,
         max_shear_ratio=2,
         seed_aug=seed_aug)
-    batch = dataiter.next()
+    batch = next(dataiter)
     data = batch.data[0].asnumpy().astype(np.uint8)
 
     dataiter = mx.io.ImageRecordIter(
@@ -378,7 +378,7 @@ def test_ImageRecordIter_seed_augmentation():
         random_h=10,
         max_shear_ratio=2,
         seed_aug=seed_aug)
-    batch = dataiter.next()
+    batch = next(dataiter)
     data2 = batch.data[0].asnumpy().astype(np.uint8)
     assert(np.array_equal(data,data2))
 
@@ -399,7 +399,7 @@ def test_ImageRecordIter_seed_augmentation():
         random_h=10,
         max_shear_ratio=2,
         seed_aug=seed_aug+1)
-    batch = dataiter.next()
+    batch = next(dataiter)
     data2 = batch.data[0].asnumpy().astype(np.uint8)
     assert(not np.array_equal(data,data2))
 
@@ -411,7 +411,7 @@ def test_ImageRecordIter_seed_augmentation():
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
-    batch = dataiter.next()
+    batch = next(dataiter)
     data = batch.data[0].asnumpy().astype(np.uint8)
 
     dataiter = mx.io.ImageRecordIter(
@@ -421,7 +421,7 @@ def test_ImageRecordIter_seed_augmentation():
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
-    batch = dataiter.next()
+    batch = next(dataiter)
     data2 = batch.data[0].asnumpy().astype(np.uint8)
     assert(np.array_equal(data,data2))
 

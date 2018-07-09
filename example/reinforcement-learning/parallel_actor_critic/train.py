@@ -16,6 +16,7 @@
 # under the License.
 
 """Trains an `Agent` using trajectories from multiple environments."""
+from __future__ import print_function
 
 import argparse
 from itertools import chain

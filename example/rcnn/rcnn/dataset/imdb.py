@@ -25,6 +25,7 @@ basic format [image_index]
 ['image', 'height', 'width', 'flipped',
 'boxes', 'gt_classes', 'gt_overlaps', 'max_classes', 'max_overlaps', 'bbox_targets']
 """
+from __future__ import print_function
 
 from ..logger import logger
 import os

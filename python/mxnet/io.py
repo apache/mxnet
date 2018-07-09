@@ -229,7 +229,7 @@ class DataIter(object):
             raise StopIteration
 
     def __next__(self):
-        return self.next()
+        return next(self)
 
     def iter_next(self):
         """Move to the next batch.
@@ -326,10 +326,10 @@ class ResizeIter(DataIter):
         if self.cur == self.size:
             return False
         try:
-            self.current_batch = self.data_iter.next()
+            self.current_batch = next(self.data_iter)
         except StopIteration:
             self.data_iter.reset()
-            self.current_batch = self.data_iter.next()
+            self.current_batch = next(self.data_iter)
 
         self.cur += 1
         return True
@@ -398,7 +398,7 @@ class PrefetchingIter(DataIter):
                 if not self.started:
                     break
                 try:
-                    self.next_batch[i] = self.iters[i].next()
+                    self.next_batch[i] = next(self.iters[i])
                 except StopIteration:
                     self.next_batch[i] = None
                 self.data_taken[i].clear()
@@ -797,7 +797,7 @@ class MXDataIter(DataIter):
 
         # load the first batch to get shape information
         self.first_batch = None
-        self.first_batch = self.next()
+        self.first_batch = next(self)
         data = self.first_batch.data[0]
         label = self.first_batch.label[0]
 

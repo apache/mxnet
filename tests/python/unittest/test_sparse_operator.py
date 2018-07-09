@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -251,10 +252,10 @@ def test_elemwise_binary_ops():
         assert outputs[0].stype == expected_result_storage_type
 
         if verbose is True:
-            print ("mx forward output: ", outputs[0].asnumpy())
-            print ("lhs_nd: ", lhs_nd.stype)
-            print ("rhs_nd: ", rhs_nd.stype)
-            print ("forward output: ", outputs[0].stype)
+            print(("mx forward output: ", outputs[0].asnumpy()))
+            print(("lhs_nd: ", lhs_nd.stype))
+            print(("rhs_nd: ", rhs_nd.stype))
+            print(("forward output: ", outputs[0].stype))
 
         if outputs[0].stype != 'default':
             out_grad = create_sparse_array_zd(
@@ -277,14 +278,14 @@ def test_elemwise_binary_ops():
         out_grad_np = out_grad.asnumpy()
 
         if verbose is True:
-            print("out_grad_np", out_grad_np)
+            print(("out_grad_np", out_grad_np))
 
         ingrad_lhs_np, ingrad_rhs_np = backward_numpy_call(out_grad_np, lhs_np, rhs_np)
 
         if verbose is True:
-            print("out_grad", out_grad.asnumpy())
-            print("ingrad_lhs_np", ingrad_lhs_np)
-            print("ingrad_rhs_np", ingrad_rhs_np)
+            print(("out_grad", out_grad.asnumpy()))
+            print(("ingrad_lhs_np", ingrad_lhs_np))
+            print(("ingrad_rhs_np", ingrad_rhs_np))
 
         igrads_result = check_symbolic_backward(test, location, [out_grad],
                                                 [ingrad_lhs_np, ingrad_rhs_np],
@@ -292,8 +293,8 @@ def test_elemwise_binary_ops():
                                                 equal_nan=True)
 
         if verbose is True:
-            print("ingrad_lhs", igrads_result['lhs'].asnumpy())
-            print("ingrad_rhs", igrads_result['rhs'].asnumpy())
+            print(("ingrad_lhs", igrads_result['lhs'].asnumpy()))
+            print(("ingrad_rhs", igrads_result['rhs'].asnumpy()))
 
         assert len(igrads_result) == 2
 
@@ -623,7 +624,7 @@ def check_sparse_mathematical_core(name, stype,
     shape = rand_shape_2d()
 
     if verbose is True:
-        print("Shape: ", shape, "density: ", density, "force_overlap", force_overlap)
+        print(("Shape: ", shape, "density: ", density, "force_overlap", force_overlap))
 
     if stype == 'default':
         data_tmp = np.zeros(shape)
@@ -643,10 +644,10 @@ def check_sparse_mathematical_core(name, stype,
         )
         data_tmp = arr_data.asnumpy()
         if verbose is True:
-            print("arr_data indices", arr_data.indices.asnumpy())
+            print(("arr_data indices", arr_data.indices.asnumpy()))
 
     if verbose is True:
-        print("input", data_tmp)
+        print(("input", data_tmp))
 
     if backward_numpy_call is None:
         arr_grad = None
@@ -692,8 +693,8 @@ def check_sparse_mathematical_core(name, stype,
         npout = forward_numpy_call(data_tmp)
 
     if verbose is True:
-        print("out", out)
-        print("npout", npout)
+        print(("out", out))
+        print(("npout", npout))
 
     assert_almost_equal(out, npout, equal_nan=True)
 
@@ -715,7 +716,7 @@ def check_sparse_mathematical_core(name, stype,
         npout_grad = out_grad.asnumpy()
 
         if verbose is True:
-            print("npout_grad", npout_grad)
+            print(("npout_grad", npout_grad))
 
         if rhs_arg is not None:
             temp = backward_numpy_call(data_tmp, rhs_arg)
@@ -735,8 +736,8 @@ def check_sparse_mathematical_core(name, stype,
 
         if verbose is True:
             print(name)
-            print("arr_grad", arr_grad)
-            print("input_grad", input_grad)
+            print(("arr_grad", arr_grad))
+            print(("input_grad", input_grad))
 
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)
 
@@ -1143,7 +1144,7 @@ def test_sparse_mathematical_core():
                 print("Could not import scipy. Skipping unit tests for special functions")
 
     for i in range(1):
-        print("pass", i)
+        print(("pass", i))
         for density in [0.0, random.uniform(0, 1), 1.0]:
             for ograd_density in [0.0, random.uniform(0, 1), 1.0]:
                 for force_overlap in [False, True]:

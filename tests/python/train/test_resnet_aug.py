@@ -136,7 +136,7 @@ class CustomDataIter(mx.io.DataIter):
         self.data.reset()
 
     def next(self):
-        return self.data.next()
+        return next(self.data)
 
     def iter_next(self):
         return self.data.iter_next()

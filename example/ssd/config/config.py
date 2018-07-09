@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,7 +17,7 @@
 # under the License.
 
 import os
-from config.utils import DotDict, namedtuple_with_defaults, zip_namedtuple, config_as_dict
+from .config.utils import DotDict, namedtuple_with_defaults, zip_namedtuple, config_as_dict
 
 RandCropper = namedtuple_with_defaults('RandCropper',
     'min_crop_scales, max_crop_scales, \

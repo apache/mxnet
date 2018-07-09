@@ -121,7 +121,7 @@ class SyntheticDataIter(DataIter):
         else:
             raise StopIteration
     def __next__(self):
-        return self.next()
+        return next(self)
     def reset(self):
         self.cur_iter = 0
 

@@ -19,9 +19,10 @@
 test pretrained models
 """
 from __future__ import print_function
+from __future__ import absolute_import
 import mxnet as mx
-from common import find_mxnet, modelzoo
-from score import score
+from .common import find_mxnet, modelzoo
+from .score import score
 
 VAL_DATA='data/val-5k-256.rec'
 def download_data():

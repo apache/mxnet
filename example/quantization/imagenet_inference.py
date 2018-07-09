@@ -59,7 +59,7 @@ def advance_data_iter(data_iter, n):
     has_next_batch = True
     while has_next_batch:
         try:
-            data_iter.next()
+            next(data_iter)
             n -= 1
             if n == 0:
                 return data_iter

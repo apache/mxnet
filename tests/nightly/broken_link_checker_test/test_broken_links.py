@@ -18,6 +18,7 @@
 # under the License.
 
 
+from __future__ import print_function
 import sys
 from subprocess import check_output, STDOUT, CalledProcessError
 

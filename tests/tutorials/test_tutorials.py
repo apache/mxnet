@@ -32,6 +32,7 @@
     NB: in the real CI, the tests will re-download everything since they start from
     a clean workspace.
 """
+from __future__ import print_function
 import os
 import warnings
 import imp

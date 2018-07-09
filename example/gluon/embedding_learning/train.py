@@ -16,6 +16,7 @@
 # under the License.
 
 from __future__ import division
+from __future__ import print_function
 
 import argparse
 import logging
@@ -204,7 +205,7 @@ def train(epochs, ctx):
 
         # Inner training loop.
         for i in range(200):
-            batch = train_data.next()
+            batch = next(train_data)
             data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
             label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
 

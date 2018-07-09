@@ -18,14 +18,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import absolute_import
 import argparse
-import tools.find_mxnet
 import mxnet as mx
 import os
 import sys
-from detect.detector import Detector
-from symbol.symbol_factory import get_symbol
-from dataset.cv2Iterator import CameraIterator
+from mxnet.tools import find_mxnet
+from .detect.detector import Detector
+from .symbol.symbol_factory import get_symbol
+from .dataset.cv2Iterator import CameraIterator
 import logging
 import cv2
 
@@ -238,4 +239,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-

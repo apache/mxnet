@@ -64,7 +64,7 @@ class Multi_mnist_iterator(mx.io.DataIter):
         self.data_iter.reset()
 
     def next(self):
-        batch = self.data_iter.next()
+        batch = next(self.data_iter)
         label = batch.label[0]
 
         return mx.io.DataBatch(data=batch.data, label=[label, label], \

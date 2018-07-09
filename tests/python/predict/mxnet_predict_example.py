@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -38,7 +39,7 @@ synset = [l.strip() for l in open('resnet/synset.txt').readlines()]
 def PreprocessImage(path, show_img=False):
     # load image
     img = io.imread(path)
-    print("Original Image Shape: ", img.shape)
+    print(("Original Image Shape: ", img.shape))
     # we crop image from center
     short_egde = min(img.shape[:2])
     yy = int((img.shape[0] - short_egde) / 2)
@@ -64,8 +65,8 @@ prob = predictor.get_output(0)[0]
 pred = np.argsort(prob)[::-1]
 # Get top1 label
 top1 = synset[pred[0]]
-print("Top1: ", top1)
+print(("Top1: ", top1))
 # Get top5 label
 top5 = [synset[pred[i]] for i in range(5)]
-print("Top5: ", top5)
+print(("Top5: ", top5))
 

@@ -21,6 +21,7 @@ This example shows how to create a iterator reading from recordio,
 introducing image augmentations and using a backend thread to hide IO cost.
 All you need to do is to set some parameters.
 """
+from __future__ import print_function
 import mxnet as mx
 
 dataiter = mx.io.ImageRecordIter(
@@ -71,6 +72,6 @@ for dbatch in dataiter:
     label = dbatch.label[0]
     pad = dbatch.pad
     index = dbatch.index
-    print("Batch", batchidx)
+    print(("Batch", batchidx))
     print(label.asnumpy().flatten())
     batchidx += 1

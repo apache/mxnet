@@ -21,6 +21,8 @@
 """Multi arch dockerized build tool.
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 __author__ = 'Marco de Abreu, Kellen Sunderland, Anton Chernov, Pedro Larroy'
 __version__ = '0.1'
@@ -197,7 +199,7 @@ def list_platforms() -> str:
 def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         try:
-            import docker_cache
+            from . import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
         except Exception:

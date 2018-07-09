@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -224,7 +225,7 @@ def test_dot_real(data_dict):
     assert default_batch_size_index < len(batch_size_list)
     assert default_output_index < len(m)
     if ARGS.verbose:
-        print("Running Benchmarking on %r data") % data_dict['data_mini']
+        print(("Running Benchmarking on %r data") % data_dict['data_mini'])
     print('{:>15} {:>10} {:>10} {:>10} {:>20} {:>15} {:>15} {:>10} {:>10}'.format('density(%)',
                                                                                  'n',
                                                                                  'm',
@@ -324,8 +325,8 @@ def test_dot_synthetic(data_dict):
     def print_benchmark_info(lhs, rhs, lhs_trans, fw):
         trans_str = "^T" if lhs_trans else ""
         print("========================================================")
-        print("  %s sparse dot benchmark: dot(%s, %s) = %s  ") % (fw, lhs, rhs, rhs)
-        print("  (matrix multiplication: (m x k)%s * (k x n) = m x n)  ") % (trans_str)
+        print(("  %s sparse dot benchmark: dot(%s, %s) = %s  ") % (fw, lhs, rhs, rhs))
+        print(("  (matrix multiplication: (m x k)%s * (k x n) = m x n)  ") % (trans_str))
         print("========================================================")
         headline_pattern = '{:>15} {:>15} {:>10} {:>8} {:>8} {:>8} {:>13} {:>13} {:>8}'
         headline = headline_pattern.format('lhs_density(%)',
@@ -463,4 +464,4 @@ if __name__ == "__main__":
     test_dot_synthetic(SYNTHETIC1)
     test_dot_synthetic(SYNTHETIC2)
     total_time = time.time() - begin_time
-    print("total time is %f") % total_time
+    print(("total time is %f") % total_time)

@@ -19,6 +19,7 @@
 
 """Cross-entropy loss layer for MXNet.
 """
+from __future__ import print_function
 import os
 import time
 

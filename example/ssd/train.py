@@ -18,10 +18,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import absolute_import
 import argparse
 import mxnet as mx
 import os
-from train.train_net import train_net
+from .train.train_net import train_net
 
 
 def parse_args():

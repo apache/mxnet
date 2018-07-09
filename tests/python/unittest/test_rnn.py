@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -305,7 +306,7 @@ def test_encode_sentences():
     dict = {'a':1, 'b':2, 'c':3}
     result, vocab = mx.rnn.io.encode_sentences(sentences, vocab=dict, invalid_label=-1, invalid_key='\n',
                          start_label=0, unknown_token='UNK')
-    print(result, vocab)
+    print((result, vocab))
     assert vocab == {'a': 1, 'b': 2, 'c': 3, 'UNK': 0}
     assert result == [[1,2,3],[2,3,0]]
     

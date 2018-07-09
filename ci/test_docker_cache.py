@@ -21,6 +21,7 @@
 """
 Distributed Docker cache tests
 """
+from __future__ import absolute_import
 
 import unittest.mock
 import tempfile
@@ -31,8 +32,8 @@ import sys
 from unittest.mock import MagicMock
 
 sys.path.append(os.path.dirname(__file__))
-import docker_cache
-import build as build_util
+from . import docker_cache
+from . import build as build_util
 
 DOCKERFILE_DIR = 'docker'
 DOCKER_REGISTRY_NAME = 'test_registry'

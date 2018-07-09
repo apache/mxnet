@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -96,9 +97,9 @@ def test_dot_real(data_dict):
         os.system("head -n 2000 %r > %r" % (path, mini_path))
         assert os.path.exists(mini_path)
 
-    print "Running Benchmarking on %r data" % data_dict['data_mini']
+    print("Running Benchmarking on %r data" % data_dict['data_mini'])
     for batch_size in data_dict['batch_size']:  # iterator through different batch size of choice
-        print "batch_size is %d" % batch_size
+        print("batch_size is %d" % batch_size)
         # model
         data_shape = (k, )
         train_iter = get_iter(mini_path, data_shape, batch_size)

@@ -18,6 +18,7 @@
 # pylint: disable=invalid-name, exec-used
 """Setup mxnet package."""
 from __future__ import absolute_import
+from __future__ import print_function
 import os
 import sys
 # need to use distutils.core for correct placement of cython dll
