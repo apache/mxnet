@@ -1086,7 +1086,7 @@ $ sudo apt-get install libcurl4-openssl-dev libssl-dev libxml2-dev libcairo2-dev
 $ sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 ```
 
-If you have multiple versions of ``libblas`` installed on your system you are likely to encounter errors of the form ''/usr/lib/libblas.so.3: undefined symbol: gotoblas`` in the previous step. You can get around it by selecting a different version of the library with the following commands and then rerun the previous step.
+If you have multiple versions of ``libblas`` installed on your system you are likely to encounter errors of the form ``/usr/lib/libblas.so.3: undefined symbol: gotoblas`` in the previous step. You can get around it by selecting a different version of the library with the following commands and then rerun the previous step.
 ```bash
 sudo update-alternatives --config libblas.so.3 
 sudo update-alternatives --config liblapack.so.3
