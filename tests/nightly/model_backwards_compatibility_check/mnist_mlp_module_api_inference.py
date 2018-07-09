@@ -18,77 +18,14 @@
 # under the License.
 
 
-import boto3
-import mxnet as mx
-import numpy as np
-import json
-import logging
-import os
-logging.getLogger().setLevel(logging.DEBUG)
-mx.random.seed(7)
-np.random.seed(7)
+from common import *
 
-bucket_name = 'mxnet-model-backwards-compatibility'
-backslash = '/'
 model_name = 'mnist_mlp_module_api'
-s3 = boto3.resource('s3')
-num_epoch = 2
 ctx = mx.cpu()
-
-def prepare_mnist_data(mnist_raw_data):
-    
-    #shuffle the indices
-    indices = np.random.permutation(mnist_raw_data['train_label'].shape[0])
-
-    #print indices[0:10]
-    train_idx , val_idx = indices[:50000], indices[50000:]
-
-    train_data = mnist_raw_data['train_data'][train_idx,:]
-    train_label = mnist_raw_data['train_label'][train_idx]
-    
-    val_data = mnist_raw_data['train_data'][val_idx,:]
-    val_label = mnist_raw_data['train_label'][val_idx]
-    
-    test_data = mnist_raw_data['test_data']
-    test_label = mnist_raw_data['test_label']
-
-    #print len(train_data)
-    #print len(val_data)
-    
-    train = {'train_X' : train_data, 'train_Y' : train_label}
-    test = {'test_X' : test_data, 'test_Y' : test_label}
-    val = {'val_X' : val_data, 'val_Y' : val_label}
-    
-    data = dict()
-    data['train'] = train
-    data['test'] = test
-    data['val'] = val
-    
-    return data
-
-def get_val_test_iter():
-    data = prepare_mnist_data(mx.test_utils.get_mnist())
-    val = data['val']
-    test = data['test']
-    batch_size = 100
-    val_iter = mx.io.NDArrayIter(val['val_X'], val['val_Y'], batch_size, shuffle=True)
-    test_iter = mx.io.NDArrayIter(test['test_X'], test['test_Y'])
-    return val_iter, test_iter
 
 val_iter, test_iter = get_val_test_iter()
 
-def get_top_level_folders_in_bucket(s3client, bucket_name):
-    '''This function returns the top level folders in the S3Bucket. These folders help us to navigate to the trained model files stored for different MXNet versions. '''
-    bucket = s3client.Bucket(bucket_name)
-    result = bucket.meta.client.list_objects(Bucket=bucket.name,
-                                         Delimiter=backslash)
-    folder_list = list()
-    for obj in result['CommonPrefixes']:
-        folder_list.append(obj['Prefix'].strip(backslash))
-
-    return folder_list
-
-def get_model():
+def get_model_definition():
     ##### Old Model ##### : 
     input = mx.symbol.Variable('data')
     input = mx.symbol.Flatten(data=input)
@@ -119,21 +56,6 @@ def perform_inference(test_iter, val_iter, model, inference_file):
     assert(results['test_acc'] == test_inference_score[0][1])
     print ('Inference results passed for %s' % model_name) 
 
-def clean_mnist_data():
-    if os.path.isfile('train-images-idx3-ubyte.gz'):
-        os.remove('train-images-idx3-ubyte.gz')
-    if os.path.isfile('t10k-labels-idx1-ubyte.gz'):
-        os.remove('t10k-labels-idx1-ubyte.gz')
-    if os.path.isfile('train-labels-idx1-ubyte.gz'):
-        os.remove('train-labels-idx1-ubyte.gz')
-    if os.path.isfile('t10k-images-idx3-ubyte.gz'):
-        os.remove('t10k-images-idx3-ubyte.gz')
-
-def clean_model_files(model_files):
-    for file in model_files:
-        if os.path.isfile(file):
-            os.remove(file)
-
 if __name__=='__main__':
     for folder in get_top_level_folders_in_bucket(s3, bucket_name):
         bucket = s3.Bucket(bucket_name)
@@ -148,7 +70,7 @@ if __name__=='__main__':
             ## Download this file---
             bucket.download_file(obj.key, file_name)
 
-        model = get_model()
+        model = get_model_definition()
         perform_inference(test_iter, val_iter, model, model_name + '_inference.json')
         clean_model_files(model_files)
         clean_mnist_data()
