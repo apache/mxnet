@@ -697,6 +697,16 @@ struct product {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
   /*! \brief finalize reduction */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
@@ -768,6 +778,20 @@ struct nansum {
     residual = (t - dst) - y;
     dst = t;
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - src_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
   /*! \brief finalize reduction */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
@@ -811,6 +835,16 @@ struct nanprod {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
   /*! \brief finalize reduction */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
@@ -824,6 +858,7 @@ struct nanprod {
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
     initv = 1;
   }
+
   /*!
   *\brief set the initial value during reduction
   */
@@ -853,15 +888,30 @@ struct nrm2 {
       }
     }
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    dst_val += src_val;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq, volatile DType dst_scale, volatile DType& src_ssq, volatile DType& src_scale) { // NOLINT(*)
+    if (dst_scale != 0 && dst_scale >= src_scale) {
+      dst_ssq = dst_ssq + src_ssq * (src_scale / dst_scale) * (src_scale / dst_scale);
+    } else if (src_scale !=0 && dst_scale < src_scale) {
+      dst_ssq = src_ssq + dst_ssq * (dst_scale / src_scale) * (dst_scale / src_scale);
+      dst_scale = src_scale;
+    }
+  }
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares) { // NOLINT(*)
-    sum_of_squares = std::sqrt(sum_of_squares);
+    sum_of_squares = math::sqrt(sum_of_squares);
   }
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares, volatile DType& scale) { // NOLINT(*)
-    sum_of_squares = scale * std::sqrt(sum_of_squares);
+    sum_of_squares = scale * math::sqrt(sum_of_squares);
   }
   /*!
    *\brief calculate gradient of redres with respect to redsrc,
