@@ -56,8 +56,13 @@ def _find_lib_path():
         lib_path = [amalgamation_lib_path]
         return lib_path
     else:
-        # from python/setup.py
-        libinfo_py = os.path.join(curr_path, '../../python/mxnet/libinfo.py')
+        libinfo_search_pathes = sys.path + [os.path.join(curr_path, '../../python/')]
+        libinfo_search_pathes = [os.path.join(p, 'mxnet/libinfo.py') for p in libinfo_search_pathes]
+        libinfo_pathes = [p for p in libinfo_search_pathes if os.path.exists(p) and os.path.isfile(p)]
+        if len(libinfo_pathes) == 0:
+            raise RuntimeError('Cannot find libinfo.py.\n' +
+                               'List of candidates:\n' + str('\n'.join(libinfo_search_pathes)))
+        libinfo_py = libinfo_pathes[0]
         libinfo = {'__file__': libinfo_py}
         exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinfo)
         lib_path = libinfo['find_lib_path']()

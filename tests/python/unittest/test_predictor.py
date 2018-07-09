@@ -16,17 +16,17 @@
 # under the License.
 
 from __future__ import print_function
+import sys, os
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, "../../../amalgamation/python/"))
+from mxnet_predict import Predictor, load_ndarray_file
+
 import numpy as np
 import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal
 from common import setup_module, with_seed, teardown
-
-import sys, os
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.append(os.path.join(curr_path, "../../../amalgamation/python/"))
-from mxnet_predict import Predictor, load_ndarray_file
 
 @with_seed()
 def test_predictor():
