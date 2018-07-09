@@ -17,24 +17,17 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.slf4j.LoggerFactory
-import org.kohsuke.args4j.{CmdLineParser, Option}
-import scala.collection.JavaConverters._
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Context
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.Executor
-import org.apache.mxnet.optimizer.SGD
 import java.io.File
-import javax.imageio.ImageIO
-import scala.util.Random
-import org.apache.mxnet.optimizer.Adam
 
-/**
- * @author Depeng Liang
- */
+import org.apache.mxnet.{Context, Executor, NDArray, Shape, Symbol}
+import org.apache.mxnet.optimizer.SGD
+import org.kohsuke.args4j.{CmdLineParser, Option}
+import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
+import scala.util.Random
+
+
 object BoostTrain {
 
   private val logger = LoggerFactory.getLogger(classOf[BoostTrain])
@@ -46,12 +39,13 @@ object BoostTrain {
     val nChannel = img.shape(1)
     val sImg = Symbol.Variable("img")
     val sKernel = Symbol.Variable("kernel")
-    val channels = Symbol.SliceChannel()(sImg)(Map("num_outputs" -> nChannel))
-    val out = Symbol.Concat()((0 until nChannel).map { i =>
-      Symbol.Convolution()()(Map("data" -> channels.get(i), "weight" -> sKernel,
-                    "num_filter" -> 1, "kernel" -> "(3,3)", "pad" -> "(1,1)",
-                    "no_bias" -> true, "stride" -> "(1,1)"))
-    }.toArray: _*)() * tvWeight
+    val channels = Symbol.api.SliceChannel(data = Some(sImg), num_outputs = nChannel)
+    val toConcat = (0 until nChannel).map( i =>
+      Symbol.api.Convolution(data = Some(channels.get(i)), weight = Some(sKernel),
+        num_filter = 1, kernel = Shape(3, 3), pad = Some(Shape(1, 1)),
+        no_bias = Some(true), stride = Some(Shape(1, 1)))
+    ).toArray
+    val out = Symbol.api.Concat(data = toConcat, num_args = toConcat.length) * tvWeight
     val kernel = {
       val tmp = NDArray.empty(Shape(1, 1, 3, 3), ctx)
       tmp.set(Array[Float](0, -1, 0, -1, 4, -1, 0, -1, 0))
@@ -197,9 +191,9 @@ object BoostTrain {
 class BoostTrain {
   @Option(name = "--data-path", usage = "the input train data path")
   private val dataPath: String = null
-  @Option(name = "--vgg--model-path", usage = "the pretrained model to use: ['vgg']")
+  @Option(name = "--vgg-model-path", usage = "the pretrained model to use: ['vgg']")
   private val vggModelPath: String = null
-  @Option(name = "--save--model-path", usage = "the save model path")
+  @Option(name = "--save-model-path", usage = "the save model path")
   private val saveModelPath: String = null
   @Option(name = "--style-image", usage = "the style image")
   private val styleImage: String = null

@@ -17,21 +17,20 @@
 
 package org.apache.mxnetexamples.neuralstyle
 
-import org.apache.mxnet._
-import org.kohsuke.args4j.{CmdLineParser, Option}
-import org.slf4j.LoggerFactory
-import scala.collection.JavaConverters._
-import com.sksamuel.scrimage.Image
 import java.io.File
-import com.sksamuel.scrimage.Pixel
+
+import com.sksamuel.scrimage.{Image, Pixel}
 import com.sksamuel.scrimage.filter.GaussianBlurFilter
 import com.sksamuel.scrimage.nio.JpegWriter
+import org.apache.mxnet._
 import org.apache.mxnet.optimizer.Adam
+import org.kohsuke.args4j.{CmdLineParser, Option}
+import org.slf4j.LoggerFactory
+
+import scala.collection.JavaConverters._
 
 /**
  * An Implementation of the paper A Neural Algorithm of Artistic Style
- * by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge
- * @author Depeng Liang
  */
 object NeuralStyle {
   case class NSExecutor(executor: Executor, data: NDArray, dataGrad: NDArray)
