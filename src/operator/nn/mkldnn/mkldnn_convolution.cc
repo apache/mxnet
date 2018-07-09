@@ -309,7 +309,7 @@ class MKLDNNConvBackward {
   }
 
   void SetDataNewMem(const mkldnn::memory &out_grad, const mkldnn::memory &weight,
-                 const mkldnn::memory &in_grad) {
+                     const mkldnn::memory &in_grad) {
     if (this->out_grad == nullptr)
       this->out_grad = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
         bwdData_pd.diff_dst_primitive_desc(), out_grad.get_data_handle()));
@@ -333,8 +333,8 @@ class MKLDNNConvBackward {
   }
 
 void SetWeightNewMem(const mkldnn::memory &data,
-                       const mkldnn::memory &out_grad,
-                       const mkldnn::memory &in_grad_weight) {
+                     const mkldnn::memory &out_grad,
+                     const mkldnn::memory &in_grad_weight) {
     if (this->data == nullptr)
       this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
           bwdWeights_pd.src_primitive_desc(), data.get_data_handle()));
