@@ -38,6 +38,10 @@ This document describes all the ONNX-MXNet APIs.
    /tutorials/onnx/fine_tuning_gluon.md
 ```
 
+## ONNX Examples
+
+* [Face Recognition with ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace)
+
 ## API Reference
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
