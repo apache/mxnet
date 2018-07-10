@@ -77,6 +77,13 @@ def test_rsp_push_pull():
                     expected_val += 0 if row in excluded_row_ids else 2
                     assert_almost_equal(retained[row], expected_val)
 
+            kv.pull('e', out=vals_to_pull, ignore_sparse=False)
+            for val in vals:
+                retained = val.asnumpy()
+                expected_val = np.zeros_like(retained)
+                expected_val[:] = 2
+                assert_almost_equal(retained, expected_val)
+
         check_rsp_pull(kv, 1, [mx.gpu(0)])
         check_rsp_pull(kv, 1, [mx.cpu(0)])
         check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)])
@@ -86,8 +93,7 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], use_slice=True)
         check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], use_slice=True)
 
-    # test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9384
-    # check_rsp_push_pull('local')
+    check_rsp_push_pull('local')
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 

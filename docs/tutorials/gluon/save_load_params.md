@@ -6,7 +6,7 @@ In this tutorial, we will learn ways to save and load Gluon models. There are tw
 
 **1. Save/load model parameters only**
 
-Parameters of any Gluon model can be saved using the `save_params` and `load_params` method. This does not save model architecture. This method is used to save parameters of dynamic (non-hybrid) models. Model architecture cannot be saved for dynamic models because model architecture changes during execution.
+Parameters of any Gluon model can be saved using the `save_parameters` and `load_parameters` method. This does not save model architecture. This method is used to save parameters of dynamic (non-hybrid) models. Model architecture cannot be saved for dynamic models because model architecture changes during execution.
 
 **2. Save/load model parameters AND architecture**
 
@@ -126,24 +126,24 @@ Epoch: 0; Batch 900; Loss 0.008402 <!--notebook-skip-line-->
 
 ## Saving model parameters to file
 
-Okay, we now have a model (`net`) that we can save to a file. Let's save the parameters of this model to a file using the `save_params` function.
+Okay, we now have a model (`net`) that we can save to a file. Let's save the parameters of this model to a file using the `save_parameters` function.
 
 ```python
 file_name = "net.params"
-net.save_params(file_name)
+net.save_parameters(file_name)
 ```
 
 We have successfully saved the parameters of the model into a file.
 
-Note: `Block.collect_params().save()` is not a recommended way to save parameters of a Gluon network if you plan to load the parameters back into a Gluon network using `Block.load_params()`.
+Note: `Block.collect_params().save()` is not a recommended way to save parameters of a Gluon network if you plan to load the parameters back into a Gluon network using `Block.load_parameters()`.
 
 ## Loading model parameters from file
 
-Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_params` function.
+Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_parameters` function.
 
 ```python
 new_net = build_lenet(gluon.nn.Sequential())
-new_net.load_params(file_name, ctx=ctx)
+new_net.load_parameters(file_name, ctx=ctx)
 ```
 
 Note that to do this, we need the definition of the network as Python code. If we want to recreate this network on a different machine using the saved weights, we need the same Python code (`build_lenet`) that created the network to create the `new_net` object shown above. This means Python code needs to be copied over to any machine where we want to run this network.

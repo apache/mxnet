@@ -156,7 +156,10 @@ def test_gluon_hybrid():
     
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
-    
+
+def test_gluon_learning_rate_finder():
+    assert _test_tutorial_nb('gluon/learning_rate_finder')
+
 def test_gluon_learning_rate_schedules():
     assert _test_tutorial_nb('gluon/learning_rate_schedules')
 

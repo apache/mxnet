@@ -25,6 +25,7 @@ import mxnet as mx
 from mxnet.test_utils import assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
+from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -212,6 +213,32 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
+
+@with_seed()
+def test_batchnorm():
+    def check_batchnorm_training(stype):
+        for shape in [(2, 3), (2, 3, 2, 2)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+            s = shape[1],
+            gamma = np.ones(s)
+            beta = np.ones(s)
+            gamma[1] = 3
+            beta[0] = 3
+
+            rolling_mean = np.random.uniform(size=s)
+            rolling_std = np.random.uniform(size=s)
+
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(gamma).tostype(stype),
+                           mx.nd.array(beta).tostype(stype)]
+            mean_std = [mx.nd.array(rolling_mean).tostype(stype), mx.nd.array(rolling_std).tostype(stype)]
+
+            test = mx.symbol.BatchNorm(data, fix_gamma=True)
+            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_batchnorm_training(stype)
 
 if __name__ == '__main__':
     test_mkldnn_install()

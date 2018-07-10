@@ -17,20 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+set -evx
 
-set -ex
-pushd .
-# This environment variable comes from the docker file
-echo "Downloading android SDK rev ${ANDROID_NDK_REVISION}"
-curl -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-unzip ./android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-cd android-ndk-r${ANDROID_NDK_REVISION} && \
-./build/tools/make_standalone_toolchain.py \
-    --stl=libc++ \
-    --arch arm64 \
-    --api 21 \
-    --install-dir=${CROSS_ROOT} && \
+mkdir -p model
+cd model
+wget http://data.mxnet.io/models/imagenet/resnet/50-layers/resnet-50-symbol.json
+wget http://data.mxnet.io/models/imagenet/resnet/50-layers/resnet-50-0000.params
+cd ..
 
-popd
