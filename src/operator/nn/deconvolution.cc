@@ -27,6 +27,8 @@
 #include "./deconvolution-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"
+#include "../operator_common.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -273,8 +275,15 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   else
 #endif
     wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+
+  bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
+      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
+   }
+  if (!dispatched){
+      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+   }
+  return dispatched;
 }
 
 inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
@@ -294,8 +303,15 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   else
 #endif
     wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  
+  bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
+      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
+   }
+  if (!dispatched){
+      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+   }
+  return dispatched;
 }
 
 #if MXNET_USE_MKLDNN == 1
