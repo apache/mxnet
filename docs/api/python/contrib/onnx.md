@@ -40,7 +40,8 @@ This document describes all the ONNX-MXNet APIs.
 
 ## ONNX Examples
 
-* [Face Recognition with ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace)
+* Face Recognition with [ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace)
+* Image Classification with [MobileNet](https://github.com/onnx/models/tree/master/models/image_classification/mobilenet), [ResNet](https://github.com/onnx/models/tree/master/models/image_classification/resnet), [SqueezeNet](https://github.com/onnx/models/tree/master/models/image_classification/squeezenet), [VGG](https://github.com/onnx/models/tree/master/models/image_classification/vgg) 
 
 ## API Reference
 
