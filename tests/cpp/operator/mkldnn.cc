@@ -518,7 +518,7 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
 OpAttrs GetPoolingBackwardsOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Pooling");
-  attrs.num_inputs = 2 ? 5 : 3;
+  attrs.num_inputs = dim == 2 ? 5 : 3;
   attrs.num_outputs = 1;
   TShape kernel_shape(dim);
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
@@ -1183,6 +1183,7 @@ void TestPoolingOp(const OpAttrs &attrs,
       if (backwards) {
         int in_data_idx = attrs.num_inputs == 5 ? 2 : 1;
         inputs[in_data_idx] = outputs[0];
+        Imperative::Get()->set_is_training(true);
       }
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
