@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-apt update
+apt update || true
 apt install -y \
     libxslt1-dev \
     docbook-xsl \

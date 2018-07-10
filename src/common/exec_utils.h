@@ -98,10 +98,21 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
     is_default = nd.IsDefaultData();
 #endif
     if (!is_default) {
-      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
-                                                             true, nd.dtype());
 #if MXNET_USE_MKLDNN == 1
+      NDArray temp;
+      if (bufs != nullptr) {
+        temp = bufs->at(i);
+      } else if (kAddTo == req->at(i) && nd.IsMKLDNNData()) {
+        temp = nd.Reorder2Default();
+      } else if (kAddTo == req->at(i)) {
+        temp = nd;
+      } else {
+        temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
+      }
       CHECK(temp.IsDefaultData());
+#else
+      NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
+          true, nd.dtype());
 #endif
       temp_src->emplace_back(nd);
       temp_dst->emplace_back(temp);
