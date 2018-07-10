@@ -166,26 +166,15 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
+
 ## Install the MXNet Package for Scala
 
-If you haven't installed maven yet, you need to install it now (required by the makefile):
-```bash
-    brew install maven
-```
+To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Before you build MXNet for Scala from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
+Further information is in the [MXNet-Scala Setup Instructions](./scala_setup.md).
 
-```bash
-    make scalapkg
-```
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
 
-This command creates the JAR files for the assembly, core, and example modules. It also creates the native library in the ```native/{your-architecture}/target directory```, which you can use to cooperate with the core module.
-
-To install the MXNet Scala package into your local Maven repository, run the following command from the MXNet source root directory:
-
-```bash
-    make scalainstall
-```
 
 ## Install the MXNet Package for Perl
 Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).

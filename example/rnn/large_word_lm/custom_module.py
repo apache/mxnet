@@ -60,7 +60,7 @@ class CustomModule(Module):
                                           priority=-param_idx)
 
     @staticmethod
-    def load(prefix, epoch, load_optimizer_states=False, **kwargs):
+    def load(prefix, epoch, load_optimizer_states=False, symbol=None, **kwargs):
         """Creates a model from previously saved checkpoint.
 
         Parameters
@@ -90,6 +90,7 @@ class CustomModule(Module):
             Default ``None``, indicating no network parameters are fixed.
         """
         sym, args, auxs = load_checkpoint(prefix, epoch)
+        sym = sym if symbol is None else symbol
         mod = CustomModule(symbol=sym, **kwargs)
         mod._arg_params = args
         mod._aux_params = auxs

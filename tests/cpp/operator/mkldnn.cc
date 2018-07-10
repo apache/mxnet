@@ -27,6 +27,7 @@
 
 #include <cmath>
 #include <climits>
+#include <set>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -364,6 +365,7 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
+  std::set<OpReqType> requests;
   int num_inputs;
   int num_outputs;
 };
@@ -376,6 +378,9 @@ OpAttrs GetCopyOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -387,6 +392,9 @@ OpAttrs GetCopyBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -400,6 +408,9 @@ OpAttrs GetReluOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -413,6 +424,9 @@ OpAttrs GetReluBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -424,6 +438,9 @@ OpAttrs GetSumOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -435,6 +452,9 @@ OpAttrs GetSumBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -858,6 +878,21 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  CHECK(original_outputs.size() == new_outputs.size());
+  std::vector<NDArray*> tmp_outputs;
+  NDArray tmp;
+  for (size_t i = 0; i < new_outputs.size(); i++) {
+    tmp = new_outputs[i]->Reorder2Default() - original_outputs[i]->Reorder2Default();
+    tmp_outputs.push_back(&tmp);
+  }
+  Engine::Get()->WaitForAll();
+  verify_fn(in_arrs, tmp_outputs);
+}
+
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
   // in_arrs is larger array, out_arr is ammler
@@ -881,552 +916,6 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                   out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
-}
-
-/*
- * Return new TShape that is shifted on by amount on dim
- */
-TShape GetShiftedCoordinate(const TShape coordindate, int dim, int amount) {
-  CHECK(dim < coordindate.ndim());
-  TShape tmp = coordindate;
-  tmp[dim] = tmp[dim] + amount;
-  return tmp;
-}
-
-/*
- * Get value inside arr indexing along axis
- */
-float GetValueAtCoordinate(const NDArray &arr, const TShape coordinate) {
-  TShape input_shape = arr.shape();
-  std::vector<int> block_sizes(input_shape.ndim()); // number of indexes must move to move along the axis
-  for (int dim = 0; dim < input_shape.ndim(); dim++)
-    block_sizes[dim] = GetBlockSize(input_shape, dim + 1);
-
-  int index = 0;
-  for (int i = 0; i < coordinate.ndim(); i++)
-    index += block_sizes[i] * coordinate[i];
-  return static_cast<float*>(arr.Reorder2Default().data().dptr_)[index];
-}
-
-/*
- * Checks if coordinate is in arr
- */
-bool IsInArray(const NDArray &arr, const TShape coord) {
-  TShape shape = arr.shape();
-  for (int i = 0; i < coord.ndim(); i++) {
-    if (coord[i] < 0 || coord[i] >= shape[i]) return false;
-  }
-  return true;
-}
-
-/*
- * Perform a 1D pool on arr at coordinate
- */
-float MaxPoolAtCoordinate1D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = arr.shape();
-  float max = -std::numeric_limits<float>::max();
-  int shift = kernel_shape[0] / 2;
-  for (int i = -shift; i < kernel_shape[0] - shift; i++) {
-    float value = -std::numeric_limits<float>::max();
-    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
-    if (IsInArray(arr, shifted_shape))
-      value = GetValueAtCoordinate(arr, shifted_shape);
-    max = std::fmax(value, max);
-  }
-  return max;
-}
-
-/*
- * Perform a 2D pool on arr at coordinate
- */
-float MaxPoolAtCoordinate2D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = arr.shape();
-  float max = -std::numeric_limits<float>::max();
-  int shift1 = kernel_shape[0] / 2;
-  int shift2 = kernel_shape[1] / 2;
-  for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
-    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
-    for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
-      float value = -std::numeric_limits<float>::max();
-      TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
-      if (IsInArray(arr, shifted_shape1))
-        value = GetValueAtCoordinate(arr, shifted_shape1);
-      max = std::fmax(value, max);
-    }
-  }
-  return max;
-}
-
-/*
- * Perform a 3D pool on arr at coordinate
- */
-float MaxPoolAtCoordinate3D(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = arr.shape();
-  float max = -std::numeric_limits<float>::max();
-  int shift1 = kernel_shape[0] / 2;
-  int shift2 = kernel_shape[1] / 2;
-  int shift3 = kernel_shape[2] / 2;
-  for (int i = -shift1; i < kernel_shape[0] - shift1; i++) {
-    TShape shifted_shape = GetShiftedCoordinate(coordinate, 2, i);
-    for (int j = -shift2; j < kernel_shape[1] - shift2; j++) {
-      TShape shifted_shape1 = GetShiftedCoordinate(shifted_shape, 3, j);
-      for (int k = -shift3; k < kernel_shape[2] - shift3; k++) {
-        float value = -std::numeric_limits<float>::max();
-        TShape shifted_shape2 = GetShiftedCoordinate(shifted_shape1, 4, k);
-        if (IsInArray(arr, shifted_shape2))
-          value = GetValueAtCoordinate(arr, shifted_shape2);
-        max = std::fmax(value, max);
-      }
-    }
-  }
-  return max;
-}
-
-/*
- * Pools at specified coordinate
- */
-float MaxPoolAtCoordinate(const NDArray &arr, const TShape coordinate, const TShape kernel_shape) {
-  TShape input_shape = arr.shape();
-  CHECK(input_shape[0] > coordinate[0]) << "Batch dimension should be within arr bounds";
-  CHECK(input_shape[1] > coordinate[1]) << "Pooling dimension should be within arr bounds";
-
-  if (kernel_shape.ndim() == 1)
-    return MaxPoolAtCoordinate1D(arr, coordinate, kernel_shape);
-  if (kernel_shape.ndim() == 2)
-    return MaxPoolAtCoordinate2D(arr, coordinate, kernel_shape);
-  if (kernel_shape.ndim() == 3)
-    return MaxPoolAtCoordinate3D(arr, coordinate, kernel_shape);
-  return -1;
-}
-
-TEST(MKLDNN_NDArray, GetValueAtCoordinate) {
-  TShape test_shape = {1,1,8};
-  TShape kernel_shape = {3};
-  NDArray arr(test_shape, Context());
-  InitDefaultArray(&arr);
-  TShape coord1 = {0,0,0}; // edge
-  TShape coord2 = {0,0,7}; // edge
-  TShape coord3 = {0,0,4}; //middle
-  for (int i = 0; i < 8; i++) {
-    TShape tmp = {0,0,i};
-    EXPECT_EQ(i - 4, GetValueAtCoordinate(arr, tmp));
-  }
-}
-
-TEST(MKLDNN_NDArray, MaxPoolAtCoordinate) {
-  // one channel
-  {
-    TShape test_shape = {1,1,8};
-    TShape odd_kernel_shape = {3};
-    TShape even_kernel_shape = {4};
-    NDArray arr(test_shape, Context());
-    InitDefaultArray(&arr);
-    TShape coord1 = {0,0,0}; // edge
-    TShape coord2 = {0,0,7}; // edge
-    TShape coord3 = {0,0,4}; // middle
-    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord2, odd_kernel_shape));
-    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord1, even_kernel_shape));
-    EXPECT_EQ(3, MaxPoolAtCoordinate(arr, coord2, even_kernel_shape));
-    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord3, even_kernel_shape));
-  }
-
-  // two channels
-  {
-    TShape test_shape = {1,2,8};
-    TShape odd_kernel_shape = {3};
-    NDArray arr(test_shape, Context());
-    InitDefaultArray(&arr);
-    TShape coord1 = {0,0,0}; // edge
-    TShape coord2 = {0,0,7}; // edge
-    TShape coord3 = {0,0,4}; // middle
-    TShape coord4 = {0,1,0}; // edge
-    TShape coord5 = {0,1,7}; // edge
-    TShape coord6 = {0,1,4}; // middle
-    EXPECT_EQ(-7, MaxPoolAtCoordinate(arr, coord1, odd_kernel_shape));
-    EXPECT_EQ(-1, MaxPoolAtCoordinate(arr, coord2, odd_kernel_shape));
-    EXPECT_EQ(-3, MaxPoolAtCoordinate(arr, coord3, odd_kernel_shape));
-    EXPECT_EQ(1, MaxPoolAtCoordinate(arr, coord4, odd_kernel_shape));
-    EXPECT_EQ(7, MaxPoolAtCoordinate(arr, coord5, odd_kernel_shape));
-    EXPECT_EQ(5, MaxPoolAtCoordinate(arr, coord6, odd_kernel_shape));
-  }
-
-  // 2d shape
-  {
-    TShape test_shape = {1,1,3,3};
-    TShape kernel_shape = {2,2};
-    NDArray arr(test_shape, Context());
-    InitDefaultArray(&arr);
-    TShape coord1 = {0,0,0,0}; // edge
-    TShape coord2 = {0,0,0,2}; // edge
-    TShape coord3 = {0,0,2,0}; // edge
-    TShape coord4 = {0,0,2,2}; // edge
-    TShape coord5 = {0,0,1,1}; // center
-
-    EXPECT_EQ(-4, MaxPoolAtCoordinate(arr, coord1, kernel_shape));
-    EXPECT_EQ(-2, MaxPoolAtCoordinate(arr, coord2, kernel_shape));
-    EXPECT_EQ(2, MaxPoolAtCoordinate(arr, coord3, kernel_shape));
-    EXPECT_EQ(4, MaxPoolAtCoordinate(arr, coord4, kernel_shape));
-    EXPECT_EQ(0, MaxPoolAtCoordinate(arr, coord5, kernel_shape));
-  }
-}
-
-TEST(MKLDNN_NDArray, GetShiftedCoordinate) {
-  TShape test_shape = {1,1,1,1,1};
-  TShape shifted_shape = GetShiftedCoordinate(test_shape, 2, 5);
-  EXPECT_EQ(1, shifted_shape[0]);
-  EXPECT_EQ(1, shifted_shape[1]);
-  EXPECT_EQ(6, shifted_shape[2]);
-  EXPECT_EQ(1, shifted_shape[3]);
-  EXPECT_EQ(1, shifted_shape[4]);
-}
-
-void VerifyPool1D(const NDArray &input,
-                  const NDArray &output,
-                  const TShape padding,
-                  const TShape kernel,
-                  const TShape stride,
-                  int batch_num,
-                  int channel_num) {
-  TShape input_shape = input.shape();
-  TShape output_shape = output.shape();
-  TShape ptr(input_shape.ndim());
-  ptr[0] = batch_num;
-  ptr[1] = channel_num;
-  ptr[2] = 0;
-  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int start_ptr = batch_num * GetBlockSize(input_shape, 1) + channel_num * GetBlockSize(input_shape, 2);
-  int out_ptr = 0;
-  for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
-    int center = i + kernel[0] / 2;
-    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
-    ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate, kernel), out_data[start_ptr+out_ptr]);
-    out_ptr++;
-  }
-  ASSERT_EQ(output_shape[2], out_ptr);
-}
-
-void VerifyPool2D(const NDArray &input,
-                  const NDArray &output,
-                  const TShape padding,
-                  const TShape kernel,
-                  const TShape stride,
-                  int batch_num,
-                  int channel_num) {
-  TShape input_shape = input.shape();
-  TShape output_shape = output.shape();
-  TShape ptr(input_shape.ndim());
-  ptr[0] = batch_num;
-  ptr[1] = channel_num;
-  ptr[2] = 0;
-  ptr[3] = 0;
-  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int start_ptr = batch_num * GetBlockSize(output_shape, 1) + channel_num * GetBlockSize(output_shape, 2);
-  int out_ptr = 0;
-  for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
-    int center = i + kernel[0] / 2;
-    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
-    for (int j = -padding[1]; j <= input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
-      int center = j + kernel[1] / 2;
-      TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
-      ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate1, kernel), out_data[start_ptr+out_ptr]);
-      out_ptr++;
-    }
-  }
-  ASSERT_EQ(output_shape[2] * output_shape[3], out_ptr);
-}
-
-void VerifyPool3D(const NDArray &input,
-                  const NDArray &output,
-                  const TShape padding,
-                  const TShape kernel,
-                  const TShape stride,
-                  int batch_num,
-                  int channel_num) {
-  TShape input_shape = input.shape();
-  TShape output_shape = output.shape();
-  TShape ptr(input_shape.ndim());
-  ptr[0] = batch_num;
-  ptr[1] = channel_num;
-  ptr[2] = 0;
-  ptr[3] = 0;
-  ptr[4] = 0;
-  mshadow::default_real_t* out_data = output.data().dptr<mshadow::default_real_t>();
-  int start_ptr = batch_num * GetBlockSize(output_shape, 1) + channel_num * GetBlockSize(output_shape, 2);
-  int out_ptr = 0;
-  for (int i = -padding[0]; i <= input_shape[2] + padding[0] - kernel[0]; i = i + stride[0]) {
-    int center = i + kernel[0] / 2;
-    TShape coordinate = GetShiftedCoordinate(ptr, 2, center);
-    for (int j = -padding[1]; j <= input_shape[3] + padding[1] - kernel[1]; j = j + stride[1]) {
-      int center = j + kernel[1] / 2;
-      TShape coordinate1 = GetShiftedCoordinate(coordinate, 3, center);
-      for (int k = -padding[2]; k <= input_shape[4] + padding[2] - kernel[2]; k = k + stride[2]) {
-        int center = k + kernel[2] / 2;
-        TShape coordinate2 = GetShiftedCoordinate(coordinate1, 4, center);
-        ASSERT_EQ(MaxPoolAtCoordinate(input, coordinate2, kernel), out_data[start_ptr+out_ptr]);
-        out_ptr++;
-      }
-    }
-  }
-  ASSERT_EQ(output_shape[2] * output_shape[3] * output_shape[4], out_ptr);
-}
-
-void VerifyPoolingResult(const std::vector<NDArray *> &in_arrs,
-                         const std::vector<NDArray *> &out_arrs,
-                         const OpAttrs &attrs) {
-  mxnet::op::PoolingParam param;
-  param.Init(attrs.attrs.dict);
-  TShape kernel = param.kernel;
-  TShape padding = param.pad;
-  TShape stride = param.stride;
-  NDArray input = in_arrs[0]->Reorder2Default();
-  NDArray output = out_arrs[0]->Reorder2Default();
-  TShape input_shape = input.shape();
-  CHECK(input_shape.ndim() == kernel.ndim() + 2);
-  int num_batches = input_shape[0];
-  int num_channels = input_shape[1];
-  for (int batch_num = 0; batch_num < num_batches; batch_num++) {
-    for (int channel_num = 0; channel_num < num_channels; channel_num++) {
-      if (input_shape.ndim() == 3)
-        VerifyPool1D(input, output, padding, kernel, stride, batch_num, channel_num);
-      if (input_shape.ndim() == 4)
-        VerifyPool2D(input, output, padding, kernel, stride, batch_num, channel_num);
-      if (input_shape.ndim() == 5)
-        VerifyPool3D(input, output, padding, kernel, stride, batch_num, channel_num);
-    }
-  }
-}
-
-TEST(MKLDNN_NDArray, VerifyPoolingResult) {
-  TShape test_shape = {1,1,3};
-
-  std::vector<NDArray *> in_arrs(1);
-  std::vector<NDArray *> out_arrs(1);
-  NDArray arr(test_shape, Context());
-  InitDefaultArray(&arr);
-  mshadow::default_real_t *input_data = arr.data().dptr<mshadow::default_real_t>();
-  EXPECT_EQ(-1, input_data[0]);
-  EXPECT_EQ(0, input_data[1]);
-  EXPECT_EQ(1, input_data[2]);
-
-  // test base
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel", "1"});
-    attrs.attrs.dict.insert({"stride", "1"});
-    attrs.attrs.dict.insert({"pad", "0"});
-    attrs.attrs.dict.insert({"pool_type", "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    NDArray expected_output(test_shape, Context());
-    mshadow::default_real_t *expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -1;
-    expected_data[1] = 0;
-    expected_data[2] = 1;
-    in_arrs[0] = &arr;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  // test kernel
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "2"});
-    attrs.attrs.dict.insert({"stride" , "1"});
-    attrs.attrs.dict.insert({"pad" , "0" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = 0;
-    expected_data[1] = 1;
-    in_arrs[0] = &arr;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  //test padding
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "2"});
-    attrs.attrs.dict.insert({"stride" , "1"});
-    attrs.attrs.dict.insert({"pad" , "1" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,4};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -1;
-    expected_data[1] = 0;
-    expected_data[2] = 1;
-    expected_data[3] = 1;
-    in_arrs[0] = &arr;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  //test stride
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "1"});
-    attrs.attrs.dict.insert({"stride" , "2"});
-    attrs.attrs.dict.insert({"pad" , "0" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -1;
-    expected_data[1] = 1;
-    in_arrs[0] = &arr;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  TShape test_shape2d = {1,1,2,2};
-  NDArray arr2d(test_shape2d, Context());
-  InitDefaultArray(&arr2d);
-  mshadow::default_real_t *input_data2 = arr2d.data().dptr<mshadow::default_real_t>();
-  EXPECT_EQ(-2, input_data2[0]);
-  EXPECT_EQ(-1, input_data2[1]);
-  EXPECT_EQ(0, input_data2[2]);
-  EXPECT_EQ(1, input_data2[3]);
-
-  // test 2d shape base
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "(1,1)"});
-    attrs.attrs.dict.insert({"stride" , "(1,1)"});
-    attrs.attrs.dict.insert({"pad" , "(0,0)" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2,2};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -2;
-    expected_data[1] = -1;
-    expected_data[2] = 0;
-    expected_data[3] = 1;
-    in_arrs[0] = &arr2d;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  // test 2d shape kernel
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "(2,2)"});
-    attrs.attrs.dict.insert({"stride" , "(1,1)"});
-    attrs.attrs.dict.insert({"pad" , "(0,0)" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,1,1};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = 1;
-    in_arrs[0] = &arr2d;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  // test 2d shape padding
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "(2,2)"});
-    attrs.attrs.dict.insert({"stride" , "(1,1)"});
-    attrs.attrs.dict.insert({"pad" , "(1,1)" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,3,3};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -2;
-    expected_data[1] = -1;
-    expected_data[2] = -1;
-    expected_data[3] = 0;
-    expected_data[4] = 1;
-    expected_data[5] = 1;
-    expected_data[6] = 0;
-    expected_data[7] = 1;
-    expected_data[8] = 1;
-    in_arrs[0] = &arr2d;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  // test 2d shape stride
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "(1,1)"});
-    attrs.attrs.dict.insert({"stride" , "(2,2)"});
-    attrs.attrs.dict.insert({"pad" , "(0,0)" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,1,1};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -2;
-    in_arrs[0] = &arr2d;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-  TShape test_shape3d = {1,1,2,2,2};
-  NDArray arr3d(test_shape3d, Context());
-  InitDefaultArray(&arr3d);
-  mshadow::default_real_t *input_data3 = arr3d.data().dptr<mshadow::default_real_t>();
-  EXPECT_EQ(-4, input_data3[0]);
-  EXPECT_EQ(-3, input_data3[1]);
-  EXPECT_EQ(-2, input_data3[2]);
-  EXPECT_EQ(-1, input_data3[3]);
-  EXPECT_EQ(0, input_data3[4]);
-  EXPECT_EQ(1, input_data3[5]);
-  EXPECT_EQ(2, input_data3[6]);
-  EXPECT_EQ(3, input_data3[7]);
-
-  // test 3d shape base
-  {
-    OpAttrs attrs;
-    attrs.attrs.op = Op::Get("Pooling");
-    attrs.attrs.dict.insert({"kernel" , "(1,1,1)"});
-    attrs.attrs.dict.insert({"stride" , "(1,1,1)"});
-    attrs.attrs.dict.insert({"pad" , "(0,0,0)" });
-    attrs.attrs.dict.insert({"pool_type" , "max"});
-    attrs.attrs.op->attr_parser(&attrs.attrs);
-    TShape expected_shape = {1,1,2,2,2};
-    NDArray expected_output(expected_shape, Context());
-    mshadow::default_real_t* expected_data = expected_output.data().dptr<mshadow::default_real_t>();
-    expected_data[0] = -4;
-    expected_data[1] = -3;
-    expected_data[2] = -2;
-    expected_data[3] = -1;
-    expected_data[4] = 0;
-    expected_data[5] = 1;
-    expected_data[6] = 2;
-    expected_data[7] = 3;
-    in_arrs[0] = &arr3d;
-    out_arrs[0] = &expected_output;
-    VerifyPoolingResult(in_arrs, out_arrs, attrs);
-  }
-
-}
-
-void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
-                      const std::vector<NDArray*> &original_outputs,
-                      const std::vector<NDArray*> &new_outputs,
-                      VerifyFunc verify_fn) {
-  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
-  tmp.WaitToRead();
-  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -1453,54 +942,88 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<NDArrayAttrs> in_arrs;
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  for (auto &in_arr : in_arrs) {
-    for (auto &dispatch : dispatches) {
-      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-      for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &in_arr.arr;
-      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        for (int i = 0; i < attrs.num_outputs; i++) {
-          req[i] = kWriteTo;
-          outputs[i] = &out_arrs[i][output_i].arr;
+  if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
+    std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          for (int i = 0; i < attrs.num_outputs; i++) {
+            req[i] = kWriteTo;
+            outputs[i] = &out_arrs[i][output_i].arr;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          verify_fn(inputs, outputs);
         }
-        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        Engine::Get()->WaitForAll();
-        verify_fn(inputs, outputs);
       }
     }
   }
 
-  for (auto &dispatch : dispatches) {
-    in_arrs = GetTestInputArrays();
-    for (auto &arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &arr.arr;
-      for (int i = 0; i < attrs.num_outputs; i++) {
-        req[i] = kWriteInplace;
-        outputs[i] = &arr.arr;
+  if (attrs.requests.find(OpReqType::kWriteInplace) != attrs.requests.end()) {
+    for (auto &dispatch : dispatches) {
+      in_arrs = GetTestInputArrays();
+      for (auto &arr : in_arrs) {
+        // If the array is a view, we shouldn't write data to it.
+        if (arr.arr.IsView())
+          continue;
+        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &arr.arr;
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteInplace;
+          outputs[i] = &arr.arr;
+        }
+        PrintVerifyMsg(orig, arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                    dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          orig_inputs[i] = &orig.arr;
+        verify_fn(orig_inputs, outputs);
       }
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        orig_inputs[i] = &orig.arr;
-      verify_fn(orig_inputs, outputs);
+    }
+  }
+
+  if (attrs.requests.find(OpReqType::kAddTo) != attrs.requests.end()) {
+    std::vector<NDArray*> original_outputs(attrs.num_outputs);
+    in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (size_t i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          NDArray tmp;
+          for (size_t i = 0; i < attrs.num_outputs; i++) {
+            auto out_arr = out_arrs[i][output_i];
+            tmp = out_arr.arr.Copy(out_arr.arr.ctx());
+            original_outputs[i] =  &tmp;
+            outputs[i] = &out_arrs[i][output_i].arr;
+            req[i] = kAddTo;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          VerifyAddRequest(inputs, original_outputs, outputs, verify_fn);
+        }
+      }
     }
   }
 }

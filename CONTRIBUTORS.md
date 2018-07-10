@@ -172,3 +172,5 @@ List of Contributors
 * [Thomas Delteil](https://github.com/ThomasDelteil)
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
+* [Kou Ding](https://github.com/chinakook)
+* [Istvan Fehervari](https://github.com/ifeherva)

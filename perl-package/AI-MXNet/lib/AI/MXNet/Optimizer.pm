@@ -1314,7 +1314,7 @@ method update(
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    my $is_sparse = ($weight->stype eq 'row_sparse' and $grad->stype eq 'row_sparse') ? 1 : 0;
+    my $is_sparse = $grad->stype eq 'row_sparse' ? 1 : 0;
     my $history = $state;
     if($is_sparse)
     {
@@ -1950,7 +1950,15 @@ method set_states($states)
 
 method get_states(Bool $dump_optimizer=0)
 {
-    return freeze($dump_optimizer ? [$self->states, $self->optimizer] : $self->states);
+    if($dump_optimizer)
+    {
+        my $param_dict = $self->optimizer->param_dict;
+        $self->optimizer->param_dict({});
+        my $freezed = freeze([$self->states, $self->optimizer]);
+        $self->optimizer->param_dict($param_dict);
+        return $freezed;
+    }
+    return freeze($self->states);
 }
 
 package AI::MXNet::Optimizer;

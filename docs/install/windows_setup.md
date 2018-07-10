@@ -39,7 +39,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
     git clone https://github.com/apache/incubator-mxnet.git --recursive
 ```
 2. Start a Visual Studio command prompt.
-3. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
+3. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the
 [CMake](https://cmake.org/) command:
 ```
     mkdir build
@@ -64,7 +64,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 - [Python](#install-the-mxnet-package-for-python)
 - [R](#install-mxnet-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
-- [Scala](#install-the-mxnet-package-for-scala)
+- **Scala** is not yet available for Windows
 
 ## Install MXNet for Python
 
@@ -241,57 +241,8 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
 
 ## Installing the MXNet Package for Scala
-There are four ways to install the MXNet package for Scala:
 
-* Use the prebuilt binary package
-
-* Build the library from source code
-
-### Use the Prebuilt Binary Package
-For Linux and OS X (Mac) users, MXNet provides prebuilt binary packages that support computers with either GPU or CPU processors. To download and build these packages using ```Maven```, change the ```artifactId``` in the following Maven dependency to match your architecture:
-
-```HTML
-<dependency>
-  <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-full_<system architecture></artifactId>
-  <version>0.1.1</version>
-</dependency>
-```
-
-For example, to download and build the 64-bit CPU-only version for Linux, use:
-
-```HTML
-<dependency>
-  <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-full_2.10-linux-x86_64-cpu</artifactId>
-  <version>0.1.1</version>
-</dependency>
-```
-
-If your native environment differs slightly from the assembly package, for example, if you use the openblas package instead of the atlas package, it's better to use the mxnet-core package and put the compiled Java native library in your load path:
-
-```HTML
-<dependency>
-  <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-core_2.10</artifactId>
-  <version>0.1.1</version>
-</dependency>
-```
-
-### Build the Library from Source Code
-Before you build MXNet for Scala from source code, you must complete [Step 1. Build the Shared Library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Scala package:
-
-```bash
-  make scalapkg
-```
-
-This command creates the JAR files for the assembly, core, and example modules. It also creates the native library in the ```native/{your-architecture}/target directory```, which you can use to cooperate with the core module.
-
-To install the MXNet Scala package into your local Maven repository, run the following command from the MXNet source root directory:
-
-```bash
-  make scalainstall
-```
+Scala-MXNet is not yet available for Windows.
 
 ## Next Steps
 

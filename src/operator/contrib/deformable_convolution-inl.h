@@ -231,7 +231,7 @@ class DeformableConvolutionOp : public Operator {
         in_grad[conv::kData].shape_, col_buffer.shape_,
         param_.kernel, param_.pad, param_.stride, param_.dilate, param_.num_deformable_group,
         in_grad[conv::kOffset].dptr<DType>() + n*input_offset_dim_,
-        req[conv::kData]);
+        req[conv::kOffset]);
 
       // gradient w.r.t. input data
       deformable_col2im(s, col_buffer.dptr<DType>(),

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,20 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+from distutils.core import setup, Extension
+from Cython.Build import cythonize
+import numpy
 
-set -ex
-pushd .
-# This environment variable comes from the docker file
-echo "Downloading android SDK rev ${ANDROID_NDK_REVISION}"
-curl -O https://dl.google.com/android/repository/android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-unzip ./android-ndk-r${ANDROID_NDK_REVISION}-linux-x86_64.zip && \
-cd android-ndk-r${ANDROID_NDK_REVISION} && \
-./build/tools/make_standalone_toolchain.py \
-    --stl=libc++ \
-    --arch arm64 \
-    --api 21 \
-    --install-dir=${CROSS_ROOT} && \
-
-popd
+extension_name = "log_uniform"
+sources = ["log_uniform.pyx", "LogUniformGenerator.cc"]
+setup(ext_modules = cythonize(Extension(extension_name,
+                                        sources=sources,
+                                        language="c++",
+                                        extra_compile_args=["-std=c++11"],
+                                        include_dirs=[numpy.get_include()])))

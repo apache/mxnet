@@ -149,7 +149,7 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 .. automodule:: mxnet.io

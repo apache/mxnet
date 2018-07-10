@@ -933,7 +933,7 @@ pip install graphviz
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
 </div> <!-- END of Python -->
--<!-- END - Linux Python GPU Installation Instructions -->
+<!-- END - Linux Python GPU Installation Instructions -->
 
 
 <div class="r">
@@ -1068,13 +1068,40 @@ $ R CMD INSTALL mxnet_current_r.tar.gz
 </div> <!-- END of R -->
 
 
-<div class="scala julia perl">
+<div class="scala">
+<div class="gpu">
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of gpu -->
+
+<div class="cpu">
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu -->
+</div> <!-- End of scala -->
+
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
+
 <div class="cpp">
 <div class="cpu gpu">
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
@@ -1500,14 +1527,34 @@ Will be available soon.
 </div> <!-- END of GPU -->
 </div> <!-- END of R -->
 
+<div class="scala">
+<div class="cpu">
 
-<div class="scala julia perl">
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu  -->
+<div class="gpu">
+
+Not available at this time. <br>
+
+</div>
+</div> <!-- End of scala -->
+
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
+
 <div class="cpp">
 <p>To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.</p>
 <br/>
@@ -1854,14 +1901,22 @@ Alternatively, You can also follow the installation instructions [in this guide]
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->
 
+<div class="scala">
+<div class="cpu gpu">
 
-<div class="scala julia perl">
+MXNet-Scala for Windows is not yet available.
+<br>
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of scala -->
+
+<div class="julia perl">
 <div class="cpu gpu">
 
 Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of scala julia perl -->
+</div> <!-- End of julia perl -->
+
 <div class="cpp">
 <div class="cpu gpu">
 <p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
@@ -2429,8 +2484,15 @@ b
 </div>
 
 
+
 <div class="linux">
-  <div class="scala julia perl cpp">
+  <div class="scala">
+    <div class="cpu gpu">
+      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+    </div>
+  </div>
+
+  <div class="julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
@@ -2440,7 +2502,12 @@ Will be available soon.
 </div>
 
 <div class="macos">
-  <div class="scala julia perl cpp">
+  <div class="scala">
+    <div class="cpu gpu">
+      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+    </div>
+  </div>
+  <div class="julia perl cpp">
     <div class="cpu gpu">
 
 Will be available soon.
