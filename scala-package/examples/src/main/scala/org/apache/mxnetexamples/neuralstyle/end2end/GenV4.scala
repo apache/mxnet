@@ -43,7 +43,7 @@ object GenV4 {
     var conv4_1 = Conv(conv3_1, 32, 4096)
     var conv5_1 = Conv(conv4_1, 48, 4096)
     var conv6_1 = Conv(conv5_1, 32, 4096)
-    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3,3),
+    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3, 3),
       pad = Some(Shape(1, 1)), no_bias = Some(true), workspace = Some(4096))
     out = Symbol.api.BatchNorm(data = Some(out), fix_gamma = Some(false))
     out = Symbol.api.Activation(data = Some(out), act_type = "tanh")
