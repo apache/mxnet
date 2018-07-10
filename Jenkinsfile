@@ -295,7 +295,7 @@ try {
     'GPU: MKLDNN_CUDNNOFF': {
        node('mxnetlinux-cpu') {
          ws('workspace/build-mkldnn-gpu-nocudnn') {
-           withEnv(['CUDNN_DISABLED=ON']) {
+           withEnv(['CUDNN_OFF_TEST_ONLY=ON']) {
              timeout(time: max_time, unit: 'MINUTES') {
                init_git()
                docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
@@ -683,7 +683,7 @@ try {
     'Python3: MKLDNN-GPU-NOCUDNN': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
-          withEnv(['CUDNN_DISABLED=ON']) {
+          withEnv(['CUDNN_OFF_TEST_ONLY=ON']) {
             try {
               init_git()
               unpack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
