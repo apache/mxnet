@@ -315,9 +315,14 @@ def while_loop(cond, func, loop_vars, max_iterations):
         outputs.append(step_output)
         steps += 1
         if len(outputs) != steps or len(step_output) != len(outputs[0]):
-            raise ValueError("step_output are inconsistent on each step")
-    try:
-        outputs = list(ndarray.op.stack(*item) for item in zip(*outputs))
-    except ValueError:
-        raise ValueError("step_outputs are inconsistent on each step")
-    return outputs, list(loop_vars)
+            raise ValueError("Number of elements in step_output should be the same in each step")
+    stacked_outputs = []
+    for i_th, items in enumerate(zip(*outputs), 1):
+        try:
+            stacked_outputs.append(ndarray.op.stack(*items))
+        except ValueError:
+            raise ValueError("\n".join(
+                ["Shapes of %d-th elements in step_outputs are inconsistent, which are:" % i_th] +
+                ["  Step %d, shape is %s" % (i, str(x.shape)) for i, x in enumerate(items)]
+            ))
+    return stacked_outputs, list(loop_vars)
