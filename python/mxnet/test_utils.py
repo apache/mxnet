@@ -71,14 +71,6 @@ def default_dtype():
     return np.float32
 
 
-def cudnn_enabled():
-    """Check if cudnn enabled for the MXNet installation
-    """
-    curr = ctypes.c_bool()
-    check_call(_LIB.MXCUDNNIsEnabled(ctypes.byref(curr)))
-    return curr.value
-
-
 def get_atol(atol=None):
     """Get default numerical threshold for regression test."""
     # _TODO: get from env variable, different threshold might

@@ -25,7 +25,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, cudnn_enabled
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from mxnet.base import MXNetError
 from mxnet import autograd
 from numpy.testing import assert_allclose
