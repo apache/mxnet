@@ -27,6 +27,7 @@
 
 #include <cmath>
 #include <climits>
+#include <set>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -363,6 +364,7 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
+  std::set<OpReqType> requests;
   int num_inputs;
   int num_outputs;
 };
@@ -375,6 +377,9 @@ OpAttrs GetCopyOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -386,6 +391,9 @@ OpAttrs GetCopyBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -399,6 +407,9 @@ OpAttrs GetReluOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -412,6 +423,9 @@ OpAttrs GetReluBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -423,6 +437,9 @@ OpAttrs GetSumOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -434,6 +451,9 @@ OpAttrs GetSumBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -821,6 +841,21 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  CHECK(original_outputs.size() == new_outputs.size());
+  std::vector<NDArray*> tmp_outputs;
+  NDArray tmp;
+  for (size_t i = 0; i < new_outputs.size(); i++) {
+    tmp = new_outputs[i]->Reorder2Default() - original_outputs[i]->Reorder2Default();
+    tmp_outputs.push_back(&tmp);
+  }
+  Engine::Get()->WaitForAll();
+  verify_fn(in_arrs, tmp_outputs);
+}
+
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
   // in_arrs is larger array, out_arr is ammler
@@ -844,15 +879,6 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                   out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
-}
-
-void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
-                      const std::vector<NDArray*> &original_outputs,
-                      const std::vector<NDArray*> &new_outputs,
-                      VerifyFunc verify_fn) {
-  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
-  tmp.WaitToRead();
-  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -879,54 +905,88 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<NDArrayAttrs> in_arrs;
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  for (auto &in_arr : in_arrs) {
-    for (auto &dispatch : dispatches) {
-      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-      for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &in_arr.arr;
-      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        for (int i = 0; i < attrs.num_outputs; i++) {
-          req[i] = kWriteTo;
-          outputs[i] = &out_arrs[i][output_i].arr;
+  if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
+    std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          for (int i = 0; i < attrs.num_outputs; i++) {
+            req[i] = kWriteTo;
+            outputs[i] = &out_arrs[i][output_i].arr;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          verify_fn(inputs, outputs);
         }
-        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        Engine::Get()->WaitForAll();
-        verify_fn(inputs, outputs);
       }
     }
   }
 
-  for (auto &dispatch : dispatches) {
-    in_arrs = GetTestInputArrays();
-    for (auto &arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &arr.arr;
-      for (int i = 0; i < attrs.num_outputs; i++) {
-        req[i] = kWriteInplace;
-        outputs[i] = &arr.arr;
+  if (attrs.requests.find(OpReqType::kWriteInplace) != attrs.requests.end()) {
+    for (auto &dispatch : dispatches) {
+      in_arrs = GetTestInputArrays();
+      for (auto &arr : in_arrs) {
+        // If the array is a view, we shouldn't write data to it.
+        if (arr.arr.IsView())
+          continue;
+        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &arr.arr;
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteInplace;
+          outputs[i] = &arr.arr;
+        }
+        PrintVerifyMsg(orig, arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                    dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          orig_inputs[i] = &orig.arr;
+        verify_fn(orig_inputs, outputs);
       }
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        orig_inputs[i] = &orig.arr;
-      verify_fn(orig_inputs, outputs);
+    }
+  }
+
+  if (attrs.requests.find(OpReqType::kAddTo) != attrs.requests.end()) {
+    std::vector<NDArray*> original_outputs(attrs.num_outputs);
+    in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (size_t i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          NDArray tmp;
+          for (size_t i = 0; i < attrs.num_outputs; i++) {
+            auto out_arr = out_arrs[i][output_i];
+            tmp = out_arr.arr.Copy(out_arr.arr.ctx());
+            original_outputs[i] =  &tmp;
+            outputs[i] = &out_arrs[i][output_i].arr;
+            req[i] = kAddTo;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          VerifyAddRequest(inputs, original_outputs, outputs, verify_fn);
+        }
+      }
     }
   }
 }

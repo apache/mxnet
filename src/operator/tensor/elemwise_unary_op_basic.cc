@@ -70,8 +70,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 // relu
-MXNET_OPERATOR_REGISTER_UNARY(relu)
-MXNET_ADD_SPARSE_OP_ALIAS(relu)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
 .describe(R"code(Computes rectified linear.
 
 .. math::
@@ -81,11 +80,9 @@ The storage type of ``relu`` output depends upon the input storage type:
 
    - relu(default) = default
    - relu(row_sparse) = row_sparse
+   - relu(csr) = csr
 
 )code" ADD_FILELINE)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::ComputeEx<cpu, mshadow_op::relu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu,
@@ -171,9 +168,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
-    std::vector<TBlob> in_blobs {inputs[0].data()};
-    std::vector<TBlob> out_blobs {outputs[0].data()};
-    UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
@@ -535,7 +530,6 @@ NNVM_REGISTER_OP(_backward_cast)
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(negative, cpu, mshadow_op::negation)
-MXNET_ADD_SPARSE_OP_ALIAS(negative)
 .describe(R"code(Numerical negative of the argument, element-wise.
 
 The storage type of ``negative`` output depends upon the input storage type:
@@ -566,8 +560,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
   ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >);
 
 // abs
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(abs, cpu, mshadow_op::abs)
-MXNET_ADD_SPARSE_OP_ALIAS(abs)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(abs, cpu, mshadow_op::abs)
 .describe(R"code(Returns element-wise absolute value of the input.
 
 Example::
@@ -578,6 +571,7 @@ The storage type of ``abs`` output depends upon the input storage type:
 
    - abs(default) = default
    - abs(row_sparse) = row_sparse
+   - abs(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
@@ -585,8 +579,7 @@ The storage type of ``abs`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_op::sign>);
 
 // sign
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sign, cpu, mshadow_op::sign)
-MXNET_ADD_SPARSE_OP_ALIAS(sign)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sign, cpu, mshadow_op::sign)
 .describe(R"code(Returns element-wise sign of the input.
 
 Example::
@@ -597,6 +590,7 @@ The storage type of ``sign`` output depends upon the input storage type:
 
    - sign(default) = default
    - sign(row_sparse) = row_sparse
+   - sign(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
@@ -604,8 +598,7 @@ The storage type of ``sign`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow_op::sign_grad>);
 
 // round
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(round, cpu, mshadow_op::round)
-MXNET_ADD_SPARSE_OP_ALIAS(round)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.
 
 Example::
@@ -616,13 +609,13 @@ The storage type of ``round`` output depends upon the input storage type:
 
   - round(default) = default
   - round(row_sparse) = row_sparse
+  - round(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // rint
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(rint, cpu, mshadow_op::rint)
-MXNET_ADD_SPARSE_OP_ALIAS(rint)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(rint, cpu, mshadow_op::rint)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.
 
 .. note::
@@ -637,13 +630,13 @@ The storage type of ``rint`` output depends upon the input storage type:
 
    - rint(default) = default
    - rint(row_sparse) = row_sparse
+   - rint(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(ceil, cpu, mshadow_op::ceil)
-MXNET_ADD_SPARSE_OP_ALIAS(ceil)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(ceil, cpu, mshadow_op::ceil)
 .describe(R"code(Returns element-wise ceiling of the input.
 
 The ceil of the scalar x is the smallest integer i, such that i >= x.
@@ -656,13 +649,13 @@ The storage type of ``ceil`` output depends upon the input storage type:
 
    - ceil(default) = default
    - ceil(row_sparse) = row_sparse
+   - ceil(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // floor
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(floor, cpu, mshadow_op::floor)
-MXNET_ADD_SPARSE_OP_ALIAS(floor)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(floor, cpu, mshadow_op::floor)
 .describe(R"code(Returns element-wise floor of the input.
 
 The floor of the scalar x is the largest integer i, such that i <= x.
@@ -675,13 +668,13 @@ The storage type of ``floor`` output depends upon the input storage type:
 
    - floor(default) = default
    - floor(row_sparse) = row_sparse
+   - floor(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // trunc
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(trunc, cpu, mshadow_op::trunc)
-MXNET_ADD_SPARSE_OP_ALIAS(trunc)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(trunc, cpu, mshadow_op::trunc)
 .describe(R"code(Return the element-wise truncated value of the input.
 
 The truncated value of the scalar x is the nearest integer i which is closer to
@@ -695,13 +688,13 @@ The storage type of ``trunc`` output depends upon the input storage type:
 
    - trunc(default) = default
    - trunc(row_sparse) = row_sparse
+   - trunc(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // fix
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(fix, cpu, mshadow_op::fix)
-MXNET_ADD_SPARSE_OP_ALIAS(fix)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(fix, cpu, mshadow_op::fix)
 .describe(R"code(Returns element-wise rounded value to the nearest \
 integer towards zero of the input.
 
@@ -713,13 +706,13 @@ The storage type of ``fix`` output depends upon the input storage type:
 
    - fix(default) = default
    - fix(row_sparse) = row_sparse
+   - fix(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square)
-MXNET_ADD_SPARSE_OP_ALIAS(square)
 .describe(R"code(Returns element-wise squared value of the input.
 
 .. math::
@@ -742,8 +735,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
                                                unary_bwd<mshadow_op::square_grad>);
 
 // sqrt
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(sqrt, cpu, mshadow_op::square_root)
-MXNET_ADD_SPARSE_OP_ALIAS(sqrt)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sqrt, cpu, mshadow_op::square_root)
 .describe(R"code(Returns element-wise square-root value of the input.
 
 .. math::
@@ -757,6 +749,7 @@ The storage type of ``sqrt`` output depends upon the input storage type:
 
    - sqrt(default) = default
    - sqrt(row_sparse) = row_sparse
+   - sqrt(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
@@ -785,7 +778,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
   _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>);
 
 // cbrt
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(cbrt, cpu, mshadow_op::cube_root)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(cbrt, cpu, mshadow_op::cube_root)
 .describe(R"code(Returns element-wise cube-root value of the input.
 
 .. math::
@@ -794,6 +787,12 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(cbrt, cpu, mshadow_op::cube_root)
 Example::
 
    cbrt([1, 8, -125]) = [1, 2, -5]
+
+The storage type of ``cbrt`` output depends upon the input storage type:
+
+   - cbrt(default) = default
+   - cbrt(row_sparse) = row_sparse
+   - cbrt(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
@@ -884,8 +883,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>);
 
 // log1p
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(log1p, cpu, mshadow_op::log1p)
-MXNET_ADD_SPARSE_OP_ALIAS(log1p)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(log1p, cpu, mshadow_op::log1p)
 .describe(R"code(Returns element-wise ``log(1 + x)`` value of the input.
 
 This function is more accurate than ``log(1 + x)``  for small ``x`` so that
@@ -895,6 +893,7 @@ The storage type of ``log1p`` output depends upon the input storage type:
 
    - log1p(default) = default
    - log1p(row_sparse) = row_sparse
+   - log1p(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
@@ -903,8 +902,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
                                                   unary_bwd<mshadow_op::log1p_grad>);
 
 // expm1
-MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(expm1, cpu, mshadow_op::expm1)
-MXNET_ADD_SPARSE_OP_ALIAS(expm1)
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(expm1, cpu, mshadow_op::expm1)
 .describe(R"code(Returns ``exp(x) - 1`` computed element-wise on the input.
 
 This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
@@ -913,6 +911,7 @@ The storage type of ``expm1`` output depends upon the input storage type:
 
    - expm1(default) = default
    - expm1(row_sparse) = row_sparse
+   - expm1(csr) = csr
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});

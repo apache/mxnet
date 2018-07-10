@@ -993,6 +993,31 @@ $ R CMD INSTALL mxnet_current_r.tar.gz
 </div> <!-- End of scala -->
 
 
+<div class="scala">
+<div class="gpu">
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of gpu -->
+
+<div class="cpu">
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu -->
+</div> <!-- End of scala -->
+
+
 <div class="julia perl">
 <div class="cpu gpu">
 
