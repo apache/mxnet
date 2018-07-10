@@ -120,7 +120,7 @@ if(OpenBLAS_NEED_LAPACK)
                  NAMES gfortran
                  PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
   else()
-    set(OpenBLAS_LAPACK_LIBRARY OpenBLAS_LIBRARY)
+    set(OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
   endif()
 
   set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LIBRARY})
