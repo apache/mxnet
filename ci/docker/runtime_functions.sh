@@ -733,7 +733,9 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step
 }
 
 test_ubuntu_cpu_python2() {
