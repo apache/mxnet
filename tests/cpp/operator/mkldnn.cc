@@ -1113,8 +1113,12 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
-int CalculateWidth(int width, int kernel, int padding, int stride) {
+int CalculateWidthPoolOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
+}
+
+int CalculateWidthPoolInput(int width, int kernel, int padding, int stride) {
+  return (width - 1) * stride + kernel - 2*padding;
 }
 
 void TestPoolingOp(const OpAttrs &attrs,
@@ -1138,13 +1142,6 @@ void TestPoolingOp(const OpAttrs &attrs,
   std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(attrs.num_outputs);
 
-  // concat backwards uses scaled up inputs
-  if (backwards) {
-    std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
-    int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
-  }
-
   for (auto &in_arr : in_arrs) {
     // can only pool only 3D and 4D inputs
     TShape input_shape = in_arr.arr.shape();
@@ -1157,25 +1154,36 @@ void TestPoolingOp(const OpAttrs &attrs,
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
-      if (i < 2)
+      if (i < 2) {
         scale_vector[i] = 1;
-      else
-        scale_vector[i] = CalculateWidth(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
+      } else if (!backwards) {
+        scale_vector[i] = CalculateWidthPoolOutput(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
             static_cast<float>(input_shape[i]);
+      } else if (backwards) {
+        scale_vector[i] = CalculateWidthPoolInput(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
+            static_cast<float>(input_shape[i]);
+      }
+
     }
     for (int i = 0; i < attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
 
-    for (int i = 0; i < attrs.num_inputs; i++)
+    for (int i = 0; i < attrs.num_inputs; i++) {
       inputs[i] = &in_arr.arr;
+    }
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < attrs.num_outputs; i++) {
         req[i] = kWriteTo;
         outputs[i] = &out_arrs[i][output_i].arr;
         ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+      }
+
+      if (backwards) {
+        int in_data_idx = attrs.num_inputs == 5 ? 2 : 1;
+        inputs[in_data_idx] = outputs[0];
       }
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
