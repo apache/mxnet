@@ -32,7 +32,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DiagParam);
 
 NNVM_REGISTER_OP(diag)
-.describe(R"code(This operators implements the diag function:
+.describe(R"code(This operator implements the diag function:
 TODO: example and description comes here
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DiagParam>)
@@ -45,19 +45,18 @@ TODO: example and description comes here
 .set_attr<nnvm::FInferShape>("FInferShape", DiagOpShape)
 .set_attr<nnvm::FInferType>("FInferType", DiagOpType)
 .set_attr<FCompute>("FCompute<cpu>", DiagOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    /** nodeptr: The node to take gradient
-     * out_grads: Gradient of current node's outputs
-     * \return gradients of the inputs
-    **/
-    if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-    auto ret = MakeGradNode("_backward_diag", n, {ograds[0], n->inputs[0]},
-                            n->attrs.dict);
-    return ret;
-  })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_diag"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DiagParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(_backward_diag)
+.set_attr_parser(ParamParser<DiagParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", DiagOpBackward<cpu>);
+
 
 } // namespace op
 } // namespace mxnet

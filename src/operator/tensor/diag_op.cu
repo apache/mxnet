@@ -29,8 +29,8 @@
  NNVM_REGISTER_OP(diag)
  .set_attr<FCompute>("FCompute<gpu>", DiagOpForward<gpu>);
  
- //NNVM_REGISTER_OP(_backward_diag)
- //.set_attr<FCompute>("FCompute<gpu>", DiagOpBackward<gpu>);
+ NNVM_REGISTER_OP(_backward_diag)
+ .set_attr<FCompute>("FCompute<gpu>", DiagOpBackward<gpu>);
  
  }  // namespace op
  }  // namespace mxnet

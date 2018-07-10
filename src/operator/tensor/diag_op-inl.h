@@ -30,6 +30,7 @@
 #include <dmlc/parameter.h>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "../elemwise_op_common.h"
 #include <vector>
 
 namespace mxnet {
@@ -107,7 +108,7 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(req[0], kWriteTo);
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
   const TShape& ishape = inputs[0].shape_;
@@ -121,7 +122,33 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   } else {
     // TODO 1 dim input
   }
+}
+
+template<typename xpu>
+void DiagOpBackward(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;                  
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const TShape& ishape = inputs[0].shape_;
+  //const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed); needed for k
   
+  if (ishape.ndim() == 2) {
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      Kernel<diag, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]));
+    });
+  } else {
+    // TODO 1 dim input
+  }
 }
 
 }  // namespace op
