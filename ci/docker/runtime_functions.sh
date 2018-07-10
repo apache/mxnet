@@ -854,6 +854,13 @@ nightly_test_javascript() {
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
+#Tests Model backwards compatibility on MXNet
+nightly_model_backwards_compat_test() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
+}
+
 # Deploy
 
 deploy_docs() {
