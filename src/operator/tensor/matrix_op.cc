@@ -102,7 +102,6 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
-DMLC_REGISTER_PARAMETER(SpaceToDepthParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -914,7 +913,7 @@ NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(This operators implements the depthToSpace function:
 .. math::
     f(x, block) = ~x
-where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N,C/block^2,H*block,W*block]
+where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N, C/(block^2), H*block, W*block]
 Example::
 #(1,4,2,3) input tensor
   x = [[[[0, 1, 2],
@@ -951,6 +950,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"space_to_depth"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
 
@@ -958,28 +958,28 @@ NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(This operators implements the spacetodepth function:
 .. math::
     f(x, block) = ~x
-where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N,C/block^2,H*block,W*block]
+where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N, C*(block^2), H/block, W/block]
 Example::
 #(1,4,2,3) input tensor
   x = [[[[0, 6, 1, 7, 2, 8],
-    [12, 18, 13, 19, 14, 20],
-    [3, 9, 4, 10, 5, 11],
-    [15, 21, 16, 22, 17, 23]]]]
+         [12, 18, 13, 19, 14, 20],
+         [3, 9, 4, 10, 5, 11],
+         [15, 21, 16, 22, 17, 23]]]]
   
   
   y = space_to_depth(x, 2)
 
 # (1, 1, 4, 6) output tensor
   y = [[[[0, 1, 2],
-    [3, 4, 5]],
-     [[6, 7, 8],
-    [9, 10, 11]],
-     [[12, 13, 14],
-    [15, 16, 17]],
-     [[18, 19, 20],
-    [21, 22, 23]]]]
+         [3, 4, 5]],
+        [[6, 7, 8],
+         [9, 10, 11]],
+        [[12, 13, 14],
+         [15, 16, 17]],
+        [[18, 19, 20],
+         [21, 22, 23]]]]
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<SpaceToDepthParam>)
+.set_attr_parser(ParamParser<DepthToSpaceParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -996,8 +996,9 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(SpaceToDepthParam::__FIELDS__());
+.add_arguments(DepthToSpaceParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

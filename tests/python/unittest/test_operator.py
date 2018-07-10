@@ -6678,6 +6678,7 @@ def test_diag():
     diag_sym = mx.sym.diag(data=data, k=-1)
     check_numeric_gradient(diag_sym, [a_np])
 
+@with_seed()
 def test_depthtospace():
     def f(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -6686,14 +6687,21 @@ def test_depthtospace():
         y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
         return y
 
-
-    shape = (1,4,2,3)
+    shape_inp = (1,4,2,3)
     block = 2
-    data = rand_ndarray(shape, 'default')
+    data = rand_ndarray(shape_inp, 'default')
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.depth_to_space(data, block)
     assert_almost_equal(output.asnumpy(), expected)
+
+    shape_out = (1,1,4,6)
+    data = mx.sym.Variable('data')
+    dts_sym = mx.sym.depth_to_space(data, block)
+    check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
+
+    check_symbolic_forward(dts_sym, [data_np], [expected])
+    check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
 
 @with_seed()
 def test_spacetodepth():
@@ -6704,14 +6712,21 @@ def test_spacetodepth():
         y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
         return y
 
-
-    shape = (1,1,2,6)
+    shape_inp = (1,1,4,6)
     block = 2
-    data = rand_ndarray(shape, 'default')
+    data = rand_ndarray(shape_inp, 'default')
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.space_to_depth(data, block)
     assert_almost_equal(output.asnumpy(), expected)
+
+    shape_out = (1,4,2,3)
+    data = mx.sym.Variable('data')
+    dts_sym = mx.sym.space_to_depth(data, block)
+    check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
+
+    check_symbolic_forward(dts_sym, [data_np], [expected])
+    check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
 
 if __name__ == '__main__':
     import nose
