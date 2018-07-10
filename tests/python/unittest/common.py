@@ -99,7 +99,7 @@ def assert_raises_cudnn_disabled(assertion_error=False):
     def test_helper(orig_test):
         @make_decorator(orig_test)
         def test_new(*args, **kwargs):
-            cudnn_disabled = (os.getenv('CUDNN_OFF_TEST_ONLY') == "ON")
+            cudnn_disabled = (os.getenv('CUDNN_OFF_TEST_ONLY') == "true")
             if not cudnn_disabled or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
