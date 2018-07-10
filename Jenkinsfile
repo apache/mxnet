@@ -685,6 +685,7 @@ try {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           withEnv(['CUDNN_DISABLED=ON']) {
             try {
+              init_git()
               unpack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
               python3_gpu_ut('ubuntu_gpu')
               publish_test_coverage()
