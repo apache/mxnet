@@ -12,7 +12,7 @@ Community contributions to MXNet have added many new valuable features and funct
 ## Contents
 
 * [Learning MXNet and other Educational Resources](#learning-mxnet-and-other-educational-resources)
-* [New MXNet APIs](#new-mxnet-apis)
+* [MXNet APIs](#mxnet-apis)
 * [Toolkits to Extend MXNet](#toolkits-to-extend-mxnet)
 * [Debugging and Visualization](#debugging-and-visualization)
 * [Model Serving](#model-serving)
@@ -34,11 +34,14 @@ Community contributions to MXNet have added many new valuable features and funct
 * [C++ API](../api/c++/index.html) - not be confused with the C++ backend, this API allows C++ programmers to train networks in C++.
 * [Gluon Python Interface](../gluon/index.html) - train complex models imperatively and then deploy with a symbolic graph.
 * [Julia API](../api/julia/index.html) *(Community Supported)* - train models with multiple GPUs using Julia.
+* [Keras-MXNet](https://github.com/awslabs/keras-apache-mxnet) - design with Keras2 and train with MXNet as the backend for 2x or more speed improvement.
+* [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator integration and MXNet as backend for GPU computing
 * [Module Python API](../api/python/index.html) - backed by the Symbol API, you can define your network in a declarative fashion.
 * [ONNX-MXnet API](../api/python/contrib/onnx.html) - train and use Open Neural Network eXchange (ONNX) model files.
 * [Perl API](../api/perl/index.html) *(Community Supported)* - train models with multiple GPUs using Perl.
 * [R API](https://mxnet.incubator.apache.org/api/r/index.html) *(Community Supported)* - train models with multiple GPUs using R.
 * [Scala Infer API](../api/scala/infer.html) - model loading and inference functionality.
+* [TensorFuse](https://github.com/dementrock/tensorfuse) - Common interface for Theano, CGT, TensorFlow, and MXNet (experimental) by [dementrock](https://github.com/dementrock)
 
 
 ## Toolkits to Extend MXNet
@@ -63,11 +66,6 @@ Community contributions to MXNet have added many new valuable features and funct
 
 * [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) - models trained in Gluon and available through Gluon's model zoo API.
 * [ONNX Model Zoo](https://github.com/onnx/model-zoo) - ONNX models from a variety of ONNX-supported frameworks.
-
-
-## MXNet as a Backend
-
-* [Keras-MXNet](https://github.com/awslabs/keras-apache-mxnet) - design with Keras2 and train with MXNet as the backend for 2x or more speed improvement.
 
 
 ## Contributions
