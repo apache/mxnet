@@ -80,7 +80,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   find_package(Atlas REQUIRED)
 
   include_directories(SYSTEM ${Atlas_INCLUDE_DIRS})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${Atlas_LIBRARIES} PARENT_SCOPE)
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${Atlas_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
@@ -98,7 +98,7 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
   find_package(OpenBLAS REQUIRED)
 
   include_directories(SYSTEM ${OpenBLAS_INCLUDE_DIRS})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${OpenBLAS_LIBRARIES} PARENT_SCOPE)
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${OpenBLAS_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
@@ -114,7 +114,7 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   find_package(MKL REQUIRED)
 
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
@@ -144,7 +144,7 @@ if(BLAS MATCHES "([Aa][Pp][Pp][Ll][Ee]|[Aa][Cc][Cc][Ee][Ll][Ee][Rr][Aa][Tt][Ee])
   find_package(Accelerate REQUIRED)
 
   include_directories(SYSTEM ${Accelerate_INCLUDE_DIR})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${Accelerate_LIBRARIES} PARENT_SCOPE)
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${Accelerate_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
