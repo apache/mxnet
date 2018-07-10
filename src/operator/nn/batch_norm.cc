@@ -444,6 +444,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   }
   FallBackCompute(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
+#endif
 
 static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         const int dev_mask,
@@ -452,8 +453,32 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 5);
   CHECK_EQ(out_attrs->size(), 3);
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+
+  if ((common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+       common::ContainsStorageType(*in_attrs, kCSRStorage)) &&
+      param.fix_gamma) {
+    LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
+  }
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  bool dispatched = false;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+                      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+#endif
+  return dispatched;
 }
 
 static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
@@ -461,10 +486,33 @@ static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                                  DispatchMode *dispatch_mode,
                                                  std::vector<int> *in_attrs,
                                                  std::vector<int> *out_attrs) {
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
-}
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+
+  if ((common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+       common::ContainsStorageType(*in_attrs, kCSRStorage)) &&
+      param.fix_gamma) {
+    LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
+  }
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  bool dispatched = false;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+                      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
 #endif
+  return dispatched;
+}
 
 std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
@@ -552,6 +600,11 @@ axis to be the last item in the input shape.
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
 then set ``gamma`` to 1 and its gradient to 0.
 
+Note::
+
+When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
+the sparse tensors will fallback.
+
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(3)
@@ -574,9 +627,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 })
 .set_attr<nnvm::FInferShape>("FInferShape", BatchNormShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
-#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
-#endif
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormComputeExCPU)
