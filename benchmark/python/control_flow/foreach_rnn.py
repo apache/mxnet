@@ -157,7 +157,8 @@ if __name__ == '__main__':
     ndim = 512
     seq_len = 100
     batch_sizes = [1, 32]
-    cells = [gluon.rnn.GRUCell(ndim, prefix='rnn_'),
+    cells = [gluon.rnn.RNNCell(ndim, prefix='rnn_'),
+             gluon.rnn.GRUCell(ndim, prefix='rnn_'),
              gluon.rnn.LSTMCell(ndim, prefix='rnn_')]
     ctxs = [mx.cpu(0), mx.gpu(0)]
     for cell in cells:
@@ -165,8 +166,13 @@ if __name__ == '__main__':
             for batch_size in batch_sizes:
                 if len(get_gpus()) == 0 and ctx == mx.gpu(0):
                     continue
-
-                if isinstance(cell, gluon.rnn.GRUCell):
+                if isinstance(cell, gluon.rnn.RNNCell):
+                    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, ndim),
+                                            ctx=mx.cpu(0))
+                    states = []
+                    states.append(mx.nd.normal(loc=0, scale=1, shape=(batch_size, ndim),
+                                               ctx=mx.cpu(0)))
+                elif isinstance(cell, gluon.rnn.GRUCell):
                     rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, ndim),
                                             ctx=mx.cpu(0))
                     states = []
