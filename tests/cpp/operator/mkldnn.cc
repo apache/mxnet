@@ -1170,9 +1170,8 @@ void TestPoolingOp(const OpAttrs &attrs,
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
 
-    for (int i = 0; i < attrs.num_inputs; i++) {
+    for (int i = 0; i < attrs.num_inputs; i++)
       inputs[i] = &in_arr.arr;
-    }
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < attrs.num_outputs; i++) {
@@ -1250,7 +1249,7 @@ TEST(IMPERATIVE, PoolingOp) {
     for (int kernel = 1; kernel < 4; kernel++) {
       for (int stride = 1; stride < 3; stride++) {
         for (int pad = 0; pad < 2; pad++) {
-          if (ceil(kernel / 2.) < pad)
+          if (kernel / 2. < pad)
             continue;
           OpAttrs attrs = GetPoolingOp(kernel, dim, stride, pad);
           TestPoolingOp(attrs, false);
