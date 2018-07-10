@@ -31,19 +31,64 @@
   </properties>
 
   <packaging>pom</packaging>
-  <modules>
-    <module>init</module>
-    <module>init-native</module>
-    <module>macros</module>
-    <module>core</module>
-    <module>native</module>
-    <module>infer</module>
-    <module>examples</module>
-    <module>spark</module>
-    <module>assembly</module>
-  </modules>
 
   <profiles>
+    <profile>
+      <id>unittest</id>
+        <modules>
+            <module>init</module>
+            <module>init-native</module>
+            <module>macros</module>
+            <module>core</module>
+            <module>native</module>
+            <module>infer</module>
+        </modules>
+    </profile>
+    <profile>
+      <id>integrationtest</id>
+      <modules>
+        <module>init</module>
+        <module>init-native</module>
+        <module>macros</module>
+        <module>core</module>
+        <module>native</module>
+        <module>infer</module>
+        <module>examples</module>
+        <module>spark</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>package</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>init</module>
+        <module>init-native</module>
+        <module>macros</module>
+        <module>core</module>
+        <module>native</module>
+        <module>infer</module>
+        <module>assembly</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>all</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <modules>
+        <module>init</module>
+        <module>init-native</module>
+        <module>macros</module>
+        <module>core</module>
+        <module>native</module>
+        <module>infer</module>
+        <module>examples</module>
+        <module>spark</module>
+        <module>assembly</module>
+      </modules>
+    </profile>
     <profile>
       <id>release</id>
       <build>
@@ -335,7 +380,7 @@
           <execution>
             <id>attach-javadocs</id>
             <goals>
-              <goal>jar</goal>
+              <goal>aggregate-jar</goal>
             </goals>
           </execution>
         </executions>

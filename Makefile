@@ -584,36 +584,36 @@ rpkgtest:
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
+		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),all)
 
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),package -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalaunittest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalaintegrationtest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn verify -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),all -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),all -DskipTests -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
