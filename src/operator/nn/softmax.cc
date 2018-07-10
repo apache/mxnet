@@ -27,7 +27,6 @@
 #include "../tensor/elemwise_binary_op.h"
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
-#include "../../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -50,6 +49,7 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::softmax_fwd>, attrs, ctx,
                   inputs, req, outputs);
 }
+#endif
 
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
@@ -59,26 +59,9 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  // We only run MKLDNN op if it runs on CPU.
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-
-  bool dispatched = false;
-  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
-      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
-   }
-  if (!dispatched){
-      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
-   }
- 
-  return dispatched;
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                           in_attrs, out_attrs);
 }
-#endif
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
 .describe(R"code(Applies the softmax function.

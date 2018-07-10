@@ -31,6 +31,8 @@
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #endif  // MXNET_USE_MKLDNN
+#include "../operator_common.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -100,16 +102,16 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
                                          std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask,
-                                                            dispatch_mode,
-                                                            in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
+  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param))
+    return ElemwiseStorageType<1, 1, false, false, false>(
+        attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
+  else
+    return op::dispatch_fallback(out_attrs, dispatch_mode);
 #endif
-  return ret;
+return ElemwiseStorageType<1, 1, false, false, false>(
+    attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
@@ -120,17 +122,26 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = false;
 #if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  if (param.act_type != activation::kReLU) {
-    CHECK_EQ(in_attrs->size(), 3U);
-    ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
-                                                         dispatch_mode,
-                                                         in_attrs, out_attrs);
-  } else {
-    // for ReLU activation, the backward pass only needs ograd and output
-    CHECK_EQ(in_attrs->size(), 2U);
-    ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
-                                                         dispatch_mode,
-                                                         in_attrs, out_attrs);
+  bool should_continue = true;
+#if MXNET_USE_MKLDNN == 1
+  if (!(dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param))) {
+    should_continue = false;
+  }
+#endif
+  if (should_continue) {
+    if (param.act_type != activation::kReLU) {
+      CHECK_EQ(in_attrs->size(), 3U);
+      ret = ElemwiseStorageType<3, 1, false, false, false>(
+          attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
+    } else {
+      // for ReLU activation, the backward pass only needs ograd and output
+      CHECK_EQ(in_attrs->size(), 2U);
+      ret = ElemwiseStorageType<2, 1, false, false, false>(
+          attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
+    }
+  }
+  else {
+    ret = op::dispatch_fallback(out_attrs, dispatch_mode);
   }
 #else
   CHECK_EQ(in_attrs->size(), 2U);
@@ -139,11 +150,6 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                                        in_attrs, out_attrs);
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
-#endif
   return ret;
 }
 

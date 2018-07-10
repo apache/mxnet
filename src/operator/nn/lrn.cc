@@ -26,6 +26,7 @@
 
 #include "./lrn-inl.h"
 #include "../operator_common.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
@@ -87,16 +88,9 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                        dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
-  }
-#endif
-  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                      dispatch_mode, DispatchMode::kFCompute);
-  return true;
+
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                           in_attrs, out_attrs);
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -105,16 +99,9 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                        dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
-  }
-#endif
-  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                      dispatch_mode, DispatchMode::kFCompute);
-  return true;
+
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                           in_attrs, out_attrs);
 }
 
 #if MXNET_USE_MKLDNN == 1
