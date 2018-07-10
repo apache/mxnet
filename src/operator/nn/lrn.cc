@@ -26,6 +26,7 @@
 
 #include "./lrn-inl.h"
 #include "../operator_common.h"
+#include "../../common/utils.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
 #endif
@@ -87,16 +88,22 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                        dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
-  }
+   if (dev_mask == mshadow::cpu::kDevMask)
+    wanted_mode = DispatchMode::kFComputeEx;
+  else
 #endif
-  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                      dispatch_mode, DispatchMode::kFCompute);
-  return true;
+    wanted_mode = DispatchMode::kFCompute;
+
+   bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
+      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
+   }
+  if (!dispatched){
+      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+   }
+  return dispatched;
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -105,16 +112,22 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+  DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                        dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
-  }
+   if (dev_mask == mshadow::cpu::kDevMask)
+    wanted_mode = DispatchMode::kFComputeEx;
+  else
 #endif
-  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                      dispatch_mode, DispatchMode::kFCompute);
-  return true;
+    wanted_mode = DispatchMode::kFCompute;
+
+   bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)){
+      dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage, dispatch_mode, wanted_mode);
+   }
+  if (!dispatched){
+      dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+   }
+  return dispatched;
 }
 
 #if MXNET_USE_MKLDNN == 1

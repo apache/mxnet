@@ -27,7 +27,8 @@
 #include "../tensor/elemwise_binary_op.h"
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
-#include "../../operator_common.h"
+#include "../operator_common.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -39,7 +40,7 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  // It seems MKLDNN softmax doesn't support training.
+// It seems MKLDNN softmax doesn't support training.
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNSoftmaxForward(attrs, ctx, inputs[0], req[0], outputs[0]);
