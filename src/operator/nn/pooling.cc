@@ -222,13 +222,13 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          const std::vector<OpReqType> &req,
                          const std::vector<NDArray> &outputs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  const NDArray *workspace = nullptr;
-  if (MKLDNNRequireWorkspace(param)) {
-    CHECK_GT(outputs.size(), 1U);
-    workspace = &outputs[1];
-  }
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
+    const NDArray *workspace = nullptr;
+    if (MKLDNNRequireWorkspace(param)) {
+      CHECK_GT(outputs.size(), 1U);
+      workspace = &outputs[1];
+    }
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
     MKLDNNPoolingCompute(ctx, param, inputs[0], req[0], outputs[0], workspace);
     MKLDNN_OPCHECK_RUN(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
