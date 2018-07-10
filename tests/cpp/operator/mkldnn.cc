@@ -515,6 +515,23 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   return attrs;
 }
 
+OpAttrs GetPoolingBackwardsOp(int kernel, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Pooling");
+  attrs.num_inputs = 2 ? 5 : 3;
+  attrs.num_outputs = 1;
+  TShape kernel_shape(dim);
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"pool_type" , "max"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.dispatches[0] = DispatchMode::kFCompute;
+  attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  return attrs;
+}
+
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
@@ -546,7 +563,7 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, std::vector<float> scale={1}) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -554,25 +571,26 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
 
-  int slice_amount = 1;
-  if (dim == 0)
-    slice_amount = num_inputs;
+  int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (dim >= shape.ndim())
+    if (scale.size() >= shape.ndim())
       continue;
-    shape[dim] = shape[dim] * num_inputs;
+
+    for (int dim = 0; dim < scale.size(); dim++)
+      shape[dim] = shape[dim] * scale[dim];
 
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-      if (num_inputs > 1) {
+
+      for (int dim = 0; dim < scale.size(); dim++) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
-          pd = GetExpandedMemPD(pd, num_inputs, dim);
+          pd = GetExpandedMemPD(pd, scale[dim], dim);
         else
-          pd = GetExpandedMemPD(pd, num_inputs);
+          pd = GetExpandedMemPD(pd, scale[dim]);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -718,7 +736,13 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
-      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
+
+      std::vector<float> scale_vector(dim + 1);
+      for (int i = 0; i < dim + 1; i++)
+        scale_vector[i] = 1;
+      scale_vector[dim] = num_inputs;
+
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, scale_vector);
       int i = 0;
       for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
@@ -1044,7 +1068,12 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+
+    std::vector<float> scale_vector(dim+1);
+    for (int i = 0; i < dim+1; i++)
+      scale_vector[i] = 1;
+    scale_vector[dim] = attrs.num_outputs;
+    in_arrs = GetTestInputArrays(false, scale_vector);
   }
 
   for (auto &in_arr : in_arrs) {
@@ -1108,12 +1137,14 @@ void TestPoolingOp(const OpAttrs &attrs,
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(attrs.num_outputs);
+
   // concat backwards uses scaled up inputs
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
     in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
+
   for (auto &in_arr : in_arrs) {
     // can only pool only 3D and 4D inputs
     TShape input_shape = in_arr.arr.shape();
@@ -1123,7 +1154,6 @@ void TestPoolingOp(const OpAttrs &attrs,
     // skip if not default layout since memory layout must match
     if (in_arr.arr.IsMKLDNNData())
       continue;
-
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
@@ -1215,6 +1245,21 @@ TEST(IMPERATIVE, PoolingOp) {
           if (ceil(kernel / 2.) < pad)
             continue;
           OpAttrs attrs = GetPoolingOp(kernel, dim, stride, pad);
+          TestPoolingOp(attrs, false);
+        }
+      }
+    }
+  }
+}
+
+TEST(IMPERATIVE, PoolingBackwardsOp) {
+  for (int dim = 2; dim < 4; dim++) {
+    for (int kernel = 1; kernel < 4; kernel++) {
+      for (int stride = 1; stride < 3; stride++) {
+        for (int pad = 0; pad < 2; pad++) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
           TestPoolingOp(attrs, false);
         }
       }
