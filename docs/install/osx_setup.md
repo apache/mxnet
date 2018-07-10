@@ -114,6 +114,7 @@ You have 2 options:
 
 ### Building MXNet with the Prebuilt Binary Package
 
+Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
 For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
 
 ```r
