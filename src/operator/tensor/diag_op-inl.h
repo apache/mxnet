@@ -85,6 +85,7 @@ inline bool DiagOpType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
+template<int req>
 struct diag {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
@@ -92,7 +93,23 @@ struct diag {
     using namespace mxnet_op;
 
     int j = ravel(mshadow::Shape2(i,i), ishape);
-    out[i] = a[j];
+    KERNEL_ASSIGN(out[i], req, a[j]);
+  }
+};
+
+template<int req>
+struct diag_backward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
+                                  mshadow::Shape<2> oshape) {
+    using namespace mxnet_op;
+
+    auto j = unravel(i, oshape);
+    if (j[0] == j[1]) {
+      KERNEL_ASSIGN(in_grad[i], req, out_grad[j[0]]);
+    } else {
+      KERNEL_ASSIGN(in_grad[i], req, 0.0);
+    }
   }
 };
 
@@ -116,8 +133,10 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   
   if (ishape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-      Kernel<diag, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
                                 in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]));
+      });
     });
   } else {
     // TODO 1 dim input
@@ -138,13 +157,15 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
 
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  const TShape& ishape = inputs[0].shape_;
+  const TShape& oshape = outputs[0].shape_;
   //const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed); needed for k
-  
-  if (ishape.ndim() == 2) {
+
+  if (oshape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-      Kernel<diag, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<diag_backward<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]));
+      });
     });
   } else {
     // TODO 1 dim input
