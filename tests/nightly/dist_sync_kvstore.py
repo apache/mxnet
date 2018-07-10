@@ -394,7 +394,7 @@ def test_gluon_trainer_step():
     def check_trainer_step():
         ctx = mx.cpu(0)
         shape = (10, 1)
-        x = mx.gluon.Parameter('x', shape=shape, grad_stype='row_sparse')
+        x = mx.gluon.Parameter('x', shape=shape)
         x.initialize(ctx=ctx, init='ones')
         trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'multi_precision': False}, kvstore=kv)
         with mx.autograd.record():
@@ -434,20 +434,23 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     if opt.type == 'gluon_type':
         test_gluon_trainer_type()
+        exit()
     if opt.type == 'gluon_step':
         test_gluon_trainer_step()
+        exit()
     if opt.type == 'gluon_sparse_step':
         test_gluon_trainer_sparse_step()
+        exit()
     if opt.type == 'invalid':
         test_invalid_operations()
+        exit()
     if opt.type == 'all' or opt.type == 'init':
         test_sync_init(opt.gpu)
+    kv = init_kv()
     if opt.type == 'all' or opt.type == 'default':
-        kv = init_kv()
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
-    # dont run non compressed tests after this as kvstore compression will be set here
+    # don't run non compressed tests after this as kvstore compression will be set here
     if opt.type == 'all' or opt.type == 'compressed':
-        kv = init_kv()
         kv, threshold = init_kv_compressed(kv)
         test_sync_2bit_compression(threshold, opt.nrepeat)
