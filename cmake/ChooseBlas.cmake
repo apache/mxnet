@@ -16,7 +16,7 @@
 # under the License.
 
 set(BLAS "Open" CACHE STRING "Selected BLAS library")
-set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
+set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL;Apple")
 
 function(switch_lapack enable)
   if(${enable})
@@ -24,6 +24,27 @@ function(switch_lapack enable)
     add_definitions(-DMXNET_USE_LAPACK=1)
   else()
     message(WARNING "Lapack functionality not available")
+  endif()
+endfunction()
+
+function(try_accelerate)
+  if(NOT APPLE)
+    return()
+  endif()
+
+  if(BLAS MATCHES "[Mm][Kk][Ll]")
+    return()
+  endif()
+
+  if(${USE_ACCELERATE_IF_AVAILABLE})
+    message(STATUS "Trying to enable accelerate framework due to USE_ACCELERATE_IF_AVAILABLE")
+    find_package(Accelerate)
+    if(${Accelerate_FOUND})
+      message(STATUS "Accelerate framework found")
+      set(BLAS Accelerate PARENT_SCOPE)
+    else()
+      message(STATUS "Accelerate framework not found")
+    endif()
   endif()
 endfunction()
 
@@ -49,6 +70,8 @@ if(USE_MKL_IF_AVAILABLE)
   endif()
 endif()
 
+try_accelerate()
+
 # cmake regexp does not support case insensitive match (?i) or //i
 if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   message(STATUS "Using Atlas for BLAS")
@@ -57,7 +80,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   find_package(Atlas REQUIRED)
 
   include_directories(SYSTEM ${Atlas_INCLUDE_DIRS})
-  list(APPEND mshadow_LINKER_LIBS ${Atlas_LIBRARIES})
+  list(APPEND mxnet_LINKER_LIBS ${Atlas_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
@@ -75,7 +98,7 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
   find_package(OpenBLAS REQUIRED)
 
   include_directories(SYSTEM ${OpenBLAS_INCLUDE_DIRS})
-  list(APPEND mshadow_LINKER_LIBS ${OpenBLAS_LIBRARIES})
+  list(APPEND mxnet_LINKER_LIBS ${OpenBLAS_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
@@ -91,7 +114,7 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   find_package(MKL REQUIRED)
 
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
-  list(APPEND mshadow_LINKER_LIBS ${MKL_LIBRARIES})
+  list(APPEND mxnet_LINKER_LIBS ${MKL_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
@@ -107,7 +130,7 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   endif()
 endif()
 
-if(BLAS MATCHES "[Aa][Pp][Pp][Ll][Ee]")
+if(BLAS MATCHES "([Aa][Pp][Pp][Ll][Ee]|[Aa][Cc][Cc][Ee][Ll][Ee][Rr][Aa][Tt][Ee])")
   if(NOT APPLE)
     message(FATAL_ERROR "Apple BLAS framework is available only on MAC")
     return()
@@ -121,7 +144,7 @@ if(BLAS MATCHES "[Aa][Pp][Pp][Ll][Ee]")
   find_package(Accelerate REQUIRED)
 
   include_directories(SYSTEM ${Accelerate_INCLUDE_DIR})
-  list(APPEND mshadow_LINKER_LIBS ${Accelerate_LIBRARIES})
+  list(APPEND mxnet_LINKER_LIBS ${Accelerate_LIBRARIES})
 
   add_definitions(-DMSHADOW_USE_CBLAS=1)
   add_definitions(-DMSHADOW_USE_MKL=0)
