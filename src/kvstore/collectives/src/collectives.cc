@@ -601,8 +601,8 @@ int InitializeMPIOnce(Comm *comm) {
   coll_global.device = -1;
   coll_global.local_comm = comm;
   coll_global.pinned_ctx = coll_global.local_comm->pinned_ctx();
-  coll_global.sync_var1 = mxnet::NDArray(mxnet::TShape({1,1}), coll_global.pinned_ctx, true);
-  coll_global.sync_var2 = mxnet::NDArray(mxnet::TShape({1,1}), coll_global.pinned_ctx, true);
+  coll_global.sync_var1 = mxnet::NDArray(mxnet::TShape({1, 1}), coll_global.pinned_ctx, true);
+  coll_global.sync_var2 = mxnet::NDArray(mxnet::TShape({1, 1}), coll_global.pinned_ctx, true);
   coll_global.sync_key = 0xfeedbeaf;
 
   coll_global.background_thread = std::thread(BackgroundThreadLoop);
