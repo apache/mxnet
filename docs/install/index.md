@@ -946,7 +946,6 @@ After you have setup R v3.4.4+ and MXNet, you can build and install the MXNet R 
 ```bash
 $ cd incubator-mxnet/R-package
 $ make rpkg
-$ R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 </div> <!-- END of CPU -->
@@ -961,7 +960,6 @@ After you have setup R v3.4.4+ and MXNet, you can build and install the MXNet R 
 ```bash
 $ cd incubator-mxnet/R-package
 $ make rpkg
-$ R CMD INSTALL mxnet_current_r.tar.gz
 ```
 
 </div> <!-- END of GPU -->
