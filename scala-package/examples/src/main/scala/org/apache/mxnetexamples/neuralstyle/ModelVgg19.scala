@@ -20,11 +20,11 @@ package org.apache.mxnetexamples.neuralstyle
 import org.apache.mxnet.{Context, Executor, NDArray, Shape, Symbol}
 
 /**
- * Definition for the neuralstyle network and initialize it with pretrained weight
- */
+  * Definition for the neuralstyle network and initialize it with pretrained weight
+  */
 object ModelVgg19 {
   case class ConvExecutor(executor: Executor, data: NDArray, dataGrad: NDArray,
-                      style: Array[NDArray], content: NDArray, argDict: Map[String, NDArray])
+                          style: Array[NDArray], content: NDArray, argDict: Map[String, NDArray])
 
   def ConvRelu(data : Symbol, convName : String, reluName : String,
                numFilter : Int, kernel : (Int, Int) = (3, 3),
@@ -33,7 +33,9 @@ object ModelVgg19 {
       pad = Some(Shape(1, 1)), kernel = Shape(kernel._1, kernel._2),
       stride = Some(Shape(stride._1, stride._2)), no_bias = Some(false),
       workspace = Some(1024), name = convName)
-    Symbol.api.relu(data = Some(conv), name = reluName)
+    val relu = Symbol.api.relu(data = Some(conv), name = reluName)
+    conv.dispose()
+    relu
   }
 
   def getSymbol: (Symbol, Symbol) = {
@@ -81,7 +83,7 @@ object ModelVgg19 {
   }
 
   def getExecutor(style: Symbol, content: Symbol, modelPath: String,
-      inputSize: (Int, Int), ctx: Context): ConvExecutor = {
+                  inputSize: (Int, Int), ctx: Context): ConvExecutor = {
     val out = Symbol.Group(style, content)
     // make executor
     val (argShapes, outputShapes, auxShapes) = out.inferShape(
@@ -95,15 +97,17 @@ object ModelVgg19 {
       val key = s"arg:$name"
       if (pretrained.contains(key)) argDict(name).set(pretrained(key))
     }
+    pretrained.foreach(ele => ele._2.dispose())
     val executor = out.bind(ctx, argDict, gradDict)
+    out.dispose()
     val outArray = executor.outputs
     ConvExecutor(executor = executor,
-                              data = argDict("data"),
-                              dataGrad = gradDict("data"),
-                              style = outArray.take(outArray.length - 1),
-                              content = outArray(outArray.length - 1),
-                              argDict = argDict)
-    }
+      data = argDict("data"),
+      dataGrad = gradDict("data"),
+      style = outArray.take(outArray.length - 1),
+      content = outArray(outArray.length - 1),
+      argDict = argDict)
+  }
 
   def getModel(modelPath: String, inputSize: (Int, Int), ctx: Context): ConvExecutor = {
     val (style, content) = getSymbol

@@ -28,10 +28,11 @@ import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 /**
- * An Implementation of the paper A Neural Algorithm of Artistic Style
- */
+  * An Implementation of the paper A Neural Algorithm of Artistic Style
+  */
 object NeuralStyle {
   case class NSExecutor(executor: Executor, data: NDArray, dataGrad: NDArray)
 
@@ -108,11 +109,11 @@ object NeuralStyle {
     var gradScale = List[Int]()
     for (i <- 0 until style.listOutputs().length) {
       val shape = outputShape(i)
-      val x = Symbol.Reshape()()(Map("data" -> style.get(i),
-          "target_shape" -> Shape(shape(1), shape(2) * shape(3))))
-      // use fully connected to quickly do dot(x, x^T)
-      val gram = Symbol.FullyConnected()()(Map("data" -> x, "weight" -> x,
-          "no_bias" -> true, "num_hidden" -> shape(1)))
+      val x = Symbol.api.Reshape(data = Some(style.get(i)),
+        target_shape = Some(Shape(shape(1), shape(2) * shape(3))))
+      val gram = Symbol.api.FullyConnected(data = Some(x), weight = Some(x),
+        no_bias = Some(true), num_hidden = shape(1))
+      x.dispose()
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
     }
@@ -120,13 +121,20 @@ object NeuralStyle {
   }
 
   def getLoss(gram: Symbol, content: Symbol): (Symbol, Symbol) = {
-    var gramLoss = List[Symbol]()
+    var gramLoss = ListBuffer[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      gramLoss = gramLoss :+ Symbol.sum()(Symbol.square()(gvar - gram.get(i))())()
+      Symbol.api.square(data = Some(gvar - gram.get(i)))
+      gramLoss += Symbol.api.sum(
+        Some(Symbol.api.square(data = Some(gvar - gram.get(i))))
+      )
+      gvar.dispose()
     }
+    gram.dispose()
     val cvar = Symbol.Variable("target_content")
-    val contentLoss = Symbol.sum()(Symbol.square()(cvar - content)())()
+    val contentLoss = Symbol.api.sum(
+      Some(Symbol.api.square(Some(cvar - content)))
+    )
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 
@@ -137,12 +145,13 @@ object NeuralStyle {
     val nChannel = img.shape(1)
     val sImg = Symbol.Variable("img")
     val sKernel = Symbol.Variable("kernel")
-    val channels = Symbol.SliceChannel()(sImg)(Map("num_outputs" -> nChannel))
-    val out = Symbol.Concat()((0 until nChannel).map { i =>
-      Symbol.Convolution()()(Map("data" -> channels.get(i), "weight" -> sKernel,
-                    "num_filter" -> 1, "kernel" -> "(3,3)", "pad" -> "(1,1)",
-                    "no_bias" -> true, "stride" -> "(1,1)"))
-    }: _*)() * tvWeight
+    val channels = Symbol.api.SliceChannel(data = Some(sImg), num_outputs = nChannel)
+    val result = (0 until nChannel).map { i =>
+      Symbol.api.Convolution(data = Some(channels.get(i)), weight = Some(sKernel),
+        num_filter = 1, kernel = Shape(3, 3), pad = Some(Shape(1, 1)), no_bias = Some(true),
+        stride = Some(Shape(1, 1)))
+    }.toArray
+    val out = Symbol.api.Concat(result, result.length) * tvWeight
     val kernel = {
       val tmp = NDArray.empty(Shape(1, 1, 3, 3), ctx)
       tmp.set(Array[Float](0, -1, 0, -1, 4, -1, 0, -1, 0))
@@ -157,7 +166,7 @@ object NeuralStyle {
 
   //scalastyle:off
   def runTraining(model : String, contentImage : String, styleImage: String, dev : Context,
-                   modelPath : String, outputDir : String, styleWeight : Float,
+                  modelPath : String, outputDir : String, styleWeight : Float,
                   contentWeight : Float, tvWeight : Float, gaussianRadius : Int,
                   lr: Float, maxNumEpochs: Int, maxLongEdge: Int,
                   saveEpochs : Int, stopEps: Float) : Unit = {
@@ -179,6 +188,12 @@ object NeuralStyle {
     val contentArray = modelExecutor.content.copyTo(Context.cpu())
 
     // delete the executor
+    modelExecutor.argDict.foreach(ele => ele._2.dispose())
+    modelExecutor.content.dispose()
+    modelExecutor.data.dispose()
+    modelExecutor.dataGrad.dispose()
+    modelExecutor.style.foreach(_.dispose())
+    modelExecutor.executor.dispose()
     modelExecutor = null
 
     val (styleLoss, contentLoss) = getLoss(gram, content)

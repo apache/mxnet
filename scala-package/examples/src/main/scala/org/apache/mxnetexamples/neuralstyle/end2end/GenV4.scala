@@ -23,13 +23,15 @@ import org.apache.mxnet.{Context, Shape, Symbol, Xavier}
 object GenV4 {
 
   def Conv(data: Symbol, numFilter: Int, workspace : Long, kernel: (Int, Int) = (5, 5),
-      pad: (Int, Int) = (2, 2)): Symbol = {
-    var sym = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
+           pad: (Int, Int) = (2, 2)): Symbol = {
+    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
       kernel = Shape(kernel._1, kernel._2), workspace = Some(workspace),
       pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
-    sym = Symbol.api.BatchNorm(data = Some(sym), fix_gamma = Some(false))
-    sym = Symbol.api.LeakyReLU(data = Some(sym), act_type = Some("leaky"))
-    sym
+    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
+    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    sym2.dispose()
+    sym1.dispose()
+    sym3
   }
 
   def getGenerator(prefix: String, imHw: (Int, Int)): Symbol = {
@@ -41,7 +43,7 @@ object GenV4 {
     var conv4_1 = Conv(conv3_1, 32, 4096)
     var conv5_1 = Conv(conv4_1, 48, 4096)
     var conv6_1 = Conv(conv5_1, 32, 4096)
-    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3, 3),
+    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3,3),
       pad = Some(Shape(1, 1)), no_bias = Some(true), workspace = Some(4096))
     out = Symbol.api.BatchNorm(data = Some(out), fix_gamma = Some(false))
     out = Symbol.api.Activation(data = Some(out), act_type = "tanh")
@@ -62,9 +64,9 @@ object GenV4 {
       else (dataShape, false, false)
     }
     val mod = new Module(symbol = sym, context = ctx,
-                         dataShapes = dataShapes,
-                         initializer = new Xavier(magnitude = 2f),
-                         forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
+      dataShapes = dataShapes,
+      initializer = new Xavier(magnitude = 2f),
+      forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
     mod
   }
 }

@@ -22,18 +22,20 @@ import org.apache.mxnet.{Context, Shape, Symbol, Xavier}
 
 object GenV3 {
   def Conv(data: Symbol, numFilter: Int, kernel: (Int, Int) = (5, 5),
-      pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
-    var sym = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
+           pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
+    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
       kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
       pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
-    sym = Symbol.api.BatchNorm(data = Some(sym), fix_gamma = Some(false))
-    sym = Symbol.api.LeakyReLU(data = Some(sym), act_type = Some("leaky"))
-    sym
+    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
+    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    sym2.dispose()
+    sym1.dispose()
+    sym3
   }
 
   def Deconv(data: Symbol, numFilter: Int, imHw: (Int, Int),
-      kernel: (Int, Int) = (7, 7), pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2),
-      crop: Boolean = true, out: Boolean = false): Symbol = {
+             kernel: (Int, Int) = (7, 7), pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2),
+             crop: Boolean = true, out: Boolean = false): Symbol = {
     var sym = Symbol.api.Deconvolution(data = Some(data), num_filter = numFilter,
       kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
       pad = Some(Shape(pad._1, pad._2)), no_bias = Some(true))
@@ -74,9 +76,9 @@ object GenV3 {
       else (dataShape, false, false)
     }
     val mod = new Module(symbol = sym, context = ctx,
-                         dataShapes = dataShapes,
-                         initializer = new Xavier(magnitude = 2f),
-                         forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
+      dataShapes = dataShapes,
+      initializer = new Xavier(magnitude = 2f),
+      forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
     mod
   }
 }
