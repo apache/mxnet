@@ -28,7 +28,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian"]
+__all__ = ["rand_zipfian", "foreach", "while_loop"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -193,7 +193,7 @@ def foreach(body, data, init_states):
     return (outputs, states)
 
 
-def while_loop(loop_vars, cond, func, max_iterations):
+def while_loop(cond, func, loop_vars, max_iterations):
     """Run a while loop with user-defined computation and loop condition.
 
     This operator simulates a while loop which iterately does customized computation
@@ -201,40 +201,45 @@ def while_loop(loop_vars, cond, func, max_iterations):
 
     `loop_vars` is a list of NDArrays on which the computation uses.
 
-    `cond` is a user-defined function as the loop condition.
+    `cond` is a user-defined function, used as the loop condition.
     It consumes `loop_vars`, and produces a scalar MXNet NDArray,
     indicating the termination of the loop.
     The loop ends when `cond` returns false (zero).
     The `cond` is variadic, and its signature should be
     `cond(*loop_vars) => NDArray`.
 
-    `func` is a user-defined function as the loop body.
+    `func` is a user-defined function, used as the loop body.
     It also consumes `loop_vars`, and produces `step_output` and `new_loop_vars` at each step.
-    The number of elements, shape, dtype of each element in `step_output` should be consistent.
-    The `new_loop_vars` should be consistent with `loop_vars` on each step.
+    In each step, `step_output` should contain the same number elements.
+    Through all steps, the i-th element of `step_output` should have the same shape and dtype.
+    Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
+    and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
     `func(*loop_vars) => (List[NDArray] step_output, List[NDArray] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
-    This function returns a list of NDArrays of length `|step_output| + |loop_vars|`.
-    The i-th element in the first `|step_output|` ones of the list represent
-    the i-th `step_output` at all step, stacked along axis 0.
-    The i-th element in the last `|loop_vars|` ones of the list
-    represent the final state of each loop variable.
+    This function returns two lists as a tuple.
+    The first list has the length of `|step_output|`,
+    in which the i-th element are all i-th elements of
+    `step_output` from all steps, stacked along axis 0.
+    The second list has the length of `|loop_vars|`,
+    which represents final states of loop variables.
 
-    Warning 1: when `cond` is never satisfied, we assume `step_output` is empty.
-    Warning 2: The output shape along axis 0 is currently `max_iteration`,
-    which not consistent to the symbloic version.
+    Warning 1: when `cond` is never satisfied, we assume `step_output` is empty,
+    because it cannot be inferred. This is different from the symbolic version.
+
+    Warning 2: The output shape along axis 0 is currently the actual number of iterations taken,
+    which is different from the symbolic version, where it is `max_iteration`.
 
     Parameters
     ----------
-    loop_vars: list of NDArrays.
-        The initial values of the loop variables.
     cond: a Python function.
         The loop condition.
     func: a Python function.
         The loop body.
+    loop_vars: list of NDArrays.
+        The initial values of the loop variables.
     max_iteration: a python int.
         Maximum number of iterations.
 
@@ -249,7 +254,7 @@ def while_loop(loop_vars, cond, func, max_iterations):
     >>> cond = lambda i, s: i <= 5
     >>> func = lambda i, s: ([i + s], [i + 1, s + i])
     >>> loop_vars = (mx.nd.array([0], dtype="int64"), mx.nd.array([1], dtype="int64"))
-    >>> outputs, states = mx.nd.contrib.while_loop(loop_vars, cond, func, max_iterations=10)
+    >>> outputs, states = mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations=10)
     """
     def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,

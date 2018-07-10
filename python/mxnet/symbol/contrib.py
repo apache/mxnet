@@ -34,7 +34,7 @@ from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian", "foreach"]
+__all__ = ["rand_zipfian", "foreach", "while_loop"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
@@ -345,36 +345,48 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
 
     `loop_vars` is a list of Symbols on which the computation uses.
 
-    `cond` is a user-defined function as the loop condition.
+    `cond` is a user-defined function, used as the loop condition.
     It consumes `loop_vars`, and produces a scalar MXNet symbol,
     indicating the termination of the loop.
     The loop ends when `cond` returns false (zero).
     The `cond` is variadic, and its signature should be
     `cond(*loop_vars) => Symbol`.
 
-    `func` is a user-defined function as the loop body.
+    `func` is a user-defined function, used as the loop body.
     It also consumes `loop_vars`, and produces `step_output` and `new_loop_vars` at each step.
-    The number of elements, shape, dtype of each element in `step_output` should be consistent.
-    The `new_loop_vars` should be consistent with `loop_vars` on each step.
+    In each step, `step_output` should contain the same number elements.
+    Through all steps, the i-th element of `step_output` should have the same shape and dtype.
+    Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
+    and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
     `func(*loop_vars) => (List[Symbol] step_output, List[Symbol] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
-    This function returns a list of Symbols of length `|step_output| + |loop_vars|`.
-    The i-th element in the first `|step_output|` ones of the list represent
-    the i-th `step_output` at all step, stacked along axis 0.
-    The i-th element in the last `|loop_vars|` ones of the list
-    represent the final state of each loop variable.
+    This function returns two lists as a tuple.
+    The first list has the length of `|step_output|`,
+    in which the i-th element are all i-th elements of
+    `step_output` from all steps, stacked along axis 0.
+    The second list has the length of `|loop_vars|`,
+    which represents final states of loop variables.
+
+    Warning 1: Even if `cond` is never satisfied,
+    while_loop returns a list of outputs with inferred dtype and shape.
+    This is different from the NDArray version,
+    where in this case `step_outputs` are assumed as an empty list.
+
+    Warning 2: The output shape along axis 0 is `max_iteration`,
+    which is different from the NDArray version,
+    where it is the actual number of steps taken.
 
     Parameters
     ----------
-    loop_vars: list of Symbol.
-        The initial values of the loop variables.
     cond: a Python function.
         The loop condition.
     func: a Python function.
         The loop body.
+    loop_vars: list of Symbol.
+        The initial values of the loop variables.
     max_iteration: a python int.
         Maximum number of iterations.
 
