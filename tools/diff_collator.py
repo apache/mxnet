@@ -34,25 +34,35 @@ import logging
 
 logging.basicConfig(level=logging.INFO) 
 
+
 def parser(diff_output):
     diff_output = str(diff_output, errors="strict")
     changes = []
 
-    for file_diff in diff_output.split("diff --git")[1:]:
-        changes.append(parse_file(file_diff))
-
+    for patch in diff_output.split("diff --git")[1:]:
+        # split diff_output into patches
+        changes.append(parse_patch(patch))
+    
     return changes
 
-def parse_file(file_diff):
-    """ Parse changes to a single file
-    git diff 
-    """
-    changes = {}
-    lines = file_diff.splitlines()
-    file_name  = lines[0].split()[-1][2:]
-    logging.info("Parsing: %s", file_name)
 
-    for line in file_diff.splitlines():
+def parse_patch(patch):
+    """ Parse changes in a single patch
+
+    git diff outputs results as a patches, each of which corresponds to
+    a file that has been changed. Each patch consists of a header with one or
+    more hunks that show differing lines between files. Hunks themselves have
+    headers with specific formats that this function parses to get information
+    about the changes to the file whose patch we are parsing.
+    """
+    lines = patch.splitlines()
+
+    changes = {}
+    file_name  = lines[0].split()[-1][2:]
+    
+    logging.debug("Parsing: %s", file_name)
+
+    for line in patch.splitlines():
         if line.startswith("@"):
             # parse hunk header
             tokens = line.split()
@@ -69,53 +79,87 @@ def parse_file(file_diff):
                 else:
                     to_range = t[1:].split(",")
 
-            func_header = tokens[-1].split("(")
-            if len(func_header) == 1:
-                func_name = "top-level"
+            # get function name
+            hunk_header = tokens[-1].split("(")
+            if len(hunk_header) == 1:
+                hunk_name = "top-level"
             else:
-                func_name = tokens[-1].split("(")[0]
+                hunk_name = tokens[-1].split("(")[0]
+            logging.debug("\tHunk: %s - (%d,%d)", hunk_name, start, end)
 
-            if func_name not in changes:
-                changes[func_name] = []
-            changes[func_name].append((start, end))
+            # add hunk info to changes
+            if hunk_name not in changes:
+                changes[hunk_name] = []
+            changes[hunk_name].append((start, end))
 
     return (file_name, changes)
 
-def output_changes(changes):
+
+def output_changes(changes, verbosity):
+    if not changes:
+        logging.info("No changes found")
+
     for file_name, chunks in changes:
-        print(file_name)
+        if verbosity > 0:
+            print(file_name)
         for func_name, ranges in chunks.items():
-            print("\t{}".format(func_name))
+            if verbosity > 1:
+                print("\t{}".format(func_name))
             for (start, end) in ranges:
-                print("\t\t{} {}".format(start, end))
+                if verbosity > 2:
+                    print("\t\t{} {}".format(start, end))
     
+
 def parse_args():
     arg_parser = argparse.ArgumentParser()
 
-    group = arg_parser.add_mutually_exclusive_group()
-    group.add_argument("--commits", "-c", nargs=2,
-                       help="specifies two commits to be compared")
-    group.add_argument("--branches", "-b", nargs=2,
-                       metavar=["master", "topic"],
-                       help="specifies two branches to be compared")
+    arg_parser.add_argument(
+        "--verbosity", "-v", action="count", default=2,
+        help="verbosity level, repeat up to 3 times, defaults to 2")
 
+    targets = arg_parser.add_mutually_exclusive_group()
+    targets.add_argument(
+        "--commits", "-c", nargs=2, metavar=("HASH1 ","HASH2"),
+        help="specifies two commits to be compared")
+    targets.add_argument(
+        "--branches", "-b", nargs=2, metavar=("MASTER", "TOPIC"),
+        help="specifies two branches to be compared")
+
+    filters = arg_parser.add_argument_group(
+        "filters", "filter which files should be included in output")
+    filters.add_argument("--filter-path", "-p", dest="path", default="",
+        help="specify directory or file in which to search for changes")
+    filters.add_argument(
+        "--filter-exp", "-f", "-e", dest="expr", metavar="REGEX", default=".*",
+        help="filter files with given python regular expression")
+    
     args = arg_parser.parse_args()
     return args
 
+
 if __name__ == "__main__":
+    
     args = parse_args()
 
-    if args.commits is  not None:
-        diff_output = subprocess.check_output(["git", "diff",
-            "--unified=0", args.commits[0], args.commits[1]])
-    elif args.branches is not None:
-        diff_target = args.branches[0] + "..." + args.branches[1]
-        diff_output = subprocess.check_output(["git", "diff",
-                                              "--unified=0", diff_target])
-    else:
-        diff_output = subprocess.check_output(["git", "diff", "--unified=0",
-                                               "master...HEAD"])
+    try:
+        if args.commits is  not None:
+            diff_output = subprocess.check_output(
+                ["git", "diff", "--unified=0", args.commits[0],
+                args.commits[1], "--", args.path])
+        else:
+            if args.branches is None:
+                # default to current branch with master
+                args.branches = ["master", "HEAD"]
+
+            diff_target = args.branches[0] + "..." + args.branches[1]
+            diff_output = subprocess.check_output(
+                ["git", "diff", "--unified=0", diff_target, "--", args.path])
+    except subprocess.CalledProcessError as e:
+        logging.error("git diff returned a non zero exit code: %d",
+                      e.returncode)
+        sys.exit(1)
 
     changes = parser(diff_output)
-    output_changes(changes)
+    changes = [(n, cs) for (n, cs) in changes if re.fullmatch(args.expr, n)]
+    output_changes(changes, args.verbosity)
 
