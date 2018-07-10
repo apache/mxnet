@@ -114,6 +114,12 @@ struct CollectiveGlobalState {
 
   Comm *local_comm = NULL;
 
+  mxnet::NDArray sync_var1;
+
+  mxnet::NDArray sync_var2;
+
+  int sync_key;
+
 ~CollectiveGlobalState() {
   if (background_thread.joinable()) {
     shut_down = true;
@@ -595,6 +601,9 @@ int InitializeMPIOnce(Comm *comm) {
   coll_global.device = -1;
   coll_global.local_comm = comm;
   coll_global.pinned_ctx = coll_global.local_comm->pinned_ctx();
+  coll_global.sync_var1 = mxnet::NDArray(mxnet::TShape({1,1}), coll_global.pinned_ctx, true);
+  coll_global.sync_var2 = mxnet::NDArray(mxnet::TShape({1,1}), coll_global.pinned_ctx, true);
+  coll_global.sync_key = 0xfeedbeaf;
 
   coll_global.background_thread = std::thread(BackgroundThreadLoop);
   std::unique_lock<std::mutex> lock(coll_global.mu);
@@ -770,8 +779,12 @@ int MXAllGather(int key,
 }
 
 int MXBarrier() {
+  int ret = MXAllReduce(coll_global.sync_key,
+                        &coll_global.sync_var1,
+                        &coll_global.sync_var2,
+                        0);
   mxnet::Engine::Get()->WaitForAll();
-  return MPI_Barrier(MPI_COMM_WORLD);
+  return ret;
 }
 
 }  // end of namespace kvstore

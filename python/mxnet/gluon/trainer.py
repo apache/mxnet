@@ -295,7 +295,7 @@ class Trainer(object):
                     if 'allreduce' not in self._kvstore.type:
                         self._kvstore.push(i, param.list_grad(), priority=-i)
                         if not self._update_on_kvstore:
-                            self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=False)
+                            self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=True)
                     else:
                         self._kvstore.pushpull(i, param.list_grad(), param.list_grad(), priority=-i)
 

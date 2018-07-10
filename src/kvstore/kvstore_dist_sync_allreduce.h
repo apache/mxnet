@@ -67,7 +67,8 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
 
   void Pull(const std::vector<int>& keys,
             const std::vector<NDArray*>& values,
-            int priority) override {
+            int priority,
+            bool ignore_sparse) override {
     LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
@@ -85,7 +86,8 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
 
   void Pull(const std::vector<std::string>& str_keys,
             const std::vector<NDArray*>& values,
-            int priority) override {
+            int priority,
+            bool ignore_sparse) override {
     LOG(FATAL) << "Not supported in KVStore with type " << type_ << ".";
   }
 
@@ -181,9 +183,9 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
     std::vector<std::vector<NDArray*> > grouped_outvals;
 
     CHECK_EQ(in_values.size(), out_values.size());
-    GroupKVPairsPush(keys, in_values, &uniq_keys, &grouped_invals);
+    GroupKVPairsPush(keys, in_values, &uniq_keys, &grouped_invals, false);
     uniq_keys.clear();
-    GroupKVPairsPull(keys, out_values, &uniq_keys, &grouped_outvals);
+    GroupKVPairsPull(keys, out_values, &uniq_keys, &grouped_outvals, true);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       // reduce over devices
@@ -218,7 +220,7 @@ class KVStoreDistSyncAllReduce : public KVStoreLocal {
                      int priority) {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsPull(keys, values, &uniq_keys, &grouped_vals, true);
 
     for (size_t i = 0; i < uniq_keys.size(); ++i) {
       int key = uniq_keys[i];
