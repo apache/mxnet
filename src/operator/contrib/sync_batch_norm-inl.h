@@ -96,9 +96,6 @@ class SharedND {
 
   ~SharedND() {
     mshadow::FreeSpace(&mean_);
-    for (int i = 0; i < num_devices_; i++) {
-      mshadow::FreeSpace(&data_[i]);
-    }
     delete [] flag_;
     delete [] data_;
   }
@@ -182,7 +179,7 @@ class GlobalShared {
   ~GlobalShared() {
     for (auto it = registry_.begin(); it != registry_.end(); it++) {
       T *ptr = it->second;
-      delete [] ptr;
+      delete ptr;
     }
   }
  private:
@@ -208,7 +205,7 @@ class GlobalSharedRank {
   ~GlobalSharedRank() {
     for (auto it = registry_.begin(); it != registry_.end(); it++) {
       T *ptr = it->second;
-      delete [] ptr;
+      delete ptr;
     }
   }
  private:
