@@ -30,7 +30,6 @@ import errno
 import logging
 import bz2
 import zipfile
-import ctypes
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -49,8 +48,6 @@ from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
-from .base import _LIB, check_call
-
 
 
 def default_context():
