@@ -1061,10 +1061,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
       std::vector<float> scale_vector(in_arr.arr.shape().ndim());
       for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
         scale_vector[i] = 1;
-
-      // must scale on 0 axis since during backwar
-      scale_vector[0] = scale;
-
+      scale_vector[dim] = scale;
       for (int i = 0; i < attrs.num_outputs; i++)
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
 
