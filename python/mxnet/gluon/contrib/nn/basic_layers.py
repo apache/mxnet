@@ -199,10 +199,9 @@ class SyncBatchNorm(BatchNorm):
         - **out**: output tensor with the same shape as `data`.
 
     Reference:
-        .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating
+        .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating \
           deep network training by reducing internal covariate shift." *ICML 2015*
-
-        .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang,
+        .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang, \
           Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
     """
     def __init__(self, in_channels=0, num_devices=None, momentum=0.9, epsilon=1e-5,
