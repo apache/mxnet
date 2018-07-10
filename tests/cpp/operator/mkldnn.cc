@@ -1268,7 +1268,7 @@ TEST(IMPERATIVE, PoolingBackwardsOp) {
           if (kernel / 2. < pad)
             continue;
           OpAttrs attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
-          TestPoolingOp(attrs, false);
+          TestPoolingOp(attrs, true);
         }
       }
     }
