@@ -573,7 +573,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, std::vector<floa
 
   int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (scale.size() >= shape.ndim())
+    if (scale.size() > shape.ndim())
       continue;
 
     for (int dim = 0; dim < scale.size(); dim++)
