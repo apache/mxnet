@@ -158,7 +158,8 @@ class SyncBatchNorm(BatchNorm):
     """Cross-GPU Synchronized Batch normalization (SyncBN)
     Standard BN [1]_ implementation only normalize the data within each device.
     SyncBN normalizes the input within the whole mini-batch.
-    We follow the sync-onece implmentation described in the paper [2]_ .
+    We follow the sync-onece implmentation described in the paper [2]_.
+
     Parameters
     ----------
     in_channels : int, default 0
@@ -199,9 +200,10 @@ class SyncBatchNorm(BatchNorm):
 
     Reference:
         .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating
-        deep network training by reducing internal covariate shift." *ICML 2015*
+          deep network training by reducing internal covariate shift." *ICML 2015*
+
         .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang,
-        Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
+          Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
     """
     def __init__(self, in_channels=0, num_devices=None, momentum=0.9, epsilon=1e-5,
                  center=True, scale=True, use_global_stats=False, beta_initializer='zeros',

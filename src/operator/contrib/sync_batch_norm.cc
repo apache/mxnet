@@ -52,7 +52,7 @@ Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
 well as offset ``beta``.
 Standard BN [1]_ implementation only normalize the data within each device.
 SyncBN normalizes the input within the whole mini-batch.
-We follow the sync-onece implmentation described in the paper [2]_ .
+We follow the sync-onece implmentation described in the paper [2]_.
 
 Assume the input has more than one dimension and we normalize along axis 1.
 We first compute the mean and variance along this axis:
@@ -91,9 +91,10 @@ then set ``gamma`` to 1 and its gradient to 0.
 
 Reference:
   .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating
-  deep network training by reducing internal covariate shift." *ICML 2015*
+    deep network training by reducing internal covariate shift." *ICML 2015*
+
   .. [2] Hang Zhang, Kristin Dana, Jianping Shi, Zhongyue Zhang, Xiaogang Wang,
-  Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
+    Ambrish Tyagi, and Amit Agrawal. "Context Encoding for Semantic Segmentation." *CVPR 2018*
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
