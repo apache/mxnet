@@ -165,6 +165,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
     coord = unravel(k, rshape);
     Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]), residual);
   }
+  Reducer::Finalize(val, residual);
   assign(&small[idx], addto, val);
 }
 
@@ -256,6 +257,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 
     Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
   }
+  Reducer::Finalize(val, residual);
   assign(&small[idx], addto, val);
 }
 
