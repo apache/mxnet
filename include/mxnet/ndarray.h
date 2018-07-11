@@ -504,7 +504,9 @@ class NDArray {
    * \param dtype The data type.
    * \return NDArray in new shape and type.
    */
-  inline NDArray AsArray(const TShape &shape, int dtype) const {
+  inline NDArray AsArray(const TShape &shape,
+                         int dtype,
+                         size_t byte_offset = 0) const {
     CHECK_EQ(storage_type(), kDefaultStorage)
              << "AsArray is intended only for kDefaultStorage.";
     CHECK_GE(ptr_->shandle.size,
@@ -513,6 +515,7 @@ class NDArray {
     // We can't reuse memory in a view.
     CHECK(!IsView());
     NDArray ret = *this;
+    ret.byte_offset_ = byte_offset_ + byte_offset;
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;

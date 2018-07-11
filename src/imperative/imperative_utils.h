@@ -789,7 +789,7 @@ inline MemoryPlanVector PlanMemory(
 }
 
 
-inline std::multimap<size_t, NDArray> AllocateMemory(
+inline NDArray AllocateMemory(
     const nnvm::Graph& g,
     const nnvm::IndexedGraph& idx,
     const Context& default_ctx,
@@ -797,14 +797,26 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     const MemoryPlanVector& mem_plan,
     const std::vector<NDArray*>& arrays,
     std::vector<OpReqType> *array_reqs,
-    std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
+    NDArray pool = NDArray()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
-  std::multimap<size_t, NDArray> new_pool;
+  size_t total_size = 0;
+  for (uint32_t i = entry_start; i < entry_end; ++i) {
+    if (mem_plan[i].storage_id == exec::kExternalStorageID ||
+        mem_plan[i].storage_id == exec::kDynamicStorageID ||
+        mem_plan[i].root != i) continue;
+    total_size += mem_plan[i].size;
+  }
 
+  if (pool.is_none() || total_size > pool.shape().Size()) {
+    pool = NDArray(TShape({static_cast<nnvm::dim_t>(total_size)}),
+                   default_ctx, true, mshadow::kUint8);
+  }
+
+  size_t offset = 0;
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
     CHECK(arrays[i]->is_none());
@@ -816,17 +828,8 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
       CHECK_GT(mem_plan[i].size, 0);
-      auto iter = pool.lower_bound(mem_plan[i].size);
-      if (iter != pool.end()) {
-        *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
-        new_pool.insert(*iter);
-        pool.erase(iter);
-      } else {
-        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
-                     default_ctx, true, mshadow::kUint8);
-        *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
-        new_pool.insert({mem_plan[i].size, buff});
-      }
+      *arrays[i] = pool.AsArray(shapes[i], dtypes[i], offset);
+      offset += mem_plan[i].size;
     } else {
       CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
       *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);
@@ -836,7 +839,9 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     }
   }
 
-  return new_pool;
+  CHECK_EQ(offset, total_size);
+
+  return pool;
 }
 
 inline void SetupOpExec(

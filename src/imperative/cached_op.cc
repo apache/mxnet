@@ -87,8 +87,8 @@ struct CachedOp::CachedOpState {
   std::vector<imperative::EngineOprSeg> opr_segs;
 
   std::vector<bool> dynamic_entries;
-  std::multimap<size_t, NDArray> fwd_reuse_pool;
-  std::multimap<size_t, NDArray> bwd_reuse_pool;
+  NDArray fwd_reuse_pool;
+  NDArray bwd_reuse_pool;
 };
 
 CachedOp::CachedOp(
