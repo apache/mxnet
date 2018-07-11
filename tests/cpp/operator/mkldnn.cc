@@ -1187,14 +1187,18 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
 
-      backwards_input[0] = outputs[0]; // output grad
-      backwards_input[1] = outputs[0]; // output
-      backwards_input[2] = inputs[0]; // input
 
       // backwards test performed same time since output needed
-      if (backwards_attrs.num_inputs == 5) {
-        backwards_input[3] = outputs[1]; // output from forward
-        backwards_input[4] = outputs[1]; // output from forward
+      if (backwards_attrs.num_inputs == 3) {
+        backwards_input[0] = outputs[0]; // output grad
+        backwards_input[1] = inputs[0]; // input
+        backwards_input[2] = outputs[0]; // output
+      } else if (backwards_attrs.num_inputs == 5) {
+        backwards_input[0] = outputs[0]; // output grad
+        backwards_input[1] = outputs[0]; // workspace grad
+        backwards_input[2] = inputs[0]; // input
+        backwards_input[3] = outputs[0]; // output
+        backwards_input[4] = outputs[1]; // workspace
       }
 
       auto tmp_output = GetTestInputArrays(true)[i1];
