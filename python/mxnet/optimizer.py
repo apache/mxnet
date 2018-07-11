@@ -550,7 +550,7 @@ class SGD(Optimizer):
 class Signum(Optimizer):
     """The Signum optimizer that takes the sign of gradient or momentum.
 
-    The optimizer updates the weight by:
+    The optimizer updates the weight by::
 
         rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
         state = momentum * state + (1-momentum)*rescaled_grad
