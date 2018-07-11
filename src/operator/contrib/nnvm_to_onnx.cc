@@ -149,7 +149,6 @@ op::TRTParam ConvertNnvmGraphToOnnx(
     }    // conversion function exists
   }      // loop over i from 0 to num_nodes
 
-  LOG(INFO) << "ONNX graph construction complete.";
   model_proto.SerializeToString(&trt_param.serialized_onnx_graph);
   common::Serialize<op::tensorrt::NameToIdx_t>(trt_input_map,
                                           &trt_param.serialized_input_map);

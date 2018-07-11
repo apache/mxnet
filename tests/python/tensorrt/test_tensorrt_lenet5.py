@@ -22,12 +22,8 @@ import unittest
 import numpy as np
 import mxnet as mx
 from ctypes.util import find_library
-from mxnet.cuda_utils import get_device_count
-
-assert get_device_count() > 0, "No GPUs available to test TensorRT"
 
 assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
-
 
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
@@ -180,4 +176,3 @@ def test_tensorrt_inference():
 
 if __name__ == '__main__':
     test_tensorrt_inference()
-

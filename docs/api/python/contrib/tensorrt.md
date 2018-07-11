@@ -38,12 +38,12 @@ nvidia-docker run -ti --rm mxnet_with_tensorrt
 
 After starting the container, you will find yourself in the /opt/mxnet directory by default.
 
-## Running a "hello, world" model / unit test:
+## Running a "hello, world" model / unit test (LeNet-5 on MNIST)
 
-You can then run the LeNet-5 unit test, which will train LeNet-5 on MNIST.  The test will then run inference in MXNet both with, and without MXNet-TensorRT runtime integration.  Finally, the test will display a comparison of both runtime's accuracy scores. The test can be run as follows:
+You can then run the LeNet-5 unit test, which will train LeNet-5 on MNIST using the symbolic API.  The test will then run inference in MXNet both with, and without MXNet-TensorRT runtime integration.  Finally, the test will display a comparison of both runtime's accuracy scores. The test can be run as follows:
 
 ```no-highlight
-python tests/python/tensorrt/test_tensorrt_lenet5.py
+python ${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_lenet5.py
 ```
 
 You should get a result similar to the following:
@@ -52,20 +52,64 @@ You should get a result similar to the following:
 Running inference in MXNet
 [03:31:18] src/operator/nn/./cudnn/./cudnn_algoreg-inl.h:107: Running performance tests to find the best convolution algorithm, this can take a while... (setting env variable MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)
 Running inference in MXNet-TensorRT
-[03:31:18] src/operator/contrib/nnvm_to_onnx.cc:152: ONNX graph construction complete.
-Building TensorRT engine, FP16 available:1
-    Max batch size:     1024
-    Max workspace size: 1024 MiB
-[03:31:18] src/operator/contrib/tensorrt.cc:85: TensorRT engine instantiated!!!
 MXNet accuracy: 98.680000
 MXNet-TensorRT accuracy: 98.680000
 ```
 
-## Running a more complex model
+## Running more complex models
 
-To show that the runtime integration handles more complex models such as ResNet-50 (which includes batch normalization as well as skip connections), the relevant script is included in the `example/image_classification/tensorrt` directory.
+The unit test directory also provides a way to run models from the [Gluon model zoo](https://gluon-cv.mxnet.io/model_zoo/index.html) after slight modifications. The models that are tested are CNN classification models from the Gluon zoo. They are mostly based on [ResNet](https://arxiv.org/pdf/1512.03385.pdf), but include [ResNeXt](https://arxiv.org/pdf/1611.05431.pdf) as well:
+* cifar_resnet20_v1
+* cifar_resnet56_v1
+* cifar_resnet110_v1
+* cifar_resnet20_v2
+* cifar_resnet56_v2
+* cifar_resnet110_v2
+* cifar_wideresnet16_10
+* cifar_wideresnet28_10
+* cifar_wideresnet40_8
+* cifar_resnext29_16x64d
 
-## Building your own models
+Please note that even those examples are based on [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) due to the ease of accessing the dataset without formal registration and preprocessing, everything should work fine with models trained on [ImageNet](http://www.image-net.org/), using MxNet's ImageNet iterators, based on the [RecordIO](https://mxnet.incubator.apache.org/architecture/note_data_loading.html) representation of the ImageNet dataset.
+
+The script can be run simply as
+```no-highlight
+python ${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_resnet_resnext.py
+```
+
+Here's some sample output, for inference with batch size 16 (TensorRT is especially useful for small batches for low-latency production inference):
+```
+===========================================
+Model: cifar_resnet56_v1
+===========================================
+
+*** Running inference using pure MxNet ***
+MxNet: time elapsed: 2.463s, accuracy: 94.19%
+
+*** Running inference using MxNet + TensorRT ***
+TensorRT: time elapsed: 1.652s, accuracy: 94.19%
+
+TensorRT speed-up (not counting compilation): 1.49x
+Absolute accuracy difference: 0.000000
+
+
+===========================================
+Model: cifar_resnet110_v1
+===========================================
+
+*** Running inference using pure MxNet ***
+MxNet: time elapsed: 4.000s, accuracy: 95.20%
+
+*** Running inference using MxNet + TensorRT ***
+
+TensorRT: time elapsed: 2.085s, accuracy: 95.20%
+
+TensorRT speed-up (not counting compilation): 1.92x
+Absolute accuracy difference: 0.000000
+```
+As you can see, the speed-up varies by model. ResNet-110 has more layers that can be fused than ResNet-56, hence the speed-up is greater.
+
+## Running TensorRT with your own models with the symbolic API
 
 When building your own models, feel free to use the above ResNet-50 model as an example. Here, we highlight a small number of issues that need to be taken into account.
 
@@ -114,4 +158,47 @@ set_use_tensorrt(True)
 trt_pct = run_inference(sym, arg_params, aux_params, mnist,
                         all_test_labels,  batch_size=batch_size)
 ```
-Simply switching the flag allows us to go back and forth between MXNet and MXNet-TensorRT inference. See the details in the unit test at `tests/python/tensorrt/test_tensorrt_lenet5.py`.
+Simply switching the flag allows us to go back and forth between MXNet and MXNet-TensorRT inference. See the details in the unit test at `${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_lenet5.py`.
+
+## Running TensorRT with your own models with the Gluon API
+
+**Note:** Please first read the previous section titled "Running TensorRT with your own models with the symbolic API" - it contains information that will also be useful for Gluonusers.
+
+**Note:** If the user wishes to use the [Gluon vision models](https://gluon-cv.mxnet.io/model_zoo/index.html), it's necessary to install the `gluoncv` pip package:
+```
+pip install gluoncv
+```
+The above package is based on a [separate repository](https://github.com/dmlc/gluon-cv.git).
+
+For [Gluon](http://mxnet.incubator.apache.org/gluon/index.html) models specifically, we need to add a data symbol to the model to load the data, as well as apply the softmax layer, because the Gluon models only present the logits that are to be presented for softmax. This is shown in `python ${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_resnet_resnext.py`.  Here's the relevant code:
+
+```python
+net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
+data = mx.sym.var('data')
+out = net(data)
+softmax = mx.sym.SoftmaxOutput(out, name='softmax')
+```
+
+Since as in the symbolic API case, we need to provide the weights during the `simple_bind` call, we need to extract them. The Gluon symbol allows very easy access to the weights - we can extract them directly from the network object, and then provide them during the `simple_bind` call:
+
+```python
+net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
+
+all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
+
+executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, 32, 32), softmax_label=(batch_size,), grad_req='null',
+                                   shared_buffer=all_params, force_rebind=True)
+
+```
+Note that for Gluon-trained models, we should use Gluon's data pipeline to replicate the behavior of the pipeline that was used for training (e.g. using the same data scaling). Here's how to get the Gluon data iterator for the CIFAR-10 examples:
+```python
+gluon.data.DataLoader(
+        gluon.data.vision.CIFAR10(train=False).transform_first(transform_test),
+        batch_size=batch_size, shuffle=False, num_workers=num_workers)
+```
+
+For more details, see the unit test examples at `${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_resnet_resnext.py`.
+
+## Examples
+
+The sections above describe how to launch unit tests on pre-trained models as examples. For cross-reference, the launch shell scripts have also been added [here](../../../../example/image-classification/tensorrt/README.md).
