@@ -71,9 +71,7 @@ cd incubator-mxnet
 
 ### Enable OpenMP for MacOS
 
-If you want to enable OpenMP for better performance, you should modify these two files in MXNet root dictionary:
-
-1. Makefile:
+If you want to enable OpenMP for better performance, you should modify the Makefile in MXNet root dictionary:
 
 Add CFLAGS '-fopenmp' for Darwin.
 
@@ -83,14 +81,6 @@ ifeq ($(USE_OPENMP), 1)
     CFLAGS += -fopenmp
 # endif
 endif
-```
-
-2. prepare_mkldnn.sh:
-
-Set cmake complier to gcc-4.9 to support OpenMP.
-
-```
-CC=gcc-4.9 CXX=g++-4.9 cmake $MKLDNN_ROOTDIR -DCMAKE_INSTALL_PREFIX=$MKLDNN_INSTALLDIR -B$MKLDNN_BUILDDIR -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF >&2
 ```
 
 ### Build MXNet with MKL-DNN
