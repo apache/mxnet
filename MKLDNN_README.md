@@ -59,7 +59,7 @@ brew tap homebrew/core
 brew install opencv
 brew tap homebrew/versions
 brew install gcc49
-brew link gcc49
+brew link gcc49 #gcc-5 and gcc-7 also work
 ```
 
 ### Clone MXNet sources
