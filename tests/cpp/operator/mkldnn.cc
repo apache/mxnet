@@ -1133,6 +1133,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
 
 
   std::vector<OpReqType> req(forward_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
   std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
@@ -1208,12 +1209,13 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       Imperative::Get()->set_is_training(true);
       backwards_outputs[0] = &tmp_output.arr;
       backwards_ex_outputs[0] = &tmp_output2.arr;
+      back_req[0] = kWriteTo;
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
       Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+                                  backwards_outputs, back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
       Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+                                  backwards_ex_outputs, back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
