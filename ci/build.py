@@ -199,7 +199,7 @@ def list_platforms() -> str:
 def load_docker_cache(tag, docker_registry) -> None:
     if docker_registry:
         try:
-            from . import docker_cache
+            import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
             docker_cache.load_docker_cache(registry=docker_registry, docker_tag=tag)
         except Exception:
