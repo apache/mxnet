@@ -911,27 +911,28 @@ NNVM_REGISTER_OP(_backward_squeeze)
 
 NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(This operators implements the depthToSpace function:
-.. math::
-    f(x, block) = ~x
-where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N, C/(block^2), H*block, W*block]
-Example::
-#(1,4,2,3) input tensor
-  x = [[[[0, 1, 2],
-		[3, 4, 5]],
-	   [[6, 7, 8],
-		[9, 10, 11]],
-	   [[12, 13, 14],
-		[15, 16, 17]],
-	   [[18, 19, 20],
-		[21, 22, 23]]]]
-  
-  y = depth_to_space(x, 2)
 
-# (1, 1, 4, 6) output tensor
-  y = [[[[0, 6, 1, 7, 2, 8],
-		[12, 18, 13, 19, 14, 20],
-		[3, 9, 4, 10, 5, 11],
-		[15, 21, 16, 22, 17, 23]]]]
+.. math::
+
+    f(x, block) = \tilde{x}
+
+where :math:`x` is an input tensor of shape [N,C,H,W] and :math:`\tilde{x}` is the output tensor of shape :math:`[N, C/(block^2), H*block, W*block]`
+
+Example::
+
+  x = [[[[0, 1, 2],
+         [3, 4, 5]],
+        [[6, 7, 8],
+         [9, 10, 11]],
+        [[12, 13, 14],
+         [15, 16, 17]],
+        [[18, 19, 20],
+         [21, 22, 23]]]]
+  
+  depth_to_space(x, 2) = [[[[0, 6, 1, 7, 2, 8],
+                            [12, 18, 13, 19, 14, 20],
+                            [3, 9, 4, 10, 5, 11],
+                            [15, 21, 16, 22, 17, 23]]]]
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DepthToSpaceParam>)
 .set_num_inputs(1)
@@ -943,8 +944,9 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", DepthToSpaceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", DepthToSpaceOpType)
 .set_attr<FCompute>("FCompute<cpu>", DepthToSpaceOpForward<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
@@ -956,28 +958,29 @@ Example::
 
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(This operators implements the spacetodepth function:
+
 .. math::
-    f(x, block) = ~x
-where :math:`x` is an input tensor of shape [N,C,H,W] and `~x` is the output tensor of shape [N, C*(block^2), H/block, W/block]
+
+    f(x, blockSize) = \tilde{x}
+
+where :math:`x` is an input tensor of shape [N,C,H,W] and :math:`\tilde{x}` is the output tensor of shape :math:`[N, C*(block^2), H/block, W/block]`
+
 Example::
-#(1,4,2,3) input tensor
+
   x = [[[[0, 6, 1, 7, 2, 8],
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
          [15, 21, 16, 22, 17, 23]]]]
   
   
-  y = space_to_depth(x, 2)
-
-# (1, 1, 4, 6) output tensor
-  y = [[[[0, 1, 2],
-         [3, 4, 5]],
-        [[6, 7, 8],
-         [9, 10, 11]],
-        [[12, 13, 14],
-         [15, 16, 17]],
-        [[18, 19, 20],
-         [21, 22, 23]]]]
+  space_to_depth(x, 2) = [[[[0, 1, 2],
+                            [3, 4, 5]],
+                           [[6, 7, 8],
+                            [9, 10, 11]],
+                           [[12, 13, 14],
+                            [15, 16, 17]],
+                           [[18, 19, 20],
+                            [21, 22, 23]]]]
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DepthToSpaceParam>)
 .set_num_inputs(1)
@@ -989,8 +992,9 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", SpaceToDepthOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SpaceToDepthOpType)
 .set_attr<FCompute>("FCompute<cpu>", SpaceToDepthOpForward<cpu>)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {

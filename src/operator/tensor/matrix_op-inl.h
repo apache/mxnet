@@ -2231,6 +2231,17 @@ inline bool DepthToSpaceOpType(const nnvm::NodeAttrs& attrs,
     inp_index += (idx - next_idx_val * dim_size) * offset_arr[X]; \
     idx = next_idx_val;
 
+/*!
+ * \brief This function preforms the tensor transpose (0, 1, 2, 3, 4, 5) ->
+ * (0, 3, 4, 1, 5, 2) by computing linear index within input tensor to be mapped
+ * to the ith index of output tensor
+ * \param i           tensor index
+ * \param out_data    output tensor
+ * \param in_data     input tensor
+ * \param block       size of chunks to be moved out of depth dimension
+ * \param size        array containing the size of each dimension of input tensor
+ * \param offset_arr  array containing the linear offset of input tensor
+ */
 template<int req>
 struct depth_to_space_forward {
   template<typename DType>
@@ -2253,6 +2264,19 @@ struct depth_to_space_forward {
   }
 };
 
+/*!
+ * \brief This function calculates the linear offset for each dimension of
+ * input tensor and stores them in an array, which is later used in
+ * performing depth_to_space operation
+ * \param i           global thread id
+ * \param offset_arr  array to be populated with offset values
+ * \param size        array to be populated with size of each dimension of input tensor
+ * \param block       size of chunks to be moved out of depth dimension
+ * \param size0       size of Dim 0 of input tensor
+ * \param size1       size of Dim 1 of input tensor
+ * \param size2       size of Dim 2 of input tensor
+ * \param size3       size of Dim 3 of input tensor
+ */
 template<int req>
 struct compute_offset_for_depth_to_space {
   template<typename DType>
@@ -2290,10 +2314,10 @@ void DepthToSpaceOpForward(const nnvm::NodeAttrs& attrs,
   int block = param.blockSize;
 
   mshadow::Tensor<xpu, 1, char> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t)*10), s);
+    ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t) * 10), s);
   char* workspace_curr_ptr = workspace.dptr_;
   int32_t* offset_arr = reinterpret_cast<int32_t*>(workspace_curr_ptr);
-  int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t)*6);
+  int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t) * 6);
 
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
@@ -2335,7 +2359,7 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
        " Dimension:3(2nd space dimension) should be a multiple of 'block' ";
 
   expected_out[0] = in_shape[0];
-  expected_out[1] = in_shape[1] * (block * block);
+  expected_out[1] = in_shape[1] * block * block;
   uint32_t i = 2;
   while (i < expected_out.ndim()) {
     expected_out[i] = in_shape[i] / block;
@@ -2357,12 +2381,22 @@ inline bool SpaceToDepthOpType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1;
 }
 
+/*!
+ * \brief This function preforms the tensor transpose (0, 1, 2, 3, 4, 5) ->
+ * (0, 3, 5, 1, 2, 4) by computing linear index within input tensor to be mapped
+ * to the ith index of output tensor
+ * \param i           tensor index
+ * \param out_data    output tensor
+ * \param in_data     input tensor
+ * \param block       size of chunks to be moved out of depth dimension
+ * \param size        array containing the size of each dimension of input tensor
+ * \param offset_arr  array containing the linear offset of input tensor
+ */
 template<int req>
 struct space_to_depth_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int block, const int* size,
-                                  const int* offset_arr) {
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const int block,
+                                  const int* size, const int* offset_arr) {
     int inp_index = 0, idx = i, next_idx_val, dim_size;
     dim_size = size[3] / block;
     UPDATE_INDEX_USING_OFFSET(4)
@@ -2384,6 +2418,19 @@ struct space_to_depth_forward {
 #undef UPDATE_INDEX_USING_OFFSET
 #endif
 
+/*!
+ * \brief This function calculates the linear offset for each dimension of
+ * input tensor and stores them in an array, which is later used in
+ * performing space_to_depth operation
+ * \param i           global thread id
+ * \param offset_arr  array to be populated with offset values
+ * \param size        array to be populated with size of each dimension of input tensor
+ * \param block       size of chunks to be moved out of depth dimension
+ * \param size0       size of Dim 0 of input tensor
+ * \param size1       size of Dim 1 of input tensor
+ * \param size2       size of Dim 2 of input tensor
+ * \param size3       size of Dim 3 of input tensor
+ */
 template<int req>
 struct compute_offset_for_space_to_depth {
   template<typename DType>
@@ -2424,7 +2471,7 @@ void SpaceToDepthOpForward(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t) * 10), s);
   char* workspace_curr_ptr = workspace.dptr_;
   int32_t* offset_arr = reinterpret_cast<int32_t*>(workspace_curr_ptr);
-  int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t)*6);
+  int32_t* size = reinterpret_cast<int32_t*>(workspace_curr_ptr + sizeof(int32_t) * 6);
 
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
