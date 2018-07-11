@@ -1117,32 +1117,42 @@ int CalculateWidthPoolOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
 }
 
-int CalculateWidthPoolInput(int width, int kernel, int padding, int stride) {
-  return (width - 1) * stride + kernel - 2*padding;
-}
+//int CalculateWidthPoolInput(int width, int kernel, int padding, int stride) {
+//  return (width - 1) * stride + kernel - 2*padding;
+//}
 
-void TestPoolingOp(const OpAttrs &attrs,
-                  bool backwards = false) {
-  std::vector<NDArray*> inputs(attrs.num_inputs);
-  std::vector<NDArray*> outputs(attrs.num_outputs);
-  std::vector<NDArray*> ex_outputs(attrs.num_outputs);
-  std::vector<OpReqType> req(attrs.num_outputs);
-  std::vector<DispatchMode> dispatches = attrs.dispatches;
+
+void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
+  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
+  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
+
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+
+
+  std::vector<OpReqType> req(forward_attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   mxnet::op::PoolingParam param;
-  param.Init(attrs.attrs.dict);
+  param.Init(forward_attrs.attrs.dict);
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   TShape stride = param.stride;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(attrs.num_outputs);
+  std::vector<NDArrayAttrs> in_arrs1 = GetTestInputArrays();
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
+  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
-  for (auto &in_arr : in_arrs) {
+  for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+    auto in_arr = in_arrs[i1];
+    auto in_arr1 = in_arrs1[i1];
+
     // can only pool only 3D and 4D inputs
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
@@ -1154,45 +1164,53 @@ void TestPoolingOp(const OpAttrs &attrs,
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
-      if (i < 2) {
+      if (i < 2)
         scale_vector[i] = 1;
-      } else if (!backwards) {
+      else
         scale_vector[i] = CalculateWidthPoolOutput(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
             static_cast<float>(input_shape[i]);
-      } else if (backwards) {
-        scale_vector[i] = CalculateWidthPoolInput(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
-            static_cast<float>(input_shape[i]);
-      }
 
     }
-    for (int i = 0; i < attrs.num_outputs; i++) {
+    for (int i = 0; i < forward_attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
 
-    for (int i = 0; i < attrs.num_inputs; i++)
+    for (int i = 0; i < forward_attrs.num_inputs; i++)
       inputs[i] = &in_arr.arr;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-      for (int i = 0; i < attrs.num_outputs; i++) {
+      for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
         outputs[i] = &out_arrs[i][output_i].arr;
         ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
       }
 
-      if (backwards) {
-        int in_data_idx = attrs.num_inputs == 5 ? 2 : 1;
-        inputs[in_data_idx] = outputs[0];
-        Imperative::Get()->set_is_training(true);
-      }
-
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
-      VerifyCopyResult(ex_outputs, outputs);
+      VerifyCopyResult(outputs, ex_outputs);
+
+      backwards_input[0] = outputs[0]; // output grad
+      backwards_input[1] = outputs[0]; // output
+      backwards_input[2] = inputs[0]; // input
+      backwards_input[3] = outputs[1]; // output from forward
+      backwards_input[4] = outputs[1]; // output from forward
+
+      backwards_outputs[0] = &in_arr.arr;
+      backwards_ex_outputs[0] = &in_arr1.arr;
+
+      // backwards test performed same time since output needed
+      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
+                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
+                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
   }
 }
@@ -1252,23 +1270,9 @@ TEST(IMPERATIVE, PoolingOp) {
         for (int pad = 0; pad < 2; pad++) {
           if (kernel / 2. < pad)
             continue;
-          OpAttrs attrs = GetPoolingOp(kernel, dim, stride, pad);
-          TestPoolingOp(attrs, false);
-        }
-      }
-    }
-  }
-}
-
-TEST(IMPERATIVE, PoolingBackwardsOp) {
-  for (int dim = 2; dim < 4; dim++) {
-    for (int kernel = 1; kernel < 4; kernel++) {
-      for (int stride = 1; stride < 3; stride++) {
-        for (int pad = 0; pad < 2; pad++) {
-          if (kernel / 2. < pad)
-            continue;
-          OpAttrs attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
-          TestPoolingOp(attrs, true);
+          OpAttrs forward_attrs = GetPoolingOp(kernel, dim, stride, pad);
+          OpAttrs backwards_attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
+          TestPoolingOp(forward_attrs, backwards_attrs);
         }
       }
     }
