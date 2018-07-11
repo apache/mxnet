@@ -22,6 +22,7 @@ import sys
 import os
 import numpy as np
 import mxnet as mx
+from test_mkldnn_gluon import *
 from mxnet.test_utils import assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
