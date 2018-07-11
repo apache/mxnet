@@ -1202,16 +1202,16 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
         backwards_input[3] = outputs[1]; // output from forward
         backwards_input[4] = outputs[1]; // output from forward
       }
-      
+
       backwards_outputs[0] = &in_arr.arr;
       backwards_ex_outputs[0] = &in_arr1.arr;
 
       // backwards test performed same time since output needed
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
       Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+                                  backwards_outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
       Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+                                  backwards_ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
