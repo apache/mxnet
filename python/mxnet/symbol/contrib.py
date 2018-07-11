@@ -337,7 +337,7 @@ def foreach(body, data, init_states, name="foreach"):
 
     return (outs, states)
 
-def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
+def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     """Run a while loop with user-defined computation and loop condition.
 
     This operator simulates a while loop which iterately does customized computation
@@ -515,6 +515,8 @@ def while_loop(cond, func, loop_vars, max_iterations, name="while_loop"):
                     var_locs[name_to_var_locs[name]] = len(input_locs) - 1
             locs.append((input_locs, var_locs))
         return inputs, locs
+    if max_iterations is None:
+        raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
     loop_vars = _to_symbol_tuple(loop_vars, "loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
