@@ -1202,8 +1202,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
         backwards_input[4] = outputs[1]; // output from forward
       }
 
-      auto tmp_output = GetTestInputArrays()[i1];
-      auto tmp_output2 = GetTestInputArrays()[i1];
+      auto tmp_output = GetTestInputArrays(true)[i1];
+      auto tmp_output2 = GetTestInputArrays(true)[i1];
 
       Imperative::Get()->set_is_training(true);
       backwards_outputs[0] = &tmp_output.arr;
