@@ -648,9 +648,6 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   CHECK_EQ(outputs.size(), req.size());
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
     CHECK_EQ(params.max_iterations, outputs[i].shape()[0]);
-  for (const auto &arr : outputs)
-    CHECK_EQ(arr.storage_type(), kDefaultStorage)
-          << "The while_loop operator doesn't support the sparse format";
   // construct inputs and outputs for cond
   std::vector<NDArray> cond_inputs, cond_outputs = {NDArray()};
   WhileLoopState::extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
@@ -718,10 +715,6 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   CHECK_EQ(_outputs.size(), _req.size());
   for (auto x : _req) {
     CHECK_NE(x, kWriteInplace);
-  }
-  for (auto x : _outputs) {
-    CHECK_EQ(x.storage_type(), kDefaultStorage)
-          << "The while_loop operator doesn't support the sparse format";
   }
   std::vector<NDArray> outputs;
   std::vector<OpReqType> req;
