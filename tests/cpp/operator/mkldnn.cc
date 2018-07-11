@@ -509,9 +509,6 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
-  attrs.dispatches[0] = DispatchMode::kFCompute;
-  attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
 
@@ -526,9 +523,6 @@ OpAttrs GetPoolingBackwardsOp(int kernel, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
-  attrs.dispatches[0] = DispatchMode::kFCompute;
-  attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
 
