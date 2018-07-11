@@ -25,6 +25,7 @@
 #  Align with R install script: /docs/install/install_mxnet_ubuntu_r.sh
 
 set -ex
+cd "$(dirname "$0")"
 # install libraries for mxnet's r package on ubuntu
 echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
 
