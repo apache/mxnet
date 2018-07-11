@@ -41,8 +41,8 @@ namespace mxnet {
 namespace kvstore {
 
 template<typename IType>
-size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
-                   IType *dptr, const size_t size) {
+size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
+                   IType *dptr, const size_t size, Context ctx) {
   // estimate unique temp space. The first byte is reserved to store the number
   // of unique values selected
   const size_t num_selected_bytes = sizeof(size_t);
@@ -68,12 +68,12 @@ size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
   // request temp storage
   const size_t total_workspace = num_selected_bytes + sort_output_bytes +
                                  std::max(sort_temp_bytes, unique_temp_bytes);
-  mshadow::Tensor<gpu, 1, char> workspace = rsc
-    .get_space_typed<gpu, 1, char>(mshadow::Shape1(total_workspace), s);
+  *workspace = NDArray(mshadow::Shape1((total_workspace + 3) / 4), ctx, false);
+  char* workspace_dptr = reinterpret_cast<char*>(workspace->data().dptr_);
   // temp space layout: num_selected_ptr, sort_output_bytes, unique/sort_temp_storage
-  size_t* num_selected_ptr = reinterpret_cast<size_t*>(workspace.dptr_);
-  IType* sort_output_ptr = reinterpret_cast<IType*>(workspace.dptr_ + num_selected_bytes);
-  void *temp_storage = static_cast<void*>(workspace.dptr_ +
+  size_t* num_selected_ptr = reinterpret_cast<size_t*>(workspace_dptr);
+  IType* sort_output_ptr = reinterpret_cast<IType*>(workspace_dptr + num_selected_bytes);
+  void *temp_storage = static_cast<void*>(workspace_dptr +
                                           num_selected_bytes + sort_output_bytes);
   // execute the sort kernel
 #ifndef SORT_WITH_THRUST
@@ -96,13 +96,12 @@ size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
 }
 
 template<>
-void UniqueImpl<gpu>(const Resource& rsc, mshadow::Stream<gpu> *s,
-                     const NDArray &out) {
+void UniqueImpl<gpu>(NDArray *workspace, mshadow::Stream<gpu> *s, const NDArray &out) {
   const size_t num_elements = out.shape().Size();
   CHECK_EQ(out.storage_type(), kRowSparseStorage) << "row_sparse NDArray is expected";
   MSHADOW_IDX_TYPE_SWITCH(out.dtype(), IType, {
     IType *dptr = out.data().dptr<IType>();
-    size_t num_selected_out = UniqueImplGPU(rsc, s, dptr, num_elements);
+    size_t num_selected_out = UniqueImplGPU(workspace, s, dptr, num_elements, out.ctx());
     // set the shape of data/aux_data according to the number of unique values
     out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_selected_out));
   });

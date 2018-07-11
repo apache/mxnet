@@ -24,7 +24,7 @@
 
 (def arr (ndarray/ones [2 3]))
 
-arr  ;=> #object[ml.dmlc.mxnet.NDArray 0x482401ab "ml.dmlc.mxnet.NDArray@d8902656"]
+arr ;=> #object[org.apache.mxnet.NDArray 0x597d72e "org.apache.mxnet.NDArray@e35c3ba9"]
 
 (ndarray/shape-vec arr) ;=>  [2 3]
 

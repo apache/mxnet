@@ -839,8 +839,8 @@ class ColorNormalizeAug(Augmenter):
     """
     def __init__(self, mean, std):
         super(ColorNormalizeAug, self).__init__(mean=mean, std=std)
-        self.mean = nd.array(mean) if mean is not None else None
-        self.std = nd.array(std) if std is not None else None
+        self.mean = mean if mean is None or isinstance(mean, nd.NDArray) else nd.array(mean)
+        self.std = std if std is None or isinstance(std, nd.NDArray) else nd.array(std)
 
     def __call__(self, src):
         """Augmenter body"""
@@ -999,14 +999,14 @@ def CreateAugmenter(data_shape, resize=0, rand_crop=False, rand_resize=False, ra
         auglist.append(RandomGrayAug(rand_gray))
 
     if mean is True:
-        mean = np.array([123.68, 116.28, 103.53])
+        mean = nd.array([123.68, 116.28, 103.53])
     elif mean is not None:
-        assert isinstance(mean, np.ndarray) and mean.shape[0] in [1, 3]
+        assert isinstance(mean, (np.ndarray, nd.NDArray)) and mean.shape[0] in [1, 3]
 
     if std is True:
-        std = np.array([58.395, 57.12, 57.375])
+        std = nd.array([58.395, 57.12, 57.375])
     elif std is not None:
-        assert isinstance(std, np.ndarray) and std.shape[0] in [1, 3]
+        assert isinstance(std, (np.ndarray, nd.NDArray)) and std.shape[0] in [1, 3]
 
     if mean is not None or std is not None:
         auglist.append(ColorNormalizeAug(mean, std))
