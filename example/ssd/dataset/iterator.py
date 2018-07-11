@@ -99,7 +99,7 @@ class DetRecordIter(mx.io.DataIter):
             raise StopIteration
 
     def _get_batch(self):
-        self._batch = self.rec.next()
+        self._batch = next(self.rec)
         if not self._batch:
             return False
 

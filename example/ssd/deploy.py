@@ -16,13 +16,14 @@
 # under the License.
 
 from __future__ import print_function
+from __future__ import absolute_import
 import argparse
-import tools.find_mxnet
 import mxnet as mx
+from mxnet.tools import find_mxnet
 import os
 import importlib
 import sys
-from symbol.symbol_factory import get_symbol
+from .symbol.symbol_factory import get_symbol
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert a trained model to deploy model')

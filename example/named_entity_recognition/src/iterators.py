@@ -1,3 +1,4 @@
+from __future__ import print_function
 # !/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -42,7 +43,7 @@ class BucketNerIter(DataIter):
             seq_counts = np.bincount([len(s) for s in sentences])
             buckets = [i for i, j in enumerate(seq_counts) if j >= batch_size]
         buckets.sort()
-        print("\nBuckets  created: ", buckets)
+        print(("\nBuckets  created: ", buckets))
         assert(len(buckets) > 0), "Not enough utterances to create any buckets."
 
         ###########
@@ -64,7 +65,7 @@ class BucketNerIter(DataIter):
             buff[:len(sent)] = sent # Fill with actual values
             self.sentences[buck_idx].append(buff) # Append array to index = bucket index
         self.sentences = [np.asarray(i, dtype=dtype) for i in self.sentences] # Convert to list of array
-        print("Warning, {0} sentences sliced to largest bucket size.".format(nslice)) if nslice > 0 else None
+        print(("Warning, {0} sentences sliced to largest bucket size.".format(nslice)) if nslice > 0 else None)
 
         ############
         # Characters

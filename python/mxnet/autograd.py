@@ -19,6 +19,7 @@
 """Autograd for NDArray."""
 from __future__ import absolute_import
 from __future__ import division
+from __future__ import print_function
 
 from array import array
 from threading import Lock

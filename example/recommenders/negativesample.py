@@ -17,6 +17,7 @@
 
 """DataIter for negative sampling.
 """
+from __future__ import print_function
 import mxnet as mx
 import numpy as np
 
@@ -157,13 +158,13 @@ if __name__ == "__main__":
     R = np.random.randint(1,5,size=(100,))
     batch_size=3
     oridi = mx.io.NDArrayIter(data={'a':A,'b':B},label=R, batch_size=batch_size)
-    oribatch = oridi.next()
+    oribatch = next(oridi)
     oridi.reset()
     for ratio in range(0,5):
         nsdi = NegativeSamplingDataIter(oridi, sample_ratio=ratio)
 
         # Check sizes of output
-        bat = nsdi.next()
+        bat = next(nsdi)
         for i in range(len(bat.data)):
             assert bat.data[i].shape[0] == batch_size
             assert bat.data[i].shape[1] == oribatch.data[i].shape[1]

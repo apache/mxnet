@@ -18,6 +18,7 @@
 """Random projection layers in MXNet as custom python ops.
 Currently slow and memory-inefficient, but functional.
 """
+from __future__ import print_function
 import os
 import numpy as np
 import mxnet as mx

@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import print_function
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 

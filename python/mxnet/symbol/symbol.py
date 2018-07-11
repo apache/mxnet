@@ -20,6 +20,7 @@
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
 from __future__ import absolute_import as _abs
+from __future__ import print_function
 try:
     from __builtin__ import slice as py_slice
 except ImportError:

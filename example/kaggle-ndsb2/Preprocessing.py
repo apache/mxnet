@@ -19,6 +19,7 @@
 
 This script walks over the directories and dump the frames into a csv file
 """
+from __future__ import print_function
 import os
 import csv
 import sys

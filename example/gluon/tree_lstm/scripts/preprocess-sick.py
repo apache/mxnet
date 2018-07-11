@@ -19,6 +19,7 @@
 Preprocessing script for SICK data.
 
 """
+from __future__ import print_function
 
 import os
 import glob

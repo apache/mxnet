@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ, too-many-lines
 """Base container class for all neural network models."""
+from __future__ import print_function
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import threading

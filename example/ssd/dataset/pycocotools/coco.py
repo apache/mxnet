@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'tylin'
 __version__ = '2.0'
 # Interface for accessing the Microsoft COCO dataset.

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -19,8 +20,8 @@ import os
 import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
-from common import find_mxnet
-from common import data, fit, modelzoo
+from .common import find_mxnet
+from .common import data, fit, modelzoo
 import mxnet as mx
 import numpy as np
 

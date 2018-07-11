@@ -16,6 +16,7 @@
 # under the License.
 
 from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 import argparse
@@ -24,9 +25,9 @@ import mxnet as mx
 import time
 import logging
 
-from symbol.symbol_factory import get_symbol
-from symbol.symbol_factory import get_symbol_train
-from symbol import symbol_builder
+from .symbol.symbol_factory import get_symbol
+from .symbol.symbol_factory import get_symbol_train
+from .symbol import symbol_builder
 
 
 parser = argparse.ArgumentParser(description='MxNet SSD benchmark')

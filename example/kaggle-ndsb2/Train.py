@@ -17,6 +17,7 @@
 
 """Training script, this is converted from a ipython notebook
 """
+from __future__ import print_function
 
 import os
 import csv

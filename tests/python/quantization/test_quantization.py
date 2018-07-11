@@ -18,6 +18,7 @@
 """Some of the tests using CUDNN require a special GPU instruction called dp4a.
 Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Final-Letter-Web.pdf
 """
+from __future__ import print_function
 import os
 import mxnet as mx
 import numpy as np

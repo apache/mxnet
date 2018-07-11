@@ -122,10 +122,10 @@ class Solver(object):
                 if self.iter_start_callback(i):
                     return
             try:
-                batch = data_iter.next()
+                batch = next(data_iter)
             except StopIteration:
                 data_iter.reset()
-                batch = data_iter.next()
+                batch = next(data_iter)
             for data, buff in zip(batch.data+batch.label, input_buffs):
                 data.copyto(buff)
             exe.forward(is_train=True)

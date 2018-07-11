@@ -223,7 +223,7 @@ def test():
     score = np.zeros((args.batch_size,))
     for t in range(N):
         dataiter.clear_history()
-        data = dataiter.next()
+        data = next(dataiter)
         module.forward(data, is_train=False)
         act = module.get_outputs()[0].asnumpy()
         act = [np.random.choice(dataiter.act_dim, p=act[i]) for i in range(act.shape[0])]

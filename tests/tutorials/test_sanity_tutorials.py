@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -60,7 +61,7 @@ def test_tutorial_downloadable():
         downloadable = download_button_string in last or download_button_string in second_last
         friendly_name = '/'.join(tutorial.split('/')[-2:])
         if not downloadable and friendly_name  not in whitelist_set:
-            print(last, second_last)
+            print((last, second_last))
             assert False, "{} is missing <!-- INSERT SOURCE DOWNLOAD BUTTONS --> as its last line".format(friendly_name)
 
 def test_tutorial_tested():

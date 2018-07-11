@@ -1,3 +1,4 @@
+from __future__ import print_function
 # !/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one

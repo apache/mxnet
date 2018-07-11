@@ -18,6 +18,7 @@
 # coding: utf-8
 """A server node for the key value store."""
 from __future__ import absolute_import
+from __future__ import print_function
 import ctypes
 import sys
 import pickle

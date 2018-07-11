@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 """ data iterator for mnist """
+from __future__ import print_function
 import os
 import random
 import logging

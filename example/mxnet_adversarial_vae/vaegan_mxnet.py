@@ -437,7 +437,7 @@ def train(dataset, nef, ndf, ngf, nc, batch_size, Z, lr, beta1, epsilon, ctx, ch
         train_iter.reset()
         for t, batch in enumerate(train_iter):
 
-            rbatch = rand_iter.next()
+            rbatch = next(rand_iter)
 
             if mon is not None:
                 mon.tic()

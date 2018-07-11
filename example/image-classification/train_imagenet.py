@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -19,8 +20,8 @@ import os
 import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
-from common import find_mxnet, data, fit
-from common.util import download_file
+from .common import find_mxnet, data, fit
+from .common.util import download_file
 import mxnet as mx
 
 if __name__ == '__main__':

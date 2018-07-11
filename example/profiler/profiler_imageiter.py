@@ -34,7 +34,7 @@ def run_imageiter(path_rec, n, batch_size=32):
     data.reset()
     tic = time.time()
     for i in range(n):
-        data.next()
+        next(data)
     mx.nd.waitall()
     print(batch_size*n/(time.time() - tic))
 

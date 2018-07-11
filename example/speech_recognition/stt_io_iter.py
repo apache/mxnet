@@ -103,11 +103,11 @@ class STTIter(mx.io.DataIter):
             texts = []
             for i in range(self.batch_size):
                 try:
-                    duration, audio_path, text = self.trainDataIter.next()
+                    duration, audio_path, text = next(self.trainDataIter)
                 except:
                     random.shuffle(self.trainDataList)
                     self.trainDataIter = iter(self.trainDataList)
-                    duration, audio_path, text = self.trainDataIter.next()
+                    duration, audio_path, text = next(self.trainDataIter)
                 audio_paths.append(audio_path)
                 texts.append(text)
             if self.is_first_epoch:

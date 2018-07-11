@@ -17,6 +17,7 @@
 
 """Convert Caffe's modelzoo
 """
+from __future__ import print_function
 import os
 import argparse
 from convert_model import convert_model

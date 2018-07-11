@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import _layers
+from . import _layers
 import coremltools as _coremltools
 import coremltools.models.datatypes as _datatypes
 from coremltools.models import neural_network as _neural_network
@@ -68,9 +70,9 @@ def check_error(model, path, shapes, output = 'softmax_output', verbose = True):
     error = _np.linalg.norm(e_out - mx_out)
 
     if verbose:
-        print "First few predictions from CoreML : %s" % e_out[0:10]
-        print "First few predictions from MXNet  : %s" % e_out[0:10]
-        print "L2 Error on random data %s" % error
+        print("First few predictions from CoreML : %s" % e_out[0:10])
+        print("First few predictions from MXNet  : %s" % e_out[0:10])
+        print("L2 Error on random data %s" % error)
     return error
 
 def _set_input_output_layers(builder, input_names, output_names):

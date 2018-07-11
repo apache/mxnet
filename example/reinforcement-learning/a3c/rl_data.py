@@ -172,6 +172,6 @@ if __name__ == '__main__':
         for _ in range(100):
             dataiter.act([env.action_space.sample() for env in dataiter.env])
             dataiter.clear_history()
-            dataiter.next()
+            next(dataiter)
         print(batch_size*100/(time.time() - tic))
         tic = time.time()

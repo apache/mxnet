@@ -85,7 +85,7 @@ if __name__ == '__main__':
         # reset initial LSTMP states
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-num_sample_names]
-        next_batch = train_data.next()
+        next_batch = next(train_data)
         next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
         stop_iter = False
         while not stop_iter:
@@ -104,7 +104,7 @@ if __name__ == '__main__':
             module.forward(batch)
             try:
                 # prefetch the next batch of data and samples
-                next_batch = train_data.next()
+                next_batch = next(train_data)
                 next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
             except StopIteration:
                 stop_iter = True

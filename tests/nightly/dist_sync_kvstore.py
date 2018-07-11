@@ -18,6 +18,7 @@
 # under the License.
 
 # pylint: skip-file
+from __future__ import print_function
 import sys
 sys.path.insert(0, "../../python/")
 import argparse

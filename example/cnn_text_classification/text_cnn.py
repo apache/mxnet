@@ -19,6 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import sys
 import os
 import mxnet as mx
@@ -85,11 +86,11 @@ def data_iter(batch_size, num_embed, pre_trained_word2vec=False):
     x_train, x_dev = x_shuffled[:-1000], x_shuffled[-1000:]
     y_train, y_dev = y_shuffled[:-1000], y_shuffled[-1000:]
     print('Train/Valid split: %d/%d' % (len(y_train), len(y_dev)))
-    print('train shape:', x_train.shape)
-    print('valid shape:', x_dev.shape)
-    print('sentence max words', sentence_size)
-    print('embedding size', embed_size)
-    print('vocab size', vocab_size)
+    print(('train shape:', x_train.shape))
+    print(('valid shape:', x_dev.shape))
+    print(('sentence max words', sentence_size))
+    print(('embedding size', embed_size))
+    print(('vocab size', vocab_size))
 
     train = mx.io.NDArrayIter(
         x_train, y_train, batch_size, shuffle=True)

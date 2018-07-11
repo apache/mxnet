@@ -21,6 +21,8 @@
 """Multi arch dockerized build tool.
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 __author__ = 'Marco de Abreu, Kellen Sunderland, Anton Chernov, Pedro Larroy'
 __version__ = '0.1'

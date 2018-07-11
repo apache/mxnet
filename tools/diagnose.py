@@ -20,6 +20,7 @@
 """Diagnose script for checking OS/hardware/python/pip/mxnet/network.
 The output of this script can be a very good hint to issue/problem.
 """
+from __future__ import print_function
 import platform, subprocess, sys, os
 import socket, time
 try:
@@ -83,17 +84,17 @@ def test_connection(name, url, timeout=10):
 
 def check_python():
     print('----------Python Info----------')
-    print('Version      :', platform.python_version())
-    print('Compiler     :', platform.python_compiler())
-    print('Build        :', platform.python_build())
-    print('Arch         :', platform.architecture())
+    print(('Version      :', platform.python_version()))
+    print(('Compiler     :', platform.python_compiler()))
+    print(('Build        :', platform.python_build()))
+    print(('Arch         :', platform.architecture()))
 
 def check_pip():
     print('------------Pip Info-----------')
     try:
         import pip
-        print('Version      :', pip.__version__)
-        print('Directory    :', os.path.dirname(pip.__file__))
+        print(('Version      :', pip.__version__))
+        print(('Directory    :', os.path.dirname(pip.__file__)))
     except ImportError:
         print('No corresponding pip install for current python.')
 
@@ -101,13 +102,13 @@ def check_mxnet():
     print('----------MXNet Info-----------')
     try:
         import mxnet
-        print('Version      :', mxnet.__version__)
+        print(('Version      :', mxnet.__version__))
         mx_dir = os.path.dirname(mxnet.__file__)
-        print('Directory    :', mx_dir)
+        print(('Directory    :', mx_dir))
         commit_hash = os.path.join(mx_dir, 'COMMIT_HASH')
         with open(commit_hash, 'r') as f:
             ch = f.read().strip()
-            print('Commit Hash   :', ch)
+            print(('Commit Hash   :', ch))
     except ImportError:
         print('No MXNet installed.')
     except IOError:
@@ -121,16 +122,16 @@ def check_mxnet():
 
 def check_os():
     print('----------System Info----------')
-    print('Platform     :', platform.platform())
-    print('system       :', platform.system())
-    print('node         :', platform.node())
-    print('release      :', platform.release())
-    print('version      :', platform.version())
+    print(('Platform     :', platform.platform()))
+    print(('system       :', platform.system()))
+    print(('node         :', platform.node()))
+    print(('release      :', platform.release()))
+    print(('version      :', platform.version()))
 
 def check_hardware():
     print('----------Hardware Info----------')
-    print('machine      :', platform.machine())
-    print('processor    :', platform.processor())
+    print(('machine      :', platform.machine()))
+    print(('processor    :', platform.processor()))
     if sys.platform.startswith('darwin'):
         pipe = subprocess.Popen(('sysctl', '-a'), stdout=subprocess.PIPE)
         output = pipe.communicate()[0]

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,11 +17,11 @@
 # under the License.
 
 import argparse
-import tools.find_mxnet
 import mxnet as mx
+from mxnet.tools import find_mxnet
 import os
 import sys
-from evaluate.evaluate_net import evaluate_net
+from .evaluate.evaluate_net import evaluate_net
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate a network')

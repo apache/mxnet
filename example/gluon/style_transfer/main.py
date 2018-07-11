@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -47,7 +48,7 @@ def train(args):
     train_loader = gluon.data.DataLoader(train_dataset, batch_size=args.batch_size,
                                          last_batch='discard')
     style_loader = utils.StyleLoader(args.style_folder, args.style_size, ctx=ctx)
-    print('len(style_loader):',style_loader.size())
+    print(('len(style_loader):',style_loader.size()))
     # models
     vgg = net.Vgg16()
     utils.init_vgg_params(vgg, 'models', ctx=ctx)
@@ -56,7 +57,7 @@ def train(args):
     if args.resume is not None:
         print('Resuming, initializing using weight from {}.'.format(args.resume))
         style_model.load_parameters(args.resume, ctx=ctx)
-    print('style_model:',style_model)
+    print(('style_model:',style_model))
     # optimizer and loss
     trainer = gluon.Trainer(style_model.collect_params(), 'adam',
                             {'learning_rate': args.lr})
@@ -122,14 +123,14 @@ def train(args):
                     args.content_weight) + "_" + str(args.style_weight) + ".params"
                 save_model_path = os.path.join(args.save_model_dir, save_model_filename)
                 style_model.save_parameters(save_model_path)
-                print("\nCheckpoint, trained model saved at", save_model_path)
+                print(("\nCheckpoint, trained model saved at", save_model_path))
 
     # save model
     save_model_filename = "Final_epoch_" + str(args.epochs) + "_" + str(time.ctime()).replace(' ', '_') + "_" + str(
         args.content_weight) + "_" + str(args.style_weight) + ".params"
     save_model_path = os.path.join(args.save_model_dir, save_model_filename)
     style_model.save_parameters(save_model_path)
-    print("\nDone, trained model saved at", save_model_path)
+    print(("\nDone, trained model saved at", save_model_path))
 
 
 def evaluate(args):

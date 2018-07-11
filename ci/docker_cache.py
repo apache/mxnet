@@ -23,6 +23,7 @@ Utility to handle distributed docker cache. This is done by keeping the entire i
 on an S3 bucket. This utility allows cache creation and download. After execution, the cache will be in an identical
 state as if the container would have been built locally already.
 """
+from __future__ import absolute_import
 
 import os
 import logging

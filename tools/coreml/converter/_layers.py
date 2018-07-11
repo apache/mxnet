@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import _add_pooling
+from . import _add_pooling
 from ast import literal_eval
 
 def _get_input_output_name(net, node, index=0):

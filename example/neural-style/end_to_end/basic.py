@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -160,7 +161,7 @@ if __name__ == "__main__":
         data_grad = mod.get_input_grads()[0]
         gnorm = mx.nd.norm(data_grad).asscalar()
         if gnorm > clip_norm:
-            print("Data Grad: ", gnorm / clip_norm)
+            print(("Data Grad: ", gnorm / clip_norm))
             data_grad[:] *= clip_norm / gnorm
 
         optimizer.update(0, img, data_grad, optim_state)

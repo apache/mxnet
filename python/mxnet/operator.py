@@ -19,6 +19,7 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines
 """numpy interface for operators."""
 from __future__ import absolute_import
+from __future__ import print_function
 
 import traceback
 import warnings

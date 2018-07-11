@@ -16,6 +16,7 @@
 # under the License.
 
 """A sphnix-doc plugin to build mxnet docs"""
+from __future__ import print_function
 import subprocess
 import re
 import os

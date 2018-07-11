@@ -18,8 +18,9 @@
 """
 Benchmark the scoring performance on various CNNs
 """
-from common import find_mxnet
-from common.util import get_gpus
+from __future__ import absolute_import
+from .common import find_mxnet
+from .common.util import get_gpus
 import mxnet as mx
 from importlib import import_module
 import logging
