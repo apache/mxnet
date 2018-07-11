@@ -469,7 +469,7 @@ state = momentum * state + rescaled_grad
 weight = weight - state
 ```
 
-Meanwhile, the sparse update rule for SGD optimizer is:
+However, with sparse gradient the SGD optimizer uses the following lazy update by default:
 
 ```
 for row in grad.indices:
@@ -477,6 +477,9 @@ for row in grad.indices:
     state[row] = momentum[row] * state[row] + rescaled_grad[row]
     weight[row] = weight[row] - state[row]
 ```
+
+This means that the lazy update leads to different optimization results if `weight_decay` or `momentum` is non-zero.
+To disable lazy update, please set `lazy_update` to be False when creating the optimizer.
 
 
 ```python
@@ -531,8 +534,9 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-Note that both [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD)
-and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) support sparse updates in MXNet.
+Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD)
+and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) and
+[mxnet.optimizer.AdaGrad](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
 
 ## Advanced Topics
 
