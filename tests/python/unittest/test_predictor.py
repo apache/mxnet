@@ -69,7 +69,6 @@ def test_predictor():
 
 @with_seed()
 def test_load_ndarray():
-
     nd_file = 'test_predictor_load_ndarray.params'
     a = nd.random.uniform(shape=(7, 3))
     b = nd.random.uniform(shape=(7,))
