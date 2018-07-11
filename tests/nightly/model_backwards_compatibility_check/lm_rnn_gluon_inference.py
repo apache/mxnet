@@ -66,7 +66,7 @@ def perform_inference(test_data, val_data, model, inference_file):
 	print ('Inference results passed for %s' % model_name)
 
 def clean_up_files (model_files):
-	clean_ptb_data()
+	clean_sherlock_data()
 	clean_model_files(model_files)
 	print ('Model files deleted')
 	

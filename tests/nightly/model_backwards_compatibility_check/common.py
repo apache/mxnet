@@ -204,8 +204,8 @@ class Corpus(object):
         self.test = self.tokenize(path + 'test.txt')
 
     def download_data_from_s3(self, ):
-        print ('Downloading files from bucket : ptb-small-dataset' )
-        bucket = s3.Bucket('ptb-small-dataset')
+        print ('Downloading files from bucket : sherlock-dataset' )
+        bucket = s3.Bucket('sherlock-dataset')
         files = ['test.txt', 'train.txt', 'valid.txt']
         for file in files:
             if os.path.exists(args_data + file) :
@@ -241,7 +241,7 @@ class Corpus(object):
 
 
 #### Common utilies for lm_rnn_gluon_train & inference files
-args_data = 'ptb.'
+args_data = 'sherlockholmes.'
 args_model = 'rnn_relu'
 args_emsize = 100
 args_nhid = 100
@@ -331,7 +331,7 @@ def eval(data_source, model):
         ntotal += L.size
     return total_L / ntotal
 
-def clean_ptb_data():
+def clean_sherlock_data():
     files = ['test.txt', 'train.txt', 'valid.txt']
     for file in files: 
         if os.path.isfile(args_data + file):
@@ -339,4 +339,4 @@ def clean_ptb_data():
 
 # This function is added so that if a download gets interrupted in between, one can clean the corrupted files
 clean_mnist_data()
-clean_ptb_data()
+clean_sherlock_data()

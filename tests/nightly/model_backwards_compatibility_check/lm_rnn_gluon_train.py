@@ -78,7 +78,7 @@ def save_inference_results(test, val):
         json.dump(inference_results, file)
 
 def clean_up_files (model_files):
-    clean_ptb_data()
+    clean_sherlock_data()
     clean_model_files(model_files)
     print ('Model files deleted')
     
