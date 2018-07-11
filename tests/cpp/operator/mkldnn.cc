@@ -557,7 +557,8 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, std::vector<float> scale={1}) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
+    std::vector<float> scale = {1}) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -578,7 +579,6 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, std::vector<floa
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-
       for (int dim = 0; dim < scale.size(); dim++) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
@@ -730,7 +730,6 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
-
       std::vector<float> scale_vector(dim + 1);
       for (int i = 0; i < dim + 1; i++)
         scale_vector[i] = 1;
@@ -1111,11 +1110,6 @@ int CalculateWidthPoolOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
 }
 
-//int CalculateWidthPoolInput(int width, int kernel, int padding, int stride) {
-//  return (width - 1) * stride + kernel - 2*padding;
-//}
-
-
 void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
@@ -1160,9 +1154,9 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       if (i < 2)
         scale_vector[i] = 1;
       else
-        scale_vector[i] = CalculateWidthPoolOutput(input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
+        scale_vector[i] = CalculateWidthPoolOutput(
+            input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
             static_cast<float>(input_shape[i]);
-
     }
     for (int i = 0; i < forward_attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
@@ -1191,15 +1185,15 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
 
       // backwards test performed same time since output needed
       if (backwards_attrs.num_inputs == 3) {
-        backwards_input[0] = outputs[0]; // output grad
-        backwards_input[1] = inputs[0]; // input
-        backwards_input[2] = outputs[0]; // output
+        backwards_input[0] = outputs[0];  // output grad
+        backwards_input[1] = inputs[0];  // input
+        backwards_input[2] = outputs[0];  // output
       } else if (backwards_attrs.num_inputs == 5) {
-        backwards_input[0] = outputs[0]; // output grad
-        backwards_input[1] = outputs[0]; // workspace grad
-        backwards_input[2] = inputs[0]; // input
-        backwards_input[3] = outputs[0]; // output
-        backwards_input[4] = ex_outputs[1]; // workspace
+        backwards_input[0] = outputs[0];  // output grad
+        backwards_input[1] = outputs[0];  // workspace grad
+        backwards_input[2] = inputs[0];  // input
+        backwards_input[3] = outputs[0];  // output
+        backwards_input[4] = ex_outputs[1];  // workspace
       }
 
       auto tmp_output = GetTestInputArrays(true)[i1];
@@ -1209,10 +1203,12 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       back_req[0] = kWriteTo;
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_outputs, back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
-                                  backwards_ex_outputs, back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
