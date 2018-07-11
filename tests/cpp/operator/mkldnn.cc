@@ -1179,7 +1179,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
         ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
       }
       Imperative::Get()->set_is_training(true);
-      
+
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
       Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
@@ -1199,7 +1199,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
         backwards_input[1] = outputs[0]; // workspace grad
         backwards_input[2] = inputs[0]; // input
         backwards_input[3] = outputs[0]; // output
-        backwards_input[4] = outputs[1]; // workspace
+        backwards_input[4] = ex_outputs[1]; // workspace
       }
 
       auto tmp_output = GetTestInputArrays(true)[i1];
