@@ -82,8 +82,6 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   nvinfer1::ICudaEngine* const trt_engine = ::onnx_to_tensorrt::onnxToTrtCtx(
       node_param.serialized_onnx_graph, batch_size, 1 << 30);
 
-  LOG(INFO) << "TensorRT engine instantiated!!!";
-
   tensorrt::NameToIdx_t output_map;
   for (auto& el : node_param.output_map) {
     output_map[el.first] = std::get<0>(el.second);
