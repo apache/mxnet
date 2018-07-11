@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+from distutils.version import LooseVersion
 import os
 import pickle as pkl
 import unittest
@@ -1276,10 +1277,19 @@ def test_ndarray_astype():
 
 @with_seed()
 def test_norm(ctx=default_context()):
+    try:
+        import scipy
+        assert LooseVersion(scipy.__version__) >= LooseVersion('0.1')
+        from scipy.linalg import norm as sp_norm
+    except (AssertionError, ImportError):
+        print("Could not import scipy.linalg.norm or scipy is too old. "
+              "Falling back to numpy.linalg.norm which is not numerically stable.")
+        from numpy.linalg import norm as sp_norm
+
     def l1norm(input_data, axis=0, keepdims=False):
         return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
     def l2norm(input_data, axis=0, keepdims=False): 
-        return np.linalg.norm(input_data, axis=axis, keepdims=keepdims)
+        return sp_norm(input_data, axis=axis, keepdims=keepdims)
 
     in_data_dim = random_sample([4,5,6], 1)[0]
     in_data_shape = rand_shape_nd(in_data_dim)
