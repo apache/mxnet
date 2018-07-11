@@ -49,7 +49,8 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
 
 inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
   if (ishape.ndim() == 1) {
-    return TShape({ishape[0], ishape[0]});
+    auto s = ishape[0] + std::abs(k);
+    return TShape({s, s});
   }
   
   auto h = ishape[0];
@@ -69,11 +70,11 @@ inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
   return TShape({s});
 }
 
-inline bool DiagOpShape(const nnvm::NodeAttrs& attrs, // contains k
-                             std::vector<TShape>* in_attrs, // in shapes
-                             std::vector<TShape>* out_attrs) { // out shapes
-    CHECK_EQ(in_attrs->size(), 1U); // only one input data
-    CHECK_EQ(out_attrs->size(), 1U); // only one output data
+inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape>* in_attrs,
+                             std::vector<TShape>* out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
 
     const TShape& ishape = (*in_attrs)[0];
     if (ishape.ndim() == 0) return false;
@@ -85,7 +86,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs, // contains k
     TShape oshape = DiagShapeImpl(ishape, param.k);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
     
-    return out_attrs->at(0).ndim() != 0U ;//&& out_attrs->at(0).Size() != 0U;
+    return out_attrs->at(0).ndim() != 0U ;
 }
 
 inline bool DiagOpType(const nnvm::NodeAttrs& attrs,
@@ -119,18 +120,18 @@ struct diag {
 };
 
 template<int req>
-struct diag_backward {
+struct diag_gen {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
+  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
                                   mshadow::Shape<2> oshape, int32_t k) {
     using namespace mxnet_op;
-
+    
     auto j = unravel(i, oshape);
     if (j[1] == (j[0] + k)) {
       auto l = std::min(j[0], j[1]);
-      KERNEL_ASSIGN(in_grad[i], req, out_grad[l]);
+      KERNEL_ASSIGN(out[i], req, a[l]);
     } else {
-      KERNEL_ASSIGN(in_grad[i], req, 0.0);
+      KERNEL_ASSIGN(out[i], req, 0.0);
     }
   }
 };
@@ -151,6 +152,7 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
   const TShape& ishape = inputs[0].shape_;
+  const TShape& oshape = outputs[0].shape_;
   const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
   
   if (ishape.ndim() == 2) {
@@ -161,7 +163,12 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
       });
     });
   } else {
-    // TODO 1 dim input
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k);
+      });
+    });
   }
 }
 
@@ -179,18 +186,24 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
 
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
+  const TShape& ishape = inputs[0].shape_;
   const TShape& oshape = outputs[0].shape_;
   const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
   if (oshape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<diag_backward<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+        Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
                                 in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k);
       });
     });
   } else {
-    // TODO 1 dim input
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
+                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k);
+      });
+    });
   }
 }
 

@@ -7033,6 +7033,109 @@ def test_op_roi_align():
     test_roi_align_value(2)
     test_roi_align_autograd()
 
+@with_seed()
+def test_diag():
+
+    # test 2d input
+    h = np.random.randint(2,9)
+    w = np.random.randint(2,9)
+    a_np = np.random.random((h, w))
+    a = mx.nd.array(a_np)
+    
+    # k == 0
+    r = mx.nd.diag(a)
+
+    for i in range(r.shape[0]):
+        assert r[i] == a[i][i]
+
+    # k == 1
+    k = 1
+    r = mx.nd.diag(a, k=k)
+    
+    for i in range(max(r.shape[0]-k, 0)):
+        assert r[i] == a[i][i+k]
+
+    # k == -1
+    k = -1
+    r = mx.nd.diag(a, k=k)
+
+    for i in range(max(r.shape[0]+k, 0)):
+        assert r[i] == a[i-k][i]
+
+    # random k
+    k = np.random.randint(-min(h,w),max(h,w))
+    r = mx.nd.diag(a, k=k)
+    if k > 0:
+        for i in range(max(r.shape[0]-k, 0)):
+            assert r[i] == a[i][i+k]
+    elif k < 0:
+        for i in range(max(r.shape[0]+k, 0)):
+            assert r[i] == a[i-k][i]
+    else:
+        for i in range(max(r.shape[0], 0)):
+            assert r[i] == a[i][i+k]
+
+    # Test 2d backward, k=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # test 1d input
+    d = np.random.randint(2,9)
+    a_np = np.random.random((d))
+    a = mx.nd.array(a_np)
+    
+    # k is random
+    k = np.random.randint(-d,d)
+    r = mx.nd.diag(a, k=k)
+
+    if k > 0:
+        for i in range(r.shape[0]):
+            for j in range(r.shape[1]):
+                if i + k == j:
+                    assert r[i][j] == a[i]
+                else:
+                    assert r[i][j] == 0
+    elif k < 0:
+        for i in range(r.shape[0]):
+            for j in range(r.shape[1]):
+                if i == j - k:
+                    assert r[i][j] == a[j]
+                else:
+                    assert r[i][j] == 0
+    else:
+        for i in range(r.shape[0]):
+            for j in range(r.shape[1]):
+                if i == j:
+                    assert r[i][j] == a[i]
+                else:
+                    assert r[i][j] == 0
+
+    # Test 2d backward, k=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
 
 if __name__ == '__main__':
     import nose

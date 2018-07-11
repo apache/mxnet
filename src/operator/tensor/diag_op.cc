@@ -32,8 +32,39 @@ namespace op {
 DMLC_REGISTER_PARAMETER(DiagParam);
 
 NNVM_REGISTER_OP(diag)
-.describe(R"code(This operator implements the diag function:
-TODO: example and description comes here
+.describe(R"code(Extracts a diagonal or constructs a diagonal array.
+
+``diag``'s behavior depends on the input array dimensions:
+
+- 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero
+- 2-D arrays: returns elements in the diagonal as a new 1-D array
+- N-D arrays: not supported yet
+
+Examples::
+
+  x = [[1, 2, 3],
+       [4, 5, 6]]
+
+  diag(x) = [1, 5]
+
+  diag(x, k=1) = [2, 6]
+
+  diag(x, k=-1) = [4]
+
+  x = [1, 2, 3]
+
+  diag(x) = [[1, 0, 0],
+             [0, 2, 0],
+             [0, 0, 3]]
+
+  diag(x, k=1) = [[0, 1, 0],
+                  [0, 0, 2],
+                  [0, 0, 0]]
+
+  diag(x, k=-1) = [[0, 0, 0],
+                   [1, 0, 0],
+                   [0, 2, 0]]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DiagParam>)
 .set_num_inputs(1)
