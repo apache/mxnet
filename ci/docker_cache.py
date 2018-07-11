@@ -31,7 +31,7 @@ import argparse
 import sys
 import subprocess
 import json
-from . import build as build_util
+import build as build_util
 from joblib import Parallel, delayed
 
 
