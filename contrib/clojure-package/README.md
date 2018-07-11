@@ -162,8 +162,6 @@ Do `lein run` for the cpu version or `lein run :gpu` for gpu.
 
 To generate api docs, run `lein codox`. The html docs will be generated in the target/docs directory.
 
-_Note: There is an error thrown in the generated code due to some loading issues, but the docs are all still there._
-
 ## Code Coverage
 
 To run the Code Coverage tool. Run `lein cloverage`.
@@ -235,3 +233,4 @@ Special thanks to people that provided testing and feedback to make this possibl
 - Burin Choomnuan
 - Avram Aelony
 - Jim Dunn
+- Kovas Boguta

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,20 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
-
-set -ex
-cd "$(dirname "$0")"
-# install libraries for mxnet's r package on ubuntu
-echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
-
-#key=E084DAB9
-#gpg --keyserver keyserver.ubuntu.com --recv-key $key || \
-#    gpg --keyserver keyserver.pgp.com --recv-keys $key || \
-#    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys $key ;
-#gpg -a --export $key | apt-key add -
-apt-key add r.gpg
-
-apt-get update
-apt-get install -y --allow-unauthenticated r-base r-base-dev libxml2-dev libssl-dev libxt-dev
+gpg --keyserver keyserver.ubuntu.com --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+gpg --output sbt.gpg --export scalasbt@gmail.com
+gpg --keyserver keyserver.ubuntu.com --recv E084DAB9
+gpg --output r.gpg --export marutter@gmail.com

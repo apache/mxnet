@@ -118,7 +118,6 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
       }
     }
     // output
-    if (req[0] == kWriteTo) const_cast<NDArray &>(outputs[0]).InvalidateMKLDNNData();
     FullyConnectedCompute<cpu>(attrs, ctx, in_blobs, req, {outputs[0].data()});
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
