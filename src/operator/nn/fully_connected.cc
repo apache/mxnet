@@ -212,8 +212,6 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
 
   DispatchMode wanted_mode;
 #if 1
-  // TODO(zhengda) let's disable MKLDNN for FullyConnected for now.
-  // It seems there is a bug.
   if (dev_mask == mshadow::cpu::kDevMask)
     wanted_mode = DispatchMode::kFComputeEx;
   else
