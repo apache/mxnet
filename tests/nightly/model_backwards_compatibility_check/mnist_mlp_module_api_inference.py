@@ -62,6 +62,7 @@ if __name__=='__main__':
         prefix = folder + backslash + model_name
         model_files_meta = list(bucket.objects.filter(Prefix = prefix))
         if len(model_files_meta) == 0:
+            print ('No trained models found under path : %s' %prefix)
             continue
         model_files = list()
         for obj in model_files_meta:

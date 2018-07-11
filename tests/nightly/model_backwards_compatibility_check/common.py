@@ -83,6 +83,9 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
     result = bucket.meta.client.list_objects(Bucket=bucket.name,
                                          Delimiter=backslash)
     folder_list = list()
+    if 'CommonPrefixes' not in result:
+        print ('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
+        sys.exit(1)
     for obj in result['CommonPrefixes']:
         folder_list.append(obj['Prefix'].strip(backslash))
 
