@@ -432,16 +432,16 @@ if __name__ == "__main__":
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
-    if opt.type == 'gluon_type':
+    if opt.type == 'gluon_type_cpu':
         test_gluon_trainer_type()
         exit()
-    if opt.type == 'gluon_step':
+    if opt.type == 'gluon_step_cpu':
         test_gluon_trainer_step()
         exit()
-    if opt.type == 'gluon_sparse_step':
+    if opt.type == 'gluon_sparse_step_cpu':
         test_gluon_trainer_sparse_step()
         exit()
-    if opt.type == 'invalid':
+    if opt.type == 'invalid_cpu':
         test_invalid_operations()
         exit()
     if opt.type == 'all' or opt.type == 'init':
