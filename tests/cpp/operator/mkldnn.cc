@@ -1197,9 +1197,12 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       backwards_input[0] = outputs[0]; // output grad
       backwards_input[1] = outputs[0]; // output
       backwards_input[2] = inputs[0]; // input
-      backwards_input[3] = outputs[1]; // output from forward
-      backwards_input[4] = outputs[1]; // output from forward
 
+      if (backwards_attrs.num_inputs == 5) {
+        backwards_input[3] = outputs[1]; // output from forward
+        backwards_input[4] = outputs[1]; // output from forward
+      }
+      
       backwards_outputs[0] = &in_arr.arr;
       backwards_ex_outputs[0] = &in_arr1.arr;
 
