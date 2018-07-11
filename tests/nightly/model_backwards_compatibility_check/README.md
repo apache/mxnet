@@ -14,6 +14,7 @@ This is configuration file for jenkins job.
 - These APIs are covered over models with architectures such as : MLP, RNNs, LeNet covering the four scenarios described above.
 - More operators/models will be added in the future to extend the operator coverage. 
 - The model train files suffixed by `_train.py` and the trained models are hosted in AWS S3.
-- The trained models for now are backfilled into S3 starting from every MXNet release version v1.0.0
+- The trained models for now are backfilled into S3 starting from every MXNet release version v1.1.0.
+- The script for training the models on older versions of MXNet is : `train_mxnet_legacy_models.sh`.
 - The inference files are suffixed by `_inference.py`.
 
