@@ -18,11 +18,14 @@
 """
 Output a list of differences between current git branch and master
 
-Precondition: this script is run instide an existing git repository
+Precondition: this script is run inside an existing git repository
 
-This script will performs a retrieves and output a list of changes
-based on the output of git diff. For each changes, the file, line numbers
-and top-level funtcion name is provided.
+This script first retrieves the raw output from git diff. By default,
+the current and master branches are used as targets for git diff, but the user
+may specify their own targets. Then, the raw output is parsed to retrieve info
+about each of the changes bnetween the targets, including file name, top-level
+funtion name, and line numbers for each change. Finally, the list of changes
+is outputted with each change on a separate line.
 """
 
 import os
@@ -50,10 +53,10 @@ def parser(diff_output):
 def parse_patch(patch):
     """ Parse changes in a single patch
 
-    Git diff outputs results as a patches, each of which corresponds to
-    a file that has been changed.  Each patch consists of a header with one or
-    more hunks that show differing lines between files.  Hunks themselves have
-    headers that this function parses to get info about the changes.
+    Git diff outputs results as patches, each of which corresponds to a single
+    that has been changed.  Each patch consists of a header with one or more
+    hunks that show differing lines between files.  Hunks themselves have
+    headers that include line numbers changed and function names.
     """
     lines = patch.splitlines()
 
@@ -63,6 +66,7 @@ def parse_patch(patch):
     logging.debug("Parsing: %s", file_name)
 
     for line in patch.splitlines():
+        # parse hunk header
         if line.startswith("@"):
             tokens = line.split()
             to_range = []
@@ -97,25 +101,31 @@ def parse_patch(patch):
 
 
 def output_changes(changes, verbosity):
+    if not verbosity:
+        verbosity = 2
+    logging.debug("verbosity: %d", verbosity)
+
     if not changes:
         logging.info("No changes found")
-        
-    for file_name, chunks in changes:
-        if verbosity > 0:
-            print(file_name)
-        for func_name, ranges in chunks.items():
-            if verbosity > 1:
-                print("\t{}".format(func_name))
-            for (start, end) in ranges:
-                if verbosity > 2:
-                    print("\t\t{} {}".format(start, end))
+    else:
+        for file_name, chunks in changes:
+            if verbosity == 1:
+                print(file_name)
+            for func_name, ranges in chunks.items():
+                if verbosity == 2:
+                    print("{}\t{}".format(file_name, func_name))
+                for (start, end) in ranges:
+                    if verbosity > 2:
+                        print("{}\t{}\t{}:{}".format(
+                            file_name, func_name, start, end))
+
     
 
 def parse_args():
     arg_parser = argparse.ArgumentParser()
 
     arg_parser.add_argument(
-        "--verbosity", "-v", action="count", default=2,
+        "--verbosity", "-v", action="count", 
         help="verbosity level, repeat up to 3 times, defaults to 2")
 
     targets = arg_parser.add_mutually_exclusive_group()
@@ -131,7 +141,7 @@ def parse_args():
     filters.add_argument("--filter-path", "-p", dest="path", default="",
         help="specify directory or file in which to search for changes")
     filters.add_argument(
-        "--filter-exp", "-f", "-e", dest="expr", metavar="REGEX", default=".*",
+        "--filter", "-f", "-e", dest="expr", metavar="REGEX", default=".*",
         help="filter files with given python regular expression")
     
     args = arg_parser.parse_args()
@@ -141,14 +151,14 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    try:        # Get output from git diff.
+    try:        # Get output from git diff
         if args.commits is not None:
             diff_output = subprocess.check_output(
                 ["git", "diff", "--unified=0", args.commits[0],
                 args.commits[1], "--", args.path])
         else:
             if args.branches is None:
-                # default to current branch with master
+                # Default to current branch with master
                 args.branches = ["master", "HEAD"]
 
             diff_target = args.branches[0] + "..." + args.branches[1]
