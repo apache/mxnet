@@ -998,7 +998,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             unpack_lib('cpu')
-            docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', true)
+            docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
             publish_test_coverage()
           }
         }
