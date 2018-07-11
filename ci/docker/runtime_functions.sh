@@ -724,6 +724,17 @@ integrationtest_ubuntu_gpu_cpp_package() {
     cpp-package/tests/ci_test.sh
 }
 
+integrationtest_ubuntu_cpu_dist_kvstore() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    cd tests/nightly/
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step
+}
+
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     export PYTHONPATH=./python/
@@ -732,10 +743,6 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step
 }
 
 test_ubuntu_cpu_python2() {

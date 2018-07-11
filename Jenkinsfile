@@ -991,6 +991,18 @@ try {
           }
         }
       }
+    },
+    'dist-kvstore tests CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-dist-kvstore') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu')
+            docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', true)
+            publish_test_coverage()
+          }
+        }
+      }
     }
   }
 
