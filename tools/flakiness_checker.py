@@ -85,7 +85,7 @@ def parse_args():
     
     parser.add_argument("test", action=NameAction,
                         help="file name and and function name of test, "
-                        "provided in the format: <file-name>:<test-name> "
+                        "provided in the format: <file-name>.<test-name> "
                         "or <directory>/<file>:<test-name>")
     
     parser.add_argument("-n", "--num-trials", metavar="N",
