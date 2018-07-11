@@ -101,4 +101,4 @@ if __name__=='__main__':
 
 		model = get_model(model_name + '.params')
 		perform_inference(test_data, val_data, model, model_name + '_inference.json')
-	clean_up_files(model_files)
+		clean_up_files(model_files)
