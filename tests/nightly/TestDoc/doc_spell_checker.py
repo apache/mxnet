@@ -21,6 +21,7 @@
     An exclude list is provided to avoid checking specific word,
     such as NDArray.
 """
+from __future__ import print_function
 
 import os
 import sys
@@ -171,8 +172,8 @@ if __name__ == "__main__":
             spell_check_res = DOC_PARSER.get_res()[0]
             grammar_check_res = DOC_PARSER.get_res()[1]
             if len(spell_check_res) > 0:
-                print "%s has typo:" % os.path.join(root, read_file)
-                print "%s\n" % spell_check_res
+                print("%s has typo:" % os.path.join(root, read_file))
+                print("%s\n" % spell_check_res)
                 ALL_CLEAR = False
     if ALL_CLEAR:
-        print "No typo is found."
+        print("No typo is found.")
