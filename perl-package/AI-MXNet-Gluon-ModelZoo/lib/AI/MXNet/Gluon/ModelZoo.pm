@@ -44,8 +44,10 @@ our $VERSION = '1.3';
 
 =head1 DESCRIPTION
 
-    This module houses a collection of pretrained modules (the parameters are hosted on public mxnet servers).
+    This module houses a collection of pretrained models (the parameters are hosted on public mxnet servers).
     https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html
+    See examples/image_classification.pl for the example of real time image classification
+    using a pretrained model from the ModelZoo
 =cut
 
 our %models = qw/

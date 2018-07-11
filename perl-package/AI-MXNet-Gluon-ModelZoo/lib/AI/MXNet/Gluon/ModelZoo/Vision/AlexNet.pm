@@ -34,7 +34,7 @@ extends 'AI::MXNet::Gluon::HybridBlock';
     Parameters
     ----------
     classes : Int, default 1000
-        Number of classes for the output layer->
+        Number of classes for the output layer.
 =cut
 has 'classes' => (is => 'ro', isa => 'Int', default => 1000);
 method python_constructor_arguments() { ['classes'] }

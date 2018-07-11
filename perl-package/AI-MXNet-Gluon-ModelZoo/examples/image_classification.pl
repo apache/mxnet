@@ -63,7 +63,7 @@ $image = $image->transpose([2,0,1])->expand_dims(axis=>0);
 ## normalizing the image
 my $rgb_mean = nd->array([0.485, 0.456, 0.406])->reshape([1,3,1,1]);
 my $rgb_std = nd->array([0.229, 0.224, 0.225])->reshape([1,3,1,1]);
-$image = $image->astype('float32') / (255 - $rgb_mean) / $rgb_std;
+$image = ($image->astype('float32') / 255 - $rgb_mean) / $rgb_std;
 
 # Now we can recognize the object in the image.
 # We perform an additional softmax on the output to obtain probability scores.
