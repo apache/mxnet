@@ -36,6 +36,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def parser(diff_output):
+    """Split diff output into patches and parse each patch individually"""
     diff_output = str(diff_output, errors="strict")
     changes = []
 
@@ -49,11 +50,10 @@ def parser(diff_output):
 def parse_patch(patch):
     """ Parse changes in a single patch
 
-    git diff outputs results as a patches, each of which corresponds to
-    a file that has been changed. Each patch consists of a header with one or
-    more hunks that show differing lines between files. Hunks themselves have
-    headers with specific formats that this function parses to get information
-    about the changes to the file whose patch we are parsing.
+    Git diff outputs results as a patches, each of which corresponds to
+    a file that has been changed.  Each patch consists of a header with one or
+    more hunks that show differing lines between files.  Hunks themselves have
+    headers that this function parses to get info about the changes.
     """
     lines = patch.splitlines()
 
@@ -64,11 +64,12 @@ def parse_patch(patch):
 
     for line in patch.splitlines():
         if line.startswith("@"):
-            # parse hunk header
             tokens = line.split()
             to_range = []
             start = 0
             end = 0
+            
+            # Get line numbers
             for t in tokens[1:]:
                 if t.startswith("@"):
                     start = int(to_range[0])
@@ -79,7 +80,7 @@ def parse_patch(patch):
                 else:
                     to_range = t[1:].split(",")
 
-            # get function name
+            # Get function name
             hunk_header = tokens[-1].split("(")
             if len(hunk_header) == 1:
                 hunk_name = "top-level"
@@ -87,7 +88,7 @@ def parse_patch(patch):
                 hunk_name = tokens[-1].split("(")[0]
             logging.debug("\tHunk: %s - (%d,%d)", hunk_name, start, end)
 
-            # add hunk info to changes
+            # Add hunk info to changes
             if hunk_name not in changes:
                 changes[hunk_name] = []
             changes[hunk_name].append((start, end))
@@ -98,7 +99,7 @@ def parse_patch(patch):
 def output_changes(changes, verbosity):
     if not changes:
         logging.info("No changes found")
-
+        
     for file_name, chunks in changes:
         if verbosity > 0:
             print(file_name)
@@ -138,11 +139,10 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    
     args = parse_args()
 
-    try:
-        if args.commits is  not None:
+    try:        # Get output from git diff.
+        if args.commits is not None:
             diff_output = subprocess.check_output(
                 ["git", "diff", "--unified=0", args.commits[0],
                 args.commits[1], "--", args.path])
