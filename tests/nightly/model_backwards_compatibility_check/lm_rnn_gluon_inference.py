@@ -30,8 +30,7 @@ def test(test_data, model):
 def get_top_level_folders_in_bucket(s3client, bucket_name):
 	'''This function returns the top level folders in the S3Bucket. These folders help us to navigate to the trained model files stored for different MXNet versions. '''
 	bucket = s3client.Bucket(bucket_name)
-	result = bucket.meta.client.list_objects(Bucket=bucket.name,
-										 Delimiter=backslash)
+	result = bucket.meta.client.list_objects(Bucket=bucket.name, Delimiter=backslash)
 	folder_list = list()
 	for obj in result['CommonPrefixes']:
 		folder_list.append(obj['Prefix'].strip(backslash))
