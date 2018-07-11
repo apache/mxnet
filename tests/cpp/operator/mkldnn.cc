@@ -1145,13 +1145,11 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   TShape stride = param.stride;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  std::vector<NDArrayAttrs> in_arrs1 = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
   for (int i1 = 0; i1 < in_arrs.size(); i1++) {
     auto in_arr = in_arrs[i1];
-    auto in_arr1 = in_arrs1[i1];
 
     // can only pool only 3D and 4D inputs
     TShape input_shape = in_arr.arr.shape();
@@ -1198,16 +1196,19 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       backwards_input[1] = outputs[0]; // output
       backwards_input[2] = inputs[0]; // input
 
+      // backwards test performed same time since output needed
       if (backwards_attrs.num_inputs == 5) {
         backwards_input[3] = outputs[1]; // output from forward
         backwards_input[4] = outputs[1]; // output from forward
       }
 
-      Imperative::Get()->set_is_training(true);
-      backwards_outputs[0] = &in_arr.arr;
-      backwards_ex_outputs[0] = &in_arr1.arr;
+      auto tmp_output = GetTestInputArrays()[i1];
+      auto tmp_output2 = GetTestInputArrays()[i1];
 
-      // backwards test performed same time since output needed
+      Imperative::Get()->set_is_training(true);
+      backwards_outputs[0] = &tmp_output.arr;
+      backwards_ex_outputs[0] = &tmp_output2.arr;
+
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
       Imperative::Get()->InvokeOp(Context(), backwards_attrs.attrs, backwards_input,
                                   backwards_outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
