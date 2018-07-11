@@ -89,5 +89,5 @@ NNVM_REGISTER_OP(_backward_diag)
 .set_attr<FCompute>("FCompute<cpu>", DiagOpBackward<cpu>);
 
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet

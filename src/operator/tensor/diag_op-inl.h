@@ -20,18 +20,19 @@
 /*!
 * Copyright (c) 2015 by Contributors
 * \file diag_op-inl.h
-* \brief
+* \brief CPU Implementation of the diag op
 * \author Istvan Fehervari
 */
 
-#ifndef MXNET_OPERATOR_DIAG_INL_H_
-#define MXNET_OPERATOR_DIAG_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
+#define MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
 
 #include <dmlc/parameter.h>
+#include <vector>
+#include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -52,7 +53,7 @@ inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
     auto s = ishape[0] + std::abs(k);
     return TShape({s, s});
   }
-  
+
   auto h = ishape[0];
   auto w = ishape[1];
 
@@ -66,7 +67,7 @@ inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
   if (s < 0) {
     s = 0;
   }
-  
+
   return TShape({s});
 }
 
@@ -82,11 +83,11 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
       << "Input must be 1- or 2-d.";
 
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
-    
+
     TShape oshape = DiagShapeImpl(ishape, param.k);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-    
-    return out_attrs->at(0).ndim() != 0U ;
+
+    return out_attrs->at(0).ndim() != 0U;
 }
 
 inline bool DiagOpType(const nnvm::NodeAttrs& attrs,
@@ -94,7 +95,7 @@ inline bool DiagOpType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  
+
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return (*out_attrs)[0] != -1;
@@ -114,7 +115,7 @@ struct diag {
     } else {
       j = ravel(mshadow::Shape2(i, i), ishape);
     }
-    
+
     KERNEL_ASSIGN(out[i], req, a[j]);
   }
 };
@@ -125,7 +126,7 @@ struct diag_gen {
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
                                   mshadow::Shape<2> oshape, int32_t k) {
     using namespace mxnet_op;
-    
+
     auto j = unravel(i, oshape);
     if (j[1] == (j[0] + k)) {
       auto l = std::min(j[0], j[1]);
@@ -154,7 +155,7 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   const TShape& ishape = inputs[0].shape_;
   const TShape& oshape = outputs[0].shape_;
   const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
-  
+
   if (ishape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
@@ -178,7 +179,7 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;                  
+  using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -210,4 +211,4 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_DIAG_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_
