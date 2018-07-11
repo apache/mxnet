@@ -184,6 +184,9 @@ def test_python_matrix_factorization():
 def test_python_linear_regression() :
     assert _test_tutorial_nb('python/linear-regression')
 
+def test_python_logistic_regression() :
+    assert _test_tutorial_nb('gluon/logistic_regression_explained')
+
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
 
