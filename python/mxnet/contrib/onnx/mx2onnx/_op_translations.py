@@ -741,7 +741,7 @@ def convert_leakyrelu(node, **kwargs):
     input_node = proc_nodes[input_node_id].name
     attrs = node["attrs"]
 
-    act_type = attrs.get("act_type", "LeakyRelu")
+    act_type = attrs.get("act_type", "leaky")
     alpha = float(attrs.get("slope", 0.25))
 
     act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu"}

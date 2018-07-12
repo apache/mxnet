@@ -65,6 +65,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_transpose',
     'test_globalmaxpool',
     'test_globalaveragepool',
+    # enabling partial test cases for matmul
+    'test_matmul_3d',
+    'test_matmul_4d',
     'test_slice_cpu',
     'test_slice_neg',
     'test_squeeze_',
@@ -115,11 +118,11 @@ STANDARD_MODEL = [
 for op_test in IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TESTS.include(op_test)
 
-for basic_model_test in BASIC_MODEL_TESTS:
-    BACKEND_TESTS.include(basic_model_test)
-
-for std_model_test in STANDARD_MODEL:
-    BACKEND_TESTS.include(std_model_test)
+# for basic_model_test in BASIC_MODEL_TESTS:
+#     BACKEND_TESTS.include(basic_model_test)
+#
+# for std_model_test in STANDARD_MODEL:
+#     BACKEND_TESTS.include(std_model_test)
 
 BACKEND_TESTS.exclude('.*broadcast.*')
 BACKEND_TESTS.exclude('.*bcast.*')
