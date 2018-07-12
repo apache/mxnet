@@ -46,6 +46,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
+            <id>binary-jar</id>
             <phase>package</phase>
             <goals>
               <goal>single</goal>
@@ -54,6 +55,20 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptors>
                 <descriptor>src/main/assembly/assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sources-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <finalName>${artifactId}-${version}-sources</finalName>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptors>
+                <descriptor>${project.parent.basedir}/src/source.xml</descriptor>
               </descriptors>
             </configuration>
           </execution>

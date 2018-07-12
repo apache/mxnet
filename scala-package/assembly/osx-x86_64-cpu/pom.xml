@@ -57,21 +57,7 @@
               <finalName>${artifactId}-${version}-sources</finalName>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptors>
-                <descriptor>src/main/assembly/source.xml</descriptor>
-              </descriptors>
-            </configuration>
-          </execution>
-          <execution>
-            <id>javadoc-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-            <configuration>
-              <finalName>${artifactId}-${version}-javadoc</finalName>
-              <appendAssemblyId>false</appendAssemblyId>
-              <descriptors>
-                <descriptor>src/main/assembly/javadoc.xml</descriptor>
+                <descriptor>${project.parent.basedir}/src/source.xml</descriptor>
               </descriptors>
             </configuration>
           </execution>
