@@ -89,13 +89,23 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   CHECK(!in_attrs->empty());
   CHECK(!in_attrs->empty());
   bool dispatched = false;
-  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   if (!dispatched) {
-    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
+#endif
   return dispatched;
 }
 
@@ -106,13 +116,23 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
   bool dispatched = false;
-  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   if (!dispatched) {
-    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
+#endif
   return dispatched;
 }
 
