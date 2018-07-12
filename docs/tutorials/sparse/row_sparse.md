@@ -534,7 +534,7 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) and
+Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam), and
 [mxnet.optimizer.AdaGrad](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
 
 ## Advanced Topics
@@ -544,7 +544,7 @@ Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/pyth
 By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is limited
 to a few sparse operators such as [sgd_update](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.sgd_update),
 [dot](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.dot) and
-[SparseEmbedding](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.SparseEmbedding).
+[Embedding](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding).
 
 To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
 
