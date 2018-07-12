@@ -15,6 +15,18 @@
 
   <profiles>
     <profile>
+      <id>unittest</id>
+      <properties>
+        <skiptest>false</skiptest>
+      </properties>
+    </profile>
+    <profile>
+      <id>integrationtest</id>
+      <properties>
+        <skiptest>true</skiptest>
+      </properties>
+    </profile>
+    <profile>
       <id>osx-x86_64-cpu</id>
       <properties>
         <platform>osx-x86_64</platform>
@@ -103,6 +115,7 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
+          <skipTests>${skiptest}</skipTests>
           <environmentVariables>
             <MXNET_BASEDIR>${project.parent.basedir}/init-native</MXNET_BASEDIR>
           </environmentVariables>
