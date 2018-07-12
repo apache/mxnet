@@ -100,11 +100,9 @@ Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://c
 
 ## Setting Up a Docs Dev Server
 
-Running docs builds locally on a Mac is not recommended.
+Running docs builds locally on a Mac is not recommended. See [#10858](https://github.com/apache/incubator-mxnet/issues/10858) for workarounds.
 
-For these instructions, you will use an Ubuntu machine.
-
-This flow has been tested on a vanilla Ubuntu 16.04 cloud instance on AWS.
+For these instructions, you will use an Ubuntu machine. This flow has been tested on a vanilla Ubuntu 16.04 cloud instance on AWS.
 
 **Step 1:** Spin up your Ubuntu server and SSH in.
 
@@ -118,30 +116,26 @@ source mxnet_docs/bin/activate
 
 **Note:** Using a Python 2.7 environment is required to build older versions of the docs that have Python 3 incompatibilities. If you're only building the latest or version 1.0.0+, then you may use a Python 3 environment.
 
-**Step 3:** Clone the repo.
+**Step 3:** Clone the repo or your own fork of the repo.
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
+cd mxnet/docs/build_version_doc
 ```
 
-**Step 4:** Install dependencies.
+**Step 4:** Install dependencies and build MXNet.
 
-These scripts will install the dependencies for you.
+This script will install the dependencies for you and build MXNet from source.
 
 ```bash
-./ci/docker/install/ubuntu_core.sh
-./ci/docker/install/ubuntu_python.sh
-./ci/docker/install/ubuntu_scala.sh
-./ci/docker/install/ubuntu_clojure.sh
-./ci/docker/install/ubuntu_docs.sh
+./install_mxnet_ubuntu_docs.sh
 ```
 
 **Step 5a:** Make the docs.
 
 Here you have two options (recommended for most situations):
 
-* Build this current branch with the following:
+* Change branches first, or build master with the following:
 
 ```bash
 cd mxnet
