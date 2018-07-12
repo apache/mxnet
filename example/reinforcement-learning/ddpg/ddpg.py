@@ -21,6 +21,7 @@ import rllab.misc.logger as logger
 import pyprind
 import mxnet as mx
 import numpy as np
+from mxnet.base import xrange
 
 
 class DDPG(object):

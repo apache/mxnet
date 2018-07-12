@@ -18,10 +18,10 @@
 from __future__ import print_function
 import csv
 import os
-import sys
 import random
 import numpy as np
 import argparse
+from six.moves import xrange
 
 parser = argparse.ArgumentParser(description='generate train/test image list files form input directory. If training it will also split into tr and va sets.')
 parser.add_argument('--image-folder', type=str, default="data/train/",
@@ -104,5 +104,3 @@ if args.train:
         tr_fo.writerow(item)
     for item in va_lst:
         va_fo.writerow(item)
-
-
