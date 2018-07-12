@@ -223,8 +223,9 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          const std::vector<NDArray> &outputs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   const NDArray *workspace = nullptr;
-  if (SupportMKLDNN(inputs[0])
-      && SupportMKLDNNPooling(param, inputs[0].shape())) {
+  if (SupportMKLDNN(inputs[0]) &&
+      SupportMKLDNNPooling(param, inputs[0].shape()) &&
+      SupportMKLDNNPooling(inputs[0], outputs[0])) {
     if (MKLDNNRequireWorkspace(param)) {
       CHECK_GT(outputs.size(), 1U);
       workspace = &outputs[1];
@@ -243,7 +244,8 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<NDArray> &outputs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0])
-      && SupportMKLDNNPooling(param, inputs[0].shape())) {
+      && SupportMKLDNNPooling(param, inputs[0].shape()) &&
+      SupportMKLDNNPooling(inputs[0], outputs[0])) {
     const NDArray &out_grad = inputs[0];
     const NDArray *workspace = nullptr;
     const NDArray *in_data = nullptr;

@@ -28,6 +28,7 @@
 
 #include <utility>
 #include <mkldnn.hpp>
+#include <mkldnn_types.h>
 #include "../pooling-inl.h"
 #include "./mkldnn_base-inl.h"
 
@@ -105,6 +106,11 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   else
     return false;
 #endif
+}
+
+inline bool SupportMKLDNNPooling(const NDArray &input, const NDArray &output) {
+  return !(input.GetMKLDNNData()->get_primitive_desc().desc().data.format !=
+      output.GetMKLDNNData()->get_primitive_desc().desc().data.format && !output.IsView());
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
