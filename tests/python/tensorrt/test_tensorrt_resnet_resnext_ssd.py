@@ -158,13 +158,13 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     print("\n===========================================")
     print("Model: %s" % model_name)
     print("===========================================")
-    print("*** Running inference using pure MxNet ***\n")
+    print("*** Running inference using pure MXNet ***\n")
     mx_duration, mx_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
                                         num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph,
                                         use_tensorrt=False)
-    print("\nMxNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
+    print("\nMXNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
 
-    print("\n*** Running inference using MxNet + TensorRT ***\n")
+    print("\n*** Running inference using MXNet + TensorRT ***\n")
     trt_duration, trt_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
                                           num_workers=num_workers, use_tensorrt=True)
     print("TensorRT: time elapsed: %.3fs, accuracy: %.2f%%" % (trt_duration, trt_pct))
@@ -205,7 +205,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
             speedup, acc_diff = run_experiment_for(model, batch_size, num_workers, fp16_for_fp32_graph=use_fp16)
             speedups[idx] = speedup
             acc_diffs[idx] = acc_diff
-            assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (
+            assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (
                 tolerance, model)
 
         print("Perf and correctness checks run on the following models:")
@@ -228,10 +228,10 @@ if __name__ == '__main__':
     num_workers = int(multiprocessing.cpu_count() / 2)
     # test_tensorrt_on_cifar_resnets(batch_size=16, tolerance=0.1, num_workers=num_workers)
     batch_size = 16
-    print("Running SSD in pure MxNet")
+    print("Running SSD in pure MXNet")
     mx_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
     print("Execution time: %.2f seconds" % mx_ssd_time)
-    print("Running SSD in MxNet + TensorRT")
+    print("Running SSD in MXNet + TensorRT")
     trt_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
     print("Execution time: %.2f seconds" % trt_ssd_time)
     print("Speedup: %.2fx" % (mx_ssd_time / trt_ssd_time))
