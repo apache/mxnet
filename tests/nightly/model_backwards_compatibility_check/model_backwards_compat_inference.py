@@ -126,10 +126,10 @@ def test_lenet_gluon_hybrid_imports_api():
 
 def test_lstm_gluon_load_parameters_api():
 	## If this code is being run on version >= 1.2.0 only then execute it, since it uses save_parameters and load_parameters API
-    if compare_versions(str(mxnet_version), '1.2.1')  < 0:
-        print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
-        sys.exit(1)
-        
+	if compare_versions(str(mxnet_version), '1.2.1')  < 0:
+		print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
+		sys.exit(1)
+
 	model_name = 'lstm_gluon_save_parameters_api'
 	print ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
@@ -154,7 +154,7 @@ def test_lstm_gluon_load_parameters_api():
 
 	        ## Load the model and perform inference
 	        loaded_model = SimpleLSTMModel()
-	        loaded_model.load_params(model_name+'-params')
+	        loaded_model.load_parameters(model_name+'-params')
 	        output = loaded_model(test_data)
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())

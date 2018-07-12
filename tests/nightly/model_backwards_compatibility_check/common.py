@@ -36,7 +36,7 @@ import sys
 from mxnet.test_utils import assert_almost_equal
 
 # Set fixed random seeds.
-mx.random.seed(7)
+mx.random.seed(7, ctx = mx.cpu())
 np.random.seed(7)
 logging.getLogger().setLevel(logging.DEBUG)
 
