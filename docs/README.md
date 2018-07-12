@@ -37,12 +37,12 @@ The host repo is hooked with [Apache gitbox](https://gitbox.apache.org/repos/asf
 ### Process for Running the Docs Build Job
 
 1. Login to [Jenkins](http://jenkins.mxnet-ci.amazon-ml.com/).
-1. View the pipeline currently called `website build pipeline`.
+1. View the pipeline currently called `restricted website build`.
 1. Click `Build with Parameters`.
 1. Use the defaults, or change the domain to be your staging server's IP/DNS web address.
 1. Wait about 20-30 minutes while it builds the full site.
 1. On your staging server, clone the [mxnet site repo](https://github.com/apache/incubator-mxnet-site.git).
-1. When you ran `website build pipeline` it followed up with website build - test publish which pushed the changes to the incubator-mxnet-site repo.
+1. When you ran `restricted website build` it followed up with `restricted website publish` which pushed the changes to the incubator-mxnet-site repo.
 1. Make sure you git pull if you had already cloned the site repo before this first run-through.
 1. Copy the files to your webroot. For more info on this see the developer instructions for docs build.
 1. Preview the site on your staging server. Note, use the domain default before you try to use this for production, but using your own is helpful for QA'ing the site.
