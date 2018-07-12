@@ -20,7 +20,11 @@ import json
 import utils
 import math
 import sys
-from six.moves import xrange
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 
 def calc_complexity(ishape, node):

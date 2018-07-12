@@ -22,12 +22,16 @@ import numpy as np
 import sys
 import os
 from collections import namedtuple
-from six.moves import xrange
 
 current_working_directory = os.getcwd()
 sys.path.append(current_working_directory + "/..")
 sys.path.append(current_working_directory + "/../converter/")
 import _mxnet_converter as mxnet_converter
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 
 def _mxnet_remove_batch(input_data):

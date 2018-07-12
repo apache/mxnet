@@ -21,7 +21,6 @@ import numpy as np
 import unittest
 import sys
 import os
-from six.moves import xrange
 
 current_working_directory = os.getcwd()
 sys.path.append(current_working_directory + "/..")
@@ -29,6 +28,10 @@ sys.path.append(current_working_directory + "/../converter/")
 import _mxnet_converter as mxnet_converter
 from converter.utils import load_model
 
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 VAL_DATA = 'data/val-5k-256.rec'
 URL = 'http://data.mxnet.io/data/val-5k-256.rec'

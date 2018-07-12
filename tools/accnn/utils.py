@@ -20,7 +20,11 @@ import mxnet as mx
 import copy
 import json
 import ast
-from six.moves import xrange
+
+try:
+    xrange          # Python 2
+except NameError:
+    xrange = range  # Python 3
 
 
 def load_model(args):
