@@ -1201,8 +1201,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       backwards_outputs[0] = &tmp_output.arr;
       backwards_ex_outputs[0] = &tmp_output2.arr;
       back_req[0] = kWriteTo;
-
-      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+      std::cout << "Backwards: ";
+      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
       Imperative::Get()->InvokeOp(
           Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
           back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
