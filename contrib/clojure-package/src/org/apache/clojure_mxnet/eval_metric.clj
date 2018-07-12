@@ -20,7 +20,6 @@
   (:require [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet Accuracy TopKAccuracy F1 Perplexity MAE MSE RMSE CustomMetric)))
 
-
 (defn accuracy
   "Basic Accuracy Metric"
   []

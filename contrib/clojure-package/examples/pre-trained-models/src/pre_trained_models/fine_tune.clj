@@ -34,7 +34,6 @@
 (def model-dir "model")
 (def batch-size 16)
 
-
 ;;; image set is http://www.vision.caltech.edu/Image_Datasets/Caltech101/
 ;; Pictures of objects belonging to 101 categories. About 40 to 800 images per category. Most categories have about 50 images
 
@@ -49,13 +48,13 @@
                   :rand-mirror true}))
 
 (def val-iter (mx-io/image-record-iter
-                 {:path-imgrec "caltech-256/caltech-256-60-val.rec"
-                  :data-name "data"
-                  :label-name "softmax_label"
-                  :batch-size batch-size
-                  :data-shape [3 224 224]
-                  :rand-crop false
-                  :rand-mirror false}))
+               {:path-imgrec "caltech-256/caltech-256-60-val.rec"
+                :data-name "data"
+                :label-name "softmax_label"
+                :batch-size batch-size
+                :data-shape [3 224 224]
+                :rand-crop false
+                :rand-mirror false}))
 
 (defn get-model []
   (let [mod (m/load-checkpoint {:prefix (str model-dir "/resnet-50") :epoch 0})]
@@ -104,9 +103,7 @@
                (mapv #(context/gpu %) (range (Integer/parseInt (or dev-num "1"))))
                (mapv #(context/cpu %) (range (Integer/parseInt (or dev-num "1")))))]
     (println "Running with context devices of" devs)
-   (fine-tune! devs))
-  )
-
+    (fine-tune! devs)))
 
 (comment
 
@@ -126,7 +123,5 @@
 ;; INFO  ml.dmlc.mxnet.Callback$Speedometer: Epoch[0] Batch [120]	Speed: 3.44 samples/sec	Train-accuracy=0.040806
 ;; INFO  ml.dmlc.mxnet.Callback$Speedometer: Epoch[0] Batch [130]	Speed: 3.41 samples/sec	Train-accuracy=0.043893
 ;; INFO  ml.dmlc.mxnet.Callback$Speedometer: Epoch[0] Batch [140]	Speed: 3.42 samples/sec	Train-accuracy=0.045213
-
 )
-
 

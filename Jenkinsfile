@@ -93,7 +93,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 def publish_test_coverage() {
-    sh 'curl --retry 10 -s https://codecov.io/bash | bash -s -'
+    // Fall back to our own copy of the bash helper if it failed to download the public version
+    sh '(curl --retry 10 -s https://codecov.io/bash | bash -s -) || (curl --retry 10 -s https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data/codecov-bash.txt | bash -s -)'
 }
 
 def collect_test_results_unix(original_file_name, new_file_name) {
@@ -501,7 +502,18 @@ try {
           }
         }
       }
+    },
+    'Android / ARMv7':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/androidv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('android_armv7', 'build_android_armv7', false)
+          }
+        }
+      }
     }
+
   } // End of stage('Build')
 
   stage('Tests') {

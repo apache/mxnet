@@ -18,7 +18,6 @@
 (ns org.apache.clojure-mxnet.callback
   (:import (org.apache.mxnet Callback$Speedometer)))
 
-
 ;;; used to track status during epoch
 
 (defn speedometer

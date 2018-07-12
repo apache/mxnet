@@ -516,9 +516,6 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
-#if MXNET_USE_MKLDNN == 1
-    ret.InvalidateMKLDNNData();
-#endif
     return ret;
   }
 
@@ -1026,10 +1023,12 @@ void CopyFromTo(const NDArray &from, const NDArray *to, int priority = 0);
  * \param from the ndarray we want to copy data from
  * \param to the target ndarray
  * \param priority Priority of the action.
+ * \param is_opr whether it is invoked by an operator. For example, false if invoked from
+       KVStore, true if invoked from `_copyto` operator.
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0);
+void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0, bool is_opr = false);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.

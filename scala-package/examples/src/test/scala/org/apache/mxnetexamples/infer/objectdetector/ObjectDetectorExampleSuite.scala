@@ -18,7 +18,9 @@
 package org.apache.mxnetexamples.infer.objectdetector
 
 import java.io.File
+import java.net.URL
 
+import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -35,29 +37,34 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     logger.info("tempDirPath: %s".format(tempDirPath))
 
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
-    val synsetBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
-    Process("wget " + modelBase + "resnet50_ssd_model-symbol.json " + "-P " +
-      tempDirPath + "/resnetssd/ -q") !
 
-
-    Process("wget " + modelBase + "resnet50_ssd_model-0000.params " +
-      "-P " + tempDirPath + "/resnetssd/ -q") !
-
-
-    Process("wget  " + synsetBase + "synset.txt " + "-P" +
-      tempDirPath + "/resnetssd/ -q") !
-
-    Process("wget " +
-      imageBase + "dog-ssd.jpg " +
-      "-P " + tempDirPath + "/inputImages/") !
-
+    var tmpFile = new File(tempDirPath + "/resnetssd/resnet50_ssd_model-symbol.json")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(modelBase + "resnet50_ssd_model-symbol.json"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/resnetssd/resnet50_ssd_model-0000.params")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(modelBase + "resnet50_ssd_model-0000.params"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/resnetssd/synset.txt")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(modelBase + "synset.txt"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(imageBase + "dog-ssd.jpg"),
+        tmpFile)
+    }
 
     val modelDirPath = tempDirPath + File.separator + "resnetssd/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/dog-ssd.jpg"
-    val inputImageDir = tempDirPath + File.separator + "inputImages/"
+      "inputImages/resnetssd/dog-ssd.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/resnetssd/"
 
     var context = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&

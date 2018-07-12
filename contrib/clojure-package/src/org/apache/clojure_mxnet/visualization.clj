@@ -20,8 +20,6 @@
             [org.apache.clojure-mxnet.shape :as mx-shape])
   (:import (org.apache.mxnet Visualization)))
 
-
-
 (defn plot-network
   "convert symbol to Dot object for visualization
    -  symbol symbol to be visualized
@@ -46,7 +44,6 @@
                               hide-weights))
   ([sym shape-map]
    (plot-network sym shape-map {})))
-
 
 (defn render
   " Render file with Graphviz engine into format.

@@ -34,7 +34,7 @@
    (uniform low high shape-vec {})))
 
 (defn normal
-    "Generate normal(Gaussian) distribution N(mean, stdvar^^2) with shape.
+  "Generate normal(Gaussian) distribution N(mean, stdvar^^2) with shape.
     loc: The standard deviation of the normal distribution
     scale: The upper bound of distribution.
     shape-vec: vector shape of the ndarray generated.
@@ -46,7 +46,6 @@
    (Random/normal (float loc) (float scale) (mx-shape/->shape shape-vec) ctx out))
   ([loc scale shape-vec]
    (normal loc scale shape-vec {})))
-
 
 (defn seed
   " Seed the random number generators in mxnet.

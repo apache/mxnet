@@ -26,7 +26,7 @@ from __future__ import absolute_import
 import re
 import copy
 import json
-
+import warnings
 from .symbol import Symbol
 
 def _str2tuple(string):
@@ -252,6 +252,15 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
+    # check if multiple nodes have the same name
+    if len(nodes) != len(set([node["name"] for node in nodes])):
+        seen_nodes = set()
+        # find all repeated names
+        repeated = set(node['name'] for node in nodes if node['name'] in seen_nodes
+                       or seen_nodes.add(node['name']))
+        warning_message = "There are multiple variables with the same name in your graph, " \
+                          "this may result in cyclic graph. Repeated names: " + ','.join(repeated)
+        warnings.warn(warning_message, RuntimeWarning)
     # default attributes of node
     node_attr = {"shape": "box", "fixedsize": "true",
                  "width": "1.3", "height": "0.8034", "style": "filled"}

@@ -50,9 +50,8 @@
       (doseq [grad arr-grad]
         (is (= out-grad grad))))))
 
-
 (deftest test-concat
-  (let [shape-vecs[[2 2] [3 2]]
+  (let [shape-vecs [[2 2] [3 2]]
         x (sym/variable "x")
         y (sym/variable "y")
         out (sym/concat "conc" nil [x y] {:dim 0})
@@ -80,7 +79,6 @@
           np-grads arr-np]
       (is (= grads (mapv #(ndarray/+ % 1) np-grads))))))
 
-
 (defn check-regression [model forward-fn backward-fn]
   (let [shape-vec [3 1]
         arr-data (random/uniform -1 1 shape-vec)
@@ -98,7 +96,6 @@
     (let [npout-back (mapv backward-fn
                            np-out (ndarray/->vec arr-label))]
       (is (approx= 1e-6 npout-back arr-grad)))))
-
 
 (deftest test-regression
   (check-regression (sym/logistic-regression-output {:data (sym/variable "data") :label (sym/variable "label")})
@@ -151,7 +148,6 @@
         (let [val (ndarray/->vec (ndarray/slice out i))]
           (is (approx= 1e-6 [1 1 1 2 2 2] val)))))))
 
-
 (defn check-symbolic-forward [test-sym location expected tolerance]
   (let [arr-data (mapv #(ndarray/copy %) location)
         arr-grad (mapv #(ndarray/empty (mx-shape/->vec (ndarray/shape %))) location)
@@ -184,7 +180,6 @@
                        expected
                        grad-arrays)))))
 
-
 (deftest test-scalar-op
   (let [data (sym/variable "data")
         shape-vec [3 4]
@@ -215,7 +210,6 @@
     (is (approx= 1e-4
                  [0 0 0 0]
                  (-> exec (executor/forward) (executor/outputs) (first))))))
-
 
 (deftest test-arange
   (let [start 1
@@ -384,7 +378,6 @@
     (executor/backward exec-test (ndarray/* (ndarray/ones shape-vec) 2))
     (is (approx= 1e-6 (ndarray/zeros shape-vec) arr-grad))))
 
-
 (deftest test-round-ceil-floor
   (let [data (sym/variable "data")
         shape-vec [3 4]
@@ -401,7 +394,6 @@
                      (ndarray/+ (ndarray/ceil data-tmp))
                      (ndarray/+ (ndarray/floor data-tmp)))
                  (-> (executor/forward exec-test) (executor/outputs) (first))))))
-
 
 (deftest test-rsqrt-cos-sin
   (let [data (sym/variable "data")
@@ -451,8 +443,8 @@
         exec-test (sym/bind test (context/default-context) [arr-data1 arr-data2])
         out (-> (executor/forward exec-test) (executor/outputs) (first))]
     (is (approx= 1e-6
-                           (mapv min (ndarray/->vec data-tmp1) (ndarray/->vec data-tmp2))
-                           out))))
+                 (mapv min (ndarray/->vec data-tmp1) (ndarray/->vec data-tmp2))
+                 out))))
 
 (deftest test-transpose
   (let [data (sym/variable "data")
@@ -513,41 +505,36 @@
     (let [out-grad (ndarray/* (ndarray/ones shape-vec) 2)
           npout-grad (ndarray/* out-grad (ndarray/sign data-tmp))]
       (executor/backward exec-test out-grad)
-      (is (approx= 1e-6 npout-grad arr-grad)))))
-
-
-  ;; configure A: input --> conv --> deconv --> output.
+      (is (approx= 1e-6 npout-grad arr-grad)))));; configure A: input --> conv --> deconv --> output.
   ;;  the convolution and deconvoluiton has similar parameter which ensure
   ;;  the input shape is the same as output, and the same weights between conv
   ;;  and deconv;
   ;;  If the input value of forward() and backwrad() is the same, then
 ;;  the output value of them should also the same;
 
-(defn check-deconvolution-forward-backward [{:keys[input-shape-vec num-filter kernel stride pad]}]
+(defn check-deconvolution-forward-backward [{:keys [input-shape-vec num-filter kernel stride pad]}]
   (let [data (sym/variable "data")
-          conv (sym/convolution "conv" {:data data :kernel kernel :stride stride
-                                        :pad pad :num-filter num-filter :no-bias "true"})
-          deconv (sym/deconvolution "deconv" {:data conv :kernel kernel :stride stride
-                                              :pad pad :num-filter num-filter :no-bias "true"} )
-          arg-names (sym/list-arguments deconv)
-          arg-shape-vecs (first (sym/infer-shape deconv {:data input-shape-vec}))
-          input-data (random/uniform -5 5 input-shape-vec)
-          out-grad input-data
-          conv-weight (random/normal 0 1 [num-filter (second input-shape-vec) (first kernel) (last kernel)])
-          args {:data input-data :conv-weight conv-weight :deconv-weight conv-weight}
-          args-grad (mapv #(ndarray/empty %) arg-shape-vecs)
-          exec (sym/bind deconv (context/default-context) args args-grad)
-          out (-> (executor/forward exec) (executor/outputs) first)]
-      (executor/backward exec out-grad)
-      (is (approx= 1e-3 (ndarray/->vec out) (ndarray/->vec (first args-grad))))))
-
+        conv (sym/convolution "conv" {:data data :kernel kernel :stride stride
+                                      :pad pad :num-filter num-filter :no-bias "true"})
+        deconv (sym/deconvolution "deconv" {:data conv :kernel kernel :stride stride
+                                            :pad pad :num-filter num-filter :no-bias "true"})
+        arg-names (sym/list-arguments deconv)
+        arg-shape-vecs (first (sym/infer-shape deconv {:data input-shape-vec}))
+        input-data (random/uniform -5 5 input-shape-vec)
+        out-grad input-data
+        conv-weight (random/normal 0 1 [num-filter (second input-shape-vec) (first kernel) (last kernel)])
+        args {:data input-data :conv-weight conv-weight :deconv-weight conv-weight}
+        args-grad (mapv #(ndarray/empty %) arg-shape-vecs)
+        exec (sym/bind deconv (context/default-context) args args-grad)
+        out (-> (executor/forward exec) (executor/outputs) first)]
+    (executor/backward exec out-grad)
+    (is (approx= 1e-3 (ndarray/->vec out) (ndarray/->vec (first args-grad))))))
 
 (deftest test-deconvolution-forward-and-backward
   (check-deconvolution-forward-backward {:input-shape-vec [1 1 5 5] :num-filter 1 :kernel [3 3] :stride [1 1] :pad [1 1]})
   (check-deconvolution-forward-backward {:input-shape-vec [32 3 28 28] :num-filter 3 :kernel [3 3] :stride [1 1] :pad [1 1]})
   ;; commented out to make the tests fast
-  #_(check-deconvolution-forward-backward {:input-shape-vec [10 3 403 403] :num-filter 3 :kernel [7 7] :stride [5 5] :pad [2 2]})
-  )
+  #_(check-deconvolution-forward-backward {:input-shape-vec [10 3 403 403] :num-filter 3 :kernel [7 7] :stride [5 5] :pad [2 2]}))
 
 ;;  configure A: input --> conv --> output.
 ;;  configure B: input --> deconv --> output
@@ -558,52 +545,51 @@
 
 (defn check-deconvolution-gradient [{:keys [input-shape-vec num-filter pad]}]
   (let [stride [1 1]
-         kernel [(inc (* 2 (first pad))) (inc (* 2 (second pad)))]
-         data-conv (sym/variable "data_conv")
-         conv (sym/convolution "conv" {:data data-conv :kernel kernel :stride stride
-                                       :pad pad :num-filter num-filter :no-bias "true"})
-         data-deconv (sym/variable "data_deconv")
-         deconv (sym/deconvolution "deconv" {:data data-deconv :kernel kernel :stride stride
-                                             :pad pad :num-filter num-filter :no-bias true})
-         conv-data (random/uniform -5 5 input-shape-vec)
-         conv-args {"data_conv" conv-data "conv_weight" (random/normal 0 1 [num-filter (second input-shape-vec) (first kernel) (second kernel)])}
-         conv-args-grad [(ndarray/zeros (-> conv-data (ndarray/shape) (ndarray/->vec)))
-                         (ndarray/zeros [num-filter (second input-shape-vec) (first kernel) (second kernel)])]
-         exec-conv (sym/bind conv (context/default-context) conv-args conv-args-grad)
-         conv-out-grad (random/normal 0 2 (-> (executor/outputs exec-conv) (first) (ndarray/shape) (mx-shape/->vec)))]
-     (executor/forward exec-conv)
-     (executor/backward exec-conv conv-out-grad)
+        kernel [(inc (* 2 (first pad))) (inc (* 2 (second pad)))]
+        data-conv (sym/variable "data_conv")
+        conv (sym/convolution "conv" {:data data-conv :kernel kernel :stride stride
+                                      :pad pad :num-filter num-filter :no-bias "true"})
+        data-deconv (sym/variable "data_deconv")
+        deconv (sym/deconvolution "deconv" {:data data-deconv :kernel kernel :stride stride
+                                            :pad pad :num-filter num-filter :no-bias true})
+        conv-data (random/uniform -5 5 input-shape-vec)
+        conv-args {"data_conv" conv-data "conv_weight" (random/normal 0 1 [num-filter (second input-shape-vec) (first kernel) (second kernel)])}
+        conv-args-grad [(ndarray/zeros (-> conv-data (ndarray/shape) (ndarray/->vec)))
+                        (ndarray/zeros [num-filter (second input-shape-vec) (first kernel) (second kernel)])]
+        exec-conv (sym/bind conv (context/default-context) conv-args conv-args-grad)
+        conv-out-grad (random/normal 0 2 (-> (executor/outputs exec-conv) (first) (ndarray/shape) (mx-shape/->vec)))]
+    (executor/forward exec-conv)
+    (executor/backward exec-conv conv-out-grad)
 
-     (let [deconv-data conv-out-grad
-           deconv-args {"data_deconv" deconv-data "deconv_weight" (get conv-args "conv_weight")}
-           deconv-args-grad [(ndarray/zeros (-> deconv-data (ndarray/shape) (mx-shape/->vec)))
-                             (ndarray/zeros [num-filter (second input-shape-vec) (first kernel) (second kernel)])]
-           exec-deconv (sym/bind deconv (context/default-context) deconv-args deconv-args-grad)
-           deconv-out-grad conv-data]
-       (executor/forward exec-deconv)
-       (executor/backward exec-deconv deconv-out-grad)
+    (let [deconv-data conv-out-grad
+          deconv-args {"data_deconv" deconv-data "deconv_weight" (get conv-args "conv_weight")}
+          deconv-args-grad [(ndarray/zeros (-> deconv-data (ndarray/shape) (mx-shape/->vec)))
+                            (ndarray/zeros [num-filter (second input-shape-vec) (first kernel) (second kernel)])]
+          exec-deconv (sym/bind deconv (context/default-context) deconv-args deconv-args-grad)
+          deconv-out-grad conv-data]
+      (executor/forward exec-deconv)
+      (executor/backward exec-deconv deconv-out-grad)
 
-       (is (approx= 1e-4 (ndarray/->vec (second conv-args-grad)) (ndarray/->vec (second deconv-args-grad)))))))
+      (is (approx= 1e-4 (ndarray/->vec (second conv-args-grad)) (ndarray/->vec (second deconv-args-grad)))))))
 
 (deftest test-deconvolution-gradient
   (check-deconvolution-gradient {:input-shape-vec [1 3 5 5] :num-filter 3 :pad [1 1]}))
 
 (defn check-nearest-up-sampling-with-shape [{:keys [shape-vecs scale root-scale]}]
- (let [arr (zipmap (map #(str "arg_" %) (range 0 (count shape-vecs)))
-                   (map #(random/uniform -10 10 %) shape-vecs))
-       arr-grad (zipmap (map #(str "arg_" %) (range 0 (count shape-vecs)))
-                        (map #(ndarray/zeros %) shape-vecs))
-       up-args (mapv #(sym/variable (str "arg_" %)) (range 0 (count shape-vecs)))
-       up (sym/up-sampling "up-sampling" nil up-args {:sample-type "nearest" :scale root-scale})
-       exec (sym/bind up (context/default-context) arr arr-grad)]
-   (executor/forward exec)
-   (executor/backward exec (executor/outputs exec))
-   (doseq [k (range 0 (count shape-vecs))]
-     (let [k-name (str "arg_" k)
-           expected (->> (get arr k-name) (ndarray/->vec) (mapv #(* % (Math/pow root-scale 2) (Math/pow scale (*  2 k)))))
-           real (-> (get arr-grad k-name) (ndarray/->vec))]
-       (is (approx= 0.1 expected real))))))
-
+  (let [arr (zipmap (map #(str "arg_" %) (range 0 (count shape-vecs)))
+                    (map #(random/uniform -10 10 %) shape-vecs))
+        arr-grad (zipmap (map #(str "arg_" %) (range 0 (count shape-vecs)))
+                         (map #(ndarray/zeros %) shape-vecs))
+        up-args (mapv #(sym/variable (str "arg_" %)) (range 0 (count shape-vecs)))
+        up (sym/up-sampling "up-sampling" nil up-args {:sample-type "nearest" :scale root-scale})
+        exec (sym/bind up (context/default-context) arr arr-grad)]
+    (executor/forward exec)
+    (executor/backward exec (executor/outputs exec))
+    (doseq [k (range 0 (count shape-vecs))]
+      (let [k-name (str "arg_" k)
+            expected (->> (get arr k-name) (ndarray/->vec) (mapv #(* % (Math/pow root-scale 2) (Math/pow scale (*  2 k)))))
+            real (-> (get arr-grad k-name) (ndarray/->vec))]
+        (is (approx= 0.1 expected real))))))
 
 (deftest test-nearest-upsampling
   (doall (for [root-scale (range 1 4)
@@ -611,6 +597,6 @@
                num-shape (range 1 4)
                base (range 1 4)]
            (let [shape-vecs (mapv (fn [i] [1 3 (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))
-                                     (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))])
+                                           (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))])
                                   (range 0 num-shape))]
              (check-nearest-up-sampling-with-shape {:shape-vecs shape-vecs :scale scale :root-scale root-scale})))))

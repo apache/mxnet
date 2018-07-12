@@ -21,7 +21,8 @@ private[mxnet] object CToScalaUtils {
 
 
   // Convert C++ Types to Scala Types
-  def typeConversion(in : String, argType : String = "", returnType : String) : String = {
+  def typeConversion(in : String, argType : String = "",
+                     argName : String, returnType : String) : String = {
     in match {
       case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
@@ -33,9 +34,9 @@ private[mxnet] object CToScalaUtils {
       case "double" | "doubleorNone" => "Double"
       case "string" => "String"
       case "boolean" | "booleanorNone" => "Boolean"
-      case "tupleof<float>" | "tupleof<double>" | "ptr" | "" => "Any"
+      case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
-        s"Invalid type for args: $default, $argType")
+        s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
     }
   }
 
@@ -47,10 +48,12 @@ private[mxnet] object CToScalaUtils {
     * The three field shown above do not usually come at the same time
     * This function used the above format to determine if the argument is
     * optional, what is it Scala type and possibly pass in a default value
+    * @param argName The name of the argument
     * @param argType Raw arguement Type description
     * @return (Scala_Type, isOptional)
     */
-  def argumentCleaner(argType : String, returnType : String) : (String, Boolean) = {
+  def argumentCleaner(argName: String,
+                      argType : String, returnType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
@@ -66,9 +69,9 @@ private[mxnet] object CToScalaUtils {
       // arg: Type, optional, default = Null
       require(commaRemoved(1).equals("optional"))
       require(commaRemoved(2).startsWith("default="))
-      (typeConversion(commaRemoved(0), argType, returnType), true)
+      (typeConversion(commaRemoved(0), argType, argName, returnType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType, returnType)
+      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType)
       val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
       (tempType, tempOptional)
     } else {
