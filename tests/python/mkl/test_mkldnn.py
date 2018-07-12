@@ -242,6 +242,21 @@ def test_batchnorm():
 
 
 @with_seed()
+def test_lrn():
+    def check_lrn_training(stype):
+        shape = (2, 3, 2, 2)
+        data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+        data = mx.symbol.Variable('data', stype=stype)
+        in_location = [mx.nd.array(data_tmp).tostype(stype)]
+        test = mx.symbol.LRN(data, nsize=3)
+        check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_lrn_training(stype)
+
+
+@with_seed()
 def test_fullyconnected():
     def check_fullyconnected_training(stype):
         data_shape = rand_shape_nd(2)
