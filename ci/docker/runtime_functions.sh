@@ -452,6 +452,23 @@ build_ubuntu_gpu_mkldnn() {
     report_ccache_usage
 }
 
+build_ubuntu_gpu_mkldnn_nocudnn() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_CUDA=1                    \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_CUDNN=0                   \
+        -j$(nproc)
+
+    report_ccache_usage
+}
+
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
@@ -608,6 +625,14 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_python3_gpu_nocudnn() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_OFF_TEST_ONLY=true
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
