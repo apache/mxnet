@@ -24,10 +24,8 @@ use Getopt::Long qw(HelpMessage);
 
 GetOptions(
     ## my Pembroke Welsh Corgi Kyuubi, enjoing Solar eclipse of August 21, 2017
-    'image=s' => \(my $image = 'https://scontent-sea1-1.cdninstagram.com/vp/'.
-                               'c6e923f45b408fb26077bb2079e2ffa8/5BDB8A7E/'.
-                               't51.2885-15/e35/'.
-                               '23734897_1382606301862187_7379024371697844224_n.jpg'),
+    'image=s' => \(my $image = 'http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'.
+                               'gluon/dataset/kyuubi.jpg'),
     'model=s' => \(my $model = 'resnet152_v2'),
     'help'    => sub { HelpMessage(0) },
 ) or HelpMessage(1);
@@ -69,8 +67,7 @@ $image = ($image->astype('float32') / 255 - $rgb_mean) / $rgb_std;
 # We perform an additional softmax on the output to obtain probability scores.
 # And then print the top-5 recognized objects.
 my $prob = $net->($image)->softmax;
-my $idxs = $prob->topk(k=>5)->[0];
-for my $idx (@{ $idxs->reshape([5]) })
+for my $idx (@{ $prob->topk(k=>5)->at(0) })
 {
     my $i = $idx->asscalar;
     printf(
