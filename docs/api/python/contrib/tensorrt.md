@@ -70,7 +70,7 @@ The unit test directory also provides a way to run models from the [Gluon model 
 * cifar_wideresnet40_8
 * cifar_resnext29_16x64d
 
-Please note that even those examples are based on [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) due to the ease of accessing the dataset without formal registration and preprocessing, everything should work fine with models trained on [ImageNet](http://www.image-net.org/), using MxNet's ImageNet iterators, based on the [RecordIO](https://mxnet.incubator.apache.org/architecture/note_data_loading.html) representation of the ImageNet dataset.
+Please note that even those examples are based on [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) due to the ease of accessing the dataset without formal registration and preprocessing, everything should work fine with models trained on [ImageNet](http://www.image-net.org/), using MXNet's ImageNet iterators, based on the [RecordIO](https://mxnet.incubator.apache.org/architecture/note_data_loading.html) representation of the ImageNet dataset.
 
 The script can be run simply as
 ```no-highlight
@@ -83,10 +83,10 @@ Here's some sample output, for inference with batch size 16 (TensorRT is especia
 Model: cifar_resnet56_v1
 ===========================================
 
-*** Running inference using pure MxNet ***
-MxNet: time elapsed: 2.463s, accuracy: 94.19%
+*** Running inference using pure MXNet ***
+MXNet: time elapsed: 2.463s, accuracy: 94.19%
 
-*** Running inference using MxNet + TensorRT ***
+*** Running inference using MXNet + TensorRT ***
 TensorRT: time elapsed: 1.652s, accuracy: 94.19%
 
 TensorRT speed-up (not counting compilation): 1.49x
@@ -97,10 +97,10 @@ Absolute accuracy difference: 0.000000
 Model: cifar_resnet110_v1
 ===========================================
 
-*** Running inference using pure MxNet ***
-MxNet: time elapsed: 4.000s, accuracy: 95.20%
+*** Running inference using pure MXNet ***
+MXNet: time elapsed: 4.000s, accuracy: 95.20%
 
-*** Running inference using MxNet + TensorRT ***
+*** Running inference using MXNet + TensorRT ***
 
 TensorRT: time elapsed: 2.085s, accuracy: 95.20%
 

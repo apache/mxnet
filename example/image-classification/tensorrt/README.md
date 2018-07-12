@@ -1,15 +1,15 @@
-## MxNet-TensorRT runtime integration examples
+## MXNet-TensorRT runtime integration examples
 
-**Note:** The TensorRT integration API documentation can be found [here](../../../docs/api/python/contrib/tensorrt.md). Please read it carefully as it describes how to build MxNet with TensorRT, and how to adapt existing pre-trained models for both the symboli API and for Gluon.
+**Note:** The TensorRT integration API documentation can be found [here](../../../docs/api/python/contrib/tensorrt.md). Please read it carefully as it describes how to build MXNet with TensorRT, and how to adapt existing pre-trained models for both the symboli API and for Gluon.
 
-**Note:** To use this feature, MxNet needs to be built with TensorRT support. Please see the details as to how to build a Docker container with TensorRT support for the x86_64 platform [here](../../../docs/api/python/contrib/tensorrt.md).
+**Note:** To use this feature, MXNet needs to be built with TensorRT support. Please see the details as to how to build a Docker container with TensorRT support for the x86_64 platform [here](../../../docs/api/python/contrib/tensorrt.md).
 
 **Note:** This example uses pre-trained models from the [Gluon model zoo](https://gluon-cv.mxnet.io/model_zoo/index.html). In order to use it, please install the [gluoncv](https://pypi.org/project/gluoncv/) pip package as follows:
 ```
 pip install gluoncv
 ```
 
-The following example shows how to run image classification models using pure MxNet for inference, followed by MxNet with TensorRT integration, comparing performance and accuracy. The models in question are:
+The following example shows how to run image classification models using pure MXNet for inference, followed by MxNet with TensorRT integration, comparing performance and accuracy. The models in question are:
 
 * cifar_resnet20_v1
 * cifar_resnet56_v1
