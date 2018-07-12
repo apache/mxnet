@@ -534,8 +534,7 @@ sgd.update(0, weight, grad, momentum)
 
 
 
-Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD)
-and [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) and
+Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD), [mxnet.optimizer.Adam](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.Adam) and
 [mxnet.optimizer.AdaGrad](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.AdaGrad) support sparse updates in MXNet.
 
 ## Advanced Topics
