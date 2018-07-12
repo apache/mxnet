@@ -252,6 +252,25 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     >>> func = lambda i, s: ([i + s], [i + 1, s + i])
     >>> loop_vars = (mx.nd.array([0], dtype="int64"), mx.nd.array([1], dtype="int64"))
     >>> outputs, states = mx.nd.contrib.while_loop(cond, func, loop_vars, max_iterations=10)
+    >>> outputs
+    [
+    [[ 1]
+    [ 2]
+    [ 4]
+    [ 7]
+    [11]
+    [16]
+    [...]  # undefined value
+    [...]
+    [...]
+    [...]]
+    <NDArray 6x1 @cpu(0)>]
+    >>> states
+    [
+    [6]
+    <NDArray 1 @cpu(0)>,
+    [16]
+    <NDArray 1 @cpu(0)>]
     """
     def _to_python_scalar(inputs, type_, name):
         """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
