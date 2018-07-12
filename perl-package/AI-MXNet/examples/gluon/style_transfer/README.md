@@ -3,15 +3,11 @@ This directory provides AI::MXNet Implementation of MSG-Net real time style tran
 ### Stylize Images Using Pre-trained MSG-Net
 Download the pre-trained model:
 
-        ```
         ./get_data.sh
-        ```
 
 Test the model:
 
-        ```
         ./style_transfer.pl --content-image <path or url> --style-image < path or url> --content-size 512
-        ```
 
 More options:
 
