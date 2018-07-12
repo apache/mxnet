@@ -1,0 +1,8 @@
+cpplint==1.3.0
+h5py==2.8.0rc1
+nose
+nose-timer
+numpy<1.15.0,>=1.8.2
+pylint==1.8.3
+requests<2.19.0,>=2.18.4
+scipy==1.0.1
