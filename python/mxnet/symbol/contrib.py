@@ -370,14 +370,10 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     The second list has the length of `|loop_vars|`,
     which represents final states of loop variables.
 
-    Warning 1: Even if `cond` is never satisfied,
+    Warning: Even if `cond` is never satisfied,
     while_loop returns a list of outputs with inferred dtype and shape.
     This is different from the NDArray version,
     where in this case `step_outputs` are assumed as an empty list.
-
-    Warning 2: The output shape along axis 0 is `max_iteration`,
-    which is different from the NDArray version,
-    where it is the actual number of steps taken.
 
     Parameters
     ----------

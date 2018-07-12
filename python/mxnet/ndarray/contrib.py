@@ -226,11 +226,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     The second list has the length of `|loop_vars|`,
     which represents final states of loop variables.
 
-    Warning 1: when `cond` is never satisfied, we assume `step_output` is empty,
+    Warning: when `cond` is never satisfied, we assume `step_output` is empty,
     because it cannot be inferred. This is different from the symbolic version.
-
-    Warning 2: The output shape along axis 0 is currently the actual number of iterations taken,
-    which is different from the symbolic version, where it is `max_iteration`.
 
     Parameters
     ----------
@@ -320,8 +317,19 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             raise ValueError("Number of elements in step_output should be the same in each step")
     stacked_outputs = []
     for i_th, items in enumerate(zip(*outputs), 1):
+        # `mx.ndarray.pad` only support 4-D or 5-D inputs for now
+        # so we could not use it.
+        items = [x.reshape([1] + list(x.shape)) for x in items]
+        if steps != max_iterations and items:
+            pad_shape = [max_iterations - steps] + list(items[0].shape[1: ])
+            pad = ndarray.empty(
+                shape=pad_shape,
+                ctx=items[0].context,
+                dtype=items[0].dtype,
+            )
+            items = list(items) + [pad]
         try:
-            stacked_outputs.append(ndarray.op.stack(*items))
+            stacked_outputs.append(ndarray.op.concat(*items, dim=0))
         except ValueError:
             raise ValueError("\n".join(
                 ["Shapes of %d-th elements in step_outputs are inconsistent, which are:" % i_th] +

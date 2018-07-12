@@ -139,7 +139,7 @@ def test_while_loop_simple_forward():
         assert result_s.asscalar() == 0
 
 
-def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, max_iterations, is_for):
+def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, max_iterations, is_for, n_steps):
 
     def _create_vars(num, prefix):
         return [mx.sym.var(prefix + str(i)) for i in range(num)]
@@ -159,7 +159,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
     def _to_numpy_list(arrays):
         return [x.asnumpy() if x is not None else x for x in arrays]
 
-    def _get_imperative_result():
+    def _get_imperative_result(n_steps):
         free_vars = [args["FreeVar" + str(i)].copy() for i, _ in enumerate(free_var_shapes)]
         loop_vars = [args["LoopVar" + str(i)].copy() for i, _ in enumerate(loop_var_shapes)]
         loop_var_start = int(is_for)
@@ -173,7 +173,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
                 loop_vars=loop_vars,
                 max_iterations=max_iterations,
             )
-            n_steps = outputs[0].shape[0] if outputs else 0
+            outputs = [x[: n_steps] for x in outputs]
             out_grads = _create_arrays(x.shape for x in outputs)  \
                       + _create_arrays(x.shape for x in final_loop_vars)
             loop_result_nd = [x * 2 for x in outputs] + [x * 3 for x in final_loop_vars]
@@ -183,7 +183,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
                 cat_out.backward(out_grad=mx.nd.concat(*[x.reshape(-1) for x in out_grads], dim=0))
                 grads = [free_vars[i].grad for i, _ in enumerate(free_var_shapes)] \
                       + [loop_vars[i].grad for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
-            return _to_numpy_list(loop_result_nd), _to_numpy_list(grads), out_grads, n_steps
+            return _to_numpy_list(loop_result_nd), _to_numpy_list(grads), out_grads
 
     def _get_symbolic_result(out_grads, n_steps):
 
@@ -232,7 +232,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
     if is_for:
         assert loop_var_shapes[0] == (1, )
         args["LoopVar0"] = mx.nd.array([0])
-    imp_outs, imp_grads, out_grads, n_steps = _get_imperative_result()
+    imp_outs, imp_grads, out_grads = _get_imperative_result(n_steps)
     sym_outs, sym_grads = _get_symbolic_result(out_grads, n_steps)
     for imp_out, sym_out in zip(imp_outs, sym_outs):
         if imp_out is None or sym_out is None:
@@ -247,10 +247,10 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 def test_while_loop_for_foreach():
 
     def make_true_cond():
-        return lambda loop_vars, _: (loop_vars[0] < 1e9).prod()
+        return lambda loop_vars, _: (loop_vars[0] < 1e200).prod()
 
     def make_false_cond():
-        return lambda loop_vars, _: (loop_vars[0] > 1e9).prod()
+        return lambda loop_vars, _: (loop_vars[0] > 1e200).prod()
 
     def make_for_cond(length):
         return lambda loop_vars, _: loop_vars[0] < length
@@ -276,6 +276,7 @@ def test_while_loop_for_foreach():
             free_var_shapes=[
                 (1, 3),         # scanned
             ],
+            n_steps=1,
         )
 
     def case_1(**params):
@@ -613,6 +614,7 @@ def test_while_loop_for_foreach():
             (1, ),          # b
         ],
         max_iterations=23,
+        n_steps=23,
     )
     # Case 1.2.*
     case_1(
@@ -625,6 +627,7 @@ def test_while_loop_for_foreach():
             (2, 3, 4),      # b
         ],
         max_iterations=31,
+        n_steps=31,
     )
     # Case 1.3.*
     case_1(
@@ -637,6 +640,7 @@ def test_while_loop_for_foreach():
             (2, 3, 4),      # b
         ],
         max_iterations=20,
+        n_steps=0,
     )
     # Case 2.1.*
     case_2(
@@ -650,6 +654,7 @@ def test_while_loop_for_foreach():
             (2, ),          # f_1
             (3, 4, 5, 6),   # f_2, unused
         ],
+        n_steps=31,
     )
     # Case 2.2.*
     case_2(
@@ -663,6 +668,7 @@ def test_while_loop_for_foreach():
             (2, ),          # f_1
             (3, 4, 5, 6),   # f_2, unused
         ],
+        n_steps=25,
     )
     # Case 3.*
     case_3(
@@ -679,6 +685,7 @@ def test_while_loop_for_foreach():
             (2, ),          # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=11,
     )
     # Case 4.1.*
     case_4(
@@ -697,6 +704,7 @@ def test_while_loop_for_foreach():
             (5, ),          # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=4,
     )
     # Case 4.2.*
     case_4(
@@ -715,6 +723,7 @@ def test_while_loop_for_foreach():
             (5, 12),        # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=5,
     )
     # Case 5.1.*
     case_5(
@@ -733,6 +742,7 @@ def test_while_loop_for_foreach():
             (5, ),          # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=4,
     )
     # Case 5.2.*
     case_5(
@@ -751,6 +761,7 @@ def test_while_loop_for_foreach():
             (3, 4, 2),      # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=5,
     )
     # Case 6.*
     case_6(
@@ -769,6 +780,7 @@ def test_while_loop_for_foreach():
             (5, 3),         # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
+        n_steps=5,
     )
 
 
