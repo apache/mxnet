@@ -143,7 +143,7 @@ inline bool TRTInferType(const NodeAttrs& attrs, std::vector<int>* in_dtype,
 inline std::vector<std::string> TRTListInputNames(const NodeAttrs& attrs) {
   std::vector<std::string> output;
   const auto node_param = nnvm::get<TRTParam>(attrs.parsed);
-  output.reserve(node_param.input_map.size());
+  output.resize(node_param.input_map.size());
   for (auto& el : node_param.input_map) {
     output[el.second] = el.first;
   }
@@ -153,7 +153,7 @@ inline std::vector<std::string> TRTListInputNames(const NodeAttrs& attrs) {
 inline std::vector<std::string> TRTListOutputNames(const NodeAttrs& attrs) {
   std::vector<std::string> output;
   const auto node_param = nnvm::get<TRTParam>(attrs.parsed);
-  output.reserve(node_param.output_map.size());
+  output.resize(node_param.output_map.size());
   for (auto& el : node_param.output_map) {
     output[std::get<0>(el.second)] = el.first;
   }

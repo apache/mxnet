@@ -598,6 +598,16 @@ int MXExecutorReshape(int partial_shaping,
   API_END_HANDLE_ERROR(delete out);
 }
 
+int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
+                                 SymbolHandle *out) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  exec::GraphExecutor *exec = static_cast<exec::GraphExecutor*>(handle);
+  *s = exec->GetOptimizedSymbol();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
                                  void* callback_handle) {
