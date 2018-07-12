@@ -503,7 +503,6 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   attrs.attrs.op = Op::Get("Pooling");
   attrs.num_inputs = 1;
   attrs.num_outputs = dim == 2 ? 2 : 1;
-  TShape kernel_shape(dim);
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
@@ -517,7 +516,6 @@ OpAttrs GetPoolingBackwardsOp(int kernel, int dim, int stride, int pad) {
   attrs.attrs.op = Op::Get("_backward_Pooling");
   attrs.num_inputs = dim == 2 ? 5 : 3;
   attrs.num_outputs = 1;
-  TShape kernel_shape(dim);
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
