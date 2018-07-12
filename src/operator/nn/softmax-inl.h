@@ -247,11 +247,11 @@ inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
 
 struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   int axis;
-  double temperature;
+  dmlc::optional<double> temperature;
   DMLC_DECLARE_PARAMETER(SoftmaxParam) {
     DMLC_DECLARE_FIELD(axis).set_default(-1)
       .describe("The axis along which to compute softmax.");
-    DMLC_DECLARE_FIELD(temperature).set_default(1.0)
+    DMLC_DECLARE_FIELD(temperature).set_default(dmlc::optional<double>())
       .describe("Temperature parameter in softmax");
   }
 };
@@ -267,16 +267,18 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[0], kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());
+  const double temperature = param.temperature.has_value() ?
+    param.temperature.value() : 1.0;
   TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (shape.ndim() == 2) {
       Softmax<OP>(ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
               outputs[0].dptr<DType>(), shape.get<2>(), axis,
-              static_cast<DType>(param.temperature));
+              static_cast<DType>(temperature));
     } else {
       Softmax<OP>(ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
               outputs[0].dptr<DType>(), shape.get<3>(), axis,
-              static_cast<DType>(param.temperature));
+              static_cast<DType>(temperature));
     }
   });
 }
@@ -293,18 +295,20 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[0], kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());
+  const double temperature = param.temperature.has_value() ?
+    param.temperature.value() : 1.0;
   TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (shape.ndim() == 2) {
       SoftmaxGrad<OP1, OP2>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
                             inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
                             shape.get<2>(), axis,
-                            static_cast<DType>(param.temperature));
+                            static_cast<DType>(temperature));
     } else {
       SoftmaxGrad<OP1, OP2>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
                             inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
                             shape.get<3>(), axis,
-                            static_cast<DType>(param.temperature));
+                            static_cast<DType>(temperature));
     }
   });
 }

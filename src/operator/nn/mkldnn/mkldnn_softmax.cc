@@ -33,7 +33,9 @@ namespace mxnet {
 namespace op {
 
 bool SupportMKLDNNSoftmax(const SoftmaxParam &param) {
-  if (param.temperature != 1.0) {
+  // MKLDNN does not support temperature argument in their softmax function
+  // now. Need update this once they start to support it.
+  if (param.temperature.has_value()) {
     return false;
   }
   return true;
