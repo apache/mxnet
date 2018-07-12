@@ -1054,6 +1054,13 @@ Graph GraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
   return g;
 }
 
+nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+    graph_.outputs.begin() + num_forward_outputs_);
+  return ret;
+}
+
 /*!
  * \brief GraphExecutor initializer for simple bind flow in
  * which only certain input shapes and dtypes are provided by users.
