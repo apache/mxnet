@@ -515,7 +515,6 @@ DMLC_REGISTER_PARAMETER(WhileLoopParam);
 class WhileLoopState: public LoopState {
  public:
   WhileLoopParam params;
-  Symbol cond;          // symbol of the `cond' subgraph
   size_t n_iterations;  // the actual number of steps taken in this while loop, <= max_iterations
   CachedOpPtr cond_op;
   // abbrev for output_input_mapping
@@ -525,7 +524,6 @@ class WhileLoopState: public LoopState {
   WhileLoopState(const WhileLoopParam &params, const Symbol &cond, const Symbol &func) :
                  LoopState(func),
                  params(params),
-                 cond(cond),
                  n_iterations(0U),
                  cond_op(LoopState::MakeSharedOp(cond)),
                  oi_map(params.func_var_locs.ndim(), -1) {
