@@ -164,7 +164,6 @@ number of kernels in the layer.
 .set_attr_parser(ParamParser<LRNParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
-.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data"};
@@ -175,6 +174,7 @@ number of kernels in the layer.
 })
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
@@ -184,10 +184,10 @@ number of kernels in the layer.
 NNVM_REGISTER_OP(_backward_LRN)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LRNParam>)
-.set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 
