@@ -38,6 +38,7 @@ shape = (2, 3)
 irregular_shape = (1211,1211)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
+keys_invalid = [999]
 keys_shape = ['3', '5', '7']
 keys_big_shape = ['99']
 fp16_keys_shape = ['4', '6', '8']
@@ -350,18 +351,44 @@ def test_sync_init(gpu_tests=False):
         check_init(kv, init_test_keys_device_big, big_shape, device=True)
     print('worker ' + str(kv.rank) + ' is initialized')
 
-def test_gluon_trainer_reset():
-    params = mx.gluon.ParameterDict()
-    x = params.get('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
-    params.initialize(ctx=mx.cpu(0), init='zeros')
-    trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-    params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
-    row_id = mx.nd.arange(0, 4)
-    w = x.row_sparse_data(row_id)
-    assert trainer._kv_initialized and trainer._update_on_kvstore
-    # load would fail to reset kvstore since update_on_kvstore is True
-    assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
-    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_reset')
+def test_invalid_operations():
+    def check_invalid_gluon_trainer_reset():
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
+        params.initialize(ctx=mx.cpu(0), init='zeros')
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        row_id = mx.nd.arange(0, 4)
+        w = x.row_sparse_data(row_id)
+        assert trainer._kv_initialized and trainer._update_on_kvstore
+        mx.nd.waitall()
+        # load would fail to reset kvstore since update_on_kvstore is True
+        assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        print('worker ' + str(my_rank) + ' passed check_invalid_gluon_trainer_reset')
+
+    def check_invalid_pull():
+        kv.init(keys_invalid[0], mx.nd.ones((2,2)).tostype('row_sparse'))
+        out = mx.nd.ones((2,2)).tostype('row_sparse')
+        assert_exception(kv.pull, mx.MXNetError, 'invalid_key', out=out, ignore_sparse=False)
+        print('worker ' + str(my_rank) + ' passed check_invalid_pull')
+
+    check_invalid_gluon_trainer_reset()
+    check_invalid_pull()
+
+def test_gluon_trainer():
+    def check_trainer_kv_type(stype, grad_stype, update_on_kv):
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        trainer._init_kvstore()
+        assert trainer._kv_initialized
+        assert trainer._update_on_kvstore is update_on_kv
+
+    check_trainer_kv_type('default', 'default', False)
+    check_trainer_kv_type('default', 'row_sparse', True)
+    check_trainer_kv_type('row_sparse', 'row_sparse', True)
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer')
 
 
 if __name__ == "__main__":
@@ -372,7 +399,9 @@ if __name__ == "__main__":
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
     if opt.type == 'gluon':
-        test_gluon_trainer_reset()
+        test_gluon_trainer()
+    if opt.type == 'invalid':
+        test_invalid_operations()
     if opt.type == 'all' or opt.type == 'init':
         test_sync_init(opt.gpu)
     if opt.type == 'all' or opt.type == 'default':

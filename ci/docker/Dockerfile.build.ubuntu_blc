@@ -30,6 +30,7 @@ COPY install/ubuntu_npm_blc.sh /work/
 RUN /work/ubuntu_npm_blc.sh
 
 ARG USER_ID=0
+ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

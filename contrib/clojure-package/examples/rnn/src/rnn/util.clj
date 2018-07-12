@@ -21,13 +21,13 @@
 (defn build-vocab [path]
   (let [content (slurp path)
         vocab-map (reduce (fn [{:keys [vocab idx] :as result} c]
-                               (if (get vocab c)
-                result
-                (-> result
-                    (update :vocab assoc c (inc idx))
-                    (update :idx inc))))
-                             {:vocab {} :idx 0}     ;; 0 is used for padding
-                             content)]
+                            (if (get vocab c)
+                              result
+                              (-> result
+                                  (update :vocab assoc c (inc idx))
+                                  (update :idx inc))))
+                          {:vocab {} :idx 0}     ;; 0 is used for padding
+                          content)]
     (:vocab vocab-map)))
 
 (defn make-revert-vocab [vmap]
@@ -42,9 +42,8 @@
 
 (defn cdf [weights]
   (let [total (* 1.0 (apply + weights))
-        csums (reduce (fn [cumsum w] (conj cumsum (+ (or (last cumsum) 0) w)) ) [] weights)]
+        csums (reduce (fn [cumsum w] (conj cumsum (+ (or (last cumsum) 0) w))) [] weights)]
     (mapv #(/ % total) csums)))
-
 
 (defn choice [population weights]
   (assert (= (count population) (count weights)))

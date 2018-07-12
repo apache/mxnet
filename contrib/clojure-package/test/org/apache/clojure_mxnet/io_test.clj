@@ -59,7 +59,6 @@
         (is (= label1 label0))
         (is (= data1 data0))))))
 
-
 (deftest test-image-record-iter
   (let [_ (when-not (.exists (io/file "data/cifar/train.rec"))
             (sh "scripts/get_cifar_data.sh"))
@@ -120,7 +119,6 @@
       (is (= #{[100]} (into #{} (map :shape provide-label))))
       (mx-io/dispose prefetch-iter))))
 
-
 (deftest test-ndarray-iter
   (let [shape0 [1000 2 2]
         data [(ndarray/ones shape0) (ndarray/zeros shape0)]
@@ -138,17 +136,17 @@
           nbatch0 8]
       (is (= nbatch0 (count (mx-io/for-batches data-iter0 (fn [batch] 1)))))
       (is (every? true? (mx-io/for-batches data-iter0
-                                            (fn [batch]
-                                              (= batch-data0
-                                                 (first (mx-io/batch-data batch)))))))
+                                           (fn [batch]
+                                             (= batch-data0
+                                                (first (mx-io/batch-data batch)))))))
       (is (every? true? (mx-io/for-batches data-iter0
-                                            (fn [batch]
-                                              (= batch-data1
-                                                 (second (mx-io/batch-data batch)))))))
+                                           (fn [batch]
+                                             (= batch-data1
+                                                (second (mx-io/batch-data batch)))))))
       (is (every? true? (mx-io/for-batches data-iter0
-                                            (fn [batch]
-                                              (= batch-label
-                                                 (first (mx-io/batch-label batch))))))))
+                                           (fn [batch]
+                                             (= batch-label
+                                                (first (mx-io/batch-label batch))))))))
 
     ;; test discard
     (let [data-iter1 (mx-io/ndarray-iter data {:label label

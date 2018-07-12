@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,8 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
-set -evx
-
-cd contrib/clojure-package
-lein test
+gpg --keyserver keyserver.ubuntu.com --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
+gpg --output sbt.gpg --export scalasbt@gmail.com
+gpg --keyserver keyserver.ubuntu.com --recv E084DAB9
+gpg --output r.gpg --export marutter@gmail.com

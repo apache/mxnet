@@ -82,6 +82,7 @@ def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
+    _run_cmd('cd ..; make scalapkg')
     _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
@@ -89,6 +90,18 @@ def build_scala_docs(app):
     scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
     for doc_file in scaladocs:
         _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+
+def build_clojure_docs(app):
+    """build clojure doc and then move the outdir"""
+    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
+    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
+    clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
+    _run_cmd('cd ' + clojure_path + '; lein codox')
+    dest_path = app.builder.outdir + '/api/clojure/docs'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/target/doc'
+    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path)
 
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
@@ -374,6 +387,7 @@ def setup(app):
         app.connect("builder-inited", build_mxnet)
     app.connect("builder-inited", generate_doxygen)
     app.connect("builder-inited", build_scala_docs)
+    app.connect("builder-inited", build_clojure_docs)
     # skipped to build r, it requires to install latex, which is kinds of too heavy
     # app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)

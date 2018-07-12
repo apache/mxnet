@@ -19,8 +19,11 @@ package org.apache.mxnet
 
 import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.CToScalaUtils
+import java.io._
+import java.security.MessageDigest
 
 import scala.collection.mutable.ListBuffer
+import scala.io.Source
 
 /**
   * This object will generate the Scala documentation of the new Scala API
@@ -35,15 +38,25 @@ private[mxnet] object APIDocGenerator{
 
   def main(args: Array[String]) : Unit = {
     val FILE_PATH = args(0)
-    absClassGen(FILE_PATH, true)
-    absClassGen(FILE_PATH, false)
+    val hashCollector = ListBuffer[String]()
+    hashCollector += absClassGen(FILE_PATH, true)
+    hashCollector += absClassGen(FILE_PATH, false)
+    hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
+    hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
+    val finalHash = hashCollector.mkString("\n")
   }
 
-  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : Unit = {
+  def MD5Generator(input : String) : String = {
+    val md = MessageDigest.getInstance("MD5")
+    md.update(input.getBytes("UTF-8"))
+    val digest = md.digest()
+    org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
+  }
+
+  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    // TODO: Add Filter to the same location in case of refactor
-    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_")).map(absClassFunction => {
+    val absFuncs = absClassFunctions.map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
       s"$scalaDoc\n$defBody"
@@ -55,16 +68,44 @@ private[mxnet] object APIDocGenerator{
     val imports = "import org.apache.mxnet.annotation.Experimental"
     val absClassDef = s"abstract class $packageName"
     val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
+    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
+    pw.write(finalStr)
+    pw.close()
+    MD5Generator(finalStr)
+  }
+
+  def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
+    // scalastyle:off
+    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    val absFuncs = absClassFunctions.map(absClassFunction => {
+      val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
+      if (isSymbol) {
+        val defBody = s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): org.apache.mxnet.Symbol"
+        s"$scalaDoc\n$defBody"
+      } else {
+        val defBodyWithKwargs = s"def ${absClassFunction.name}(kwargs: Map[String, Any] = null)(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
+        val defBody = s"def ${absClassFunction.name}(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
+        s"$scalaDoc\n$defBodyWithKwargs\n$scalaDoc\n$defBody"
+      }
+    })
+    val packageName = if (isSymbol) "SymbolBase" else "NDArrayBase"
+    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
+    val scalaStyle = "// scalastyle:off"
+    val packageDef = "package org.apache.mxnet"
+    val imports = "import org.apache.mxnet.annotation.Experimental"
+    val absClassDef = s"abstract class $packageName"
+    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
     import java.io._
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
     pw.close()
+    MD5Generator(finalStr)
   }
 
   // Generate ScalaDoc type
-  def generateAPIDocFromBackend(func : absClassFunction) : String = {
+  def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
     val desc = func.desc.split("\n").map({ currStr =>
-      s"  * $currStr"
+      s"  * $currStr<br>"
     })
     val params = func.listOfArgs.map({ absClassArg =>
       val currArgName = absClassArg.argName match {
@@ -75,7 +116,11 @@ private[mxnet] object APIDocGenerator{
       s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
     val returnType = s"  * @return ${func.returnType}"
-    s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
+    if (withParam) {
+      s"  /**\n${desc.mkString("\n")}\n${params.mkString("\n")}\n$returnType\n  */"
+    } else {
+      s"  /**\n${desc.mkString("\n")}\n$returnType\n  */"
+    }
   }
 
   def generateAPISignature(func : absClassFunction, isSymbol : Boolean) : String = {
@@ -112,11 +157,12 @@ private[mxnet] object APIDocGenerator{
     val returnType = if (isSymbol) "Symbol" else "NDArray"
     _LIB.mxListAllOpNames(opNames)
     // TODO: Add '_linalg_', '_sparse_', '_image_' support
+    // TODO: Add Filter to the same location in case of refactor
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName, "org.apache.mxnet." + returnType)
-    }).toList
+    }).toList.filterNot(_.name.startsWith("_"))
   }
 
   // Create an atomic symbol function by handle and function name.
@@ -136,7 +182,7 @@ private[mxnet] object APIDocGenerator{
     val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = CToScalaUtils.argumentCleaner(argType, returnType)
+      val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     new absClassFunction(aliasName, desc.value, argList.toList, returnType)

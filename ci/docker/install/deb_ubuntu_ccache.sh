@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-apt update
+apt update || true
 apt install -y \
     libxslt1-dev \
     docbook-xsl \

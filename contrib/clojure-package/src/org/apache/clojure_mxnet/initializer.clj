@@ -20,7 +20,7 @@
   (:import (org.apache.mxnet Uniform Normal Xavier)))
 
 (defn uniform
- "Initialize the weight with uniform [-scale, scale]
+  "Initialize the weight with uniform [-scale, scale]
    scale - The scale of uniform distribution"
   ([scale]
    (new Uniform (float scale)))
@@ -41,9 +41,9 @@
   factor-type - 'avg' 'in' or 'out'
   magnitude - scale of random number range "
   ([{:keys [rand-type factor-type magnitude :as opts]
-      :or {rand-type "uniform"
-           factor-type "avg"
-           magnitude 3}}]
+     :or {rand-type "uniform"
+          factor-type "avg"
+          magnitude 3}}]
    (new Xavier rand-type factor-type (float magnitude)))
   ([]
    (xavier {})))

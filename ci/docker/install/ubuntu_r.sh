@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,12 @@
 # build and install are separated so changes to build don't invalidate
 # the whole docker cache for the image
 
+# Important Maintenance Instructions:
+#  Align changes with installation instructions in /docs/install/ubuntu_setup.md
+#  Align with R install script: /docs/install/install_mxnet_ubuntu_r.sh
+
 set -ex
+cd "$(dirname "$0")"
 # install libraries for mxnet's r package on ubuntu
 echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
 
@@ -30,7 +35,16 @@ gpg --keyserver keyserver.ubuntu.com --recv-key $key || \
     gpg --keyserver keyserver.pgp.com --recv-keys $key || \
     gpg --keyserver ha.pool.sks-keyservers.net --recv-keys $key ;
 
+# Installing the latest version (3.3+) that is compatible with MXNet
+add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
+
 gpg -a --export $key | apt-key add -
 
 apt-get update
-apt-get install -y --allow-unauthenticated r-base r-base-dev libxml2-dev libssl-dev libxt-dev
+apt-get install -y --allow-unauthenticated \
+    libcairo2-dev \
+    libssl-dev \
+    libxml2-dev \
+    libxt-dev \
+    r-base \
+    r-base-dev

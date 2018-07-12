@@ -174,3 +174,4 @@ List of Contributors
 * [Hang Zhang](http://hangzh.com)
 * [Lin Yuan](https://github.com/apeforest)
 * [Kou Ding](https://github.com/chinakook)
+* [Istvan Fehervari](https://github.com/ifeherva)
