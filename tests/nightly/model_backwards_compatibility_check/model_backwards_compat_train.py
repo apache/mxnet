@@ -121,10 +121,10 @@ def train_lenet_gluon_hybrid_export_api():
 
 def train_lstm_gluon_save_parameters_api():
 	## If this code is being run on version >= 1.2.0 only then execute it, since it uses save_parameters and load_parameters API
-    if compare_versions(str(mxnet_version), '1.2.1')  < 0:
-        print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
-        sys.exit(1)
-        
+	if compare_versions(str(mxnet_version), '1.2.1')  < 0:
+		print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
+		sys.exit(1)
+
 	model_name = 'lstm_gluon_save_parameters_api'
 	print ('Saving files for model %s' %model_name)
 	net = SimpleLSTMModel()
