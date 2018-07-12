@@ -29,7 +29,7 @@ from symbol.symbol_factory import get_symbol_train
 from symbol import symbol_builder
 
 
-parser = argparse.ArgumentParser(description='MxNet SSD benchmark')
+parser = argparse.ArgumentParser(description='MXNet SSD benchmark')
 parser.add_argument('--network', '-n', type=str, default='vgg16_reduced')
 parser.add_argument('--batch_size', '-b', type=int, default=0)
 parser.add_argument('--shape', '-w', type=int, default=300)
