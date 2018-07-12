@@ -722,11 +722,12 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export OMP_NUM_THREADS=3
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    ../../tools/launch.py -n 3 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    ../../tools/launch.py -n 3 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    ../../tools/launch.py -n 3 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    ../../tools/launch.py -n 3 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
 }
 
 integrationtest_ubuntu_gpu_scala() {
