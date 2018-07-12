@@ -712,18 +712,6 @@ try {
         }
       }
     },
-    'Scala: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu', mx_dist_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
-            publish_test_coverage()
-          }
-        }
-      }
-    },
     'Clojure: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/ut-clojure-cpu') {
@@ -999,6 +987,18 @@ try {
             init_git()
             unpack_lib('cpu')
             docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
+    'Scala: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-scala-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu', mx_dist_lib)
+            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             publish_test_coverage()
           }
         }

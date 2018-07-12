@@ -516,9 +516,6 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
-#if MXNET_USE_MKLDNN == 1
-    ret.InvalidateMKLDNNData();
-#endif
     return ret;
   }
 

@@ -638,13 +638,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_ubuntu_cpu_scala() {
     set -ex
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalatest USE_BLAS=openblas USE_DIST_KVSTORE=1
-}
-
-unittest_ubuntu_gpu_scala() {
-    set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
-    make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1
 }
 
 unittest_ubuntu_cpu_clojure() {
@@ -733,6 +727,12 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+}
+
+integrationtest_ubuntu_gpu_scala() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
