@@ -38,14 +38,14 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-    int32_t k;
-    DMLC_DECLARE_PARAMETER(DiagParam) {
-            DMLC_DECLARE_FIELD(k)
-                    .set_default(0)
-                    .describe("Diagonal in question. The default is 0."
-                    "Use k>0 for diagonals above the main diagonal, "
-                    "and k<0 for diagonals below the main diagonal.");
-    }
+  int32_t k;
+  DMLC_DECLARE_PARAMETER(DiagParam) {
+    DMLC_DECLARE_FIELD(k)
+    .set_default(0)
+    .describe("Diagonal in question. The default is 0."
+              "Use k>0 for diagonals above the main diagonal, "
+              "and k<0 for diagonals below the main diagonal.");
+  }
 };
 
 inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
