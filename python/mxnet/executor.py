@@ -25,8 +25,9 @@ import ctypes
 import copy
 import numpy as np
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
+from .base import mx_uint, NDArrayHandle, ExecutorHandle, SymbolHandle, py_str
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
+from .symbol import symbol
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 
@@ -53,7 +54,7 @@ class Executor(object):
     >>> c = 2 * a + b
     >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
+    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):  # pylint: disable=redefined-outer-name
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -73,6 +74,7 @@ class Executor(object):
         self.aux_arrays = []
         self.outputs = self._get_outputs()
         self._symbol = copy.deepcopy(symbol)
+        self._optimized_symbol = None
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
@@ -322,6 +324,20 @@ class Executor(object):
             self._output_dict = Executor._get_dict(
                 self._symbol.list_outputs(), self.outputs)
         return self._output_dict
+
+    @property
+    def optimized_symbol(self):
+        """Get optimized symbol.
+
+        Returns
+        -------
+        symbol : nnvm::Symbol
+            The nnvm symbol optimized.
+        """
+        if self._optimized_symbol is None:
+            handle = SymbolHandle()
+            check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(handle)))
+        return symbol.Symbol(handle=handle)
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
