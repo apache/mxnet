@@ -9,6 +9,7 @@ Building MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) will gain 
 * [3. Windows](#3)
 * [4. Verify MXNet with python](#4)
 * [5. Enable MKL BLAS](#5)
+* [6. Support](#6)
 
 <h2 id="1">Linux</h2>
 
@@ -100,8 +101,8 @@ We recommend to build and install MXNet yourself using [Microsoft Visual Studio 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
-3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
+2. Download and Install [CMake 3](https://cmake.org/) if it is not already installed.
+3. Download and install [OpenCV 3](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
 4. Unzip the OpenCV package.
 5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```C:\opencv\build\x64\vc14``` for example). Also, you need to add the OpenCV bin directory (```C:\opencv\build\x64\vc14\bin``` for example) to the ``PATH`` variable.
 6. If you have Intel Math Kernel Library (MKL) installed, set ```MKL_ROOT``` to point to ```MKL``` directory that contains the ```include``` and ```lib```. If you want to use MKL blas, you should set ```-DUSE_BLAS=mkl``` when cmake. Typically, you can find the directory in
@@ -120,8 +121,8 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 
 3. Start a Visual Studio command prompt.
 
-4. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
-[CMake](https://cmake.org/) command:
+4. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
+[CMake 3](https://cmake.org/) command:
 ```
 mkdir build
 cd build
@@ -139,7 +140,7 @@ Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/`
 To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and install [CMake](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
+2. Download and install [CMake 3](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
 3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
 4. Unzip the OpenCV package.
 5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
@@ -290,3 +291,11 @@ Numpy + Intel(R) MKL: preloading libiomp5.so runtime
 MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) enabled processors, Lnx 2.40GHz lp64 intel_thread NMICDev:0
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
+
+<h2 id="6">Next Steps and Support</h2>
+
+- For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl)
+
+- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn)
+
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN)
