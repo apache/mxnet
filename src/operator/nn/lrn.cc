@@ -87,8 +87,21 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-  return MKLDNNStorageType(attrs, dev_mask, true,
-                           dispatch_mode, in_attrs, out_attrs);
+  bool dispatched =false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
+    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  return true;
+//  return MKLDNNStorageType(attrs, dev_mask, true,
+//                           dispatch_mode, in_attrs, out_attrs);
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -97,8 +110,21 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-  return MKLDNNStorageType(attrs, dev_mask, true,
-                           dispatch_mode, in_attrs, out_attrs);
+  bool dispatched =false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
+    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  return true;
+//  return MKLDNNStorageType(attrs, dev_mask, true,
+//                           dispatch_mode, in_attrs, out_attrs);
 }
 
 #if MXNET_USE_MKLDNN == 1
