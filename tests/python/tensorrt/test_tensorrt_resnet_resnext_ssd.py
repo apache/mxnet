@@ -22,7 +22,8 @@ def get_fp16_infer_for_fp16_graph():
 def set_fp16_infer_for_fp16_graph(status=False):
     os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
 
-def get_ssd_model(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
+#ssd_512_resnet50_v1_coco
+def get_ssd_model(model_name='faster_rcnn_resnet50_v2a_voc', use_tensorrt=True,
                   ctx=mx.gpu(0), batch_size=32, fp16_for_fp32_graph=False):
 
     set_use_tensorrt(use_tensorrt)
@@ -30,12 +31,14 @@ def get_ssd_model(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
     data = mx.sym.var('data')
     anchors, class_preds, box_preds = net(data)
+    all_preds = mx.sym.concat(anchors, class_preds, box_preds, dim=2)
     all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
 
     if not get_use_tensorrt():
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
-    executor = class_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 32, 32), softmax_label=(batch_size,), grad_req='null',
+    # class_preds
+    executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null',
                                    shared_buffer=all_params, force_rebind=True)
     return executor
 
@@ -113,6 +116,29 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
 
     return duration, 100.0 * matches / example_ct
 
+def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
+        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
+
+    executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
+
+    start = None
+    num_runs = 50
+
+    for i in range(2):
+        data = np.random.randn(batch_size, 3, 224, 224)
+        executor.arg_dict["data"] = data
+        if i == 1:
+            start = time()
+        for runs in range(num_runs):
+            executor.forward(is_train = False)
+            executor.outputs[0].wait_to_read()
+#            all_preds = executor.outputs[0].asnumpy()
+#            anchors = all_preds[:, :, 0]
+#            class_preds = all_preds[:, :, 1]
+#            box_preds = all_preds[:, :, 2:]
+
+    return time() - start
+
 def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph):
     print("\n===========================================")
     print("Model: %s" % model_name)
@@ -183,4 +209,12 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
 
 if __name__ == '__main__':
     num_workers = int(multiprocessing.cpu_count() / 2)
-    test_tensorrt_on_cifar_resnets(batch_size=1, tolerance=0.1, num_workers=num_workers)
+#    test_tensorrt_on_cifar_resnets(batch_size=16, tolerance=0.1, num_workers=num_workers)
+    batch_size = 16
+    print("Running SSD in pure MxNet")
+    mx_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
+    print("Execution time: %.2f seconds" % mx_ssd_time)
+    print("Running SSD in MxNet + TensorRT")
+    trt_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
+    print("Execution time: %.2f seconds" % trt_ssd_time)
+    print("Speedup: %.2fx" % (mx_ssd_time / trt_ssd_time))
