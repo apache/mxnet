@@ -128,7 +128,7 @@ cd mxnet/docs/build_version_doc
 This script will install the dependencies for you and build MXNet from source.
 
 ```bash
-./install_mxnet_ubuntu_docs.sh
+./setup_docs_ubuntu.sh
 ```
 
 **Step 5a:** Make the docs.
