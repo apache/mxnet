@@ -92,10 +92,10 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
-//  if (!dispatched) {
-//    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-//                                     dispatch_mode, DispatchMode::kFCompute);
-//  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
   return dispatched;
 }
 
@@ -108,6 +108,10 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   return dispatched;
 }
