@@ -55,13 +55,14 @@ make scalapkg
 (Optional) run unit/integration tests by
 
 ```bash
-make scalatest
+make scalaunittest
+make scalaintegrationtest
 ```
 
 Or run a subset of unit tests by, e.g.,
 
 ```bash
-make SCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite scalatest
+make SCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite scalaunittest
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
