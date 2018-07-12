@@ -87,15 +87,26 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-//  bool dispatched =false;
-//  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
-//    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-//  }
-//  if (!dispatched) {
-//    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-//                                     dispatch_mode, DispatchMode::kFCompute);
-//  }
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  CHECK(!in_attrs->empty());
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+#endif
+  return dispatched;
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -104,15 +115,25 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-//  bool dispatched =false;
-//  if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
-//    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
-//  }
-//  if (!dispatched) {
-//    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-//                                     dispatch_mode, DispatchMode::kFCompute);
-//  }
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched && (common::ContainsStorageType(*in_attrs, kRowSparseStorage) ||
+      common::ContainsStorageType(*in_attrs, kCSRStorage))) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  if (!dispatched) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+#endif
+  return dispatched;
 }
 
 #if MXNET_USE_MKLDNN == 1
@@ -176,6 +197,7 @@ number of kernels in the layer.
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 .set_attr_parser(ParamParser<LRNParam>)
+.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -188,7 +210,6 @@ number of kernels in the layer.
 })
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
-.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
@@ -198,10 +219,10 @@ number of kernels in the layer.
 NNVM_REGISTER_OP(_backward_LRN)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LRNParam>)
+.set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
-.set_attr<FInferStorageType>("FInferStorageType", LRNBackwardInferStorageType)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 
