@@ -828,19 +828,37 @@ def test_sigmoid():
 def test_shape_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
-        x = np.random.ranf(shape)
-        y = mx.nd.shape_array(mx.nd.array(x))
-        expected_y = np.shape(x)
-        same(y.asnumpy(), expected_y)
+        x = mx.sym.var('x')
+        y = mx.sym.shape_array(x)
+        xa = mx.nd.array(np.random.ranf(shape))
+        xg = mx.nd.empty(xa.shape)
+        ya = np.shape(xa)
+        yg = mx.nd.ones(ya)
+        exe = y.bind(ctx=default_context(), args={'x': xa},
+                     args_grad={'x': xg})
+        exe.forward(is_train=True)
+        exe.backward([yg])
+        yo = exe.outputs[0].asnumpy()
+        same(yo, ya)
+        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_size_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
-        x = np.random.ranf(shape)
-        y = mx.nd.size_array(mx.nd.array(x))
-        expected_y = np.size(x)
-        same(y.asnumpy(), expected_y)
+        x = mx.sym.var('x')
+        y = mx.sym.size_array(x)
+        xa = mx.nd.array(np.random.ranf(shape))
+        xg = mx.nd.empty(xa.shape)
+        ya = np.size(xa)
+        yg = mx.nd.ones(ya)
+        exe = y.bind(ctx=default_context(), args={'x': xa},
+                     args_grad={'x': xg})
+        exe.forward(is_train=True)
+        exe.backward([yg])
+        yo = exe.outputs[0].asnumpy()
+        same(yo, ya)
+        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_hard_sigmoid():
