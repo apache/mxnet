@@ -21,28 +21,31 @@ import mxnet as mx
 import multiprocessing
 import numpy as np
 import os
-import sys
 
 from mxnet.gluon.data.vision import transforms
 from mxnet import gluon
 from time import time
 
+
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
+
 
 def set_use_tensorrt(status=False):
     os.environ["MXNET_USE_TENSORRT"] = str(int(status))
 
+
 def get_fp16_infer_for_fp16_graph():
     return int(os.environ.get("MXNET_TENSORRT_USE_FP16_FOR_FP32", 0))
+
 
 def set_fp16_infer_for_fp16_graph(status=False):
     os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
 
-#ssd_512_resnet50_v1_coco
+
+# ssd_512_resnet50_v1_coco
 def get_ssd_model(model_name='faster_rcnn_resnet50_v2a_voc', use_tensorrt=True,
                   ctx=mx.gpu(0), batch_size=32, fp16_for_fp32_graph=False):
-
     set_use_tensorrt(use_tensorrt)
     set_fp16_infer_for_fp16_graph(fp16_for_fp32_graph)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
@@ -55,14 +58,13 @@ def get_ssd_model(model_name='faster_rcnn_resnet50_v2a_voc', use_tensorrt=True,
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
     # class_preds
-    executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null',
-                                   shared_buffer=all_params, force_rebind=True)
+    executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null', shared_buffer=all_params,
+                                     force_rebind=True)
     return executor
 
 
-def get_cifar_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
-                      ctx=mx.gpu(0), batch_size=128, fp16_for_fp32_graph=False):
-
+def get_cifar_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0), batch_size=128,
+                            fp16_for_fp32_graph=False):
     set_use_tensorrt(use_tensorrt)
     set_fp16_infer_for_fp16_graph(fp16_for_fp32_graph)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
@@ -80,9 +82,9 @@ def get_cifar_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
                                    shared_buffer=all_params, force_rebind=True)
     return executor
 
-def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorrt=True,
-        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
+def cifar10_infer(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0), fp16_for_fp32_graph=False,
+                  batch_size=128, num_workers=1):
     executor = get_cifar_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
 
     num_ex = 10000
@@ -95,16 +97,16 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
         transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
     ])
 
-    data_loader = lambda: gluon.data.DataLoader(
-        gluon.data.vision.CIFAR10(train=False).transform_first(transform_test),
-        batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    def data_loader():
+        return gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=False).transform_first(transform_test),
+                                     batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     val_data = data_loader()
 
     for idx, (data, label) in enumerate(val_data):
         extent = data.shape[0]
-        offset = idx*batch_size
-        all_label_test[offset:offset+extent] = label.asnumpy()
+        offset = idx * batch_size
+        all_label_test[offset:offset + extent] = label.asnumpy()
 
         # warm-up, but don't use result
         executor.arg_dict["data"][:extent, :] = data
@@ -123,8 +125,8 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
         executor.arg_dict["data"][:extent, :] = data
         executor.forward(is_train=False)
         preds = executor.outputs[0].asnumpy()
-        offset = idx*batch_size
-        all_preds[offset:offset+extent, :] = preds[:extent]
+        offset = idx * batch_size
+        all_preds[offset:offset + extent, :] = preds[:extent]
         example_ct += extent
 
     all_preds = np.argmax(all_preds, axis=1)
@@ -133,9 +135,9 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
 
     return duration, 100.0 * matches / example_ct
 
-def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
-        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
+def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True, ctx=mx.gpu(0), fp16_for_fp32_graph=False,
+              batch_size=128):
     executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
 
     start = None
@@ -147,14 +149,10 @@ def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
         if i == 1:
             start = time()
         for runs in range(num_runs):
-            executor.forward(is_train = False)
+            executor.forward(is_train=False)
             executor.outputs[0].wait_to_read()
-#            all_preds = executor.outputs[0].asnumpy()
-#            anchors = all_preds[:, :, 0]
-#            class_preds = all_preds[:, :, 1]
-#            box_preds = all_preds[:, :, 2:]
-
     return time() - start
+
 
 def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph):
     print("\n===========================================")
@@ -162,12 +160,13 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     print("===========================================")
     print("*** Running inference using pure MxNet ***\n")
     mx_duration, mx_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
-        num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph, use_tensorrt=False)
+                                        num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph,
+                                        use_tensorrt=False)
     print("\nMxNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
 
     print("\n*** Running inference using MxNet + TensorRT ***\n")
     trt_duration, trt_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
-        num_workers=num_workers, use_tensorrt=True)
+                                          num_workers=num_workers, use_tensorrt=True)
     print("TensorRT: time elapsed: %.3fs, accuracy: %.2f%%" % (trt_duration, trt_pct))
     speedup = mx_duration / trt_duration
     print("TensorRT speed-up (not counting compilation): %.2fx" % speedup)
@@ -177,8 +176,7 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     return speedup, acc_diff
 
 
-def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, test_fp16=False):
-
+def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
     models = [
         'cifar_resnet20_v1',
         'cifar_resnet56_v1',
@@ -207,7 +205,8 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
             speedup, acc_diff = run_experiment_for(model, batch_size, num_workers, fp16_for_fp32_graph=use_fp16)
             speedups[idx] = speedup
             acc_diffs[idx] = acc_diff
-            assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (tolerance, model)
+            assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (
+                tolerance, model)
 
         print("Perf and correctness checks run on the following models:")
         print(models)
@@ -224,9 +223,10 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
 
         print("Test duration: %.2f seconds" % test_duration)
 
+
 if __name__ == '__main__':
     num_workers = int(multiprocessing.cpu_count() / 2)
-#    test_tensorrt_on_cifar_resnets(batch_size=16, tolerance=0.1, num_workers=num_workers)
+    # test_tensorrt_on_cifar_resnets(batch_size=16, tolerance=0.1, num_workers=num_workers)
     batch_size = 16
     print("Running SSD in pure MxNet")
     mx_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
