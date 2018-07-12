@@ -20,6 +20,7 @@ import mxnet as mx
 import copy
 import json
 import ast
+from six.moves import xrange
 
 
 def load_model(args):
