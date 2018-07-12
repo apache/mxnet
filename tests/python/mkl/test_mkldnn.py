@@ -65,18 +65,18 @@ def test_mkldnn_ndarray_slice():
     net = gluon.nn.HybridSequential()
     with net.name_scope():
         net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=ctx)
+    net.collect_params().initialize(init=mx.init.Constant(0.001), ctx=ctx)
     x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
     y = net(x)
 
     # trigger computation on ndarray slice
-    assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
+    assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.027)
 
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
     with net.name_scope():
         net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=mx.cpu())
+    net.collect_params().initialize(init=mx.init.Constant(0.001), ctx=mx.cpu())
     class Dummy(gluon.data.Dataset):
         def __len__(self):
             return 2
@@ -93,8 +93,8 @@ def test_mkldnn_engine_threading():
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
-        # output should be 016711406 (non-mkldnn mode output) 
-        assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
+        # output should be 0.027 (non-mkldnn mode output) 
+        assert_almost_equal(y[0, 0, 0, 0], 0.027)
         break
 
 
