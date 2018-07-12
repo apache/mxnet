@@ -19,24 +19,10 @@
 
 #Author: Piyush Ghai
 
-echo "Invoking model_backwards_compat_test.sh script"
+echo "Invoking model_backwards_compat_checker.sh script"
 echo `pwd`
 cd tests/nightly/model_backwards_compatibility_check
 echo `pwd`
 
 echo '=========================='
-echo 'running mlp with module api'
-python mnist_mlp_module_api_inference.py
-
-echo '=========================='
-echo 'running lenet with gluon api (non - hybridized)'
-python lenet_cnn_gluon_inference.py
-
-echo '=========================='
-echo 'running lenet with gluon api (hybridized)'
-python lenet_cnn_gluon_hybrid_inference.py
-
-echo '=========================='
-echo 'running rnn with gluon - save and load parameters'
-python lm_rnn_gluon_inference.py
-
+python model_backwards_compat_inference.py

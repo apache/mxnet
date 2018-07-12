@@ -23,13 +23,7 @@ run_models() {
 	echo '=========================='
 	echo "Running training files and preparing models"
 	echo '=========================='
-	python mnist_mlp_module_api_train.py
-	echo '=========================='
-	python lenet_cnn_gluon_hybrid_train.py
-	echo '=========================='
-	python lm_rnn_gluon_train.py
-	echo '=========================='
-	python lenet_cnn_gluon_train.py
+	python model_backwards_compat_train.py
 	echo '=========================='
 }
 

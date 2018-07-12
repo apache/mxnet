@@ -33,6 +33,7 @@ from mxnet.gluon import nn, rnn
 import re
 import time
 import sys
+from mxnet.test_utils import assert_almost_equal
 
 # Set fixed random seeds.
 mx.random.seed(7)
@@ -41,41 +42,77 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 # get the current mxnet version we are running on
 mxnet_version = mx.__version__
-bucket_name = 'mxnet-model-backwards-compatibility'
+model_bucket_name = 'mxnet-model-backwards-compatibility-models'
+data_bucket_name = 'mxnet-model-backwards-compatibility-data'
 backslash = '/'
 s3 = boto3.resource('s3')
-num_epoch = 2
+ctx = mx.cpu(0)
 
-def prepare_mnist_data(mnist_raw_data):
-    
-    #shuffle the indices
-    indices = np.random.permutation(mnist_raw_data['train_label'].shape[0])
+def get_module_api_model_definition():
+    input = mx.symbol.Variable('data')
+    input = mx.symbol.Flatten(data=input)
 
-    #print indices[0:10]
-    train_idx , val_idx = indices[:50000], indices[50000:]
+    fc1 = mx.symbol.FullyConnected(data=input, name='fc1', num_hidden=128)
+    act1 = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
+    fc2 = mx.symbol.FullyConnected(data=fc1, name='fc2', num_hidden=2)
+    op = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
+    model = mx.mod.Module(symbol=op, context=ctx, data_names=['data'], label_names=['softmax_label'])
+    return model
 
-    train_data = mnist_raw_data['train_data'][train_idx,:]
-    train_label = mnist_raw_data['train_label'][train_idx]
-    
-    val_data = mnist_raw_data['train_data'][val_idx,:]
-    val_label = mnist_raw_data['train_label'][val_idx]
-    
-    test_data = mnist_raw_data['test_data']
-    test_label = mnist_raw_data['test_label']
+def save_inference_results(inference_results, model_name):
+    assert (isinstance(inference_results, mx.ndarray.ndarray.NDArray))
+    mx.nd.save(model_name + '-inference', {'inference' : inference_results})
 
-    #print len(train_data)
-    #print len(val_data)
-    
-    train = {'train_X' : train_data, 'train_Y' : train_label}
-    test = {'test_X' : test_data, 'test_Y' : test_label}
-    val = {'val_X' : val_data, 'val_Y' : val_label}
-    
-    data = dict()
-    data['train'] = train
-    data['test'] = test
-    data['val'] = val
-    
+def load_inference_results(model_name):
+    inf_dict = mx.nd.load(model_name+'-inference')
+    return inf_dict['inference']
+
+def save_data_and_labels(test_data, test_labels, model_name):
+    assert (isinstance(test_data, mx.ndarray.ndarray.NDArray))
+    assert (isinstance(test_labels, mx.ndarray.ndarray.NDArray))
+    mx.nd.save(model_name + '-data', {'data' : test_data, 'labels' : test_labels})
+
+def upload_data_and_labels_to_s3(model_name):
+    s3 = boto3.client('s3')
+    file = model_name + '-data'
+    s3.upload_file(file, data_bucket_name, file)
+    print ('data files successfully uploaded to s3')
+
+def upload_model_files_to_s3(files, folder_name):
+    s3 = boto3.client('s3')
+    for file in files:
+        s3.upload_file(file, model_bucket_name, folder_name + file)
+
+def clean_model_files(files, model_name):
+    files.append(model_name + '-inference')
+    files.append(model_name + '-data')
+
+    for file in files:
+        if os.path.isfile(file):
+            os.remove(file)
+
+def download_data_from_s3(model_name):
+    print ('Downloading data files for %s from bucket %s'%(model_name, data_bucket_name))
+    bucket = s3.Bucket(data_bucket_name)
+    bucket.download_file(model_name+'-data', model_name+'-data')
+
+    data = mx.nd.load(model_name+'-data')
     return data
+
+def download_model_files_from_s3(model_name):
+    for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
+        bucket = s3.Bucket(model_bucket_name)
+        prefix = folder + backslash + model_name
+        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
+        if len(model_files_meta) == 0:
+            print ('No trained models found under path : %s' %prefix)
+            continue
+        model_files = list()
+        for obj in model_files_meta:
+            file_name = obj.key.split('/')[2]
+            model_files.append(file_name)
+            ## Download this file---
+            bucket.download_file(obj.key, file_name)
 
 def get_top_level_folders_in_bucket(s3client, bucket_name):
     '''This function returns the top level folders in the S3Bucket. These folders help us to navigate to the trained model files stored for different MXNet versions. '''
@@ -91,49 +128,28 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
 
     return folder_list
 
-def clean_mnist_data():
-    if os.path.isfile('train-images-idx3-ubyte.gz'):
-        os.remove('train-images-idx3-ubyte.gz')
-    if os.path.isfile('t10k-labels-idx1-ubyte.gz'):
-        os.remove('t10k-labels-idx1-ubyte.gz')
-    if os.path.isfile('train-labels-idx1-ubyte.gz'):
-        os.remove('train-labels-idx1-ubyte.gz')
-    if os.path.isfile('t10k-images-idx3-ubyte.gz'):
-        os.remove('t10k-images-idx3-ubyte.gz')
+class Net(gluon.Block):
+    def __init__(self, **kwargs):
+        super(Net, self).__init__(**kwargs)
+        with self.name_scope():
+            # layers created in name_scope will inherit name space
+            # from parent layer.
+            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
+            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
+            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+            self.fc1 = nn.Dense(500)
+            self.fc2 = nn.Dense(2)
 
-def clean_model_files(model_files):
-    for file in model_files:
-        if os.path.isfile(file):
-            os.remove(file)
-
-def upload_model_files_to_s3(bucket_name, files, folder_name):
-    s3 = boto3.client('s3')
-    for file in files:
-        s3.upload_file(file, bucket_name, folder_name + file)
-    print ('model successfully uploaded to s3')
-
-def save_inference_results(inference_results_file, inference_results):
-    # Write the inference results to local json file. This will be cleaned up later
-    with open(inference_results_file, 'w') as file:
-        json.dump(inference_results, file)
-
-
-def compare_versions(version1, version2):
-    '''
-    https://stackoverflow.com/questions/1714027/version-number-comparison-in-python
-    '''
-    def normalize(v):
-        return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
-    return cmp(normalize(version1), normalize(version2))
-
-def get_val_test_iter():
-    data = prepare_mnist_data(mx.test_utils.get_mnist())
-    val = data['val']
-    test = data['test']
-    batch_size = 100
-    val_iter = mx.io.NDArrayIter(val['val_X'], val['val_Y'], batch_size, shuffle=True)
-    test_iter = mx.io.NDArrayIter(test['test_X'], test['test_Y'])
-    return val_iter, test_iter
+    def forward(self, x):
+        x = self.pool1(F.tanh(self.conv1(x)))
+        x = self.pool2(F.tanh(self.conv2(x)))
+        # 0 means copy over size from corresponding dimension.
+        # -1 means infer size from the rest of dimensions.
+        x = x.reshape((0, -1))
+        x = F.tanh(self.fc1(x))
+        x = F.tanh(self.fc2(x))
+        return x
 
 class HybridNet(gluon.HybridBlock):
     def __init__(self, **kwargs):
@@ -146,7 +162,7 @@ class HybridNet(gluon.HybridBlock):
             self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
             self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
             self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(10)
+            self.fc2 = nn.Dense(2)
 
     def hybrid_forward(self, F, x):
         x = self.pool1(F.tanh(self.conv1(x)))
@@ -158,185 +174,26 @@ class HybridNet(gluon.HybridBlock):
         x = F.tanh(self.fc2(x))
         return x
 
-class Net(gluon.Block):
+class SimpleLSTMModel(gluon.Block):
     def __init__(self, **kwargs):
-        super(Net, self).__init__(**kwargs)
+        super(SimpleLSTMModel, self).__init__(**kwargs)
         with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(10)
+            self.model = mx.gluon.nn.Sequential(prefix='')
+            with self.model.name_scope():
+                self.model.add(mx.gluon.nn.Embedding(30, 10))
+                self.model.add(mx.gluon.rnn.LSTM(20))
+                self.model.add(mx.gluon.nn.Dense(100))
+                self.model.add(mx.gluon.nn.Dropout(0.5))
+                self.model.add(mx.gluon.nn.Dense(2, flatten=True, activation='tanh'))
+
 
     def forward(self, x):
-        x = self.pool1(F.tanh(self.conv1(x)))
-        x = self.pool2(F.tanh(self.conv2(x)))
-        # 0 means copy over size from corresponding dimension.
-        # -1 means infer size from the rest of dimensions.
-        x = x.reshape((0, -1))
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
-        return x
+        return self.model(x)
 
-class Dictionary(object):
-    def __init__(self):
-        self.word2idx = {}
-        self.idx2word = []
-
-    def add_word(self, word):
-        if word not in self.word2idx:
-            self.idx2word.append(word)
-            self.word2idx[word] = len(self.idx2word) - 1
-        return self.word2idx[word]
-
-    def __len__(self):
-        return len(self.idx2word)
-
-class Corpus(object):
-    def __init__(self, path):
-        self.dictionary = Dictionary()
-        self.download_data_from_s3()
-        self.train = self.tokenize(path + 'train.txt')
-        self.valid = self.tokenize(path + 'valid.txt')
-        self.test = self.tokenize(path + 'test.txt')
-
-    def download_data_from_s3(self, ):
-        print ('Downloading files from bucket : sherlock-dataset' )
-        bucket = s3.Bucket('sherlock-dataset')
-        files = ['test.txt', 'train.txt', 'valid.txt']
-        for file in files:
-            if os.path.exists(args_data + file) :
-                print ('File %s'%(args_data + file), 'already exists. Skipping download')
-                continue
-            file_path = args_data + file
-            bucket.download_file(file_path, args_data + file) 
-
-    def tokenize(self, path):
-        """Tokenizes a text file."""
-        assert os.path.exists(path)
-        # Add words to the dictionary
-        with open(path, 'r') as f:
-            tokens = 0
-            for line in f:
-                words = line.split() + ['<eos>']
-                tokens += len(words)
-                for word in words:
-                    self.dictionary.add_word(word)
-
-        # Tokenize file content
-        with open(path, 'r') as f:
-            ids = np.zeros((tokens,), dtype='int32')
-            token = 0
-            for line in f:
-                words = line.split() + ['<eos>']
-                for word in words:
-                    ids[token] = self.dictionary.word2idx[word]
-                    token += 1
-
-        return mx.nd.array(ids, dtype='int32')
-
-
-
-#### Common utilies for lm_rnn_gluon_train & inference files
-args_data = 'sherlockholmes.'
-args_model = 'rnn_relu'
-args_emsize = 100
-args_nhid = 100
-args_nlayers = 2
-args_lr = 1.0
-args_clip = 0.2
-args_epochs = 2
-args_batch_size = 32
-args_bptt = 5
-args_dropout = 0.2
-args_tied = True
-args_cuda = 'store_true'
-args_log_interval = 500
-
-class RNNModel(gluon.Block):
-    """A model with an encoder, recurrent layer, and a decoder."""
-
-    def __init__(self, mode, vocab_size, num_embed, num_hidden,
-                 num_layers, dropout=0.5, tie_weights=False, **kwargs):
-        super(RNNModel, self).__init__(**kwargs)
-        with self.name_scope():
-            self.drop = nn.Dropout(dropout)
-            self.encoder = nn.Embedding(vocab_size, num_embed,
-                                        weight_initializer = mx.init.Uniform(0.1))
-            if mode == 'rnn_relu':
-                self.rnn = rnn.RNN(num_hidden, num_layers, activation='relu', dropout=dropout,
-                                   input_size=num_embed)
-            elif mode == 'rnn_tanh':
-                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
-                                   input_size=num_embed)
-            elif mode == 'lstm':
-                self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
-                                    input_size=num_embed)
-            elif mode == 'gru':
-                self.rnn = rnn.GRU(num_hidden, num_layers, dropout=dropout,
-                                   input_size=num_embed)
-            else:
-                raise ValueError("Invalid mode %s. Options are rnn_relu, "
-                                 "rnn_tanh, lstm, and gru"%mode)
-            if tie_weights:
-                self.decoder = nn.Dense(vocab_size, in_units = num_hidden,
-                                        params = self.encoder.params)
-            else:
-                self.decoder = nn.Dense(vocab_size, in_units = num_hidden)
-            self.num_hidden = num_hidden
-
-    def forward(self, inputs, hidden):
-        emb = self.drop(self.encoder(inputs))
-        output, hidden = self.rnn(emb, hidden)
-        output = self.drop(output)
-        decoded = self.decoder(output.reshape((-1, self.num_hidden)))
-        return decoded, hidden
-
-    def begin_state(self, *args, **kwargs):
-        return self.rnn.begin_state(*args, **kwargs)
-
-def batchify(data, batch_size):
-    """Reshape data into (num_example, batch_size)"""
-    nbatch = data.shape[0] // batch_size
-    data = data[:nbatch * batch_size]
-    data = data.reshape((batch_size, nbatch)).T
-    return data
-
-def get_batch(source, i):
-    seq_len = min(args_bptt, source.shape[0] - 1 - i)
-    data = source[i : i + seq_len]
-    target = source[i + 1 : i + 1 + seq_len]
-    return data, target.reshape((-1,))
-
-def detach(hidden):
-    if isinstance(hidden, (tuple, list)):
-        hidden = [i.detach() for i in hidden]
-    else:
-        hidden = hidden.detach()
-    return hidden
-
-def eval(data_source, model):
-    total_L = 0.0
-    ntotal = 0
-    loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    hidden = model.begin_state(func = mx.nd.zeros, batch_size = args_batch_size, ctx=mx.cpu(0))
-    for i in range(0, data_source.shape[0] - 1, args_bptt):
-        data, target = get_batch(data_source, i)
-        output, hidden = model(data, hidden)
-        L = loss(output, target)
-        total_L += mx.nd.sum(L).asscalar()
-        ntotal += L.size
-    return total_L / ntotal
-
-def clean_sherlock_data():
-    files = ['test.txt', 'train.txt', 'valid.txt']
-    for file in files: 
-        if os.path.isfile(args_data + file):
-            os.remove(args_data + file)
-
-# This function is added so that if a download gets interrupted in between, one can clean the corrupted files
-clean_mnist_data()
-clean_sherlock_data()
+def compare_versions(version1, version2):
+    '''
+    https://stackoverflow.com/questions/1714027/version-number-comparison-in-python
+    '''
+    def normalize(v):
+        return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+    return cmp(normalize(version1), normalize(version2))
