@@ -87,7 +87,6 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
-  CHECK(!in_attrs->empty());
   bool dispatched = false;
 #if MXNET_USE_MKLDNN == 1
   if (!dispatched) {
@@ -197,9 +196,9 @@ number of kernels in the layer.
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 .set_attr_parser(ParamParser<LRNParam>)
-.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
+.set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data"};
