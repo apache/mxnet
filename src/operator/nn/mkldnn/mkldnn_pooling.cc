@@ -86,15 +86,12 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &o
   return;
 }
 
-void MKLDNNPoolingFwd::SetDataHandle(const mxnet::NDArray &data,
-                                     const mxnet::NDArray &output,
-                                     const mxnet::NDArray *workspace) {
+void MKLDNNPoolingFwd::SetNewMem(const mkldnn::memory &data_mem,
+                                 const mkldnn::memory &out_mem,
+                                 const mxnet::NDArray *workspace) {
   // mkldnn::memory
-  auto data_mem = data.GetMKLDNNData();
-  auto out_mem = const_cast<NDArray&>(output).CreateMKLDNNData(
-                                                  this->fwd_pd_->dst_primitive_desc());
-  this->data_->set_data_handle(data_mem->get_data_handle());
-  this->out_->set_data_handle(out_mem->get_data_handle());
+  this->data_->set_data_handle(data_mem.get_data_handle());
+  this->out_->set_data_handle(out_mem.get_data_handle());
   if (this->with_workspace_ && workspace == nullptr) {
     LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
   }
@@ -254,8 +251,12 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &in_data, const OpReqType req,
                           const NDArray &out_data, const NDArray *workspace) {
+
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
-  fwd.SetDataHandle(in_data, out_data, workspace);
+  auto input_mem = in_data.GetMKLDNNData();
+  auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req, &in_data);
+  fwd.SetNewMem(*input_mem, *out_mem_t.second, workspace);
+  CommitOutput(out_data, out_mem_t);
   fwd.Execute();
 }
 

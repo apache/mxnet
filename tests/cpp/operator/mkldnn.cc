@@ -28,6 +28,7 @@
 #include <cmath>
 #include <climits>
 #include <set>
+#include <mkldnn_types.h>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -1143,8 +1144,9 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
-    // skip if not default layout since memory layout must match
-    if (in_arr.arr.IsMKLDNNData())
+    // skip if ndims don't match
+    if (in_arr.arr.shape().ndim() !=
+        in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims)
       continue;
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());

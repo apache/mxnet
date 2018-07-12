@@ -39,7 +39,10 @@ static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const Op
     << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0]);
-  fwd.SetDataHandle(in_data[0], out_data[0]);
+  auto in_mem = in_data[0].GetMKLDNNData();
+  auto out_mem_t = CreateMKLDNNMem(out_data[0], fwd.fwd_pd_->dst_primitive_desc(), req[0], &in_data[0]);
+  fwd.SetNewMem(*in_mem, *out_mem_t.second);
+  CommitOutput(out_data[0], out_mem_t);
   fwd.Execute();
   out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
   out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
