@@ -148,7 +148,7 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   trt_builder->setMaxBatchSize(max_batch_size);
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
   if ( fp16 && dmlc::GetEnv("MXNET_TENSORRT_USE_FP16_FOR_FP32", false) ) {
-    LOG(INFO) << "WARNING: TensorRT using fp16 given original MxNet graph in fp32 !!!";
+    LOG(INFO) << "WARNING: TensorRT using fp16 given original MXNet graph in fp32 !!!";
     trt_builder->setHalf2Mode(true);
   } else if ( model_dtype == nvinfer1::DataType::kINT8 ) {
     // Add Int8 support
