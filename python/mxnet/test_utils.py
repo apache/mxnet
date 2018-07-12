@@ -484,7 +484,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         return
 
     index, rel = find_max_violation(a, b, rtol, atol)
-    np.set_printoptions(threshold=4, suppress=True)
+    np.set_printoptions(threshold=np.nan, suppress=True)
     msg = npt.build_err_msg([a, b],
                             err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
                                     " Location of maximum error:%s, a=%f, b=%f"
