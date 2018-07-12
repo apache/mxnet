@@ -865,7 +865,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                                   in_arg_ctxes[arg_top], inferred_dtype)));
                 }
             #else
-                LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set, but MxNet wasn't "
+                LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set, but MXNet wasn't "
                   << "built with TensorRT. Add USE_TENSORRT = 1 in config.mk";
             #endif
         } else {
@@ -1150,7 +1150,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
             }
           }
       #else
-          LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set but MxNet wasn't "
+          LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set but MXNet wasn't "
             << "built with TensorRT. Add USE_TENSORRT = 1 to config.mk";
       #endif
   }
