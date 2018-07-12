@@ -1911,12 +1911,6 @@ def test_context_num_gpus():
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
     from mxnet.gluon.utils import split_and_load
-    def _assert_tensor_close(a, b, atol=1e-3, rtol=1e-3):
-        npa, npb = a.asnumpy(), b.asnumpy()
-        assert np.allclose(npa, npb, rtol=rtol, atol=atol), \
-            'Tensor close check failed\n{}\n{}\nadiff={}, rdiff={}'.format(
-                a, b, np.abs(npa - npb).max(), np.abs((npa - npb) / np.fmax(npa, 1e-5)).max())
-
     def _find_bn(module):
         if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
             return module
@@ -1951,7 +1945,6 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     # using the same values for gamma and beta
     #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
 
-
     input1.attach_grad()
     inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
     for xi in inputs2:
@@ -1967,16 +1960,14 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
     # assert forwarding
-    _assert_tensor_close(input1, input2)
-    _assert_tensor_close(output1, output2)
-    _assert_tensor_close(_find_bn(bn1).running_mean.data(ctx_list[0]),
-                         _find_bn(bn2).running_mean.data(ctx_list[0]))
-    _assert_tensor_close(_find_bn(bn1).running_var.data(ctx_list[0]),
-                         _find_bn(bn2).running_var.data(ctx_list[0]))
+    assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0], atol=1e-3, rtol=1e-3),
+                         _find_bn(bn2).running_mean.data(ctx_list[0]), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
+                         _find_bn(bn2).running_var.data(ctx_list[0]), atol=1e-3, rtol=1e-3)
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    #print('input1.grad', input1.grad)
-    #print('input2grad', input2grad)
-    _assert_tensor_close(input1.grad, input2grad)
+    assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
 def test_sync_batchnorm():
     def get_num_devices():

@@ -95,7 +95,7 @@ class SharedND {
   }
 
   ~SharedND() {
-    mshadow::FreeSpace(&mean_);
+    if (data_inited_) mshadow::FreeSpace(&mean_);
     delete [] flag_;
     delete [] data_;
   }
@@ -112,6 +112,7 @@ class SharedND {
   }
 
   T* Retrieve(mshadow::Shape<1> shape, int index) {
+    // Retrieve a pointer for copying values
     if (!data_inited_) {
       Init(shape);
     }
@@ -123,6 +124,7 @@ class SharedND {
   }
 
   bool SetReady(int index) {
+    // Set data ready after copying
     if (flag_[index] == false) {
       flag_[index] = true;
       return true;
@@ -132,6 +134,7 @@ class SharedND {
   }
 
   T Pop(int index) {
+    // Pop the mean value after suming up
     std::lock_guard<std::mutex> lock(mutex_);
     while (!MeanReady()) {}
     flag_[index] = false;
@@ -384,7 +387,6 @@ class SyncBatchNorm : public Operator {
           mshadow::Shape2(5, mean.shape_[0]), s);
       Tensor<xpu, 1> gmean = workspace[0];
       Tensor<xpu, 1> gvar = workspace[1];
-      // Tensor<xpu, 1> tmp = workspace[2];
 
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
