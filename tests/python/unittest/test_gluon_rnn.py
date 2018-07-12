@@ -66,25 +66,31 @@ def check_contrib_rnn(cell_type, num_states):
     res1.backward()
     trainer.step(batch_size)
 
-    layer = TestRNNLayer(cell_type, hidden_size)
-    layer.initialize(ctx=mx.cpu(0))
-    layer.hybridize()
-    res2 = layer(rnn_data, states)
-    params2 = layer.collect_params()
-    for key, val in orig_params1.items():
-        params2[key].set_data(val.data())
-
-    trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
-    with mx.autograd.record():
+    configs = [
+            {},
+            {'static_alloc': True},
+            {'static_alloc': True, 'static_shape': True} ]
+    for config in configs:
+        layer = TestRNNLayer(cell_type, hidden_size)
+        layer.initialize(ctx=mx.cpu(0))
+        layer.hybridize(**config)
         res2 = layer(rnn_data, states)
-    assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
-    res2.backward()
-    trainer.step(batch_size)
+        params2 = layer.collect_params()
+        for key, val in orig_params1.items():
+            params2[key].set_data(copy.deepcopy(val.data()))
 
-    for key, val in params1.items():
-        weight1 = val.data()
-        weight2 = params2[key].data()
-        assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(), rtol=0.001, atol=0.0001)
+        trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
+        with mx.autograd.record():
+            res2 = layer(rnn_data, states)
+        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+        res2.backward()
+        trainer.step(batch_size)
+
+        for key, val in params1.items():
+            weight1 = val.data()
+            weight2 = params2[key].data()
+            assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(),
+                    rtol=0.001, atol=0.0001)
 
 
 def test_contrib_rnn():
