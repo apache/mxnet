@@ -435,6 +435,20 @@ def convert_pad(node, **kwargs):
     return [node]
 
 
+def create_helper_trans_node(op_name, input_node, node_name):
+    """create extra transpose node for dot operator"""
+    helper, _, _ = import_onnx_modules()
+
+    node_name = op_name + "_" + node_name
+    trans_node = helper.make_node(
+            'Transpose',
+            inputs=[input_node],
+            outputs=[op_name+"_a"],
+            name=node_name
+        )
+    return trans_node
+
+
 @mx_op.register("dot")
 def convert_dot(node, **kwargs):
     """Map MXNet's dot operator attributes to onnx's
@@ -450,83 +464,40 @@ def convert_dot(node, **kwargs):
     input_b_idx = kwargs["index_lookup"][node_inputs[1][0]]
     input_node_b = proc_nodes[input_b_idx].name
 
-    # Getting the attributes and assigning default values.
-    if "attrs" in node:
-        attrs = node["attrs"]
-        trans_a = int(attrs["transpose_a"])
-        trans_b = int(attrs["transpose_b"])
-    else:
-        trans_a = 0
-        trans_b = 0
+    attrs = node.get('attrs', {})
+    trans_a_node = None
+    trans_b_node = None
+
+    trans_a = 1 if ("transpose_a" in attrs) and \
+                   attrs.get("transpose_a") in ["True", "1"] else 0
+    trans_b = 1 if ("transpose_b" in attrs) and \
+                   attrs.get("transpose_b") in ["True", "1"] else 0
 
     op_name = "transpose" + str(kwargs["idx"])
+    create_helper_trans_node(op_name, input_node_a, 'a')
+    create_helper_trans_node(op_name, input_node_b, 'b')
 
-    if trans_a == 0 and trans_b == 0:
-        matmul_node = helper.make_node(
-            'MatMul',
-            inputs=[input_node_a, input_node_b],
-            outputs=[name],
-            name=name
-        )
+    if trans_a:
+        trans_a_node = create_helper_trans_node(op_name, input_node_a, 'a')
+        input_node_a = op_name+"_a"
+    if trans_b:
+        trans_b_node = create_helper_trans_node(op_name, input_node_b, 'b')
+        input_node_b = op_name+"_b"
+
+    matmul_node = helper.make_node(
+        'MatMul',
+        inputs=[input_node_a, input_node_b],
+        outputs=[name],
+        name=name
+    )
+
+    if not trans_a and not trans_b:
         return [matmul_node]
-    elif trans_a == 1 and trans_b == 0:
-        op_name = "transpose" + str(kwargs["idx"])
-        node_name = op_name+"_a"
-        trans_a_node = helper.make_node(
-            'Transpose',
-            inputs=[input_node_a],
-            outputs=[op_name+"_a"],
-            name=node_name
-        )
-
-        matmul_node = helper.make_node(
-            'MatMul',
-            inputs=[node_name, input_node_b],
-            outputs=[name],
-            name=name
-        )
+    elif trans_a and not trans_b:
         return [trans_a_node, matmul_node]
-    elif trans_a == 0 and trans_b == 1:
-        node_name = op_name + "_b"
-        trans_b_node = helper.make_node(
-            'Transpose',
-            inputs=[input_node_b],
-            outputs=[op_name+"_b"],
-            name=node_name
-        )
-
-        matmul_node = helper.make_node(
-            'MatMul',
-            inputs=[input_node_a, node_name],
-            outputs=[name],
-            name=name
-        )
-
+    elif trans_b and not trans_a:
         return [trans_b_node, matmul_node]
     else:
-        node_name_a = op_name+"_a"
-        trans_a_node = helper.make_node(
-            'Transpose',
-            inputs=[input_node_a],
-            outputs=[op_name+"_a"],
-            name=node_name_a
-        )
-
-        node_name_b = op_name + "_b"
-        trans_b_node = helper.make_node(
-            'Transpose',
-            inputs=[input_node_b],
-            outputs=[op_name+"_b"],
-            name=node_name_b
-        )
-
-        matmul_node = helper.make_node(
-            'MatMul',
-            inputs=[node_name_a, node_name_b],
-            outputs=[name],
-            name=name
-        )
-
         return [trans_a_node, trans_b_node, matmul_node]
 
 
