@@ -24,6 +24,7 @@ removed.
 
 It is heavily adapted from https://gist.github.com/decabyte/0ed87372774cf5d34d7e
 """
+from __future__ import print_function
 
 import sys
 import io
@@ -61,7 +62,7 @@ def main():
     old_ipynb = args.notebook[0]
     new_ipynb = 'tmp.ipynb'
     md_file = args.output
-    print md_file
+    print(md_file)
     if not md_file:
         md_file = os.path.splitext(old_ipynb)[0] + '.md'
 

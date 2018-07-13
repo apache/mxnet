@@ -69,7 +69,7 @@ In the tutorial below, you will install the latest package at the time of this w
 
 The configuration you should update is in the pom file's dependency for MXNet:
 
-```
+```html
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
@@ -162,7 +162,7 @@ The project's `pom.xml` will be open for editing.
   - Build options: removing '-make:transitive'
 
 
-```
+```html
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>mxnet</groupId>

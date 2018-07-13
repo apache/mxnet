@@ -168,9 +168,7 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
     // This happens if inputs are supposed to be in MKLDNN format
     // but MKLDNN doesn't support the data type or the shape. We're
     // forced to convert it to the default format.
-    std::vector<TBlob> in_blobs {inputs[0].data()};
-    std::vector<TBlob> out_blobs {outputs[0].data()};
-    UnaryOp::IdentityCompute<cpu>(attrs, ctx, in_blobs, req, out_blobs);
+    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif
@@ -419,6 +417,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", ShapeComputeCPU)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
@@ -468,6 +467,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", SizeComputeCPU)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,

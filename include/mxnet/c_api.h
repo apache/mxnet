@@ -1922,6 +1922,38 @@ MXNET_DLL int MXKVStorePushEx(KVStoreHandle handle,
  * \param keys the list of keys
  * \param vals the list of values
  * \param priority the priority of the action
+ * \param ignore_sparse whether to ignore sparse arrays in the request
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePullWithSparse(KVStoreHandle handle,
+                                      mx_uint num,
+                                      const int* keys,
+                                      NDArrayHandle* vals,
+                                      int priority,
+                                      bool ignore_sparse);
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore, where each key is a string
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
+ * \param ignore_sparse whether to ignore sparse arrays in the request
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStorePullWithSparseEx(KVStoreHandle handle,
+                                        mx_uint num,
+                                        const char** keys,
+                                        NDArrayHandle* vals,
+                                        int priority,
+                                        bool ignore_sparse);
+/*!
+ * \brief pull a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys
+ * \param vals the list of values
+ * \param priority the priority of the action
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStorePull(KVStoreHandle handle,
