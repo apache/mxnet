@@ -226,7 +226,10 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     The second list has the length of `|loop_vars|`,
     which represents final states of loop variables.
 
-    Warning: when `cond` is never satisfied, we assume `step_output` is empty,
+    Warning 1: for now, the axis 0 of all NDArrays in the first list are `max_iterations`,
+    due to lack of dynamic shape inference.
+
+    Warning 2: when `cond` is never satisfied, we assume `step_output` is empty,
     because it cannot be inferred. This is different from the symbolic version.
 
     Parameters
@@ -237,12 +240,12 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
         The loop body.
     loop_vars: list of NDArrays.
         The initial values of the loop variables.
-    max_iteration: a python int.
+    max_iterations: a python int.
         Maximum number of iterations.
 
     Returns
     -------
-    outputs: a tuple of two lists, which both contains 0, 1 or more NDArrays.
+    outputs: two lists, which both contains 0, 1 or more NDArrays.
         The first list contains the stacked output from each step,
         The second list contains the final state.
 
