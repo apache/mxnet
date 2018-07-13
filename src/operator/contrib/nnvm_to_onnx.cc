@@ -303,40 +303,38 @@ void ConvertActivation(NodeProto* node_proto, const NodeAttrs& attrs,
 void ConvertFullyConnected(NodeProto* node_proto, const NodeAttrs& attrs,
                            const nnvm::IndexedGraph& ig,
                            const array_view<IndexedGraph::NodeEntry>& inputs) {
-  // const op::FullyConnectedParam &act_param =
-  //    nnvm::get<op::FullyConnectedParam>(attrs.parsed);
+  const op::FullyConnectedParam &act_param =
+      nnvm::get<op::FullyConnectedParam>(attrs.parsed);
+  if (act_param.no_bias) {
+      node_proto->set_op_type("MatMul");
+  } else {
+      node_proto->set_op_type("Gemm");
 
-  node_proto->set_op_type("Gemm");
+      AttributeProto* const alpha = node_proto->add_attribute();
+      alpha->set_name("alpha");
+      alpha->set_type(AttributeProto::FLOAT);
+      alpha->set_f(1.0f);
 
-  // const int num_hidden = act_param.num_hidden;
-  // const bool no_bias = act_param.no_bias;
-  // Whether to collapse all but the first axis of the input data tensor.
-  // const bool flatten = act_param.flatten;
+      AttributeProto* const beta = node_proto->add_attribute();
+      beta->set_name("beta");
+      beta->set_type(AttributeProto::FLOAT);
+      beta->set_f(1.0f);
 
-  AttributeProto* const alpha = node_proto->add_attribute();
-  alpha->set_name("alpha");
-  alpha->set_type(AttributeProto::FLOAT);
-  alpha->set_f(1.0f);
+      AttributeProto* const broadcast = node_proto->add_attribute();
+      broadcast->set_name("broadcast");
+      broadcast->set_type(AttributeProto::INT);
+      broadcast->set_i(1);
 
-  AttributeProto* const beta = node_proto->add_attribute();
-  beta->set_name("beta");
-  beta->set_type(AttributeProto::FLOAT);
-  beta->set_f(1.0f);
+      AttributeProto* const transA = node_proto->add_attribute();
+      transA->set_name("transA");
+      transA->set_type(AttributeProto::INT);
+      transA->set_i(0);
 
-  AttributeProto* const broadcast = node_proto->add_attribute();
-  broadcast->set_name("broadcast");
-  broadcast->set_type(AttributeProto::INT);
-  broadcast->set_i(1);
-
-  AttributeProto* const transA = node_proto->add_attribute();
-  transA->set_name("transA");
-  transA->set_type(AttributeProto::INT);
-  transA->set_i(0);
-
-  AttributeProto* const transB = node_proto->add_attribute();
-  transB->set_name("transB");
-  transB->set_type(AttributeProto::INT);
-  transB->set_i(1);
+      AttributeProto* const transB = node_proto->add_attribute();
+      transB->set_name("transB");
+      transB->set_type(AttributeProto::INT);
+      transB->set_i(1);
+  }
 }
 
 void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& attrs,
