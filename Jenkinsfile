@@ -163,6 +163,13 @@ def python3_gpu_ut(docker_container_name) {
   }
 }
 
+// Python 3 NOCUDNN
+def python3_gpu_ut_nocudnn(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_nocudnn', true)
+  }
+}
+
 try {
   stage('Sanity Check') {
     parallel 'Lint': {
@@ -291,6 +298,17 @@ try {
           }
         }
       }
+    },
+    'GPU: MKLDNN_CUDNNOFF': {
+       node('mxnetlinux-cpu') {
+         ws('workspace/build-mkldnn-gpu-nocudnn') {
+           timeout(time: max_time, unit: 'MINUTES') {
+             init_git()
+             docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
+             pack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
+           }
+         }
+       }
     },
     'GPU: CUDA9.1+cuDNN7': {
       node('mxnetlinux-cpu') {
@@ -667,6 +685,20 @@ try {
         }
       }
     },
+    'Python3: MKLDNN-GPU-NOCUDNN': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
+          try {
+            init_git()
+            unpack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
+            python3_gpu_ut_nocudnn('ubuntu_gpu')
+            publish_test_coverage()
+          } finally {
+            collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu_nocudnn.xml')
+          }
+        }
+      }
+    },
     'Python3: CentOS 7 CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-centos7-cpu') {
@@ -707,18 +739,6 @@ try {
             init_git()
             unpack_lib('cpu', mx_dist_lib)
             docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
-            publish_test_coverage()
-          }
-        }
-      }
-    },
-    'Scala: GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/ut-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu', mx_dist_lib)
-            docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_scala', true)
             publish_test_coverage()
           }
         }
@@ -975,6 +995,18 @@ try {
             unstash 'cpp_test_score'
             unstash 'cpp_test_optimizer'
             docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
+    'Scala: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/ut-scala-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu', mx_dist_lib)
+            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             publish_test_coverage()
           }
         }

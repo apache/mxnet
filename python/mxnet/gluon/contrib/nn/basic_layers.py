@@ -118,6 +118,12 @@ class SparseEmbedding(Block):
     This SparseBlock is designed for distributed training with extremely large
     input dimension. Both weight and gradient w.r.t. weight are `RowSparseNDArray`.
 
+    Note: if `sparse_grad` is set to True, the gradient w.r.t weight will be
+    sparse. Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
+    and Adam. By default lazy updates is turned on, which may perform differently
+    from standard updates. For more details, please check the Optimization API at:
+    https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
+
     Parameters
     ----------
     input_dim : int

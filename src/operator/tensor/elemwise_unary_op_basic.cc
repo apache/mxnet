@@ -417,6 +417,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", ShapeComputeCPU)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
@@ -466,6 +467,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", SizeComputeCPU)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
