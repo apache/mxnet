@@ -406,7 +406,7 @@ class InplaceABN : public Operator {
       Tensor<xpu, 1> sumGrad = workspace[3];
       Tensor<xpu, 1> sumProd = workspace[4];
       sumGrad = sumall_except_dim<1>(grad);
-      sumProd = sumall_except_dim<1>(grad * (data - broadcast<1>(mean, data.shape_)));
+      sumProd = sumall_except_dim<1>(grad * data);
       if (param_.sync) {
         // get my rank
         Barrier *global_barrier = global_shared_barrier_backward.Register(param_.key, param_.ndev);
