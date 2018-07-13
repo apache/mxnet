@@ -1319,7 +1319,6 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   API_END();
 }
 
-
 int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shared_id) {
   API_BEGIN();
   NDArray* arr = reinterpret_cast<NDArray*>(handle);

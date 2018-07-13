@@ -19,6 +19,7 @@
 
 This example shows how to create a multiple output configuration.
 """
+from __future__ import print_function
 import mxnet as mx
 
 net = mx.symbol.Variable('data')
@@ -28,7 +29,7 @@ net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=64)
 out = mx.symbol.SoftmaxOutput(data=net, name='softmax')
 # group fc1 and out together
 group = mx.symbol.Group([fc1, out])
-print group.list_outputs()
+print(group.list_outputs())
 
 # You can go ahead and bind on the group
 # executor = group.simple_bind(data=data_shape)

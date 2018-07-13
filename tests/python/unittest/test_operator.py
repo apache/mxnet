@@ -27,7 +27,7 @@ from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
@@ -72,6 +72,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
 
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
@@ -85,6 +86,7 @@ def test_lstm_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_bidirectional():
     T, N, I, H = 5, 20, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
@@ -105,6 +107,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
@@ -118,6 +121,7 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -140,6 +144,7 @@ def test_gru_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnntanh_sym():
     T, N, I, H = 5, 32, 800, 800
 
@@ -154,27 +159,29 @@ def test_rnntanh_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnntanh_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_tanh',
                                 bidirectional=True, get_next_state=True, prefix='')
-    
+
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'),
                 mx.rnn.RNNCell(H, activation='tanh', prefix='r0_'),
-                output_prefix='bi_rnntanh_0_'))    
+                output_prefix='bi_rnntanh_0_'))
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'),
                 mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
                 output_prefix='bi_rnntanh_1_'))
-    
+
     check_rnn_consistency(fused, stack, T, N, I, H, 'write')
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnnrelu_sym():
     T, N, I, H = 5, 32, 200, 200
 
@@ -196,12 +203,12 @@ def test_rnnrelu_bidirectional():
 
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_relu',
                                 bidirectional=True, get_next_state=True, prefix='')
-    
+
     stack = mx.rnn.SequentialRNNCell()
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='relu', prefix='l0_'),
                 mx.rnn.RNNCell(H, activation='relu', prefix='r0_'),
-                output_prefix='bi_rnnrelu_0_'))    
+                output_prefix='bi_rnnrelu_0_'))
     stack.add(mx.rnn.BidirectionalCell(
                 mx.rnn.RNNCell(H, activation='relu', prefix='l1_'),
                 mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
@@ -828,19 +835,37 @@ def test_sigmoid():
 def test_shape_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
-        x = np.random.ranf(shape)
-        y = mx.nd.shape_array(mx.nd.array(x))
-        expected_y = np.shape(x)
-        same(y.asnumpy(), expected_y)
+        x = mx.sym.var('x')
+        y = mx.sym.shape_array(x)
+        xa = mx.nd.array(np.random.ranf(shape))
+        xg = mx.nd.empty(xa.shape)
+        ya = np.shape(xa)
+        yg = mx.nd.ones(ya)
+        exe = y.bind(ctx=default_context(), args={'x': xa},
+                     args_grad={'x': xg})
+        exe.forward(is_train=True)
+        exe.backward([yg])
+        yo = exe.outputs[0].asnumpy()
+        same(yo, ya)
+        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_size_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
-        x = np.random.ranf(shape)
-        y = mx.nd.size_array(mx.nd.array(x))
-        expected_y = np.size(x)
-        same(y.asnumpy(), expected_y)
+        x = mx.sym.var('x')
+        y = mx.sym.size_array(x)
+        xa = mx.nd.array(np.random.ranf(shape))
+        xg = mx.nd.empty(xa.shape)
+        ya = np.size(xa)
+        yg = mx.nd.ones(ya)
+        exe = y.bind(ctx=default_context(), args={'x': xa},
+                     args_grad={'x': xg})
+        exe.forward(is_train=True)
+        exe.backward([yg])
+        yo = exe.outputs[0].asnumpy()
+        same(yo, ya)
+        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_hard_sigmoid():
@@ -1527,9 +1552,7 @@ def test_batchnorm_training():
                 test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
                 check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
-    stypes = ['default']
-    for stype in stypes:
-        check_batchnorm_training(stype)
+    check_batchnorm_training('default')
 
 
 @with_seed()
@@ -2384,6 +2407,9 @@ def test_flip():
 
 
 @with_seed()
+# The test is disabled with USE_CUDA=ON and USE_CUDNN=OFF because of failures with the SpatialTransformer op.
+# Tracked at https://github.com/apache/incubator-mxnet/issues/11568
+@assert_raises_cudnn_disabled(assertion_error=True)
 def test_stn():
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net

@@ -226,8 +226,15 @@ Examples::
                             [ 10.,  11.,  12.,  13.,  14.]]]
 
 
-The storage type of weight can be either row_sparse or default, while
-the storage type of weight's grad depends on the value of "sparse_grad".
+The storage type of weight can be either row_sparse or default.
+
+.. Note::
+
+    If "sparse_grad" is set to True, the storage type of gradient w.r.t weights will be
+    "row_sparse". Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
+    and Adam. Note that by default lazy updates is turned on, which may perform differently
+    from standard updates. For more details, please check the Optimization API at:
+    https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
