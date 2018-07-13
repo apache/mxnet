@@ -28,11 +28,6 @@ import scala.collection.mutable
  *  - be disposed automatically when the scope finished, or <br />
  *  - simply be collected for future usage.
  *  <br />
- *  NDArrayCollector.auto or NDArrayCollector.later is thread-safe,
- *  i.e., one can use them in different threads,
- *  the NDArrays will be stored in the collector of current thread,
- *  preventing from sharing across the threads.
- *  <br />
  *  If the return type of scope is <em>NDArray</em> or <em>NDArrayFuncReturn</em>,
  *  the collector is smart enough NOT to collect or dispose the returned NDArray. <br />
  *  However in other cases, it is users' responsibility NOT to leak allocated NDArrays outside,
@@ -91,7 +86,7 @@ object NDArrayCollector {
    * @param ndArray NDArrays need to be collected.
    */
   @varargs def collect(ndArray: NDArray*): Unit = {
-    ndArray.foreach(nd => currCollector.get().add(nd))
+    currCollector.get().add(ndArray: _*)
   }
 }
 
