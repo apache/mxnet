@@ -20,9 +20,7 @@
 from __future__ import print_function
 import argparse
 import re
-import mxnet as mx
 import caffe_parser
-
 
 def _get_input(proto):
     """Get input size

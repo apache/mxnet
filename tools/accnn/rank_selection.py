@@ -16,13 +16,11 @@
 # under the License.
 
 import numpy as np
+import mxnet as mx
 import json
 import utils
 import math
 import sys
-
-from mxnet.base import xrange
-
 
 def calc_complexity(ishape, node):
   y, x = map(int, eval(node['param']['kernel']))
