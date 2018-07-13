@@ -20,13 +20,14 @@ package org.apache.mxnetexamples.rnn
 
 import org.apache.mxnet.Callback.Speedometer
 import org.apache.mxnet._
-import org.apache.mxnet.module.{BucketingModule, FitParams}
+import BucketIo.BucketSentenceIter
 import org.apache.mxnet.optimizer.SGD
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.{Logger, LoggerFactory}
-import BucketIo.BucketSentenceIter
 
 import scala.collection.JavaConverters._
+import org.apache.mxnet.module.BucketingModule
+import org.apache.mxnet.module.FitParams
 
 /**
   * Bucketing LSTM examples
@@ -53,11 +54,9 @@ object LstmBucketing {
     pred.waitToRead()
     val labelArr = label.T.toArray.map(_.toInt)
     var loss = .0
-    (0 until pred.shape(0)).foreach(i => {
-      val temp = pred.slice(i)
-      loss -= Math.log(Math.max(1e-10f, temp.toArray(labelArr(i))))
-      temp.dispose()
-    })
+    (0 until pred.shape(0)).foreach(i =>
+      loss -= Math.log(Math.max(1e-10f, pred.slice(i).toArray(labelArr(i))))
+    )
     Math.exp(loss / labelArr.length).toFloat
   }
 

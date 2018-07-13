@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
-@Ignore
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ExampleRNNSuite])
 
