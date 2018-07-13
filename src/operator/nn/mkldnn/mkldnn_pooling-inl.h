@@ -28,7 +28,6 @@
 
 #include <utility>
 #include <mkldnn.hpp>
-#include <mkldnn_types.h>
 #include "../pooling-inl.h"
 #include "./mkldnn_base-inl.h"
 

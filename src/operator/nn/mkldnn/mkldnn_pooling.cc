@@ -251,7 +251,6 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &in_data, const OpReqType req,
                           const NDArray &out_data, const NDArray *workspace) {
-
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
   auto input_mem = in_data.GetMKLDNNData();
   auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req, &in_data);
