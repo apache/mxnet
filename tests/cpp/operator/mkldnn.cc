@@ -33,6 +33,7 @@
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
 #include "../../src/operator/nn/pooling-inl.h"
 
 using namespace mxnet;
@@ -1145,8 +1146,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       continue;
 
     // skip if ndims don't match
-    if (in_arr.arr.shape().ndim() !=
-        in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims)
+    if (!SupportMKLDNN(in_arr.arr)
+        || !mxnet::op::SupportMKLDNNPooling(param, in_arr.arr.shape()))
       continue;
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
@@ -1167,6 +1168,10 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       inputs[i] = &in_arr.arr;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+      if (!mxnet::op::SupportMKLDNNPooling(in_arr.arr, out_arrs[0][output_i].arr))
+        continue;
+
+
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
         outputs[i] = &out_arrs[i][output_i].arr;
