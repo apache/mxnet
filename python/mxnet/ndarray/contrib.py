@@ -219,7 +219,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
-    This function returns two lists as a tuple.
+    This function returns two lists.
     The first list has the length of `|step_output|`,
     in which the i-th element are all i-th elements of
     `step_output` from all steps, stacked along axis 0.
