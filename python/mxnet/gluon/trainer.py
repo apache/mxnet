@@ -140,7 +140,10 @@ class Trainer(object):
                     idx = self._param2idx[param.name]
                     self._kvstore.init(idx, param_arrays[0])
                     if param._stype == 'default':
-                        self._kvstore.pull(idx, param_arrays, priority=-idx)
+                        if 'allreduce' not in self._kvstore.type:
+                            self._kvstore.pull(idx, param_arrays, priority=-idx)
+                        else:
+                            self._kvstore.broadcast(idx, param_arrays, 0, priority=-idx)
 
         self._params_to_init = params_to_init
 
@@ -289,11 +292,13 @@ class Trainer(object):
         if self._kvstore:
             for i, param in enumerate(self._params):
                 if param.grad_req != 'null':
+                    if 'allreduce' not in self._kvstore.type:
+                        self._kvstore.push(i, param.list_grad(), priority=-i)
+                        if not self._update_on_kvstore:
+                            self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=False)
+                    else:
+                        self._kvstore.pushpull(i, param.list_grad(), param.list_grad(), priority=-i)
 
-                    self._kvstore.push(i, param.list_grad(), priority=-i)
-
-                    if not self._update_on_kvstore:
-                        self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=False)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.

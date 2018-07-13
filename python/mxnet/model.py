@@ -108,7 +108,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    if kv is None:
+    if (kv is None) or ('allreduce' in kv.type):
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)
@@ -118,6 +118,8 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
         kvstore.init(name, arg_params[name])
+        if 'allreduce' in kvstore.type:
+            kvstore.broadcast(name, param_on_devs, 0, priority=-idx)
 
         if update_on_kvstore:
             kvstore.pull(name, param_on_devs, priority=-idx)
@@ -164,10 +166,13 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         index = i
         if kvstore:
             name = param_names[index]
-            # push gradient, priority is negative index
-            kvstore.push(name, grad_list, priority=-index)
-            # pull back the sum gradients, to the same locations.
-            kvstore.pull(name, grad_list, priority=-index)
+            if 'allreduce' not in kvstore.type:
+                # push gradient, priority is negative index
+                kvstore.push(name, grad_list, priority=-index)
+                # pull back the sum gradients, to the same locations.
+                kvstore.pull(name, grad_list, priority=-index)
+            else:
+                kvstore.pushpull(name, grad_list, grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)

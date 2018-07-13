@@ -923,6 +923,78 @@ int MXKVStorePullWithSparseEx(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStorePushPull(KVStoreHandle handle,
+                      mx_uint num,
+                      const int *keys,
+                      NDArrayHandle *in_vals,
+                      NDArrayHandle *out_vals,
+                      int priority) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NDArray> v_invals(num);
+  std::vector<NDArray*> v_outvals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_invals[i] = *static_cast<NDArray*>(in_vals[i]);
+    v_outvals[i] = static_cast<NDArray*>(out_vals[i]);
+  }
+  static_cast<KVStore*>(handle)->PushPull(v_keys, v_invals, v_outvals, priority);
+  API_END();
+}
+
+int MXKVStorePushPullEx(KVStoreHandle handle,
+                        mx_uint num,
+                        const char **keys,
+                        NDArrayHandle *in_vals,
+                        NDArrayHandle *out_vals,
+                        int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<NDArray> v_invals(num);
+  std::vector<NDArray*> v_outvals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_invals[i] = *static_cast<NDArray*>(in_vals[i]);
+    v_outvals[i] = static_cast<NDArray*>(out_vals[i]);
+  }
+  static_cast<KVStore*>(handle)->PushPull(v_keys, v_invals, v_outvals, priority);
+  API_END();
+}
+
+int MXKVStoreBroadcast(KVStoreHandle handle,
+                       mx_uint num,
+                       const int *keys,
+                       NDArrayHandle *vals,
+                       int root_rank,
+                       int priority) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NDArray*> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_keys, v_vals, root_rank, priority);
+  API_END();
+}
+
+int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                         mx_uint num,
+                         const char **keys,
+                         NDArrayHandle *vals,
+                         int root_rank,
+                         int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<NDArray*> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_keys, v_vals, root_rank, priority);
+  API_END();
+}
+
 int MXKVStorePullRowSparse(KVStoreHandle handle,
                            mx_uint num,
                            const int* keys,

@@ -351,12 +351,37 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
+# for kvstore with type dist_sync_mpi
+PROTOBUF_DIR=$(ROOTDIR)/deps
+PROTOC=$(PROTOBUF_DIR)/bin/protoc
+COLL_PATH=$(ROOTDIR)/src/kvstore/collectives
+PROTO_GEN_FILE=
+DEF_MPI_PATH=$(ROOTDIR)/3rdparty/mpich
+ifeq ($(USE_DIST_KVSTORE), 1)
+ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
+PROTO_GEN_FILE=src/kvstore/collectives/src/mpi_message.pb.cc src/kvstore/collectives/src/mpi_message.pb.h
+	ifeq ($(MPI_ROOT),)
+  	# Default mpi
+		MPI_ROOT := $(shell ./prepare_mpi.sh $(DEF_MPI_PATH))
+	endif
+ CFLAGS += -DMXNET_USE_ALLREDUCE_DIST_KVSTORE=1 -I$(MPI_ROOT)/include -I$(PROTOBUF_DIR)/include -I$(COLL_PATH)/include -I$(COLL_PATH)/src
+ LDFLAGS += -L$(MPI_ROOT)/lib -Wl,-rpath=$(MPI_ROOT)/lib -lmpi
+ LDFLAGS += $(PROTOBUF_DIR)/lib/libprotobuf.a
+endif
+endif
+
 .PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages
 
-SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+ALLREDUCE_SRC = $(wildcard src/kvstore/collectives/src/*.cc)
+ALLREDUCE_SRC += $(PROTO_GEN_FILE)
+ALLREDUCE_OBJ = $(patsubst %.cc, build/%.o, $(ALLREDUCE_SRC))
+
+SRC_FILTER = $(ALLREDUCE_SRC)
+ORIGSRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+SRC =	$(filter-out $(SRC_FILTER), $(ORIGSRC))
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
@@ -393,6 +418,7 @@ else
 		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
+
 
 # all dep
 LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
@@ -436,10 +462,17 @@ else
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
 endif
 
+ifeq ($(USE_DIST_KVSTORE), 1)
+ifeq ($(USE_ALLREDUCE_DIST_KVSTORE), 1)
+ ALL_DEP += $(ALLREDUCE_OBJ)
+endif
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc | mkldnn
+
+build/src/%.o: src/%.cc $(PROTO_GEN_FILE) | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -490,6 +523,9 @@ $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
+
+$(PROTO_GEN_FILE): PSLITE
+	$(PROTOC) --cpp_out=$(COLL_PATH)/src --proto_path=$(COLL_PATH)/src $(COLL_PATH)/src/mpi_message.proto
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
@@ -630,6 +666,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
+	$(RM) $(COLL_PATH)/src/mpi_message.pb.*
+	$(RM) -r $(DEF_MPI_PATH)
 else
 clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
@@ -638,6 +676,8 @@ clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) $(COLL_PATH)/src/mpi_message.pb.*
+	$(RM) -r $(DEF_MPI_PATH)
 endif
 
 clean_all: clean

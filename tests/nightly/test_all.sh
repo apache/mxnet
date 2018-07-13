@@ -44,6 +44,7 @@ USE_CUDA=1
 USE_CUDA_PATH=/usr/local/cuda
 USE_CUDNN=1
 USE_DIST_KVSTORE=1
+USE_ALLREDUCE_DIST_KVSTORE=1
 EOF
 
 juLog -name=Build -error=Error build
@@ -53,6 +54,9 @@ juLog -name=Python.Local.KVStore -error=Error python test_kvstore.py
 
 # python: distributed kvstore
 juLog -name=Python.Distributed.KVStore -error=Error ../../tools/launch.py -n 4 python dist_sync_kvstore.py
+
+#python: distributed kvstore with allreduce type
+juLog -name=Python.Distributed.KVStore.AllReduce -error=Error ../../3rdparty/mpich/build/bin/mpirun -n 4 python dist_allreduce_sync_kvstore.py
 
 # download data
 juLog -name=DownloadData bash ./download.sh

@@ -538,6 +538,20 @@ build_ubuntu_gpu_cmake() {
     report_ccache_usage
 }
 
+build_ubuntu_cpu_allreduce_kvstore() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        USE_BLAS=openblas             \
+        USE_DIST_KVSTORE=1            \
+        USE_ALLREDUCE_DIST_KVSTORE=1  \
+        -j$(nproc)
+
+    report_ccache_usage
+}
 
 # Testing
 

@@ -35,6 +35,10 @@ std::atomic<int> mxnet::kvstore::KVStoreDist::customer_id_{0};
 #include "./kvstore_nccl.h"
 #endif  // MXNET_USE_NCCL
 
+#if MXNET_USE_ALLREDUCE_DIST_KVSTORE
+#include "./kvstore_dist_sync_allreduce.h"
+#endif
+
 namespace mxnet {
 
 KVStore* KVStore::Create(const char *type_name) {
@@ -50,6 +54,19 @@ KVStore* KVStore::Create(const char *type_name) {
   }
 
   if (has("dist")) {
+#if defined(MXNET_USE_ALLREDUCE_DIST_KVSTORE) && defined(MXNET_USE_DIST_KVSTORE)
+    if (has("allreduce")) {
+      kv = new kvstore::KVStoreDistSyncAllReduce(use_device_comm);
+      kv->type_ = tname;
+      return kv;
+    }
+#else
+    if (has("allreduce")) {
+      LOG(FATAL) << "compile with USE_ALLREDUCE_DIST_KVSTORE=1 to use " << tname;
+      return nullptr;
+    }
+#endif
+
 #if MXNET_USE_DIST_KVSTORE
     kv = new kvstore::KVStoreDist(use_device_comm);
     if (!has("_async") && kv->IsWorkerNode() && kv->get_rank() == 0) {
