@@ -27,7 +27,6 @@ import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle, SymbolHandle, py_str
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
-from .symbol import symbol
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 
@@ -54,7 +53,7 @@ class Executor(object):
     >>> c = 2 * a + b
     >>> texec = c.bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
     """
-    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):  # pylint: disable=redefined-outer-name
+    def __init__(self, handle, symbol, ctx, grad_req, group2ctx):
         """Constructor, used Symbol.bind and Symbol.simple_bind instead.
 
         Parameters
@@ -337,7 +336,7 @@ class Executor(object):
         if self._optimized_symbol is None:
             handle = SymbolHandle()
             check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(handle)))
-        return symbol.Symbol(handle=handle)
+        return mx.sym.Symbol(handle=handle)
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
