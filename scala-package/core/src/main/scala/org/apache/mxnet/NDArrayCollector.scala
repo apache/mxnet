@@ -136,7 +136,6 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
     NDArrayCollector.currCollector.set(this)
     try {
       val ret = body
-
       ret match {
         case ndRet: NDArray =>
           arrays.remove(ndRet.handle)
@@ -144,13 +143,12 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
           ndarrays.arr.foreach(nd => arrays.remove(nd.handle))
         case _ => // do nothing
       }
-
+      ret
+    } finally {
       if (autoDispose) {
         foreach(_.dispose())
         clear()
       }
-      ret
-    } finally {
       NDArrayCollector.currCollector.set(old)
     }
   }
