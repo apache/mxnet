@@ -77,6 +77,7 @@ def test_dequantize_int8_to_float32():
 
 
 @with_seed()
+@unittest.skip('Flaky test, tracked in: https://github.com/apache/incubator-mxnet/issues/11747')
 def test_requantize_int32_to_int8():
     def quantized_int32_to_float(qdata, min_range, max_range):
         assert qdata.dtype == 'int32'
