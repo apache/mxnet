@@ -948,10 +948,6 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"space_to_depth"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
@@ -996,10 +992,6 @@ Example::
   [](const NodeAttrs& n) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
