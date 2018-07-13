@@ -1145,6 +1145,11 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
+    // cannot pool if ndarray and mkldnn memory have different ndim
+    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
+        != in_arr.arr.shape().ndim())
+      continue;
+
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
       if (i < 2)
@@ -1163,15 +1168,6 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       inputs[i] = &in_arr.arr;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-      // do not test if not supported as kFComputeEx will fallback
-      if (!mxnet::op::SupportMKLDNNPooling(in_arr.arr, out_arrs[0][output_i].arr))
-        continue;
-
-      // cannot pool if ndarray and mkldnn memory have different ndim
-      if (in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
-          != in_arr.arr.shape().ndim())
-        continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
         outputs[i] = &out_arrs[i][output_i].arr;
