@@ -213,8 +213,8 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   // TODO(zhengda) let's disable MKLDNN for FullyConnected for now.
   // It seems there is a bug.
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                        dispatch_mode, DispatchMode::kFCompute);
+    dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
