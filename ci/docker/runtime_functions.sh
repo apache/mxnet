@@ -24,6 +24,7 @@ set -ex
 
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 
+
 clean_repo() {
     set -ex
     git clean -xfd
@@ -321,6 +322,7 @@ build_centos7_gpu() {
         USE_CUDA=1 \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1 \
+        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70" \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
 }
@@ -447,6 +449,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
+        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70" \
         -j$(nproc)
 
     report_ccache_usage
@@ -479,6 +482,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
+        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70" \
         USE_CPP_PACKAGE=1             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -508,6 +512,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
         -DUSE_MKLDNN=1             \
+        -DCUDA_ARCH_LIST="52 70"   \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
@@ -530,6 +535,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_MKLML_MKL=0          \
         -DUSE_MKLDNN=0             \
         -DUSE_DIST_KVSTORE=1       \
+        -DCUDA_ARCH_LIST="52 70"   \
         -DCMAKE_BUILD_TYPE=Release \
         -G Ninja                   \
         /work/mxnet
