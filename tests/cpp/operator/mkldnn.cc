@@ -1145,11 +1145,6 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
-    // skip if ndims don't match
-    if (!SupportMKLDNN(in_arr.arr)
-        || !mxnet::op::SupportMKLDNNPooling(param, in_arr.arr.shape()))
-      continue;
-
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
       if (i < 2)
