@@ -557,8 +557,7 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
-    std::vector<float> scale = {1}) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -566,25 +565,25 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
 
-  int slice_amount = scale[0];
+  int slice_amount = 1;
+  if (dim == 0)
+    slice_amount = num_inputs;
   for (auto shape : shapes) {
-    if (scale.size() > shape.ndim())
+    if (dim >= shape.ndim())
       continue;
-
-    for (int dim = 0; dim < scale.size(); dim++)
-      shape[dim] = shape[dim] * scale[dim];
+    shape[dim] = shape[dim] * num_inputs;
 
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-      for (int dim = 0; dim < scale.size(); dim++) {
+      if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
-          pd = GetExpandedMemPD(pd, scale[dim], dim);
+          pd = GetExpandedMemPD(pd, num_inputs, dim);
         else
-          pd = GetExpandedMemPD(pd, scale[dim]);
+          pd = GetExpandedMemPD(pd, num_inputs);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -730,12 +729,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
-      std::vector<float> scale_vector(dim + 1);
-      for (int i = 0; i < dim + 1; i++)
-        scale_vector[i] = 1;
-      scale_vector[dim] = num_inputs;
-
-      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, scale_vector);
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
       int i = 0;
       for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
@@ -1061,12 +1055,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-
-    std::vector<float> scale_vector(dim+1);
-    for (int i = 0; i < dim+1; i++)
-      scale_vector[i] = 1;
-    scale_vector[dim] = attrs.num_outputs;
-    in_arrs = GetTestInputArrays(false, scale_vector);
+    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
   }
 
   for (auto &in_arr : in_arrs) {
