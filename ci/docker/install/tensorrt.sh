@@ -18,7 +18,8 @@
 # under the License.
 
 # Install gluoncv since we're testing Gluon models as well
-pip install gluoncv
+pip2 install gluoncv==0.2.0
+pip3 install gluoncv==0.2.0
 
 # Install Protobuf
 # Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
