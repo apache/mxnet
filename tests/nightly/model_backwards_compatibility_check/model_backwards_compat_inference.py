@@ -30,20 +30,7 @@ def test_module_checkpoint_api():
 
 	## For each MXNet version that has the saved models
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        bucket = s3.Bucket(model_bucket_name)
-	        prefix = folder + backslash + model_name
-	        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
-	        if len(model_files_meta) == 0:
-	            print ('No trained models found under path : %s' %prefix)
-	            continue
-	        model_files = list()
-	        ## For each file found under a model folder : 
-	        for obj in model_files_meta:
-	            file_name = obj.key.split('/')[2]
-	            model_files.append(file_name)
-	            ## Download this file---
-	            bucket.download_file(obj.key, file_name)
-
+	        model_files = download_model_files_from_s3(model_name)
 	        ## Load the model and perform inference
 	        loaded_model = get_module_api_model_definition()
 
@@ -69,20 +56,7 @@ def test_lenet_gluon_load_params_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        bucket = s3.Bucket(model_bucket_name)
-	        prefix = folder + backslash + model_name
-	        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
-	        if len(model_files_meta) == 0:
-	            print ('No trained models found under path : %s' %prefix)
-	            continue
-	        model_files = list()
-	        ## For each file found under a model folder :
-	        for obj in model_files_meta:
-	            file_name = obj.key.split('/')[2]
-	            model_files.append(file_name)
-	            ## Download this file---
-	            bucket.download_file(obj.key, file_name)
-
+	        model_files = download_model_files_from_s3(model_name)
 	        ## Load the model and perform inference
 	        loaded_model = Net()
 	        loaded_model.load_params(model_name+'-params')
@@ -101,20 +75,7 @@ def test_lenet_gluon_hybrid_imports_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        bucket = s3.Bucket(model_bucket_name)
-	        prefix = folder + backslash + model_name
-	        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
-	        if len(model_files_meta) == 0:
-	            print ('No trained models found under path : %s' %prefix)
-	            continue
-	        model_files = list()
-	        ## For each file found under a model folder :
-	        for obj in model_files_meta:
-	            file_name = obj.key.split('/')[2]
-	            model_files.append(file_name)
-	            ## Download this file---
-	            bucket.download_file(obj.key, file_name)
-
+	        model_files = download_model_files_from_s3(model_name)
 	        ## Load the model and perform inference
 	        loaded_model = HybridNet()
 	        loaded_model = gluon.SymbolBlock.imports(model_name + '-symbol.json', ['data'], model_name + '-0001.params')
@@ -128,7 +89,7 @@ def test_lstm_gluon_load_parameters_api():
 	## If this code is being run on version >= 1.2.0 only then execute it, since it uses save_parameters and load_parameters API
 	if compare_versions(str(mxnet_version), '1.2.1')  < 0:
 		print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
-		sys.exit(1)
+		return
 
 	model_name = 'lstm_gluon_save_parameters_api'
 	print ('Performing inference for model/API %s' %model_name)
@@ -138,20 +99,7 @@ def test_lstm_gluon_load_parameters_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        bucket = s3.Bucket(model_bucket_name)
-	        prefix = folder + backslash + model_name
-	        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
-	        if len(model_files_meta) == 0:
-	            print ('No trained models found under path : %s' %prefix)
-	            continue
-	        model_files = list()
-	        ## For each file found under a model folder :
-	        for obj in model_files_meta:
-	            file_name = obj.key.split('/')[2]
-	            model_files.append(file_name)
-	            ## Download this file---
-	            bucket.download_file(obj.key, file_name)
-
+		model_files = download_model_files_from_s3(model_name)
 	        ## Load the model and perform inference
 	        loaded_model = SimpleLSTMModel()
 	        loaded_model.load_parameters(model_name+'-params')

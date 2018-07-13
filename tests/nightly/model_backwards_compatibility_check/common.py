@@ -114,6 +114,8 @@ def download_model_files_from_s3(model_name):
             ## Download this file---
             bucket.download_file(obj.key, file_name)
 
+    return model_files
+
 def get_top_level_folders_in_bucket(s3client, bucket_name):
     '''This function returns the top level folders in the S3Bucket. These folders help us to navigate to the trained model files stored for different MXNet versions. '''
     bucket = s3client.Bucket(bucket_name)
@@ -122,7 +124,7 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
     folder_list = list()
     if 'CommonPrefixes' not in result:
         print ('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
-        sys.exit(1)
+        return
     for obj in result['CommonPrefixes']:
         folder_list.append(obj['Prefix'].strip(backslash))
 
