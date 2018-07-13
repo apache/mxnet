@@ -100,7 +100,6 @@ object NDArray extends NDArrayBase {
     val outputs = ArrayBuffer.empty[NDArrayHandle]
     checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.map(_.handle).toArray, outputVars,
       outputs, updatedKwargs.size, updatedKwargs.keys.toArray, updatedKwargs.values.toArray))
-
     new NDArrayFuncReturn(Option(oriOutputs).getOrElse {
       val outputArrs = outputs.map(new NDArray(_)).toArray
       addDependency(ndArgs.toArray, outputArrs)
@@ -491,7 +490,7 @@ object NDArray extends NDArrayBase {
     val names = ArrayBuffer.empty[String]
     checkCall(_LIB.mxNDArrayLoad(fname, outSize, handles, outNameSize, names))
     require(outNameSize.value == 0 || outNameSize.value == outSize.value)
-    (names.toArray, handles.map { ndHandle => new NDArray(ndHandle) }.toArray)
+    (names.toArray, handles.map(new NDArray(_)).toArray)
   }
 
   def load2Map(fname: String): Map[String, NDArray] = {
@@ -985,7 +984,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def copyTo(ctx: Context): NDArray = {
     val ret = new NDArray(NDArray.newAllocHandle(shape, ctx, delayAlloc = true))
     copyTo(ret)
-    ret
   }
 
   /**
