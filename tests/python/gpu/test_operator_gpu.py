@@ -1960,14 +1960,16 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
     # assert forwarding
-    assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]),
-                        _find_bn(bn2).running_mean.data(ctx_list[0]), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
-                        _find_bn(bn2).running_var.data(ctx_list[0]), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+                        _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
+                        atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+                        _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
+                        atol=1e-3, rtol=1e-3)
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
 def test_sync_batchnorm():
     def get_num_devices():
