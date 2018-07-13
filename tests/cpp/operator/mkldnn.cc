@@ -1168,9 +1168,6 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       inputs[i] = &in_arr.arr;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-      if (!mxnet::op::SupportMKLDNNPooling(in_arr.arr, out_arrs[0][output_i].arr))
-        continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
         outputs[i] = &out_arrs[i][output_i].arr;
