@@ -21,10 +21,7 @@ import copy
 import json
 import ast
 
-try:
-    xrange          # Python 2
-except NameError:
-    xrange = range  # Python 3
+from mxnet.base import xrange
 
 
 def load_model(args):
