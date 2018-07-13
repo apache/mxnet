@@ -25,10 +25,10 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <mkldnn_types.h>
 #include <cmath>
 #include <climits>
 #include <set>
-#include <mkldnn_types.h>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
