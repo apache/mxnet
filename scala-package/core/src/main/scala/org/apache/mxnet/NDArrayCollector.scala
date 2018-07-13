@@ -25,7 +25,7 @@ import scala.collection.mutable
 /**
  *  A collector to store NDArrays.
  *  It provides a scope, NDArrays allocated in the scope can either <br />
- *  - be disposed automatically when the scope finished, or <br />
+ *  - be disposed automatically when the code block finishes, or <br />
  *  - simply be collected for future usage.
  *  <br />
  *  If the return type of scope is <em>NDArray</em> or <em>NDArrayFuncReturn</em>,
@@ -122,12 +122,12 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
   /**
    * Create a code scope, NDArrays allocated within this scope will be collected.
    * The collected NDArrays will be either <br />
-   * - disposed automatically when the scope finishes (when using <em>auto</em>) or <br />
+   * - disposed automatically when the code blcok finishes (when using <em>auto</em>) or <br />
    * - stored for later access (when using <em>manual</em>) <br />
    * If the return type of scope is <em>NDArray</em> or <em>NDArrayFuncReturn</em>,
    * it is smart enough NOT to collect or dispose the returned NDArray. <br />
    * However in other cases, it is users' responsibility NOT to leak allocated NDArrays outside.
-   * @param body function to be executed within the scope.
+   * @param body code block to be executed within the scope.
    * @tparam T return type of the function <em>body</em>.
    * @return The result of function <em>body</em>.
    */
