@@ -30,6 +30,7 @@ from common import setup_module, with_seed, teardown
 shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
+logging.basicConfig(level=logging.INFO)
 
 class EnvManager:
     def __init__(self, key, val):
@@ -41,7 +42,7 @@ class EnvManager:
         try:
             self._prev_val = os.environ[self._key]
         except KeyError:
-            self._prev_val = ""
+            self._prev_val = ''
         os.environ[self._key] = self._next_val
 
     def __exit__(self, ptype, value, trace):
@@ -55,6 +56,47 @@ def init_kv_with_str(stype='default', kv_type='local'):
     # list
     kv.init(str_keys, [mx.nd.zeros(shape=shape, stype=stype)] * len(keys))
     return kv
+
+def test_dense_push_pull():
+    shapes = [(1026), (1,2,3,4,5,6,7,8)]
+    keys = [1,2,3,4,5,6,7]
+
+    def check_dense_push_pull(kv_type):
+        def check_dense_pull(kv_type, ctxs):
+            n = 0
+            n_devs = len(ctxs)
+            for context in ctxs:
+                kv = mx.kv.create(kv_type)
+                a = mx.nd.ones(shape, ctxs[0])
+                cur_key = str(key*n_devs+n)
+                kv.init(cur_key, a)
+                arr_list = [mx.nd.ones(shape, ctx=context) for context in ctxs]
+                res = [mx.nd.zeros(shape, ctx=context) for context in ctxs]
+                kv.push(cur_key, arr_list)
+                kv.pull(cur_key, res)
+                n += 1
+                for x in range(n_devs):
+                    #if np.sum(np.abs((res[x]-n_devs).asnumpy()))!=0:
+                    print(x, (res[x]-n_devs).asnumpy())
+                    assert(np.sum(np.abs((res[x]-n_devs).asnumpy()))==0)
+
+        for key in keys:
+            check_dense_pull(kv_type, [mx.gpu(0)])
+            check_dense_pull(kv_type, [mx.cpu(0)])
+            check_dense_pull(kv_type, [mx.gpu(i) for i in range(4)])
+            check_dense_pull(kv_type, [mx.cpu(i) for i in range(4)])
+
+    key1 = 'MXNET_KVSTORE_GPUARRAY_BOUND'
+    envs2 = ['','1']
+    key2  = 'MXNET_KVSTORE_USETREE'
+    for i in range(2):
+        for val2 in envs2:
+            with EnvManager(key2, val2):
+                check_dense_push_pull('local')
+                check_dense_push_pull('device')
+
+        os.environ[key1] = '0'
+    os.environ[key1] = ''
 
 # Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
 # Not reproducible, so this test is back on random seeds.
@@ -102,17 +144,16 @@ def test_rsp_push_pull():
         check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], use_slice=True)
         check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], use_slice=True)
 
-    # test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/9384
-    # check_rsp_push_pull('local')
     envs = ["","1"]
     key  = "MXNET_KVSTORE_USETREE"
     for val in envs:
         with EnvManager(key, val):
+            print('done')
             check_rsp_push_pull('local')
             check_rsp_push_pull('device')
             check_rsp_push_pull('device', is_push_cpu=False)
 
-
+@with_seed()
 def test_row_sparse_pull_single_device():
     envs = ["","1"]
     key  = "MXNET_KVSTORE_USETREE"
@@ -130,7 +171,7 @@ def test_row_sparse_pull_single_device():
 
             assert_almost_equal(grad.asnumpy(), copy.asnumpy())
 
-
+@with_seed()
 def test_rsp_push_pull_large_rowid():
     envs = ["","1"]
     key  = "MXNET_KVSTORE_USETREE"

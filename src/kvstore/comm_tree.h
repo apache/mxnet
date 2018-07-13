@@ -83,9 +83,14 @@ class CommDeviceTree : public CommDevice {
     }
   }
 
-  // src is sliced shape
-  // copy_buf not sliced
-  // merged not sliced
+  /**
+   * \brief Reduce src to tree_merge_buf_
+   * \param key is the id of the gradient we are doing Reduce on
+   * \param src is the array of values located on different GPUs
+   * \param root is the id of the GPU we want to send result of reduce to
+   * \param merged_row is the id of the slice we are taking
+   * \param priority the priority of the operation
+   */
   const NDArray& ReduceInner(int key, const std::vector<NDArray>& src, int root,
                              int merged_row, int priority) {
     std::vector<std::vector<NDArray>> reduce(devs_.size());
@@ -98,8 +103,8 @@ class CommDeviceTree : public CommDevice {
     if (stype == kDefaultStorage) {
       // Copy everything into buf.merged for each gpu
       for (size_t i = 0; i < src.size(); ++i) {
-        int start = scan_[root][depth_  ];
-        int end   = scan_[root][depth_+1];
+        int start = scan_[root][depth_];
+        int end = scan_[root][depth_+1];
 
         for (int j = start; j < end; ++j) {
           int topo_id = topology[j];
@@ -113,13 +118,13 @@ class CommDeviceTree : public CommDevice {
 
       for (int level = depth_; level > 0; --level) {
         int start = scan_[root][level  ];
-        int end   = scan_[root][level+1];
+        int end = scan_[root][level+1];
 
         unsigned is_dest = 0;
-        int      dest_id = 0;
+        int dest_id = 0;
         for (int j = start; j < end; ++j) {
           int topo_id = topology[j];
-          dest_id     = (is_dest == 0) ? topo_id : dest_id;
+          dest_id = (is_dest == 0) ? topo_id : dest_id;
 
           TreeBufferEntry& buf_dest = tree_merge_buf_[dest_id][key];
           TreeBufferEntry& buf_from = tree_merge_buf_[topo_id][key];
@@ -141,7 +146,7 @@ class CommDeviceTree : public CommDevice {
         }
 
         start = scan_[root][level-1];
-        end   = scan_[root][level  ];
+        end = scan_[root][level];
         for (int i = start; i < end; ++i) {
           int gpu_id = topology[i];
 
@@ -158,7 +163,7 @@ class CommDeviceTree : public CommDevice {
         }
       }
     } else {
-      LOG(WARNING) << "Only dense input supported for now";
+      LOG(FATAL) << "Only dense input supported for now";
     }
 
     int topo_id = topology[0];
@@ -231,7 +236,7 @@ class CommDeviceTree : public CommDevice {
       }
 
       // Copy from list of small NDArrays to one big NDArray, which is returned
-      int gpu_id    = 0;
+      int gpu_id = 0;
       return src[gpu_id];
     } else {
       // sparse reduce
@@ -252,13 +257,13 @@ class CommDeviceTree : public CommDevice {
 
     for (int level = 1; level <= depth_; ++level) {
       int start = scan_[root][level];
-      int end   = scan_[root][level+1];
+      int end = scan_[root][level+1];
 
       unsigned is_src = 0;
-      int      src_id = 0;
+      int src_id = 0;
       for (int j = start; j < end; ++j) {
         int topo_id = topology[j];
-        src_id      = (is_src == 0) ? topo_id : src_id;
+        src_id = (is_src == 0) ? topo_id : src_id;
 
         if (is_src && src_id != topo_id) {
           CopyFromTo(temp[src_id], dst[topo_id], priority);
@@ -392,8 +397,8 @@ class CommDeviceTree : public CommDevice {
       else
         key_dist[shape.Size()]++;
 
-      int start = scan_[0][depth_  ];
-      int end   = scan_[0][depth_+1];
+      int start = scan_[0][depth_];
+      int end = scan_[0][depth_+1];
 
       // In order to generalize to any number of GPUs, we use strategy of having
       // found the mapping from 0, 1, ..., n_gpus to dev_id i.e.
@@ -484,10 +489,10 @@ class CommDeviceTree : public CommDevice {
   std::vector<Context> devs_;
 
   /// \brief Highest numbered device
-  int   max_dev_;
-  int   depth_;
-  int   gpuarray_bound_;
-  bool  backtrack_;
+  int max_dev_;
+  int depth_;
+  int gpuarray_bound_;
+  bool backtrack_;
   float link_usage_penalty_;
 
   /// \brief constant for maximum size of recv buffer per GPU
