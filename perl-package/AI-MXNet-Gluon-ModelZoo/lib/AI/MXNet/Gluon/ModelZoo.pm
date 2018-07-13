@@ -127,4 +127,6 @@ sub get_model
     AI::MXNet::Gluon::ModelZoo::Vision->$sub(%kwargs);
 }
 
+sub vision { 'AI::MXNet::Gluon::ModelZoo::Vision' }
+
 1;
