@@ -119,16 +119,16 @@ template<typename K, typename V>
 inline size_t serialized_size(const std::map<K, V>& obj) {
   size_t sum_val = 4;
   if (is_container<K>::value && is_container<V>::value) {
-    for (auto p : obj) {
+    for (const auto& p : obj) {
       sum_val += serialized_size(p.first) + serialized_size(p.second);
     }
   } else if (is_container<K>::value) {
-    for (auto p : obj) {
+    for (const auto& p : obj) {
       sum_val += serialized_size(p.first);
     }
     sum_val += sizeof(V) * obj.size();
   } else if (is_container<K>::value) {
-    for (auto p : obj) {
+    for (const auto& p : obj) {
       sum_val += serialized_size(p.second);
     }
     sum_val += sizeof(K) * obj.size();
