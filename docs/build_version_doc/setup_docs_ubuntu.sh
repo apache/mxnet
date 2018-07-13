@@ -78,8 +78,7 @@ sudo sh -c 'gpg --keyserver keyserver.ubuntu.com --recv-key $key || \
 
 # Installing the latest version (3.3+) that is compatible with MXNet
 sudo add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
-
-sudo sh -c 'gpg -a --export $key | apt-key add -'
+sudo apt-key add ../../ci/docker/install/sbt.gpg
 
 sudo apt-get update
 sudo apt-get install -y --allow-unauthenticated \
