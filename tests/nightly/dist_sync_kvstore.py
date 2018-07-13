@@ -428,29 +428,27 @@ def test_gluon_trainer_sparse_step():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
     parser.add_argument('--nrepeat', type=int, default=7)
-    parser.add_argument('--type', type=str, default='all')
+    parser.add_argument('--type', type=str, default='default_cpu')
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
     if opt.type == 'gluon_type_cpu':
         test_gluon_trainer_type()
-        exit()
-    if opt.type == 'gluon_step_cpu':
+    elif opt.type == 'gluon_step_cpu':
         test_gluon_trainer_step()
-        exit()
-    if opt.type == 'gluon_sparse_step_cpu':
+    elif opt.type == 'gluon_sparse_step_cpu':
         test_gluon_trainer_sparse_step()
-        exit()
-    if opt.type == 'invalid_cpu':
+    elif opt.type == 'invalid_cpu':
         test_invalid_operations()
-        exit()
-    if opt.type == 'all' or opt.type == 'init':
+    elif opt.type == 'init_gpu':
         test_sync_init(opt.gpu)
-    kv = init_kv()
-    if opt.type == 'all' or opt.type == 'default':
+    elif opt.type == 'default_cpu':
+        kv = init_kv()
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
-    # don't run non compressed tests after this as kvstore compression will be set here
-    if opt.type == 'all' or opt.type == 'compressed':
+    elif opt.type == 'compressed_cpu':
         kv, threshold = init_kv_compressed(kv)
+        kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_2bit_compression(threshold, opt.nrepeat)
+    else:
+        raise RuntimeError("Unknown test type")
