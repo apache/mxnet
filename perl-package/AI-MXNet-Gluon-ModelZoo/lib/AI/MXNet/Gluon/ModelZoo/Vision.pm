@@ -15,15 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-package AI::MXNet::Gluon;
+package AI::MXNet::Gluon::ModelZoo::Vision;
 use strict;
 use warnings;
-use AI::MXNet::Gluon::Loss;
-use AI::MXNet::Gluon::Trainer;
-use AI::MXNet::Gluon::Utils;
-use AI::MXNet::Gluon::Data;
-use AI::MXNet::Gluon::NN;
-use AI::MXNet::Gluon::RNN;
+use AI::MXNet::Gluon::ModelZoo::ModelStore;
+use AI::MXNet::Gluon::ModelZoo::Vision::AlexNet;
+use AI::MXNet::Gluon::ModelZoo::Vision::DenseNet;
+use AI::MXNet::Gluon::ModelZoo::Vision::Inception;
+use AI::MXNet::Gluon::ModelZoo::Vision::MobileNet;
+use AI::MXNet::Gluon::ModelZoo::Vision::ResNet;
+use AI::MXNet::Gluon::ModelZoo::Vision::SqueezeNet;
+use AI::MXNet::Gluon::ModelZoo::Vision::VGG;
 
 sub import
 {
@@ -35,26 +37,12 @@ sub import
         {
             my $short_name_package =<<"EOP";
             package $short_name;
-            no warnings 'redefine';
-            sub data { 'AI::MXNet::Gluon::Data' }
-            sub nn { 'AI::MXNet::Gluon::NN_' }
-            sub rnn { 'AI::MXNet::Gluon::RNN_' }
-            sub loss { 'AI::MXNet::Gluon::Loss_' }
-            sub utils { 'AI::MXNet::Gluon::Utils' }
-            sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
-            sub Trainer { shift; AI::MXNet::Gluon::Trainer->new(\@_); }
-            sub Parameter { shift; AI::MXNet::Gluon::Parameter->new(\@_); }
-            sub ParameterDict { shift; AI::MXNet::Gluon::ParameterDict->new(\@_); }
-            \@${short_name}::ISA = ('AI::MXNet::Gluon_');
+            \@${short_name}::ISA = ('AI::MXNet::Gluon::ModelZoo::Vision');
             1;
 EOP
             eval $short_name_package;
         }
     }
 }
-
-sub data { 'AI::MXNet::Gluon::Data' }
-sub utils { 'AI::MXNet::Gluon::Utils' }
-sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
 
 1;
