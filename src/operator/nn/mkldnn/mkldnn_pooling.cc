@@ -268,10 +268,18 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
     return;
   }
 
+  NDArray ograd_buffer = out_grad;
+  if (out_grad.IsView() && out_grad.IsMKLDNNData())
+    ograd_buffer = out_grad.Reorder2Default();
+
+  NDArray in_data_buffer = out_grad;
+  if (in_data.IsView() && in_data.IsMKLDNNData())
+    in_data_buffer = in_data.Reorder2Default();
+
   TmpMemMgr::Get()->Init(ctx.requested[0]);
   // mkldnn::memory
-  auto diff_dst_mem = out_grad.GetMKLDNNData();
-  auto input_mem = in_data.GetMKLDNNData();
+  auto diff_dst_mem = ograd_buffer.GetMKLDNNData();
+  auto input_mem = in_data_buffer.GetMKLDNNData();
   mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
   const mkldnn::memory::desc data_md = data_mpd.desc();
   const memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],

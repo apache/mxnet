@@ -108,9 +108,12 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
 #endif
 }
 
+// input and output must be same format and neither can be views
 inline bool SupportMKLDNNPooling(const NDArray &input, const NDArray &output) {
-  return !(input.GetMKLDNNData()->get_primitive_desc().desc().data.format !=
-      output.GetMKLDNNData()->get_primitive_desc().desc().data.format && !output.IsView());
+  if (output.IsView() || input.IsView())
+    return false;
+  return input.GetMKLDNNData()->get_primitive_desc().desc().data.format ==
+      output.GetMKLDNNData()->get_primitive_desc().desc().data.format;
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
