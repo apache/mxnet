@@ -21,31 +21,28 @@ import mxnet as mx
 import multiprocessing
 import numpy as np
 import os
+import sys
 
 from mxnet.gluon.data.vision import transforms
 from mxnet import gluon
 from time import time
 
-
 def get_use_tensorrt():
     return int(os.environ.get("MXNET_USE_TENSORRT", 0))
-
 
 def set_use_tensorrt(status=False):
     os.environ["MXNET_USE_TENSORRT"] = str(int(status))
 
-
 def get_fp16_infer_for_fp16_graph():
     return int(os.environ.get("MXNET_TENSORRT_USE_FP16_FOR_FP32", 0))
-
 
 def set_fp16_infer_for_fp16_graph(status=False):
     os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
 
-
-# ssd_512_resnet50_v1_coco
-def get_ssd_model(model_name='faster_rcnn_resnet50_v2a_voc', use_tensorrt=True,
+#ssd_512_resnet50_v1_coco
+def get_ssd_model(model_name='ssd_512_resnet50_v1_coco', use_tensorrt=True,
                   ctx=mx.gpu(0), batch_size=32, fp16_for_fp32_graph=False):
+
     set_use_tensorrt(use_tensorrt)
     set_fp16_infer_for_fp16_graph(fp16_for_fp32_graph)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
@@ -58,13 +55,14 @@ def get_ssd_model(model_name='faster_rcnn_resnet50_v2a_voc', use_tensorrt=True,
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
     # class_preds
-    executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null', shared_buffer=all_params,
-                                     force_rebind=True)
+    executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null',
+                                   shared_buffer=all_params, force_rebind=True)
     return executor
 
 
-def get_cifar_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0), batch_size=128,
-                            fp16_for_fp32_graph=False):
+def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True,
+                      ctx=mx.gpu(0), batch_size=128, fp16_for_fp32_graph=False, imagenet=False):
+
     set_use_tensorrt(use_tensorrt)
     set_fp16_infer_for_fp16_graph(fp16_for_fp32_graph)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
@@ -78,14 +76,19 @@ def get_cifar_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, c
     if not get_use_tensorrt():
         all_params = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in all_params.items()])
 
-    executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, 32, 32), softmax_label=(batch_size,), grad_req='null',
+    if imagenet:
+        h, w = 224, 224
+    else:
+        h, w = 32, 32 
+
+    executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,), grad_req='null',
                                    shared_buffer=all_params, force_rebind=True)
     return executor
 
+def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorrt=True,
+        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
-def cifar10_infer(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0), fp16_for_fp32_graph=False,
-                  batch_size=128, num_workers=1):
-    executor = get_cifar_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
+    executor = get_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph, imagenet=False)
 
     num_ex = 10000
     all_preds = np.zeros([num_ex, 10])
@@ -97,16 +100,16 @@ def cifar10_infer(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(
         transforms.Normalize([0.4914, 0.4822, 0.4465], [0.2023, 0.1994, 0.2010])
     ])
 
-    def data_loader():
-        return gluon.data.DataLoader(gluon.data.vision.CIFAR10(train=False).transform_first(transform_test),
-                                     batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    data_loader = lambda: gluon.data.DataLoader(
+        gluon.data.vision.CIFAR10(train=False).transform_first(transform_test),
+        batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     val_data = data_loader()
 
     for idx, (data, label) in enumerate(val_data):
         extent = data.shape[0]
-        offset = idx * batch_size
-        all_label_test[offset:offset + extent] = label.asnumpy()
+        offset = idx*batch_size
+        all_label_test[offset:offset+extent] = label.asnumpy()
 
         # warm-up, but don't use result
         executor.arg_dict["data"][:extent, :] = data
@@ -125,8 +128,8 @@ def cifar10_infer(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(
         executor.arg_dict["data"][:extent, :] = data
         executor.forward(is_train=False)
         preds = executor.outputs[0].asnumpy()
-        offset = idx * batch_size
-        all_preds[offset:offset + extent, :] = preds[:extent]
+        offset = idx*batch_size
+        all_preds[offset:offset+extent, :] = preds[:extent]
         example_ct += extent
 
     all_preds = np.argmax(all_preds, axis=1)
@@ -135,10 +138,10 @@ def cifar10_infer(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(
 
     return duration, 100.0 * matches / example_ct
 
+def ssd_infer(model_name='cifar_resnet110_v1', use_tensorrt=True,
+        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
-def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True, ctx=mx.gpu(0), fp16_for_fp32_graph=False,
-              batch_size=128):
-    executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
+    executor = get_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph, imagenet=False)
 
     start = None
     num_runs = 50
@@ -149,8 +152,36 @@ def ssd_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True, ctx=mx.gp
         if i == 1:
             start = time()
         for runs in range(num_runs):
-            executor.forward(is_train=False)
+            executor.forward(is_train = False)
             executor.outputs[0].wait_to_read()
+#            all_preds = executor.outputs[0].asnumpy()
+#            anchors = all_preds[:, :, 0]
+#            class_preds = all_preds[:, :, 1]
+#            box_preds = all_preds[:, :, 2:]
+
+    return time() - start
+
+def classif_imagenet_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
+        ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
+
+    executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
+
+    start = None
+    num_runs = 2
+
+    for i in range(2):
+        data = np.random.randn(batch_size, 3, 224, 224)
+        executor.arg_dict["data"] = data
+        if i == 1:
+            start = time()
+        for runs in range(num_runs):
+            executor.forward(is_train = False)
+            executor.outputs[0].wait_to_read()
+#            all_preds = executor.outputs[0].asnumpy()
+#            anchors = all_preds[:, :, 0]
+#            class_preds = all_preds[:, :, 1]
+#            box_preds = all_preds[:, :, 2:]
+
     return time() - start
 
 
@@ -158,15 +189,14 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     print("\n===========================================")
     print("Model: %s" % model_name)
     print("===========================================")
-    print("*** Running inference using pure MXNet ***\n")
+    print("*** Running inference using pure MxNet ***\n")
     mx_duration, mx_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
-                                        num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph,
-                                        use_tensorrt=False)
-    print("\nMXNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
+        num_workers=num_workers, fp16_for_fp32_graph=fp16_for_fp32_graph, use_tensorrt=False)
+    print("\nMxNet: time elapsed: %.3fs, accuracy: %.2f%%" % (mx_duration, mx_pct))
 
-    print("\n*** Running inference using MXNet + TensorRT ***\n")
+    print("\n*** Running inference using MxNet + TensorRT ***\n")
     trt_duration, trt_pct = cifar10_infer(model_name=model_name, batch_size=batch_size,
-                                          num_workers=num_workers, use_tensorrt=True)
+        num_workers=num_workers, use_tensorrt=True)
     print("TensorRT: time elapsed: %.3fs, accuracy: %.2f%%" % (trt_duration, trt_pct))
     speedup = mx_duration / trt_duration
     print("TensorRT speed-up (not counting compilation): %.2fx" % speedup)
@@ -176,18 +206,19 @@ def run_experiment_for(model_name, batch_size, num_workers, fp16_for_fp32_graph)
     return speedup, acc_diff
 
 
-def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
+def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, test_fp16=False):
+
     models = [
         'cifar_resnet20_v1',
-        'cifar_resnet56_v1',
-        'cifar_resnet110_v1',
-        'cifar_resnet20_v2',
-        'cifar_resnet56_v2',
-        'cifar_resnet110_v2',
-        'cifar_wideresnet16_10',
-        'cifar_wideresnet28_10',
-        'cifar_wideresnet40_8',
-        'cifar_resnext29_16x64d'
+#        'cifar_resnet56_v1',
+#        'cifar_resnet110_v1',
+#        'cifar_resnet20_v2',
+#        'cifar_resnet56_v2',
+#        'cifar_resnet110_v2',
+#        'cifar_wideresnet16_10',
+#        'cifar_wideresnet28_10',
+#        'cifar_wideresnet40_8',
+#        'cifar_resnext29_16x64d'
     ]
 
     num_models = len(models)
@@ -195,7 +226,11 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
     speedups = np.zeros(num_models, dtype=np.float32)
     acc_diffs = np.zeros(num_models, dtype=np.float32)
 
-    for precision in ["fp32", "fp16"]:
+    precisions = ["fp32"]
+    if test_fp16:
+        precisions.append("fp16")
+
+    for precision in precisions:
 
         test_start = time()
 
@@ -205,8 +240,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
             speedup, acc_diff = run_experiment_for(model, batch_size, num_workers, fp16_for_fp32_graph=use_fp16)
             speedups[idx] = speedup
             acc_diffs[idx] = acc_diff
-            assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (
-                tolerance, model)
+            assert acc_diff < tolerance, "Accuracy difference between MxNet and TensorRT > %.2f%% for model %s" % (tolerance, model)
 
         print("Perf and correctness checks run on the following models:")
         print(models)
@@ -223,15 +257,28 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
 
         print("Test duration: %.2f seconds" % test_duration)
 
-
 if __name__ == '__main__':
     num_workers = int(multiprocessing.cpu_count() / 2)
-    # test_tensorrt_on_cifar_resnets(batch_size=16, tolerance=0.1, num_workers=num_workers)
     batch_size = 16
-    print("Running SSD in pure MXNet")
+
+    print("\n\n ================= IMAGENET CLASSIFICATION =================\n\n") 
+    print("Running ResNet-152 inference in MxNet")
+    mx_imagenet_time = classif_imagenet_infer(use_tensorrt=False, batch_size=batch_size)
+    print("Running ResNet-152 inference in MxNet-TensorRT")
+    trt_imagenet_time = classif_imagenet_infer(use_tensorrt=True, batch_size=batch_size)
+    print("Speedup: %.2fx" % (mx_imagenet_time / trt_imagenet_time))
+
+    print("\n\n ================= CIFAR-10 CLASSIFICATION =================\n\n") 
+    # ResNets
+    test_tensorrt_on_cifar_resnets(batch_size=batch_size, tolerance=0.1, num_workers=num_workers)
+
+    print("\n\n ================= IMAGENET OBJECT DETECTION =================\n\n") 
+
+    # SSD
+    print("Running SSD in pure MxNet")
     mx_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
     print("Execution time: %.2f seconds" % mx_ssd_time)
-    print("Running SSD in MXNet + TensorRT")
+    print("Running SSD in MxNet + TensorRT")
     trt_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
     print("Execution time: %.2f seconds" % trt_ssd_time)
     print("Speedup: %.2fx" % (mx_ssd_time / trt_ssd_time))
