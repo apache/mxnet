@@ -24,6 +24,7 @@ from array import array as py_array
 import ctypes
 import copy
 import numpy as np
+import mxnet as mx
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, ExecutorHandle, SymbolHandle, py_str
 from .base import check_call, c_handle_array, c_array_buf, c_str_array

@@ -40,7 +40,7 @@ def set_fp16_infer_for_fp16_graph(status=False):
     os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
 
 #ssd_512_resnet50_v1_coco
-def get_ssd_model(model_name='ssd_512_resnet50_v1_coco', use_tensorrt=True,
+def get_ssd_model(model_name='ssd_512_mobilenet1_0_coco', use_tensorrt=True,
                   ctx=mx.gpu(0), batch_size=32, fp16_for_fp32_graph=False):
 
     set_use_tensorrt(use_tensorrt)
@@ -138,10 +138,11 @@ def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorr
 
     return duration, 100.0 * matches / example_ct
 
-def ssd_infer(model_name='cifar_resnet110_v1', use_tensorrt=True,
+def ssd_infer(model_name='ssd_512_mobilenet1_0_voc', use_tensorrt=True,
         ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
-    executor = get_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph, imagenet=False)
+    print("Running SSD inference with model: %s" % model_name)
+    executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
 
     start = None
     num_runs = 50
@@ -161,10 +162,11 @@ def ssd_infer(model_name='cifar_resnet110_v1', use_tensorrt=True,
 
     return time() - start
 
-def classif_imagenet_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=True,
+def classif_imagenet_infer(model_name='ssd_512_mobilenet1_0_coco', use_tensorrt=True,
         ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
 
     executor = get_ssd_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph)
+    executor = get_classif_model(model_name, use_tensorrt, ctx, batch_size, fp16_for_fp32_graph, imagenet=False)
 
     start = None
     num_runs = 2
@@ -177,10 +179,6 @@ def classif_imagenet_infer(model_name='ssd_512_resnet50_v1_voc', use_tensorrt=Tr
         for runs in range(num_runs):
             executor.forward(is_train = False)
             executor.outputs[0].wait_to_read()
-#            all_preds = executor.outputs[0].asnumpy()
-#            anchors = all_preds[:, :, 0]
-#            class_preds = all_preds[:, :, 1]
-#            box_preds = all_preds[:, :, 2:]
 
     return time() - start
 
@@ -210,15 +208,15 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1, 
 
     models = [
         'cifar_resnet20_v1',
-#        'cifar_resnet56_v1',
-#        'cifar_resnet110_v1',
-#        'cifar_resnet20_v2',
-#        'cifar_resnet56_v2',
-#        'cifar_resnet110_v2',
-#        'cifar_wideresnet16_10',
-#        'cifar_wideresnet28_10',
-#        'cifar_wideresnet40_8',
-#        'cifar_resnext29_16x64d'
+        'cifar_resnet56_v1',
+        'cifar_resnet110_v1',
+        'cifar_resnet20_v2',
+        'cifar_resnet56_v2',
+        'cifar_resnet110_v2',
+        'cifar_wideresnet16_10',
+        'cifar_wideresnet28_10',
+        'cifar_wideresnet40_8',
+        'cifar_resnext29_16x64d'
     ]
 
     num_models = len(models)
@@ -261,24 +259,24 @@ if __name__ == '__main__':
     num_workers = int(multiprocessing.cpu_count() / 2)
     batch_size = 16
 
-    print("\n\n ================= IMAGENET CLASSIFICATION =================\n\n") 
-    print("Running ResNet-152 inference in MxNet")
-    mx_imagenet_time = classif_imagenet_infer(use_tensorrt=False, batch_size=batch_size)
-    print("Running ResNet-152 inference in MxNet-TensorRT")
-    trt_imagenet_time = classif_imagenet_infer(use_tensorrt=True, batch_size=batch_size)
-    print("Speedup: %.2fx" % (mx_imagenet_time / trt_imagenet_time))
-
-    print("\n\n ================= CIFAR-10 CLASSIFICATION =================\n\n") 
-    # ResNets
-    test_tensorrt_on_cifar_resnets(batch_size=batch_size, tolerance=0.1, num_workers=num_workers)
-
-    print("\n\n ================= IMAGENET OBJECT DETECTION =================\n\n") 
+#    print("\n\n ================= IMAGENET CLASSIFICATION =================\n\n") 
+#    print("Running ResNet-152 inference in MxNet")
+#    mx_imagenet_time = classif_imagenet_infer(use_tensorrt=False, batch_size=batch_size)
+#    print("Running ResNet-152 inference in MxNet-TensorRT")
+#    trt_imagenet_time = classif_imagenet_infer(use_tensorrt=True, batch_size=batch_size)
+#    print("Speedup: %.2fx" % (mx_imagenet_time / trt_imagenet_time))
+#
+#    print("\n\n ================= CIFAR-10 CLASSIFICATION =================\n\n") 
+#    # ResNets
+#    test_tensorrt_on_cifar_resnets(batch_size=batch_size, tolerance=0.1, num_workers=num_workers)
+#
+#    print("\n\n ================= IMAGENET OBJECT DETECTION =================\n\n") 
 
     # SSD
     print("Running SSD in pure MxNet")
     mx_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
     print("Execution time: %.2f seconds" % mx_ssd_time)
     print("Running SSD in MxNet + TensorRT")
-    trt_ssd_time = ssd_infer(use_tensorrt=False, batch_size=batch_size)
+    trt_ssd_time = ssd_infer(use_tensorrt=True, batch_size=batch_size)
     print("Execution time: %.2f seconds" % trt_ssd_time)
     print("Speedup: %.2fx" % (mx_ssd_time / trt_ssd_time))
