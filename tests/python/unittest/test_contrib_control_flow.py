@@ -237,11 +237,11 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
     for imp_out, sym_out in zip(imp_outs, sym_outs):
         if imp_out is None or sym_out is None:
             continue
-        assert_almost_equal(imp_out, sym_out)
+        assert_almost_equal(imp_out, sym_out, rtol=1e-4, atol=1e-4)
     for imp_grad, sym_grad in zip(imp_grads, sym_grads):
         if imp_grad is None or sym_grad is None:
             continue
-        assert_almost_equal(imp_grad, sym_grad, rtol=1e-5, atol=1e-5)
+        assert_almost_equal(imp_grad, sym_grad, rtol=1e-4, atol=1e-4)
 
 
 def test_while_loop_for_foreach():
@@ -886,9 +886,9 @@ def test_while_loop_nested():
         assert len(imp_out) == len(sym_out)
         assert len(imp_grad) == len(sym_grad)
         for x, y in zip(imp_out, sym_out):
-            assert_almost_equal(x, y)
+            assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
         for x, y in zip(imp_grad, sym_grad):
-            assert_almost_equal(x, y, rtol=1e-5, atol=1e-5)
+            assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
 
 
 def test_while_loop_rnn():
