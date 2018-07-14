@@ -19,23 +19,23 @@ mx.opt.sgd <- function(learning.rate = 0.01,
                        rescale.grad = 1,
                        clip_gradient = -1,
                        lr_scheduler = NULL) {
-  
+
   lr <- learning.rate
   count <- 0
   num_update <- 0
-  
+
   sgd <- new.env()
   sgd$lr <- lr
   sgd$count <- 0
   sgd$num_update <- 0
-  
+
   create_exec <- function(index, weight_dim, ctx) {
-    
+
     if (momentum == 0) {
-      
+
       weight <- mx.symbol.Variable("weight")
       grad <- mx.symbol.Variable("grad")
-      
+
       sym <- mx.symbol.sgd_update(weight,
                                   grad,
                                   lr = lr,
@@ -44,11 +44,11 @@ mx.opt.sgd <- function(learning.rate = 0.01,
                                   clip_gradient = clip_gradient,
                                   name = "w")
     } else {
-      
+
       weight <- mx.symbol.Variable("weight")
       grad <- mx.symbol.Variable("grad")
       mom <- mx.symbol.Variable("mom")
-      
+
       sym <- mx.symbol.sgd_mom_update(weight,
                                       grad,
                                       mom,
@@ -64,7 +64,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
   }
 
   update <- function(index, exec_w, weight, grad) {
-    
+
     if (!is.null(lr_scheduler)){
       lr_scheduler(sgd) ## changing lr
       lr <- sgd$lr
@@ -78,7 +78,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
         sgd$num_update <- max(sgd$num_update, sgd[[indexKey]])
       }
     }
-    
+
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
     mx.exec.forward(exec_w, is.train = F)
     return(exec_w$ref.outputs$w_output)
@@ -115,7 +115,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
                            rescale.grad = 1,
                            clip_gradient = -1,
                            lr_scheduler = NULL) {
-  
+
   lr <- learning.rate
   count <- 0
   num_update <- 0
@@ -124,17 +124,17 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
   rmsprop$lr <- lr
   rmsprop$count <- 0
   rmsprop$num_update <- 0
-  
+
   create_exec <- function(index, weight_dim, ctx) {
-    
+
     if (centered) {
-      
+
       weight <- mx.symbol.Variable("weight")
       grad <- mx.symbol.Variable("grad")
       n <- mx.symbol.Variable("n")
       g <- mx.symbol.Variable("g")
       delta <- mx.symbol.Variable("delta")
-      
+
       sym <- mx.symbol.rmspropalex_update(weight,
                                           grad,
                                           n,
@@ -152,7 +152,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
       weight <- mx.symbol.Variable("weight")
       grad <- mx.symbol.Variable("grad")
       n <- mx.symbol.Variable("n")
-      
+
       sym <- mx.symbol.rmsprop_update(weight,
                                       grad,
                                       n,
@@ -164,7 +164,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
                                       clip_gradient = clip_gradient,
                                       name = "w")
     }
-    
+
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
@@ -183,7 +183,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
         rmsprop$num_update <- max(rmsprop$num_update, rmsprop[[indexKey]])
       }
     }
-    
+
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
     mx.exec.forward(exec_w, is.train = F)
     return(exec_w$ref.outputs$w_output)
@@ -222,7 +222,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
                         rescale.grad = 1,
                         clip_gradient = -1,
                         lr_scheduler = NULL) {
-  
+
   lr <- learning.rate
   count <- 0
   num_update <- 0
@@ -231,14 +231,14 @@ mx.opt.adam <- function(learning.rate = 1e-3,
   adam$lr <- lr
   adam$count <- 0
   adam$num_update <- 0
-  
+
   create_exec <- function(index, weight_dim, ctx) {
-    
+
     weight <- mx.symbol.Variable("weight")
     grad <- mx.symbol.Variable("grad")
     mean <- mx.symbol.Variable("mean")
     var <- mx.symbol.Variable("var")
-    
+
     sym <- mx.symbol.adam_update(weight,
                                  grad,
                                  mean,
@@ -251,7 +251,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
                                  rescale_grad = rescale.grad,
                                  clip_gradient = clip_gradient,
                                  name = "w")
-    
+
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
@@ -270,7 +270,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
         adam$num_update <- max(adam$num_update, adam[[indexKey]])
       }
     }
-    
+
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
     mx.exec.forward(exec_w, is.train = F)
     return(exec_w$ref.outputs$w_output)
@@ -314,27 +314,27 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
   adagrad$lr <- lr
   adagrad$count <- 0
   adagrad$num_update <- 0
-  
+
   create_exec <- function(index, weight_dim, ctx) {
-    
+
     weight <- mx.symbol.Variable("weight")
     grad <- mx.symbol.Variable("grad")
     history <- mx.symbol.Variable("history")
-    
+
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
       if(clip_gradient >= 0) {
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
-    
+
     history <- history + (grad * grad)
     weight <- weight - lr * (grad / mx.symbol.sqrt(history + epsilon) + wd * weight)
-    
+
     w <- mx.symbol.identity(weight, name = "w")
     h <- mx.symbol.identity(history, name = "h")
     sym <- mx.symbol.Group(c(w, h))
-    
+
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
@@ -353,13 +353,13 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
         adagrad$num_update <- max(adagrad$num_update, adagrad[[indexKey]])
       }
     }
-    
+
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
     mx.exec.forward(exec_w, is.train = F)
-    
+
     # update state
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(history = exec_w$ref.outputs$h_output), match.name = T)
-    
+
     return(exec_w$ref.outputs$w_output)
   }
   return(list(create_exec = create_exec, update = update))
@@ -389,7 +389,7 @@ mx.opt.adadelta <- function(rho = 0.90,
                             rescale.grad = 1,
                             clip_gradient = -1) {
   adadelta <- new.env()
-  
+
   create_exec <- function(index, weight_dim, ctx) {
     weight <- mx.symbol.Variable("weight")
     grad <- mx.symbol.Variable("grad")
@@ -402,34 +402,34 @@ mx.opt.adadelta <- function(rho = 0.90,
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
-    
+
     # update state (acc.g, acc.delta)
     acc.g <- rho * acc.g + (1 - rho) * (grad * grad)
     current.delta <- mx.symbol.sqrt(acc.delta + epsilon) / mx.symbol.sqrt(acc.g + epsilon) * grad
     acc.delta <- rho * acc.delta + (1 - rho) * (current.delta * current.delta)
     weight <- weight - current.delta - wd * weight
-    
+
     w <- mx.symbol.identity(weight, name = "w")
     g <- mx.symbol.identity(acc.g, name = "g")
     delta <- mx.symbol.identity(acc.delta, name = "delta")
     sym <- mx.symbol.Group(c(w, g, delta))
-    
+
     exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
     return(exec)
   }
 
   update <- function(index, exec_w, weight, grad) {
-    
+
     mx.exec.update.arg.arrays(exec_w, arg.arrays = list(weight = weight,grad = grad), match.name = T)
     mx.exec.forward(exec_w, is.train = F)
-    
+
     # update state
-    mx.exec.update.arg.arrays(exec_w, 
+    mx.exec.update.arg.arrays(exec_w,
                               arg.arrays = list(
-                                acc.g = exec_w$ref.outputs$g_output, 
-                                acc.delta = exec_w$ref.outputs$delta_output), 
+                                acc.g = exec_w$ref.outputs$g_output,
+                                acc.delta = exec_w$ref.outputs$delta_output),
                               match.name = T)
-    
+
     return(exec_w$ref.outputs$w_output)
   }
   return(list(create_exec = create_exec, update = update))
@@ -460,7 +460,7 @@ mx.opt.create <- function(name, ...) {
 #'
 #' @export
 mx.opt.get.updater <- function(optimizer, weights, ctx) {
-  
+
   exec_list <- lapply(seq_along(weights), function(i) {
     if (is.null(weights[[i]])) {
       return(NULL)
@@ -472,12 +472,12 @@ mx.opt.get.updater <- function(optimizer, weights, ctx) {
   update <- optimizer$update
 
   update.closure <- function(weight, grad) {
-    
+
     weight_list <- lapply(seq_along(weight), function(i) {
       if (!is.null(grad[[i]])) {
         return(update(i, exec_list[[i]], weight[[i]], grad[[i]]))
       } else {
-        return(NULL) 
+        return(NULL)
       }
     })
     return(weight_list)
