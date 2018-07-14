@@ -441,11 +441,11 @@ def create_helper_trans_node(op_name, input_node, node_name):
 
     node_name = op_name + "_" + node_name
     trans_node = helper.make_node(
-            'Transpose',
-            inputs=[input_node],
-            outputs=[op_name+"_a"],
-            name=node_name
-        )
+        'Transpose',
+        inputs=[input_node],
+        outputs=[op_name+"_a"],
+        name=node_name
+    )
     return trans_node
 
 
