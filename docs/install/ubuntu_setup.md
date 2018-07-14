@@ -92,7 +92,7 @@ The following table presents the pip packages that are recommended for each vers
 | mxnet | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 -->
 
-![pip package table](https://user-images.githubusercontent.com/5974205/42119928-362ad5ba-7bc7-11e8-97de-dba8fd099c90.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
