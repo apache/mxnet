@@ -21,7 +21,6 @@ import os
 import random
 import numpy as np
 import argparse
-from six.moves import xrange
 
 parser = argparse.ArgumentParser(description='generate train/test image list files form input directory. If training it will also split into tr and va sets.')
 parser.add_argument('--image-folder', type=str, default="data/train/",
@@ -57,7 +56,7 @@ head = "acantharia_protist_big_center,acantharia_protist_halo,acantharia_protist
 img_lst = []
 cnt = 0
 if args.train:
-    for i in xrange(len(head)):
+    for i in range(len(head)):
         path = args.image_folder + head[i]
         lst = os.listdir(args.image_folder + head[i])
         for img in lst:

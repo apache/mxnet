@@ -21,7 +21,6 @@ import rllab.misc.logger as logger
 import pyprind
 import mxnet as mx
 import numpy as np
-from mxnet.base import xrange
 
 
 class DDPG(object):
@@ -191,7 +190,7 @@ class DDPG(object):
         end = False
         obs = self.env.reset()
 
-        for epoch in xrange(self.n_epochs):
+        for epoch in range(self.n_epochs):
             logger.push_prefix("epoch #%d | " % epoch)
             logger.log("Training started")
             for epoch_itr in pyprind.prog_bar(range(self.epoch_length)):
@@ -221,7 +220,7 @@ class DDPG(object):
                 obs = nxt
 
                 if memory.size >= self.memory_start_size:
-                    for update_time in xrange(self.n_updates_per_sample):
+                    for update_time in range(self.n_updates_per_sample):
                         batch = memory.get_batch(self.batch_size)
                         self.do_update(itr, batch)
 

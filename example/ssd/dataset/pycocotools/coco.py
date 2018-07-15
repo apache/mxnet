@@ -55,7 +55,7 @@ import itertools
 # from . import mask as maskUtils
 import os
 from collections import defaultdict
-from six.moves import string_types
+from mxnet.base import string_types
 try:
     from urllib.request import urlretrieve
 except ImportError:
