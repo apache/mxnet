@@ -41,7 +41,7 @@ import scala.collection.mutable
  *  </pre>
  *  In the case above, the intermediate NDArrays
  *  (created by <em>NDArray.relu</em> and <em>+</em>) will be disposed automatically. <br />
- *  User can also decide to use dispose the collected NDArrays later: <br />
+ *  User can also decide to dispose the collected NDArrays later: <br />
  *  <pre>
  *  val collector = NDArrayCollector.manual()
  *  val res = collector.withScope {
@@ -92,7 +92,7 @@ object NDArrayCollector {
 
 class NDArrayCollector private(private val autoDispose: Boolean = true,
                                private val doCollect: Boolean = true) {
-  private val arrays: mutable.Map[Long, NDArray] = mutable.HashMap.empty[Long, NDArray]
+  private val arrays = mutable.HashMap.empty[Long, NDArray]
 
   private def add(nd: NDArray*): Unit = {
     if (doCollect) nd.foreach(arr => arrays.put(arr.handle, arr))
