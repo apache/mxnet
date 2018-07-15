@@ -28,6 +28,7 @@ mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3r
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 // command to start a docker container
 docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
@@ -370,6 +371,17 @@ try {
             init_git()
             docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
             pack_lib('cmake_gpu', mx_cmake_lib)
+          }
+        }
+      }
+    },
+    'TensorRT': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            pack_lib('tensorrt', mx_tensorrt_lib)
           }
         }
       }
@@ -727,6 +739,22 @@ try {
               publish_test_coverage()
             } finally {
               collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
+            }
+          }
+        }
+      }
+    },
+    'Python3: TensorRT GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              init_git()
+              unpack_lib('tensorrt', mx_tensorrt_lib)
+              docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+              publish_test_coverage()
+            } finally {
+              collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
             }
           }
         }
