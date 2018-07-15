@@ -36,6 +36,8 @@ class NDArrayCollectorSuite extends FunSuite with BeforeAndAfterAll with Matcher
     assert(!res.isDisposed) // smart enough not to dispose the returned NDArray
 
     assert(res.toArray === Array(-1f, 0f, 2f))
+
+    res.dispose()
   }
 
   test("manually dispose") {
@@ -63,5 +65,7 @@ class NDArrayCollectorSuite extends FunSuite with BeforeAndAfterAll with Matcher
 
     collector.clear()
     assert(collector.size === 0)
+
+    res.dispose()
   }
 }
