@@ -33,6 +33,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include "../mshadow_op.h"
 
 namespace mxnet {
 namespace op {
@@ -129,7 +130,7 @@ struct diag_gen {
 
     auto j = unravel(i, oshape);
     if (j[1] == (j[0] + k)) {
-      auto l = std::min(j[0], j[1]);
+      auto l = mshadow_op::minimum::Map(j[0], j[1]);
       KERNEL_ASSIGN(out[i], req, a[l]);
     } else {
       KERNEL_ASSIGN(out[i], req, 0.0);
