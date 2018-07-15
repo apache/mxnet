@@ -87,6 +87,7 @@ class _Conv(HybridBlock):
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
     """
+
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -96,11 +97,11 @@ class _Conv(HybridBlock):
             self._channels = channels
             self._in_channels = in_channels
             if isinstance(strides, numeric_types):
-                strides = (strides,)*len(kernel_size)
+                strides = (strides,) * len(kernel_size)
             if isinstance(padding, numeric_types):
-                padding = (padding,)*len(kernel_size)
+                padding = (padding,) * len(kernel_size)
             if isinstance(dilation, numeric_types):
-                dilation = (dilation,)*len(kernel_size)
+                dilation = (dilation,) * len(kernel_size)
             self._op_name = op_name
             self._kwargs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
@@ -109,7 +110,7 @@ class _Conv(HybridBlock):
             if adj is not None:
                 self._kwargs['adj'] = adj
 
-            dshape = [0]*(len(kernel_size) + 2)
+            dshape = [0] * (len(kernel_size) + 2)
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
@@ -124,15 +125,17 @@ class _Conv(HybridBlock):
                 self.bias = None
 
             if activation is not None:
-                self.act = Activation(activation, prefix=activation+'_')
+                self.act = Activation(activation, prefix=activation + '_')
             else:
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if bias is None:
-            act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
+            act = getattr(F, self._op_name)(
+                x, weight, name='fwd', **self._kwargs)
         else:
-            act = getattr(F, self._op_name)(x, weight, bias, name='fwd', **self._kwargs)
+            act = getattr(F, self._op_name)(
+                x, weight, bias, name='fwd', **self._kwargs)
         if self.act is not None:
             act = self.act(act)
         return act
@@ -156,7 +159,8 @@ class _Conv(HybridBlock):
         s += ')'
         shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
-                        mapping='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]),
+                        mapping='{0} -> {1}'.format(shape[1]
+                                                    if shape[1] else None, shape[0]),
                         **self._kwargs)
 
 
@@ -225,6 +229,7 @@ class Conv1D(_Conv):
 
               out_width = floor((width+2*padding-dilation*(kernel_size-1)-1)/stride)+1
     """
+
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -232,7 +237,8 @@ class Conv1D(_Conv):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
-        assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
+        assert len(
+            kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
@@ -305,6 +311,7 @@ class Conv2D(_Conv):
               out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
               out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
     """
+
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
@@ -312,8 +319,9 @@ class Conv2D(_Conv):
         assert layout == 'NCHW' or layout == 'NHWC', \
             "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
-            kernel_size = (kernel_size,)*2
-        assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
+            kernel_size = (kernel_size,) * 2
+        assert len(
+            kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
@@ -387,6 +395,7 @@ class Conv3D(_Conv):
               out_height = floor((height+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
               out_width = floor((width+2*padding[2]-dilation[2]*(kernel_size[2]-1)-1)/stride[2])+1
     """
+
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
@@ -394,8 +403,9 @@ class Conv3D(_Conv):
         assert layout == 'NCDHW' or layout == 'NDHWC', \
             "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
-            kernel_size = (kernel_size,)*3
-        assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
+            kernel_size = (kernel_size,) * 3
+        assert len(
+            kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
@@ -469,6 +479,7 @@ class Conv1DTranspose(_Conv):
 
               out_width = (width-1)*strides-2*padding+kernel_size+output_padding
     """
+
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
@@ -478,8 +489,10 @@ class Conv1DTranspose(_Conv):
             kernel_size = (kernel_size,)
         if isinstance(output_padding, numeric_types):
             output_padding = (output_padding,)
-        assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
-        assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
+        assert len(
+            kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
+        assert len(
+            output_padding) == 1, "output_padding must be a number or a list of 1 ints"
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -560,6 +573,7 @@ class Conv2DTranspose(_Conv):
               out_height = (height-1)*strides[0]-2*padding[0]+kernel_size[0]+output_padding[0]
               out_width = (width-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
     """
+
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
@@ -567,11 +581,13 @@ class Conv2DTranspose(_Conv):
         assert layout == 'NCHW' or layout == 'NHWC', \
             "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
-            kernel_size = (kernel_size,)*2
+            kernel_size = (kernel_size,) * 2
         if isinstance(output_padding, numeric_types):
-            output_padding = (output_padding,)*2
-        assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
-        assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
+            output_padding = (output_padding,) * 2
+        assert len(
+            kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
+        assert len(
+            output_padding) == 2, "output_padding must be a number or a list of 2 ints"
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -653,6 +669,7 @@ class Conv3DTranspose(_Conv):
             out_height = (height-1)*strides[1]-2*padding[1]+kernel_size[1]+output_padding[1]
             out_width = (width-1)*strides[2]-2*padding[2]+kernel_size[2]+output_padding[2]
     """
+
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
@@ -660,11 +677,13 @@ class Conv3DTranspose(_Conv):
         assert layout == 'NCDHW' or layout == 'NDHWC', \
             "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
-            kernel_size = (kernel_size,)*3
+            kernel_size = (kernel_size,) * 3
         if isinstance(output_padding, numeric_types):
-            output_padding = (output_padding,)*3
-        assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
-        assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
+            output_padding = (output_padding,) * 3
+        assert len(
+            kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
+        assert len(
+            output_padding) == 3, "output_padding must be a number or a list of 3 ints"
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -674,15 +693,16 @@ class Conv3DTranspose(_Conv):
 
 class _Pooling(HybridBlock):
     """Abstract class for different pooling layers."""
+
     def __init__(self, pool_size, strides, padding, ceil_mode, global_pool,
                  pool_type, count_include_pad=None, **kwargs):
         super(_Pooling, self).__init__(**kwargs)
         if strides is None:
             strides = pool_size
         if isinstance(strides, numeric_types):
-            strides = (strides,)*len(pool_size)
+            strides = (strides,) * len(pool_size)
         if isinstance(padding, numeric_types):
-            padding = (padding,)*len(pool_size)
+            padding = (padding,) * len(pool_size)
         self._kwargs = {
             'kernel': pool_size, 'stride': strides, 'pad': padding,
             'global_pool': global_pool, 'pool_type': pool_type,
@@ -738,15 +758,17 @@ class MaxPool1D(_Pooling):
           When `ceil_mode` is `True`, ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
-                 ceil_mode=False, **kwargs):
+                 ceil_mode=False, deterministic=False, **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
-        assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
+        assert len(
+            pool_size) == 1, "pool_size must be a number or a list of 1 ints"
+        max_type = 'max'if not deterministic else 'max_deterministic'
         super(MaxPool1D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
-
+            pool_size, strides, padding, ceil_mode, False, max_type, **kwargs)
 
 class MaxPool2D(_Pooling):
     """Max pooling operation for two dimensional (spatial) data.
@@ -768,7 +790,8 @@ class MaxPool2D(_Pooling):
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
         When `True`, will use ceil instead of floor to compute the output shape.
-
+    deterministic : bool, default False
+        When `True`, will use deterministic algorithm (only used for the CUDNN backend).
 
     Inputs:
         - **data**: 4D input tensor with shape
@@ -786,14 +809,17 @@ class MaxPool2D(_Pooling):
           When `ceil_mode` is `True`, ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
-                 ceil_mode=False, **kwargs):
+                 ceil_mode=False, deterministic=False, **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         if isinstance(pool_size, numeric_types):
-            pool_size = (pool_size,)*2
-        assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
+            pool_size = (pool_size,) * 2
+        assert len(
+            pool_size) == 2, "pool_size must be a number or a list of 2 ints"
+        max_type = 'max'if not deterministic else 'max_deterministic'
         super(MaxPool2D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, max_type, **kwargs)
 
 
 class MaxPool3D(_Pooling):
@@ -817,7 +843,8 @@ class MaxPool3D(_Pooling):
         dimension.
     ceil_mode : bool, default False
         When `True`, will use ceil instead of floor to compute the output shape.
-
+    deterministic : bool, default False
+        When `True`, will use deterministic algorithm (only used for the CUDNN backend).
 
     Inputs:
         - **data**: 5D input tensor with shape
@@ -836,14 +863,17 @@ class MaxPool3D(_Pooling):
           When `ceil_mode` is `True`, ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
-                 ceil_mode=False, layout='NCDHW', **kwargs):
+                 ceil_mode=False, layout='NCDHW', deterministic=False, **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         if isinstance(pool_size, numeric_types):
-            pool_size = (pool_size,)*3
-        assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
+            pool_size = (pool_size,) * 3
+        assert len(
+            pool_size) == 3, "pool_size must be a number or a list of 3 ints"
+        max_type = 'max'if not deterministic else 'max_deterministic'
         super(MaxPool3D, self).__init__(
-            pool_size, strides, padding, ceil_mode, False, 'max', **kwargs)
+            pool_size, strides, padding, ceil_mode, False, max_type, **kwargs)
 
 
 class AvgPool1D(_Pooling):
@@ -882,12 +912,14 @@ class AvgPool1D(_Pooling):
           When `ceil_mode` is `True`, ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
                  ceil_mode=False, count_include_pad=True, **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
-        assert len(pool_size) == 1, "pool_size must be a number or a list of 1 ints"
+        assert len(
+            pool_size) == 1, "pool_size must be a number or a list of 1 ints"
         super(AvgPool1D, self).__init__(
             pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
@@ -931,12 +963,14 @@ class AvgPool2D(_Pooling):
           When `ceil_mode` is `True`, ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=(2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCHW', count_include_pad=True, **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         if isinstance(pool_size, numeric_types):
-            pool_size = (pool_size,)*2
-        assert len(pool_size) == 2, "pool_size must be a number or a list of 2 ints"
+            pool_size = (pool_size,) * 2
+        assert len(
+            pool_size) == 2, "pool_size must be a number or a list of 2 ints"
         super(AvgPool2D, self).__init__(
             pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
@@ -982,18 +1016,21 @@ class AvgPool3D(_Pooling):
           When `ceil_mode` is `True,` ceil will be used instead of floor in this
           equation.
     """
+
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCDHW', count_include_pad=True, **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         if isinstance(pool_size, numeric_types):
-            pool_size = (pool_size,)*3
-        assert len(pool_size) == 3, "pool_size must be a number or a list of 3 ints"
+            pool_size = (pool_size,) * 3
+        assert len(
+            pool_size) == 3, "pool_size must be a number or a list of 3 ints"
         super(AvgPool3D, self).__init__(
             pool_size, strides, padding, ceil_mode, False, 'avg', count_include_pad, **kwargs)
 
 
 class GlobalMaxPool1D(_Pooling):
     """Global max pooling operation for temporal data."""
+
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         super(GlobalMaxPool1D, self).__init__(
@@ -1002,6 +1039,7 @@ class GlobalMaxPool1D(_Pooling):
 
 class GlobalMaxPool2D(_Pooling):
     """Global max pooling operation for spatial data."""
+
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         super(GlobalMaxPool2D, self).__init__(
@@ -1010,6 +1048,7 @@ class GlobalMaxPool2D(_Pooling):
 
 class GlobalMaxPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
+
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         super(GlobalMaxPool3D, self).__init__(
@@ -1018,6 +1057,7 @@ class GlobalMaxPool3D(_Pooling):
 
 class GlobalAvgPool1D(_Pooling):
     """Global average pooling operation for temporal data."""
+
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         super(GlobalAvgPool1D, self).__init__(
@@ -1026,6 +1066,7 @@ class GlobalAvgPool1D(_Pooling):
 
 class GlobalAvgPool2D(_Pooling):
     """Global average pooling operation for spatial data."""
+
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         super(GlobalAvgPool2D, self).__init__(
@@ -1034,6 +1075,7 @@ class GlobalAvgPool2D(_Pooling):
 
 class GlobalAvgPool3D(_Pooling):
     """Global max pooling operation for 3D data."""
+
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         super(GlobalAvgPool3D, self).__init__(
@@ -1068,6 +1110,7 @@ class ReflectionPad2D(HybridBlock):
     >>> input = mx.nd.random.normal(shape=(16, 3, 224, 224))
     >>> output = m(input)
     """
+
     def __init__(self, padding=0, **kwargs):
         super(ReflectionPad2D, self).__init__(**kwargs)
         if isinstance(padding, numeric_types):

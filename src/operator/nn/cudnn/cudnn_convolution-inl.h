@@ -30,6 +30,7 @@
 #include <vector>
 #include <mutex>
 #include <string>
+#include <type_traits>
 #include "../convolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
 #include "../../../common/cuda_utils.h"
@@ -820,15 +821,62 @@ class CuDNNConvolutionOp {
                        size_t workspace_byte, CuDNNAlgo<AlgoType> *algo) {
     // Determine the fastest acceptable algo that matches the algo_preference (-1 = any),
     // regardless of mathType.
-    for (decltype(perf_results.size()) i = 0; i != perf_results.size(); ++i) {
+
+    for (decltype(perf_results.size()) i = 0; i != perf_results.size(); ++i)
+    {
       const auto &result = perf_results[i];
       bool algo_is_tensor_core = false;
       #if CUDNN_MAJOR >= 7
-        algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
+      algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
       #endif
-      if (result.status == CUDNN_STATUS_SUCCESS &&
-          (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)) {
+      if (std::is_same<AlgoType, cudnnConvolutionBwdFilterAlgo_t>::value && (result.status == CUDNN_STATUS_SUCCESS))
+      {
+        //Determinitic algorithms for cudnnConvolutionBwdFilterAlgo_t
+        if ((param_.cudnn_tune.value() == conv::kDeterministicLimitedWorkspace && result.memory <= workspace_byte) ||
+            (param_.cudnn_tune.value() == conv::kDeterministicFastest))
+        {
+          if (result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC)
+          {
+            algo->Set(result.algo, algo_is_tensor_core);
+            LOG(INFO) << "Determinitic algorithm for cudnnConvolutionBwdFilterAlgo_t found:" << result.algo;
+            return;
+          }
+        }
+        //Any algorithm for cudnnConvolutionBwdFilterAlgo_t
+        else if (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)
+        {
+          algo->Set(result.algo, algo_is_tensor_core);
+          LOG(INFO) << "Algorithm for cudnnConvolutionBwdFilterAlgo_t found:" << result.algo;
+          return;
+        }
+      }
+      else if (std::is_same<AlgoType, cudnnConvolutionBwdDataAlgo_t>::value && (result.status == CUDNN_STATUS_SUCCESS))
+      {
+        if ((param_.cudnn_tune.value() == conv::kDeterministicLimitedWorkspace && result.memory <= workspace_byte) ||
+            (param_.cudnn_tune.value() == conv::kDeterministicFastest))
+        {
+          //Determinitic algorithms for cudnnConvolutionBwdDataAlgo_t
+          if (result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC)
+          {
+            algo->Set(result.algo, algo_is_tensor_core);
+            LOG(INFO) << "Determinitic algorithm for cudnnConvolutionBwdDataAlgo_t found:" << result.algo;
+            return;
+          }
+        }
+        //Any algorithm for cudnnConvolutionBwdDataAlgo_t
+        else if (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)
+        {
+          algo->Set(result.algo, algo_is_tensor_core);
+          LOG(INFO) << "Algorithm for cudnnConvolutionBwdDataAlgo_t found:" << result.algo;
+          return;
+        }
+      }
+      //Any algorithm for cudnnConvolutionFwdAlgo_t
+      else if ((param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)
+               && (result.status == CUDNN_STATUS_SUCCESS) )
+      {
         algo->Set(result.algo, algo_is_tensor_core);
+        LOG(INFO) << "Algorithm for cudnnConvolutionFwdAlgo_t found:" << result.algo;
         return;
       }
     }

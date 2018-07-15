@@ -52,7 +52,14 @@ namespace conv {
 enum ConvolutionOpInputs {kData, kWeight, kBias};
 enum ConvolutionOpOutputs {kOut};
 enum ConvolutionOpResource {kTempSpace};
-enum ConvolutionOpCudnnTune {kOff, kLimited, kFastest};
+enum ConvolutionOpCudnnTune
+{
+  kOff,
+  kLimited,
+  kFastest,
+  kDeterministicLimitedWorkspace,
+  kDeterministicFastest
+};
 }
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
@@ -91,6 +98,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("off", conv::kOff)
     .add_enum("limited_workspace", conv::kLimited)
     .add_enum("fastest", conv::kFastest)
+    .add_enum("deterministic_limited_workspace", conv::kDeterministicLimitedWorkspace)
+    .add_enum("deterministic_fastest", conv::kDeterministicFastest)    
     .set_default(dmlc::optional<int>())
         .describe("Whether to pick convolution algo by running performance test.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
