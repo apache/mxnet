@@ -44,8 +44,26 @@ echo `pwd`
 
 install_boto3
 
-install_mxnet 1.1.0
-run_models
+## Fetch the latest release tags, filtering out 'rcs' and filtering out some other irrelevant ones
+## This list is sorted in descending order chronologically. Keeping n = 5 for a precautionary check.
+## Sample output for the below git tag command is : 1.2.0 utils 1.1.0 1.0.0 0.12.1
+previous_versions=($(git tag --sort=-creatordate | grep --invert-match rc | head -n 5))
+count=0
+for version in ${previous_versions[*]}
+do
+	# We just need to train the previous two versions. This logic can be changed later on as welll.
+	if [[ "$count" -gt 1 ]]
+	then
+		echo "Successfully trained files for the previous two MXNet release versions"
+		exit 1
+	fi
 
-install_mxnet 1.2.0
-run_models
+	## If MXNet major version starts with a number >=1. with a wildcard match for the minor version numbers
+	if [[ $version = [1-9]* ]]
+	then
+		count=$((count + 1))
+		# echo $version
+		install_mxnet $version
+		run_models
+	fi
+done
