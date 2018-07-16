@@ -121,10 +121,7 @@ build_armv6() {
     pushd .
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
+    # Lapack functionality requires -lgfortran to be linked additionally.
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
@@ -138,7 +135,7 @@ build_armv6() {
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_LAPACK=OFF \
+        -DUSE_LAPACK=ON \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -153,10 +150,7 @@ build_armv7() {
     pushd .
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
+    # Lapack functionality requires -lgfortran to be linked additionally.
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
@@ -169,7 +163,7 @@ build_armv7() {
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_LAPACK=OFF \
+        -DUSE_LAPACK=ON \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -266,7 +260,7 @@ build_amzn_linux_cpu() {
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
+        -DUSE_LAPACK=ON\
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
     ninja -v
@@ -614,18 +608,17 @@ build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DENABLE_TESTCOVERAGE=ON                \
-        -DUSE_CUDA=1                            \
-        -DUSE_CUDNN=1                           \
-        -DUSE_MKLML_MKL=1                       \
-        -DUSE_MKLDNN=1                          \
-        -DCMAKE_BUILD_TYPE=Release              \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache   \
+        -DENABLE_TESTCOVERAGE=ON             \
+        -DUSE_CUDA=1                         \
+        -DUSE_CUDNN=1                        \
+        -DUSE_MKL_IF_AVAILABLE=ON            \
+        -DUSE_MKLDNN=ON                      \
+        -DCMAKE_BUILD_TYPE=Release           \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
-        -G Ninja                                \
-        /work/mxnet
+        -G Ninja /work/mxnet
 
     ninja -v
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
@@ -642,8 +635,8 @@ build_ubuntu_gpu_cmake() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
-        -DUSE_MKLML_MKL=0                       \
-        -DUSE_MKLDNN=0                          \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=1                    \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \

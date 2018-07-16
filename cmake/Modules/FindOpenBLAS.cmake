@@ -95,7 +95,7 @@ find_path(OpenBLAS_INCLUDE_DIR
           NAMES cblas.h
           PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
 find_library(OpenBLAS_LIBRARY
-             NAMES openblas libopenblas.dll.a libopenblas.dll
+             NAMES libopenblas.a openblas libopenblas.dll.a libopenblas.dll
              PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
 
 set(LOOKED_FOR
@@ -110,20 +110,11 @@ if(OpenBLAS_NEED_LAPACK)
             NAMES lapacke.h
             PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
 
-  if(UNIX AND NOT APPLE)
-    # lapack if present in OpenBLAS build is included into the libopenblas. But it requires gfortran to be linked
-    # dynamically.
-    # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
-    # Static linking goes with openblas, but fortran needs to be linked dynamically:
-    # https://github.com/xianyi/OpenBLAS/issues/460#issuecomment-61293128
-    find_library(OpenBLAS_LAPACK_LIBRARY
-                 NAMES gfortran
-                 PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
-  else()
-    set(OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
-  endif()
+  # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
+  # lapack if present in OpenBLAS build is included into libopenblas
+  set(OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
 
-  set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LIBRARY})
+  set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LAPACK_LIBRARY})
   include(CheckFunctionExists)
   check_function_exists("cheev_" LAPACK_FOUND)
 
