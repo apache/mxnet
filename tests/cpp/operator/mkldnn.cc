@@ -510,7 +510,6 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   return attrs;
 }
@@ -525,7 +524,6 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   return attrs;
 }
