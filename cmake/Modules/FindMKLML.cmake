@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Find the MKLML libraries
+# Find the MKLML (subset of MKL) libraries
 #
 # The following variables are optionally searched for defaults
 #
-# MKLML_ROOT:        Base directory where all MKLML components are found
+# MKLROOT: Base directory where all MKL/MKLML components are found
 #
 # The following are set after configuration is done:
 #
@@ -27,15 +27,15 @@
 # MKLML_INCLUDE_DIRS
 # MKLML_LIBRARIES
 
-if($ENV{MKLML_ROOT})
-  file(TO_CMAKE_PATH "$ENV{MKLML_ROOT}" MKLML_ROOT)
+if($ENV{MKLROOT})
+  file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
 endif()
 
 set(MKLML_INCLUDE_SEARCH_PATHS
     ${MKLML_INCLUDE_SEARCH_PATHS}
 
-    ${MKLML_ROOT}
-    ${MKLML_ROOT}/include
+    ${MKLROOT}
+    ${MKLROOT}/include
 
     ${PROJECT_SOURCE_DIR}/3rdparty/MKLML/include
     )
@@ -50,12 +50,10 @@ endif()
 set(MKLML_LIB_SEARCH_PATHS
     ${MKLML_LIB_SEARCH_PATHS}
 
-    ${MKLML_ROOT}
+    ${MKLROOT}
 
     ${PROJECT_SOURCE_DIR}/3rdparty/MKLML/lib
     )
-
-message("MKLML_INCLUDE_SEARCH_PATHS=${MKLML_INCLUDE_SEARCH_PATHS}")
 
 find_path(MKLML_INCLUDE_DIR
           NAMES mkl_blas.h
@@ -65,7 +63,7 @@ set(LOOKED_FOR
     MKLML_INCLUDE_DIR
     )
 
-set(MKLML_LIBS "")
+set(MKLML_LIBS iomp5)
 
 if(WIN32)
   list(APPEND MKLML_LIBS mklml_intel)
