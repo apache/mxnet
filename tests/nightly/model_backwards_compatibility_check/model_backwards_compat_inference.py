@@ -34,7 +34,11 @@ def test_module_checkpoint_api():
 
 	## For each MXNet version that has the saved models
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        model_files = download_model_files_from_s3(model_name)
+		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+	        model_files = download_model_files_from_s3(model_name, folder)
+		if len(model_files) == 0:
+			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			continue
 	        ## Load the model and perform inference
 	        loaded_model = get_module_api_model_definition()
 
@@ -47,6 +51,7 @@ def test_module_checkpoint_api():
 	        ## Check whether they are equal or not ?
 	        assert_almost_equal(inference_results.asnumpy(), old_inference_results.asnumpy())
 	        clean_model_files(model_files, model_name)
+	        print ('=================================')
 	
 	print ('Assertion passed for model : %s' %model_name)
 	        
@@ -63,7 +68,11 @@ def test_lenet_gluon_load_params_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        model_files = download_model_files_from_s3(model_name)
+		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+	        model_files = download_model_files_from_s3(model_name, folder)
+		if len(model_files) == 0:
+			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			continue
 	        ## Load the model and perform inference
 	        loaded_model = Net()
 	        loaded_model.load_params(model_name+'-params')
@@ -71,6 +80,7 @@ def test_lenet_gluon_load_params_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
+	        print ('=================================')
 	print ('Assertion passed for model : %s' %model_name)
 
 def test_lenet_gluon_hybrid_imports_api():
@@ -85,7 +95,11 @@ def test_lenet_gluon_hybrid_imports_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-	        model_files = download_model_files_from_s3(model_name)
+		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+	        model_files = download_model_files_from_s3(model_name, folder)
+	    	if len(model_files) == 0:
+			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			continue  
 	        ## Load the model and perform inference
 	        loaded_model = HybridNet()
 	        loaded_model = gluon.SymbolBlock.imports(model_name + '-symbol.json', ['data'], model_name + '-0001.params')
@@ -93,6 +107,7 @@ def test_lenet_gluon_hybrid_imports_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
+	        print ('=================================')
 	print ('Assertion passed for model : %s' %model_name)
 
 def test_lstm_gluon_load_parameters_api():
@@ -102,7 +117,7 @@ def test_lstm_gluon_load_parameters_api():
 		return
 
 	model_name = 'lstm_gluon_save_parameters_api'
-	print ('Performing inference for model/API %s' %model_name)
+	print ('Performing inference for model/API %s and model'%model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
 	if data is None:
@@ -112,7 +127,11 @@ def test_lstm_gluon_load_parameters_api():
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-		model_files = download_model_files_from_s3(model_name)
+		print ('Fetching files for MXNet version : %s' %folder)
+		model_files = download_model_files_from_s3(model_name, folder)
+		if len(model_files) == 0:
+			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			continue
 	        ## Load the model and perform inference
 	        loaded_model = SimpleLSTMModel()
 	        loaded_model.load_parameters(model_name+'-params')
@@ -120,6 +139,7 @@ def test_lstm_gluon_load_parameters_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
+	        print ('=================================')
 	print ('Assertion passed for model : %s' %model_name)	
 
 if __name__=='__main__':

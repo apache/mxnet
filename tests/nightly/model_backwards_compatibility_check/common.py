@@ -105,20 +105,19 @@ def download_data_from_s3(model_name):
     data = mx.nd.load(model_name+'-data')
     return data
 
-def download_model_files_from_s3(model_name):
-    for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        bucket = s3.Bucket(model_bucket_name)
-        prefix = folder + backslash + model_name
-        model_files_meta = list(bucket.objects.filter(Prefix = prefix))
-        if len(model_files_meta) == 0:
-            print ('No trained models found under path : %s' %prefix)
-            continue
-        model_files = list()
-        for obj in model_files_meta:
-            file_name = obj.key.split('/')[2]
-            model_files.append(file_name)
+def download_model_files_from_s3(model_name, folder_name):
+    model_files = list()
+    bucket = s3.Bucket(model_bucket_name)
+    prefix = folder_name + backslash + model_name
+    model_files_meta = list(bucket.objects.filter(Prefix = prefix))
+    if len(model_files_meta) == 0:
+        print ('No trained models found under path : %s' %prefix)
+        return model_files
+    for obj in model_files_meta:
+        file_name = obj.key.split('/')[2]
+        model_files.append(file_name)
             ## Download this file---
-            bucket.download_file(obj.key, file_name)
+        bucket.download_file(obj.key, file_name)
 
     return model_files
 
@@ -130,7 +129,7 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
     folder_list = list()
     if 'CommonPrefixes' not in result:
         print ('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
-        return
+        return folder_list
     for obj in result['CommonPrefixes']:
         folder_name = obj['Prefix'].strip(backslash)
         # The top level folders contain MXNet Version # for trained models. Skipping the data folder here
