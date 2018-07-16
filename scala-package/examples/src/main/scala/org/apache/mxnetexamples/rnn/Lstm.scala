@@ -79,9 +79,10 @@ object Lstm {
     // embeding layer
     val data = Symbol.Variable("data")
     var label = Symbol.Variable("softmax_label")
-    val embed = Symbol.api.Embedding(data = Some(data), input_dim = inputSize, weight = Some(embedWeight),
-      output_dim = numEmbed, name = "embed")
-    val wordvec = Symbol.api.SliceChannel(data = Some(embed), num_outputs = seqLen, squeeze_axis = Some(true))
+    val embed = Symbol.api.Embedding(data = Some(data), input_dim = inputSize,
+      weight = Some(embedWeight), output_dim = numEmbed, name = "embed")
+    val wordvec = Symbol.api.SliceChannel(data = Some(embed),
+      num_outputs = seqLen, squeeze_axis = Some(true))
 
     val hiddenAll = ArrayBuffer[Symbol]()
     var dpRatio = 0f
@@ -133,8 +134,8 @@ object Lstm {
 
     val data = Symbol.Variable("data")
 
-    var hidden = Symbol.api.Embedding(data = Some(data), input_dim = inputSize, weight = Some(embedWeight),
-      output_dim = numEmbed, name = "embed")
+    var hidden = Symbol.api.Embedding(data = Some(data), input_dim = inputSize,
+      weight = Some(embedWeight), output_dim = numEmbed, name = "embed")
 
     var dpRatio = 0f
     // stack LSTM
@@ -149,8 +150,8 @@ object Lstm {
     }
     // decoder
     if (dropout > 0f) hidden = Symbol.api.Dropout(data = Some(hidden), p = Some(dropout))
-    val fc = Symbol.api.FullyConnected(data = Some(hidden), num_hidden = numLabel, weight = Some(clsWeight),
-      bias = Some(clsBias))
+    val fc = Symbol.api.FullyConnected(data = Some(hidden),
+      num_hidden = numLabel, weight = Some(clsWeight), bias = Some(clsBias))
     val sm = Symbol.api.SoftmaxOutput(data = Some(fc), name = "softmax")
     var output = Array(sm)
     for (state <- lastStates) {
