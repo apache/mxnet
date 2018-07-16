@@ -969,7 +969,12 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   this->InitOpSegs();
 }
 
-
+/*!
+ * \brief This function is triggered after each tensorrt subgraph replacement pass.
+ * Reset arguments of GraphExecutor::Init(...) as some variables (weights and biases)
+ * are absorbed into the TRT engine it also it rerun attributes inferences accordingly
+ * to the new topology.
+ */
 Graph GraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
                                  const std::map<std::string, Context> &ctx_map,
                                  std::vector<Context> *in_arg_ctxes,
@@ -1054,6 +1059,10 @@ Graph GraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
   return g;
 }
 
+/*!
+ * \brief Return the "optimzed" symbol contained in _graph.
+ * For optimization pass such as TensorRT pass
+ */
 nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
   Symbol ret;
   ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
