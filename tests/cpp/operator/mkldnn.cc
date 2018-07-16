@@ -503,8 +503,8 @@ std::string CreateShapeString(int value, int dim) {
 OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Convolution");
-  attrs.num_inputs = 1;
-  attrs.num_outputs = dim == 2 ? 2 : 1;
+  attrs.num_inputs = 3;
+  attrs.num_outputs = 1;
   // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
@@ -517,8 +517,8 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
 OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Convolution");
-  attrs.num_inputs = 1;
-  attrs.num_outputs = dim == 2 ? 2 : 1;
+  attrs.num_inputs = 5;
+  attrs.num_outputs = 3;
   // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
@@ -585,7 +585,8 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
+                                             std::vector<float> scale = {1}) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -593,25 +594,25 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
 
-  int slice_amount = 1;
-  if (dim == 0)
-    slice_amount = num_inputs;
+  int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (dim >= shape.ndim())
+    if (scale.size() > shape.ndim())
       continue;
-    shape[dim] = shape[dim] * num_inputs;
+
+    for (int dim = 0; dim < scale.size(); dim++)
+      shape[dim] = shape[dim] * scale[dim];
 
     // Type 1.
     NDArray arr(shape, Context());
     in_arrs.emplace_back(arr, "Normal NDArray");
     InitDefaultArray(&in_arrs.back().arr, rand);
     for (auto pd : pds) {
-      if (num_inputs > 1) {
+      for (int dim = 0; dim < scale.size(); dim++) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
-          pd = GetExpandedMemPD(pd, num_inputs, dim);
+          pd = GetExpandedMemPD(pd, scale[dim], dim);
         else
-          pd = GetExpandedMemPD(pd, num_inputs);
+          pd = GetExpandedMemPD(pd, scale[dim]);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -757,7 +758,12 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
-      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, num_inputs, dim);
+      std::vector<float> scale_vector(dim + 1);
+      for (int i = 0; i < dim + 1; i++)
+        scale_vector[i] = 1;
+      scale_vector[dim] = num_inputs;
+
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(false, scale_vector);
       int i = 0;
       for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
@@ -1083,7 +1089,11 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+    std::vector<float> scale_vector(dim+1);
+    for (int i = 0; i < dim+1; i++)
+      scale_vector[i] = 1;
+    scale_vector[dim] = attrs.num_outputs;
+    in_arrs = GetTestInputArrays(false, scale_vector);
   }
 
   for (auto &in_arr : in_arrs) {
