@@ -43,7 +43,7 @@ logging.getLogger().setLevel(logging.DEBUG)
 # get the current mxnet version we are running on
 mxnet_version = mx.__version__
 model_bucket_name = 'mxnet-model-backwards-compatibility-models'
-data_bucket_name = 'mxnet-model-backwards-compatibility-data'
+data_folder = 'mxnet-model-backwards-compatibility-data'
 backslash = '/'
 s3 = boto3.resource('s3')
 ctx = mx.cpu(0)
@@ -75,7 +75,7 @@ def save_data_and_labels(test_data, test_labels, model_name):
 def upload_data_and_labels_to_s3(model_name):
     s3 = boto3.client('s3')
     file = model_name + '-data'
-    s3.upload_file(file, data_bucket_name, file)
+    s3.upload_file(file, model_bucket_name, data_folder + backslash +  file)
     print ('data files successfully uploaded to s3')
 
 def upload_model_files_to_s3(files, folder_name):
@@ -92,9 +92,9 @@ def clean_model_files(files, model_name):
             os.remove(file)
 
 def download_data_from_s3(model_name):
-    print ('Downloading data files for %s from bucket %s'%(model_name, data_bucket_name))
-    bucket = s3.Bucket(data_bucket_name)
-    bucket.download_file(model_name+'-data', model_name+'-data')
+    print ('Downloading data files for %s from bucket %s'%(model_name, model_bucket_name + backslash + data_folder))
+    bucket = s3.Bucket(model_bucket_name)
+    bucket.download_file(data_folder + backslash + model_name+'-data', model_name+'-data')
 
     data = mx.nd.load(model_name+'-data')
     return data
@@ -126,6 +126,10 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
         print ('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
         return
     for obj in result['CommonPrefixes']:
+        folder_name = obj['Prefix'].strip(backslash)
+        # The top level folders contain MXNet Version # for trained models. Skipping the data folder here
+        if folder_name == data_folder:
+            continue
         folder_list.append(obj['Prefix'].strip(backslash))
 
     return folder_list
