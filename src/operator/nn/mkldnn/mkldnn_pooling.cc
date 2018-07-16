@@ -253,7 +253,7 @@ void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &out_data, const NDArray *workspace) {
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
   auto input_mem = in_data.GetMKLDNNData();
-  auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req, &in_data);
+  auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req);
   fwd.SetNewMem(*input_mem, *out_mem_t.second, workspace);
   fwd.Execute();
   CommitOutput(out_data, out_mem_t);
