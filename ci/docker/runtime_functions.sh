@@ -863,6 +863,8 @@ nightly_model_backwards_compat_test() {
 }
 
 #Backfills S3 bucket with models trained on earlier versions of mxnet
+# Note : This script should not be called from the regular docker environment because the IAM roles required for S3 uploads
+# do not get propagated into the container as of now. 
 nightly_model_backwards_compat_train() {
     set -ex
     export PYTHONPATH=./python/
