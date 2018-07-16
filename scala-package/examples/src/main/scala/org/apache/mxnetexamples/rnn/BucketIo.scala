@@ -34,7 +34,7 @@ object BucketIo {
   type ReadContent = String => String
 
   def defaultReadContent(path: String): String = {
-    Source.fromFile(path).mkString.replaceAll("\\. |\n", " <eos> ")
+    Source.fromFile(path, "UTF-8").mkString.replaceAll("\\. |\n", " <eos> ")
   }
 
   def defaultBuildVocab(path: String): Map[String, Int] = {
