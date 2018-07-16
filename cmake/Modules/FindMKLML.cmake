@@ -67,6 +67,8 @@ set(MKLML_LIBS iomp5)
 
 if(WIN32)
   list(APPEND MKLML_LIBS mklml_intel)
+elseif(APPLE)
+  list(APPEND MKLML_LIBS mklml)
 else()
   list(APPEND MKLML_LIBS mklml_gnu)
 endif()
