@@ -17,7 +17,6 @@ Community contributions to MXNet have added many new valuable features and funct
 * [Debugging and Visualization](#debugging-and-visualization)
 * [Model Serving](#model-serving)
 * [Model Zoos](#model-zoos)
-* [MXNet as a Backend](#mxnet-as-a-backend)
 * [Contributions](#contributions)
 
 
