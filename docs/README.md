@@ -8,9 +8,21 @@ MXNet Documentation Website is built with [Sphinx](http://www.sphinx-doc.org) an
 
 ## How to Build the MXNet Website for Development and QA
 
-Using `make docs` from the MXNet root is the quickest way to generate the MXNet API docs and the website. This method automatically generates each API, [except the Perl and R APIs](#other-build-processes).
+Using `make docs` from the MXNet root is the quickest way to generate the MXNet API docs and the website, as long as you already have all of the dependencies installed. This method automatically generates each API, [except the Perl and R APIs](#other-build-processes).
 
-* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies) - required before you do any building of the docs
+**Easy docs setup for Ubuntu:** Run the following on Ubuntu 16.04 to install all MXNet and docs dependencies and to build MXNet from source. Then issue the `make docs` command from the source root to build the docs.
+
+```bash
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet/docs/build_version_doc
+./setup_docs_ubuntu.sh
+cd ../../
+make docs USE_OPENMP=1
+```
+
+For more information on each API's documentation dependencies, how to serve the docs, or how to build the full website with each legacy MXNet version, refer to the following links:
+
+* [Dependencies](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#dependencies) - required before you build the docs
 * [Developer Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions) - build your local branch
 * [Full Site Build Instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#full-website-build) - build the latest commits to the official branches
 
