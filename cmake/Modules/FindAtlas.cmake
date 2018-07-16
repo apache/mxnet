@@ -20,7 +20,7 @@
 # The following variables are optionally searched for defaults
 #
 # Atlas_ROOT_DIR:    Base directory where all Atlas components are found
-# Atlas_NEED_LAPACK: Whether need lapack libraries
+# Atlas_NEED_LAPACK: Whether need LAPACK libraries
 #
 # The following are set after configuration is done:
 #
@@ -86,7 +86,7 @@ set(LOOKED_FOR
     )
 
 if(Atlas_NEED_LAPACK)
-  message(STATUS "Looking for lapack support...")
+  message(STATUS "Looking for LAPACK support...")
 
   find_path(Atlas_CLAPACK_INCLUDE_DIR
             NAMES clapack.h
@@ -107,10 +107,10 @@ if(Atlas_NEED_LAPACK)
         Atlas_CLAPACK_INCLUDE_DIR
         Atlas_LAPACK_LIBRARY)
 
-    message(STATUS "Lapack found")
+    message(STATUS "LAPACK found")
   else()
     set(Atlas_LAPACK_FOUND False)
-    message(WARNING "Lapack with Atlas could not be found, lapack functionality will not be available")
+    message(WARNING "LAPACK with Atlas could not be found, LAPACK functionality will not be available")
   endif()
 
 endif()

@@ -104,14 +104,14 @@ set(LOOKED_FOR
     )
 
 if(OpenBLAS_NEED_LAPACK)
-  message(STATUS "Looking for lapack support...")
+  message(STATUS "Looking for LAPACK support...")
 
   find_path(OpenBLAS_LAPACK_INCLUDE_DIR
             NAMES lapacke.h
             PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
 
-  # OpenBLAS does not have a separate lapack library: https://github.com/xianyi/OpenBLAS/issues/296
-  # lapack if present in OpenBLAS build is included into libopenblas
+  # OpenBLAS does not have a separate LAPACK library: https://github.com/xianyi/OpenBLAS/issues/296
+  # LAPACK if present in OpenBLAS build is included into libopenblas
   set(OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
 
   set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LAPACK_LIBRARY})
@@ -126,10 +126,10 @@ if(OpenBLAS_NEED_LAPACK)
         OpenBLAS_LAPACK_INCLUDE_DIR
         OpenBLAS_LAPACK_LIBRARY
         )
-    message(STATUS "Lapack found")
+    message(STATUS "LAPACK found")
   else()
     set(OpenBLAS_LAPACK_FOUND False)
-    message(WARNING "OpenBlas has not been compiled with Lapack support, lapack functionality will not be available")
+    message(WARNING "OpenBlas has not been compiled with LAPACK support, LAPACK functionality will not be available")
   endif()
 
 endif()

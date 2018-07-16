@@ -40,9 +40,10 @@ set(LOOKED_FOR
     )
 
 if(Accelerate_NEED_LAPACK)
-  message(STATUS "Looking for lapack support...")
+  message(STATUS "Looking for LAPACK support...")
 
-  # Apples vecLib should contain lapack functionalities included in the Accelerate framework, but we will double check
+  # Apple's vecLib should contain LAPACK functionalities included in the Accelerate
+  # framework, but we will double check
   # https://developer.apple.com/documentation/accelerate/veclib?changes=_2
   include(CheckFunctionExists)
   set(CMAKE_REQUIRED_LIBRARIES "-framework Accelerate")
@@ -50,10 +51,11 @@ if(Accelerate_NEED_LAPACK)
 
   if(LAPACK_FOUND)
     set(Accelerate_LAPACK_FOUND True)
-    message(STATUS "Lapack found")
+    message(STATUS "LAPACK found")
   else()
     set(Accelerate_LAPACK_FOUND False)
-    message(WARNING "Accelerate lapack support could not be identified, lapack functionality will not be available")
+    message(WARNING "Apple's Accelerate LAPACK support could not be identified, \
+                     LAPACK functionality will not be available")
   endif()
 
 endif()
@@ -66,6 +68,6 @@ if(Accelerate_FOUND)
   set(Accelerate_LIBRARIES "-framework Accelerate")
   mark_as_advanced(${LOOKED_FOR})
 
-  message(STATUS "Found Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_LIBRARIES})")
+  message(STATUS "Found Apple Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_LIBRARIES})")
 endif(Accelerate_FOUND)
 

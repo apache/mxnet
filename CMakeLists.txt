@@ -46,14 +46,14 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 # * MKL (MKL, MKLML, MKLDNN)
 # * Apple Accelerate
 #
-# The default order of choice for the libraries if found follows the path from probably the most
+# The default order of choice for the libraries if found follows the path from the most
 # (recommended) to less performant backends. The order is as follows:
 #
-# 1. MKLDNN (requires and checks for MKL or MKLML)
-# 2. MKL
-# 3. MKLML (downloaded)
-# 4. Accelerate (on mac)
-# 5. OpenBLAS
+# 1. MKLDNN (requires and checks for MKL or MKLML) | USE_MKLDNN
+# 2. MKL | USE_MKL_IF_AVAILABLE
+# 3. MKLML (downloaded) | USE_MKLML
+# 4. Apple Accelerate (on mac) | USE_APPLE_ACCELERATE_IF_AVAILABLE
+# 5. OpenBLAS | BLAS (Atlas;Open;MKL;Apple)
 #
 # Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
 # https://software.intel.com/en-us/mkl
@@ -74,6 +74,7 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 #
 # Since the full MKL library is almost always faster than any other it's turned on by default,
 # however it needs to be downloaded and installed manually before doing cmake configuration.
+# Register and download here https://software.seek.intel.com/performance-libraries
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 
 # If the full MKL library could not be found the thinner subset MKLML will be downloaded
@@ -87,8 +88,8 @@ mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON)
 # Apple's mathematical framework, probably the best choice on a Mac if MKL/MKLML/MKLDNN
 # are not available.
 # https://developer.apple.com/documentation/accelerate
-mxnet_option(USE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, \
-                                          works if MKL not found or disabled" ON IF ${APPLE})
+mxnet_option(USE_APPLE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, \
+                                                works if MKL not found or disabled" ON IF ${APPLE})
 
 # Another important option of the math libraries is presence of additional set of
 # mathematical functions gathered and named as the LAPACK (Linear Algebra Package). Some

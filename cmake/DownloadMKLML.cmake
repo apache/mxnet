@@ -15,9 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script will download mkldnn with dependencies such as intel omp and mklml
+# This script will download MKLML
 
-message(STATUS "downloading mkldnn...")
+message(STATUS "Downloading MKLML...")
 
 if(MSVC)
   set(MKL_NAME "mklml_win_2018.0.3.20180406")
