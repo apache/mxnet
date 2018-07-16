@@ -443,7 +443,7 @@ def create_helper_trans_node(op_name, input_node, node_name):
     trans_node = helper.make_node(
         'Transpose',
         inputs=[input_node],
-        outputs=[op_name+"_a"],
+        outputs=[node_name],
         name=node_name
     )
     return trans_node
