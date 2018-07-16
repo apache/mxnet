@@ -370,6 +370,11 @@ class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
 
+    Note: if `sparse_grad` is set to True, the gradient w.r.t weight will be
+    sparse. Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
+    and Adam. By default lazy updates is turned on, which may perform differently
+    from standard updates. For more details, please check the Optimization API at:
+    https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
 
     Parameters
     ----------

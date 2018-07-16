@@ -35,11 +35,13 @@ sub import
         {
             my $short_name_package =<<"EOP";
             package $short_name;
+            no warnings 'redefine';
             sub data { 'AI::MXNet::Gluon::Data' }
             sub nn { 'AI::MXNet::Gluon::NN_' }
             sub rnn { 'AI::MXNet::Gluon::RNN_' }
             sub loss { 'AI::MXNet::Gluon::Loss_' }
             sub utils { 'AI::MXNet::Gluon::Utils' }
+            sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
             sub Trainer { shift; AI::MXNet::Gluon::Trainer->new(\@_); }
             sub Parameter { shift; AI::MXNet::Gluon::Parameter->new(\@_); }
             sub ParameterDict { shift; AI::MXNet::Gluon::ParameterDict->new(\@_); }
@@ -50,5 +52,9 @@ EOP
         }
     }
 }
+
+sub data { 'AI::MXNet::Gluon::Data' }
+sub utils { 'AI::MXNet::Gluon::Utils' }
+sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
 
 1;
