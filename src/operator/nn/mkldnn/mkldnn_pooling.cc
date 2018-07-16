@@ -255,8 +255,9 @@ void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
   auto input_mem = in_data.GetMKLDNNData();
   auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req, &in_data);
   fwd.SetNewMem(*input_mem, *out_mem_t.second, workspace);
-  CommitOutput(out_data, out_mem_t);
   fwd.Execute();
+  CommitOutput(out_data, out_mem_t);
+  MKLDNNStream::Get()->Submit();
 }
 
 void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
