@@ -194,7 +194,7 @@ static mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
                                                       fw_pdesc);
     return bw_pdesc;
   });
-  LOG(INFO) << "Unsupported data type for MKLDNN activation";
+  LOG(FATAL) << "Unsupported data type for MKLDNN activation";
   mkldnn::eltwise_forward::desc fw_desc(mkldnn::prop_kind::forward_training,
                                         alg, data_md, 0.0);
   mkldnn::eltwise_forward::primitive_desc fw_pdesc(fw_desc, cpu_engine);
