@@ -553,18 +553,13 @@ def test_convolution_large_c():
         check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
-    # First, populate algo and op caches with models that use cudnnFind() exclusively.
-    for trial in range(0,6):
-        test_1D_with_width(2**(trial+1), 'write')
-    # Then create symbols that must avoid cached cudnnFind() results in some cases.
-    for trial in range(0,6):
-        test_1D_with_width(2**(trial+1), 'add')
-    #2D
-    for trial in range(0,6):
-        test_2D_with_width(2**(trial+1), 'write')
-    # Then create symbols that must avoid cached cudnnFind() results in some cases.
-    for trial in range(0,6):
-        test_2D_with_width(2**(trial+1), 'add')
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
@@ -588,18 +583,13 @@ def test_deconvolution_large_c():
         check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
-    # First, populate algo and op caches with models that use cudnnFind() exclusively.
-    for trial in range(0,6):
-        test_1D_with_width(2**(trial+1), 'write')
-    # Then create symbols that must avoid cached cudnnFind() results in some cases.
-    for trial in range(0,6):
-        test_1D_with_width(2**(trial+1), 'add')
-    #2D
-    for trial in range(0,6):
-        test_2D_with_width(2**(trial+1), 'write')
-    # Then create symbols that must avoid cached cudnnFind() results in some cases.
-    for trial in range(0,6):
-        test_2D_with_width(2**(trial+1), 'add')
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
 
 
 @with_seed()
