@@ -30,6 +30,7 @@ use Carp;
 use Exporter;
 use base qw(Exporter);
 use List::Util qw(shuffle);
+use Data::Dumper;
 
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
                               pdl cat dog svd bisect_left pdl_shuffle as_array ascsr rand_sparse
@@ -355,7 +356,7 @@ sub process_arguments
             %{ $attributes_per_class{$class} } = map { $_->name => 1 } $class->meta->get_all_attributes;
         }
         my %kwargs;
-        while(@_ >= 2 and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
+        while(@_ >= 2 and defined $_[-2] and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
         {
             my $v = pop(@_);
             my $k = pop(@_);
@@ -363,7 +364,10 @@ sub process_arguments
         }
         if(@_)
         {
-            @kwargs{ @{ $class->python_constructor_arguments }[0..@_-1] } = @_;
+            my @named_params = @{ $class->python_constructor_arguments };
+            Carp::confess("Paramers mismatch expected ".Dumper(\@named_params).", but got ".Dumper(\@_))
+                if @_ > @named_params;
+            @kwargs{ @named_params[0..@_-1] } = @_;
         }
         return $class->$orig(%kwargs);
     }

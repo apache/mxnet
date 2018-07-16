@@ -211,7 +211,8 @@ Building *MXNet* from source is a 2 step process.
 You can quickly build MXNet-R with the following two scripts found in the `/docs/install` folder:
 
 ```bash
-cd docs/install
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet/docs/install
 ./install_mxnet_ubuntu_python.sh
 ./install_mxnet_ubuntu_r.sh
 ```

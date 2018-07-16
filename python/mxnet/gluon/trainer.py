@@ -93,6 +93,7 @@ class Trainer(object):
         self._kv_initialized = False
         self._kvstore = None
         self._update_on_kvstore = None
+        self._distributed = None
         self._params_to_init = []
         self._reset_kvstore()
 
@@ -150,6 +151,7 @@ class Trainer(object):
             raise RuntimeError("Cannot reset distributed KVStore.")
         self._kv_initialized = False
         self._kvstore = None
+        self._distributed = None
         self._update_on_kvstore = None
         self._params_to_init = [param for param in self._params]
 
@@ -190,7 +192,8 @@ class Trainer(object):
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
-            if 'dist' in kvstore.type:
+            self._distributed = 'dist' in kvstore.type
+            if self._distributed:
                 # kv.pull(row_sparse_grad) is not supported for dist kvstore
                 update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad
             if update_on_kvstore:
@@ -291,9 +294,9 @@ class Trainer(object):
                 if param.grad_req != 'null':
 
                     self._kvstore.push(i, param.list_grad(), priority=-i)
-
                     if not self._update_on_kvstore:
-                        self._kvstore.pull(i, param.list_grad(), priority=-i, ignore_sparse=False)
+                        self._kvstore.pull(i, param.list_grad(), priority=-i,
+                                           ignore_sparse=self._distributed)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.
