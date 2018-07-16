@@ -22,10 +22,10 @@
 (defn sgd
   "A very simple SGD optimizer with momentum and weight regularization."
   ([{:keys [learning-rate momentum wd clip-gradient lr-scheduler] :as opts
-      :or {learning-rate 0.01
-           momentum 0.0
-           wd 0.0001
-           clip-gradient 0}}]
+     :or {learning-rate 0.01
+          momentum 0.0
+          wd 0.0001
+          clip-gradient 0}}]
    (new SGD (float learning-rate) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (sgd {})))
@@ -35,11 +35,11 @@
   Implementation of paper 'Asynchronous Stochastic Gradient Descent with
   Delay Compensation for Distributed Deep Learning'"
   ([{:keys [learning-rate momentum lambda wd clip-gradient lr-scheduler] :as opts
-      :or {learning-rate 0.01
-           momentum 0.0
-           lambda 0.04
-           wd 0.0
-           clip-gradient 0}}]
+     :or {learning-rate 0.01
+          momentum 0.0
+          lambda 0.04
+          wd 0.0
+          clip-gradient 0}}]
    (new DCASGD (float learning-rate) (float lambda) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (dcasgd {})))
@@ -49,10 +49,10 @@
    It is implemented according to
    https://github.com/torch/optim/blob/master/sgd.lua"
   ([{:keys [learning-rate momentum wd clip-gradient lr-scheduler] :as opts
-      :or {learning-rate 0.01
-           momentum 0.0
-           wd 0.0001
-           clip-gradient 0}}]
+     :or {learning-rate 0.01
+          momentum 0.0
+          wd 0.0001
+          clip-gradient 0}}]
    (new NAG (float learning-rate) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (nag {})))
@@ -106,7 +106,7 @@
           rescale-gradient 1.0
           epsilon 1e-7
           wd 0.0}}]
-   (new AdaGrad (float learning-rate) (float rescale-gradient) (float epsilon) (float wd) ))
+   (new AdaGrad (float learning-rate) (float rescale-gradient) (float epsilon) (float wd)))
   ([]
    (ada-grad {})))
 
@@ -139,7 +139,7 @@
    (adam {})))
 
 (defn sgld
- "Stochastic Langevin Dynamics Updater to sample from a distribution.
+  "Stochastic Langevin Dynamics Updater to sample from a distribution.
 
   - learning-rate Step size.
   - rescale-gradient rescaling factor of gradient.
@@ -168,7 +168,6 @@
   [optimizer index weight grad state]
   (doto optimizer
     (.update (int index) weight grad state)))
-
 
 (defn create-state
   "Create additional optimizer state such as momentum."

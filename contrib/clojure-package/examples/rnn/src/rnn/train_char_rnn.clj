@@ -69,15 +69,15 @@
 
 
 (defn build-training-data [path]
-    (let [content (slurp path)
-          sentences (string/split content #"\n")
-          max-length (first buckets)
-          padding-int 0]
-      (doall (for [sentence sentences]
-               (let [ids (mapv #(get vocab %) sentence)]
-                 (if (>= (count ids) max-length)
-                   (into [] (take max-length ids))
-                   (into ids (repeat (- max-length (count ids)) 0))))))))
+  (let [content (slurp path)
+        sentences (string/split content #"\n")
+        max-length (first buckets)
+        padding-int 0]
+    (doall (for [sentence sentences]
+             (let [ids (mapv #(get vocab %) sentence)]
+               (if (>= (count ids) max-length)
+                 (into [] (take max-length ids))
+                 (into ids (repeat (- max-length (count ids)) 0))))))))
 
 (defn build-labels [train-data]
     ;; want to learn the next char some rotate by 1
@@ -89,7 +89,6 @@
         (map vals)
         (first)
         (apply hash-map)))
-
 
 (defn train [devs]
   (let [;; initialize the states for the lstm
@@ -118,7 +117,7 @@
 
         rnn-mod (-> (m/module rnn-sym {:contexts devs})
                     (m/bind {:data-shapes (into (mx-io/provide-data train-iter)
-                                            (mapv (fn [[k v]] {:name k :shape v}) init-states))
+                                                (mapv (fn [[k v]] {:name k :shape v}) init-states))
                              :label-shapes (mx-io/provide-label train-iter)})
                     (m/init-params {:initializer (init/xavier {:factor-type "in" :magnitude 2.34})})
                     (m/init-optimizer {:optimizer (optimizer/adam {:learning-rate learning-rate :wd 0.0001})}))
@@ -138,8 +137,7 @@
                                     (mapv #(Math/log %))
                                     (mapv #(* -1.0 %))
                                     (apply +))]
-                    (float (Math/exp (/ result (count labels)))))
-                  )
+                    (float (Math/exp (/ result (count labels))))))
 
                 "perplexity")]
 
@@ -151,11 +149,11 @@
        (fn [batch-num batch]
          (let [batch (mx-io/next train-iter)]
            (-> rnn-mod
-            (m/forward (mx-io/data-batch {:data (into (mx-io/batch-data batch) init-states-data)
-                                          :label (mx-io/batch-label batch)}))
-            (m/update-metric metric (mx-io/batch-label batch))
-            (m/backward)
-            (m/update))
+               (m/forward (mx-io/data-batch {:data (into (mx-io/batch-data batch) init-states-data)
+                                             :label (mx-io/batch-label batch)}))
+               (m/update-metric metric (mx-io/batch-label batch))
+               (m/backward)
+               (m/update))
            (when (zero? (mod batch-num 10))
              (println "Eval metric for batch-num " batch-num " is " (eval-metric/get metric)))
            (inc batch-num))))
@@ -170,7 +168,6 @@
     (println "Showing the result after 75 epochs (pre-trained)")
     (println (test-rnn/rnn-test "data/obama" 75 200 true))
     (println "=====")))
-
 
 (defn -main [& args]
   (let [[dev dev-num] args

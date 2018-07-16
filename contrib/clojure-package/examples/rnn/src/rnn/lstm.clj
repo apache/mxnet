@@ -56,14 +56,14 @@
         cls-weight (sym/variable "cls_weight")
         cls-bias (sym/variable "cls_bias")
         param-cells (mapv (fn [i]
-                             (lstm-param (sym/variable (str "l" i "_i2h_weight"))
-                                         (sym/variable (str "l" i "_i2h_bias"))
-                                         (sym/variable (str "l" i "_h2h_weight"))
-                                         (sym/variable (str "l" i "_h2h_bias"))))
-                           (range 0 num-lstm-layer))
+                            (lstm-param (sym/variable (str "l" i "_i2h_weight"))
+                                        (sym/variable (str "l" i "_i2h_bias"))
+                                        (sym/variable (str "l" i "_h2h_weight"))
+                                        (sym/variable (str "l" i "_h2h_bias"))))
+                          (range 0 num-lstm-layer))
         last-states (mapv (fn [i]
-                             (lstm-state (sym/variable (str "l" i "_init_c_beta"))
-                                         (sym/variable (str "l" i "_init_h_beta"))))
+                            (lstm-state (sym/variable (str "l" i "_init_c_beta"))
+                                        (sym/variable (str "l" i "_init_h_beta"))))
                           (range 0 num-lstm-layer))
         ;; embedding layer
         data (sym/variable "data")
@@ -76,7 +76,7 @@
         hidden-all (doall (for [seq-idx (range seq-len)]
                             (let [hidden (:h (last (loop [i 0
                                                           hidden (sym/get wordvec seq-idx)
-                                                    next-states []]
+                                                          next-states []]
                                                      (if (= i num-lstm-layer)
                                                        next-states
                                                        (let [dp-ratio (if (zero? i) 0 dropout)
@@ -108,14 +108,14 @@
         cls-weight (sym/variable "cls_weight")
         cls-bias (sym/variable "cls_bias")
         param-cells (mapv (fn [i]
-                             (lstm-param (sym/variable (str "l" i "_i2h_weight"))
-                                         (sym/variable (str "l" i "_i2h_bias"))
-                                         (sym/variable (str "l" i "_h2h_weight"))
-                                         (sym/variable (str "l" i "_h2h_bias"))))
-                           (range 0 num-lstm-layer))
+                            (lstm-param (sym/variable (str "l" i "_i2h_weight"))
+                                        (sym/variable (str "l" i "_i2h_bias"))
+                                        (sym/variable (str "l" i "_h2h_weight"))
+                                        (sym/variable (str "l" i "_h2h_bias"))))
+                          (range 0 num-lstm-layer))
         last-states (mapv (fn [i]
-                             (lstm-state (sym/variable (str "l" i "_init_c_beta"))
-                                         (sym/variable (str "l" i "_init_h_beta"))))
+                            (lstm-state (sym/variable (str "l" i "_init_c_beta"))
+                                        (sym/variable (str "l" i "_init_h_beta"))))
                           (range 0 num-lstm-layer))
         data (sym/variable "data")
         dp-ratio 0

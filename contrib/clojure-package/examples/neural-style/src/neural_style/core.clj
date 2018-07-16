@@ -28,13 +28,10 @@
             [mikera.image.filters :as img-filter]
             [think.image.pixel :as pixel]
             [neural-style.model-vgg-19 :as model-vgg-19])
-  (:gen-class))
-
-
- ;; An Implementation of the paper A Neural Algorithm of Artistic Style
+  (:gen-class));; An Implementation of the paper A Neural Algorithm of Artistic Style
  ;;by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge
 
-(def content-image "input/IMG_4343.jpg" )
+(def content-image "input/IMG_4343.jpg")
 (def style-image "input/starry_night.jpg")
 (def model-path "model/vgg19.params")
 (def max-long-edge 600) ;; resize the content image
@@ -69,7 +66,7 @@
   (let [simg (img/load-image path)
         _ (println "The content image is size " {:height (img/height simg) :width (img/width simg)})
         factor (/ short-edge (img/width simg))
-        resized-img (img/resize simg (* (img/width simg) factor) (* (img/height simg) factor) )
+        resized-img (img/resize simg (* (img/width simg) factor) (* (img/height simg) factor))
         new-height (img/height resized-img)
         new-width (img/width resized-img)]
     (image->ndarray resized-img)))
@@ -97,29 +94,28 @@
         _  (img/set-pixels new-image (int-array pixels))]
     new-image))
 
-
 (defn style-gram-symbol [input-size style]
   (let [[_ output-shape _] (sym/infer-shape style {:data [1 3 (first input-size) (second input-size)]})
         output-shapes (mx-shape/->vec output-shape)
         {:keys [gram-list grad-scale]} (doall (reduce
-                                                 (fn [result i]
-                                                   (let [shape (get output-shapes i)
-                                                         [s0 s1 s2 s3] shape
-                                                         x (sym/reshape {:data (sym/get style i) :target-shape [s1 (* s2 s3)] })
+                                               (fn [result i]
+                                                 (let [shape (get output-shapes i)
+                                                       [s0 s1 s2 s3] shape
+                                                       x (sym/reshape {:data (sym/get style i) :target-shape [s1 (* s2 s3)]})
                                                          ;; use fully connected to quickly do dot(x x^T)
-                                                         gram (sym/fully-connected {:data x :weight x :no-bias true :num-hidden s1})]
-                                                     (-> result
-                                                         (update :gram-list conj gram)
-                                                         (update :grad-scale conj (* s1 s2 s3 s1)))))
-                                                 {:gram-list [] :grad-scale []}
-                                                 (range (count (sym/list-outputs style)))))]
+                                                       gram (sym/fully-connected {:data x :weight x :no-bias true :num-hidden s1})]
+                                                   (-> result
+                                                       (update :gram-list conj gram)
+                                                       (update :grad-scale conj (* s1 s2 s3 s1)))))
+                                               {:gram-list [] :grad-scale []}
+                                               (range (count (sym/list-outputs style)))))]
     {:gram (sym/group (into [] gram-list)) :g-scale grad-scale}))
 
 (defn get-loss [gram content]
   (let [gram-loss (doall (mapv (fn [i]
-                           (let [gvar (sym/variable (str "target_gram_" i))]
-                             (sym/sum (sym/square (sym/- gvar (sym/get gram i))))))
-                         (range (count (sym/list-outputs gram)))))
+                                 (let [gvar (sym/variable (str "target_gram_" i))]
+                                   (sym/sum (sym/square (sym/- gvar (sym/get gram i))))))
+                               (range (count (sym/list-outputs gram)))))
         cvar (sym/variable "target_content")
         content-loss (sym/sum (sym/square (sym/- cvar content)))]
     {:style-loss (sym/group gram-loss) :content-loss content-loss}))
@@ -137,7 +133,6 @@
     (> a 255) 255
     :else a))
 
-
 (defn save-image [img filename radius blur?]
   (let [filtered-image (if blur?
                          ((img-filter/box-blur blur-radius blur-radius) (postprocess-image img))
@@ -149,7 +144,7 @@
 (defn get-tv-grad-executor [img ctx tv-weight]
   (when (pos? tv-weight)
     (let [img-shape (mx-shape/->vec (ndarray/shape img))
-          n-channel(get img-shape 1)
+          n-channel (get img-shape 1)
           s-img (sym/variable "img")
           s-kernel (sym/variable "kernel")
           channels (sym/split {:data s-img :axis 1 :num-outputs n-channel})
@@ -161,7 +156,6 @@
                             0.8)
           out (ndarray/* out tv-weight)]
       (sym/bind out ctx {"img" img "kernel" kernel}))))
-
 
 (defn train [devs]
 
@@ -217,7 +211,7 @@
         clip-norm (apply  * (mx-shape/->vec (ndarray/shape img)))
         tv-grad-executor (get-tv-grad-executor img dev tv-weight)
         eps 0.0
-        e 0 ]
+        e 0]
     (doseq [i (range 20)]
       (ndarray/set (:data model-executor) img)
       (-> (:executor model-executor)
@@ -255,10 +249,6 @@
     (println "Running with context devices of" devs)
     (train devs)))
 
-
-
 (comment
 
-  (train [(context/cpu)])
-
-  )
+  (train [(context/cpu)]))

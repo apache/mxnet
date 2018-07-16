@@ -85,7 +85,7 @@
                                         :data-batch-size batch-size
                                         :last-batch-handle "pad"})
         test-data (mx-io/ndarray-iter [(get-in shuffled [:test :data])]
-                                      {:label[(get-in  shuffled [:test :label])]
+                                      {:label [(get-in  shuffled [:test :label])]
                                        :label-name "softmax_label"
                                        :data-batch-size batch-size
                                        :last-batch-handle "pad"})]
@@ -107,8 +107,6 @@
     ;; runs all the examples
     #_(train-convnet {:embedding-size 50 :batch-size 100 :test-size 1000 :num-epoch 10})))
 
-
 (comment
-  (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000})
-  )
+  (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000}))
 
