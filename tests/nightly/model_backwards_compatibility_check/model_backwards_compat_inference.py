@@ -23,6 +23,10 @@ def test_module_checkpoint_api():
 	model_name = 'module_checkpoint_api'
 	print ('Performing inference for model/API %s' %model_name)
 	data = download_data_from_s3(model_name)
+	if data is None:
+		print ('No data files found for %s' %model_name)
+		return
+
 	test_data = data['data']
 	test_label = data['labels']
 
@@ -52,6 +56,9 @@ def test_lenet_gluon_load_params_api():
 	print ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
+	if data is None:
+		print ('No data files found for %s' %model_name)
+		return
 	
 	test_data = data['data']
 
@@ -71,6 +78,9 @@ def test_lenet_gluon_hybrid_imports_api():
 	print ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
+	if data is None:
+		print ('No data files found for %s' %model_name)
+		return
 	
 	test_data = data['data']
 
@@ -95,7 +105,10 @@ def test_lstm_gluon_load_parameters_api():
 	print ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
-	
+	if data is None:
+		print ('No data files found for %s' %model_name)
+		return
+
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):

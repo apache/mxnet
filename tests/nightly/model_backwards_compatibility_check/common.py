@@ -94,6 +94,12 @@ def clean_model_files(files, model_name):
 def download_data_from_s3(model_name):
     print ('Downloading data files for %s from bucket %s'%(model_name, model_bucket_name + backslash + data_folder))
     bucket = s3.Bucket(model_bucket_name)
+    prefix = data_folder + backslash + model_name + '-data'
+    data_files_meta = list(bucket.objects.filter(Prefix = prefix))
+    if len(data_files_meta) == 0:
+        print ('No data files found for %s' %model_name)
+        return None
+
     bucket.download_file(data_folder + backslash + model_name+'-data', model_name+'-data')
 
     data = mx.nd.load(model_name+'-data')
