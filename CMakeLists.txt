@@ -18,10 +18,10 @@ mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could se
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
+mxnet_option(USE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, works if MKL not found or disabled" ON IF APPLE)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, works if USE_MKL_IF_AVAILABLE is OFF" ON IF APPLE)
-mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
+mxnet_option(USE_MKLML            "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
+mxnet_option(USE_MKLDNN           "Use MKLDNN (requires MKLML or MKL)" ON)
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -217,31 +217,12 @@ if(ENABLE_TESTCOVERAGE)
   if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
   endif() # NOT GCOV_PATH
-  
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
   link_libraries(gcov)
-endif()
-
-if(USE_MKLDNN)
-  include(cmake/DownloadMKLML.cmake)
-  # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
-  if(NOT MSVC)
-    set(ARCH_OPT_FLAGS "-mtune=generic")
-  endif()
-  set(WITH_TEST OFF CACHE INTERNAL "" FORCE)
-  set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
-  set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
-
-  add_subdirectory(3rdparty/mkldnn)
-
-  include_directories(3rdparty/mkldnn/include)
-  add_definitions(-DUSE_MKL=1)
-  add_definitions(-DCUB_MKL=1)
-  add_definitions(-DMXNET_USE_MKLDNN=1)
-  list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'

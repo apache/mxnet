@@ -27,6 +27,60 @@ function(switch_lapack enable)
   endif()
 endfunction()
 
+function(try_mkldnn)
+
+  if(NOT ${USE_MKLDNN})
+    return()
+  endif()
+
+  if(${CMAKE_CROSSCOMPILING})
+    message(WARNING "MKLDNN with cross compilation is not supported, MKLDNN will not be available")
+    return()
+  endif()
+
+  message(STATUS "Adding MKLDNN to the build")
+
+  if(NOT MKL_FOUND AND ${USE_MKLML})
+    include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
+    find_package(MKLML REQUIRED)
+    include_directories(SYSTEM ${MKLML_INCLUDE_DIRS})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKLML_LIBRARIES} PARENT_SCOPE)
+  endif()
+
+  # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
+  if(NOT MSVC)
+    set(ARCH_OPT_FLAGS ${ARCH_OPT_FLAGS} "-mtune=generic" PARENT_SCOPE)
+  endif()
+
+  set(WITH_TEST OFF)
+  set(WITH_EXAMPLE OFF)
+  add_subdirectory(3rdparty/mkldnn)
+
+  include_directories(3rdparty/mkldnn/include)
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} mkldnn PARENT_SCOPE)
+
+  add_definitions(-DUSE_MKL=1)
+  add_definitions(-DCUB_MKL=1)
+  add_definitions(-DMXNET_USE_MKLDNN=1)
+
+endfunction()
+
+function(try_mkl)
+  if(${USE_MKL_IF_AVAILABLE} AND NOT ${USE_MKLML})
+    message(STATUS "Trying to enable mkl framework due to USE_MKL_IF_AVAILABLE")
+    find_package(MKL)
+    if(${MKL_FOUND})
+      message(STATUS "MKL framework found")
+      set(BLAS MKL PARENT_SCOPE)
+    else()
+      message(STATUS "MKL framework not found")
+    endif()
+
+    set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+    set(MKLROOT ${MKLROOT} PARENT_SCOPE)
+  endif()
+endfunction()
+
 function(try_accelerate)
   if(NOT APPLE)
     return()
@@ -48,28 +102,8 @@ function(try_accelerate)
   endif()
 endfunction()
 
-if(USE_MKL_IF_AVAILABLE)
-  message(STATUS "Trying to find MKL library due to USE_MKL_IF_AVAILABLE=True...")
-
-  if(NOT MKL_FOUND)
-    find_package(MKL)
-  endif()
-
-  if(MKL_FOUND)
-    message(STATUS "MKL library found, checking if USE_MKLDNN...")
-
-    if(USE_MKLDNN)
-      message(STATUS "USE_MKLDNN=True, setting to use OpenBLAS")
-      set(BLAS "open")
-    else()
-      message(STATUS "USE_MKLDNN=False, setting to use MKL")
-      set(BLAS "MKL")
-    endif()
-  else()
-    message(STATUS "MKL library not found, BLAS=${BLAS}")
-  endif()
-endif()
-
+try_mkl()
+try_mkldnn()
 try_accelerate()
 
 # cmake regexp does not support case insensitive match (?i) or //i
