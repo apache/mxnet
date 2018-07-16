@@ -124,10 +124,18 @@ def test_input_name_order():
         check_input_order(ret, ['exp', 'BatchNorm'])
         check_input_order(ret, ['BatchNorm'])
 
+    def test_network_structure_5():
+        # the last op has multiple duplicate outputs
+        data = mx.sym.var('data')
+        ret = mx.sym.exp(data)
+        ret = mx.sym.Group([ret, ret, ret])
+        check_input_order(ret, ['exp'])
+
     test_network_structure_1()
     test_network_structure_2()
     test_network_structure_3()
     test_network_structure_4()
+    test_network_structure_5()
 
 
 if __name__ == '__main__':

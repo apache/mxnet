@@ -622,6 +622,10 @@ void TopSortEntries(const Graph& g,
     if (visited.count(node) == 0U) {
       s.emplace(node, 0U, &e);
       visited.insert(node);
+    } else {
+      // The entry's source node has been visited before.
+      // Marking the order for it.
+      entry_top_order_map->emplace(&e, entry_top_order_map->size());
     }
     while (!s.empty()) {
       auto& top = s.top();
@@ -641,7 +645,7 @@ void TopSortEntries(const Graph& g,
           visited.insert(input_node);
         } else {
           // The entry's source node has been visited before.
-          // Marking order for it.
+          // Marking the order for it.
           entry_top_order_map->emplace(&entry, entry_top_order_map->size());
         }
       }
