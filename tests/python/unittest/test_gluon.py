@@ -20,7 +20,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises, teardown
+from common import setup_module, with_seed, assertRaises, teardown, assert_raises_cudnn_disabled
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -780,6 +780,7 @@ def test_embedding():
     check_embedding_large_input(True)
     check_embedding_large_input(False)
 
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11616")
 @with_seed()
 def test_export():
     ctx = mx.context.current_context()
@@ -1174,7 +1175,7 @@ def check_hybrid_static_memory(**kwargs):
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11171")
+@with_seed()
 def test_hybrid_static_memory():
     check_hybrid_static_memory()
     check_hybrid_static_memory(static_alloc=True)
@@ -1197,7 +1198,7 @@ def check_hybrid_static_memory_switching(**kwargs):
         y.backward()
     mx.nd.waitall()
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11171")
+@with_seed()
 def test_hybrid_static_memory_switching():
     check_hybrid_static_memory_switching()
     check_hybrid_static_memory_switching(static_alloc=True)
@@ -1258,6 +1259,7 @@ def test_apply():
 
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()
@@ -1412,6 +1414,21 @@ def test_share_inputs_outputs():
             res.backward(out_grad=out_grad)
             assert_almost_equal(out_grad.asnumpy(), d1.grad.asnumpy())
             assert_almost_equal(out_grad.asnumpy(), d2.grad.asnumpy())
+
+
+def test_grad_graph_change():
+    class Model(mx.gluon.HybridBlock):
+        def hybrid_forward(self, F, array, index):
+            row = array.take(index)
+            return row, index
+    array = mx.nd.arange(3)
+    index = mx.nd.array([2])
+    array.attach_grad()
+    model = Model()
+    model.hybridize(inline_limit=0)
+    with mx.autograd.record(train_mode=True):
+        row, _ = model(array, index)
+    row.backward()
 
 
 if __name__ == '__main__':

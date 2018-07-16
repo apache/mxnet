@@ -27,7 +27,6 @@
 ;;; Viz stuff
 (OpenCV/loadShared)
 
-
 (defn clip [x]
   (->> x
        (mapv #(* 255 %))
@@ -69,7 +68,7 @@
         [n c h w] shape
         totals (* h w)
         raw-data (byte-array (clip (ndarray/to-array x)))
-        row (.intValue(Math/sqrt n))
+        row (.intValue (Math/sqrt n))
         col row
         line-arrs (into [] (partition (* col c totals) raw-data))
         line-mats (mapv (fn [line]

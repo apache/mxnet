@@ -32,7 +32,6 @@
             [clojure.reflect :as r]
             [clojure.string :as string]))
 
-
 (deftest test-model-dtype
   (let [dtype dtype/FLOAT32
         dshape [3 8 7]
@@ -44,14 +43,14 @@
         (m/bind {:data-shapes [{:name "data" :shape dshape :dtype dtype :layout "TNC"}]})
         (m/init-params)
         (m/forward {:data [(ndarray/ones dshape {:dtype dtype})]})
-        (m/backward[(ndarray/ones dshape {:dtype dtype})]))
+        (m/backward [(ndarray/ones dshape {:dtype dtype})]))
     (let [outputs  (-> mod (m/outputs) flatten)]
       (is (every? #(= dtype/FLOAT32 (ndarray/dtype %)) outputs)))))
 
 (deftest test-module-input-grads
   (let [a (sym/variable "a" {:kwargs {"__layout__" "NC"}})
         b (sym/variable "b" {:kwargs {"__layout__" "NC"}})
-        c (sym/variable "c" {:kwargs {"__layout__" "NC"}} )
+        c (sym/variable "c" {:kwargs {"__layout__" "NC"}})
         c (sym/+ a (sym/+ (sym/* b 2) (sym/* c 3)))
         mod (m/module c ["b" "c" "a"] nil [(context/cpu 0) (context/cpu 1)])]
     (-> mod
@@ -61,11 +60,11 @@
                  :inputs-need-grad true})
         (m/init-params)
         (m/forward {:data [(ndarray/ones [5 5])
-                            (ndarray/ones [5 5])
-                            (ndarray/ones [5 5])]
-                     :label nil
-                     :index nil
-                     :pad 0})
+                           (ndarray/ones [5 5])
+                           (ndarray/ones [5 5])]
+                    :label nil
+                    :index nil
+                    :pad 0})
         (m/backward [(ndarray/ones [5 5])]))
     (let [[a-grad b-grad c-grad] (m/input-grads-merged mod)]
       (is (every? #(= 1.0 %) (ndarray/->vec a-grad)))
@@ -74,17 +73,17 @@
 
 (deftest test-module-layout
   (let [s (sym/variable "data")
-        s (sym/activation "act "{"__layout__" "TNC"} {:data s :act_type "relu"})
+        s (sym/activation "act " {"__layout__" "TNC"} {:data s :act_type "relu"})
         dshape [3 8 7]
         mod (m/module s ["data"] nil [(context/cpu 0) (context/cpu 1)])]
     (-> mod
         (m/bind {:data-shapes [{:name "data" :shape dshape :dtype dtype/FLOAT32 :layout "TNC"}]})
         (m/init-params)
         (m/forward {:data [(ndarray/ones dshape)]
-                     :label nil
-                     :index nil
-                     :pad 0})
-        (m/backward[(ndarray/ones dshape)]))
+                    :label nil
+                    :index nil
+                    :pad 0})
+        (m/backward [(ndarray/ones dshape)]))
     (let [outputs-merged (m/outputs-merged mod)
           outputs (m/outputs mod)
           hd-shape [3 4 7]]
@@ -107,7 +106,7 @@
       (-> mod2
           (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
           (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
-      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json) ))
+      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json)))
       (is (= (-> mod m/params first) (-> mod2 m/params first))))))
 
 (deftest test-module-save-load-multi-device
@@ -127,7 +126,7 @@
       (-> mod2
           (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
           (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
-      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json) ))
+      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json)))
       (is (= (-> mod m/params first) (-> mod2 m/params first))))))
 
 (deftest test-module-reshape
@@ -158,7 +157,7 @@
   (let [data (ndarray/array [0.05 0.1] [1 1 1 2])
         label (ndarray/array [0.01 0.99] [1 1 1 2])
         train-data (mx-io/ndarray-iter [data] {:label [label] :label-name "softmax_label"})
-          x (as-> (sym/variable "data") v
+        x (as-> (sym/variable "data") v
             (sym/fully-connected "fc_0" {:data v :num-hidden 2})
             (sym/activation "act_0" {:data v :act-type "sigmoid"})
             (sym/fully-connected "fc_1" {:data v :num-hidden 2})
@@ -166,7 +165,7 @@
             (sym/linear-regression-output "softmax" {:data v :grad-scale 2}))
 
         mod (m/module x)]
-    (m/bind mod {:data-shapes (mx-io/provide-data train-data) :label-shapes (mx-io/provide-label train-data)} )
+    (m/bind mod {:data-shapes (mx-io/provide-data train-data) :label-shapes (mx-io/provide-label train-data)})
 
     (let [arg-params-correct {"fc_0_weight" (ndarray/array [0.15 0.2 0.25 0.3] [2 2])
                               "fc_0_bias" (ndarray/array [0.35 0.35] [2])
@@ -214,13 +213,12 @@
     (let [result (monitor/toc mon)
           freq (->> result
                     (map (fn [v] (as-> (second v) ?
-                                     (clojure.string/split ? #"_")
+                                   (clojure.string/split ? #"_")
                                    (take 2 ?)
                                    (clojure.string/join "_" ?))))
                     (frequencies))
           expected-freq {"act_0" 2 "act_1" 2 "data" 1 "fc_0" 6 "fc_1" 6}]
       (is (= expected-freq (select-keys freq (keys expected-freq)))))))
-
 
 (deftest test-forward-reshape
   (let [num-class 10
@@ -271,9 +269,9 @@
       (-> mod
           (m/forward data-batch))
       (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
-         (-> mod
-        (m/backward)
-        (m/update)))
+      (-> mod
+          (m/backward)
+          (m/update)))
 
     (let [d-shape1 [20 3 64 64]
           d-shape2 [20 3 32 32]
@@ -286,43 +284,41 @@
       (-> mod
           (m/forward data-batch))
       (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
-         (-> mod
-        (m/backward)
-        (m/update)))
+      (-> mod
+          (m/backward)
+          (m/update)))
 
     ;; train with both different batch sizes and data shapes
     (let [d-shape1 [20 3 120 120]
           d-shape2 [20 3 32 64]
           l-shape [20]
           data-batch {:data [(ndarray/random-uniform 0 9 (str (mx-shape/->shape d-shape1)))
-                               (ndarray/random-uniform 15 25 (str (mx-shape/->shape d-shape2)))]
-                        :label [(ndarray/ones l-shape)]
-                        :index nil
-                        :pad 0}]
+                             (ndarray/random-uniform 15 25 (str (mx-shape/->shape d-shape2)))]
+                      :label [(ndarray/ones l-shape)]
+                      :index nil
+                      :pad 0}]
       (-> mod
           (m/forward data-batch))
       (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
-         (-> mod
-        (m/backward)
-        (m/update)))
+      (-> mod
+          (m/backward)
+          (m/update)))
     (let [d-shape1 [5 3 28 40]
           d-shape2 [5 3 24 16]
           l-shape [5]
           data-batch {:data [(ndarray/random-uniform 0 9 (str (mx-shape/->shape d-shape1)))
-                               (ndarray/random-uniform 15 25 (str (mx-shape/->shape d-shape2)))]
-                        :label [(ndarray/ones l-shape)]
-                        :index nil
-                        :pad 0}]
+                             (ndarray/random-uniform 15 25 (str (mx-shape/->shape d-shape2)))]
+                      :label [(ndarray/ones l-shape)]
+                      :index nil
+                      :pad 0}]
       (-> mod
           (m/forward data-batch))
       (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
-         (-> mod
-        (m/backward)
-        (m/update)))))
-
+      (-> mod
+          (m/backward)
+          (m/update)))))
 
 (comment
 
- (m/data-shapes x)
-  )
+  (m/data-shapes x))
 

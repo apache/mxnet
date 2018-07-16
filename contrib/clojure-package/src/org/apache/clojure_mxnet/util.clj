@@ -75,11 +75,10 @@
 (defn convert-tuple [param]
   (apply $/tuple param))
 
-
 (def tuple-param-names #{"kernel" "stride" "pad" "target-shape" "shape"})
 
 (defn convert-by-shape [param]
-    (into {} (mapv (fn [[k v]]
+  (into {} (mapv (fn [[k v]]
                    [k (if (vector? v) (mx-shape/->shape v) v)])
                  param)))
 
@@ -87,8 +86,8 @@
   (into {} (mapv (fn [[k v]]
                    (if (or (get tuple-param-names k)
                            (get tuple-param-names (name k)))
-                               [k (str (if (vector? v) (mx-shape/->shape v) v))]
-                               [k v]))
+                     [k (str (if (vector? v) (mx-shape/->shape v) v))]
+                     [k v]))
                  param)))
 
 (def io-param-names #{"input-shape" "data-shape" "label-shape"})
@@ -109,7 +108,6 @@
                                 (into [])
                                 flatten
                                 keyword->snake-case))))
-
 
 (defn convert-symbol-map [param]
   (convert-map (tuple-convert-by-param-name param)))
@@ -183,7 +181,7 @@
   [f]
   `($/fn ~@(drop-last (rest f)) ~(last f)))
 
-(defn translate-keyword-shape[[k v]]
+(defn translate-keyword-shape [[k v]]
   [(if (keyword? k) (string/replace (name k) "-" "_") k)
    (if (vector? v) (mx-shape/->shape v) v)])
 

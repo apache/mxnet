@@ -435,6 +435,72 @@ def convert_pad(node, **kwargs):
     return [node]
 
 
+def create_helper_trans_node(op_name, input_node, node_name):
+    """create extra transpose node for dot operator"""
+    helper, _, _ = import_onnx_modules()
+
+    node_name = op_name + "_" + node_name
+    trans_node = helper.make_node(
+        'Transpose',
+        inputs=[input_node],
+        outputs=[node_name],
+        name=node_name
+    )
+    return trans_node
+
+
+@mx_op.register("dot")
+def convert_dot(node, **kwargs):
+    """Map MXNet's dot operator attributes to onnx's
+    MatMul and Transpose operators based on the values set for
+    transpose_a, transpose_b attributes."""
+    helper, _, _ = import_onnx_modules()
+    proc_nodes = kwargs["proc_nodes"]
+    node_inputs = node["inputs"]
+    name = node["name"]
+
+    input_a_idx = kwargs["index_lookup"][node_inputs[0][0]]
+    input_node_a = proc_nodes[input_a_idx].name
+    input_b_idx = kwargs["index_lookup"][node_inputs[1][0]]
+    input_node_b = proc_nodes[input_b_idx].name
+
+    attrs = node.get('attrs', {})
+    trans_a_node = None
+    trans_b_node = None
+
+    trans_a = 1 if ("transpose_a" in attrs) and \
+                   attrs.get("transpose_a") in ["True", "1"] else 0
+    trans_b = 1 if ("transpose_b" in attrs) and \
+                   attrs.get("transpose_b") in ["True", "1"] else 0
+
+    op_name = "transpose" + str(kwargs["idx"])
+    create_helper_trans_node(op_name, input_node_a, 'a')
+    create_helper_trans_node(op_name, input_node_b, 'b')
+
+    if trans_a:
+        trans_a_node = create_helper_trans_node(op_name, input_node_a, 'a')
+        input_node_a = op_name+"_a"
+    if trans_b:
+        trans_b_node = create_helper_trans_node(op_name, input_node_b, 'b')
+        input_node_b = op_name+"_b"
+
+    matmul_node = helper.make_node(
+        'MatMul',
+        inputs=[input_node_a, input_node_b],
+        outputs=[name],
+        name=name
+    )
+
+    if not trans_a and not trans_b:
+        return [matmul_node]
+    elif trans_a and not trans_b:
+        return [trans_a_node, matmul_node]
+    elif trans_b and not trans_a:
+        return [trans_b_node, matmul_node]
+    else:
+        return [trans_a_node, trans_b_node, matmul_node]
+
+
 @mx_op.register("_linalg_gemm2")
 def convert_linalg_gemm2(node, **kwargs):
     """Map MXNet's _linalg_gemm2 operator attributes to onnx's
@@ -646,10 +712,10 @@ def convert_leakyrelu(node, **kwargs):
     input_node = proc_nodes[input_node_id].name
     attrs = node["attrs"]
 
-    act_type = attrs.get("act_type", "LeakyRelu")
+    act_type = attrs.get("act_type", "leaky")
     alpha = float(attrs.get("slope", 0.25))
 
-    act_name = {"elu": "Elu", "LeakyRelu": "LeakyRelu", "prelu": "PRelu"}
+    act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu"}
 
     if act_type == "prelu":
         alpha_node_index = kwargs["index_lookup"][inputs[1][0]]

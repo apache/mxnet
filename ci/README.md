@@ -26,7 +26,7 @@ service docker restart
 usermod -a -G docker $SUDO_USER
 ```
 
-For detailed instructions go to the docker documentation.
+For detailed instructions go to the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
 
 
 ## build.py
@@ -49,7 +49,14 @@ To build for armv7 for example:
 ./build.py -p armv7
 ```
 
-The artifacts are located in the build/ directory in the project root. In case
+
+To work inside a container with a shell you can do:
+
+```
+./build.py -p ubuntu_cpu -i
+```
+
+When building, the artifacts are located in the build/ directory in the project root. In case
 `build.py -a` is invoked, the artifacts are located in build.<platform>/
 
 ## Add a platform
