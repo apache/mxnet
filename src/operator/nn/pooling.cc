@@ -223,9 +223,13 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          const std::vector<NDArray> &outputs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   const NDArray *workspace = nullptr;
+
+  // Pooling does not currently support working with views
+  if (inputs[0].IsView() || outputs[0].IsView())
+    FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+
   if (SupportMKLDNN(inputs[0]) &&
-      SupportMKLDNNPooling(param, inputs[0].shape()) &&
-      SupportMKLDNNPooling(inputs[0], outputs[0])) {
+      SupportMKLDNNPooling(param, inputs[0].shape())) {
     if (MKLDNNRequireWorkspace(param)) {
       CHECK_GT(outputs.size(), 1U);
       workspace = &outputs[1];
@@ -243,9 +247,13 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+
+  // Pooling does not currently support working with views
+  if (inputs[0].IsView() || outputs[0].IsView())
+    FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+
   if (SupportMKLDNN(inputs[0])
-      && SupportMKLDNNPooling(param, inputs[0].shape()) &&
-      SupportMKLDNNPooling(inputs[0], outputs[0])) {
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
     const NDArray &out_grad = inputs[0];
     const NDArray *workspace = nullptr;
     const NDArray *in_data = nullptr;

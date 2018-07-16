@@ -107,11 +107,6 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
 #endif
 }
 
-// input and output must be same format and neither can be views
-inline bool SupportMKLDNNPooling(const NDArray &input, const NDArray &output) {
-  return !input.IsView() && !output.IsView();
-}
-
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
   return param.pool_type != pool_enum::kAvgPooling;
 }
