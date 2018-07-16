@@ -17,11 +17,6 @@ mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
 mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
-mxnet_option(USE_LAPACK           "Build with lapack support" ON)
-mxnet_option(USE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, works if MKL not found or disabled" ON IF APPLE)
-mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_MKLML            "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
-mxnet_option(USE_MKLDNN           "Use MKLDNN (requires MKLML or MKL)" ON)
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -41,6 +36,67 @@ mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
+
+# Choose BLAS (Basic Linear Algebra Subprograms) computation libraries
+
+# MXNet supports multiple mathematical backends for computations on the CPU:
+#
+# * Atlas
+# * OpenBLAS
+# * MKL (MKL, MKLML, MKLDNN)
+# * Apple Accelerate
+#
+# The default order of choice for the libraries if found follows the path from probably the most
+# (recommended) to less performant backends. The order is as follows:
+#
+# 1. MKLDNN (requires and checks for MKL or MKLML)
+# 2. MKL
+# 3. MKLML (downloaded)
+# 4. Accelerate (on mac)
+# 5. OpenBLAS
+#
+# Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
+# https://software.intel.com/en-us/mkl
+#
+# It has following flavours:
+
+# * MKL is a full library, containing all the functionality. It is free under
+#   community support licensing (https://software.intel.com/en-us/articles/free-mkl),
+#   but needs to be downloaded and installed manually.
+#
+# * MKLML is a subset of MKL. It contains smaller number of functions to reduce the
+#   size of the download and reduce the number of dynamic libraries user needs. This
+#   is the most effective option since it can be downloaded and installed automatically
+#   by the cmake script (see cmake/DownloadMKLML.cmake).
+#
+# * MKLDNN is a separate open-source library, but it requires MKL or MKLML. It is
+#   shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn).
+#
+# Since the full MKL library is almost always faster than any other it's turned on by default,
+# however it needs to be downloaded and installed manually before doing cmake configuration.
+mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+
+# If the full MKL library could not be found the thinner subset MKLML will be downloaded
+# unless switched off explicitly.
+mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
+
+# If either MKL of MKLML is present MKLDNN can be utilised from the 3rdparty/mkldnn subrepo.
+# See more information here: https://github.com/intel/mkl-dnn
+mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON)
+
+# Apple's mathematical framework, probably the best choice on a Mac if MKL/MKLML/MKLDNN
+# are not available.
+# https://developer.apple.com/documentation/accelerate
+mxnet_option(USE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework if found, \
+                                          works if MKL not found or disabled" ON IF ${APPLE})
+
+# Another important option of the math libraries is presence of additional set of
+# mathematical functions gathered and named as the LAPACK (Linear Algebra Package). Some
+# libraries don't include it, thus the cmake script will check the presence of an
+# indicating function "cheev_" within the available choosen libraries and switch the
+# functionality off if not found.
+mxnet_option(USE_LAPACK "Build with lapack support" ON)
+
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
