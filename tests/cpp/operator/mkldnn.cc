@@ -517,7 +517,7 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
 OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Convolution");
-  attrs.num_inputs = 5;
+  attrs.num_inputs = 4;
   attrs.num_outputs = 3;
   // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
@@ -1158,6 +1158,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   TShape stride = param.stride;
+  int num_filter = param.num_filter;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -1188,8 +1189,12 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
 
-    for (int i = 0; i < forward_attrs.num_inputs; i++)
-      inputs[i] = &in_arr.arr;
+
+    NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+    NDArray ndbias = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
+    inputs[0] = &in_arr.arr;
+    inputs[1] = &ndkernel;
+    inputs[2] = &ndbias;
 
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -1246,6 +1251,36 @@ int CalculateWidthConvOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
 }
 
+NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
+  CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
+  TShape target_shape(4);
+  target_shape[0] = num_filters;
+  target_shape[1] = input[1];
+  target_shape[2] = kernel[0];
+  target_shape[3] = kernel[1];
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(kernel, Context());
+  auto pd = GetMemPD(kernel, dtype, mkldnn::memory::format::nc);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
+NDArray CreateBiasNDArray(TShape input, TShape kernel, int num_filters, TShape padding, TShape stride) {
+  TShape target_shape(4);
+  int new_height = CalculateWidthConvOutput(input[2], kernel[0], padding[0], stride[0]);
+  int new_width = CalculateWidthConvOutput(input[3], kernel[1], padding[1], stride[1]);
+  target_shape[0] = input[0];
+  target_shape[1] = num_filters;
+  target_shape[2] = new_height;
+  target_shape[3] = new_width;
+  CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(kernel, Context());
+  auto pd = GetMemPD(kernel, dtype, mkldnn::memory::format::nc);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
 void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
@@ -1276,14 +1311,9 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   for (int i1 = 0; i1 < in_arrs.size(); i1++) {
     auto in_arr = in_arrs[i1];
 
-    // can only conv only 3D and 4D inputs
+    // can only conv only 4D inputs
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
-      continue;
-
-    // cannot conv if ndarray and mkldnn memory have different ndim
-    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
-        != in_arr.arr.shape().ndim())
       continue;
 
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
@@ -1321,23 +1351,30 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
 
       // backwards test performed same time since output needed
-      if (backwards_attrs.num_inputs == 3) {
-        backwards_input[0] = outputs[0];  // output grad
-        backwards_input[1] = inputs[0];  // input
-        backwards_input[2] = outputs[0];  // output
-      } else if (backwards_attrs.num_inputs == 5) {
-        backwards_input[0] = outputs[0];  // output grad
-        backwards_input[1] = outputs[0];  // workspace grad
-        backwards_input[2] = inputs[0];  // input
-        backwards_input[3] = outputs[0];  // output
-        backwards_input[4] = ex_outputs[1];  // workspace
-      }
+      backwards_input[0] = outputs[0];  // output grad
+      backwards_input[1] = inputs[0];  // input
+      backwards_input[2] = inputs[1];  // kernel
+      backwards_input[3] = outputs[2];  // bias
+
 
       auto tmp_output = GetTestInputArrays(true)[i1];
-      auto tmp_output2 = GetTestInputArrays(true)[i1];
+      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_bias = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
+
       backwards_outputs[0] = &tmp_output.arr;
-      backwards_ex_outputs[0] = &tmp_output2.arr;
-      back_req[0] = kWriteTo;
+      backwards_outputs[1] = &tmp_kernel;
+      backwards_outputs[2] = &tmp_bias;
+
+      auto tmp_output2 = GetTestInputArrays(true)[i1];
+      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_bias2 = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
+      backwards_outputs[0] = &tmp_output2.arr;
+      backwards_outputs[1] = &tmp_kernel2;
+      backwards_outputs[2] = &tmp_bias2;
+
+      for (int i = 0; i < backwards_attrs.num_outputs; i++)
+        back_req[0] = kWriteTo;
+
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
       Imperative::Get()->InvokeOp(
@@ -1417,17 +1454,16 @@ TEST(IMPERATIVE, PoolingOp) {
 }
 
 TEST(IMPERATIVE, ConvOp) {
-  for (int dim = 2; dim < 4; dim++) {
-    for (int num_filters = 2; num_filters < 3; num_filters++) {
-      for (int kernel = 1; kernel < 4; kernel++) {
-        for (int stride = 1; stride < 3; stride++) {
-          for (int pad = 0; pad < 2; pad++) {
-            if (kernel / 2. < pad)
-              continue;
-            OpAttrs forward_attrs = GetConvOp(kernel, num_filters, dim, stride, pad);
-            OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
-            TestConvOp(forward_attrs, backwards_attrs);
-          }
+  int dim = 2; // MKLDNN conv only supports 2d kernels
+  for (int num_filters = 2; num_filters < 3; num_filters++) {
+    for (int kernel = 1; kernel < 4; kernel++) {
+      for (int stride = 1; stride < 3; stride++) {
+        for (int pad = 0; pad < 2; pad++) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs forward_attrs = GetConvOp(kernel, num_filters, dim, stride, pad);
+          OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
+          TestConvOp(forward_attrs, backwards_attrs);
         }
       }
     }
