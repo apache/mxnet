@@ -127,7 +127,7 @@ inline size_t serialized_size(const std::map<K, V>& obj) {
       sum_val += serialized_size(p.first);
     }
     sum_val += sizeof(V) * obj.size();
-  } else if (is_container<K>::value) {
+  } else if (is_container<V>::value) {
     for (const auto& p : obj) {
       sum_val += serialized_size(p.second);
     }
