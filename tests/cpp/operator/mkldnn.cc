@@ -493,6 +493,35 @@ void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
      t1 << " with " << arr2.desc.c_str() << " " << t2 << "\n";
 }
 
+OpAttrs GetLRNOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("LRN");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"nsize" , "5"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
+  return attrs;
+}
+
+OpAttrs GetLRNBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_LRN");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"nsize" , "5"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
+  return attrs;
+}
+
+
 /*
  * We want to get a few types of NDArrays for testing:
  * 1. Normal NDArray
@@ -1042,6 +1071,88 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
+// compares output of fcompute with fcomputex
+void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
+  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
+  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
+
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+
+
+  std::vector<OpReqType> req(forward_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
+  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
+
+  for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+    auto in_arr = in_arrs[i1];
+
+    for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+        req[i] = kWriteTo;
+        outputs[i] = &out_arrs[i][output_i].arr;
+        ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+      }
+      Imperative::Get()->set_is_training(true);
+
+      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(outputs, ex_outputs);
+
+
+      // backwards test performed same time since output needed
+      backwards_input[0] = outputs[0];  // output grad
+      backwards_input[1] = inputs[0];  // input
+      backwards_input[2] = inputs[1];  // kernel
+      backwards_input[3] = inputs[2];  // bias
+
+
+      auto tmp_output = GetTestInputArrays(true)[i1];
+      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_bias = CreateBiasNDArray(num_filter);
+
+      backwards_outputs[0] = &tmp_output.arr;
+      backwards_outputs[1] = &tmp_kernel;
+      backwards_outputs[2] = &tmp_bias;
+
+      auto tmp_output2 = GetTestInputArrays(true)[i1];
+      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
+      backwards_ex_outputs[0] = &tmp_output2.arr;
+      backwards_ex_outputs[1] = &tmp_kernel2;
+      backwards_ex_outputs[2] = &tmp_bias2;
+
+      for (int i = 0; i < backwards_attrs.num_outputs; i++)
+        back_req[0] = kWriteTo;
+
+      std::cout << "Backwards: ";
+      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
+    }
+  }
+}
+
 TEST(IMPERATIVE, CopyOp) {
   OpAttrs attrs = GetCopyOp();
   TestOp(attrs, VerifyCopyResult);
@@ -1088,6 +1199,12 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
       TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
     }
   }
+}
+
+TEST(IMPERATIVE, ConvOp) {
+  OpAttrs forward_attrs = GetLRNOp();
+  OpAttrs backwards_attrs = GetLRNBackwardsOp();
+  TestOpEx(forward_attrs, backwards_attrs);
 }
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
