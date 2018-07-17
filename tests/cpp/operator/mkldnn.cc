@@ -1188,14 +1188,11 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
-
-
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
     NDArray ndbias = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
     inputs[2] = &ndbias;
-
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
@@ -1260,7 +1257,7 @@ NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
   target_shape[3] = kernel[1];
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   NDArray arr(target_shape, Context());
-  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nc);
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nchw);
   InitMKLDNNArray(&arr, pd);
   return arr;
 }
@@ -1276,7 +1273,7 @@ NDArray CreateBiasNDArray(TShape input, TShape kernel, int num_filters, TShape p
   CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   NDArray arr(target_shape, Context());
-  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nc);
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nchw);
   InitMKLDNNArray(&arr, pd);
   return arr;
 }
