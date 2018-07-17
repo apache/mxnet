@@ -139,8 +139,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
       ret = ElemwiseStorageType<2, 1, false, false, false>(
           attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
     }
-  }
-  else {
+  } else {
     ret = op::dispatch_fallback(out_attrs, dispatch_mode);
   }
 #else
