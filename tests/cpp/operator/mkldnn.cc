@@ -1344,7 +1344,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       backwards_input[0] = outputs[0];  // output grad
       backwards_input[1] = inputs[0];  // input
       backwards_input[2] = inputs[1];  // kernel
-      backwards_input[3] = outputs[2];  // bias
+      backwards_input[3] = inputs[2];  // bias
 
 
       auto tmp_output = GetTestInputArrays(true)[i1];
