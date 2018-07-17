@@ -27,7 +27,7 @@ from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled, assertRaises
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
@@ -7036,7 +7036,7 @@ def test_op_roi_align():
 @with_seed()
 def test_diag():
 
-    # test 2d input
+    # Test 2d input
     h = np.random.randint(2,9)
     w = np.random.randint(2,9)
     a_np = np.random.random((h, w)).astype(np.float32)
@@ -7057,9 +7057,13 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
     # random k
-    k = np.random.randint(-min(h,w),max(h,w))
+    k = np.random.randint(-min(h,w), min(h,w))
     r = mx.nd.diag(a, k=k)
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # invalid k
+    k = max(h,w) + 1
+    assertRaises(MXNetError, mx.nd.diag, a, k=k)
 
     # Test 2d backward, k=0
     data = mx.sym.Variable('data')

@@ -44,7 +44,8 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
     .set_default(dmlc::optional<int>(0))
     .describe("Diagonal in question. The default is 0. "
               "Use k>0 for diagonals above the main diagonal, "
-              "and k<0 for diagonals below the main diagonal.");
+              "and k<0 for diagonals below the main diagonal. "
+              "If input has shape (S0 S1) k must be between -S0 and S1");
   }
 };
 
@@ -79,12 +80,14 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
 
     const TShape& ishape = (*in_attrs)[0];
     if (ishape.ndim() == 0) return false;
-    if (ishape.ndim() > 2) LOG(FATAL)
-      << "Input must be 1- or 2-d.";
+    if (ishape.ndim() > 2) LOG(FATAL) << "Input must be 1- or 2-d.";
 
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
     TShape oshape = DiagShapeImpl(ishape, param.k.value());
+    if (shape_is_none(oshape)) {
+      LOG(FATAL) << "Diagonal does not exist.";
+    }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
     return out_attrs->at(0).ndim() != 0U;
