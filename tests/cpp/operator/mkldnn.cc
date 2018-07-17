@@ -1133,12 +1133,10 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
-
     // cannot pool if ndarray and mkldnn memory have different ndim
     if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
         != in_arr.arr.shape().ndim())
       continue;
-
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
       if (i < 2)
