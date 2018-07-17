@@ -22,7 +22,7 @@
 """Definition of various recurrent neural network cells."""
 __all__ = ['RecurrentCell', 'HybridRecurrentCell',
            'RNNCell', 'LSTMCell', 'GRUCell',
-           'SequentialRNNCell', 'DropoutCell',
+           'SequentialRNNCell', 'HybridSequentialRNNCell', 'DropoutCell',
            'ModifierCell', 'ZoneoutCell', 'ResidualCell',
            'BidirectionalCell']
 
@@ -81,7 +81,7 @@ def _format_sequence(length, inputs, layout, merge, in_layout=None):
             F = symbol
         else:
             F = ndarray
-            batch_size = inputs[0].shape[batch_axis]
+            batch_size = inputs[0].shape[0]
         if merge is True:
             inputs = F.stack(*inputs, axis=axis)
             in_axis = axis
@@ -224,6 +224,7 @@ class RecurrentCell(Block):
             The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of `begin_state()`.
         """
+        # pylint: disable=too-many-locals
         self.reset()
 
         inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)
@@ -251,12 +252,19 @@ class RecurrentCell(Block):
     #pylint: disable=no-self-use
     def _get_activation(self, F, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
-        if isinstance(activation, string_types):
+        if activation == 'tanh':
+            return F.tanh(inputs, **kwargs)
+        elif activation == 'sigmoid':
+            return F.sigmoid(inputs, **kwargs)
+        elif activation == 'relu':
+            return F.relu(inputs, **kwargs)
+        elif activation == 'softsign':
+            return F.softsign(inputs, **kwargs)
+        elif isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
             return F.LeakyReLU(inputs, act_type='leaky', slope=activation._alpha, **kwargs)
-        else:
-            return activation(inputs, **kwargs)
+        return activation(inputs, **kwargs)
 
     def forward(self, inputs, states):
         """Unrolls the recurrent cell for one time step.
@@ -441,7 +449,12 @@ class LSTMCell(HybridRecurrentCell):
     params : Parameter or None
         Container for weight sharing between cells.
         Created if `None`.
-
+    activation : str
+        Activation type to use. See nd/symbol Activation
+        for supported types.
+    recurrent_activation : str
+        Activation type to use for the recurrent step. See nd/symbol Activation
+        for supported types.
 
     Inputs:
         - **data**: input tensor with shape `(batch_size, input_size)`.
@@ -453,10 +466,12 @@ class LSTMCell(HybridRecurrentCell):
         - **next_states**: a list of two output recurrent state tensors. Each has
           the same shape as `states`.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None):
+                 input_size=0, prefix=None, params=None, activation='tanh',
+                 recurrent_activation='sigmoid'):
         super(LSTMCell, self).__init__(prefix=prefix, params=params)
 
         self._hidden_size = hidden_size
@@ -473,6 +488,9 @@ class LSTMCell(HybridRecurrentCell):
         self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
+        self._activation = activation
+        self._recurrent_activation = recurrent_activation
+
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'},
@@ -491,6 +509,7 @@ class LSTMCell(HybridRecurrentCell):
 
     def hybrid_forward(self, F, inputs, states, i2h_weight,
                        h2h_weight, i2h_bias, h2h_bias):
+        # pylint: disable=too-many-locals
         prefix = 't%d_'%self._counter
         i2h = F.FullyConnected(data=inputs, weight=i2h_weight, bias=i2h_bias,
                                num_hidden=self._hidden_size*4, name=prefix+'i2h')
@@ -498,13 +517,17 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
         gates = i2h + h2h
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
-        in_gate = F.Activation(slice_gates[0], act_type="sigmoid", name=prefix+'i')
-        forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
-        in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
-        out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
+        in_gate = self._get_activation(
+            F, slice_gates[0], self._recurrent_activation, name=prefix+'i')
+        forget_gate = self._get_activation(
+            F, slice_gates[1], self._recurrent_activation, name=prefix+'f')
+        in_transform = self._get_activation(
+            F, slice_gates[2], self._activation, name=prefix+'c')
+        out_gate = self._get_activation(
+            F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
         next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                    name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
+        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation),
                                   name=prefix+'out')
 
         return next_h, [next_h, next_c]
@@ -664,8 +687,86 @@ class SequentialRNNCell(RecurrentCell):
         self._counter += 1
         next_states = []
         p = 0
+        assert all(not isinstance(cell, BidirectionalCell) for cell in self._children.values())
         for cell in self._children.values():
             assert not isinstance(cell, BidirectionalCell)
+            n = len(cell.state_info())
+            state = states[p:p+n]
+            p += n
+            inputs, state = cell(inputs, state)
+            next_states.append(state)
+        return inputs, sum(next_states, [])
+
+    def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
+               valid_length=None):
+        # pylint: disable=too-many-locals
+        self.reset()
+
+        inputs, _, F, batch_size = _format_sequence(length, inputs, layout, None)
+        num_cells = len(self._children)
+        begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
+
+        p = 0
+        next_states = []
+        for i, cell in enumerate(self._children.values()):
+            n = len(cell.state_info())
+            states = begin_state[p:p+n]
+            p += n
+            inputs, states = cell.unroll(length, inputs=inputs, begin_state=states,
+                                         layout=layout,
+                                         merge_outputs=None if i < num_cells-1 else merge_outputs,
+                                         valid_length=valid_length)
+            next_states.extend(states)
+
+        return inputs, next_states
+
+    def __getitem__(self, i):
+        return self._children[str(i)]
+
+    def __len__(self):
+        return len(self._children)
+
+    def hybrid_forward(self, *args, **kwargs):
+        # pylint: disable=missing-docstring
+        raise NotImplementedError
+
+
+class HybridSequentialRNNCell(HybridRecurrentCell):
+    """Sequentially stacking multiple HybridRNN cells."""
+    def __init__(self, prefix=None, params=None):
+        super(HybridSequentialRNNCell, self).__init__(prefix=prefix, params=params)
+
+    def __repr__(self):
+        s = '{name}(\n{modstr}\n)'
+        return s.format(name=self.__class__.__name__,
+                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m.__repr__(), 2))
+                                          for i, m in self._children.items()]))
+
+    def add(self, cell):
+        """Appends a cell into the stack.
+
+        Parameters
+        ----------
+        cell : RecurrentCell
+            The cell to add.
+        """
+        self.register_child(cell)
+
+    def state_info(self, batch_size=0):
+        return _cells_state_info(self._children.values(), batch_size)
+
+    def begin_state(self, **kwargs):
+        assert not self._modified, \
+            "After applying modifier cells (e.g. ZoneoutCell) the base " \
+            "cell cannot be called directly. Call the modifier cell instead."
+        return _cells_begin_state(self._children.values(), **kwargs)
+
+    def __call__(self, inputs, states):
+        self._counter += 1
+        next_states = []
+        p = 0
+        assert all(not isinstance(cell, BidirectionalCell) for cell in self._children.values())
+        for cell in self._children.values():
             n = len(cell.state_info())
             state = states[p:p+n]
             p += n
@@ -701,8 +802,8 @@ class SequentialRNNCell(RecurrentCell):
     def __len__(self):
         return len(self._children)
 
-    def hybrid_forward(self, *args, **kwargs):
-        raise NotImplementedError
+    def hybrid_forward(self, F, inputs, states):
+        return self.__call__(inputs, states)
 
 
 class DropoutCell(HybridRecurrentCell):
@@ -755,10 +856,9 @@ class DropoutCell(HybridRecurrentCell):
         inputs, _, F, _ = _format_sequence(length, inputs, layout, merge_outputs)
         if isinstance(inputs, tensor_types):
             return self.hybrid_forward(F, inputs, begin_state if begin_state else [])
-        else:
-            return super(DropoutCell, self).unroll(
-                length, inputs, begin_state=begin_state, layout=layout,
-                merge_outputs=merge_outputs, valid_length=None)
+        return super(DropoutCell, self).unroll(
+            length, inputs, begin_state=begin_state, layout=layout,
+            merge_outputs=merge_outputs, valid_length=None)
 
 
 class ModifierCell(HybridRecurrentCell):
@@ -856,6 +956,7 @@ class ResidualCell(ModifierCell):
     """
 
     def __init__(self, base_cell):
+        # pylint: disable=useless-super-delegation
         super(ResidualCell, self).__init__(base_cell)
 
     def hybrid_forward(self, F, inputs, states):
@@ -924,6 +1025,7 @@ class BidirectionalCell(HybridRecurrentCell):
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None,
                valid_length=None):
+        # pylint: disable=too-many-locals
         self.reset()
 
         inputs, axis, F, batch_size = _format_sequence(length, inputs, layout, False)

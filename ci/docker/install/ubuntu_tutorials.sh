@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -22,5 +22,5 @@
 
 set -ex
 apt-get install graphviz python-opencv
-pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz
+pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm
+pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm

@@ -19,9 +19,9 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import contrib
 from mxnet.gluon import nn
-from mxnet.gluon.contrib.nn import Concurrent, HybridConcurrent, Identity
+from mxnet.gluon.contrib.nn import Concurrent, HybridConcurrent, Identity, SparseEmbedding
 from mxnet.test_utils import almost_equal
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -185,12 +185,24 @@ def test_concurrent():
     x.wait_to_read()
     x2.wait_to_read()
 
-
+@with_seed()
 def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
     mx.test_utils.assert_almost_equal(model(x).asnumpy(),
                                       x.asnumpy())
+
+@with_seed()
+def test_sparse_embedding():
+    layer = SparseEmbedding(10, 100)
+    layer.initialize()
+    trainer = mx.gluon.Trainer(layer.collect_params(), 'sgd')
+    x = mx.nd.array([3,4,2,0,1])
+    with mx.autograd.record():
+        y = layer(x)
+        y.backward()
+    assert (layer.weight.grad().asnumpy()[:5] == 1).all()
+    assert (layer.weight.grad().asnumpy()[5:] == 0).all()
 
 def test_datasets():
     wikitext2_train = contrib.data.text.WikiText2(root='data/wikitext-2', segment='train')

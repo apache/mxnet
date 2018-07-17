@@ -517,7 +517,7 @@ class BucketingModule(BaseModule):
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._curr_module.get_input_grads(merge_multi_context=merge_multi_context)
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
 
         Parameters
@@ -527,7 +527,7 @@ class BucketingModule(BaseModule):
             Typically ``data_batch.label``.
         """
         assert self.binded and self.params_initialized
-        self._curr_module.update_metric(eval_metric, labels)
+        self._curr_module.update_metric(eval_metric, labels, pre_sliced)
 
     @property
     def symbol(self):

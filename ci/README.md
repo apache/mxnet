@@ -26,7 +26,7 @@ service docker restart
 usermod -a -G docker $SUDO_USER
 ```
 
-For detailed instructions go to the docker documentation.
+For detailed instructions go to the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
 
 
 ## build.py
@@ -49,12 +49,19 @@ To build for armv7 for example:
 ./build.py -p armv7
 ```
 
-The artifacts are located in the build/ directory in the project root. In case
+
+To work inside a container with a shell you can do:
+
+```
+./build.py -p ubuntu_cpu -i
+```
+
+When building, the artifacts are located in the build/ directory in the project root. In case
 `build.py -a` is invoked, the artifacts are located in build.<platform>/
 
 ## Add a platform
 
-To add a platform, you should add the appropiate dockerfile in
+To add a platform, you should add the appropriate dockerfile in
 docker/Dockerfile.build.<platform> and add a shell function named
 build_<platform> to the file docker/runtime_functions.sh with build
 instructions for that platform.
@@ -63,3 +70,9 @@ instructions for that platform.
 Due to current limitations of the CMake build system creating artifacts in the
 source 3rdparty folder of the parent mxnet sources concurrent builds of
 different platforms is NOT SUPPORTED.
+
+## ccache
+For all builds a directory from the host system is mapped where ccache will store cached 
+compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
+significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
+variable. All ccache instances are currently set to be 10 Gigabytes max in size.

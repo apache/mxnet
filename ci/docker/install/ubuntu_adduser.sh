@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -27,11 +27,17 @@ set -ex
 if [[ "$USER_ID" -gt 0 ]]
 then
     # -no-log-init required due to https://github.com/moby/moby/issues/5419
-    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave 
+    if [[ -n "$GROUP_ID" ]] && [[ "$GROUP_ID" -gt 0 ]]
+    then
+        groupadd --gid $GROUP_ID --system jenkins_slave
+        useradd -m --no-log-init --uid $USER_ID --gid $GROUP_ID --system jenkins_slave
+    else
+        useradd -m --no-log-init --uid $USER_ID --system jenkins_slave
+    fi
     usermod -aG sudo jenkins_slave
 
-    # By default, docker creates all WORK_DIRs with root owner    
-    mkdir /work/mxnet    
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
     mkdir /work/build
     chown -R jenkins_slave /work/
 fi

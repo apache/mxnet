@@ -146,7 +146,8 @@ class BaseModule(object):
         - `get_outputs()`: get outputs of the previous forward operation.
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
-        - `update_metric(metric, labels)`: update performance metric for the previous forward
+        - `update_metric(metric, labels, pre_sliced=False)`: update performance metric
+          for the previous forward
           computed results.
 
     - other properties (mostly for backward compatibility)
@@ -249,7 +250,10 @@ class BaseModule(object):
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
-            self.update_metric(eval_metric, eval_batch.label)
+            if isinstance(eval_batch, list):
+                self.update_metric(eval_metric, [eb.label for eb in eval_batch], pre_sliced=True)
+            else:
+                self.update_metric(eval_metric, eval_batch.label)
 
             if batch_end_callback is not None:
                 batch_end_params = BatchEndParam(epoch=epoch,
@@ -517,7 +521,12 @@ class BaseModule(object):
                 except StopIteration:
                     end_of_batch = True
 
-                self.update_metric(eval_metric, data_batch.label)
+                if isinstance(data_batch, list):
+                    self.update_metric(eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
+                else:
+                    self.update_metric(eval_metric, data_batch.label)
 
                 if monitor is not None:
                     monitor.toc_print()
@@ -943,7 +952,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward
         computation.
 
@@ -951,8 +960,10 @@ class BaseModule(object):
         ----------
         eval_metric : EvalMetric
             Evaluation metric to use.
-        labels : list of NDArray
-            Typically `data_batch.label`.
+        labels : list of NDArray if `pre_sliced` parameter is set to `False`,
+            list of lists of NDArray otherwise. Typically `data_batch.label`.
+        pre_sliced: bool
+            Whether the labels are already sliced per device (default: False).
 
         Examples
         --------

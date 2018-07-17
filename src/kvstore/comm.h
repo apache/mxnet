@@ -629,7 +629,7 @@ class CommDevice : public Comm {
                         "next time row_sparse_pull() is called. To avoid such an issue,"
                         "consider create a new NDArray buffer to store the output.");
       }
-
+      bool is_gpu = retained_gpu.ctx().dev_mask() == gpu::kDevMask;
       Engine::Get()->PushAsync([=](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           const TBlob& indices = row_id.data();
           using namespace mxnet::common;
@@ -653,7 +653,8 @@ class CommDevice : public Comm {
           }
           on_complete();
         }, retained_gpu.ctx(), {src.var(), row_id.var()}, {retained_gpu.var()},
-      FnProperty::kNormal, priority, "KVStoreSparseRetain");
+      is_gpu ? FnProperty::kGPUPrioritized : FnProperty::kCPUPrioritized,
+      priority, "KVStoreSparseRetain");
       CopyFromTo(retained_gpu, out, priority);
     }
   }

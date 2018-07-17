@@ -2,7 +2,8 @@
 
 This folder contains a variety of scripts to generate the MXNet.io website as well as the docs for different versions of MXNet.
 
-## Contents
+## Contents of the build_version_doc Folder
+
 * [AddPackageLink.py](AddPackageLink.py) - MXNet.io site data massaging; injects pip version numbers in the different versions' install pages
 * [AddVersion.py](AddVersion.py) - MXNet.io site data massaging; injects the versions dropdown menu in the navigation bar
 * [build_site_tag.sh](build_site_tag.sh) - takes version tags as input and generates static html; calls `build_all_version.sh` and `update_all_version.sh`
@@ -13,7 +14,9 @@ This folder contains a variety of scripts to generate the MXNet.io website as we
 
 ## Setting Up a Docs Dev Server
 
-For these instructions, you will use an Ubuntu machine. This flow has been tested on a [Deep Learning Base AMI](https://aws.amazon.com/marketplace/pp/B077GCZ4GR), although you may use the full Deep Learning Base AMI or any other Ubuntu 16.04 system with some minor adjustments.
+Running docs builds locally on a Mac is not recommended. For these instructions, you will use an Ubuntu machine.
+
+This flow has been tested on a vanilla Ubuntu 16.04 cloud instance on AWS.
 
 **Step 1:** Spin up your Ubuntu server and SSH in.
 
@@ -30,29 +33,37 @@ source mxnet_docs/bin/activate
 **Step 3:** Clone the repo.
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet
 ```
 
 **Step 4:** Install dependencies.
 
-This script will install dependencies for you.
+These scripts will install the dependencies for you.
 
 ```bash
-./incubator-mxnet/docs/build_version_doc/setup_docs_ubuntu.sh
+./ci/docker/install/ubuntu_core.sh
+./ci/docker/install/ubuntu_python.sh
+./ci/docker/install/ubuntu_scala.sh
+./ci/docker/install/ubuntu_docs.sh
 ```
 
-**Step 4:** Make the docs.
+**Step 5a:** Make the docs.
 
-Here you have two options:
+Here you have two options (recommended for most situations):
 
-* Build this current version (master) with the following:
+* Build this current branch with the following:
 
 ```bash
-cd incubator-mxnet
+cd mxnet
 make docs USE_OPENMP=1
 ```
 
-* Build all versions as what is seen in the production site. This will have the versions dropdown and any post-build processing that generates site artifacts and other requirements for the production site.
+**Step 5b:** Alternative option for all versions to be built.
+
+This will have the versions dropdown and any post-build processing that generates site artifacts and other requirements for the production site.
+
+**NOTE:** This option only builds what is checked into each branch.
 
 The following script will build all of the latest versions, set the default site to be `master` and use your dev server's IP or DNS for navigation items.
 
@@ -65,7 +76,7 @@ The following script will build all of the latest versions, set the default site
 Refer to [Serving Your Development Version](#serving-your-development-version) for detailed instructions.
 
 
-**Troubleshooting**: for AMI users or if you already have Conda, you might be stuck with the latest version and the docs build will have a conflict. To fix this, run `/home/ubuntu/anaconda3/bin/pip uninstall sphinx` and follow this with `pip install --user sphinx==1.5.6`.
+**Troubleshooting**: for users that have previously installed Python dependencies, or if you already have Conda, you might be stuck with the latest version of Sphinx and the docs build will have a conflict. To fix this, run `/home/ubuntu/anaconda3/bin/pip uninstall sphinx` and follow this with `pip install --user sphinx==1.5.6`.
 
 If you need to build <= v0.12.0, then use a Python 2 environment to avoid errors with `mxdoc.py`. This is a sphinx extension, that was not Python 3 compatible in the old versions. On the Deep Learning AMI, use `source activate mxnet_p27`, and then install the following dependencies.
 
@@ -221,63 +232,3 @@ There are several manual and semi-automatic processes to be aware of, but the bo
 1. The root should have the current `.htaccess` file from master in `/docs/`. Make sure you've updated this in master and included the most recent version in your PR.
 2. The css file from master `/docs/_static/` will be needed. Be sure that the different versions of the site work. They might need the old version, but the newer version might fix bugs that were in the tags from the legacy versions.
 3. Pay attention to `mxdocs.py` as some docs modifications are happening there.
-
-
-## Dependencies
-
-These are the dependencies for docs generation for Ubuntu 16.04.
-
-This script is available for you to run directly on Ubuntu from the source repository.
-Run `./setup_docs_ubuntu.sh`.
-
-```
-sudo apt-get update
-sudo apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    doxygen \
-    git \
-    libjemalloc-dev \
-    pandoc \
-    software-properties-common
-
-# You made need to run `/home/ubuntu/anaconda3/bin/pip uninstall sphinx`
-# Recommonmark/Sphinx errors: https://github.com/sphinx-doc/sphinx/issues/3800
-# Recommonmark should be replaced so Sphinx can be upgraded
-# For now we remove other versions of Sphinx and pin it to v1.5.6
-
-pip install \
-    beautifulsoup4 \
-    breathe \
-    CommonMark==0.5.4 \
-    h5py \
-    mock==1.0.1 \
-    pypandoc \
-    recommonmark==0.4.0 \
-    sphinx==1.5.6
-
-# Setup scala
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
-sudo apt-get update
-sudo apt-get install -y \
-  maven \
-  sbt \
-  scala
-
-# Optionally setup Apache2
-sudo apt-get install -y apache2
-sudo ufw allow 'Apache Full'
-# turn on mod_rewrite
-sudo a2enmod rewrite
-
-echo 'To enable redirects you need to edit /etc/apache2/apache2.conf '
-echo '--> Change directives for Directory for /var/www/html using the following: '
-echo '       AllowOverride all '
-echo '--> Then restart apache with: '
-echo '       sudo systemctl restart apache2'
-
-# Cleanup
-sudo apt autoremove -y
-```

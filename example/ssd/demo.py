@@ -109,6 +109,8 @@ def parse_args():
                         help='string of comma separated names, or text filename')
     parser.add_argument('--camera', action='store_true',
                         help="use camera for image capturing")
+    parser.add_argument('--frame-resize', type=str, default=None,
+                        help="resize camera frame to x,y pixels or a float scaling factor")
     args = parser.parse_args()
     return args
 
@@ -126,6 +128,15 @@ def parse_class_names(class_names):
     else:
         raise RuntimeError("No valid class_name provided...")
     return class_names
+
+def parse_frame_resize(x):
+    if not x:
+        return x
+    x = list(map(float, x.strip().split(',')))
+    assert len(x) >= 1 and len(x) <= 2, "frame_resize should be a float scaling factor or a tuple of w,h pixels"
+    if len(x) == 1:
+        x = x[0]
+    return x
 
 def parse_data_shape(data_shape_str):
     """Parse string to tuple or int"""
@@ -160,7 +171,7 @@ def network_path(prefix, network, data_shape):
 def run_camera(args,ctx):
     assert args.batch_size == 1, "only batch size of 1 is supported"
     logging.info("Detection threshold is {}".format(args.thresh))
-    iter = CameraIterator()
+    iter = CameraIterator(frame_resize=parse_frame_resize(args.frame_resize))
     class_names = parse_class_names(args.class_names)
     mean_pixels = (args.mean_r, args.mean_g, args.mean_b)
     data_shape = int(args.data_shape)

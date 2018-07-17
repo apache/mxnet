@@ -41,6 +41,8 @@ Operator *WarpCTCProp::CreateOperator(Context ctx) const {
 DMLC_REGISTER_PARAMETER(WarpCTCParam);
 
 MXNET_REGISTER_OP_PROPERTY(WarpCTC, WarpCTCProp)
+.add_argument("data", "NDArray-or-Symbol", "Input data.")
+.add_argument("label", "NDArray-or-Symbol", "Input label.")
 .describe("warp ctc.")
 .add_arguments(WarpCTCParam::__FIELDS__());
 

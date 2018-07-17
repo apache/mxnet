@@ -18,7 +18,7 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]

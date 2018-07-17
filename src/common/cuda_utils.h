@@ -494,6 +494,36 @@ static inline __device__ void atomicAdd(mshadow::half::half_t *address,
   } while (assumed != old);
 }
 
+static inline __device__ void atomicAdd(uint8_t *address, uint8_t val) {
+  unsigned int * address_as_ui = (unsigned int *) (address - ((size_t)address & 0x3));
+  unsigned int old = *address_as_ui;
+  unsigned int shift = (((size_t)address & 0x3) << 3);
+  unsigned int sum;
+  unsigned int assumed;
+
+  do {
+    assumed = old;
+    sum = val + static_cast<uint8_t>((old >> shift) & 0xff);
+    old = (old & ~(0x000000ff << shift)) | (sum << shift);
+    old = atomicCAS(address_as_ui, assumed, old);
+  } while (assumed != old);
+}
+
+static inline __device__ void atomicAdd(int8_t *address, int8_t val) {
+  unsigned int * address_as_ui = (unsigned int *) (address - ((size_t)address & 0x3));
+  unsigned int old = *address_as_ui;
+  unsigned int shift = (((size_t)address & 0x3) << 3);
+  unsigned int sum;
+  unsigned int assumed;
+
+  do {
+    assumed = old;
+    sum = val + static_cast<int8_t>((old >> shift) & 0xff);
+    old = (old & ~(0x000000ff << shift)) | (sum << shift);
+    old = atomicCAS(address_as_ui, assumed, old);
+  } while (assumed != old);
+}
+
 // Overload atomicAdd to work for signed int64 on all architectures
 static inline  __device__  void atomicAdd(int64_t *address, int64_t val) {
   atomicAdd(reinterpret_cast<unsigned long long*>(address), static_cast<unsigned long long>(val)); // NOLINT

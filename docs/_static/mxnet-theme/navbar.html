@@ -55,17 +55,18 @@
           <ul id="burgerMenu" class="dropdown-menu">
               <li><a href="{{url_root}}install/index.html">Install</a></li>
               <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a></li>
-              <li class="dropdown-submenu">
-                <a href="#" tabindex="-1">Community</a>
+              <li class="dropdown-submenu dropdown">
+                <a href="#" tabindex="-1" aria-haspopup="true" role="button" class="dropdown-toggle burger-link" data-toggle="dropdown">Community</a>
                 <ul class="dropdown-menu">
-                  <li><a tabindex="-1"  href="{{url_root}}community/index.html">Community</a></li>
+                  <li><a tabindex="-1"  href="http://discuss.mxnet.io">Forum</a></li>
+                  <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet">Github</a></li>
                   <li><a tabindex="-1"  href="{{url_root}}community/contribute.html">Contribute</a></li>
                   <li><a tabindex="-1"  href="{{url_root}}community/powered_by.html">Powered By</a></li>
                 </ul>
               </li>
               {% for name in ['API'] %}
               <li class="dropdown-submenu">
-                <a href="#" tabindex="-1">{{name}}</a>
+                <a href="#" tabindex="-1" role="button" aria-haspopup="true" class="dropdown-toggle burger-link" data-toggle="dropdown">{{name}}</a>
                 <ul class="dropdown-menu">
                   {% for lang in ['Python', 'Scala', 'R', 'Julia', 'C++', 'Perl'] %}
                     <li><a tabindex="-1" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">{{lang}}</a>
@@ -75,7 +76,7 @@
               </li>
               {% endfor %}
               <li class="dropdown-submenu">
-                <a href="#" tabindex="-1">Docs</a>
+                <a href="#" tabindex="-1" aria-haspopup="true" aria-expanded="true" class="dropdown-toggle burger-link" data-toggle="dropdown">Docs</a>
                 <ul class="dropdown-menu">
                   <li><a tabindex="-1"  href="{{url_root}}tutorials/index.html">Tutorials</a></li>
                   <li><a tabindex="-1"  href="{{url_root}}faq/index.html">FAQ</a></li>

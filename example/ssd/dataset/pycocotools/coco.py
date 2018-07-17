@@ -55,12 +55,12 @@ import itertools
 # from . import mask as maskUtils
 import os
 from collections import defaultdict
-import sys
-PYTHON_VERSION = sys.version_info[0]
-if PYTHON_VERSION == 2:
-    from urllib import urlretrieve
-elif PYTHON_VERSION == 3:
+from mxnet.base import string_types
+try:
     from urllib.request import urlretrieve
+except ImportError:
+    from urllib import urlretrieve
+
 
 class COCO:
     def __init__(self, annotation_file=None):
@@ -302,7 +302,7 @@ class COCO:
 
         print('Loading and preparing results...')
         tic = time.time()
-        if type(resFile) == str or type(resFile) == unicode:
+        if type(resFile) in string_types:
             anns = json.load(open(resFile))
         elif type(resFile) == np.ndarray:
             anns = self.loadNumpyAnnotations(resFile)

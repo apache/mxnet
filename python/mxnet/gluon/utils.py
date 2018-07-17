@@ -118,10 +118,14 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 def clip_global_norm(arrays, max_norm):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
     """
+    def _norm(array):
+        if array.stype == 'default':
+            x = array.reshape((-1,))
+            return ndarray.dot(x, x)
+        return array.norm().square()
     assert len(arrays) > 0
     ctx = arrays[0].context
-    total_norm = ndarray.add_n(*[ndarray.dot(x, x).as_in_context(ctx)
-                                 for x in (arr.reshape((-1,)) for arr in arrays)])
+    total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
     total_norm = ndarray.sqrt(total_norm).asscalar()
     if not np.isfinite(total_norm):
         warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
@@ -171,7 +175,7 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
     """Download an given URL
 
     Parameters
@@ -186,6 +190,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
     sha1_hash : str, optional
         Expected sha1 hash in hexadecimal digits. Will ignore existing file when hash is specified
         but doesn't match.
+    retries : integer, default 5
+        The number of times to attempt the download in case of failure or non 200 return codes
 
     Returns
     -------
@@ -200,26 +206,37 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
             fname = os.path.join(path, url.split('/')[-1])
         else:
             fname = path
+    assert retries >= 0, "Number of retries should be at least 0"
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-
-        print('Downloading %s from %s...'%(fname, url))
-        r = requests.get(url, stream=True)
-        if r.status_code != 200:
-            raise RuntimeError("Failed downloading url %s"%url)
-        with open(fname, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        if sha1_hash and not check_sha1(fname, sha1_hash):
-            raise UserWarning('File {} is downloaded but the content hash does not match. ' \
-                              'The repo may be outdated or download may be incomplete. ' \
-                              'If the "repo_url" is overridden, consider switching to ' \
-                              'the default repo.'.format(fname))
+        while retries+1 > 0:
+            # Disable pyling too broad Exception
+            # pylint: disable=W0703
+            try:
+                print('Downloading %s from %s...'%(fname, url))
+                r = requests.get(url, stream=True)
+                if r.status_code != 200:
+                    raise RuntimeError("Failed downloading url %s"%url)
+                with open(fname, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk: # filter out keep-alive new chunks
+                            f.write(chunk)
+                if sha1_hash and not check_sha1(fname, sha1_hash):
+                    raise UserWarning('File {} is downloaded but the content hash does not match.'\
+                                      ' The repo may be outdated or download may be incomplete. '\
+                                      'If the "repo_url" is overridden, consider switching to '\
+                                      'the default repo.'.format(fname))
+                break
+            except Exception as e:
+                retries -= 1
+                if retries <= 0:
+                    raise e
+                else:
+                    print("download failed, retrying, {} attempt{} left"
+                          .format(retries, 's' if retries > 1 else ''))
 
     return fname
 

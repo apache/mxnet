@@ -20,13 +20,14 @@ import mxnet as mx
 import numpy as np
 import random
 import shutil
+from mxnet.base import MXNetError
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 
 import models
 from contextlib import contextmanager
-from nose.tools import make_decorator
+from nose.tools import make_decorator, assert_raises
 import tempfile
 
 def assertRaises(expected_exception, func, *args, **kwargs):
@@ -92,6 +93,23 @@ def random_seed(seed=None):
         np.random.seed(next_seed)
         mx.random.seed(next_seed)
         random.seed(next_seed)
+
+
+def assert_raises_cudnn_disabled(assertion_error=False):
+    def test_helper(orig_test):
+        @make_decorator(orig_test)
+        def test_new(*args, **kwargs):
+            cudnn_disabled = (os.getenv('CUDNN_OFF_TEST_ONLY') == "true")
+            if not cudnn_disabled or mx.context.current_context().device_type == 'cpu':
+                orig_test(*args, **kwargs)
+            else:
+                if assertion_error:
+                    errors = (MXNetError, RuntimeError, AssertionError)
+                else:
+                    errors = (MXNetError, RuntimeError)
+                assert_raises(errors, orig_test, *args, **kwargs)
+        return test_new
+    return test_helper
 
 
 def with_seed(seed=None):
@@ -241,3 +259,11 @@ except:
 
         def __exit__(self, exc_type, exc_value, traceback):
             shutil.rmtree(self._dirname)
+
+def teardown():
+    """
+    A function with a 'magic name' executed automatically after each nosetests test module.
+
+    It waits for all operations in one file to finish before carrying on the next.
+    """
+    mx.nd.waitall()
