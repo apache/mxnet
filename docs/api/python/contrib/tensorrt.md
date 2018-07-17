@@ -27,7 +27,7 @@ The above points ensure that we find a compromise between the flexibility of MXN
 Building MXNet together with TensorRT is somewhat complex. The recipe will hopefully be simplified in the near future, but for now, it's easiest to build a Docker container with a Ubuntu 16.04 base. This Dockerfile can be found under the ci subdirectory of the MXNet repository. You can build the container as follows:
 
 ```
-docker build -t ci/docker/Dockerfile.build.ubuntu_gpu_tensorrt mxnet_with_tensorrt
+docker build -f docker/Dockerfiles/Dockerfile.tensorrt -t mxnet_with_tensorrt .
 ```
 
 Next, we can run this container as follows (don't forget to install [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)):
@@ -160,7 +160,7 @@ trt_pct = run_inference(sym, arg_params, aux_params, mnist,
 ```
 Simply switching the flag allows us to go back and forth between MXNet and MXNet-TensorRT inference. See the details in the unit test at `${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_lenet5.py`.
 
-## Running TensorRT with your own models with the Gluon API
+## Running TensorRT with your own image classification models with the Gluon API
 
 **Note:** Please first read the previous section titled "Running TensorRT with your own models with the symbolic API" - it contains information that will also be useful for Gluonusers.
 
@@ -198,6 +198,36 @@ gluon.data.DataLoader(
 ```
 
 For more details, see the unit test examples at `${MXNET_HOME}/tests/python/tensorrt/test_tensorrt_resnet_resnext.py`.
+
+## Running TensorRT with your own object detection models with the Gluon API
+
+The process for object detection is almost exactly the same as for image classification. However, let's note that an object detection network, such as [SSD](https://arxiv.org/pdf/1512.02325.pdf), has 3 outputs:
+
+* anchors
+* predicted classes
+* bounding box coordinates
+
+The symbols that are being bound for execution are the model outputs. If we didn't group them, we'd have 3 bound symbols, and most of the TensorRT segmentation, memory allocation, etc., would be repeated. In order to work around that, we can group the output symbols using the concatenation symbol. This will concatenate the tensors, which we can later split when manipulating the model output in NumPy. Let's start with the concatenation:
+
+```python
+net = gluoncv.model_zoo.get_model(model_name='ssd_512_mobilenet1_0_coco', pretrained=True)
+data = mx.sym.var('data')
+anchors, class_preds, box_preds = net(data)
+all_preds = mx.sym.concat(anchors, class_preds, box_preds, dim=2)
+all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
+executor = all_preds.simple_bind(ctx=ctx, data=(batch_size, 3, 224, 224), grad_req='null',
+                                   shared_buffer=all_params, force_rebind=True)
+```
+Now that the symbol to be bound concatenates anchors, class predictions and box predictions, we can run inference and split the output at the end:
+
+```python
+executor.arg_dict["data"] = data
+executor.forward(is_train = False)
+results = executor.outputs[0].asnumpy()
+_, anchors, class_preds, box_preds = tuple(np.split(results, indices_or_sections=[0, 1, 2], axis=2))
+```
+
+As you can see, splitting the three outputs after prediction is as easy as their initial concatenation.
 
 ## Examples
 
