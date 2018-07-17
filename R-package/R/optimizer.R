@@ -17,7 +17,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
                        momentum = 0,
                        wd = 0,
                        rescale.grad = 1,
-                       clip_gradient = Inf,
+                       clip_gradient = -1,
                        lr_scheduler = NULL) {
 
   lr <- learning.rate
