@@ -895,6 +895,41 @@ nightly_test_javascript() {
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
+# Nightly 'MXNet: The Straight Dope' Single-GPU Tests
+set_up_nightly_straight_dope_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    rm -rf ./straight_dope_book
+    git clone https://github.com/zackchase/mxnet-the-straight-dope straight_dope_book
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=${1}
+}
+
+nightly_straight_dope_python2_single_gpu_tests() {
+    set_up_nightly_straight_dope_tests python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_single_gpu_tests() {
+    set_up_nightly_straight_dope_tests python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+# Nightly 'MXNet: The Straight Dope' Multi-GPU Tests
+nightly_straight_dope_python2_multi_gpu_tests() {
+    set_up_nightly_straight_dope_tests python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_multi_gpu_tests() {
+    set_up_nightly_straight_dope_tests python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
 # Deploy
 
 deploy_docs() {

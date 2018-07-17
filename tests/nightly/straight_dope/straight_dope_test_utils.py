@@ -1,0 +1,82 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+#pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
+"""
+    This file tests and ensures that all straight dope notebooks run
+    without warning or exception.
+
+    env variable MXNET_TEST_KERNEL controls which kernel to use when running
+    the notebook. e.g: `export MXNET_TEST_KERNEL=python2`
+
+    env variable MXNET_TEST_NO_CACHE controls whether to clean the
+    temporary directory in which the notebook was run and re-download any
+    resource file. The default behaviour is to not clean the directory. Set to '1'
+    to force clean the directory. e.g: `export MXNET_TEST_NO_CACHE=1`
+    NB: in the real CI, the tests will re-download everything since they start from
+    a clean workspace.
+"""
+import io
+import os
+import re
+import shutil
+import sys
+
+#TODO(vishaalk): Find a cleaner way to import this notebook.
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
+from notebook_test import run_notebook
+
+EPOCHS_REGEX = r'epochs\s+=\s+[0-9]+'  # Regular expression that matches 'epochs = #'
+KERNEL = os.getenv('MXNET_TEST_KERNEL', None)
+NO_CACHE = os.getenv('MXNET_TEST_NO_CACHE', False)
+NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), 'straight_dope_book')
+
+def _test_notebook(notebook, override_epochs=True):
+    """Run Jupyter notebook to catch any execution error.
+
+    Args:
+        notebook : string
+            notebook name in folder/notebook format
+        epochs : boolean
+            whether or not to override the number of epochs to 1
+    Returns:
+        True if the notebook runs without warning or error.
+    """
+    if override_epochs:
+        _override_epochs(notebook)
+    return run_notebook(notebook, NOTEBOOKS_DIR, kernel=KERNEL, no_cache=NO_CACHE)
+
+
+def _override_epochs(notebook):
+    """Overrides the number of epochs in the notebook to 1 epoch.
+
+    Args:
+        notebook : string
+            notebook name in folder/notebook format
+    """
+    notebook_path = os.path.join(*([NOTEBOOKS_DIR] + notebook.split('/'))) + ".ipynb"
+
+    # Read the notebook and set epochs to num_epochs
+    with io.open(notebook_path, 'r', encoding='utf-8') as f:
+        notebook = f.read()
+
+    # Set number of epochs to 1
+    modified_notebook = re.sub(EPOCHS_REGEX, 'epochs = 1', notebook)
+    
+    # Replace the original notebook with the modified one.
+    with io.open(notebook_path, 'w', encoding='utf-8') as f:
+        f.write(modified_notebook)

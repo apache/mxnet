@@ -98,6 +98,42 @@ try {
           docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
         }
       }
+    },
+    'StraightDope: Python2 Single-GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/straight_dope-single_gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_single_gpu_tests', true)
+        }
+      }
+    },
+    'StraightDope: Python2 Multi-GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/straight_dope-multi_gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_multi_gpu_tests', true)
+        }
+      }
+    },
+    'StraightDope: Python3 Single-GPU': {
+      node('mxnetlinux-gpu-p3') {
+        ws('workspace/straight_dope-single_gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_single_gpu_tests', true)
+        }
+      }
+    },
+    'StraightDope: Python3 Multi-GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/straight_dope-multi_gpu') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
+        }
+      }
     }
   }
 } catch (caughtError) {
