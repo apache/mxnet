@@ -28,36 +28,52 @@ import org.apache.mxnet.Context
   * Integration test for imageClassifier example.
   * This will run as a part of "make scalatest"
   */
-class ProfilerTest extends FunSuite with BeforeAndAfterAll {
-  private val logger = LoggerFactory.getLogger(classOf[ProfilerTest])
+class ProfilerSuite extends FunSuite with BeforeAndAfterAll {
+  private val logger = LoggerFactory.getLogger(classOf[ProfilerSuite])
 
-  test("testProfiler") {
+  override def beforeAll(): Unit = {
     logger.info("Running profiler test...")
-
     val eray = new ProfilerNDArray
-    try {
+    val path = System.getProperty("java.io.tmpdir")
+    val kwargs = Map("file_name" -> path)
+    logger.info(s"profile file save to $path")
 
-      val path = System.getProperty("java.io.tmpdir")
-      val kwargs = Map("file_name" -> path)
-      logger.info(s"profile file save to $path")
+    Profiler.profilerSetState("run")
+  }
 
-      Profiler.profilerSetState("run")
-      ProfilerNDArray.testBroadcast()
-      ProfilerNDArray.testNDArraySaveload()
-      ProfilerNDArray.testNDArrayCopy()
-      ProfilerNDArray.testNDArrayNegate()
-      ProfilerNDArray.testNDArrayScalar()
-      ProfilerNDArray.testClip()
-      ProfilerNDArray.testDot()
-      ProfilerNDArray.testNDArrayOnehot()
-      Profiler.profilerSetState("stop")
+  override def afterAll(): Unit = {
+    Profiler.profilerSetState("stop")
+  }
 
-    } catch {
-      case ex: Exception => {
-        logger.error(ex.getMessage, ex)
-        sys.exit(1)
-      }
-    }
+  test("Profiler Broadcast test") {
+    ProfilerNDArray.testBroadcast()
+  }
 
+  test("Profiler NDArray Saveload test") {
+    ProfilerNDArray.testNDArraySaveload()
+  }
+
+  test("Profiler NDArray Copy") {
+    ProfilerNDArray.testNDArrayCopy()
+  }
+
+  test("Profiler NDArray Negate") {
+    ProfilerNDArray.testNDArrayNegate()
+  }
+
+  test("Profiler NDArray Scalar") {
+    ProfilerNDArray.testNDArrayScalar()
+  }
+
+  test("Profiler NDArray Onehot") {
+    ProfilerNDArray.testNDArrayOnehot()
+  }
+
+  test("Profiler Clip") {
+    ProfilerNDArray.testClip()
+  }
+
+  test("Profiler Dot") {
+    ProfilerNDArray.testDot()
   }
 }
