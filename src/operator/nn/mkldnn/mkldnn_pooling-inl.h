@@ -87,8 +87,18 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param) {
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
                                  const TShape &dshape) {
   bool ret = SupportMKLDNNPooling(param);
+  if (!ret)
+    return false;
 
-  return ret;
+  if (param.pooling_convention == pool_enum::kValid) {
+    return true;
+  } else {
+    // currently, only max-pooling is supported for full convention
+    if (param.pool_type == pool_enum::kMaxPooling)
+      return true;
+    else
+      return false;
+  }
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {
