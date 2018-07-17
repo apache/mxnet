@@ -96,7 +96,6 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
         logging.info('%d out of %d tries to build the docker image. You can influence this by setting the '
                      'environment variable "DOCKER_BUILD_NUM_RETRIES"', i + 1, num_retries)
 
-
         cmd = [docker_binary, "build",
                "-f", get_dockerfile(platform),
                "--build-arg", "USER_ID={}".format(os.getuid()),
@@ -110,11 +109,13 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
             # Docker build was successful. Call break to break out of the retry mechanism
             break
         except subprocess.CalledProcessError as e:
-            logging.exception('Error during building docker image', e)
+            saved_exception = e
+            logging.error('Failed to build docker image')
             # Building the docker image failed. Call continue to trigger the retry mechanism
             continue
     else:
         # Num retries exceeded
+        logging.exception('Exception during build of docker image', saved_exception)
         logging.fatal('Failed to build the docker image, aborting...')
         sys.exit(1)
 
