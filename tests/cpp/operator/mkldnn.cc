@@ -1344,13 +1344,11 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
 
-
       // backwards test performed same time since output needed
       backwards_input[0] = outputs[0];  // output grad
       backwards_input[1] = inputs[0];  // input
       backwards_input[2] = inputs[1];  // kernel
       backwards_input[3] = inputs[2];  // bias
-
 
       auto tmp_output = GetTestInputArrays(true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
