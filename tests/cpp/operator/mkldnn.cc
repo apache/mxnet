@@ -1114,9 +1114,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       Imperative::Get()->set_is_training(true);
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+      auto ctx = Context();
+      Imperative::Get()->InvokeOp(ctx, forward_attrs.attrs, inputs,
                                   outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+      Imperative::Get()->InvokeOp(ctx, forward_attrs.attrs, inputs,
                                   ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
@@ -1137,10 +1138,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
       Imperative::Get()->InvokeOp(
-          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+          ctx, backwards_attrs.attrs, backwards_input, backwards_outputs,
           back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
       Imperative::Get()->InvokeOp(
-          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          ctx, backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
           back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
