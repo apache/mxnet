@@ -1311,7 +1311,8 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         != in_arr.arr.shape().ndim())
       continue;
 
-    float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0]) / static_cast<float>(input_shape[2]);
+    float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0])
+        / static_cast<float>(input_shape[2]);
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     scale_vector[0] = 1;
     scale_vector[1] = static_cast<float>(num_filter) / input_shape[1];
@@ -1448,7 +1449,7 @@ TEST(IMPERATIVE, PoolingOp) {
 }
 
 TEST(IMPERATIVE, ConvOp) {
-  int dim = 2; // MKLDNN conv only supports 2d kernels
+  int dim = 2;  // MKLDNN conv only supports 2d kernels
   for (int num_filters = 2; num_filters < 3; num_filters++) {
     for (int kernel = 1; kernel < 4; kernel++) {
       for (int stride = 1; stride < 3; stride++) {
