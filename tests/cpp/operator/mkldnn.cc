@@ -497,7 +497,7 @@ OpAttrs GetLRNOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("LRN");
   attrs.num_inputs = 1;
-  attrs.num_outputs = 1;
+  attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"nsize" , "5"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
@@ -510,7 +510,7 @@ OpAttrs GetLRNOp() {
 OpAttrs GetLRNBackwardsOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_LRN");
-  attrs.num_inputs = 1;
+  attrs.num_inputs = 2;
   attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"nsize" , "5"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
@@ -1097,6 +1097,11 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   for (int i1 = 0; i1 < in_arrs.size(); i1++) {
     auto in_arr = in_arrs[i1];
 
+    for (int i = 0; i < forward_attrs.num_outputs; i++) {
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    }
+
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
@@ -1113,28 +1118,15 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
 
-
       // backwards test performed same time since output needed
       backwards_input[0] = outputs[0];  // output grad
       backwards_input[1] = inputs[0];  // input
-      backwards_input[2] = inputs[1];  // kernel
-      backwards_input[3] = inputs[2];  // bias
-
 
       auto tmp_output = GetTestInputArrays(true)[i1];
-      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
-      NDArray tmp_bias = CreateBiasNDArray(num_filter);
-
       backwards_outputs[0] = &tmp_output.arr;
-      backwards_outputs[1] = &tmp_kernel;
-      backwards_outputs[2] = &tmp_bias;
 
       auto tmp_output2 = GetTestInputArrays(true)[i1];
-      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
-      NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
       backwards_ex_outputs[0] = &tmp_output2.arr;
-      backwards_ex_outputs[1] = &tmp_kernel2;
-      backwards_ex_outputs[2] = &tmp_bias2;
 
       for (int i = 0; i < backwards_attrs.num_outputs; i++)
         back_req[0] = kWriteTo;
@@ -1151,6 +1143,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
   }
+
+  // todo: add kWriteINnplace and addTo
 }
 
 TEST(IMPERATIVE, CopyOp) {
