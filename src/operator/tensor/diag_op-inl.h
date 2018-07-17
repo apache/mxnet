@@ -160,14 +160,14 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
+                            in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
       });
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
+                            in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
       });
     });
   }
@@ -195,14 +195,14 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
+                            in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
       });
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
+                            in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
       });
     });
   }
