@@ -225,8 +225,11 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   const NDArray *workspace = nullptr;
 
   // Pooling does not currently support working with views
-  if (inputs[0].IsView() || outputs[0].IsView())
+  if (inputs[0].IsView() || outputs[0].IsView()) {
     FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
 
   if (SupportMKLDNN(inputs[0]) &&
       SupportMKLDNNPooling(param, inputs[0].shape())) {
@@ -249,8 +252,11 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
 
   // Pooling does not currently support working with views
-  if (inputs[0].IsView() || outputs[0].IsView())
-    FallBackCompute(PoolingCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  if (inputs[0].IsView() || outputs[0].IsView()) {
+    FallBackCompute(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+
 
   if (SupportMKLDNN(inputs[0])
       && SupportMKLDNNPooling(param, inputs[0].shape())) {
