@@ -969,30 +969,7 @@ $ make rpkg
 <div class="scala">
 <div class="gpu">
 
-```html
-<dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of gpu -->
-
-<div class="cpu">
-
-```html
-<dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of cpu -->
-</div> <!-- End of scala -->
-
-
-<div class="scala">
-<div class="gpu">
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 ```html
 <dependency>
@@ -1004,6 +981,8 @@ $ make rpkg
 </div> <!-- End of gpu -->
 
 <div class="cpu">
+
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 ```html
 <dependency>
@@ -1453,6 +1432,8 @@ Will be available soon.
 
 <div class="scala">
 <div class="cpu">
+
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 ```html
 <dependency>
@@ -2425,7 +2406,7 @@ You should see the following output:
 <div class="linux">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+      Coming soon.
     </div>
   </div>
 
@@ -2441,7 +2422,7 @@ Will be available soon.
 <div class="macos">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+      Coming soon.
     </div>
   </div>
   <div class="julia perl cpp">
