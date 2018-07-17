@@ -696,7 +696,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    nosetests-3.4 --verbose tests/python/tensorrt
+    nosetests-3.4 --verbose --processes=1 --process-restartworker tests/python/tensorrt
 }
 
 # quantization gpu currently only runs on P3 instances

@@ -21,24 +21,7 @@ import unittest
 # pylint: enable=unused-import
 import numpy as np
 import mxnet as mx
-from ctypes.util import find_library
-
-assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
-
-def get_use_tensorrt():
-    return int(os.environ.get("MXNET_USE_TENSORRT", 0))
-
-
-def set_use_tensorrt(status=False):
-    os.environ["MXNET_USE_TENSORRT"] = str(int(status))
-
-
-def merge_dicts(*dict_args):
-    """Merge arg_params and aux_params to populate shared_buffer"""
-    result = {}
-    for dictionary in dict_args:
-        result.update(dictionary)
-    return result
+from common import *
 
 
 def get_iters(mnist, batch_size):
@@ -137,8 +120,8 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
 
 
 def test_tensorrt_inference():
-    """Run inference comparison between MXNet and TensorRT.
-       This could be used stand-alone or with nosetests."""
+    """Run LeNet-5 inference comparison between MXNet and TensorRT."""
+    check_tensorrt_installation()
     mnist = mx.test_utils.get_mnist()
     num_epochs = 10
     batch_size = 1024
@@ -156,6 +139,7 @@ def test_tensorrt_inference():
     # Load serialized MXNet model (model-symbol.json + model-epoch.params)
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
 
+    print("LeNet-5 test")
     print("Running inference in MXNet")
     set_use_tensorrt(False)
     mx_pct = run_inference(sym, arg_params, aux_params, mnist,
