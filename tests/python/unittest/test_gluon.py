@@ -1099,6 +1099,30 @@ def test_save_load():
 
     net.load_parameters('test_save_load.params')
 
+    class Network(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Network, self).__init__(**kwargs)
+            with self.name_scope():
+                self.encoders = gluon.nn.Sequential()
+                with self.encoders.name_scope():
+                    for _ in range(2):
+                        lstm = mx.gluon.rnn.LSTM(200, 1, bidirectional=True)
+                        self.encoders.add(lstm)
+
+        def forward(self, x):
+            for i in range(2):
+                x = self.encoders[i](x)
+            return x
+    net = Network()
+    net.initialize(mx.init.Xavier(), ctx=mx.cpu())
+    net.hybridize()
+    x = np.random.rand(32, 10, 10)
+    x = mx.nd.array(x).as_in_context(mx.cpu())
+    net(x)
+    net.save_parameters('tmp.params')
+    net2 = Network()
+    net2.load_parameters('tmp.params')
+
 @with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):

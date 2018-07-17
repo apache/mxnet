@@ -28,8 +28,6 @@ mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3r
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-// command to start a docker container
-docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
 max_time = 120
 // assign any caught errors here
@@ -966,18 +964,19 @@ try {
         }
       }
     },
-    'Caffe GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-caffe') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
-            publish_test_coverage()
-          }
-        }
-      }
-    },
+    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
+    // 'Caffe GPU': {
+    //   node('mxnetlinux-gpu') {
+    //     ws('workspace/it-caffe') {
+    //       timeout(time: max_time, unit: 'MINUTES') {
+    //         init_git()
+    //         unpack_lib('gpu')
+    //         docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
+    //         publish_test_coverage()
+    //       }
+    //     }
+    //   }
+    // },
     'cpp-package GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-cpp-package') {
@@ -1000,6 +999,30 @@ try {
         }
       }
     },
+    'dist-kvstore tests GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-dist-kvstore') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
+    'dist-kvstore tests CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-dist-kvstore') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu')
+            docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
@@ -1012,19 +1035,6 @@ try {
         }
       }
     }
-    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
-    // 'dist-kvstore tests GPU': {
-    //  node('mxnetlinux-gpu') {
-    //    ws('workspace/it-dist-kvstore') {
-    //      timeout(time: max_time, unit: 'MINUTES') {
-    //        init_git()
-    //        unpack_lib('gpu')
-    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
-    //        publish_test_coverage()
-    //      }
-    //    }
-    //  }
-    //}
   }
 
   stage('Deploy') {

@@ -618,7 +618,7 @@ class Block(object):
                 params = 0
                 summary[m_key]['trainable'] = 0
                 summary[m_key]['shared'] = 0
-                for p in block._reg_params.values():
+                for p in block.params.values():
                     params += p.data().size
                     summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
                     if p in seen:
