@@ -1306,13 +1306,17 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
+    // cannot pool if ndarray and mkldnn memory have different ndim
+    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
+        != in_arr.arr.shape().ndim())
+      continue;
+
     float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0]) / static_cast<float>(input_shape[2]);
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     scale_vector[0] = 1;
     scale_vector[1] = static_cast<float>(num_filter) / input_shape[1];
     scale_vector[2] = scale;
     scale_vector[3] = scale;
-
 
     for (int i = 0; i < forward_attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
