@@ -335,12 +335,12 @@ class ConvolutionV1Op : public Operator {
                                      oshape[2] * oshape[3]);
     // param_.workspace is in elements of sizeof(DType)
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
-    nstep_ = std::max(
+    nstep_ = std::max<index_t>(
         std::min(
             static_cast<index_t>(
                 param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
             ishape[0]),
-        1LL);
+        1);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
