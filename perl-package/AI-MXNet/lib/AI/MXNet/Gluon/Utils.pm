@@ -25,7 +25,7 @@ use File::Path qw(make_path);
 use HTTP::Tiny;
 use Exporter;
 use base qw(Exporter);
-@AI::MXNet::Gluon::Utils::EXPORT_OK = qw(download);
+@AI::MXNet::Gluon::Utils::EXPORT_OK = qw(download check_sha1);
 
 =head1 NAME
 

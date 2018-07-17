@@ -28,8 +28,6 @@ mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3r
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-// command to start a docker container
-docker_run = 'tests/ci_build/ci_build.sh'
 // timeout in minutes
 max_time = 120
 // assign any caught errors here
@@ -407,7 +405,7 @@ try {
         }
       }
     },
-    //Todo: Set specific CUDA_ARCh for windows builds in cmake
+
     'Build GPU windows':{
       node('mxnetwindows-cpu') {
         timeout(time: max_time, unit: 'MINUTES') {
@@ -417,7 +415,7 @@ try {
             bat """mkdir build_vc14_gpu
               call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
               cd build_vc14_gpu
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release -DUSE_MKL_IF_AVAILABLE=0 ${env.WORKSPACE}"""
+              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=Manual -DCUDA_ARCH_BIN=52 -DCUDA_ARCH_PTX=52 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release -DUSE_MKL_IF_AVAILABLE=0 ${env.WORKSPACE}"""
             bat 'C:\\mxnet\\build_vc14_gpu.bat'
             bat '''rmdir /s/q pkg_vc14_gpu
               mkdir pkg_vc14_gpu\\lib
@@ -450,7 +448,7 @@ try {
               call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
               cd build_%BUILD_NAME%
               copy ${env.WORKSPACE}\\3rdparty\\mkldnn\\config_template.vcxproj.user ${env.WORKSPACE}\\config_template.vcxproj.user /y
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
+              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=Manual -DCUDA_ARCH_BIN=52 -DCUDA_ARCH_PTX=52 -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
             bat '''
                 call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
                 cd build_%BUILD_NAME%
@@ -966,18 +964,19 @@ try {
         }
       }
     },
-    'Caffe GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-caffe') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
-            publish_test_coverage()
-          }
-        }
-      }
-    },
+    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
+    // 'Caffe GPU': {
+    //   node('mxnetlinux-gpu') {
+    //     ws('workspace/it-caffe') {
+    //       timeout(time: max_time, unit: 'MINUTES') {
+    //         init_git()
+    //         unpack_lib('gpu')
+    //         docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
+    //         publish_test_coverage()
+    //       }
+    //     }
+    //   }
+    // },
     'cpp-package GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-cpp-package') {
@@ -1000,6 +999,30 @@ try {
         }
       }
     },
+    'dist-kvstore tests GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/it-dist-kvstore') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('gpu')
+            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
+    'dist-kvstore tests CPU': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/it-dist-kvstore') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            unpack_lib('cpu')
+            docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
+            publish_test_coverage()
+          }
+        }
+      }
+    },
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
@@ -1012,19 +1035,6 @@ try {
         }
       }
     }
-    // Disable until fixed https://github.com/apache/incubator-mxnet/issues/11441
-    // 'dist-kvstore tests GPU': {
-    //  node('mxnetlinux-gpu') {
-    //    ws('workspace/it-dist-kvstore') {
-    //      timeout(time: max_time, unit: 'MINUTES') {
-    //        init_git()
-    //        unpack_lib('gpu')
-    //        docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
-    //        publish_test_coverage()
-    //      }
-    //    }
-    //  }
-    //}
   }
 
   stage('Deploy') {
