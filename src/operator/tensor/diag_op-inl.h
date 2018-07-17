@@ -38,11 +38,11 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-  nnvm::dim_t k;
+  dmlc::optional<int> k;
   DMLC_DECLARE_PARAMETER(DiagParam) {
     DMLC_DECLARE_FIELD(k)
-    .set_default(0)
-    .describe("Diagonal in question. The default is 0."
+    .set_default(dmlc::optional<int>(0))
+    .describe("Diagonal in question. The default is 0. "
               "Use k>0 for diagonals above the main diagonal, "
               "and k<0 for diagonals below the main diagonal.");
   }
@@ -84,7 +84,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
 
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
-    TShape oshape = DiagShapeImpl(ishape, param.k);
+    TShape oshape = DiagShapeImpl(ishape, param.k.value());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
     return out_attrs->at(0).ndim() != 0U;
@@ -105,7 +105,7 @@ template<int req>
 struct diag {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  mshadow::Shape<2> ishape, const nnvm::dim_t k) {
+                                  mshadow::Shape<2> ishape, int k) {
     using namespace mxnet_op;
     int j = 0;
     if (k > 0) {
@@ -124,7 +124,7 @@ template<int req>
 struct diag_gen {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  mshadow::Shape<2> oshape, const nnvm::dim_t k) {
+                                  mshadow::Shape<2> oshape, int k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -160,14 +160,14 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k);
+                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
       });
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k);
+                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
       });
     });
   }
@@ -195,14 +195,14 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k);
+                                in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), param.k.value());
       });
     });
   } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag<req_type>, xpu>::Launch(s, out_data.Size(), out_data.dptr<DType>(),
-                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k);
+                                in_data.dptr<DType>(), Shape2(ishape[0], ishape[1]), param.k.value());
       });
     });
   }
