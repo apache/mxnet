@@ -1195,7 +1195,7 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
   }
 }
 
-TEST(IMPERATIVE, ConvOp) {
+TEST(IMPERATIVE, LRNOp) {
   OpAttrs forward_attrs = GetLRNOp();
   OpAttrs backwards_attrs = GetLRNBackwardsOp();
   TestOpEx(forward_attrs, backwards_attrs);
