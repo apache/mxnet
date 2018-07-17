@@ -337,10 +337,10 @@ class ConvolutionV1Op : public Operator {
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
     nstep_ = std::max(
         std::min(
-            static_cast<size_t>(
+            static_cast<index_t>(
                 param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
             ishape[0]),
-        1UL);
+        1LL);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);

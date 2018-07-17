@@ -75,7 +75,7 @@ Examples::
       std::vector<nnvm::NodeEntry> inputs;
       index_t n_out = n->num_outputs();
       for (index_t i = 0; i < n_out; ++i) {
-        inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+        inputs.emplace_back(nnvm::NodeEntry{ n, static_cast<uint32_t>(i), 0 });
       }
       return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
     } else {
@@ -137,7 +137,7 @@ Examples::
     std::vector<nnvm::NodeEntry> inputs;
     index_t n_out = n->num_outputs();
     for (index_t i = 0; i < n_out; ++i) {
-      inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+      inputs.emplace_back(nnvm::NodeEntry{ n, static_cast<uint32_t>(i), 0 });
     }
     return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,
                                {{"axis", n->attrs.dict["axis"]},
