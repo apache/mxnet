@@ -1308,7 +1308,7 @@ fixed-size items.
         The arguments are the same as for :py:func:`diag`, with
         this array as data.
         """
-        return op.diag(self, *args, **kwargs)
+        return op.diag(self, k, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.
