@@ -2412,7 +2412,7 @@ You should see the following output:
 <div class="linux">
   <div class="scala">
     <div class="cpu gpu">
-      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">Scala-MXNet demo project</a> to validate your Maven package installation.
+      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
     </div>
   </div>
 
@@ -2428,7 +2428,7 @@ Will be available soon.
 <div class="macos">
   <div class="scala">
     <div class="cpu gpu">
-      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">Scala-MXNet demo project</a> to validate your Maven package installation.
+      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
     </div>
   </div>
   <div class="julia perl cpp">
