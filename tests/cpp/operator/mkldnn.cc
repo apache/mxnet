@@ -1089,13 +1089,15 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
   for (int i1 = 0; i1 < in_arrs.size(); i1++) {
     auto in_arr = in_arrs[i1];
+
+    if (in_arr.arr.shape().ndim() != 4)
+      continue;
 
     for (int i = 0; i < forward_attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
@@ -1114,10 +1116,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       Imperative::Get()->set_is_training(true);
 
       PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      auto ctx = Context();
-      Imperative::Get()->InvokeOp(ctx, forward_attrs.attrs, inputs,
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(ctx, forward_attrs.attrs, inputs,
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(outputs, ex_outputs);
@@ -1138,10 +1139,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
       Imperative::Get()->InvokeOp(
-          ctx, backwards_attrs.attrs, backwards_input, backwards_outputs,
+          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
           back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
       Imperative::Get()->InvokeOp(
-          ctx, backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
           back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
       VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
