@@ -964,18 +964,19 @@ try {
         }
       }
     },
-    'Caffe GPU': {
-      node('mxnetlinux-gpu') {
-        ws('workspace/it-caffe') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            unpack_lib('gpu')
-            docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
-            publish_test_coverage()
-          }
-        }
-      }
-    },
+    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
+    // 'Caffe GPU': {
+    //   node('mxnetlinux-gpu') {
+    //     ws('workspace/it-caffe') {
+    //       timeout(time: max_time, unit: 'MINUTES') {
+    //         init_git()
+    //         unpack_lib('gpu')
+    //         docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
+    //         publish_test_coverage()
+    //       }
+    //     }
+    //   }
+    // },
     'cpp-package GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/it-cpp-package') {
