@@ -326,7 +326,8 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
         n_to_out = 0;
       }
     } else {
-      int n_to_copy = std::min(n_parsed_, batch_param_.batch_size - current_size);
+      int n_to_copy = std::min(n_parsed_,
+        static_cast<unsigned>(batch_param_.batch_size) - current_size);
       n_parsed_ -= n_to_copy;
       // Copy
       #pragma omp parallel for num_threads(param_.preprocess_threads)
@@ -604,7 +605,7 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
       res.release();
     }
   }
-  return (std::min(batch_param_.batch_size, gl_idx) - current_size);
+  return (std::min(static_cast<unsigned>(batch_param_.batch_size), gl_idx) - current_size);
 #else
   LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
   return 0;
