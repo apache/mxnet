@@ -1302,7 +1302,7 @@ fixed-size items.
         """
         return op.flip(self, *args, **kwargs)
 
-    def diag(self, *args, **kwargs):
+    def diag(self, k=0, **kwargs):
         """Convenience fluent method for :py:func:`diag`.
 
         The arguments are the same as for :py:func:`diag`, with
