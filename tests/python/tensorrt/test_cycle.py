@@ -16,7 +16,7 @@
 # under the License.
 
 import mxnet as mx
-from test_tensorrt_lenet5 import *
+from common import *
 
 def detect_cycle_from(sym, visited, stack):
   visited.add(sym.handle.value)
@@ -57,7 +57,7 @@ def test_simple_cycle():
   set_use_tensorrt(True)
   executor = C.simple_bind(ctx=mx.gpu(0), data=(1,10), softmax_label=(1,),
                            shared_buffer=arg_params, grad_req='null', force_rebind=True)
-  assert has_no_cycle(executor.optimized_symbol), "The graph optimized by TRT contain a cycle"
+  assert has_no_cycle(executor.optimized_symbol), "The graph optimized by TRT contains a cycle"
 
 if __name__ == '__main__':
   test_simple_cycle()
