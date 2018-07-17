@@ -966,11 +966,11 @@ def test_pooling_full_2d():
         # o_w = ceil((10 + 2 + 2 - 5) / 4) + 1 = 4
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=convention, global_pool=True, name='pool'))
+                                       pooling_convention=convention, global_pool=False, name='pool'))
 
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=convention, global_pool=True, name='pool'))
+                                       pooling_convention=convention, global_pool=False, name='pool'))
 
         check_consistency(sym_list, ctx_list)
 
