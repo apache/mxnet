@@ -17,7 +17,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
                        momentum = 0,
                        wd = 0,
                        rescale.grad = 1,
-                       clip_gradient = -1,
+                       clip_gradient = Inf,
                        lr_scheduler = NULL) {
 
   lr <- learning.rate
@@ -94,7 +94,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #'      The initial learning rate.
 #' @param gamma1 float, default=0.95
 #'      decay factor of moving average for gradient, gradient^2.
-#' @param gamm2 float, default=0.9
+#' @param gamma2 float, default=0.9
 #'      "momentum" factor.
 #' @param epsilon float, default=1e-4
 #' @param wd float, default=0.0
@@ -323,7 +323,7 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
 
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
-      if(clip_gradient >= 0) {
+      if (clip_gradient >= 0) {
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
@@ -398,7 +398,7 @@ mx.opt.adadelta <- function(rho = 0.90,
 
     grad <- grad * rescale.grad
     if (!is.null(clip_gradient)) {
-      if(clip_gradient >= 0) {
+      if (clip_gradient >= 0) {
         grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
       }
     }
