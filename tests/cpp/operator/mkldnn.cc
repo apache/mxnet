@@ -1259,8 +1259,8 @@ NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
   target_shape[2] = kernel[0];
   target_shape[3] = kernel[1];
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
-  NDArray arr(kernel, Context());
-  auto pd = GetMemPD(kernel, dtype, mkldnn::memory::format::nc);
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nc);
   InitMKLDNNArray(&arr, pd);
   return arr;
 }
@@ -1275,8 +1275,8 @@ NDArray CreateBiasNDArray(TShape input, TShape kernel, int num_filters, TShape p
   target_shape[3] = new_width;
   CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
-  NDArray arr(kernel, Context());
-  auto pd = GetMemPD(kernel, dtype, mkldnn::memory::format::nc);
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nc);
   InitMKLDNNArray(&arr, pd);
   return arr;
 }
