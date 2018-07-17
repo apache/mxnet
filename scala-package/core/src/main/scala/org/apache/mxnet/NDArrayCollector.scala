@@ -17,6 +17,7 @@
 
 package org.apache.mxnet
 
+import org.apache.mxnet.Base.CPtrAddress
 import org.slf4j.LoggerFactory
 
 import scala.annotation.varargs
@@ -92,7 +93,10 @@ object NDArrayCollector {
 
 class NDArrayCollector private(private val autoDispose: Boolean = true,
                                private val doCollect: Boolean = true) {
-  private val arrays = mutable.HashMap.empty[Long, NDArray]
+  // native ptr (handle) of the NDArray -> NDArray
+  // in some rare situation, multiple NDArrays have same native ptr,
+  // the Map here is to prevent from disposing more than once.
+  private val arrays = mutable.HashMap.empty[CPtrAddress, NDArray]
 
   private def add(nd: NDArray*): Unit = {
     if (doCollect) nd.foreach(arr => arrays.put(arr.handle, arr))
@@ -122,20 +126,20 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
   /**
    * Create a code scope, NDArrays allocated within this scope will be collected.
    * The collected NDArrays will be either <br />
-   * - disposed automatically when the code blcok finishes (when using <em>auto</em>) or <br />
+   * - disposed automatically when the code block finishes (when using <em>auto</em>) or <br />
    * - stored for later access (when using <em>manual</em>) <br />
    * If the return type of scope is <em>NDArray</em> or <em>NDArrayFuncReturn</em>,
    * it is smart enough NOT to collect or dispose the returned NDArray. <br />
    * However in other cases, it is users' responsibility NOT to leak allocated NDArrays outside.
-   * @param body code block to be executed within the scope.
-   * @tparam T return type of the function <em>body</em>.
-   * @return The result of function <em>body</em>.
+   * @param codeBlock code block to be executed within the scope.
+   * @tparam T return type of the function <em>codeBlock</em>.
+   * @return The result of function <em>codeBlock</em>.
    */
-  def withScope[T](body: => T): T = {
+  def withScope[T](codeBlock: => T): T = {
     val old = NDArrayCollector.currCollector.get()
     NDArrayCollector.currCollector.set(this)
     try {
-      val ret = body
+      val ret = codeBlock
       ret match {
         case ndRet: NDArray =>
           arrays.remove(ndRet.handle)
