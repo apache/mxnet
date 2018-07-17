@@ -90,15 +90,33 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
     #
     # This doesn't work with multi head docker files.
     # 
-    cmd = [docker_binary, "build",
-           "-f", get_dockerfile(platform),
-           "--build-arg", "USER_ID={}".format(os.getuid()),
-           "--build-arg", "GROUP_ID={}".format(os.getgid()),
-           "--cache-from", tag,
-           "-t", tag,
-           "docker"]
-    logging.info("Running command: '%s'", ' '.join(cmd))
-    check_call(cmd)
+
+    num_retries = int(os.environ['DOCKER_BUILD_NUM_RETRIES']) if 'DOCKER_BUILD_NUM_RETRIES' in os.environ else 1
+    for i in range(num_retries):
+        logging.info('%d out of %d tries to build the docker image. You can influence this by setting the '
+                     'environment variable "DOCKER_BUILD_NUM_RETRIES"', i + 1, num_retries)
+
+
+        cmd = [docker_binary, "build",
+               "-f", get_dockerfile(platform),
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid()),
+               "--cache-from", tag,
+               "-t", tag,
+               "docker"]
+        logging.info("Running command: '%s'", ' '.join(cmd))
+        try:
+            check_call(cmd)
+            # Docker build was successful. Call break to break out of the retry mechanism
+            break
+        except subprocess.CalledProcessError as e:
+            logging.exception('Error during building docker image', e)
+            # Building the docker image failed. Call continue to trigger the retry mechanism
+            continue
+    else:
+        # Num retries exceeded
+        logging.fatal('Failed to build the docker image, aborting...')
+        sys.exit(1)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
