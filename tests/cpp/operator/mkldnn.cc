@@ -1262,7 +1262,7 @@ NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
   return arr;
 }
 
-NDArray CreateBiasNDArray(TShape input, TShape kernel, int num_filters, TShape padding, TShape stride) {
+NDArray CreateBiasNDArray(int num_filters) {
   TShape target_shape = {num_filters};
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   NDArray arr(target_shape, Context());
@@ -1306,23 +1306,23 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
+    float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0]) / static_cast<float>(input_shape[2]);
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
-    for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
-      if (i < 2)
-        scale_vector[i] = 1;
-      else
-        scale_vector[i] = CalculateWidthConvOutput(
-            input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
-            static_cast<float>(input_shape[i]);
-    }
+    scale_vector[0] = 1;
+    scale_vector[1] = static_cast<float>(num_filter) / input_shape[1];
+    scale_vector[2] = scale;
+    scale_vector[3] = scale;
+
+
     for (int i = 0; i < forward_attrs.num_outputs; i++) {
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
-
-    for (int i = 0; i < forward_attrs.num_inputs; i++)
-      inputs[i] = &in_arr.arr;
-
+    NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+    NDArray ndbias = CreateBiasNDArray(num_filter);
+    inputs[0] = &in_arr.arr;
+    inputs[1] = &ndkernel;
+    inputs[2] = &ndbias;
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteTo;
@@ -1349,7 +1349,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       auto tmp_output = GetTestInputArrays(true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
-      NDArray tmp_bias = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
+      NDArray tmp_bias = CreateBiasNDArray(num_filter);
 
       backwards_outputs[0] = &tmp_output.arr;
       backwards_outputs[1] = &tmp_kernel;
@@ -1357,7 +1357,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       auto tmp_output2 = GetTestInputArrays(true)[i1];
       NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
-      NDArray tmp_bias2 = CreateBiasNDArray(in_arr.arr.shape(), kernel, num_filter, padding, stride);
+      NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
       backwards_outputs[0] = &tmp_output2.arr;
       backwards_outputs[1] = &tmp_kernel2;
       backwards_outputs[2] = &tmp_bias2;
