@@ -7039,8 +7039,8 @@ def test_diag():
     # test 2d input
     h = np.random.randint(2,9)
     w = np.random.randint(2,9)
-    a_np = np.random.random((h, w))
-    a = mx.nd.array(a_np)
+    a_np = np.random.random((h, w)).astype(np.float32)
+    a = mx.nd.array(a_np).astype('float32')
     
     # k == 0
     r = mx.nd.diag(a)
