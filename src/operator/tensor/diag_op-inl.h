@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-  int32_t k;
+  nnvm::dim_t k;
   DMLC_DECLARE_PARAMETER(DiagParam) {
     DMLC_DECLARE_FIELD(k)
     .set_default(0)
@@ -48,7 +48,7 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
   }
 };
 
-inline TShape DiagShapeImpl(const TShape& ishape, int32_t k) {
+inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k) {
   if (ishape.ndim() == 1) {
     auto s = ishape[0] + std::abs(k);
     return TShape({s, s});
@@ -105,7 +105,7 @@ template<int req>
 struct diag {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  mshadow::Shape<2> ishape, int32_t k) {
+                                  mshadow::Shape<2> ishape, const nnvm::dim_t k) {
     using namespace mxnet_op;
     int j = 0;
     if (k > 0) {
@@ -124,7 +124,7 @@ template<int req>
 struct diag_gen {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  mshadow::Shape<2> oshape, int32_t k) {
+                                  mshadow::Shape<2> oshape, const nnvm::dim_t k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -132,7 +132,7 @@ struct diag_gen {
       auto l = j[0] < j[1] ? j[0] : j[1];
       KERNEL_ASSIGN(out[i], req, a[l]);
     } else {
-      KERNEL_ASSIGN(out[i], req, 0.0);
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(0));
     }
   }
 };
