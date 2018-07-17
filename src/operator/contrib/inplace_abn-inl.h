@@ -36,6 +36,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../mshadow_op.h"
+#include "sync_batch_norm-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -78,172 +79,15 @@ struct InplaceABNParam : public dmlc::Parameter<InplaceABNParam> {
   }
 };
 
-// Modified from https://github.com/brucechin/SharedTensor
-template<class T>
-class SharedND {
- private:
-  int num_devices_;
-  T mean_;
-  T *data_;
-  bool *flag_;
-  bool mean_ready_ = false;
-  bool data_inited_ = false;
-  std::mutex mutex_;
-
- public:
-  explicit SharedND(int ndev) :num_devices_(ndev) {
-    flag_ = new bool[ndev];
-    data_ = new T[ndev];
-    memset(flag_, false, ndev * sizeof(bool));
-  }
-
-  ~SharedND() {
-    mshadow::FreeSpace(&mean_);
-    delete [] flag_;
-    delete [] data_;
-  }
-
-  void Init(mshadow::Shape<1> shape) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!data_inited_) {
-      for (int i = 0; i < num_devices_; i++) {
-        data_[i] = mshadow::NewTensor<cpu, real_t>(shape, 0.0f);
-      }
-      mean_ = mshadow::NewTensor<cpu, real_t>(shape, 0.0f);
-      data_inited_ = true;
-    }
-  }
-
-  T* Retrieve(mshadow::Shape<1> shape, int index) {
-    if (!data_inited_) {
-      Init(shape);
-    }
-    if (flag_[index] == false) {
-      return &data_[index];
-    } else {
-      return nullptr;
-    }
-  }
-
-  bool SetReady(int index) {
-    if (flag_[index] == false) {
-      flag_[index] = true;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  T Pop(int index) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    while (!MeanReady()) {}
-    flag_[index] = false;
-    T tmp = mean_;
-    ResetMean();
-    return tmp;
-  }
-
-  bool MeanReady() {
-    if (mean_ready_) {
-      return true;
-    }
-    for (int i = 0; i < num_devices_; i++) {
-      if (!flag_[i]) {
-        return false;
-      }
-    }
-    for (int i = 1; i < num_devices_; i++) {
-      data_[0] += data_[i];
-    }
-    mean_ = data_[0] * 1.0f /  num_devices_;
-    mean_ready_ = true;
-    return true;
-  }
-
-  void ResetMean() {
-    for (int i = 0; i < num_devices_; i++) {
-      if (flag_[i]) return;
-    }
-    mean_ready_ = false;
-  }
-};
-
-template<class T>
-class GlobalShared {
- public:
-  T* Register(const std::string &key, int ndev) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = registry_.find(key);
-    if (it != registry_.end()) return it->second;
-    T *newT = new T(ndev);
-    registry_[key] = newT;
-    return newT;
-  }
-  ~GlobalShared() {
-    for (auto it = registry_.begin(); it != registry_.end(); it++) {
-      T *ptr = it->second;
-      delete ptr;
-    }
-  }
- private:
-  std::mutex mutex_;
-  std::map<std::string, T*> registry_;
-};
-
-template<class T>
-class GlobalSharedRank {
- public:
-  T Register(const std::string &key, int ndev) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it = registry_.find(key);
-    if (it != registry_.end()) {
-      T* tmpT = it->second;
-      *tmpT = (*tmpT == ndev - 1) ? 0 : *tmpT + 1;
-      return *tmpT;
-    }
-    T *newT = new T(0);
-    registry_[key] = newT;
-    return *newT;
-  }
-  ~GlobalSharedRank() {
-    for (auto it = registry_.begin(); it != registry_.end(); it++) {
-      T *ptr = it->second;
-      delete ptr;
-    }
-  }
- private:
-  std::mutex mutex_;
-  std::map<std::string, T*> registry_;
-};
-
-class Barrier {
- private:
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  std::size_t count_;
-  std::size_t total_count_;
- public:
-  explicit Barrier(std::size_t count) : count_{count}, total_count_{count} { }
-  void Wait() {
-    std::unique_lock<std::mutex> lock{mutex_};
-    if (--count_ == 0) {
-      count_ = total_count_;
-      cv_.notify_all();
-    } else {
-      cv_.wait(lock, [this] { return count_ == total_count_; });
-    }
-  }
-};
-
 // Global variables for Synchronizations
-static GlobalSharedRank<int> global_shared_rank_forward;
-static GlobalSharedRank<int> global_shared_rank_backward;
-static GlobalShared<Barrier> global_shared_barrier_forward;
-static GlobalShared<Barrier> global_shared_barrier_backward;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_mean;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_var;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_grad;
-static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> global_shared_prod;
+static GlobalSharedRank<int> inpabn_global_shared_rank_forward;
+static GlobalSharedRank<int> inpabn_global_shared_rank_backward;
+static GlobalShared<Barrier> inpabn_global_shared_barrier_forward;
+static GlobalShared<Barrier> inpabn_global_shared_barrier_backward;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> inp_abn_global_shared_mean;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> inpabn_global_shared_var;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> inpabn_global_shared_grad;
+static GlobalShared<SharedND<mshadow::Tensor<cpu, 1, real_t>>> inpabn_global_shared_prod;
 
 template<typename xpu>
 class InplaceABN : public Operator {
@@ -301,12 +145,12 @@ class InplaceABN : public Operator {
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data));
       if (param_.sync) {
         // get my rank
-        Barrier *global_barrier = global_shared_barrier_forward.Register(param_.key, param_.ndev);
-        int myRank = global_shared_rank_forward.Register(param_.key, param_.ndev);
+        Barrier *global_barrier = inpabn_global_shared_barrier_forward.Register(param_.key, param_.ndev);
+        int myRank = inpabn_global_shared_rank_forward.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
-          global_shared_mean.Register(param_.key, param_.ndev);
+          inp_abn_global_shared_mean.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedVar =
-          global_shared_var.Register(param_.key, param_.ndev);
+          inpabn_global_shared_var.Register(param_.key, param_.ndev);
         // copy to cpu, push and pull
         Tensor<cpu, 1, real_t>* mean_cpu_ptr = sharedMean->Retrieve(mean.shape_, myRank);
         Tensor<cpu, 1, real_t>* var_cpu_ptr = sharedVar->Retrieve(mean.shape_, myRank);
@@ -326,21 +170,21 @@ class InplaceABN : public Operator {
       data = broadcast<1>(gamma, out.shape_) *
              (data - broadcast<1>(mean, data.shape_)) /
              F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-             broadcast<1>(beta, out.shape_)
+             broadcast<1>(beta, out.shape_);
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
-          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, DType(param_.slope));
+          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, real_t(param_.slope));
       });
     } else {
       data = broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
                           data.shape_) * data +
              broadcast<1>(beta - (gamma * moving_mean) /
-                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_)
+                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_);
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
-          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, DType(param_.slope));
+          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, real_t(param_.slope));
       });
     }
   }
@@ -377,15 +221,15 @@ class InplaceABN : public Operator {
       grad_in = in_grad[inplaceabn::kData].get<xpu, 4, real_t>(s);
     }
     // recover y and dl/dy
-    mxnet_op::Kernel<mshadow_op::xelu, xpu>::Launch(
-      s, data.size(0) * data.size(1) * data.size(2), data.dptr_, data.dptr_, DType(1.0 / param_.slope));
-    mxnet_op::Kernel<mshadow_op::xelu, xpu>::Launch(
-      s, grad.size(0) * grad.size(1) * grad.size(2), grad.dptr_, grad.dptr_, DType(param_.slope));
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, data.size(0) * data.size(1) * data.size(2), data.dptr_, data.dptr_, real_t(1.0 / param_.slope));
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, grad.size(0) * grad.size(1) * grad.size(2), grad.dptr_, grad.dptr_, real_t(param_.slope));
 
     Tensor<xpu, 1> mean = out_data[inplaceabn::kMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> var = out_data[inplaceabn::kVar].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gamma = in_data[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
-    // Tensor<xpu, 1> beta = in_data[kBeta].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> beta = in_data[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> ggamma = in_grad[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbeta = in_grad[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
     // update moving avg
@@ -396,9 +240,6 @@ class InplaceABN : public Operator {
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(5, mean.shape_[0]), s);
-      Tensor<xpu, 1> gmean = workspace[0];
-      Tensor<xpu, 1> gvar = workspace[1];
-      // Tensor<xpu, 1> tmp = workspace[2];
 
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
@@ -409,12 +250,12 @@ class InplaceABN : public Operator {
       sumProd = sumall_except_dim<1>(grad * data);
       if (param_.sync) {
         // get my rank
-        Barrier *global_barrier = global_shared_barrier_backward.Register(param_.key, param_.ndev);
-        int myRank = global_shared_rank_backward.Register(param_.key, param_.ndev);
+        Barrier *global_barrier = inpabn_global_shared_barrier_backward.Register(param_.key, param_.ndev);
+        int myRank = inpabn_global_shared_rank_backward.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad =
-          global_shared_grad.Register(param_.key, param_.ndev);
+          inpabn_global_shared_grad.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedProd =
-          global_shared_prod.Register(param_.key, param_.ndev);
+          inpabn_global_shared_prod.Register(param_.key, param_.ndev);
         // copy to cpu, push and pull
         Tensor<cpu, 1, real_t>* grad_cpu_ptr = sharedGrad->Retrieve(sumGrad.shape_, myRank);
         Tensor<cpu, 1, real_t>* prod_cpu_ptr = sharedProd->Retrieve(sumGrad.shape_, myRank);
@@ -429,28 +270,34 @@ class InplaceABN : public Operator {
         mshadow::Copy(sumGrad, grad_cpu, s);
         mshadow::Copy(sumProd, prod_cpu, s);
       }
-      gvar = (sumProd - sumGrad * mean) * gamma * (-0.5f) *
-        F<mshadow_op::power>(var + param_.eps, -1.5f);
-      gmean =  sumGrad * gamma;
-      gmean *= -1.0f / F<mshadow_op::square_root>(var + param_.eps);
       // assign
       Assign(ggamma, req[inplaceabn::kGamma],
-             sumall_except_dim<1>(
-                 grad * (data - broadcast<1>(mean, data.shape_)) /
-                 F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_))));
+             sumall_except_dim<1>((grad * (data - broadcast<1>(beta, data.shape_)) /
+                 F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)))));
       Assign(grad_in, req[inplaceabn::kData],
              (grad * broadcast<1>(gamma, data.shape_)) *
-             broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps), data.shape_) +
-             broadcast<1>(gvar, data.shape_) *
-              scale * 2.0f * (data - broadcast<1>(mean, data.shape_)) +
-             broadcast<1>(gmean, data.shape_) * scale);
+               broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps),
+                            data.shape_) -
+             scale * broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps),
+                                  data.shape_) *
+               broadcast<1>(1.0f / gamma, data.shape_)*
+               (broadcast<1>(sumProd, data.shape_) - broadcast<1>(beta, data.shape_) *
+               broadcast<1>(sumGrad, data.shape_)) * data -
+             scale *
+               broadcast<1>(1.0f * gamma * sumGrad / F<mshadow_op::square_root>(var + param_.eps),
+                            data.shape_) -
+             scale *
+               // broadcast<1>(1.0f * beta / gamma, data.shape_) *
+               broadcast<1>(1.0f * beta / gamma / F<mshadow_op::square_root>(var + param_.eps),
+                            data.shape_) *
+               (broadcast<1>(sumProd, data.shape_) -
+                broadcast<1>(beta * sumGrad, data.shape_)));
       Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad));
     } else {
       // use global statistics with freeze moving mean and var.
       Assign(ggamma, req[inplaceabn::kGamma],
-             sumall_except_dim<1>(
-               grad * (data - broadcast<1>(moving_mean, data.shape_)) /
-               F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_))));
+             sumall_except_dim<1>((grad * (data - broadcast<1>(beta, data.shape_)) /
+                 F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_)))));
       Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad));
       Assign(grad_in, req[inplaceabn::kData], (grad * broadcast<1>(gamma, data.shape_)) *
              broadcast<1>(
@@ -464,7 +311,6 @@ class InplaceABN : public Operator {
 
 template<typename xpu>
 Operator *CreateOp(InplaceABNParam param, int dtype);
-
 
 #if DMLC_USE_CXX11
 class InplaceABNProp : public OperatorProperty {

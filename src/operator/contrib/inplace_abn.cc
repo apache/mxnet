@@ -23,7 +23,7 @@
  * \author Hang Zhang
 */
 
-#include "sync_batch_norm-inl.h"
+#include "inplace_abn-inl.h"
 #include <nnvm/op_attr_types.h>
 
 namespace mxnet {
@@ -45,7 +45,7 @@ Operator *InplaceABNProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_
 
 DMLC_REGISTER_PARAMETER(InplaceABNParam);
 
-MXNET_REGISTER_OP_PROPERTY(InplaceABN, InplaceABNProp)
+MXNET_REGISTER_OP_PROPERTY(_contrib_InplaceABN, InplaceABNProp)
 .describe(R"code(Inplace Activated Batch normalization [1]_.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as

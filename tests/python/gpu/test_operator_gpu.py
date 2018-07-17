@@ -1996,6 +1996,31 @@ def test_sync_batchnorm():
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 
+def _check_inplace_abn(input, layer1, layer2):
+    with mx.autograd.record():
+        output1 = layer1(input)
+        output2 = layer2(input)
+        loss1 = (output1 ** 2).sum()
+        loss2 = (output2 ** 2).sum()
+        mx.autograd.backward(loss1)
+        mx.autograd.backward(loss2)
+    assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+
+def test_inpabn():
+    layer1 = mx.gluon.nn.Sequential()
+    ch = 4
+    layer1.add(mx.gluon.nn.BatchNorm(in_channels=ch))
+    layer1.add(mx.gluon.nn.LeakyReLU(0.01))
+    layer2 = mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01)
+    layer1.initialize()
+    layer2.initialize()
+    for i in range(10):
+        _check_inplace_abn(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+                           layer1, layer2)
+
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    test_inpabn()
+    #import nose
+    #nose.runmodule()
