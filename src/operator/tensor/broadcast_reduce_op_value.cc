@@ -274,6 +274,36 @@ NNVM_REGISTER_OP(_broadcast_backward)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   });
 
+NNVM_REGISTER_OP(broadcast_like)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds) {
+      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+                                 {{"keepdims", "true"}});
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "First input.")
+.describe(R"code(Broadcasts lhs to have the same shape as rhs.
+
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
+
+For example::
+
+   broadcast_like([[1,2,3]], [[5,6,7],[7,8,9]]) = [[ 1.,  2.,  3.],
+                                                   [ 1.,  2.,  3.]])
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
 .describe(R"code(Computes the norm on an NDArray.
