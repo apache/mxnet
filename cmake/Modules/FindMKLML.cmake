@@ -66,7 +66,7 @@ set(LOOKED_FOR
 set(MKLML_LIBS iomp5)
 
 if(WIN32)
-  list(APPEND MKLML_LIBS mklml_intel)
+  list(APPEND MKLML_LIBS mklml)
 elseif(APPLE)
   list(APPEND MKLML_LIBS mklml)
 else()
@@ -77,8 +77,11 @@ foreach(__lib ${MKLML_LIBS})
   set(__mkl_lib "${__lib}")
   string(TOUPPER ${__mkl_lib} __mkl_lib_upper)
 
+  # add static windows libs first
+  set(__mkl_lib_names lib${__mkl_lib}.lib lib${__mkl_lib}md.lib)
+
   find_library(${__mkl_lib_upper}_LIBRARY
-               NAMES ${__mkl_lib}
+               NAMES ${__mkl_lib_names} ${__mkl_lib}
                PATHS ${MKLML_LIB_SEARCH_PATHS}
                PATH_SUFFIXES ${PATH_SUFFIXES}
                )
