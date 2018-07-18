@@ -24,7 +24,7 @@ def test_module_checkpoint_api():
 	print ('Performing inference for model/API %s' %model_name)
 	data = download_data_from_s3(model_name)
 	if data is None:
-		print ('No data files found for %s' %model_name)
+		logging.error ('No data files found for %s' %model_name)
 		return
 
 	test_data = data['data']
@@ -34,10 +34,10 @@ def test_module_checkpoint_api():
 
 	## For each MXNet version that has the saved models
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+		logging.info ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
 	        model_files = download_model_files_from_s3(model_name, folder)
 		if len(model_files) == 0:
-			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			logging.warn ('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
 	        ## Load the model and perform inference
 	        loaded_model = get_module_api_model_definition()
@@ -51,27 +51,27 @@ def test_module_checkpoint_api():
 	        ## Check whether they are equal or not ?
 	        assert_almost_equal(inference_results.asnumpy(), old_inference_results.asnumpy())
 	        clean_model_files(model_files, model_name)
-	        print ('=================================')
+	        logging.info ('=================================')
 	
-	print ('Assertion passed for model : %s' %model_name)
+	logging.info ('Assertion passed for model : %s' %model_name)
 	        
 
 def test_lenet_gluon_load_params_api():
 	model_name = 'lenet_gluon_save_params_api'
-	print ('Performing inference for model/API %s' %model_name)
+	logging.info ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
 	if data is None:
-		print ('No data files found for %s' %model_name)
+		logging.error ('No data files found for %s' %model_name)
 		return
 	
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+		logging.info ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
 	        model_files = download_model_files_from_s3(model_name, folder)
 		if len(model_files) == 0:
-			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			logging.warn ('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
 	        ## Load the model and perform inference
 	        loaded_model = Net()
@@ -80,25 +80,25 @@ def test_lenet_gluon_load_params_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
-	        print ('=================================')
-	print ('Assertion passed for model : %s' %model_name)
+	        logging.info ('=================================')
+	logging.info ('Assertion passed for model : %s' %model_name)
 
 def test_lenet_gluon_hybrid_imports_api():
 	model_name = 'lenet_gluon_hybrid_export_api'
-	print ('Performing inference for model/API %s' %model_name)
+	logging.info ('Performing inference for model/API %s' %model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
 	if data is None:
-		print ('No data files found for %s' %model_name)
+		logging.error ('No data files found for %s' %model_name)
 		return
 	
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-		print ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
+		logging.info ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
 	        model_files = download_model_files_from_s3(model_name, folder)
 	    	if len(model_files) == 0:
-			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			logging.warn('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue  
 	        ## Load the model and perform inference
 	        loaded_model = HybridNet()
@@ -107,30 +107,30 @@ def test_lenet_gluon_hybrid_imports_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
-	        print ('=================================')
-	print ('Assertion passed for model : %s' %model_name)
+	        logging.info ('=================================')
+	logging.info ('Assertion passed for model : %s' %model_name)
 
 def test_lstm_gluon_load_parameters_api():
 	## If this code is being run on version >= 1.2.0 only then execute it, since it uses save_parameters and load_parameters API
 	if compare_versions(str(mxnet_version), '1.2.1')  < 0:
-		print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
+		logging.warn('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
 		return
 
 	model_name = 'lstm_gluon_save_parameters_api'
-	print ('Performing inference for model/API %s and model'%model_name)
+	logging.info ('Performing inference for model/API %s and model'%model_name)
 	## Get data from S3
 	data = download_data_from_s3(model_name)
 	if data is None:
-		print ('No data files found for %s' %model_name)
+		logging.error ('No data files found for %s' %model_name)
 		return
 
 	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-		print ('Fetching files for MXNet version : %s' %folder)
+		logging.info ('Fetching files for MXNet version : %s' %folder)
 		model_files = download_model_files_from_s3(model_name, folder)
 		if len(model_files) == 0:
-			print('No training files found for %s for MXNet version : %s'%(model_name, folder))
+			logging.warn('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
 	        ## Load the model and perform inference
 	        loaded_model = SimpleLSTMModel()
@@ -139,8 +139,8 @@ def test_lstm_gluon_load_parameters_api():
 	        old_inference_results = mx.nd.load(model_name + '-inference')['inference']
 	        assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
 	        clean_model_files(model_files, model_name)
-	        print ('=================================')
-	print ('Assertion passed for model : %s' %model_name)	
+	        logging.info ('=================================')
+	logging.info ('Assertion passed for model : %s' %model_name)
 
 if __name__=='__main__':
 	test_module_checkpoint_api()

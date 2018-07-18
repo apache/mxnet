@@ -38,7 +38,7 @@ from mxnet.test_utils import assert_almost_equal
 # Set fixed random seeds.
 mx.random.seed(7)
 np.random.seed(7)
-logging.getLogger().setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 # get the current mxnet version we are running on
 mxnet_version = mx.__version__
@@ -76,7 +76,7 @@ def upload_data_and_labels_to_s3(model_name):
     s3 = boto3.client('s3')
     file = model_name + '-data'
     s3.upload_file(file, model_bucket_name, data_folder + backslash +  file)
-    print ('data files successfully uploaded to s3')
+    logging.info('data files successfully uploaded to s3')
 
 def upload_model_files_to_s3(files, folder_name):
     s3 = boto3.client('s3')
@@ -92,12 +92,12 @@ def clean_model_files(files, model_name):
             os.remove(file)
 
 def download_data_from_s3(model_name):
-    print ('Downloading data files for %s from bucket %s'%(model_name, model_bucket_name + backslash + data_folder))
+    logging.info('Downloading data files for %s from bucket %s' %(model_name, model_bucket_name + backslash + data_folder))
     bucket = s3.Bucket(model_bucket_name)
     prefix = data_folder + backslash + model_name + '-data'
     data_files_meta = list(bucket.objects.filter(Prefix = prefix))
     if len(data_files_meta) == 0:
-        print ('No data files found for %s' %model_name)
+        logging.error('No data files found for %s', model_name)
         return None
 
     bucket.download_file(data_folder + backslash + model_name+'-data', model_name+'-data')
@@ -111,7 +111,7 @@ def download_model_files_from_s3(model_name, folder_name):
     prefix = folder_name + backslash + model_name
     model_files_meta = list(bucket.objects.filter(Prefix = prefix))
     if len(model_files_meta) == 0:
-        print ('No trained models found under path : %s' %prefix)
+        logging.error('No trained models found under path : %s', prefix)
         return model_files
     for obj in model_files_meta:
         file_name = obj.key.split('/')[2]
@@ -128,7 +128,7 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
                                          Delimiter=backslash)
     folder_list = list()
     if 'CommonPrefixes' not in result:
-        print ('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
+        logging.error('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
         return folder_list
     for obj in result['CommonPrefixes']:
         folder_name = obj['Prefix'].strip(backslash)

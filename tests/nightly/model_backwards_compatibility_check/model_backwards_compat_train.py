@@ -21,7 +21,7 @@ from common import *
 
 def train_module_checkpoint_api():
 	model_name = 'module_checkpoint_api'
-	print ('Saving files for model %s' %model_name)
+	logging.info('Saving files for model %s' %model_name)
 	### Prepare data
 	test_data = mx.nd.array(np.random.uniform(-1, 1, size=(20, 1)))
 	test_label = mx.nd.array(np.random.randint(0, 2, size=(20,)), dtype='float32')
@@ -55,7 +55,7 @@ def train_module_checkpoint_api():
 
 def train_lenet_gluon_save_params_api():
 	model_name = 'lenet_gluon_save_params_api'
-	print ('Saving files for model %s' %model_name)
+	logging.info('Saving files for model %s' %model_name)
 	net = Net()
 	weights = mx.initializer.Xavier(magnitude = 2.57)
 	net.initialize(weights, ctx = [mx.cpu(0)])
@@ -87,7 +87,7 @@ def train_lenet_gluon_save_params_api():
 
 def train_lenet_gluon_hybrid_export_api():
 	model_name = 'lenet_gluon_hybrid_export_api'
-	print ('Saving files for model %s' %model_name)
+	logging.info('Saving files for model %s' %model_name)
 	net = HybridNet()
 	weights = mx.initializer.Xavier(magnitude = 2.57)
 	net.initialize(weights, ctx = [mx.cpu(0)])
@@ -122,11 +122,11 @@ def train_lenet_gluon_hybrid_export_api():
 def train_lstm_gluon_save_parameters_api():
 	## If this code is being run on version >= 1.2.1 only then execute it, since it uses save_parameters and load_parameters API
 	if compare_versions(str(mxnet_version), '1.2.1')  < 0:
-		print ('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
+		logging.warn('Found MXNet version %s and exiting because this version does not contain save_parameters and load_parameters functions' %str(mxnet_version))
 		return
 
 	model_name = 'lstm_gluon_save_parameters_api'
-	print ('Saving files for model %s' %model_name)
+	logging.info ('Saving files for model %s' %model_name)
 	net = SimpleLSTMModel()
 	weights = mx.initializer.Xavier(magnitude = 2.57)
 	net.initialize(weights, ctx = [mx.cpu(0)])
