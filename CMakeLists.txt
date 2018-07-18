@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 
+message(STATUS "CMAKE_VERSION=${CMAKE_VERSION}")
+message(STATUS "CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}")
+
 # workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
 if(${CMAKE_CROSSCOMPILING})
   set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
@@ -135,8 +138,6 @@ mxnet_option(USE_APPLE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework i
 # indicating function "cheev_" within the available choosen libraries and switch the
 # functionality off if not found.
 mxnet_option(USE_LAPACK "Build with lapack support" ON)
-
-message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")

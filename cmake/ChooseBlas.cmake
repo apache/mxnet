@@ -81,6 +81,9 @@ function(try_mkl)
   if(${MKL_FOUND})
     message(STATUS "MKL framework found")
 
+    include_directories(SYSTEM ${MKL_INCLUDE_DIR})
+    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
+
     set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
@@ -210,10 +213,9 @@ endif()
 if(BLAS MATCHES "[Mm][Kk][Ll]")
   message(STATUS "Using MKL for BLAS")
 
-  find_package(MKL REQUIRED)
-
-  include_directories(SYSTEM ${MKL_INCLUDE_DIR})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES})
+  if(NOT ${MKL_FOUND})
+    message(FATAL_ERROR "Blas set to MKL but it could not be found")
+  endif()
 
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
