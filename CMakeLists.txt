@@ -106,12 +106,12 @@ mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 # If the full MKL library could not be found the thinner subset MKLML will be downloaded
 # unless switched off explicitly.
 # Note: The same limitation on hardware as for MKL applies for MKLML as well.
-mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
+mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of mkl, will be downloaded" ON IF ${USE_MKL_IF_AVAILABLE})
 
 # If either MKL of MKLML is present MKLDNN can be utilised from the 3rdparty/mkldnn subrepo.
 # See more information here: https://github.com/intel/mkl-dnn
 # Note: The same limitation on hardware as for MKL and MKLDNN applies for MKLDNN as well.
-mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON)
+mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON IF ${USE_MKL_IF_AVAILABLE})
 
 # Apple's mathematical framework, probably the best choice on a Mac if MKL/MKLML/MKLDNN
 # are not available.
