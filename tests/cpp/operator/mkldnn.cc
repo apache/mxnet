@@ -772,7 +772,7 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   for (int i = 0; i < tmp1.shape().Size(); i++)
-    ASSERT_FLOAT_EQ(d1[i], d2[i]);
+    ASSERT_NEAR(d1[i], d2[i], fabsf(d1[i])*1e-6);  // compare up to 6 digits of precision
 }
 
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
