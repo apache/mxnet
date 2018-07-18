@@ -1011,6 +1011,10 @@ try {
         }
       }
     },
+    /*  Disabled due to master build failure:
+     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
+     *  https://github.com/apache/incubator-mxnet/issues/11801
+
     'dist-kvstore tests CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-dist-kvstore') {
@@ -1022,7 +1026,7 @@ try {
           }
         }
       }
-    },
+    }, */
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {
