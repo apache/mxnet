@@ -117,7 +117,7 @@ def train(epochs, ctx):
         name, val_acc = test(ctx)
         print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
 
-    net.save_params('mnist.params')
+    net.save_parameters('mnist.params')
 
 
 if __name__ == '__main__':

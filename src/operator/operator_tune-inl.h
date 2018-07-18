@@ -165,8 +165,14 @@ class OperatorTune : public OperatorTuneByType<DType> {
         // Not especially concerned with a race condition, since this hsould
         // run when only one thread is active (static init), just don't cache this variable
         OperatorTuneBase::calculated_.store(true);
-        OperatorTuneBase::omp_overhead_ns_ = GetOMPLoopOverhead();
         std::string config = dmlc::GetEnv("MXNET_USE_OPERATOR_TUNING", std::string());
+        StringUtil::trim(&config);
+        // disabled
+        if (!config.empty() && ::isdigit(config[0]) && std::atoi(config.c_str()) == 0) {
+          OperatorTuneBase::omp_overhead_ns_ = INT_MAX;
+        } else {
+          OperatorTuneBase::omp_overhead_ns_ = GetOMPLoopOverhead();
+        }
         ParseEnablerConfig(config);
       }
 
@@ -435,7 +441,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
   }
 
   /*!
-   * \brief Parse MXNET_ENABLE_OPERATOR_TUNING environment variable
+   * \brief Parse MXNET_USE_OPERATOR_TUNING environment variable
    * \param config String representation of MXNET_ENABLE_OPERATOR_TUNING environment variable
    *        Values:
    *            0=disable all

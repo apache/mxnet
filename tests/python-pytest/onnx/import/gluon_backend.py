@@ -17,10 +17,9 @@
 
 # coding: utf-8
 """Gluon backend wrapper for onnx test infrastructure"""
+from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
 import mxnet as mx
-from mxnet import nd
-from mxnet.contrib.onnx._import.import_onnx import GraphProto
-import numpy as np
+
 try:
     from onnx import helper, TensorProto
     from onnx.backend.base import Backend
@@ -57,13 +56,19 @@ class GluonBackend(Backend):
             used to run inference on the input model and return the result for comparison.
         """
         graph = GraphProto()
-        net = graph.graph_to_gluon(model.graph, device)
+        if device == 'CPU':
+            ctx = mx.cpu()
+        else:
+            raise NotImplementedError("ONNX tests are run only for CPU context.")
+
+        net = graph.graph_to_gluon(model.graph, ctx)
         return GluonBackendRep(net, device)
 
     @classmethod
     def supports_device(cls, device):
         """Supports only CPU for testing"""
         return device == 'CPU'
+
 
 prepare = GluonBackend.prepare
 

@@ -170,19 +170,21 @@ class KVStore {
    * \param keys the list of keys
    * \param values the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
+   * \param ignore_sparse whether to ignore sparse arrays in the request
    */
   virtual void Pull(const std::vector<int>& keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0) = 0;
+                    int priority = 0, bool ignore_sparse = true) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    * \param keys the list of keys in string format
    * \param values the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
+   * \param ignore_sparse whether to ignore sparse arrays in the request
    */
   virtual void Pull(const std::vector<std::string>& str_keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0) = 0;
+                    int priority = 0, bool ignore_sparse = true) = 0;
 
   /*!
    * \brief pull a list of key-value pairs from the store.
@@ -229,6 +231,7 @@ class KVStore {
     CHECK(updater) << "invalid updater";
     updater_ = updater;
   }
+
   /*!
    * \brief set an updater with string keys
    *

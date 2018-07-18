@@ -23,7 +23,7 @@ import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 @with_seed()
 def test_learning_rate():
@@ -230,7 +230,10 @@ def test_sgd():
                                     ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
                                 continue
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            if dtype == np.float16:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3)
+                            else:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
                             # test operator fallback on cpu
                             if dtype != np.float16:
                                 compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
@@ -420,7 +423,7 @@ class PyNAG(PySGD):
               grad += wd * weight
               mom[:] += grad
               grad[:] += self.momentum * mom
-              weight[:] += -lr * grad 
+              weight[:] += -lr * grad
         else:
             grad32 = array(grad, ctx=grad.context, dtype=np.float32)
             grad32 = grad32 * self.rescale_grad
@@ -1031,6 +1034,8 @@ def test_adagrad():
                         if wd_option.get('wd', 0.0) == 0.0:
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              g_stype='row_sparse')
 
 
 

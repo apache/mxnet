@@ -321,6 +321,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
+  CHECK_EQ(out_shape->size(), 3U);
   const TShape &dshape = in_shape->at(batchnorm::kData);
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
@@ -451,39 +452,29 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
                                         DispatchMode *dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 5);
-  CHECK_EQ(out_attrs->size(), 3);
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  for (int& v : *in_attrs) {
-    if (v == - 1) v = kDefaultStorage;
-  }
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
-}
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
 
-static inline bool backward_BatchNormStorageType(const nnvm::NodeAttrs &attrs,
-                                                 const int dev_mask,
-                                                 DispatchMode *dispatch_mode,
-                                                 std::vector<int> *in_attrs,
-                                                 std::vector<int> *out_attrs) {
-  DispatchMode wanted_mode;
+  bool dispatched = false;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  for (int& v : *in_attrs) {
-    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
   }
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+#else
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_gamma) {
+    LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
+  }
+  return dispatched;
 }
 
 std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
@@ -572,6 +563,11 @@ axis to be the last item in the input shape.
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
 then set ``gamma`` to 1 and its gradient to 0.
 
+Note::
+
+When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
+the sparse tensors will fallback.
+
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(3)
@@ -625,7 +621,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", backward_BatchNormStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -116,7 +117,7 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(len(mxnet_pred), len(coreml_pred))
             div.append(_kl_divergence(mxnet_pred, coreml_pred))
 
-        print "Average KL divergence is % s" % np.mean(div)
+        print("Average KL divergence is % s" % np.mean(div))
         self.assertTrue(np.mean(div) < 1e-4)
 
     def test_pred_inception_bn(self):

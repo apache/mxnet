@@ -27,11 +27,15 @@ WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
 RUN /work/ubuntu_core.sh
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
 COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 COPY install/ubuntu_scala.sh /work/
+COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
 COPY install/ubuntu_r.sh /work/
+COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
@@ -47,6 +51,7 @@ RUN /work/ubuntu_nvidia.sh
 
 # Keep this at the end since this command is not cachable
 ARG USER_ID=0
+ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

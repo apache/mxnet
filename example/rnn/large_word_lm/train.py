@@ -23,6 +23,7 @@ from data import MultiSentenceIter, Vocabulary
 from model import *
 from custom_module import CustomModule
 import os, math, logging, sys
+from sampler import LogUniformSampler
 
 if __name__ == '__main__':
     # parser
@@ -48,9 +49,11 @@ if __name__ == '__main__':
     train_data = mx.io.PrefetchingIter(MultiSentenceIter(args.data, vocab,
                                        args.batch_size * ngpus, args.bptt))
     # model
-    model = Model(args, ntokens, rescale_loss)
+    model = Model(ntokens, rescale_loss, args.bptt, args.emsize, args.nhid,
+                  args.nlayers, args.dropout, args.num_proj, args.batch_size, args.k)
     train_loss_and_states = model.train()
     eval_loss_and_states = model.eval()
+    sampler = LogUniformSampler(ntokens, args.k)
 
     # training module
     data_names, label_names = ['data', 'mask'], ['label']
@@ -83,7 +86,7 @@ if __name__ == '__main__':
         module.set_states(value=0)
         state_cache = module.get_states(merge_multi_context=False)[:-num_sample_names]
         next_batch = train_data.next()
-        next_sampled_values = generate_samples(next_batch.label[0], ngpus, args.k, ntokens)
+        next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
         stop_iter = False
         while not stop_iter:
             batch = next_batch
@@ -102,8 +105,7 @@ if __name__ == '__main__':
             try:
                 # prefetch the next batch of data and samples
                 next_batch = train_data.next()
-                next_sampled_values = generate_samples(next_batch.label[0], ngpus,
-                                                       args.k, ntokens)
+                next_sampled_values = generate_samples(next_batch.label[0], ngpus, sampler)
             except StopIteration:
                 stop_iter = True
             # cache LSTMP states of the current batch
@@ -132,21 +134,29 @@ if __name__ == '__main__':
             nbatch += 1
 
         # run evaluation with full softmax on cpu
-        module.save_checkpoint(args.checkpoint_dir, epoch, save_optimizer_states=False)
-        cpu_train_mod = CustomModule.load(args.checkpoint_dir, epoch, context=mx.cpu(),
-                                          state_names=train_state_names,
-                                          data_names=data_names, label_names=label_names)
+        if not os.path.exists(args.checkpoint_dir):
+            os.mkdir(args.checkpoint_dir)
+        ckp = os.path.join(args.checkpoint_dir, 'ckp')
+        module.save_checkpoint(ckp, epoch, save_optimizer_states=False)
+
+        # use batch_size = 1 for testing
+        eval_batch_size = 1
+        load_model = Model(ntokens, rescale_loss, args.bptt, args.emsize, args.nhid,
+                           args.nlayers, args.dropout, args.num_proj, eval_batch_size, args.k)
+        cpu_train_mod = CustomModule.load(ckp, epoch, context=mx.cpu(),
+                                          state_names=train_state_names, data_names=data_names,
+                                          label_names=label_names, symbol=load_model.train())
         # eval data iter
         eval_data = mx.io.PrefetchingIter(MultiSentenceIter(args.test, vocab,
-                                          args.batch_size, args.bptt))
+                                          eval_batch_size, args.bptt))
         cpu_train_mod.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label)
 
         # eval module
-        eval_module = CustomModule(symbol=eval_loss_and_states, context=mx.cpu(), data_names=data_names,
+        eval_module = CustomModule(symbol=load_model.eval(), context=mx.cpu(), data_names=data_names,
                                    label_names=label_names, state_names=eval_state_names)
         # use `shared_module` to share parameter with the training module
         eval_module.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label,
                          shared_module=cpu_train_mod, for_training=False)
-        val_L = run_utils.evaluate(eval_module, eval_data, epoch, 20)
+        val_L = run_utils.evaluate(eval_module, eval_data, epoch, 1000)
         train_data.reset()
     logging.info("Training completed. ")

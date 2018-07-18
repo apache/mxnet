@@ -1,0 +1,120 @@
+// -*- mode: groovy -*-
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+//This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
+
+err = null
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+
+// pack libraries for later use
+def pack_lib(name, libs=mx_lib) {
+  sh """
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+  stash includes: libs, name: name
+}
+
+// unpack libraries saved before
+def unpack_lib(name, libs=mx_lib) {
+  unstash name
+  sh """
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+}
+
+def init_git() {
+  deleteDir()
+  retry(5) {
+    try {
+      timeout(time: 15, unit: 'MINUTES') {
+        checkout scm
+        sh 'git submodule update --init --recursive'
+        sh 'git clean -d -f'
+      }
+    } catch (exc) {
+      deleteDir()
+      error "Failed to fetch source codes with ${exc}"
+      sleep 2
+    }
+  }
+}
+
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
+  command = command.replaceAll('%PLATFORM%', platform)
+  command = command.replaceAll('%FUNCTION_NAME%', function_name)
+  command = command.replaceAll('%SHARED_MEM%', shared_mem)
+
+  sh command
+}
+
+try {
+  stage('Build') {
+    parallel 'GPU: CUDA9.1+cuDNN7': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-gpu') {
+          init_git()
+          //sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
+          docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+          pack_lib('gpu', mx_lib)
+        }
+      }
+    }
+  }
+
+  stage('NightlyTests'){
+    parallel 'ImageClassification: GPU': {
+      node('mxnetlinux-gpu') {
+        ws('workspace/nt-ImageClassificationTest') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
+        }
+      }
+    },
+    'KVStore_SingleNode: GPU': {
+      node('mxnetlinux-gpu-p3-8xlarge') {
+        ws('workspace/nt-KVStoreTest') {
+          init_git()
+          unpack_lib('gpu', mx_lib)
+          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
+        }
+      }
+    }
+  }
+} catch (caughtError) {
+  node("mxnetlinux-cpu") {
+    sh "echo caught ${caughtError}"
+    err = caughtError
+    currentBuild.result = "FAILURE"
+  }
+} finally {
+  node("mxnetlinux-cpu") {
+    // Only send email if master failed
+    if (currentBuild.result == "FAILURE") {
+		emailext body: 'Nightly tests for MXNet branch ${BRANCH_NAME} failed. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY TEST FAILED] build ${BUILD_NUMBER}', to: '${EMAIL}'
+    }
+    // Remember to rethrow so the build is marked as failing
+    if (err) {
+      throw err
+    }
+  }
+}

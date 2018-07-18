@@ -28,6 +28,7 @@ import os
 import logging
 import subprocess
 import sys
+from unittest.mock import MagicMock
 
 sys.path.append(os.path.dirname(__file__))
 import docker_cache
@@ -86,6 +87,8 @@ class TestDockerCache(unittest.TestCase):
         # expected. But the script can be invoked from a different path
         base = os.path.split(os.path.realpath(__file__))[0]
         os.chdir(base)
+
+        docker_cache._login_dockerhub = MagicMock()  # Override login
 
         # Stop in case previous execution was dirty
         try:
@@ -248,5 +251,5 @@ def _assert_docker_build(lambda_func, expected_cache_hit_count: int, expected_ca
 
 
 if __name__ == '__main__':
-    import nose2
-    nose2.main()
+    import nose
+    nose.main()

@@ -52,6 +52,7 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     fft
     ifft
     quantize
+    foreach
 ```
 
 ## API Reference

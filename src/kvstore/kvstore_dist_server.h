@@ -103,7 +103,8 @@ class Executor {
       lk.unlock();
 
       if (blk.f) {
-        blk.f(); blk.p->set_value();
+        blk.f();
+        blk.p->set_value();
       } else {
         blk.p->set_value(); break;
       }
@@ -328,8 +329,6 @@ class KVStoreDistServer {
     if (has_multi_precision_copy(type)) CopyFromTo(recved, updateBuf->temp_array);
     const NDArray& to_merge = has_multi_precision_copy(type) ? updateBuf->temp_array : recved;
     // accumulate row_sparse gradients
-    // TODO(haibin) override + operator for row_sparse NDArray
-    // instead of calling BinaryComputeRspRsp directly
     using namespace mshadow;
     Engine::Get()->PushAsync(
     [to_merge, updateBuf, out](RunContext ctx, Engine::CallbackOnComplete on_complete) {

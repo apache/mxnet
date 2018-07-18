@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
-from common import assertRaises
+from common import assertRaises, with_seed
 import shutil
 import tempfile
 import unittest
@@ -153,8 +153,19 @@ class TestImage(unittest.TestCase):
         for batch in test_iter:
             pass
 
-
+    @with_seed()
     def test_augmenters(self):
+        # ColorNormalizeAug
+        mean = np.random.rand(3) * 255
+        std = np.random.rand(3) + 1
+        width = np.random.randint(100, 500)
+        height = np.random.randint(100, 500)
+        src = np.random.rand(height, width, 3) * 255.
+        # We test numpy and mxnet NDArray inputs
+        color_norm_aug = mx.image.ColorNormalizeAug(mean=mx.nd.array(mean), std=std)
+        out_image = color_norm_aug(mx.nd.array(src))
+        assert_almost_equal(out_image.asnumpy(), (src - mean) / std, atol=1e-3)
+
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [[0, x] for x in TestImage.IMAGES]

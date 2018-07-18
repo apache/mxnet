@@ -19,7 +19,7 @@ import numpy as np
 import mxnet as mx
 import argparse
 
-parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
+parser = argparse.ArgumentParser(description="Train RNN on Sherlock Holmes",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--test', default=False, action='store_true',
                     help='whether to do testing instead of training')
@@ -66,7 +66,7 @@ parser.add_argument('--stack-rnn', default=False,
 parser.add_argument('--dropout', type=float, default='0.0',
                     help='dropout probability (1.0 - keep probability)')
 parser.add_argument('--rnntype', type=str, default='lstm',
-                    help='rnn type: gru and lstm are supported')
+                    help='rnn type: gru, lstm, rnn_tanh and rnn_relu are supported')
 
 #buckets = [32]
 buckets = [10, 20, 30, 40, 50, 60]
@@ -81,9 +81,9 @@ def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
     return sentences, vocab
 
 def get_data(layout):
-    train_sent, vocab = tokenize_text("./data/ptb.train.txt", start_label=start_label,
+    train_sent, vocab = tokenize_text("./data/sherlockholmes.train.txt", start_label=start_label,
                                       invalid_label=invalid_label)
-    val_sent, _ = tokenize_text("./data/ptb.test.txt", vocab=vocab, start_label=start_label,
+    val_sent, _ = tokenize_text("./data/sherlockholmes.test.txt", vocab=vocab, start_label=start_label,
                                 invalid_label=invalid_label)
 
     data_train  = mx.rnn.BucketSentenceIter(train_sent, args.batch_size, buckets=buckets,
@@ -187,6 +187,20 @@ def test(args):
                     cell = mx.rnn.BidirectionalCell(
                             cell,
                             mx.rnn.GRUCell(num_hidden=args.num_hidden, prefix='%s_%dr0_'%(args.rnntype,i)),
+                            output_prefix='bi_%s_%d'%(args.rnntype,i))
+            elif args.rnntype == 'rnn_tanh':
+                cell = mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='tanh', prefix='%s_%dl0_'%(args.rnntype,i))
+                if args.bidirectional:
+                    cell = mx.rnn.BidirectionalCell(
+                            cell,
+                            mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='tanh', prefix='%s_%dr0_'%(args.rnntype,i)),
+                            output_prefix='bi_%s_%d'%(args.rnntype,i))
+            elif args.rnntype == 'rnn_relu':
+                cell = mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='relu', prefix='%s_%dl0_'%(args.rnntype,i))
+                if args.bidirectional:
+                    cell = mx.rnn.BidirectionalCell(
+                            cell,
+                            mx.rnn.RNNCell(num_hidden=args.num_hidden, activation='relu', prefix='%s_%dr0_'%(args.rnntype,i)),
                             output_prefix='bi_%s_%d'%(args.rnntype,i))
 
             stack.add(cell)

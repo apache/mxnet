@@ -31,9 +31,9 @@ by maintaining the connection of the states and gradients through time.
 However, this implementation approach results in slow processing.
 This approach works with variable length sequences. For more complicated models (e.g., translation that uses a sequence-to-sequence model), explicitly unrolling is the easiest way. In this example, we introduce the MXNet APIs that allows us to implement bucketing.
 
-## Variable-length Sequence Training for PTB
+## Variable-length Sequence Training for Sherlock Holmes
 
-We use the [PennTreeBank language model example](https://github.com/dmlc/mxnet/tree/master/example/rnn) for this example. If you are not familiar with this example, see [this tutorial (in Julia)](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html) first.
+We use the [Sherlock Holmes language model example](https://github.com/dmlc/mxnet/tree/master/example/rnn) for this example. If you are not familiar with this example, see [this tutorial (in Julia)](http://dmlc.ml/mxnet/2015/11/15/char-lstm-in-julia.html) first.
 
 In this example, we use a simple architecture
 consisting of a word-embedding layer

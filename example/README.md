@@ -1,11 +1,12 @@
 # MXNet Examples
 
-This page contains a curated list of awesome MXNet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning).
+This page contains a curated list of awesome MXNet examples, tutorials and blogs. It is inspired by [awesome-php](https://github.com/ziadoz/awesome-php) and [awesome-machine-learning](https://github.com/josephmisiti/awesome-machine-learning). See also [Awesome-MXNet](https://github.com/chinakook/Awesome-MXNet) for a similar list.
 
   - [Contributing](#contributing)
   - [List of examples](#list-of-examples)
     - [Languages Binding Examples](#language-binding-examples)
-    - [Deep Learning Examples](#deep-learning-examples)
+    - [Deep Learning Examples in the MXNet Project Repository](#deep-learning-examples-mxnet)
+    - [Other Deep Learning Examples with MXNet](#deep-learning-examples-other)
     - [IPython Notebooks](#ipython-notebooks)
     - [Mobile App Examples](#mobile-apps-examples)
     - [Web Predictive Services](#web-predictive-services)
@@ -28,7 +29,7 @@ Example applications or scripts should be submitted in this `example` folder.
 
 ### Tutorials
 
-If you have a tutorial idea for the website, download the [ Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
+If you have a tutorial idea for the website, download the [Jupyter notebook tutorial template](https://github.com/dmlc/mxnet/tree/master/example/MXNetTutorialTemplate.ipynb).
 
 #### Tutorial location
 
@@ -45,9 +46,11 @@ The site expects the format to be markdown, so export your notebook as a .md via
 ```
 
 If you want some lines to show-up in the markdown but not in the generated notebooks, add  this comment `<!--notebook-skip-line-->` after your `![png](img_url)`. Like this:
+
 ```
 ![png](img_url.png)<!--notebook-skip-line-->
 ```
+
 Typically when you have a `plt.imshow()` you want the image tag `[png](img.png)` in the `.md` but not in the downloaded notebook as the user will re-generate the plot at run-time.
 
 #### Tutorial tests
@@ -74,7 +77,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
 
-### <a name="deep-learning-examples"></a>Deep Learning Examples in the MXNet Project Repository
+### <a name="deep-learning-examples-mxnet"></a>Deep Learning Examples in the MXNet Project Repository
 --------------
 * [Autoencoder](autoencoder) - unsupervised feature learning
 * [Bayesian Methods](bayesian-methods) - various examples related to Bayesian Methods
@@ -124,8 +127,9 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [Support Vector Machine](svm_mnist) - an SVM example using MNIST
 * [Variational Auto Encoder](vae) - implements the Variational Auto Encoder in MXNet using MNIST
 
-### Other Deep Learning Examples with MXNet
+### <a name="deep-learning-examples-other"></a>Other Deep Learning Examples with MXNet
 
+* [Face Recognition with ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace) - ONNX model for face recognition with notebooks for training, validating and running inference in MXNet by [abhinavs95](https://github.com/abhinavs95)
 * [Chinese plate recognition](https://github.com/imistyrain/mxnet-mr) - Recognize Chinese vehicle plate, by [imistyrain](https://github.com/imistyrain)
 * [Fast R-CNN](https://github.com/precedenceguo/mx-rcnn) by [Jian Guo](https://github.com/precedenceguo)
 * "End2End Captcha Recognition (OCR)" by [xlvector](https://github.com/xlvector) [github link](https://github.com/xlvector/learning-dl/tree/master/mxnet/ocr) [Blog in Chinese](http://blog.xlvector.net/2016-05/mxnet-ocr-cnn/)
@@ -151,7 +155,8 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [LSTM Human Activity Recognition](https://github.com/Ldpe2G/DeepLearningForFun/tree/master/Mxnet-Scala/HumanActivityRecognition) by [Ldpe2G](https://github.com/Ldpe2G)
 * [Visual Question Answering](https://github.com/liuzhi136/Visual-Question-Answering) by [liuzhi136](https://github.com/liuzhi136)
 * [Deformable ConvNets](https://arxiv.org/abs/1703.06211) ([github](https://github.com/msracver/Deformable-ConvNets)) by [MSRACVer](https://github.com/msracver)
-
+* [OCR with bi-LSTM and CTC Loss in Gluon](https://github.com/ThomasDelteil/Gluon_OCR_LSTM_CTC) by [ThomasDelteil](https://github.com/ThomasDelteil)
+* [Visual Search with Gluon and HNSWlib](https://github.com/ThomasDelteil/VisualSearch_MXNet), by [ThomasDelteil](https://github.com/ThomasDelteil), online demo [here](https://thomasdelteil.github.io/VisualSearch_MXNet/)
 
 ### <a name="ipython-notebooks"></a>IPython Notebooks
 -----------------
@@ -164,7 +169,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [class active maps](https://github.com/dmlc/mxnet-notebooks/blob/master/python/moved-from-mxnet/class_active_maps.ipynb) - A demo of how to localize the discriminative regions in an image using global average pooling (GAP) in CNNs.
 * [DMLC MXNet Notebooks](https://github.com/dmlc/mxnet-notebooks) DMLC's repo for various notebooks ranging from basic usages of MXNet to state-of-the-art deep learning applications.
 * [AWS Seoul Summit 2017 Demos](https://github.com/sxjscience/aws-summit-2017-seoul) The demo codes and ipython notebooks in AWS Seoul Summit 2017.
-* [Character-level CNN for text classification](https://github.com/ThomasDelteil/CNN_NLP_MXNet) Performing category classification on Amazon reviews using Gluon and character-level Convolutional Neural Networks
+* [Character-level CNN for text classification](https://github.com/ThomasDelteil/CNN_NLP_MXNet) Performing category classification on Amazon reviews using Gluon and character-level Convolutional Neural Networks. Online demo [here](https://thomasdelteil.github.io/CNN_NLP_MXNet/)
 
 ### <a name="mobile-apps-examples"></a>Mobile App Examples
 -------------------
@@ -220,4 +225,3 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXnet-face](https://github.com/tornadomeet/mxnet-face) - Using mxnet for face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model get 97.13%+-0.88% accuracy on LFW, and with only 20MB size.
 * [MinPy](https://github.com/dmlc/minpy) - Pure numpy practice with third party operator Integration and MXnet as backend for GPU computing
 * [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) - a flexible and easy to use tool for serving Deep Learning models
-* [ONNX-MXNet](https://github.com/onnx/onnx-mxnet) - implements ONNX model format support for Apache MXNet

@@ -156,7 +156,7 @@ class NDArray {
   }
 
   /* \brief Check whether the two arrays are the same array */
-  inline bool IsSame(const NDArray& other) {
+  inline bool IsSame(const NDArray& other) const {
     return ptr_ == other.ptr_ &&
         shape_ == other.shape_ &&
         byte_offset_ == other.byte_offset_ &&
@@ -202,7 +202,7 @@ class NDArray {
   /*! returns the dtypes of all aux data */
   const std::vector<int>& aux_types() const {
     CHECK_NE(storage_type(), kDefaultStorage)
-             << "aux_types() is not intended for kDefaultStorage.";
+      << "aux_types() is not intended for kDefaultStorage.";
     return ptr_->aux_types;
   }
 
@@ -214,6 +214,8 @@ class NDArray {
    * the shape is known and need to be reset using this function.
    */
   inline void set_aux_shape(size_t index, const TShape& shape) const {
+    CHECK_NE(storage_type(), kDefaultStorage)
+      << "set_aux_shape() is not intended for kDefaultStorage.";
     ptr_->set_aux_shape(index, shape);
   }
 
@@ -514,9 +516,6 @@ class NDArray {
     ret.shape_ = shape;
     ret.dtype_ = dtype;
     ret.reuse_ = true;
-#if MXNET_USE_MKLDNN == 1
-    ret.InvalidateMKLDNNData();
-#endif
     return ret;
   }
 
@@ -1024,10 +1023,12 @@ void CopyFromTo(const NDArray &from, const NDArray *to, int priority = 0);
  * \param from the ndarray we want to copy data from
  * \param to the target ndarray
  * \param priority Priority of the action.
+ * \param is_opr whether it is invoked by an operator. For example, false if invoked from
+       KVStore, true if invoked from `_copyto` operator.
  * \note The function name explicitly marks the order of from and to
  *     due to different possible convention carried by copy function.
  */
-void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0);
+void CopyFromTo(const NDArray &from, const NDArray& to, int priority = 0, bool is_opr = false);
 
 /*!
  * \brief Perform elementwise sum over each data from source, store result into out.

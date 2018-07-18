@@ -25,7 +25,7 @@ use File::Path qw(make_path);
 use HTTP::Tiny;
 use Exporter;
 use base qw(Exporter);
-@AI::MXNet::Gluon::Utils::EXPORT_OK = qw(download);
+@AI::MXNet::Gluon::Utils::EXPORT_OK = qw(download check_sha1);
 
 =head1 NAME
 
@@ -161,7 +161,7 @@ method split_and_load(
     {
         return [$data->as_in_context($ctx_list->[0])];
     }
-    my $slices = __PACKAGE__->split_data($data, scalar(@$ctx_list), $batch_axis, $even_split);
+    my $slices = __PACKAGE__->split_data($data, scalar(@$ctx_list), $batch_axis, even_split => $even_split);
     my @ret;
     for(zip($slices, $ctx_list)) {
         my ($i, $ctx) = @$_;
@@ -177,20 +177,31 @@ method split_and_load(
 
 method clip_global_norm(ArrayRef[AI::MXNet::NDArray] $arrays, Num $max_norm)
 {
+    my $_norm = sub { my ($array) = @_;
+        if($array->stype eq 'default')
+        {
+            my $x = $array->reshape([-1]);
+            return AI::MXNet::NDArray->dot($x, $x);
+        }
+        return $array->norm->square;
+    };
     assert(@$arrays > 0);
-    my $total_norm = 0;
-    for my $arr (@$arrays)
+    my $ctx = $arrays->[0]->context;
+    my $total_norm = AI::MXNet::NDArray->add_n(map { $_norm->($_)->as_in_context($ctx) } @$arrays);
+    $total_norm = $total_norm->sqrt->asscalar;
+    if(lc($total_norm) eq 'nan' or $total_norm =~ /inf/i)
     {
-        $arr = $arr->reshape([-1]);
-        $total_norm += AI::MXNet::NDArray->dot($arr, $arr);
+        AI::MXNet::Logging->warning('nan or inf is detected. Clipping results will be undefined.');
     }
-    $total_norm = sqrt($total_norm->asscalar);
     my $scale = $max_norm / ($total_norm + 1e-8);
-    if($scale < 1)
+    if($scale < 1.0)
     {
-        $_ *= $scale for @{ $arrays };
+        for my $arr (@$arrays)
+        {
+            $arr *= $scale;
+        }
     }
-    return $total_norm
+    return $total_norm;
 }
 
 =head2 check_sha1
@@ -275,6 +286,30 @@ func download(Str $url, Maybe[Str] :$path=, Bool :$overwrite=0, Maybe[Str] :$sha
         close(F);
     }
     return $fname
+}
+
+package AI::MXNet::Gluon::Utils::HookHandle;
+use Mouse;
+use AI::MXNet::Base;
+use Scalar::Util qw(refaddr);
+has [qw/_hooks_dict_ref/] => (is => 'rw', init_arg => undef, weak_ref => 1);
+has [qw/_id/]             => (is => 'rw', init_arg => undef);
+
+method attach(Hash::Ordered $hooks_dict, $hook)
+{
+    assert((not $self->_hooks_dict_ref), 'The same handle cannot be attached twice.');
+    $self->_id(refaddr($hook));
+    $hooks_dict->set($self->_id, $hook);
+    $self->_hooks_dict_ref($hooks_dict);
+}
+
+method detach()
+{
+    my $hooks_dict = $self->_hooks_dict_ref;
+    if($hooks_dict and $hooks_dict->exists($self->_id))
+    {
+        $hooks_dict->delete($self->_id);
+    }
 }
 
 1;

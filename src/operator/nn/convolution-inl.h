@@ -125,6 +125,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   }
 };
 
+void ConvolutionParamParser(nnvm::NodeAttrs* attrs);
+
 typedef ParamOpSign<ConvolutionParam> ConvSignature;
 
 }  // namespace op
