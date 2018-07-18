@@ -111,6 +111,10 @@ set(LOOKED_FOR
     OpenBLAS_LIBRARY
     )
 
+set(OpenBLAS_LAPACK_FOUND False)
+set(OpenBLAS_LAPACK_LIBRARY "")
+set(OpenBLAS_LAPACK_INCLUDE_DIR "")
+
 if(OpenBLAS_NEED_LAPACK)
   message(STATUS "Looking for LAPACK support...")
 
@@ -136,9 +140,6 @@ if(OpenBLAS_NEED_LAPACK)
         )
     message(STATUS "LAPACK found")
   else()
-    set(OpenBLAS_LAPACK_FOUND False)
-    set(OpenBLAS_LAPACK_LIBRARY "")
-    set(OpenBLAS_LAPACK_INCLUDE_DIR "")
     message(WARNING "OpenBlas has not been compiled with LAPACK support, LAPACK functionality will not be available")
   endif()
 

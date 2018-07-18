@@ -39,6 +39,8 @@ set(LOOKED_FOR
     Accelerate_CBLAS_INCLUDE_DIR
     )
 
+set(Accelerate_LAPACK_FOUND False)
+
 if(Accelerate_NEED_LAPACK)
   message(STATUS "Looking for LAPACK support...")
 
@@ -53,7 +55,6 @@ if(Accelerate_NEED_LAPACK)
     set(Accelerate_LAPACK_FOUND True)
     message(STATUS "LAPACK found")
   else()
-    set(Accelerate_LAPACK_FOUND False)
     message(WARNING "Apple's Accelerate LAPACK support could not be identified, \
                      LAPACK functionality will not be available")
   endif()
