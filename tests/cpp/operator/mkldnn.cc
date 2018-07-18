@@ -1184,6 +1184,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
         backwards_input[4] = ex_outputs[1];  // workspace
       }
 
+      // needs copies of inputs since they be reused in next iteration
+      // cannot use Copy method since we need to maintain MKLDNN format
       auto tmp_output = GetTestInputArrays(true)[i1];
       auto tmp_output2 = GetTestInputArrays(true)[i1];
       backwards_outputs[0] = &tmp_output.arr;
