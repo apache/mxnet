@@ -57,9 +57,10 @@ class MKLDNNPoolingFwd {
 
   ~MKLDNNPoolingFwd() {}
   void SetNewMem(const mkldnn::memory &data_mem,
-                 const mkldnn::memory &out_mem,
-                 const mxnet::NDArray *workspace = nullptr);
-  void Execute();
+                                   const NDArray out_data,
+                                   const OpReqType req,
+                                   const mxnet::NDArray *workspace = nullptr);
+  void Execute(const NDArray& out_data);
 
  private:
   bool is_train_;
@@ -69,6 +70,7 @@ class MKLDNNPoolingFwd {
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> workspace_;
+  mkldnn_output_t output_mem_t;
 
  private:
   void Init(const mxnet::NDArray &input,

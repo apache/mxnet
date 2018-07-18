@@ -87,11 +87,13 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &o
 }
 
 void MKLDNNPoolingFwd::SetNewMem(const mkldnn::memory &data_mem,
-                                 const mkldnn::memory &out_mem,
+                                 const NDArray out_data,
+                                 const OpReqType req,
                                  const mxnet::NDArray *workspace) {
+  auto out_mem_t = CreateMKLDNNMem(out_data, fwd_pd_->dst_primitive_desc(), req);
   // mkldnn::memory
   this->data_->set_data_handle(data_mem.get_data_handle());
-  this->out_->set_data_handle(out_mem.get_data_handle());
+  this->out_->set_data_handle(out_mem_t.second->get_data_handle());
   if (this->with_workspace_ && workspace == nullptr) {
     LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
   }
@@ -103,9 +105,10 @@ void MKLDNNPoolingFwd::SetNewMem(const mkldnn::memory &data_mem,
   }
 }
 
-void MKLDNNPoolingFwd::Execute() {
+void MKLDNNPoolingFwd::Execute(const NDArray& out_data) {
   if (this->fwd_) {
     MKLDNNStream::Get()->RegisterPrim(*(this->fwd_));
+    CommitOutput(out_data, this->output_mem_t);
     MKLDNNStream::Get()->Submit();
   } else {
     LOG(FATAL) << "MKLDNN Pooling: forward primitive is nullptr";
@@ -253,11 +256,8 @@ void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &out_data, const NDArray *workspace) {
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
   auto input_mem = in_data.GetMKLDNNData();
-  auto out_mem_t = CreateMKLDNNMem(out_data, fwd.fwd_pd_->dst_primitive_desc(), req);
-  fwd.SetNewMem(*input_mem, *out_mem_t.second, workspace);
-  fwd.Execute();
-  CommitOutput(out_data, out_mem_t);
-  MKLDNNStream::Get()->Submit();
+  fwd.SetNewMem(*input_mem, out_data, workspace, req);
+  fwd.Execute(out_data);
 }
 
 void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
