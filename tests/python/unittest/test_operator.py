@@ -2226,11 +2226,13 @@ def test_broadcast():
         axis = tuple(set(np.random.randint(0, ndim, np.random.randint(1, ndim + 1))))
         shape = target_shape.copy()
         size = tuple([shape[ele] for ele in axis])
+        target_array = rand_ndarray(shape=target_shape, stype='default')
         for ele in axis:
             shape[ele] = 1
         a = mx.symbol.Variable('a')
         sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
         sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        sym_bcast_like = mx.symbol.broadcast_like(a, target=target_array)
         def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
@@ -2247,6 +2249,7 @@ def test_broadcast():
             assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
+        test_broadcasting_ele(sym_bcast_like)
 
 
 @with_seed()
