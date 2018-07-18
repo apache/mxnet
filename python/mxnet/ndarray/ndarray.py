@@ -1715,6 +1715,44 @@ fixed-size items.
             return op.broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
 
+    def broadcast_like(self, other):
+        """Broadcasts the input array to the shape of other.
+
+        Broadcasting is only allowed on axes with size 1. The new shape cannot change
+        the number of dimensions.
+        For example, you could broadcast from shape (2, 1) to (2, 3), but not from
+        shape (2, 3) to (2, 3, 3).
+
+        Parameters
+        ----------
+        other : NDArray
+            Array with shape of the desired array.
+
+        Returns
+        -------
+        NDArray
+            A NDArray with the desired shape that is not sharing data with this
+            array, even if the new shape is the same as ``self.shape``.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(0,3).reshape((1,3,1))
+        >>> x.asnumpy()
+        array([[[ 0.],
+                [ 1.],
+                [ 2.]]], dtype=float32)
+        >>> y = x.broadcast_like(mx.nd.ones((2,3,3)))
+        >>> y.asnumpy()
+        array([[[ 0.,  0.,  0.],
+                [ 1.,  1.,  1.],
+                [ 2.,  2.,  2.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.],
+                [ 1.,  1.,  1.],
+                [ 2.,  2.,  2.]]], dtype=float32)
+        """
+        return self.broadcast_to(other.shape)
+
     def wait_to_read(self):
         """Waits until all previous write operations on the current array are finished.
 
