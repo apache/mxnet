@@ -77,9 +77,7 @@ def _build_save_container(platform, registry, load_cache) -> str:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        os.environ['DOCKER_BUILD_NUM_RETRIES'] = \
-            max(10, os.environ['DOCKER_BUILD_NUM_RETRIES'] if 'DOCKER_BUILD_NUM_RETRIES' in os.environ else 1)
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry)
+        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
