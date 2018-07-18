@@ -9,7 +9,7 @@
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
 #'      rescaling factor of gradient.
-#' @param clip_gradient float, optional, default=-1
+#' @param clip_gradient float, optional, default=-1 (no clipping if < 0)
 #'      clip gradient in range [-clip_gradient, clip_gradient].
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
@@ -101,7 +101,7 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
 #'      rescaling factor of gradient.
-#' @param clip_gradient float, optional, default=-1
+#' @param clip_gradient float, optional, default=-1 (no clipping if < 0)
 #'      clip gradient in range [-clip_gradient, clip_gradient].
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
@@ -209,7 +209,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
 #'      rescaling factor of gradient.
-#' @param clip_gradient float, optional, default=-1
+#' @param clip_gradient float, optional, default=-1 (no clipping if < 0)
 #'      clip gradient in range [-clip_gradient, clip_gradient].
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
@@ -294,7 +294,7 @@ mx.opt.adam <- function(learning.rate = 1e-3,
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
 #'      rescaling factor of gradient.
-#' @param clip_gradient float, default=-1.0 (ignored)
+#' @param clip_gradient float, default=-1.0 (no clipping if < 0)
 #'      clip gradient in range [-clip_gradient, clip_gradient].
 #' @param lr_scheduler function, optional
 #'      The learning rate scheduler.
@@ -380,7 +380,7 @@ mx.opt.adagrad <- function(learning.rate = 0.05,
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1
 #'      rescaling factor of gradient.
-#' @param clip_gradient float, default=-1 (ignored)
+#' @param clip_gradient float, default=-1 (no clipping if < 0)
 #'      clip gradient in range [-clip_gradient, clip_gradient].
 #'
 mx.opt.adadelta <- function(rho = 0.90,
