@@ -38,6 +38,28 @@ import logging
 logging.basicConfig(level=logging.INFO) 
 
 
+def get_diff_output(args):
+    try:
+        if args.commits is not None:
+            diff_output = subprocess.check_output(
+                ["git", "diff", "--unified=0", args.commits[0],
+                args.commits[1], "--", args.path])
+        else:
+            if args.branches is None:
+                # Default to current branch with master
+                args.branches = ["master", "HEAD"]
+
+            diff_target = args.branches[0] + "..." + args.branches[1]
+            diff_output = subprocess.check_output(
+                ["git", "diff", "--unified=0", diff_target, "--", args.path])
+    except subprocess.CalledProcessError as e:
+        logging.error("git diff returned a non zero exit code: %d",
+                      e.returncode)
+        sys.exit(1)
+
+    return diff_output
+
+
 def parser(diff_output):
     """Split diff output into patches and parse each patch individually"""
     diff_output = str(diff_output, errors="strict")
@@ -150,24 +172,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-
-    try:        # Get output from git diff
-        if args.commits is not None:
-            diff_output = subprocess.check_output(
-                ["git", "diff", "--unified=0", args.commits[0],
-                args.commits[1], "--", args.path])
-        else:
-            if args.branches is None:
-                # Default to current branch with master
-                args.branches = ["master", "HEAD"]
-
-            diff_target = args.branches[0] + "..." + args.branches[1]
-            diff_output = subprocess.check_output(
-                ["git", "diff", "--unified=0", diff_target, "--", args.path])
-    except subprocess.CalledProcessError as e:
-        logging.error("git diff returned a non zero exit code: %d",
-                      e.returncode)
-        sys.exit(1)
+    diff_output = get_diff_output(args)
 
     changes = parser(diff_output)
     changes = [(n, cs) for (n, cs) in changes if re.fullmatch(args.expr, n)]
