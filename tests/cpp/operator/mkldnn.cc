@@ -762,6 +762,20 @@ void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
                    tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
 }
 
+void AssertEqual(const std::vector<NDArray *> &in_arrs,
+                      const std::vector<NDArray *> &out_arrs) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();
+  NDArray tmp2 = out_arrs[0]->Reorder2Default();
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  TBlob blob1 = tmp1.data();
+  TBlob blob2 = tmp2.data();
+  mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
+  mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
+  for (int i = 0; i < tmp1.shape().Size(); i++) {
+    ASSERT_NEAR(d1[i],d2[i],1e-7);
+  }
+}
+
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
                      const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
@@ -1121,7 +1135,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
                                   ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
-      VerifyCopyResult(outputs, ex_outputs);
+      AssertEqual(outputs, ex_outputs);
 
       // backwards test performed same time since output needed
       backwards_input[0] = outputs[0];  // output grad
@@ -1145,7 +1159,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
           back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
       Engine::Get()->WaitForAll();
-      VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
+      AssertEqual(backwards_outputs, backwards_ex_outputs);
     }
   }
 
