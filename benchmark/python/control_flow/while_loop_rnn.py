@@ -50,7 +50,6 @@ class TestRNNLayer(gluon.HybridBlock):
         out, states = F.contrib.while_loop(
             cond=lambda i, *_: i < self.length,
             func=_func,
-            # lambda i, *s: [i + 1] + list(self.cell(s)),
             loop_vars=states,
             max_iterations=self.length,
         )

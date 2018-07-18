@@ -370,12 +370,14 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     The second list has the length of `|loop_vars|`,
     which represents final states of loop variables.
 
-    Warning 1: for now, the axis 0 of all Symbols in the first list are `max_iterations`,
+    .. warning::
+    For now, the axis 0 of all Symbols in the first list are `max_iterations`,
     due to lack of dynamic shape inference.
 
-    Warning 2: Even if `cond` is never satisfied,
+    .. warning::
+    Even if `cond` is never satisfied,
     while_loop returns a list of outputs with inferred dtype and shape.
-    This is different from the NDArray version,
+    This is different from the Symbol version,
     where in this case `step_outputs` are assumed as an empty list.
 
     Parameters
@@ -390,10 +392,11 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         Maximum number of iterations.
 
     Returns
-    -------
-    outputs: two lists, which both contains 0, 1 or more Symbols.
-        The first list contains the stacked output from each step,
-        The second list contains the final state.
+    ------
+    outputs: list of Symbols
+        stacked output from each step
+    states: list of Symbols
+        final state
 
     Examples
     --------

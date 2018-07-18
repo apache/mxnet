@@ -226,10 +226,12 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     The second list has the length of `|loop_vars|`,
     which represents final states of loop variables.
 
-    Warning 1: for now, the axis 0 of all NDArrays in the first list are `max_iterations`,
+    .. warning::
+    For now, the axis 0 of all NDArrays in the first list are `max_iterations`,
     due to lack of dynamic shape inference.
 
-    Warning 2: when `cond` is never satisfied, we assume `step_output` is empty,
+    .. warning::
+    When `cond` is never satisfied, we assume `step_output` is empty,
     because it cannot be inferred. This is different from the symbolic version.
 
     Parameters
@@ -244,10 +246,11 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
         Maximum number of iterations.
 
     Returns
-    -------
-    outputs: two lists, which both contains 0, 1 or more NDArrays.
-        The first list contains the stacked output from each step,
-        The second list contains the final state.
+    ------
+    outputs: list of NDArrays
+        stacked output from each step
+    states: list of NDArrays
+        final state
 
     Examples
     --------
@@ -341,7 +344,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     for i_th, items in enumerate(zip(*outputs), 1):
         # `mx.ndarray.pad` only support 4-D or 5-D inputs for now
         # so we could not use it.
-        items = [x.reshape([1] + list(x.shape)) for x in items]
+        items = [x.expand_dims(0) for x in items]
         if steps != max_iterations and items:
             pad_shape = [max_iterations - steps] + list(items[0].shape[1: ])
             pad = ndarray.empty(
