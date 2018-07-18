@@ -49,17 +49,32 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 # The default order of choice for the libraries if found follows the path from the most
 # (recommended) to less performant backends. The order is as follows:
 #
+# For desktop platforms (x86_64):
+#
 # 1. MKLDNN (requires and checks for MKL or MKLML) | USE_MKLDNN
 # 2. MKL | USE_MKL_IF_AVAILABLE
 # 3. MKLML (downloaded) | USE_MKLML
-# 4. Apple Accelerate (on mac) | USE_APPLE_ACCELERATE_IF_AVAILABLE
+# 4. Apple Accelerate | USE_APPLE_ACCELERATE_IF_AVAILABLE | Mac only
 # 5. OpenBLAS | BLAS (Atlas;Open;MKL;Apple)
+#
+# For embedded platforms (all other and if cross compiled):
+#
+# 1. OpenBLAS | BLAS (Atlas;Open)
+#
+# You can set the BLAS library explicitly by setting the BLAS variable to:
+#
+# * Atlas
+# * Open
+# * MKL
+# * Apple
+#
+# See cmake/ChooseBlas.cmake file for the options.
 #
 # Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
 # https://software.intel.com/en-us/mkl
 #
 # It has following flavours:
-
+#
 # * MKL is a full library, containing all the functionality. It is free under
 #   community support licensing (https://software.intel.com/en-us/articles/free-mkl),
 #   but needs to be downloaded and installed manually.
@@ -75,14 +90,27 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 # Since the full MKL library is almost always faster than any other it's turned on by default,
 # however it needs to be downloaded and installed manually before doing cmake configuration.
 # Register and download here https://software.seek.intel.com/performance-libraries
+#
+# Note: MKL is supported only for desktop builds and the framework itself supports the following
+# hardware:
+#
+# * Intel® Xeon Phi™ processor
+# * Intel® Xeon® processor
+# * Intel® Core™ processor family
+# * Intel Atom® processor
+#
+# If you have a different processor you can still try to use MKL, but performance results are
+# unpredictable.
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 
 # If the full MKL library could not be found the thinner subset MKLML will be downloaded
 # unless switched off explicitly.
+# Note: The same limitation on hardware as for MKL applies for MKLML as well.
 mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
 
 # If either MKL of MKLML is present MKLDNN can be utilised from the 3rdparty/mkldnn subrepo.
 # See more information here: https://github.com/intel/mkl-dnn
+# Note: The same limitation on hardware as for MKL and MKLDNN applies for MKLDNN as well.
 mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON)
 
 # Apple's mathematical framework, probably the best choice on a Mac if MKL/MKLML/MKLDNN
@@ -98,12 +126,29 @@ mxnet_option(USE_APPLE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework i
 # functionality off if not found.
 mxnet_option(USE_LAPACK "Build with lapack support" ON)
 
-
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")
 endif(NOT mxnet_LINKER_LIBS)
+
+if(MSVC)
+  set(SYSTEM_ARCHITECTURE x86_64)
+else()
+  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
+endif()
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+
+SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
+
+if("$ENV{VERBOSE}" STREQUAL "1")
+  message(STATUS " Verbose Makefile ACTIVATED")
+  set(CMAKE_VERBOSE_MAKEFILE ON)
+endif()
+
+# ---[ BLAS
+include(cmake/ChooseBlas.cmake)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
   message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
@@ -126,23 +171,6 @@ if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
 else()
   project(mxnet C CXX)
 endif()
-
-
-if(MSVC)
-  set(SYSTEM_ARCHITECTURE x86_64)
-else()
-  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
-endif()
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
-
-SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
-
-if("$ENV{VERBOSE}" STREQUAL "1")
-  message(STATUS " Verbose Makefile ACTIVATED")
-  set(CMAKE_VERBOSE_MAKEFILE ON)
-endif()
-
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -455,9 +483,6 @@ if(USE_OPENMP)
 elseif(UNIX AND NOT ANDROID)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()
-
-# ---[ BLAS
-include(cmake/ChooseBlas.cmake)
 
 # ---[ jemalloc
 if(USE_JEMALLOC)

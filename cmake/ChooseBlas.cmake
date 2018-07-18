@@ -33,11 +33,6 @@ function(try_mkldnn)
     return()
   endif()
 
-  if(${CMAKE_CROSSCOMPILING})
-    message(WARNING "MKLDNN with cross compilation is not supported, MKLDNN will not be available")
-    return()
-  endif()
-
   if(NOT ${MKL_FOUND})
     message(WARNING "MKLDNN requires either MKL or MKLML, MKLDNN will not be available")
     return()
@@ -64,20 +59,39 @@ function(try_mkldnn)
 endfunction()
 
 function(try_mkl)
-  if(${USE_MKL_IF_AVAILABLE} AND NOT ${USE_MKLML})
-    message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE")
-    find_package(MKL)
-    if(${MKL_FOUND})
-      message(STATUS "MKL framework found")
-
-      set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
-      set(MKLROOT ${MKLROOT} PARENT_SCOPE)
-
-      set(BLAS MKL PARENT_SCOPE)
-    else()
-      message(STATUS "MKL framework not found")
-    endif()
+  if(${USE_MKLML})
+    return()
   endif()
+
+  if(NOT ${USE_MKL_IF_AVAILABLE})
+    return()
+  endif()
+
+  if(${CMAKE_CROSSCOMPILING})
+    message(WARNING "MKL with cross compilation is not supported, MKL will not be available")
+    return()
+  endif()
+
+  if(${SYSTEM_ARCHITECTURE} NOT STREQUAL "x86_64")
+    message(WARNING "MKL is supported only for desktop platforms, MKL will not be available")
+    return()
+  endif()
+
+  message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE")
+
+  find_package(MKL)
+
+  if(${MKL_FOUND})
+    message(STATUS "MKL framework found")
+
+    set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+    set(MKLROOT ${MKLROOT} PARENT_SCOPE)
+
+    set(BLAS MKL PARENT_SCOPE)
+  else()
+    message(STATUS "MKL framework not found")
+  endif()
+
 endfunction()
 
 function(try_mklml)
@@ -85,7 +99,22 @@ function(try_mklml)
     return()
   endif()
 
+  if(${CMAKE_CROSSCOMPILING})
+    message(STATUS "MKLML is supported only for desktop platforms, skipping...")
+    return()
+  endif()
+
   if(${MKL_FOUND})
+    return()
+  endif()
+
+  if(${CMAKE_CROSSCOMPILING})
+    message(WARNING "MKLML with cross compilation is not supported, MKLML will not be available")
+    return()
+  endif()
+
+  if(${SYSTEM_ARCHITECTURE} NOT STREQUAL "x86_64")
+    message(WARNING "MKLML is supported only for desktop platforms, MKLML will not be available")
     return()
   endif()
 
@@ -100,6 +129,8 @@ function(try_mklml)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
   set(BLAS MKL PARENT_SCOPE)
+
+  message(STATUS "MKLML framework found")
 
 endfunction()
 
