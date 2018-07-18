@@ -127,6 +127,7 @@ build_armv6() {
 
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
@@ -202,6 +203,7 @@ build_android_armv7() {
         -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DSUPPORT_F16C=OFF\
@@ -220,6 +222,7 @@ build_android_armv8() {
     cd /work/build
     cmake\
         -DANDROID=ON \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DUSE_LAPACK=OFF\
