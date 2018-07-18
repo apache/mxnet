@@ -772,7 +772,7 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   for (int i = 0; i < tmp1.shape().Size(); i++) {
-    ASSERT_NEAR(d1[i],d2[i],1e-7);
+    ASSERT_NEAR(d1[i],d2[i],1e-5);
   }
 }
 
@@ -1107,63 +1107,123 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
-  for (int i1 = 0; i1 < in_arrs.size(); i1++) {
-    auto in_arr = in_arrs[i1];
+  if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
+    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+      auto in_arr = in_arrs[i1];
 
-    if (in_arr.arr.shape().ndim() != 4)
-      continue;
+      if (in_arr.arr.shape().ndim() != 4)
+        continue;
 
-    for (int i = 0; i < forward_attrs.num_outputs; i++) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-    }
-
-    for (int i = 0; i < forward_attrs.num_inputs; i++)
-      inputs[i] = &in_arr.arr;
-
-    for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        req[i] = kWriteTo;
-        outputs[i] = &out_arrs[i][output_i].arr;
-        ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
       }
-      Imperative::Get()->set_is_training(true);
 
-      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
-                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
-                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      AssertEqual(outputs, ex_outputs);
+      for (int i = 0; i < forward_attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
 
-      // backwards test performed same time since output needed
-      backwards_input[0] = outputs[0];  // output grad
-      backwards_input[1] = inputs[0];  // input
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        for (int i = 0; i < forward_attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+          ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+        }
+        Imperative::Get()->set_is_training(true);
 
-      auto tmp_output = GetTestInputArrays(true)[i1];
-      backwards_outputs[0] = &tmp_output.arr;
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                    outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                    ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        AssertEqual(outputs, ex_outputs);
 
-      auto tmp_output2 = GetTestInputArrays(true)[i1];
-      backwards_ex_outputs[0] = &tmp_output2.arr;
+        // backwards test performed same time since output needed
+        backwards_input[0] = outputs[0];  // output grad
+        backwards_input[1] = inputs[0];  // input
 
-      for (int i = 0; i < backwards_attrs.num_outputs; i++)
-        back_req[0] = kWriteTo;
+        auto tmp_output = GetTestInputArrays()[i1];
+        backwards_outputs[0] = &tmp_output.arr;
 
-      std::cout << "Backwards: ";
-      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
-      Imperative::Get()->InvokeOp(
-          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
-          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(
-          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
-          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      AssertEqual(backwards_outputs, backwards_ex_outputs);
+        auto tmp_output2 = GetTestInputArrays()[i1];
+        backwards_ex_outputs[0] = &tmp_output2.arr;
+
+        for (int i = 0; i < backwards_attrs.num_outputs; i++)
+          back_req[0] = kWriteTo;
+
+        std::cout << "Backwards: ";
+        PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+        Imperative::Get()->InvokeOp(
+            Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+            back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+            back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        AssertEqual(backwards_outputs, backwards_ex_outputs);
+      }
     }
   }
 
-  // todo: add kWriteINnplace and addTo
+//  if (forward_attrs.requests.find(OpReqType::kAddTo) != forward_attrs.requests.end()) {
+//    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+//      auto in_arr = in_arrs[i1];
+//
+//      if (in_arr.arr.shape().ndim() != 4)
+//        continue;
+//
+//      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+//        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+//        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+//      }
+//
+//      for (int i = 0; i < forward_attrs.num_inputs; i++)
+//        inputs[i] = &in_arr.arr;
+//
+//      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+//        for (int i = 0; i < forward_attrs.num_outputs; i++) {
+//          req[i] = kAddTo;
+//          outputs[i] = &out_arrs[i][output_i].arr;
+//          ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+//        }
+//        Imperative::Get()->set_is_training(true);
+//
+//        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+//        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+//                                    outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+//        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+//                                    ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+//        Engine::Get()->WaitForAll();
+//        AssertEqual(outputs, ex_outputs);
+//
+//        // backwards test performed same time since output needed
+//        backwards_input[0] = outputs[0];  // output grad
+//        backwards_input[1] = inputs[0];  // input
+//
+//        auto tmp_output = GetTestInputArrays(true)[i1];
+//        backwards_outputs[0] = &tmp_output.arr;
+//
+//        auto tmp_output2 = GetTestInputArrays(true)[i1];
+//        backwards_ex_outputs[0] = &tmp_output2.arr;
+//
+//        for (int i = 0; i < backwards_attrs.num_outputs; i++)
+//          back_req[0] = kAddTo;
+//
+//        std::cout << "Backwards: ";
+//        PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+//        Imperative::Get()->InvokeOp(
+//            Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+//            back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+//        Imperative::Get()->InvokeOp(
+//            Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+//            back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+//        Engine::Get()->WaitForAll();
+//        AssertEqual(backwards_outputs, backwards_ex_outputs);
+//      }
+//    }
+//  }
+
+  // todo: add kWriteInnplace and addTo
 }
 
 TEST(IMPERATIVE, CopyOp) {
