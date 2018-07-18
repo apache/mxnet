@@ -36,8 +36,6 @@ namespace op {
 
 class MKLDNNPoolingFwd {
  public:
-  std::shared_ptr<mkldnn::pooling_forward::primitive_desc> fwd_pd_;
-
   MKLDNNPoolingFwd(const mxnet::NDArray &input,
                    const mxnet::NDArray &output,
                    const int kernel_h, const int kernel_w,
@@ -66,6 +64,7 @@ class MKLDNNPoolingFwd {
   bool is_train_;
   bool with_workspace_;
   mkldnn::algorithm alg_kind_;
+  std::shared_ptr<mkldnn::pooling_forward::primitive_desc> fwd_pd_;
   std::shared_ptr<mkldnn::pooling_forward> fwd_;
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
