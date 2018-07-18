@@ -275,10 +275,10 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       DispatchMode *dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
-  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1);
   bool dispatched = false;
 #if MXNET_USE_MKLDNN == 1
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   bool support_mkldnn_pool = SupportMKLDNNPooling(param);
   if (!dispatched) {
     dispatched = MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool, dispatch_mode,
