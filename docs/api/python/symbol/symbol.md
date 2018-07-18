@@ -207,6 +207,7 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.broadcast_to
     Symbol.broadcast_axes
+    Symbol.broadcast_like
     Symbol.tile
     Symbol.pad
 ```
