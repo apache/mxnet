@@ -189,11 +189,7 @@ class _RNNLayer(Block):
             for i in range(self._dir):
                 self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
                 self.i2h_weight[i]._finish_deferred_init()
-        if inputs.context.device_type == 'gpu' or \
-           self._mode in ['lstm', 'gru'] and not self._dropout:
-            out = self._forward_kernel(inputs, states)
-        else:
-            out = self._forward(inputs, states)
+        out = self._forward_kernel(inputs, states)
 
         # out is (output, state)
         return out[0] if skip_states else out
