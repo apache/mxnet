@@ -154,6 +154,8 @@ function(try_accelerate)
 endfunction()
 
 if(${USE_MKL_IF_AVAILABLE})
+  set(MKL_FOUND False)
+
   try_mkl()
   try_mklml()
   try_mkldnn()
