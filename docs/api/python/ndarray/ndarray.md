@@ -131,6 +131,7 @@ The `ndarray` package provides several classes:
     NDArray.flatten
     NDArray.expand_dims
     NDArray.split
+    NDArray.diag
 ```
 
 ### Array expand elements

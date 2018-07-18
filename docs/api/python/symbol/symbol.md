@@ -381,6 +381,7 @@ Composite multiple symbols into a new one by an operator.
     reshape_like
     flatten
     expand_dims
+    diag
 ```
 
 ### Expanding elements
