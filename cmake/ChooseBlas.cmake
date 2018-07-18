@@ -38,7 +38,7 @@ function(try_mkldnn)
     return()
   endif()
 
-  message(STATUS "Adding MKLDNN to the build")
+  message(STATUS "Adding MKLDNN to the build due to USE_MKLDNN=${USE_MKLDNN} and MKL_FOUND=${MKL_FOUND}")
 
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
@@ -78,7 +78,7 @@ function(try_mkl)
     return()
   endif()
 
-  message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE")
+  message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   find_package(MKL)
 
@@ -120,7 +120,7 @@ function(try_mklml)
     return()
   endif()
 
-  message(STATUS "Trying to enable MKLML framework due to USE_MKLML")
+  message(STATUS "Trying to enable MKLML framework due to USE_MKLML=${USE_MKLML}")
 
   include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
   find_package(MKLML REQUIRED)
