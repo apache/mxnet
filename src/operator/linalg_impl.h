@@ -186,6 +186,8 @@ void linalg_gemm<cpu, mshadow::half::half_t>(const Tensor<cpu, 2, mshadow::half:
         A.stride_, &beta, C.dptr_, C.stride_))                             \
   }
 
+// Use cublasSgemmEx when it is available (CUDA >= 7.5). Resolves precision issues with
+// cublasSgemm. Please see https://github.com/apache/incubator-mxnet/pull/11630
 #if CUDA_VERSION >= 7050
 template <>
 inline void linalg_gemm<gpu, float>(const Tensor<gpu, 2, float>& A,
