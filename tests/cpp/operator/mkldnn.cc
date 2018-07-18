@@ -1485,7 +1485,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
         continue;
       auto out_mem = out_arr.arr.GetMKLDNNData();
       PrintVerifyMsg(in_arr, in_arr);
-      op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
+      mxnet::op::MKLDNNSum(*in_mem1, *in_mem2, *out_mem);
       MKLDNNStream::Get()->Submit();
       VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
     }
@@ -1506,7 +1506,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     PrintVerifyMsg(orig_arr, in_arr);
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
-    op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
+    mxnet::op::MKLDNNSum(*input_mem, *input_mem2, *input_mem);
     MKLDNNStream::Get()->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
@@ -1537,7 +1537,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       PrintVerifyMsg(in_arr, out_arr);
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kWriteTo);
-      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      mxnet::op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifySumResult({&in_arr.arr, &in_arr2.arr}, {&out_arr.arr});
@@ -1562,7 +1562,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateMKLDNNMem(in_arr.arr,
         input_mem->get_primitive_desc(), kWriteInplace, &in_arr.arr);
-    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    mxnet::op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
@@ -1586,7 +1586,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
       PrintVerifyMsg(in_arr, out_arr);
       auto out_mem = out_arr.arr.GetMKLDNNData();
       auto output_mem_t = CreateMKLDNNMem(out_arr.arr, out_mem->get_primitive_desc(), kAddTo);
-      op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
+      mxnet::op::MKLDNNSum(*in_mem, *in_mem2, *output_mem_t.second);
       CommitOutput(out_arr.arr, output_mem_t);
       stream->Submit();
       VerifyAddRequest(
@@ -1611,7 +1611,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateMKLDNNMem(in_arr.arr, input_mem->get_primitive_desc(), kNullOp);
-    op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
+    mxnet::op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
     // original and input should be the same since noop
