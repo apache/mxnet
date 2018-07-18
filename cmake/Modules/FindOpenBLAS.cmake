@@ -118,13 +118,14 @@ set(OpenBLAS_LAPACK_INCLUDE_DIR "")
 if(OpenBLAS_NEED_LAPACK)
   message(STATUS "Looking for LAPACK support...")
 
-  find_path(OpenBLAS_LAPACK_INCLUDE_DIR
+  # we need another variable (starting with __) because cmake will not overwrite it if already set
+  find_path(__OpenBLAS_LAPACK_INCLUDE_DIR
             NAMES lapacke.h
             PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
 
   # OpenBLAS does not have a separate LAPACK library: https://github.com/xianyi/OpenBLAS/issues/296
   # LAPACK if present in OpenBLAS build is included into libopenblas
-  set(OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
+  set(__OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
 
   set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LAPACK_LIBRARY})
   include(CheckFunctionExists)
@@ -132,6 +133,8 @@ if(OpenBLAS_NEED_LAPACK)
 
   if(LAPACK_FOUND)
     set(OpenBLAS_LAPACK_FOUND True)
+    set(OpenBLAS_LAPACK_INCLUDE_DIR ${__OpenBLAS_LAPACK_INCLUDE_DIR})
+    set(OpenBLAS_LAPACK_LIBRARY ${__OpenBLAS_LAPACK_LIBRARY})
 
     set(LOOKED_FOR
         ${LOOKED_FOR}

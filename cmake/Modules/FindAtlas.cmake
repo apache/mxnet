@@ -92,10 +92,11 @@ set(Atlas_LAPACK_LIBRARY "")
 if(Atlas_NEED_LAPACK)
   message(STATUS "Looking for LAPACK support...")
 
-  find_path(Atlas_CLAPACK_INCLUDE_DIR
+  # we need another variables (starting with __) because cmake will not overwrite it if already set
+  find_path(__Atlas_CLAPACK_INCLUDE_DIR
             NAMES clapack.h
             PATHS ${Atlas_INCLUDE_SEARCH_PATHS})
-  find_library(Atlas_LAPACK_LIBRARY
+  find_library(__Atlas_LAPACK_LIBRARY
                NAMES lapack_r lapack lapack_atlas
                PATHS ${Atlas_LIB_SEARCH_PATHS})
 
@@ -105,6 +106,8 @@ if(Atlas_NEED_LAPACK)
 
   if(LAPACK_FOUND)
     set(Atlas_LAPACK_FOUND True)
+    set(Atlas_CLAPACK_INCLUDE_DIR ${__Atlas_CLAPACK_INCLUDE_DIR})
+    set(Atlas_LAPACK_LIBRARY ${__Atlas_LAPACK_LIBRARY})
 
     set(LOOKED_FOR
         ${LOOKED_FOR}
