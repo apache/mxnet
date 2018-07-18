@@ -31,19 +31,30 @@
   </properties>
 
   <packaging>pom</packaging>
-  <modules>
-    <module>init</module>
-    <module>init-native</module>
-    <module>macros</module>
-    <module>core</module>
-    <module>native</module>
-    <module>infer</module>
-    <module>examples</module>
-    <module>spark</module>
-    <module>assembly</module>
-  </modules>
 
   <profiles>
+    <profile>
+      <id>scaladocgen</id>
+      <modules>
+        <module>init</module>
+        <module>init-native</module>
+        <module>macros</module>
+      </modules>
+    </profile>
+    <profile>
+      <id>full</id>
+      <modules>
+        <module>init</module>
+        <module>init-native</module>
+        <module>macros</module>
+        <module>core</module>
+        <module>native</module>
+        <module>infer</module>
+        <module>examples</module>
+        <module>spark</module>
+        <module>assembly</module>
+      </modules>
+    </profile>
     <profile>
       <id>release</id>
       <build>
