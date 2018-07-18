@@ -94,8 +94,16 @@ set(OpenBLAS_LIB_SEARCH_PATHS
 find_path(OpenBLAS_INCLUDE_DIR
           NAMES cblas.h
           PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
+
+set(OpenBLAS_LIB_NAMES openblas libopenblas.dll.a libopenblas.dll)
+
+if(CMAKE_CROSSCOMPILING)
+  message(STATUS "Will try link to OpenBLAS statically for cross compilation")
+  set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
+endif()
+
 find_library(OpenBLAS_LIBRARY
-             NAMES libopenblas.a openblas libopenblas.dll.a libopenblas.dll
+             NAMES ${OpenBLAS_LIB_NAMES}
              PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
 
 set(LOOKED_FOR
@@ -129,6 +137,8 @@ if(OpenBLAS_NEED_LAPACK)
     message(STATUS "LAPACK found")
   else()
     set(OpenBLAS_LAPACK_FOUND False)
+    set(OpenBLAS_LAPACK_LIBRARY "")
+    set(OpenBLAS_LAPACK_INCLUDE_DIR "")
     message(WARNING "OpenBlas has not been compiled with LAPACK support, LAPACK functionality will not be available")
   endif()
 

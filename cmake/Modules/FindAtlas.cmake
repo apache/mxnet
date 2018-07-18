@@ -110,6 +110,8 @@ if(Atlas_NEED_LAPACK)
     message(STATUS "LAPACK found")
   else()
     set(Atlas_LAPACK_FOUND False)
+    set(Atlas_CLAPACK_INCLUDE_DIR "")
+    set(Atlas_LAPACK_LIBRARY "")
     message(WARNING "LAPACK with Atlas could not be found, LAPACK functionality will not be available")
   endif()
 

@@ -73,7 +73,8 @@ function(try_mkl)
   endif()
 
   if(NOT ${SYSTEM_ARCHITECTURE} STREQUAL "x86_64")
-    message(WARNING "MKL is supported only for desktop platforms, MKL will not be available")
+    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
+                     MKL will not be available")
     return()
   endif()
 
@@ -114,7 +115,8 @@ function(try_mklml)
   endif()
 
   if(NOT ${SYSTEM_ARCHITECTURE} STREQUAL "x86_64")
-    message(WARNING "MKLML is supported only for desktop platforms, MKLML will not be available")
+    message(WARNING "MKLML is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
+                     MKLML will not be available")
     return()
   endif()
 
