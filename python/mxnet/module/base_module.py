@@ -528,7 +528,7 @@ class BaseModule(object):
                     self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
                 except StopIteration:
                     end_of_batch = True
-                    
+
                 if monitor is not None:
                     monitor.toc_print()
 
