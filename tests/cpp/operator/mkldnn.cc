@@ -510,7 +510,7 @@ OpAttrs GetLRNOp() {
 OpAttrs GetLRNBackwardsOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_LRN");
-  attrs.num_inputs = 2;
+  attrs.num_inputs = 3;
   attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"nsize" , "5"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
@@ -772,7 +772,7 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   for (int i = 0; i < tmp1.shape().Size(); i++) {
-    ASSERT_NEAR(d1[i],d2[i],1e-5);
+    ASSERT_NEAR(d1[i], d2[i], 1e-5);
   }
 }
 
@@ -1141,6 +1141,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         // backwards test performed same time since output needed
         backwards_input[0] = outputs[0];  // output grad
         backwards_input[1] = inputs[0];  // input
+        backwards_input[2] = outputs[1];  // out norm
 
         auto tmp_output = GetTestInputArrays()[i1];
         backwards_outputs[0] = &tmp_output.arr;
