@@ -127,7 +127,8 @@ class MXNet extends Serializable {
           logger.info("Starting server ...")
           val server = new ParameterServer(params.runtimeClasspath,
             role = "server",
-            rootUri = schedulerIP, rootPort = schedulerPort,
+            rootUri = schedulerIP,
+            rootPort = schedulerPort,
             numServer = params.numServer,
             numWorker = params.numWorker,
             timeout = params.timeout,
@@ -241,7 +242,9 @@ class MXNet extends Serializable {
   def fit(data: RDD[LabeledPoint]): MXNetModel = {
     val sc = data.context
     // distribute native jars
-    params.jars.foreach(jar => sc.addFile(jar))
+    if (params.jars != null) {
+      params.jars.foreach(jar => sc.addFile(jar))
+    }
     val trainData = {
       if (params.numWorker != data.partitions.length) {
         logger.info("repartitioning training set to {} partitions", params.numWorker)

@@ -92,11 +92,6 @@ function update_mxnet_css {
   echo "Update fixes complete.."
 }
 
-function update_install {
-    tag=$1
-    echo "Updating installation page for $1..."
-    cp "artifacts/$tag.index.html" "$built/versions/$tag/install/index.html"
-}
 
 
 # Update the specified tags with the Versions dropdown
@@ -114,7 +109,6 @@ for tag in $tag_list; do
         if [ -d $built/versions/$tag ]; then
             echo "The $tag is going to be updated with new css and install pages."
             update_mxnet_css $tag
-            update_install $tag
         fi
     fi
 
@@ -122,8 +116,6 @@ for tag in $tag_list; do
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
-        echo "Updating default site's installation page."
-        cp "artifacts/$tag_default.index.html" "$built/install/index.html"
         echo "Copying .htaccess from default branch to root folder...."
         cp "artifacts/.htaccess"  "$built"
     else

@@ -88,16 +88,13 @@ inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
   const int rhs_stype = in_attrs->at(1);
   int& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  // For GPU, directly fallback
-  const auto dispatch_ex = (dev_mask == mshadow::gpu::kDevMask)? DispatchMode::kFComputeFallback :
-                           DispatchMode::kFComputeEx;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                     dispatch_mode, dispatch_ex);
+                                     dispatch_mode, DispatchMode::kFComputeEx);
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
@@ -229,17 +226,42 @@ struct binary_broadcast_kernel {
   }
 };
 
-template<int req, typename OP>
+template<int req, typename OP, bool col_vec>
 struct csr_dns_csr_broadcast_kernel {
-  template <typename DType, typename CType, typename RType>
+  /*!
+   * \brief Map function for broadcast between csr and 1D vector
+   * \param row          global thread id/assigned row id
+   * \param csr_data     ptr to data buffer of csr matrix
+   * \param csr_indices  ptr to indices buffer of csr matrix
+   * \param csr_indptr   ptr to indptr buffer of csr matrix
+   * \param dns          ptr to data buffer of the dense vector
+   * \param out          ptr to the data buffer of the result csr matrix
+   */
+  template<typename DType, typename CType, typename RType>
   MSHADOW_XINLINE static void Map(int row, const DType *csr_data, const CType *csr_indices,
-                                  const RType *csr_indptr, const DType *dns,
-                                  DType *out, const nnvm::dim_t row_length, bool col_vec) {
+                                  const RType *csr_indptr, const DType *dns, DType *out) {
     const nnvm::dim_t curr_row_i = csr_indptr[row];
     const nnvm::dim_t next_row_i = csr_indptr[row + 1];
     for (nnvm::dim_t iter = curr_row_i; iter < next_row_i; iter++) {
       KERNEL_ASSIGN(out[iter], req, OP::Map(csr_data[iter],
                     (col_vec)? dns[row] : dns[csr_indices[iter]]));
+    }
+  }
+
+  /*!
+   * \brief Map function for broadcast between csr and a scalar
+   * \param i           global thread id
+   * \param csr_data    ptr to data buffer of csr matrix
+   * \param scalar_ptr  ptr to data buffer of the scalar tensor, only the 0-th element is used
+   * \param out         ptr to the data buffer of output csr matrix
+   * \param nnz         number of non-zero elements in input csr matrix
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const DType *csr_data, const DType* scalar_ptr,
+                                  DType *out, const nnvm::dim_t nnz) {
+    const DType scale = scalar_ptr[0];
+    if (i < nnz) {
+      KERNEL_ASSIGN(out[i], req, OP::Map(csr_data[i], scale));
     }
   }
 };
@@ -320,21 +342,31 @@ void BinaryBroadcastCsrDnsCsrImpl(const OpContext& ctx,
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), CType, {
         MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIndPtr), RType, {
           MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+            // broadcast_mul/div between csr and a scalar case
             if ((dns.shape().ndim() == 2 && dns.shape()[0] == 1 && dns.shape()[1] == 1) ||
                 (dns.shape().ndim() == 1 && dns.shape()[0] == 1)) {
-              Kernel<op_with_req<OP, req_type>, xpu>::Launch(
-                s, nnz, output.data().dptr<DType>(), csr.data().dptr<DType>(),
-                dns.data().dptr<DType>()[0]);
+              Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, false>, xpu>::Launch(
+                s, nnz, csr.data().dptr<DType>(), dns.data().dptr<DType>(),
+                output.data().dptr<DType>(), nnz);
             } else {
-              Kernel<csr_dns_csr_broadcast_kernel<req_type, OP>, xpu>::Launch(
-                s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
-                csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
-                output.data().dptr<DType>(), csr.shape()[1], col_vec);
+              // broadcast_mul/div between csr and column vector
+              if (col_vec) {
+                Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, true>, xpu>::Launch(
+                  s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
+                  csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
+                  output.data().dptr<DType>());
+              // broadcast_mul/div between csr and row vector
+              } else {
+                Kernel<csr_dns_csr_broadcast_kernel<req_type, OP, false>, xpu>::Launch(
+                  s, num_rows, csr.data().dptr<DType>(), csr.aux_data(kIdx).dptr<CType>(),
+                  csr.aux_data(kIndPtr).dptr<RType>(), dns.data().dptr<DType>(),
+                  output.data().dptr<DType>());
+              }
             }
             Copy(output.aux_data(kIdx).FlatTo1D<xpu, CType>(),
-                 csr.aux_data(kIdx).FlatTo1D<xpu, CType>());
+                 csr.aux_data(kIdx).FlatTo1D<xpu, CType>(), s);
             Copy(output.aux_data(kIndPtr).FlatTo1D<xpu, RType>(),
-                 csr.aux_data(kIndPtr).FlatTo1D<xpu, RType>());
+                 csr.aux_data(kIndPtr).FlatTo1D<xpu, RType>(), s);
           });
         });
       });
@@ -432,10 +464,12 @@ void BinaryBroadcastComputeSparseEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = out.storage_type();
   // If the input is a matrix with the same shape, should be elemwise
   if ((rhs.shape().ndim() != 1U) && (rhs.shape()[0] != 1) && (rhs.shape()[1] != 1)) {
-    // Currently do not support elementwise_mul/div(csr, dense) = csr, log and exit
-    using common::operator_string;
-    LOG(FATAL) << operator_string(attrs, ctx, inputs, req, outputs)
-               << "\nIf shape of lhs and rhs match, please explicitly use elemwise_mul/div\n";
+    if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
+      const bool supported_op = std::is_same<OP, mshadow_op::mul>::value;
+      CHECK(supported_op)
+        << "Please use elemwise_div for division between csr and dense of the same shape";
+      ElemwiseBinaryOp::DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, rhs, lhs, req[0], out, true);
+    }
   } else {
     // broadcast(CSR, Dense(1D)) = CSR
     if (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage && out_stype == kCSRStorage) {
@@ -477,8 +511,7 @@ void BinaryBroadcastComputeDenseEx(const nnvm::NodeAttrs& attrs,
     // If the input is a matrix with the same shape, should be elemwise
     if (!ndim) {
       mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
-      ElemwiseBinaryOp::DnsCsrDnsOp<xpu, OP>(
-        s, attrs, ctx, dns, csr, req[0], outputs[0], !reverse);
+      ElemwiseBinaryOp::DnsCsrDnsOp<OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], !reverse);
     } else {
       // broadcast(CSR, Dense(1D)) = CSR
       BinaryBroadcastCsrDnsDnsImpl<xpu, OP>(ctx, csr, dns, req[0], out,
@@ -491,7 +524,8 @@ void BinaryBroadcastComputeDenseEx(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu, typename LOP, typename ROP>
-void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
+inline typename std::enable_if<std::is_same<xpu, cpu>::value, void>::type
+BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
                                     const std::vector<TBlob>& inputs,
                                     const std::vector<OpReqType>& req,
@@ -501,28 +535,33 @@ void BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {
-    ElemwiseBinaryOp::BackwardUseNone<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    ElemwiseBinaryOp::BackwardUseNone<cpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Stream<xpu> *s = ctx.get_stream<xpu>();
+      Stream<cpu> *s = ctx.get_stream<cpu>();
       const TBlob lhs = outputs[0].reshape(new_lshape);
       const TBlob rhs = outputs[1].reshape(new_rshape);
       const TBlob out = inputs[0].reshape(new_oshape);
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
         // Request temporary storage
-        size_t workspace_size_l = ReduceWorkspaceSize<NDim, DType>(
-            s, lhs.shape_, req[0], out.shape_);
-        size_t workspace_size_r = ReduceWorkspaceSize<NDim, DType>(
-            s, rhs.shape_, req[1], out.shape_);
-        size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
-        Tensor<xpu, 1, char> workspace =
-          ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-        Reduce<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
-        Reduce<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+        size_t workspace_size = new_oshape.Size();
+        Tensor<cpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<cpu, 1, char>(
+                Shape1(workspace_size * sizeof(index_t)), s);
+        ReduceWithExtraMem<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
+        ReduceWithExtraMem<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
       });
     });
   }
 }
+
+template<typename xpu, typename LOP, typename ROP>
+inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
+BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs);
 
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
@@ -547,7 +586,7 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
       s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, LOP>(s, lgrad, req[0], workspace,
     ograd, lhs, rhs);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, ROP>(s, rgrad, req[1], workspace,
@@ -595,4 +634,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+#ifdef __CUDACC__
+#include "./elemwise_binary_broadcast_op-inl.cuh"
+#endif
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_

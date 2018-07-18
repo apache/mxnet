@@ -114,7 +114,11 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  if (inputs[0].storage_type() == kRowSparseStorage) {
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
+      (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
+       inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
+      (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
+       outputs[0].storage_type() == kDefaultStorage)) {
     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
     Resource rsc = ResourceManager::Get()->Request(ctx.run_ctx.get_ctx(),
         ResourceRequest(ResourceRequest::kTempSpace));
@@ -145,7 +149,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(ElementWiseSum)
 The storage type of ``add_n`` output depends on storage types of inputs
 
 - add_n(row_sparse, row_sparse, ..) = row_sparse
-- otherwise, ``add_n`` generates output with default storage
+- add_n(default, csr, default) = default
+- add_n(any input combinations longer than 4 (>4) with at least one default type) = default
+- otherwise, ``add_n`` falls all inputs back to default storage and generates default storage
 
 )doc" ADD_FILELINE)
 .set_attr_parser(ParamParser<ElementWiseSumParam>)

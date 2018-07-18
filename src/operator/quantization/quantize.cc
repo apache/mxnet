@@ -23,10 +23,30 @@
  * \brief
  */
 #include "./quantize-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_quantize-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(QuantizeParam);
+
+bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
+                         const int dev_mask,
+                         DispatchMode* dispatch_mode,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+#endif
+  (*out_attrs)[0] = kDefaultStorage;
+  (*out_attrs)[1] = kDefaultStorage;
+  (*out_attrs)[2] = kDefaultStorage;
+  return true;
+}
 
 NNVM_REGISTER_OP(_contrib_quantize)
 .describe(R"code(Quantize a input tensor from float to `out_type`,
@@ -61,6 +81,10 @@ where
   })
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeType)
+.set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "

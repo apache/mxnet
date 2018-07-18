@@ -300,7 +300,15 @@ def test_convgru():
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(1, 3, 16, 10), rnn_t1_data=(1, 3, 16, 10), rnn_t2_data=(1, 3, 16, 10))
     assert outs == [(1, 10, 16, 10), (1, 10, 16, 10), (1, 10, 16, 10)]
 
+def test_encode_sentences():
+    sentences = [['a','b','c'],['b','c','d']]
+    dict = {'a':1, 'b':2, 'c':3}
+    result, vocab = mx.rnn.io.encode_sentences(sentences, vocab=dict, invalid_label=-1, invalid_key='\n',
+                         start_label=0, unknown_token='UNK')
+    print(result, vocab)
+    assert vocab == {'a': 1, 'b': 2, 'c': 3, 'UNK': 0}
+    assert result == [[1,2,3],[2,3,0]]
+    
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-

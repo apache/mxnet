@@ -23,7 +23,7 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
@@ -71,6 +71,18 @@ def test_recordimage_dataset():
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
+
+@with_seed()
+def test_recordimage_dataset_with_data_loader_multiworker():
+    # This test is pointless on Windows because Windows doesn't fork
+    if platform.system() != 'Windows':
+        recfile = prepare_record()
+        dataset = gluon.data.vision.ImageRecordDataset(recfile)
+        loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+
+        for i, (x, y) in enumerate(loader):
+            assert x.shape[0] == 1 and x.shape[3] == 3
+            assert y.asscalar() == i
 
 @with_seed()
 def test_sampler():

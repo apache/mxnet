@@ -161,7 +161,7 @@ class Initializer(object):
         Parameters
         ----------
         name : str
-            Name of corrosponding NDArray.
+            Name of corresponding NDArray.
 
         arr : NDArray
             NDArray to be initialized.
@@ -424,12 +424,14 @@ class One(Initializer):
 
 @register
 class Constant(Initializer):
-    """Initializes the weights to a scalar value.
+    """Initializes the weights to a given value.
+    The value passed in can be a scalar or a NDarray that matches the shape
+    of the parameter to be set.
 
     Parameters
     ----------
-    value : float
-        Fill value.
+    value : float, NDArray
+        Value to set.
     """
     def __init__(self, value):
         super(Constant, self).__init__(value=value)
@@ -651,7 +653,7 @@ class Bilinear(Initializer):
 
 @register
 class LSTMBias(Initializer):
-    """Initialize all bias of an LSTMCell to 0.0 except for
+    """Initialize all biases of an LSTMCell to 0.0 except for
     the forget gate whose bias is set to custom value.
 
     Parameters

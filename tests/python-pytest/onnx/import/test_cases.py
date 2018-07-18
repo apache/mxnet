@@ -18,6 +18,7 @@
 """Test Cases to be run for the import module"""
 
 IMPLEMENTED_OPERATORS_TEST = [
+    'test_split_equal'
     'test_random_uniform',
     'test_random_normal',
     'test_add',
@@ -31,6 +32,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_ceil',
     'test_floor',
     'test_concat',
+    'test_identity',
     'test_sigmoid',
     'test_relu',
     'test_constant_pad',
@@ -58,6 +60,19 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_min',
+    'test_logical_and',
+    'test_logical_xor',
+    'test_logical_not',
+    'test_logical_or',
+    # enabling partial test cases for matmul
+    'test_matmul_3d',
+    'test_matmul_4d',
+    'test_clip',
+    'test_softsign',
+    'test_reduce_l2',
+    'test_reduce_log_sum',
+    'test_reduce_log_sum_exp',
+    'test_reduce_sum_square'
     #pytorch operator tests
     'test_operator_exp',
     'test_operator_maxpool',

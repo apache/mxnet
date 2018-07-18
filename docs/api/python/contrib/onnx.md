@@ -24,6 +24,7 @@ This document describes all the ONNX-MXNet APIs.
 
     mxnet.contrib.onnx.import_model
     mxnet.contrib.onnx.get_model_metadata
+    mxnet.contrib.onnx.export_model
 ```
 
 ## ONNX Tutorials
@@ -37,15 +38,21 @@ This document describes all the ONNX-MXNet APIs.
    /tutorials/onnx/fine_tuning_gluon.md
 ```
 
+## ONNX Examples
+
+* Face Recognition with [ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace)
+* Image Classification with [MobileNet](https://github.com/onnx/models/tree/master/models/image_classification/mobilenet), [ResNet](https://github.com/onnx/models/tree/master/models/image_classification/resnet), [SqueezeNet](https://github.com/onnx/models/tree/master/models/image_classification/squeezenet), [VGG](https://github.com/onnx/models/tree/master/models/image_classification/vgg) 
+
 ## API Reference
 
-<script type="text/javascript" src='../../_static/js/auto_module_index.js'></script>
+<script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
 ```eval_rst
 
 .. automodule:: mxnet.contrib.onnx
     :members: import_model
     :members: get_model_metadata
+    :members: export_model
 
 ```
 

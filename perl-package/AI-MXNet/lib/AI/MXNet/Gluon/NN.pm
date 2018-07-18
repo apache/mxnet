@@ -19,6 +19,7 @@ package AI::MXNet::Gluon::NN;
 use strict;
 use warnings;
 use AI::MXNet::Gluon::Block;
+use AI::MXNet::Gluon::NN::Activation;
 use AI::MXNet::Gluon::NN::BasicLayers;
 use AI::MXNet::Gluon::NN::ConvLayers;
 

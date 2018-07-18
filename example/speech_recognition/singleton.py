@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -30,7 +31,7 @@ class Singleton:
             return self._instance
 
     def __new__(class_, *args, **kwargs):
-        print "__new__"
+        print("__new__")
         class_.instances[class_] = super(Singleton, class_).__new__(class_, *args, **kwargs)
         return class_.instances[class_]
 

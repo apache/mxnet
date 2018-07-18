@@ -17,18 +17,13 @@
 
 package org.apache.mxnetexamples.cnntextclassification
 
-import scala.io.Source
-import java.io.BufferedInputStream
-import java.io.FileInputStream
-import java.io.DataInputStream
-import java.io.InputStream
-import org.apache.mxnet.Random
-import org.apache.mxnet.Context
-import org.apache.mxnet.Shape
+import java.io.{BufferedInputStream, DataInputStream, FileInputStream, InputStream}
+import java.nio.charset.CodingErrorAction
 
-/**
- * @author Depeng Liang
- */
+import org.apache.mxnet.{Context, Random, Shape}
+
+import scala.io.{Codec, Source}
+
 object DataHelper {
 
   def cleanStr(str: String): String = {
@@ -52,6 +47,9 @@ object DataHelper {
   // Returns split sentences and labels.
   def loadMRDataAndLabels(dataPath: String): (Array[Array[String]], Array[Float]) = {
     // load data from file
+    implicit val codec = Codec("UTF-8")
+    codec.onMalformedInput(CodingErrorAction.REPLACE)
+    codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
     val positiveExamples = {
       val lines = Source.fromFile(s"$dataPath/rt-polarity.pos").mkString.split("\n")
       lines.map(_.trim())
@@ -157,7 +155,12 @@ object DataHelper {
     val xVec = sentences.map { sentence =>
       sentence.map { word =>
         if (word2vec.contains(word)) word2vec(word)
-        else Random.uniform(-0.25f, 0.25f, Shape(embeddingSize), Context.cpu()).toArray
+        else {
+          val temp = Random.uniform(-0.25f, 0.25f, Shape(embeddingSize), Context.cpu())
+          val result = temp.toArray
+          temp.dispose()
+          result
+        }
       }
     }
     xVec

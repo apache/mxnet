@@ -13,7 +13,7 @@ For running unit tests, you will need the [nose PyPi package](https://pypi.pytho
 pip install --upgrade nose
 ```
 
-Once ```nose``` is installed, run the following from MXNet root directory:
+Once ```nose``` is installed, run the following from MXNet root directory (please make sure the installation path of ```nosetests``` is included in your ```$PATH``` environment variable):
 ```
 nosetests tests/python/unittest
 nosetests tests/python/train

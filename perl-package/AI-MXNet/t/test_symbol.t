@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 101;
+use Test::More tests => 103;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);
@@ -278,6 +278,17 @@ sub test_image_to_tensor
 }
 
 test_image_to_tensor();
+
+sub test_histogram
+{
+    my $z = mx->nd->array([0..99]);
+    my $b = mx->nd->array([10, 20, 30, 60]);
+    my ($hist, $bins) = @{ mx->sym->histogram(mx->sym->var("z"), bins => mx->sym->var("bins"))->eval(args => { z => $z, bins => $b }) };
+    ok(same($hist->aspdl, pdl([10, 10, 31])));
+    ok(same($bins->aspdl, pdl([10, 20, 30, 60])));
+}
+
+test_histogram();
 
 __DATA__
 {

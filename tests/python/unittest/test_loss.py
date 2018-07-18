@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import unittest
 
 
@@ -180,8 +180,7 @@ def test_l1_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
-@unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
-@with_seed()
+@with_seed(1234)
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
@@ -207,7 +206,7 @@ def test_ctc_loss():
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
-@unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
+
 @with_seed(1234)
 def test_ctc_loss_train():
     N = 20
@@ -220,7 +219,7 @@ def test_ctc_loss_train():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
