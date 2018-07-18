@@ -7057,7 +7057,7 @@ def test_diag():
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
     # random k
-    k = np.random.randint(-min(h,w), min(h,w))
+    k = np.random.randint(-min(h,w) + 1, min(h,w))
     r = mx.nd.diag(a, k=k)
     assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
 
