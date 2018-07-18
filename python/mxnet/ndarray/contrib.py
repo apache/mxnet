@@ -227,12 +227,14 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     which represents final states of loop variables.
 
     .. warning::
-    For now, the axis 0 of all NDArrays in the first list are `max_iterations`,
-    due to lack of dynamic shape inference.
+
+       For now, the axis 0 of all NDArrays in the first list are `max_iterations`,
+       due to lack of dynamic shape inference.
 
     .. warning::
-    When `cond` is never satisfied, we assume `step_output` is empty,
-    because it cannot be inferred. This is different from the symbolic version.
+
+       When `cond` is never satisfied, we assume `step_output` is empty,
+       because it cannot be inferred. This is different from the symbolic version.
 
     Parameters
     ----------

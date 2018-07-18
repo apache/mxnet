@@ -371,14 +371,16 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     which represents final states of loop variables.
 
     .. warning::
-    For now, the axis 0 of all Symbols in the first list are `max_iterations`,
-    due to lack of dynamic shape inference.
+
+       For now, the axis 0 of all Symbols in the first list are `max_iterations`,
+       due to lack of dynamic shape inference.
 
     .. warning::
-    Even if `cond` is never satisfied,
-    while_loop returns a list of outputs with inferred dtype and shape.
-    This is different from the Symbol version,
-    where in this case `step_outputs` are assumed as an empty list.
+
+       Even if `cond` is never satisfied,
+       while_loop returns a list of outputs with inferred dtype and shape.
+       This is different from the Symbol version,
+       where in this case `step_outputs` are assumed as an empty list.
 
     Parameters
     ----------
