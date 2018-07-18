@@ -35,25 +35,29 @@ import re
 import argparse
 import logging
 
-logging.basicConfig(level=logging.INFO) 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def get_diff_output(args):
-    try:
-        if args.commits is not None:
-            diff_output = subprocess.check_output(
-                ["git", "diff", "--unified=0", args.commits[0],
-                args.commits[1], "--", args.path])
-        else:
-            if args.branches is None:
-                # Default to current branch with master
-                args.branches = ["master", "HEAD"]
+    diff_input = ["git", "diff", "--unified=0"]
+    if args.commits is not None:
+        diff_input.extend([args.commits[0], args.commits[1]])
+    else:
+        if args.branches is None:
+            # Default to current branch with master
+            args.branches = ["master", "HEAD"]
 
-            diff_target = args.branches[0] + "..." + args.branches[1]
-            diff_output = subprocess.check_output(
-                ["git", "diff", "--unified=0", diff_target, "--", args.path])
+        diff_target = args.branches[0] + "..." + args.branches[1]
+        diff_input.append(diff_target)
+
+    if args.path:
+        diff_input.extend(["--", args.path])
+
+    try:
+        diff_output = subprocess.check_output(diff_input)
     except subprocess.CalledProcessError as e:
-        logging.error("git diff returned a non zero exit code: %d",
+        logger.error("git diff returned a non zero exit code: %d",
                       e.returncode)
         sys.exit(1)
 
@@ -63,11 +67,17 @@ def get_diff_output(args):
 def parser(diff_output):
     """Split diff output into patches and parse each patch individually"""
     diff_output = str(diff_output, errors="strict")
-    changes = []
+    changes = {}
+    
+    top = subprocess.check_output(["git","rev-parse", "--top-level"])
+    top = str(top, errors="strict")
 
     for patch in diff_output.split("diff --git")[1:]:
         # split diff_output into patches
-        changes.append(parse_patch(patch))
+        file_name, cs = parse_patch(patch)
+        if not cs:
+            continue
+        changes[file_name] = cs
     
     return changes
 
@@ -85,7 +95,7 @@ def parse_patch(patch):
     changes = {}
     file_name  = lines[0].split()[-1][2:]
     
-    logging.debug("Parsing: %s", file_name)
+    logger.debug("Parsing: %s", file_name)
 
     for line in patch.splitlines():
         # parse hunk header
@@ -107,39 +117,42 @@ def parse_patch(patch):
                     to_range = t[1:].split(",")
 
             # Get function name
-            hunk_header = tokens[-1].split("(")
-            if len(hunk_header) == 1:
+            try:
+                hunk_name = tokens[tokens.index("def") + 1].split("(")[0]
+            except ValueError:
                 hunk_name = "top-level"
-            else:
-                hunk_name = tokens[-1].split("(")[0]
-            logging.debug("\tHunk: %s - (%d,%d)", hunk_name, start, end)
+            logger.debug("\tHunk: %s - (%d,%d)", hunk_name, start, end)
 
             # Add hunk info to changes
             if hunk_name not in changes:
                 changes[hunk_name] = []
             changes[hunk_name].append((start, end))
 
-    return (file_name, changes)
+        if line.startswith("+def "):
+            func_name = line.split()[1].split("(")[0]
+            changes[func_name] = []
+
+    return file_name, changes
 
 
 def output_changes(changes, verbosity):
     if not verbosity:
         verbosity = 2
-    logging.debug("verbosity: %d", verbosity)
+    logger.debug("verbosity: %d", verbosity)
 
     if not changes:
-        logging.info("No changes found")
+        logger.info("No changes found")
     else:
-        for file_name, chunks in changes:
-            if verbosity == 1:
-                print(file_name)
+        for file_name, chunks in changes.items():    
+            print(file_name)
+            if verbosity < 2:
+                continue
             for func_name, ranges in chunks.items():
-                if verbosity == 2:
-                    print("{}\t{}".format(file_name, func_name))
+                print("\t{}".format(func_name))
+                if verbosity < 3:
+                    continue
                 for (start, end) in ranges:
-                    if verbosity > 2:
-                        print("{}\t{}\t{}:{}".format(
-                            file_name, func_name, start, end))
+                    print("\t\t{}:{}".format(start, end))
 
     
 
@@ -160,7 +173,7 @@ def parse_args():
 
     filters = arg_parser.add_argument_group(
         "filters", "filter which files should be included in output")
-    filters.add_argument("--filter-path", "-p", dest="path", default="",
+    filters.add_argument("--filter-path", "-p", dest="path", 
         help="specify directory or file in which to search for changes")
     filters.add_argument(
         "--filter", "-f", "-e", dest="expr", metavar="REGEX", default=".*",
@@ -175,6 +188,9 @@ if __name__ == "__main__":
     diff_output = get_diff_output(args)
 
     changes = parser(diff_output)
-    changes = [(n, cs) for (n, cs) in changes if re.fullmatch(args.expr, n)]
+    for file_name, chunks in changes.items():
+        if not re.fullmatch(args.expr, file_name):
+            del changes[file_name]
+
     output_changes(changes, args.verbosity)
 

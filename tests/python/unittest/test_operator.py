@@ -31,6 +31,7 @@ from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabl
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
+    #test
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 

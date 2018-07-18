@@ -28,29 +28,24 @@ import argparse
 import re
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 DEFAULT_NUM_TRIALS = 10000
-DEFAULT_VERBOSITY = 2
 
-def run_test_trials(args):
-    test_path = args.test_path + ":" + args.test_name
-    logging.info("Testing: %s", test_path)
+def run_test_trials(test_file, test_name, num_trials, seed=None):
+    test_path = test_file + ":" + test_name
+    logger.info("Testing-- %s", test_path)
 
     new_env = os.environ.copy()
-    new_env["MXNET_TEST_COUNT"] = str(args.num_trials)
+    new_env["MXNET_TEST_COUNT"] = str(num_trials)
     
-    if args.seed is None:
-        logging.info("No test seed provided, using random seed")
+    if seed is None:
+        logger.info("No test seed provided, using random seed")
     else:
-        new_env["MXNET_TEST_SEED"] = str(args.seed)
+        new_env["MXNET_TEST_SEED"] = str(seed)
 
-    verbosity = "--verbosity=" + str(args.verbosity)
-
-    code = subprocess.call(["nosetests", verbosity, test_path], 
-                           env = new_env)
-    
-    logging.info("Nosetests terminated with exit code %d", code)
+    return  subprocess.call(["nosetests", test_path], env = new_env)
 
 class NameAction(argparse.Action):
     """Parses command line argument to get test file and test name"""
@@ -97,11 +92,6 @@ def parse_args():
                         help="test seed, passed as MXNET_TEST_SEED, "
                         "defaults to random seed") 
 
-    parser.add_argument("-v", "--verbosity",
-                        default=DEFAULT_VERBOSITY, type=int,
-                        help="logging level, passed to nosetests")
-
-
     args = parser.parse_args()
     return args
 
@@ -109,4 +99,5 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    run_test_trials(args)
+    run_test_trials(args.test_path, args.test_name, args.num_trials, args.seed)
+    logger.info("Nosetests terminated with exit code %d", code)
