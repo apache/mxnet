@@ -47,49 +47,49 @@ namespace mxnet {
 namespace common {
 
 template<typename T>
-inline size_t serialized_size(const T& obj);
+inline size_t SerializedSize(const T &obj);
 
 template<typename T>
-inline size_t serialized_size(const nnvm::Tuple<T>& obj);
+inline size_t SerializedSize(const nnvm::Tuple <T> &obj);
 
 template<typename K, typename V>
-inline size_t serialized_size(const std::map<K, V>& obj);
+inline size_t SerializedSize(const std::map <K, V> &obj);
 
 template<>
-inline size_t serialized_size(const std::string& obj);
+inline size_t SerializedSize(const std::string &obj);
 
 template<typename... Args>
-inline size_t serialized_size(const std::tuple<Args...>& obj);
+inline size_t SerializedSize(const std::tuple<Args...> &obj);
 
 template<typename T>
-inline void serialize(const T& obj, char** buffer);
+inline void Serialize(const T &obj, char **buffer);
 
 template<typename T>
-inline void serialize(const nnvm::Tuple<T>& obj, char** buffer);
+inline void Serialize(const nnvm::Tuple <T> &obj, char **buffer);
 
 template<typename K, typename V>
-inline void serialize(const std::map<K, V>& obj, char** buffer);
+inline void Serialize(const std::map <K, V> &obj, char **buffer);
 
 template<>
-inline void serialize(const std::string& obj, char** buffer);
+inline void Serialize(const std::string &obj, char **buffer);
 
 template<typename... Args>
-inline void serialize(const std::tuple<Args...>& obj, char** buffer);
+inline void Serialize(const std::tuple<Args...> &obj, char **buffer);
 
 template<typename T>
-inline void deserialize(T* obj, const std::string& buffer, size_t* curr_pos);
+inline void Deserialize(T *obj, const std::string &buffer, size_t *curr_pos);
 
 template<typename T>
-inline void deserialize(nnvm::Tuple<T>* obj, const std::string& buffer, size_t* curr_pos);
+inline void Deserialize(nnvm::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos);
 
 template<typename K, typename V>
-inline void deserialize(std::map<K, V>* obj, const std::string& buffer, size_t* curr_pos);
+inline void Deserialize(std::map <K, V> *obj, const std::string &buffer, size_t *curr_pos);
 
 template<>
-inline void deserialize(std::string* obj, const std::string& buffer, size_t* curr_pos);
+inline void Deserialize(std::string *obj, const std::string &buffer, size_t *curr_pos);
 
 template<typename... Args>
-inline void deserialize(std::tuple<Args...>* obj, const std::string& buffer, size_t* curr_pos);
+inline void Deserialize(std::tuple<Args...> *obj, const std::string &buffer, size_t *curr_pos);
 
 
 template<typename T>
@@ -98,16 +98,16 @@ struct is_container {
 };
 
 template<typename T>
-inline size_t serialized_size(const T& obj) {
+inline size_t SerializedSize(const T &obj) {
   return sizeof(T);
 }
 
 template<typename T>
-inline size_t serialized_size(const nnvm::Tuple<T>& obj) {
+inline size_t SerializedSize(const nnvm::Tuple <T> &obj) {
   if (is_container<T>::value) {
     size_t sum_val = 4;
     for (auto& el : obj) {
-      sum_val += serialized_size(el);
+      sum_val += SerializedSize(el);
     }
     return sum_val;
   } else {
@@ -116,20 +116,20 @@ inline size_t serialized_size(const nnvm::Tuple<T>& obj) {
 }
 
 template<typename K, typename V>
-inline size_t serialized_size(const std::map<K, V>& obj) {
+inline size_t SerializedSize(const std::map <K, V> &obj) {
   size_t sum_val = 4;
   if (is_container<K>::value && is_container<V>::value) {
     for (const auto& p : obj) {
-      sum_val += serialized_size(p.first) + serialized_size(p.second);
+      sum_val += SerializedSize(p.first) + SerializedSize(p.second);
     }
   } else if (is_container<K>::value) {
     for (const auto& p : obj) {
-      sum_val += serialized_size(p.first);
+      sum_val += SerializedSize(p.first);
     }
     sum_val += sizeof(V) * obj.size();
   } else if (is_container<V>::value) {
     for (const auto& p : obj) {
-      sum_val += serialized_size(p.second);
+      sum_val += SerializedSize(p.second);
     }
     sum_val += sizeof(K) * obj.size();
   } else {
@@ -139,35 +139,35 @@ inline size_t serialized_size(const std::map<K, V>& obj) {
 }
 
 template<>
-inline size_t serialized_size(const std::string& obj) {
+inline size_t SerializedSize(const std::string &obj) {
   return obj.size() + 4;
 }
 
 template<int I>
 struct serialized_size_tuple {
   template<typename... Args>
-  static inline size_t compute(const std::tuple<Args...>& obj) {
-    return serialized_size(std::get<I>(obj)) + serialized_size_tuple<I-1>::compute(obj);
+  static inline size_t Compute(const std::tuple<Args...> &obj) {
+    return SerializedSize(std::get<I>(obj)) + serialized_size_tuple<I-1>::Compute(obj);
   }
 };
 
 template<>
 struct serialized_size_tuple<0> {
   template<typename... Args>
-  static inline size_t compute(const std::tuple<Args...>& obj) {
-    return serialized_size(std::get<0>(obj));
+  static inline size_t Compute(const std::tuple<Args...> &obj) {
+    return SerializedSize(std::get<0>(obj));
   }
 };
 
 template<typename... Args>
-inline size_t serialized_size(const std::tuple<Args...>& obj) {
-  return serialized_size_tuple<sizeof... (Args)-1>::compute(obj);
+inline size_t SerializedSize(const std::tuple<Args...> &obj) {
+  return serialized_size_tuple<sizeof... (Args)-1>::Compute(obj);
 }
 
-//  SERIALIZE
+//  Serializer
 
 template<typename T>
-inline size_t serialize_container_size(const T& obj, char** buffer) {
+inline size_t SerializedContainerSize(const T &obj, char **buffer) {
   uint32_t size = obj.size();
   std::memcpy(*buffer, &size, 4);
   *buffer += 4;
@@ -175,33 +175,33 @@ inline size_t serialize_container_size(const T& obj, char** buffer) {
 }
 
 template<typename T>
-inline void serialize(const T& obj, char** buffer) {
+inline void Serialize(const T &obj, char **buffer) {
   std::memcpy(*buffer, &obj, sizeof(T));
   *buffer += sizeof(T);
 }
 
 template<typename T>
-inline void serialize(const nnvm::Tuple<T>& obj, char** buffer) {
+inline void Serialize(const nnvm::Tuple <T> &obj, char **buffer) {
   uint32_t size = obj.ndim();
   std::memcpy(*buffer, &size, 4);
   *buffer += 4;
   for (auto& el : obj) {
-    serialize(el, buffer);
+    Serialize(el, buffer);
   }
 }
 
 template<typename K, typename V>
-inline void serialize(const std::map<K, V>& obj, char** buffer) {
-  serialize_container_size(obj, buffer);
+inline void Serialize(const std::map <K, V> &obj, char **buffer) {
+  SerializedContainerSize(obj, buffer);
   for (auto& p : obj) {
-    serialize(p.first, buffer);
-    serialize(p.second, buffer);
+    Serialize(p.first, buffer);
+    Serialize(p.second, buffer);
   }
 }
 
 template<>
-inline void serialize(const std::string& obj, char** buffer) {
-  auto size = serialize_container_size(obj, buffer);
+inline void Serialize(const std::string &obj, char **buffer) {
+  auto size = SerializedContainerSize(obj, buffer);
   std::memcpy(*buffer, &obj[0], size);
   *buffer += size;
 }
@@ -209,29 +209,29 @@ inline void serialize(const std::string& obj, char** buffer) {
 template<int I>
 struct serialize_tuple {
   template<typename... Args>
-  static inline void compute(const std::tuple<Args...>& obj, char** buffer) {
-    serialize_tuple<I-1>::compute(obj, buffer);
-    serialize(std::get<I>(obj), buffer);
+  static inline void Compute(const std::tuple<Args...> &obj, char **buffer) {
+    serialize_tuple<I-1>::Compute(obj, buffer);
+    Serialize(std::get<I>(obj), buffer);
   }
 };
 
 template<>
 struct serialize_tuple<0> {
   template<typename... Args>
-  static inline void compute(const std::tuple<Args...>& obj, char** buffer) {
-    serialize(std::get<0>(obj), buffer);
+  static inline void Compute(const std::tuple<Args...> &obj, char **buffer) {
+    Serialize(std::get<0>(obj), buffer);
   }
 };
 
 template<typename... Args>
-inline void serialize(const std::tuple<Args...>& obj, char** buffer) {
-  serialize_tuple<sizeof... (Args)-1>::compute(obj, buffer);
+inline void Serialize(const std::tuple<Args...> &obj, char **buffer) {
+  serialize_tuple<sizeof... (Args)-1>::Compute(obj, buffer);
 }
 
-
 // Deserializer
+
 template<typename T>
-inline size_t deserialize_container_size(T* obj, const std::string& buffer, size_t* curr_pos) {
+inline size_t DeserializedContainerSize(T *obj, const std::string &buffer, size_t *curr_pos) {
   uint32_t size = obj->size();
   std::memcpy(&size, &buffer[*curr_pos], 4);
   *curr_pos += 4;
@@ -239,35 +239,35 @@ inline size_t deserialize_container_size(T* obj, const std::string& buffer, size
 }
 
 template<typename T>
-inline void deserialize(T* obj, const std::string& buffer, size_t* curr_pos) {
+inline void Deserialize(T *obj, const std::string &buffer, size_t *curr_pos) {
   std::memcpy(obj, &buffer[*curr_pos], sizeof(T));
   *curr_pos += sizeof(T);
 }
 
 template<typename T>
-inline void deserialize(nnvm::Tuple<T>* obj, const std::string& buffer, size_t* curr_pos) {
+inline void Deserialize(nnvm::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos) {
   uint32_t size = obj->ndim();
   std::memcpy(&size, &buffer[*curr_pos], 4);
   *curr_pos += 4;
   obj->SetDim(size);
   for (size_t i = 0; i < size; ++i) {
-    deserialize((*obj)[i], buffer, curr_pos);
+    Deserialize((*obj)[i], buffer, curr_pos);
   }
 }
 
 template<typename K, typename V>
-inline void deserialize(std::map<K, V>* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_container_size(obj, buffer, curr_pos);
+inline void Deserialize(std::map <K, V> *obj, const std::string &buffer, size_t *curr_pos) {
+  auto size = DeserializedContainerSize(obj, buffer, curr_pos);
   K first;
   for (size_t i = 0; i < size; ++i) {
-    deserialize(&first, buffer, curr_pos);
-    deserialize(&(*obj)[first], buffer, curr_pos);
+    Deserialize(&first, buffer, curr_pos);
+    Deserialize(&(*obj)[first], buffer, curr_pos);
   }
 }
 
 template<>
-inline void deserialize(std::string* obj, const std::string& buffer, size_t* curr_pos) {
-  auto size = deserialize_container_size(obj, buffer, curr_pos);
+inline void Deserialize(std::string *obj, const std::string &buffer, size_t *curr_pos) {
+  auto size = DeserializedContainerSize(obj, buffer, curr_pos);
   obj->resize(size);
   std::memcpy(&(obj->front()), &buffer[*curr_pos], size);
   *curr_pos += size;
@@ -276,33 +276,33 @@ inline void deserialize(std::string* obj, const std::string& buffer, size_t* cur
 template<int I>
 struct deserialize_tuple {
   template<typename... Args>
-  static inline void compute(std::tuple<Args...>* obj,
-                             const std::string& buffer, size_t* curr_pos) {
-    deserialize_tuple<I-1>::compute(obj, buffer, curr_pos);
-    deserialize(&std::get<I>(*obj), buffer, curr_pos);
+  static inline void Compute(std::tuple<Args...> *obj,
+                             const std::string &buffer, size_t *curr_pos) {
+    deserialize_tuple<I-1>::Compute(obj, buffer, curr_pos);
+    Deserialize(&std::get<I>(*obj), buffer, curr_pos);
   }
 };
 
 template<>
 struct deserialize_tuple<0> {
   template<typename... Args>
-  static inline void compute(std::tuple<Args...>* obj,
-                             const std::string& buffer, size_t* curr_pos) {
-    deserialize(&std::get<0>(*obj), buffer, curr_pos);
+  static inline void Compute(std::tuple<Args...> *obj,
+                             const std::string &buffer, size_t *curr_pos) {
+    Deserialize(&std::get<0>(*obj), buffer, curr_pos);
   }
 };
 
 template<typename... Args>
-inline void deserialize(std::tuple<Args...>* obj, const std::string& buffer, size_t* curr_pos) {
-  deserialize_tuple<sizeof... (Args)-1>::compute(obj, buffer, curr_pos);
+inline void Deserialize(std::tuple<Args...> *obj, const std::string &buffer, size_t *curr_pos) {
+  deserialize_tuple<sizeof... (Args)-1>::Compute(obj, buffer, curr_pos);
 }
 
 
 template<typename T>
 inline void Serialize(const T& obj, std::string* serialized_data) {
-  serialized_data->resize(serialized_size(obj));
+  serialized_data->resize(SerializedSize(obj));
   char* curr_pos = &(serialized_data->front());
-  serialize(obj, &curr_pos);
+  Serialize(obj, &curr_pos);
   CHECK_EQ((int64_t)curr_pos - (int64_t)&(serialized_data->front()),
            serialized_data->size());
 }
@@ -310,7 +310,7 @@ inline void Serialize(const T& obj, std::string* serialized_data) {
 template<typename T>
 inline void Deserialize(T* obj, const std::string& serialized_data) {
   size_t curr_pos = 0;
-  deserialize(obj, serialized_data, &curr_pos);
+  Deserialize(obj, serialized_data, &curr_pos);
   CHECK_EQ(curr_pos, serialized_data.size());
 }
 
