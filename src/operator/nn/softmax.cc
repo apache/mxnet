@@ -25,8 +25,11 @@
 #include "./softmax-inl.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
+#include "../operator_common.h"
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -59,8 +62,22 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)

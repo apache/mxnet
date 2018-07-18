@@ -38,6 +38,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(ActivationParam);
+
 // This will determine the order of the inputs for backward computation.
 struct ActivationGrad {
   const char *op_name;

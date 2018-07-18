@@ -25,10 +25,12 @@
 */
 
 #include "./deconvolution-inl.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
 #include "../operator_common.h"
 #include "../../common/utils.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_ops-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -268,8 +270,22 @@ inline static bool DeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
@@ -282,8 +298,22 @@ inline static bool BackwardDeconvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), param.no_bias ? 3U : 4U);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 #if MXNET_USE_MKLDNN == 1

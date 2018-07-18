@@ -26,11 +26,14 @@
 
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
+#include "../operator_common.h"
 #if MXNET_USE_NNPACK == 1
 #include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_base-inl.h"
+#include "./mkldnn/mkldnn_ops-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
@@ -298,8 +301,22 @@ inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
@@ -313,8 +330,22 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {

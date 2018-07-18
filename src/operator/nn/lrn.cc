@@ -26,9 +26,9 @@
 
 #include "./lrn-inl.h"
 #include "../operator_common.h"
-#include "./mkldnn/mkldnn_base-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_lrn-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #endif
 
 namespace mxnet {
@@ -89,8 +89,22 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
@@ -100,8 +114,22 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
-                           in_attrs, out_attrs);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
+#else
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+#endif
+  return dispatched;
 }
 
 #if MXNET_USE_MKLDNN == 1

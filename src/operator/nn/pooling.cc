@@ -25,14 +25,13 @@
 */
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
 #if MXNET_USE_NNPACK == 1
 #include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_pooling-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #endif  // MXNET_USE_MKLDNN
-
 namespace mxnet {
 namespace op {
 
@@ -276,18 +275,26 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       DispatchMode *dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  bool support_mkldnn_pool = false;
-#if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param))
-    support_mkldnn_pool = true;
+  CHECK_EQ(in_attrs->size(), 1);
+  bool dispatched = false;
+#if MXNET_USE_MKLDNN == 1
+  bool support_mkldnn_pool = SupportMKLDNNPooling(param);
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
 #else
   CHECK_EQ(out_attrs->size(), 1);
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
 #endif
-
-  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool, dispatch_mode,
-                           in_attrs, out_attrs);
+  return dispatched;
 }
 
 inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
@@ -299,16 +306,24 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
 
-  bool support_mkldnn_pool = false;
+  bool dispatched = false;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param))
-    support_mkldnn_pool = true;
+  bool support_mkldnn_pool = SupportMKLDNNPooling(param);
+  if (!dispatched) {
+    dispatched = MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool, dispatch_mode,
+                                   in_attrs, out_attrs);
+  }
 #else
   CHECK_EQ(in_attrs->size(), 3);
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
 #endif
-
-  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool, dispatch_mode,
-                             in_attrs, out_attrs);
+  return dispatched;
 }
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
