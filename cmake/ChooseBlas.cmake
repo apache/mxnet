@@ -63,10 +63,6 @@ function(try_mkl)
     return()
   endif()
 
-  if(NOT ${USE_MKL_IF_AVAILABLE})
-    return()
-  endif()
-
   if(${CMAKE_CROSSCOMPILING})
     message(WARNING "MKL with cross compilation is not supported, MKL will not be available")
     return()
@@ -157,9 +153,12 @@ function(try_accelerate)
   endif()
 endfunction()
 
-try_mkl()
-try_mklml()
-try_mkldnn()
+if(${USE_MKL_IF_AVAILABLE})
+  try_mkl()
+  try_mklml()
+  try_mkldnn()
+endif()
+
 try_accelerate()
 
 # cmake regexp does not support case insensitive match (?i) or //i
