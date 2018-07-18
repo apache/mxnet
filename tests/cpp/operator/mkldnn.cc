@@ -771,9 +771,8 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   TBlob blob2 = tmp2.data();
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
-  for (int i = 0; i < tmp1.shape().Size(); i++) {
-    ASSERT_NEAR(d1[i], d2[i], 1e-4);
-  }
+  for (int i = 0; i < tmp1.shape().Size(); i++)
+    ASSERT_FLOAT_EQ(d1[i], d2[i]);
 }
 
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
@@ -1165,6 +1164,32 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       }
     }
   }
+
+//  if (forward_attrs.requests.find(OpReqType::kWriteInplace) != forward_attrs.requests.end()) {
+//    for (auto &dispatch : dispatches) {
+//      in_arrs = GetTestInputArrays();
+//      for (auto &arr : in_arrs) {
+//        // If the array is a view, we shouldn't write data to it.
+//        if (arr.arr.IsView())
+//          continue;
+//        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+//        for (int i = 0; i < forward_attrs.num_inputs; i++)
+//          inputs[i] = &arr.arr;
+//        for (int i = 0; i < forward_attrs.num_outputs; i++) {
+//          req[i] = kWriteInplace;
+//          outputs[i] = &arr.arr;
+//        }
+//        PrintVerifyMsg(orig, arr);
+//        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
+//                                    dispatch, mxnet::OpStatePtr());
+//        Engine::Get()->WaitForAll();
+//        std::vector<NDArray *> orig_inputs(forward_attrs.num_inputs);
+//        for (int i = 0; i < forward_attrs.num_inputs; i++)
+//          orig_inputs[i] = &orig.arr;
+//        verify_fn(orig_inputs, outputs);
+//      }
+//    }
+//  }
 
   if (forward_attrs.requests.find(OpReqType::kAddTo) != forward_attrs.requests.end()) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
