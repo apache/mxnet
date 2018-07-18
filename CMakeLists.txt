@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.0.2)
 
 # workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
-set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
+if(${CMAKE_CROSSCOMPILING})
+  set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
+  set(__CMAKE_CROSSCOMPILING_OVERRIDE ON)
+endif()
 
 project(mxnet C CXX)
 
-set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
+if(${__CMAKE_CROSSCOMPILING_OVERRIDE})
+  set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
+endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
