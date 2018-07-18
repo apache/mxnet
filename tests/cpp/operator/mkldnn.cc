@@ -1084,7 +1084,6 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
         }
-
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
@@ -1186,8 +1185,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
 
       // needs copies of inputs since they be reused in next iteration
       // cannot use Copy method since we need to maintain MKLDNN format
-      auto tmp_output = GetTestInputArrays(true)[i1];
-      auto tmp_output2 = GetTestInputArrays(true)[i1];
+      auto tmp_output = GetTestInputArrays()[i1];
+      auto tmp_output2 = GetTestInputArrays()[i1];
       backwards_outputs[0] = &tmp_output.arr;
       backwards_ex_outputs[0] = &tmp_output2.arr;
       back_req[0] = kWriteTo;
