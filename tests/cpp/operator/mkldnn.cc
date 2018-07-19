@@ -1113,6 +1113,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       if (in_arr.arr.shape().ndim() != 4)
         continue;
 
+      //  cannot pool / lrn / conv if dims are not default
+      if (in_arr.arr.IsMKLDNNData())
+        continue;
+
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
         ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
@@ -1122,6 +1126,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         inputs[i] = &in_arr.arr;
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        if (out_arrs[0][output_i].arr.IsMKLDNNData())
+          continue;
+
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
