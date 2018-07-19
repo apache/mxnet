@@ -26,7 +26,7 @@ def test_engine_import():
             reload         # Python 2
         except NameError:  # Python 3
             import sys
-            assert False, print(sys.version)
+            assert False, 'Python ' + sys.version
             from importlib import reload
         reload(mxnet)
     engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
