@@ -16,11 +16,9 @@
 # under the License.
 
 import os
-# pylint: disable=unused-import
-import unittest
-# pylint: enable=unused-import
-import numpy as np
+
 import mxnet as mx
+import numpy as np
 from common import *
 
 
@@ -38,7 +36,7 @@ def get_iters(mnist, batch_size):
 
 def lenet5():
     """LeNet-5 Symbol"""
-    #pylint: disable=no-member
+    # pylint: disable=no-member
     data = mx.sym.Variable('data')
     conv1 = mx.sym.Convolution(data=data, kernel=(5, 5), num_filter=20)
     tanh1 = mx.sym.Activation(data=conv1, act_type="tanh")
@@ -57,7 +55,7 @@ def lenet5():
     fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
     # loss
     lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
-    #pylint: enable=no-member
+    # pylint: enable=no-member
     return lenet
 
 
@@ -77,7 +75,7 @@ def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     # predict accuracy for lenet
     acc = mx.metric.Accuracy()
     lenet_model.score(test_iter, acc)
-    accuracy = acc.get()[1]
+    accuracy = float(acc.get()[1])
     assert accuracy > 0.95, "LeNet-5 training accuracy on MNIST was too low"
     return lenet_model
 
@@ -89,7 +87,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     if not get_use_tensorrt():
         shared_buffer = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in shared_buffer.items()])
     executor = sym.simple_bind(ctx=mx.gpu(0),
-                               data=(batch_size,) +  mnist['test_data'].shape[1:],
+                               data=(batch_size,) + mnist['test_data'].shape[1:],
                                softmax_label=(batch_size,),
                                shared_buffer=shared_buffer,
                                grad_req='null',
@@ -106,9 +104,9 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     for idx, dbatch in enumerate(test_iter):
         executor.arg_dict["data"][:] = dbatch.data[0]
         executor.forward(is_train=False)
-        offset = idx*batch_size
+        offset = idx * batch_size
         extent = batch_size if num_ex - offset > batch_size else num_ex - offset
-        all_preds[offset:offset+extent, :] = executor.outputs[0].asnumpy()[:extent]
+        all_preds[offset:offset + extent, :] = executor.outputs[0].asnumpy()[:extent]
         example_ct += extent
 
     all_preds = np.argmax(all_preds, axis=1)
@@ -121,6 +119,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
 
 def test_tensorrt_inference():
     """Run LeNet-5 inference comparison between MXNet and TensorRT."""
+
     check_tensorrt_installation()
     mnist = mx.test_utils.get_mnist()
     num_epochs = 10
@@ -148,7 +147,7 @@ def test_tensorrt_inference():
     print("Running inference in MXNet-TensorRT")
     set_use_tensorrt(True)
     trt_pct = run_inference(sym, arg_params, aux_params, mnist,
-                            all_test_labels,  batch_size=batch_size)
+                            all_test_labels, batch_size=batch_size)
 
     print("MXNet accuracy: %f" % mx_pct)
     print("MXNet-TensorRT accuracy: %f" % trt_pct)
@@ -159,4 +158,6 @@ def test_tensorrt_inference():
 
 
 if __name__ == '__main__':
-    test_tensorrt_inference()
+    import nose
+
+    nose.runmodule()
