@@ -60,5 +60,5 @@ def test_simple_cycle():
   assert has_no_cycle(executor.optimized_symbol), "The graph optimized by TRT contains a cycle"
 
 if __name__ == '__main__':
-  test_simple_cycle()
-
+    import nose
+    nose.runmodule()
