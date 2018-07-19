@@ -342,10 +342,10 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   TShape& rhs_shape = (*in_attrs)[1];
   TShape oshape = TShape(rhs_shape);
   if (lhs_shape.ndim() == 0 || lhs_shape.ndim() == 0) return false;
-  
+
   CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
     << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
-  
+
   for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
     if (rhs_shape[i] != 0) {
       CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)

@@ -277,10 +277,10 @@ NNVM_REGISTER_OP(_broadcast_backward)
 NNVM_REGISTER_OP(broadcast_like)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",                 \
-    [](const NodeAttrs& attrs) {                                      \
-      return std::vector<std::string>{"lhs", "rhs"};                  \
-    }) 
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+      return std::vector<std::string>{"lhs", "rhs"};
+    })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,
