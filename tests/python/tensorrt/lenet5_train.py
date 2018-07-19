@@ -18,8 +18,52 @@
 import os
 import numpy as np
 import mxnet as mx
-from common import *
 from lenet5_common import get_iters
+
+def lenet5():
+    """LeNet-5 Symbol"""
+    #pylint: disable=no-member
+    data = mx.sym.Variable('data')
+    conv1 = mx.sym.Convolution(data=data, kernel=(5, 5), num_filter=20)
+    tanh1 = mx.sym.Activation(data=conv1, act_type="tanh")
+    pool1 = mx.sym.Pooling(data=tanh1, pool_type="max",
+                           kernel=(2, 2), stride=(2, 2))
+    # second conv
+    conv2 = mx.sym.Convolution(data=pool1, kernel=(5, 5), num_filter=50)
+    tanh2 = mx.sym.Activation(data=conv2, act_type="tanh")
+    pool2 = mx.sym.Pooling(data=tanh2, pool_type="max",
+                           kernel=(2, 2), stride=(2, 2))
+    # first fullc
+    flatten = mx.sym.Flatten(data=pool2)
+    fc1 = mx.sym.FullyConnected(data=flatten, num_hidden=500)
+    tanh3 = mx.sym.Activation(data=fc1, act_type="tanh")
+    # second fullc
+    fc2 = mx.sym.FullyConnected(data=tanh3, num_hidden=10)
+    # loss
+    lenet = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
+    #pylint: enable=no-member
+    return lenet
+
+def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
+    """train LeNet-5 model on MNIST data"""
+    ctx = mx.gpu(0)
+    lenet_model = mx.mod.Module(lenet5(), context=ctx)
+
+    lenet_model.fit(train_iter,
+                    eval_data=val_iter,
+                    optimizer='sgd',
+                    optimizer_params={'learning_rate': 0.1, 'momentum': 0.9},
+                    eval_metric='acc',
+                    batch_end_callback=mx.callback.Speedometer(batch_size, 1),
+                    num_epoch=num_epochs)
+
+    # predict accuracy for lenet
+    acc = mx.metric.Accuracy()
+    lenet_model.score(test_iter, acc)
+    accuracy = acc.get()[1]
+    assert accuracy > 0.95, "LeNet-5 training accuracy on MNIST was too low"
+    return lenet_model
+
 
 def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size):
     """Run inference with either MXNet or TensorRT"""
@@ -57,40 +101,19 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
 
     return percentage
 
-def test_tensorrt_inference():
-    """Run LeNet-5 inference comparison between MXNet and TensorRT."""
-    check_tensorrt_installation()
-    mnist = mx.test_utils.get_mnist()
+if __name__ == '__main__':
+
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'
     model_file = '%s-symbol.json' % model_name
     params_file = '%s-%04d.params' % (model_name, num_epochs)
 
-    _, _, _, all_test_labels = get_iters(mnist, batch_size)
+    if not (os.path.exists(model_file) and os.path.exists(params_file)):
+        mnist = mx.test_utils.get_mnist()
 
-    # Load serialized MXNet model (model-symbol.json + model-epoch.params)
-    sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
+        _, _, _, all_test_labels = get_iters(mnist, batch_size)
 
-    print("LeNet-5 test")
-    print("Running inference in MXNet")
-    set_use_tensorrt(False)
-    mx_pct = run_inference(sym, arg_params, aux_params, mnist,
-                           all_test_labels, batch_size=batch_size)
-
-    print("Running inference in MXNet-TensorRT")
-    set_use_tensorrt(True)
-    trt_pct = run_inference(sym, arg_params, aux_params, mnist,
-                            all_test_labels,  batch_size=batch_size)
-
-    print("MXNet accuracy: %f" % mx_pct)
-    print("MXNet-TensorRT accuracy: %f" % trt_pct)
-
-    assert abs(mx_pct - trt_pct) < 1e-2, \
-        """Diff. between MXNet & TensorRT accuracy too high:
-           MXNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+        trained_lenet = train_lenet5(num_epochs, batch_size,
+                                    *get_iters(mnist, batch_size)[:-1])
+        trained_lenet.save_checkpoint(model_name, num_epochs)
