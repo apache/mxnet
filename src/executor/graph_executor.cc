@@ -1067,6 +1067,13 @@ nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
   Symbol ret;
   ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
     graph_.outputs.begin() + num_forward_outputs_);
+  ret = ret.Copy();
+  static const Op* trt_op = Op::Get("_trt_op");
+  DFSVisit(ret.outputs, [](const nnvm::NodePtr n) {
+    if (n->op() == trt_op) {
+      n->attrs.dict.clear();
+    }
+  });
   return ret;
 }
 
@@ -1101,6 +1108,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          std::unordered_map<std::string, NDArray>* shared_buffer,
                          Executor* shared_exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
+  symbol = symbol.Copy();
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, *in_arg_ctxes, *arg_grad_ctxes,
                             *aux_state_ctxes, *grad_req_types);
   // The following code of shape and dtype inferences and argument
