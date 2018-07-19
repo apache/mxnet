@@ -217,7 +217,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
                                  static_cast<dim_t>(1), kWriteTo, original_idx);
   // sort data with its original idx
-  int num_bits = ilog2(num_rows - 1);
+  int num_bits = common::ilog2ui(num_rows - 1);
   char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
   Tensor<gpu, 1, char> temp_storage_tensor(temp_storage_ptr,
                                            Shape1(sort_workspace_size), s);

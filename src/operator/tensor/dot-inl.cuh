@@ -31,16 +31,10 @@
 #include "./sort_op.h"
 #include "./util/tensor_util-inl.h"
 #include "./util/tensor_util-inl.cuh"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
-
-// Returns integer log2(a) rounded up
-inline int log2i(size_t a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
-}
 
 /*!
  * \brief GPU scalar kernel of dot(csr, dns1) = dns2
@@ -405,7 +399,6 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   }
 
   using namespace mshadow;
-  using mshadow::cuda::kBaseThreadNum;
   using mxnet_op::Kernel;
   using mxnet_op::set_zero;
   using nnvm::dim_t;
@@ -413,7 +406,6 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   const dim_t num_rows_l = lhs.shape()[0];
   const dim_t num_cols_r = rhs.shape_[1];
   const dim_t threads_per_warp = mxnet_op::cuda_get_device_prop().warpSize;
-  const dim_t threads_per_block = kBaseThreadNum;
   dim_t num_threads;
   // TODO: remove kernel dependency on warpSize=32
   if (threads_per_warp != 32) {
@@ -496,7 +488,7 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
           Tensor<gpu, 1, IType> csc_cols(csc_cols_ptr, Shape1(nnz), s);
           Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
 
-          int num_bits = log2i(num_csr_cols - 1);
+          int num_bits = common::ilog2ul(num_csr_cols - 1);
           SortByKey(csc_cols, original_idx, true, &temp_storage, 0, num_bits);
 
           // Scatter csr indptr to row id
@@ -699,7 +691,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           Tensor<gpu, 1, IType> original_idx(original_idx_ptr, Shape1(nnz), s);
           Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(total_temp_bytes), s);
 
-          int num_bits = log2i(num_cols_l - 1);
+          int num_bits = common::ilog2ul(num_cols_l - 1);
           SortByKey(col_idx_copy, original_idx, true, &temp_storage, 0, num_bits);
 
           // over-allocate aux indices
@@ -1046,7 +1038,7 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const gpu& gpu_dev,
           Tensor<gpu, 1, IType> csc_cols(csc_cols_ptr, Shape1(nnz), s);
           Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
 
-          int num_bits = log2i(num_csr_cols - 1);
+          int num_bits = common::ilog2ul(num_csr_cols - 1);
           SortByKey(csc_cols, original_idx, true, &temp_storage, 0, num_bits);
 
           // Scatter csr indptr to row id
