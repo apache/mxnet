@@ -110,7 +110,7 @@ Batch size | Data type | Top 1 Validation accuracy | Time to train | Speedup |
 1024 | float16 | 76.34% | 7.3 hrs | 1.62x |
 2048 | float16 | 76.29% | 6.5 hrs | 1.82x |
 
-![Training curves of Resnet50 v1 on Imagenet 2012](https://github.com/rahul003/web-data/blob/d415abf4a1c6df007483169c81807c250135f9a5/mxnet/tutorials/mixed-precision/resnet50v1b_imagenet_fp16_fp32_training.png?raw=true)
+![Training curves of Resnet50 v1 on Imagenet 2012](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/mixed-precision/resnet50v1b_imagenet_fp16_fp32_training.png)
 
 The differences in accuracies above are within normal random variation, and there is no reason to expect float16 to have better accuracy than float32 in general. As the plot indicates training behaves similarly for these cases, even though we didn't have to change any other hyperparameters. We can also see from the table that using float16 helps train faster through faster computation with float16 as well as allowing the use of larger batch sizes.
 
