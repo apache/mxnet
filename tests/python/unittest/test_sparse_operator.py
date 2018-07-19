@@ -1424,7 +1424,7 @@ def test_sparse_dot():
 
 @with_seed()
 def test_sparse_dot_determinism():
-    def test_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
+    def check_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
         lhs_row = rnd.randint(50, 100)
         lhs_col = rnd.randint(50, 100)
         if transpose_a:
@@ -1444,10 +1444,11 @@ def test_sparse_dot_determinism():
         res2 = mx.nd.sparse.dot(lhs, rhs, transpose_a=transpose_a, transpose_b=transpose_b, forward_stype=forward_stype)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.0, atol=0.0)
 
-    test_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'row_sparse')
+    check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'row_sparse')
     forward_stype = 'csr' if default_context() == mx.cpu() else 'default'
-    test_dot_determinism('default', 'csr', 1.0, 0.1, False, False, forward_stype)
-    test_dot_determinism('default', 'csr', 1.0, 0.1, False, True, forward_stype)
+    check_dot_determinism('default', 'csr', 1.0, 0.1, False, False, forward_stype)
+    check_dot_determinism('default', 'csr', 1.0, 0.1, False, True, forward_stype)
+    check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'default')
 
 
 @with_seed()
