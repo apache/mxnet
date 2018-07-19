@@ -45,7 +45,6 @@ Community contributions to MXNet have added many new valuable features and funct
 
 ## Toolkits to Extend MXNet
 
-* [NVIDIA DALI](https://github.com/NVIDIA/DALI/tree/master/docs/examples/mxnet) - a collection of highly optimized building blocks and an execution engine to accelerate input data pre-processing for deep learning applications.
 * [Gluon CV](https://gluon-cv.mxnet.io/) - state-of-the-art deep learning algorithms in computer vision.
 * [Gluon NLP](https://gluon-nlp.mxnet.io/) - state-of-the-art deep learning models in natural language processing.
 * [Sockeye](https://github.com/awslabs/sockeye) - a sequence-to-sequence framework for Neural Machine Translation
