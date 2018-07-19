@@ -627,7 +627,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 std::vector<NDArrayAttrs> GetTestOutputArrays(
     const TShape &shp,
     const std::vector<mkldnn::memory::primitive_desc> &pds,
-    float num_inputs = 0, int dim = 0) {
+    float num_inputs = 0, int dim = 0, bool rand = true) {
   TShape shape = shp;
   if (num_inputs != 0)
     shape[dim] = static_cast<int>(shape[dim] * num_inputs);
@@ -637,13 +637,13 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   // Type 1.
   NDArray arr(shape, Context());
   in_arrs.emplace_back(arr, "Normal NDArray");
-  InitDefaultArray(&in_arrs.back().arr, true);
+  InitDefaultArray(&in_arrs.back().arr, rand);
 
   // Type 4.
   TShape tmp_shape = shape;
   tmp_shape[0] = shape[0] * 2;
   NDArray arr0(tmp_shape, Context());
-  InitDefaultArray(&arr0, true);
+  InitDefaultArray(&arr0, rand);
   in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
 
   // Type 5.
@@ -652,14 +652,14 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   s[0] = shape.Size();
   NDArray arr1(s, Context());
   arr1 = arr1.AsArray(shape, arr1.dtype());
-  InitDefaultArray(&arr1, true);
+  InitDefaultArray(&arr1, rand);
   in_arrs.emplace_back(arr1, "Reused NDArray");
 
   // Type 6.
   s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
   NDArray arr2(s, Context(), true, mshadow::kUint8);
   arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr2, true);
+  InitDefaultArray(&arr2, rand);
   in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
 
   // Type 7
@@ -667,7 +667,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   NDArray arr3(s, Context(), true, mshadow::kUint8);
   tmp_shape[0] = shape[0] * 2;
   arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr3, true);
+  InitDefaultArray(&arr3, rand);
   in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
 
   for (auto pd : pds) {
@@ -677,9 +677,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
     if (num_inputs != 0)
       pd = GetExpandedMemPD(pd, num_inputs);
 
-
     // Type 2, 3.
-
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -689,7 +687,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
       desc = ss.str();
     }
     in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, pd, true);
+    InitMKLDNNArray(&in_arrs.back().arr, pd, rand);
 
     // Type 8, 9.
     // Get a reused version.
@@ -697,7 +695,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, pd, true);
+    InitMKLDNNArray(&arr, pd, rand);
     desc = "Reused MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
       std::stringstream ss;
@@ -772,7 +770,7 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   for (int i = 0; i < tmp1.shape().Size(); i++)
-    ASSERT_NEAR(d1[i], d2[i], fabsf(d1[i])*1e-3);  // compare up to 3 digits of precision
+    ASSERT_FLOAT_EQ(d1[i], d2[i]);
 }
 
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
@@ -1199,8 +1197,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         continue;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, false);
+        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, false);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -1208,7 +1206,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
-          req[i] = kAddTo;
+          req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
           ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
         }
@@ -1225,15 +1223,16 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         // backwards test performed same time since output needed
         backwards_input[0] = outputs[0];  // output grad
         backwards_input[1] = inputs[0];  // input
+        backwards_input[2] = outputs[1];  // out norm
 
-        auto tmp_output = GetTestInputArrays(true)[i1];
+        auto tmp_output = GetTestInputArrays()[i1];
         backwards_outputs[0] = &tmp_output.arr;
 
-        auto tmp_output2 = GetTestInputArrays(true)[i1];
+        auto tmp_output2 = GetTestInputArrays()[i1];
         backwards_ex_outputs[0] = &tmp_output2.arr;
 
         for (int i = 0; i < backwards_attrs.num_outputs; i++)
-          back_req[0] = kAddTo;
+          back_req[0] = kWriteTo;
 
         std::cout << "Backwards: ";
         PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
