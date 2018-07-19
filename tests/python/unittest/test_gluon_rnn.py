@@ -55,7 +55,7 @@ def check_contrib_rnn(cell_type, num_states):
     state_shape = (batch_size, hidden_size)
     states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
     layer = TestRNNLayer(cell_type, hidden_size)
-    layer.initialize(ctx=mx.cpu(0))
+    layer.initialize(ctx=default_context())
     res1 = layer(rnn_data, states)
     params1 = layer.collect_params()
     orig_params1 = copy.deepcopy(params1)
@@ -72,7 +72,7 @@ def check_contrib_rnn(cell_type, num_states):
             {'static_alloc': True, 'static_shape': True} ]
     for config in configs:
         layer = TestRNNLayer(cell_type, hidden_size)
-        layer.initialize(ctx=mx.cpu(0))
+        layer.initialize(ctx=default_context())
         layer.hybridize(**config)
         res2 = layer(rnn_data, states)
         params2 = layer.collect_params()
