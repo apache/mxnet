@@ -20,15 +20,12 @@ import os
 
 def test_engine_import():
     import mxnet
-
     def test_import():
         try:
-            reload         # Python 2
+            reload(mxnet)  # Python 2
         except NameError:  # Python 3
-            import sys
-            assert False, 'Python ' + sys.version
             from importlib import reload
-        reload(mxnet)
+            reload(mxnet)
     engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
 
     for type in engine_types:
