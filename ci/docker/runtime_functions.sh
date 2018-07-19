@@ -480,6 +480,7 @@ build_ubuntu_gpu_tensorrt() {
         USE_CUDA=1                                          \
         USE_CUDA_PATH=/usr/local/cuda                       \
         USE_CUDNN=1                                         \
+        USE_OPENCV=0                                        \
         USE_DIST_KVSTORE=0                                  \
         USE_TENSORRT=1                                      \
         USE_JEMALLOC=0                                      \
