@@ -71,6 +71,9 @@ inline void Softmax(Stream<cpu> *s, DType *in, DType *out,
     }
 
     DType sum = DType(0);
+    // By default temperature is 1.0, and only in reinforcement training
+    // users would set it to other values. 
+    // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
     if (temperature == 1.0) {
       for (index_t j = 0; j < M; ++j) {
         sum += std::exp(in[base + j*sa] - mmax);
@@ -128,6 +131,9 @@ inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
       sum += OP1::Map(ograd[base + j*sa], out[base + j*sa]);
     }
 
+    // By default temperature is 1.0, and only in reinforcement training
+    // users would set it to other values. 
+    // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
     if (temperature == 1.0) {
       for (index_t j = 0; j < M; ++j) {
         igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
