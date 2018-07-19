@@ -1164,28 +1164,59 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   }
 
 //  if (forward_attrs.requests.find(OpReqType::kWriteInplace) != forward_attrs.requests.end()) {
-//    for (auto &dispatch : dispatches) {
-//      in_arrs = GetTestInputArrays();
-//      for (auto &arr : in_arrs) {
-//        // If the array is a view, we shouldn't write data to it.
-//        if (arr.arr.IsView())
-//          continue;
-//        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-//        for (int i = 0; i < forward_attrs.num_inputs; i++)
-//          inputs[i] = &arr.arr;
-//        for (int i = 0; i < forward_attrs.num_outputs; i++) {
-//          req[i] = kWriteInplace;
-//          outputs[i] = &arr.arr;
-//        }
-//        PrintVerifyMsg(orig, arr);
-//        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs, outputs, req,
-//                                    dispatch, mxnet::OpStatePtr());
-//        Engine::Get()->WaitForAll();
-//        std::vector<NDArray *> orig_inputs(forward_attrs.num_inputs);
-//        for (int i = 0; i < forward_attrs.num_inputs; i++)
-//          orig_inputs[i] = &orig.arr;
-//        verify_fn(orig_inputs, outputs);
+//    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+//      auto in_arr = in_arrs[i1];
+//
+//      if (in_arr.arr.shape().ndim() != 4)
+//        continue;
+//
+//      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+//        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+//        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
 //      }
+//
+//      for (int i = 0; i < forward_attrs.num_inputs; i++)
+//        inputs[i] = &in_arr.arr;
+//
+//      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+//        req[i] = kWriteTo;
+//        outputs[i] = &out_arrs[i][output_i].arr;
+//        ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+//      }
+//      Imperative::Get()->set_is_training(true);
+//
+//      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+//      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+//                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+//      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+//                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+//      Engine::Get()->WaitForAll();
+//      AssertEqual(outputs, ex_outputs);
+//
+//      // backwards test performed same time since output needed
+//      backwards_input[0] = outputs[0];  // output grad
+//      backwards_input[1] = inputs[0];  // input
+//      backwards_input[2] = outputs[1];  // out norm
+//
+//      auto tmp_output = GetTestInputArrays()[i1];
+//      backwards_outputs[0] = &tmp_output.arr;
+//
+//      auto tmp_output2 = GetTestInputArrays()[i1];
+//      backwards_ex_outputs[0] = &tmp_output2.arr;
+//
+//      for (int i = 0; i < backwards_attrs.num_outputs; i++)
+//        back_req[0] = kWriteTo;
+//
+//      std::cout << "Backwards: ";
+//      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+//      Imperative::Get()->InvokeOp(
+//          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+//          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+//      Imperative::Get()->InvokeOp(
+//          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+//          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+//      Engine::Get()->WaitForAll();
+//      AssertEqual(backwards_outputs, backwards_ex_outputs);
 //    }
 //  }
 
@@ -1206,7 +1237,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
-          req[i] = kWriteTo;
+          req[i] = kAddTo;
           outputs[i] = &out_arrs[i][output_i].arr;
           ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
         }
@@ -1232,7 +1263,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         backwards_ex_outputs[0] = &tmp_output2.arr;
 
         for (int i = 0; i < backwards_attrs.num_outputs; i++)
-          back_req[0] = kWriteTo;
+          back_req[0] = kAddTo;
 
         std::cout << "Backwards: ";
         PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
