@@ -91,10 +91,10 @@ void MKLDNNPoolingFwd::SetNewMem(const NDArray in_data,
                                  const OpReqType req,
                                  const mxnet::NDArray *workspace) {
   auto input_mem = in_data.GetMKLDNNData();
-  auto out_mem_t = CreateMKLDNNMem(out_data, fwd_pd_->dst_primitive_desc(), req);
+  output_mem_t = CreateMKLDNNMem(out_data, fwd_pd_->dst_primitive_desc(), req);
   // mkldnn::memory
   this->data_->set_data_handle(input_mem->get_data_handle());
-  this->out_->set_data_handle(out_mem_t.second->get_data_handle());
+  this->out_->set_data_handle(output_mem_t.second->get_data_handle());
   if (this->with_workspace_ && workspace == nullptr) {
     LOG(FATAL) << "MKLDNN Pooling: incorrect workspace input";
   }
