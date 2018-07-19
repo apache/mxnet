@@ -508,6 +508,18 @@ struct WhileLoopParam : public dmlc::Parameter<WhileLoopParam> {
     DMLC_DECLARE_FIELD(func_var_locs)
     .describe("The locations of loop_vars among func's inputs.");
   }
+  template <typename T>
+  bool sync_in_out(std::vector<T> *in,
+                   std::vector<T> *out,
+                   std::function<bool(const T &)> is_empty) const {
+    for (int i = this->num_out_data; i < this->num_outputs; ++i) {
+      // each out->at(i) is a params, loop_var
+      T &x = in->at(this->func_input_locs[this->func_var_locs[i - this->num_out_data]]);
+      T &y = out->at(i);
+      fill_value(&x, &y, is_empty(x), is_empty(y));
+    }
+    return true;
+  }
 };  // struct WhileLoopParam
 
 DMLC_REGISTER_PARAMETER(WhileLoopParam);
@@ -540,83 +552,7 @@ class WhileLoopState: public LoopState {
       }
     }
   }
-  template <typename T>
-  static void extract_by_loc(const std::vector<T> &array,
-                             const nnvm::Tuple<dim_t> input_locs,
-                             std::vector<T> *out) {
-    out->clear();
-    out->reserve(input_locs.ndim());
-    for (dim_t i : input_locs) {
-      out->push_back(array[i]);
-    }
-  }
-  static bool is_shape_udf(const TShape &x) {
-    return x.ndim() == 0 || x.Size() == 0;
-  }
-  static bool is_stype_udf(const int &x) {
-    return x == exec::kBadStorageID;
-  }
-  static bool is_type_udf(const int &x) {
-    return x == -1;
-  }
-  template <typename T>
-  static bool fill_value(T *x, T *y, bool x_empty, bool y_empty) {
-    if (*x == *y || (x_empty && y_empty)) {
-      return true;
-    }
-    if (!x_empty && !y_empty) {
-      return false;
-    }
-    if (x_empty) {
-      *x = *y;
-    }
-    if (y_empty) {
-      *y = *x;
-    }
-    return true;
-  }
-  template <typename T>
-  static bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
-                         std::vector<T> *in,
-                         std::vector<T> *subg_in,
-                         std::function<bool(const T &)> is_empty) {
-    for (size_t i = 0; i < input_locs.ndim(); ++i) {
-      T &x = in->at(input_locs[i]);
-      T &y = subg_in->at(i);
-      fill_value(&x, &y, is_empty(x), is_empty(y));
-    }
-    return true;
-  }
-  template <typename T>
-  static bool sync_in_out(const WhileLoopParam& params,
-                          std::vector<T> *in,
-                          std::vector<T> *out,
-                          std::function<bool(const T &)> is_empty) {
-    for (int i = params.num_out_data; i < params.num_outputs; ++i) {
-      // each out->at(i) is a params, loop_var
-      T &x = in->at(params.func_input_locs[params.func_var_locs[i - params.num_out_data]]);
-      T &y = out->at(i);
-      fill_value(&x, &y, is_empty(x), is_empty(y));
-    }
-    return true;
-  }
 };
-
-template <typename T>
-T _asscalar(const NDArray &a) {
-  CHECK_EQ(a.shape().Size(), 1U);
-  T data;
-  a.SyncCopyToCPU(&data, 1U);
-  return data;
-}
-
-bool as_bool_scalar(const NDArray &a) {
-  MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
-    return static_cast<bool>(_asscalar<DType>(a));
-  });
-  LOG(FATAL) << "Unknown dtype";
-  return false;
-}
 
 static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
                                   const OpContext& ctx,
@@ -648,13 +584,13 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     CHECK_EQ(params.max_iterations, outputs[i].shape()[0]);
   // construct inputs and outputs for cond
   std::vector<NDArray> cond_inputs, cond_outputs = {NDArray()};
-  WhileLoopState::extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
+  extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
   std::vector<NDArray*> cond_input_ptr, cond_output_ptr;
   to_ptr_vec(cond_inputs, &cond_input_ptr);
   to_ptr_vec(cond_outputs, &cond_output_ptr);
   // construct inputs and outputs for func
   std::vector<NDArray> func_inputs, func_outputs(outputs.size());
-  WhileLoopState::extract_by_loc(inputs, params.func_input_locs, &func_inputs);
+  extract_by_loc(inputs, params.func_input_locs, &func_inputs);
   for (size_t &step = state.n_iterations = 0; step < (size_t) params.max_iterations; ++step) {
     state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
     if (!as_bool_scalar(*cond_output_ptr[0])) {
@@ -716,8 +652,8 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
   }
   std::vector<NDArray> outputs;
   std::vector<OpReqType> req;
-  WhileLoopState::extract_by_loc(_outputs, params.func_input_locs, &outputs);
-  WhileLoopState::extract_by_loc(_req, params.func_input_locs, &req);
+  extract_by_loc(_outputs, params.func_input_locs, &outputs);
+  extract_by_loc(_req, params.func_input_locs, &req);
   if (state.n_iterations == 0) {
     for (int i = params.num_out_data; i < params.num_outputs; ++i) {
       int j = params.func_var_locs[i - params.num_out_data];
@@ -796,7 +732,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *out_shape) {
   using nnvm::ShapeVector;
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const TShape &)> is_udf = WhileLoopState::is_shape_udf;
+  static const std::function<bool(const TShape &)> is_udf = is_shape_udf;
   // sanity checks
   CHECK_EQ(in_shape->size() + 2U, (size_t) params.num_args);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
@@ -811,7 +747,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     // create subg_in
     ShapeVector subg_in;
     ShapeVector &subg_out = *_subg_out;
-    WhileLoopState::extract_by_loc(*in_shape, input_locs, &subg_in);
+    extract_by_loc(*in_shape, input_locs, &subg_in);
     // create an indexed graph
     nnvm::Graph g;
     g.outputs = subg->outputs;
@@ -884,35 +820,35 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
   };
   ShapeVector cond_out_shape{TShape(1U)};  // this means: [(1, )]
   ShapeVector func_out_shape(params.num_outputs);
-  CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
+  CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, params.cond_input_locs, 0, false);
-  CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
+  CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   bool succ_1 = infer_subg(attrs.subgraphs[1], &func_out_shape, \
                            params.func_input_locs, params.num_out_data, true);
-  CHECK(WhileLoopState::sync_in_out(params, in_shape, out_shape, is_udf));
+  CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   return succ_0 && succ_1;
 }
 
 static bool WhileLoopType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_type, std::vector<int> *out_type) {
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = WhileLoopState::is_type_udf;
+  static const std::function<bool(const int &)> is_udf = is_type_udf;
   CHECK_EQ(in_type->size() + 2U, (size_t) params.num_args);
   CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   std::vector<int> cond_in_type;
   std::vector<int> func_in_type;
-  WhileLoopState::extract_by_loc(*in_type, params.cond_input_locs, &cond_in_type);
-  WhileLoopState::extract_by_loc(*in_type, params.func_input_locs, &func_in_type);
+  extract_by_loc(*in_type, params.cond_input_locs, &cond_in_type);
+  extract_by_loc(*in_type, params.func_input_locs, &func_in_type);
   std::vector<int> cond_out_type = {0};
-  CHECK(WhileLoopState::sync_in_out(params, in_type, out_type, is_udf));
+  CHECK(params.sync_in_out(in_type, out_type, is_udf));
   bool succ_0 = InferSubgraphDataType(*attrs.subgraphs[0], &cond_in_type, &cond_out_type);
-  CHECK(WhileLoopState::sync_in_out(params, in_type, out_type, is_udf));
-  CHECK(WhileLoopState::sync_in_in(params.cond_input_locs, in_type, &cond_in_type, is_udf));
+  CHECK(params.sync_in_out(in_type, out_type, is_udf));
+  CHECK(sync_in_in(params.cond_input_locs, in_type, &cond_in_type, is_udf));
   bool succ_1 = InferSubgraphDataType(*attrs.subgraphs[1], &func_in_type, out_type);
-  CHECK(WhileLoopState::sync_in_out(params, in_type, out_type, is_udf));
-  CHECK(WhileLoopState::sync_in_in(params.func_input_locs, in_type, &func_in_type, is_udf));
+  CHECK(params.sync_in_out(in_type, out_type, is_udf));
+  CHECK(sync_in_in(params.func_input_locs, in_type, &func_in_type, is_udf));
   return succ_0 && succ_1;
 }
 
@@ -922,28 +858,28 @@ static bool WhileLoopStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const int &)> is_udf = WhileLoopState::is_stype_udf;
+  static const std::function<bool(const int &)> is_udf = is_stype_udf;
   CHECK_EQ(in_attrs->size() + 2U, (size_t) params.num_args);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 2U);
   CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
   std::vector<int> cond_in_attrs;
   std::vector<int> func_in_attrs;
-  WhileLoopState::extract_by_loc(*in_attrs, params.cond_input_locs, &cond_in_attrs);
-  WhileLoopState::extract_by_loc(*in_attrs, params.func_input_locs, &func_in_attrs);
+  extract_by_loc(*in_attrs, params.cond_input_locs, &cond_in_attrs);
+  extract_by_loc(*in_attrs, params.func_input_locs, &func_in_attrs);
   std::vector<int> cond_out_attrs = {kDefaultStorage};
   DispatchMode cond_mode = DispatchMode::kUndefined;
   DispatchMode func_mode = DispatchMode::kUndefined;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
+  CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
   bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, \
                                      &cond_mode, &cond_in_attrs, &cond_out_attrs);
-  CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
-  CHECK(WhileLoopState::sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
+  CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
+  CHECK(sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
   bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, \
                                      &func_mode, &func_in_attrs, out_attrs);
-  CHECK(WhileLoopState::sync_in_out(params, in_attrs, out_attrs, is_udf));
-  CHECK(WhileLoopState::sync_in_in(params.func_input_locs, in_attrs, &func_in_attrs, is_udf));
+  CHECK(params.sync_in_out(in_attrs, out_attrs, is_udf));
+  CHECK(sync_in_in(params.func_input_locs, in_attrs, &func_in_attrs, is_udf));
   return succ_0 && succ_1;
 }
 
@@ -972,6 +908,342 @@ static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
 static std::vector<nnvm::NodeEntry>
 WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_while_loop"};
+  std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
+  entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
+  return entries;
+}
+
+struct IfelseParam : public dmlc::Parameter<IfelseParam> {
+  int num_args;
+  int num_outputs;
+  nnvm::Tuple<dim_t> cond_input_locs;
+  nnvm::Tuple<dim_t> then_input_locs;
+  nnvm::Tuple<dim_t> else_input_locs;
+  DMLC_DECLARE_PARAMETER(IfelseParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(3)
+    .describe("Number of input arguments, including cond, then and else as three symbol inputs.");
+    DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
+    .describe("The number of outputs of the subgraph.");
+    DMLC_DECLARE_FIELD(cond_input_locs)
+    .describe("The locations of cond's inputs in the given inputs.");
+    DMLC_DECLARE_FIELD(then_input_locs)
+    .describe("The locations of then's inputs in the given inputs.");
+    DMLC_DECLARE_FIELD(else_input_locs)
+    .describe("The locations of else's inputs in the given inputs.");
+  }
+};  // struct IfelseParam
+
+DMLC_REGISTER_PARAMETER(IfelseParam);
+
+class IfelseState {
+ public:
+  IfelseParam params;
+  CachedOpPtr cond_op;
+  LoopState then_branch;
+  LoopState else_branch;
+  int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
+
+  IfelseState(const IfelseParam &params,
+              const Symbol &cond,
+              const Symbol &then_sym,
+              const Symbol &else_sym):
+              params(params),
+              cond_op(LoopState::MakeSharedOp(cond)),
+              then_branch(then_sym),
+              else_branch(else_sym),
+              branch_selection(-1) {
+  }
+};
+
+static void IfelseComputeExCPU(const OpStatePtr& state_ptr,
+                               const OpContext& ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
+  // The argument `inputs' are loop_vars and other inputs
+  // loop_vars are stored in stored in `loop_vars_locs'
+  // The argument `outputs' are output and new_loop_vars
+  // [0: num_out_data) are outputs at each step.
+  // [num_out_data: ) are new_loop_vars
+  IfelseState &state = state_ptr.get_state<IfelseState>();
+  const IfelseParam& params = state.params;
+  // a helper function, converting std::vector<NDArray> to std::vector<NDArray*>
+  const auto to_ptr_vec = [](std::vector<NDArray> &in, std::vector<NDArray*> *out) {
+    out->clear();
+    out->reserve(in.size());
+    std::transform(std::begin(in),
+                   std::end(in),
+                   std::back_inserter(*out),
+                   [](NDArray &a) {return &a;});
+  };
+  // sanity checks
+  CHECK_EQ(inputs.size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(outputs.size(), (size_t) params.num_outputs);
+  CHECK_EQ(outputs.size(), req.size());
+  // construct inputs and outputs for cond
+  std::vector<NDArray> cond_inputs;
+  std::vector<NDArray> cond_outputs = {NDArray()};
+  std::vector<NDArray*> cond_input_ptr;
+  std::vector<NDArray*> cond_output_ptr;
+  extract_by_loc(inputs, params.cond_input_locs, &cond_inputs);
+  to_ptr_vec(cond_inputs, &cond_input_ptr);
+  to_ptr_vec(cond_outputs, &cond_output_ptr);
+  int &branch_selection = state.branch_selection;
+  // run cond
+  state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
+  branch_selection = as_bool_scalar(*cond_output_ptr[0]);
+  // select the right branch
+  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+                                            ? params.then_input_locs
+                                            : params.else_input_locs;
+  LoopState &loop_state = branch_selection
+                        ? state.then_branch
+                        : state.else_branch;
+  // extract inputs for the branch
+  std::vector<NDArray> func_inputs;
+  extract_by_loc(inputs, func_input_locs, &func_inputs);
+  loop_state.Forward(0, func_inputs, req, outputs, ctx.need_grad);
+}
+
+static void IfelseGradComputeExCPU(const OpStatePtr& state_ptr,
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& _req,
+                                   const std::vector<NDArray>& outputs) {
+  IfelseState &state = state_ptr.get_state<IfelseState>();
+  const IfelseParam& params = state.params;
+  // sanity checks
+  CHECK_EQ(outputs.size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(outputs.size(), _req.size());
+  // select the right branch
+  int branch_selection = state.branch_selection;
+  CHECK_NE(branch_selection, -1);
+  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+                                            ? params.then_input_locs
+                                            : params.else_input_locs;
+  LoopState &loop_state = branch_selection
+                        ? state.then_branch
+                        : state.else_branch;
+  // construct parameters
+  std::vector<NDArray> ograds(inputs.begin(), inputs.begin() + params.num_outputs);
+  std::vector<OpReqType> req;
+  extract_by_loc(_req, func_input_locs, &req);
+  std::vector<NDArray> igrads;
+  extract_by_loc(outputs, func_input_locs, &igrads);
+  loop_state.Backward(0, ograds, req, igrads);
+  loop_state.Cleanup();
+}
+
+static bool IfelseShape(const nnvm::NodeAttrs& attrs,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape) {
+  using nnvm::ShapeVector;
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  static const std::function<bool(const TShape &)> is_udf = is_shape_udf;
+  // sanity checks
+  CHECK_EQ(in_shape->size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
+  CHECK_EQ(attrs.subgraphs.size(), 3U);
+  CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
+  CHECK_EQ(attrs.subgraphs[1]->outputs.size(), attrs.subgraphs[2]->outputs.size());
+  // infer shape for cond, then and else
+  auto infer_subg = [&params, in_shape, out_shape](std::shared_ptr<Symbol> subg,
+                                                   ShapeVector *_subg_out,
+                                                   const nnvm::Tuple<dim_t> &input_locs,
+                                                   bool fill_out_shape) {
+    // create subg_in
+    ShapeVector subg_in;
+    ShapeVector &subg_out = *_subg_out;
+    extract_by_loc(*in_shape, input_locs, &subg_in);
+    // create an indexed graph
+    nnvm::Graph g;
+    g.outputs = subg->outputs;
+    const auto& idx = g.indexed_graph();
+    // get input nodes
+    const auto &input_nids = idx.input_nodes();
+    // sanity checks
+    CHECK_EQ(input_nids.size(), subg_in.size());
+    CHECK_EQ(g.outputs.size(), subg_out.size());
+    CHECK_EQ(idx.input_nodes().size(), subg_in.size());
+    CHECK_EQ(idx.outputs().size(), subg_out.size());
+    // create empty shapes for inference
+    ShapeVector shapes(idx.num_node_entries());
+    // copy subg_in into shapes
+    for (size_t i = 0; i < subg_in.size(); ++i) {
+      auto eid = idx.entry_id(input_nids[i], 0);
+      shapes[eid] = subg_in[i];
+    }
+    // copy subg_out into shapes
+    for (size_t i = 0; i < subg_out.size(); ++i) {
+      auto eid = idx.entry_id(g.outputs[i]);
+      shapes[eid] = subg_out[i];
+    }
+    // copy done, call InferShape
+    g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
+    g = exec::InferShape(std::move(g));
+    // now `shapes' won't be used anymore, use new_shapes instead
+    const auto& new_shapes = g.GetAttr<ShapeVector>("shape");
+    // copy subg_in back to in_shape
+    for (size_t i = 0; i < subg_in.size(); ++i) {
+      auto eid = idx.entry_id(input_nids[i], 0);
+      auto g_out_shape = new_shapes[eid];
+      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+        // when the shape is not fully inferred
+        continue;
+      }
+      SHAPE_ASSIGN_CHECK(*in_shape, input_locs[i], g_out_shape);
+    }
+    if (!fill_out_shape) {
+      return true;
+    }
+    // copy subg_out back to out_shape
+    for (size_t i = 0; i < g.outputs.size(); ++i) {
+      auto eid = idx.entry_id(g.outputs[i]);
+      auto g_out_shape = new_shapes[eid];
+      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+        // when the shape is not fully inferred
+        continue;
+      }
+      SHAPE_ASSIGN_CHECK(*out_shape, i, g_out_shape);
+    }
+    return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
+  };
+  ShapeVector cond_out_shape{TShape(1U)};  // this means: [(1, )]
+  ShapeVector then_out_shape(params.num_outputs);
+  ShapeVector else_out_shape(params.num_outputs);
+  bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, \
+                           params.cond_input_locs, false);
+  bool succ_1 = infer_subg(attrs.subgraphs[1], &then_out_shape, \
+                           params.then_input_locs, true);
+  bool succ_2 = infer_subg(attrs.subgraphs[2], &else_out_shape, \
+                           params.else_input_locs, true);
+  return succ_0 && succ_1 && succ_2;
+}
+
+static bool IfelseType(const nnvm::NodeAttrs& attrs,
+                       std::vector<int> *in_type,
+                       std::vector<int> *out_type) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  static const std::function<bool(const int &)> is_udf = is_type_udf;
+  CHECK_EQ(in_type->size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
+  CHECK_EQ(attrs.subgraphs.size(), 3U);
+  CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
+  CHECK_EQ(attrs.subgraphs[1]->outputs.size(), attrs.subgraphs[2]->outputs.size());
+  std::vector<int> cond_in_type;
+  std::vector<int> then_in_type;
+  std::vector<int> else_in_type;
+  extract_by_loc(*in_type, params.cond_input_locs, &cond_in_type);
+  extract_by_loc(*in_type, params.then_input_locs, &then_in_type);
+  extract_by_loc(*in_type, params.else_input_locs, &else_in_type);
+  std::vector<int> cond_out_type = {0};
+  bool succ_0 = InferSubgraphDataType(*attrs.subgraphs[0], &cond_in_type, &cond_out_type);
+  CHECK(sync_in_in(params.cond_input_locs, in_type, &cond_in_type, is_udf));
+  bool succ_1 = InferSubgraphDataType(*attrs.subgraphs[1], &then_in_type, out_type);
+  CHECK(sync_in_in(params.then_input_locs, in_type, &then_in_type, is_udf));
+  bool succ_2 = InferSubgraphDataType(*attrs.subgraphs[2], &else_in_type, out_type);
+  CHECK(sync_in_in(params.else_input_locs, in_type, &else_in_type, is_udf));
+  return succ_0 && succ_1 && succ_2;
+}
+
+static bool IfelseStorageType(const nnvm::NodeAttrs& attrs,
+                              const int dev_mask,
+                              DispatchMode* dispatch_mode,
+                              std::vector<int> *in_attrs,
+                              std::vector<int> *out_attrs) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  static const std::function<bool(const int &)> is_udf = is_stype_udf;
+  CHECK_EQ(in_attrs->size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
+  CHECK_EQ(attrs.subgraphs.size(), 3U);
+  CHECK_EQ(attrs.subgraphs[0]->outputs.size(), 1U);
+  CHECK_EQ(attrs.subgraphs[1]->outputs.size(), attrs.subgraphs[2]->outputs.size());
+  std::vector<int> cond_in_attrs;
+  std::vector<int> then_in_attrs;
+  std::vector<int> else_in_attrs;
+  extract_by_loc(*in_attrs, params.cond_input_locs, &cond_in_attrs);
+  extract_by_loc(*in_attrs, params.then_input_locs, &then_in_attrs);
+  extract_by_loc(*in_attrs, params.else_input_locs, &else_in_attrs);
+  std::vector<int> cond_out_attrs = {kDefaultStorage};
+  DispatchMode cond_mode = DispatchMode::kUndefined;
+  DispatchMode then_mode = DispatchMode::kUndefined;
+  DispatchMode else_mode = DispatchMode::kUndefined;
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  bool succ_0 = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask, \
+                                     &cond_mode, &cond_in_attrs, &cond_out_attrs);
+  CHECK(sync_in_in(params.cond_input_locs, in_attrs, &cond_in_attrs, is_udf));
+  bool succ_1 = InferSubgraphStorage(*attrs.subgraphs[1], dev_mask, \
+                                     &then_mode, &then_in_attrs, out_attrs);
+  CHECK(sync_in_in(params.then_input_locs, in_attrs, &then_in_attrs, is_udf));
+  bool succ_2 = InferSubgraphStorage(*attrs.subgraphs[2], dev_mask, \
+                                     &else_mode, &else_in_attrs, out_attrs);
+  CHECK(sync_in_in(params.else_input_locs, in_attrs, &else_in_attrs, is_udf));
+  return succ_0 && succ_1 && succ_2;
+}
+
+static bool BackwardIfelseStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
+  CHECK_EQ(attrs.subgraphs.size(), 3U);
+  static const std::function<bool(const int &)> is_udf = is_stype_udf;
+  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const nnvm::Tuple<dim_t> &input_locs) {
+    // A. first construct subg_in_attrs
+    // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
+    std::vector<int> subg_in_attrs;
+    size_t num_elts = params.num_outputs * 2 + input_locs.ndim();
+    subg_in_attrs.reserve(num_elts);
+    // part 1. subg_bwd_out (copy)
+    subg_in_attrs.insert(subg_in_attrs.end(),
+                         in_attrs->begin(),
+                         in_attrs->begin() + params.num_outputs);
+    // part 2. subg_fwd_in (extract)
+    std::vector<int> fwd_in(in_attrs->begin() + params.num_outputs,
+                            in_attrs->begin() + params.num_outputs + params.num_args - 3);
+    std::vector<int> subg_fwd_in;
+    extract_by_loc(fwd_in, input_locs, &subg_fwd_in);
+    subg_in_attrs.insert(subg_in_attrs.end(),
+                         subg_fwd_in.begin(),
+                         subg_fwd_in.end());
+    // part 3. subg_fwd_out (copy)
+    subg_in_attrs.insert(subg_in_attrs.end(),
+                         in_attrs->begin() + params.num_outputs + params.num_args - 3,
+                         in_attrs->end());
+    // check correctness of the number of elements
+    CHECK_EQ(subg_in_attrs.size(), num_elts);
+    // B. then we construct subg_out_attrs by extracting from out_attrs
+    std::vector<int> subg_out_attrs;
+    extract_by_loc(*out_attrs, input_locs, &subg_out_attrs);
+    // then we construct the subgraph and do inference
+    CachedOp op(*subg, {});
+    bool ret = op.BackwardStorageType(attrs, dev_mask, dispatch_mode, \
+                                      &subg_in_attrs, &subg_out_attrs);
+    CHECK(sync_in_in(input_locs, out_attrs, &subg_out_attrs, is_udf));
+    return ret;
+  };
+  bool succ_0 = sub_pass(attrs.subgraphs[1], params.then_input_locs);
+  bool succ_1 = sub_pass(attrs.subgraphs[2], params.else_input_locs);
+  return succ_0 && succ_1;
+}
+
+static OpStatePtr CreateIfelseState(const NodeAttrs& attrs,
+                                    Context ctx,
+                                    const std::vector<TShape>& ishape,
+                                    const std::vector<int>& itype) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  return OpStatePtr::Create<IfelseState>(
+    params,
+    *attrs.subgraphs[0],
+    *attrs.subgraphs[1],
+    *attrs.subgraphs[2]);
+}
+
+static std::vector<nnvm::NodeEntry>
+IfelseGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  ElemwiseGradUseInOut fgrad{"_backward_ifelse"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
   return entries;
@@ -1100,5 +1372,68 @@ NNVM_REGISTER_OP(_backward_while_loop)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopGradComputeExCPU)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopGradComputeExCPU);
 
+NNVM_REGISTER_OP(_ifelse)
+.MXNET_DESCRIBE("Run a if-then-else using user-defined condition and computation")
+.set_attr_parser(ParamParser<IfelseParam>)
+.set_attr<FInferStorageType>("FInferStorageType", IfelseStorageType)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  return params.num_outputs;
+})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  std::vector<std::string> names;
+  names.reserve(params.num_args);
+  names.push_back("cond");
+  names.push_back("then_branch");
+  names.push_back("else_branch");
+  for (int i = 3; i < params.num_args; ++i)
+    names.push_back("data" + std::to_string(i - 3));
+  return names;
+})
+.set_attr<nnvm::FInputGraph>("FInputGraph",
+    [](const NodeAttrs& attrs) {
+  return std::vector<uint32_t>{0, 1, 2};
+})
+.set_attr<nnvm::FGradient>("FGradient", IfelseGradient)
+.set_attr<FCreateOpState>("FCreateOpState", CreateIfelseState)
+.set_attr<nnvm::FInferShape>("FInferShape", IfelseShape)
+.set_attr<nnvm::FInferType>("FInferType", IfelseType)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", IfelseComputeExCPU)
+.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
+  return ExecType::kSubgraphExec;
+})
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", IfelseComputeExCPU)
+.set_attr<std::string>("key_var_num_args", "num_args")
+.add_argument("cond", "Symbol", "Input graph for the condition.")
+.add_argument("then_branch", "Symbol", "Input graph for the then branch.")
+.add_argument("else_branch", "Symbol", "Input graph for the else branch.")
+.add_argument("data", "NDArray-or-Symbol[]",
+              "The input arrays that include data arrays and states.")
+.add_arguments(IfelseParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_ifelse)
+.set_num_inputs([](const NodeAttrs& attrs){
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  return params.num_outputs * 2 + params.num_args - 3;
+})
+.set_num_outputs([](const NodeAttrs& attrs){
+  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  return params.num_args - 3;
+})
+.set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
+  return ExecType::kSubgraphExec;
+})
+.set_attr<FInferStorageType>("FInferStorageType", BackwardIfelseStorageType)
+.set_attr_parser(ParamParser<IfelseParam>)
+.set_attr<bool>("TIsLayerOpBackward", true)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", IfelseGradComputeExCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", IfelseGradComputeExCPU);
 }  // namespace op
 }  // namespace mxnet
