@@ -259,11 +259,6 @@ class InplaceABN(BatchNorm):
     center: bool, default True
         If True, add offset of `beta` to normalized tensor.
         If False, `beta` is ignored.
-    scale: bool, default True
-        If True, multiply by `gamma`. If False, `gamma` is not used.
-        When the next layer is linear (also e.g. `nn.relu`),
-        this can be disabled since the scaling
-        will be done by the next layer.
     use_global_stats: bool, default False
         If True, use global moving statistics instead of local batch-norm. This will force
         change batch-norm into a scale shift operator.
@@ -291,15 +286,15 @@ class InplaceABN(BatchNorm):
           
     """
     def __init__(self, in_channels=0, sync=False, num_devices=None, slope=0.01,
-                 momentum=0.9, epsilon=1e-5, center=True, scale=True, use_global_stats=False,
+                 momentum=0.9, epsilon=1e-5, center=True, use_global_stats=False,
                  beta_initializer='zeros', gamma_initializer='ones', running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
-        super(InplaceABN, self).__init__(1, momentum, epsilon, center, scale, use_global_stats,
+        super(InplaceABN, self).__init__(1, momentum, epsilon, center, True, use_global_stats,
                                             beta_initializer, gamma_initializer,
                                             running_mean_initializer, running_variance_initializer,
                                             in_channels, **kwargs)
         num_devices = 1 if not sync else self._get_num_devices() if num_devices is None else num_devices
-        self._kwargs = {'eps': epsilon, 'momentum': momentum, 'fix_gamma': not scale,
+        self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'use_global_stats': use_global_stats, 'sync' : sync,
                         'ndev': num_devices, 'slope' : slope, 'key': self.prefix}
 

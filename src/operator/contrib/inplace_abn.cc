@@ -102,7 +102,7 @@ Reference:
 .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
 .add_arguments(InplaceABNParam::__FIELDS__());
 
-NNVM_REGISTER_OP(InplaceABN)
+NNVM_REGISTER_OP(_contrib_InplaceABN)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;

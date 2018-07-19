@@ -67,7 +67,7 @@ struct InplaceABNParam : public dmlc::Parameter<InplaceABNParam> {
               "This will force change batch-norm into a scale shift operator.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output All,normal mean and var");
-    DMLC_DECLARE_FIELD(slope).set_default(0.25f)
+    DMLC_DECLARE_FIELD(slope).set_default(0.01f)
     .describe("Init slope for the activation. (For leaky and elu only)");
     DMLC_DECLARE_FIELD(sync).set_default(false)
     .describe("Syncrhonize the BatchNorm using global mean and var.");
@@ -167,14 +167,15 @@ class InplaceABN : public Operator {
       }
 
       var = var-F<mshadow_op::square>(mean);
-      data = broadcast<1>(gamma, out.shape_) *
+      Assign(out, req[inplaceabn::kOut], broadcast<1>(gamma, out.shape_) *
              (data - broadcast<1>(mean, data.shape_)) /
              F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-             broadcast<1>(beta, out.shape_);
+             broadcast<1>(beta, out.shape_));
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
-          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, real_t(param_.slope));
+          s, out.size(0) * out.size(1) * out.size(2) * out.size(3), out.dptr_,
+          out.dptr_, real_t(param_.slope));
       });
     } else {
       data = broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
@@ -184,7 +185,8 @@ class InplaceABN : public Operator {
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
-          s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_, real_t(param_.slope));
+          s, out.size(0) * out.size(1) * out.size(2) * out.size(3), out.dptr_,
+          data.dptr_, real_t(param_.slope));
       });
     }
   }
@@ -222,9 +224,11 @@ class InplaceABN : public Operator {
     }
     // recover y and dl/dy
     mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
-      s, data.size(0) * data.size(1) * data.size(2), data.dptr_, data.dptr_, real_t(1.0 / param_.slope));
+      s, data.size(0) * data.size(1) * data.size(2) * data.size(3), data.dptr_,
+      data.dptr_, real_t(1.0f / param_.slope));
     mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
-      s, grad.size(0) * grad.size(1) * grad.size(2), grad.dptr_, grad.dptr_, real_t(param_.slope));
+      s, grad.size(0) * grad.size(1) * grad.size(2) * grad.size(3), grad.dptr_,
+      grad.dptr_, real_t(param_.slope));
 
     Tensor<xpu, 1> mean = out_data[inplaceabn::kMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> var = out_data[inplaceabn::kVar].get<xpu, 1, real_t>(s);
@@ -287,7 +291,6 @@ class InplaceABN : public Operator {
                broadcast<1>(1.0f * gamma * sumGrad / F<mshadow_op::square_root>(var + param_.eps),
                             data.shape_) -
              scale *
-               // broadcast<1>(1.0f * beta / gamma, data.shape_) *
                broadcast<1>(1.0f * beta / gamma / F<mshadow_op::square_root>(var + param_.eps),
                             data.shape_) *
                (broadcast<1>(sumProd, data.shape_) -
@@ -383,7 +386,7 @@ class InplaceABNProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "InplaceABN";
+    return "_contrib_InplaceABN";
   }
 
   std::vector<int> DeclareBackwardDependency(

@@ -1996,29 +1996,53 @@ def test_sync_batchnorm():
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
 
-def _check_inplace_abn(input, layer1, layer2):
+def _check_inplace_abn(input, ndev=1):
+    ch = input.shape[1]
+    sync = ndev > 1
+    ctx_list = mx.gpu(0) if ndev <=1 else [mx.cpu(0) for _ in range(num_devices)]
+    layer1 = mx.gluon.nn.Sequential()
+    layer1.add(mx.gluon.nn.BatchNorm(in_channels=ch))
+    layer1.add(mx.gluon.nn.LeakyReLU(alpha=0.01))
+    layer2 = mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01)
+
+    layer1.initialize(ctx_list)
+    layer2.initialize(ctx_list)
+
+    input1 = input.copy()
+    input2 = input.copy()
+    input1.attach_grad()
+    input2.attach_grad()
     with mx.autograd.record():
-        output1 = layer1(input)
-        output2 = layer2(input)
+        output1 = layer1(input1)
+        output2 = layer2(input2)
+        assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
         loss1 = (output1 ** 2).sum()
         loss2 = (output2 ** 2).sum()
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
     assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
+    #print('output1', output1)
+    #print('output2', output2)
+    # print('loss1', loss1)
+    # print('loss2', loss2)
+    # print('input1.grad', input1.grad)
+    # print('input2.grad', input2.grad)
+
 def test_inpabn():
-    layer1 = mx.gluon.nn.Sequential()
-    ch = 4
-    layer1.add(mx.gluon.nn.BatchNorm(in_channels=ch))
-    layer1.add(mx.gluon.nn.LeakyReLU(0.01))
-    layer2 = mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01)
-    layer1.initialize()
-    layer2.initialize()
+    def get_num_devices():
+        for i in range(100):
+            try:
+                mx.nd.zeros((1,), ctx=mx.gpu(i))
+            except:
+                return i
     for i in range(10):
-        _check_inplace_abn(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                           layer1, layer2)
+        _check_inplace_abn(mx.nd.random.uniform(shape=(4, 4, 4, 4)))
+    # no need to use SyncBN with 1 gpu
+    if get_num_devices() < 2:
+        return
+    ndev = 2
 
 if __name__ == '__main__':
     test_inpabn()
