@@ -34,6 +34,13 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 
+#if MXNET_USE_TENSORRT
+#include <onnx/onnx.pb.h>
+#include <NvInfer.h>
+#include "./onnx_to_tensorrt.h"
+#include "../operator/contrib/tensorrt-inl.h"
+#endif  // MNET_USE_TENSORRT
+
 namespace mxnet {
 namespace exec {
 
@@ -782,8 +789,13 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           << arg_name << " for the current executor";
         aux_state_vec->emplace_back(aux_nd);
       } else {
-        EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
-                         inferred_dtype, aux_state_vec);
+        auto it = shared_buffer->find(arg_name);
+        if ( it != shared_buffer->end() ) {
+          aux_state_vec->push_back(std::move(it->second.Copy(aux_state_ctxes[aux_top])));
+        } else {
+          aux_state_vec->push_back(std::move(InitZeros(inferred_stype, inferred_shape,
+                                                    aux_state_ctxes[aux_top], inferred_dtype)));
+        }
       }  // if (has_shared_exec)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
@@ -843,9 +855,25 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       } else {  // !shared_arg_names.count(arg_name)
         // model parameter, row_sparse ndarray sharing enabled
         bool enable_row_sparse_sharing = true;
-        in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
-                                                 inferred_stype, in_arg_ctxes[arg_top],
-                                                 shared_buffer, enable_row_sparse_sharing));
+        if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
+            #if MXNET_USE_TENSORRT
+                auto it = shared_buffer->find(arg_name);
+                if (it != shared_buffer->end()) {
+                  in_arg_vec->push_back(std::move(it->second.Copy(in_arg_ctxes[arg_top])));
+                } else {
+                  in_arg_vec->push_back(std::move(InitZeros(inferred_stype, inferred_shape,
+                                                  in_arg_ctxes[arg_top], inferred_dtype)));
+                }
+            #else
+                LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set, but MXNet wasn't "
+                  << "built with TensorRT. Add USE_TENSORRT = 1 in config.mk";
+            #endif
+        } else {
+            in_arg_vec->emplace_back(ReshapeOrCreate(
+                arg_name, inferred_shape, inferred_dtype, inferred_stype,
+                in_arg_ctxes[arg_top], shared_buffer, enable_row_sparse_sharing));
+        }
+
         // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
@@ -942,6 +970,107 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
 }
 
 /*!
+ * \brief This function is triggered after each tensorrt subgraph replacement pass.
+ * Reset arguments of GraphExecutor::Init(...) as some variables (weights and biases)
+ * are absorbed into the TRT engine it also it rerun attributes inferences accordingly
+ * to the new topology.
+ */
+Graph GraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
+                                 const std::map<std::string, Context> &ctx_map,
+                                 std::vector<Context> *in_arg_ctxes,
+                                 std::vector<Context> *arg_grad_ctxes,
+                                 std::vector<Context> *aux_state_ctxes,
+                                 std::vector<OpReqType> *grad_req_types,
+                                 std::unordered_map<std::string, TShape> *arg_shape_map,
+                                 std::unordered_map<std::string, int> *arg_dtype_map,
+                                 std::unordered_map<std::string, int> *arg_stype_map,
+                                 std::unordered_map<std::string, NDArray> *params_map) {
+  std::unordered_set<std::string> to_remove_params;
+  for (auto& el : *params_map) {
+    to_remove_params.insert(el.first);
+  }
+
+  DFSVisit(g.outputs, [&to_remove_params](const nnvm::NodePtr n) {
+    to_remove_params.erase(n->attrs.name);
+  });
+
+  for (auto& el : to_remove_params) {
+    params_map->erase(el);
+    arg_shape_map->erase(el);
+    arg_dtype_map->erase(el);
+    arg_stype_map->erase(el);
+  }
+  const auto &idx = g.indexed_graph();
+  num_forward_inputs_ = idx.input_nodes().size();
+  in_arg_ctxes->resize(num_forward_inputs_ - idx.mutable_input_nodes().size());
+  arg_grad_ctxes->resize(num_forward_inputs_ - idx.mutable_input_nodes().size());
+  grad_req_types->resize(num_forward_inputs_ - idx.mutable_input_nodes().size());
+  aux_state_ctxes->resize(idx.mutable_input_nodes().size());
+
+  // create "device" and "context" attrs for the graph
+  g = AssignContext(g, default_ctx, ctx_map, *in_arg_ctxes, *arg_grad_ctxes,
+                    *aux_state_ctxes, *grad_req_types, num_forward_inputs_,
+                    num_forward_outputs_);
+
+  // get number of nodes used in forward pass
+  num_forward_nodes_ = 0;
+  for (size_t i = 0; i < num_forward_outputs_; ++i) {
+    num_forward_nodes_ = std::max(
+        num_forward_nodes_, static_cast<size_t>(idx.outputs()[i].node_id + 1));
+  }
+  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  nnvm::DTypeVector arg_dtypes(idx.input_nodes().size(), -1);
+  StorageTypeVector arg_stypes(idx.input_nodes().size(), kUndefinedStorage);
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string &name = idx[nid].source->attrs.name;
+    auto it1 = arg_shape_map->find(name);
+    if (arg_shape_map->end() != it1) {
+      arg_shapes[i] = it1->second;
+    }
+    auto it2 = arg_dtype_map->find(name);
+    if (arg_dtype_map->end() != it2) {
+      arg_dtypes[i] = it2->second;
+    }
+    auto it3 = arg_stype_map->find(name);
+    if (arg_stype_map->end() != it3) {
+      arg_stypes[i] = it3->second;
+    }
+  }
+  g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+  if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
+    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
+                          g.GetAttr<nnvm::ShapeVector>("shape"));
+  }
+
+  g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
+  if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
+    HandleInferTypeError(num_forward_inputs_, g.indexed_graph(),
+                         g.GetAttr<nnvm::DTypeVector>("dtype"));
+  }
+
+  g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
+
+  if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
+    HandleInferStorageTypeError(num_forward_inputs_, g.indexed_graph(),
+                                g.GetAttr<StorageTypeVector>("storage_type"));
+  }
+
+  return g;
+}
+
+/*!
+ * \brief Return the "optimized" symbol contained in _graph.
+ * For optimization pass such as TensorRT pass
+ */
+nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+    graph_.outputs.begin() + num_forward_outputs_);
+  return ret;
+}
+
+/*!
  * \brief GraphExecutor initializer for simple bind flow in
  * which only certain input shapes and dtypes are provided by users.
  * The initializer uses these shapes and dtypes to perform
@@ -958,22 +1087,22 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
 void GraphExecutor::Init(nnvm::Symbol symbol,
                          const Context& default_ctx,
                          const std::map<std::string, Context>& ctx_map,
-                         const std::vector<Context>& in_arg_ctxes,
-                         const std::vector<Context>& arg_grad_ctxes,
-                         const std::vector<Context>& aux_state_ctxes,
-                         const std::unordered_map<std::string, TShape>& arg_shape_map,
-                         const std::unordered_map<std::string, int>& arg_dtype_map,
-                         const std::unordered_map<std::string, int>& arg_stype_map,
-                         const std::vector<OpReqType>& grad_req_types,
-                         const std::unordered_set<std::string>& shared_arg_names,
+                         std::vector<Context>* in_arg_ctxes,
+                         std::vector<Context>* arg_grad_ctxes,
+                         std::vector<Context>* aux_state_ctxes,
+                         std::unordered_map<std::string, TShape>* arg_shape_map,
+                         std::unordered_map<std::string, int>* arg_dtype_map,
+                         std::unordered_map<std::string, int>* arg_stype_map,
+                         std::vector<OpReqType>* grad_req_types,
+                         std::unordered_set<std::string>* shared_arg_names,
                          std::vector<NDArray>* in_arg_vec,
                          std::vector<NDArray>* arg_grad_vec,
                          std::vector<NDArray>* aux_state_vec,
                          std::unordered_map<std::string, NDArray>* shared_buffer,
                          Executor* shared_exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
-  nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
-                            aux_state_ctxes, grad_req_types);
+  nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, *in_arg_ctxes, *arg_grad_ctxes,
+                            *aux_state_ctxes, *grad_req_types);
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
   // should do this differently.
@@ -987,16 +1116,16 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& name = idx[nid].source->attrs.name;
-    auto it1 = arg_shape_map.find(name);
-    if (arg_shape_map.end() != it1) {
+    auto it1 = arg_shape_map->find(name);
+    if (arg_shape_map->end() != it1) {
       arg_shapes[i] = it1->second;
     }
-    auto it2 = arg_dtype_map.find(name);
-    if (arg_dtype_map.end() != it2) {
+    auto it2 = arg_dtype_map->find(name);
+    if (arg_dtype_map->end() != it2) {
       arg_dtypes[i] = it2->second;
     }
-    auto it3 = arg_stype_map.find(name);
-    if (arg_stype_map.end() != it3) {
+    auto it3 = arg_stype_map->find(name);
+    if (arg_stype_map->end() != it3) {
       arg_stypes[i] = it3->second;
     }
   }
@@ -1018,20 +1147,37 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                                 g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
+  if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
+      #if MXNET_USE_TENSORRT
+          auto trt_groups = GetTrtCompatibleSubsets(g, shared_buffer);
+          for (auto trt_group : trt_groups) {
+            if (trt_group.size() > 1) {
+              g = ReplaceSubgraph(std::move(g), trt_group, shared_buffer);
+              g = ReinitGraph(std::move(g), default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
+                              aux_state_ctxes, grad_req_types, arg_shape_map, arg_dtype_map,
+                              arg_stype_map, shared_buffer);
+            }
+          }
+      #else
+          LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set but MXNet wasn't "
+            << "built with TensorRT. Add USE_TENSORRT = 1 to config.mk";
+      #endif
+  }
+
   // Create in_args, arg_grads, and aux_states using
   // the inferred shapes and dtypes.
   if (nullptr == shared_buffer) {  // regular simple bind
-    InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
+    InitArguments(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
                   g.GetAttr<StorageTypeVector>("storage_type"),
-                  in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-                  grad_req_types, in_arg_vec, arg_grad_vec, aux_state_vec);
+                  *in_arg_ctxes, *arg_grad_ctxes, *aux_state_ctxes,
+                  *grad_req_types, in_arg_vec, arg_grad_vec, aux_state_vec);
   } else {  // simple bind using shared data arrays and shared_exec
-    InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
+    InitArguments(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
                   g.GetAttr<StorageTypeVector>("storage_type"),
-                  in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-                  grad_req_types, shared_arg_names, shared_exec,
+                  *in_arg_ctxes, *arg_grad_ctxes, *aux_state_ctxes,
+                  *grad_req_types, *shared_arg_names, shared_exec,
                   shared_buffer, in_arg_vec, arg_grad_vec, aux_state_vec);
   }
   // The above code of shape and dtype inferences and argument
@@ -1704,14 +1850,14 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
 Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                const Context& default_ctx,
                                const std::map<std::string, Context>& group2ctx,
-                               const std::vector<Context>& in_arg_ctxes,
-                               const std::vector<Context>& arg_grad_ctxes,
-                               const std::vector<Context>& aux_state_ctxes,
-                               const std::unordered_map<std::string, TShape>& arg_shape_map,
-                               const std::unordered_map<std::string, int>& arg_dtype_map,
-                               const std::unordered_map<std::string, int>& arg_stype_map,
-                               const std::vector<OpReqType>& grad_req_types,
-                               const std::unordered_set<std::string>& shared_arg_names,
+                               std::vector<Context>* in_arg_ctxes,
+                               std::vector<Context>* arg_grad_ctxes,
+                               std::vector<Context>* aux_state_ctxes,
+                               std::unordered_map<std::string, TShape>* arg_shape_map,
+                               std::unordered_map<std::string, int>* arg_dtype_map,
+                               std::unordered_map<std::string, int>* arg_stype_map,
+                               std::vector<OpReqType>* grad_req_types,
+                               std::unordered_set<std::string>* shared_arg_names,
                                std::vector<NDArray>* in_args,
                                std::vector<NDArray>* arg_grads,
                                std::vector<NDArray>* aux_states,
