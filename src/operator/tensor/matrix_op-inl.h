@@ -676,15 +676,17 @@ inline void GetIndexRange(const TShape& dshape,
 inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     const int e, const int s,
                                     TShape* oshape) {
-  if (s > 0) {
-    CHECK_LE(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                   << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (e - b - 1) / s + 1;
-  } else {
-    CHECK_LE(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                   << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (b - e - 1) / (-s) + 1;
-  }
+  if (e != b) {
+    if (s > 0) {
+      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                     << e << ", and step[" << i << "]=" << s << " is invalid";
+      (*oshape)[i] = (e - b - 1) / s + 1;
+    } else {
+      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                     << e << ", and step[" << i << "]=" << s << " is invalid";
+      (*oshape)[i] = (b - e - 1) / (-s) + 1;
+    }
+  } // else leave oshape[i] as 0 for partial infer
 }
 
 inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
