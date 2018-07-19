@@ -92,8 +92,8 @@ class MKLDNNLRNFwd {
 
   ~MKLDNNLRNFwd() {}
 
-  void SetDataHandle(const NDArray &data,
-                     const NDArray &output);
+  void SetNewMem(const NDArray &data,
+                 const NDArray &output);
 
   void Execute();
 
@@ -102,6 +102,7 @@ class MKLDNNLRNFwd {
   std::shared_ptr<mkldnn::memory> in_mem;
   std::shared_ptr<mkldnn::memory> out_mem;
   std::shared_ptr<mkldnn::memory> ws_mem;
+  mkldnn_output_t output_mem_t;
   bool is_train;
 
  private:
@@ -131,8 +132,8 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
   }
 }
 
-void MKLDNNLRNFwd::SetDataHandle(const NDArray &in_data,
-                                 const NDArray &out_data) {
+void MKLDNNLRNFwd::SetNewMem(const NDArray &in_data,
+                             const NDArray &out_data) {
   const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
   mkldnn::memory *out_data_mem  = const_cast<NDArray&>(out_data).CreateMKLDNNData(
                        this->out_mem->get_primitive_desc());
@@ -188,7 +189,7 @@ void MKLDNNLRNForward(const OpContext &ctx,
                       const OpReqType req,
                       const NDArray &out_data) {
   MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_data);
-  fwd.SetDataHandle(in_data, out_data);
+  fwd.SetNewMem(in_data, out_data);
   fwd.Execute();
 }
 
