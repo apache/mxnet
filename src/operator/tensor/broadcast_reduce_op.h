@@ -1005,9 +1005,8 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
     ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::abs>(
           ctx, inputs, req, outputs, small);
   } else if (param.ord == 2) {
-    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
-    SqRootForL2<xpu>(ctx, req[0], outputs[0]);
   }
 }
 

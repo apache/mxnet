@@ -200,7 +200,7 @@ sub test_buffer_load
         mx->nd->save($fname, \%hash);
         $buf_data = join('',IO::File->new($fname)->getlines);
         my $hash2 = mx->nd->load_frombuffer($buf_data);
-        ok(%hash == %$hash2);
+        ok(keys %hash == keys %$hash2);
         while(my ($k, $v) = each %hash)
         {
             ok(same($v->aspdl, $hash2->{$k}->aspdl));

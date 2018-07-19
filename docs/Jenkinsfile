@@ -51,7 +51,7 @@ try {
       ws('workspace/docs') {
         init_git()
         timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py -p ubuntu_cpu /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
+            sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --docker-build-retries 3 /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.tag_default} ${params.domain}"
             archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
             build 'restricted-website-publish'
         }

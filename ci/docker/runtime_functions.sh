@@ -452,6 +452,23 @@ build_ubuntu_gpu_mkldnn() {
     report_ccache_usage
 }
 
+build_ubuntu_gpu_mkldnn_nocudnn() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_CUDA=1                    \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_CUDNN=0                   \
+        -j$(nproc)
+
+    report_ccache_usage
+}
+
 build_ubuntu_gpu_cuda91_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
@@ -611,6 +628,14 @@ unittest_ubuntu_python3_gpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
+unittest_ubuntu_python3_gpu_nocudnn() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_OFF_TEST_ONLY=true
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python2_gpu()
 unittest_ubuntu_python2_quantization_gpu() {
@@ -638,13 +663,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_ubuntu_cpu_scala() {
     set -ex
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalatest USE_BLAS=openblas USE_DIST_KVSTORE=1
-}
-
-unittest_ubuntu_gpu_scala() {
-    set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1
-    make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1
 }
 
 unittest_ubuntu_cpu_clojure() {
@@ -724,15 +743,35 @@ integrationtest_ubuntu_gpu_cpp_package() {
     cpp-package/tests/ci_test.sh
 }
 
+integrationtest_ubuntu_cpu_dist_kvstore() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_USE_OPERATOR_TUNING=0
+    cd tests/nightly/
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+}
+
+integrationtest_ubuntu_gpu_scala() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+}
+
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
 }
 
 test_ubuntu_cpu_python2() {

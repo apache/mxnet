@@ -26,6 +26,7 @@ COPY install/ubuntu_rat.sh /work/
 RUN /work/ubuntu_rat.sh
 
 ARG USER_ID=0
+ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 

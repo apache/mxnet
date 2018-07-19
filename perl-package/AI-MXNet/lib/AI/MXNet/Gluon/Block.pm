@@ -24,7 +24,7 @@ package AI::MXNet::Gluon::BlockScope;
 use AI::MXNet::Function::Parameters;
 my $_current;
 use Mouse;
-has '_block'      => (is => 'ro', init_arg => 'block');
+has '_block'      => (is => 'ro', init_arg => 'block', weak_ref => 1);
 has [qw/_counter _old_scope
     _name_scope/] => (is => 'rw', init_arg => undef);
 
@@ -700,12 +700,12 @@ method call(@args)
 {
     for my $hook ($self->_forward_pre_hooks->values)
     {
-        $hook->($self, @args);
+        $hook->($self, \@args);
     }
     my @out = $self->forward(@args);
     for my $hook ($self->_forward_hooks->values)
     {
-        $hook->($self, @args);
+        $hook->($self, \@args, \@out);
     }
     return wantarray ? @out : $out[0];
 }
@@ -731,6 +731,119 @@ method register(Str $container)
     my $sub_name = $self->_class_name;
     no strict 'refs';
     *{$container.'_::'.$sub_name} = sub { shift; $self->new(@_) };
+}
+
+=head2 summary
+
+        Print the summary of the model's output and parameters.
+
+        The network must have been initialized, and must not have been hybridized.
+
+        Parameters
+        ----------
+        @inputs : objects
+            Any inputs that the model supports. For any tensor in the input, only
+            AI::MXNet::NDArray is supported.
+=cut
+
+method summary(@inputs)
+{
+    my $summary = Hash::Ordered->new;
+    my %seen;
+    my @hooks;
+    my $stringify;
+    $stringify = sub {
+        my $in = shift;
+        if(ref($in) eq 'ARRAY')
+        {
+            return '('.join(', ', map { $stringify->($_) } @$in).')';
+        }
+         else
+        {
+            return "$in";
+        }
+    };
+    my $_get_shape_str = sub { my ($args) = @_;
+        $args = $args->[0] if(ref $args eq 'ARRAY' and @$args == 1);
+        my ($flat_args, $fmts) = __PACKAGE__->_flatten($args);
+        my $flat_arg_shapes = [map { (blessed($_) and $_->isa('AI::MXNet::NDArray')) ? $_->shape : $_ } @$flat_args];
+        my $shapes = (__PACKAGE__->_regroup($flat_arg_shapes, $fmts))[0];
+        my $shape_str = $stringify->($shapes);
+        $shape_str =~ s/L//g;
+        return $shape_str;
+    };
+
+    my $_register_summary_hook = sub { my ($block) = @_;
+        unless(not $block->isa('AI::MXNet::Gluon:::HybridBlock') or not $block->_active)
+        {
+            confess("\"${\ $block->name }\" must not be hybridized to print summary.");
+        }
+        my $_summary_hook = sub { my ($block, undef, $outputs) = @_;
+            my $class_name = $block->_class_name;
+            my $block_idx = $summary->keys - 1;
+
+            my $m_key = sprintf('%s-%i', $class_name, $block_idx+1);
+            $summary->set($m_key, Hash::Ordered->new);
+            $summary->get($m_key)->set('output_shape', $_get_shape_str->($outputs));
+
+            my $params = 0;
+            $summary->get($m_key)->set('trainable', 0);
+            $summary->get($m_key)->set('shared', 0);
+            for my $p (values %{ $block->_reg_params })
+            {
+                $params += $p->data->size;
+                $summary->get($m_key)->set('trainable', $summary->get($m_key)->get('trainable') + ($p->grad_req eq 'null' ? 0 : $p->data->size));
+                if(exists $seen{$p})
+                {
+                    $summary->get($m_key)->set('shared', $summary->get($m_key)->get('shared') + $p->data->size);
+                }
+                else
+                {
+                    $seen{$p} = 1;
+                }
+            }
+            $summary->get($m_key)->set('n_params', $params);
+        };
+
+        if(not $block->isa('AI::MXNet::Gluon::NN::Sequential') and not $block->isa('AI::MXNet::Gluon::NN::HybridSequential'))
+        {
+            push @hooks, $block->register_forward_hook($_summary_hook);
+        }
+    };
+
+    my $input = Hash::Ordered->new;
+    $summary->set('Input', $input);
+    $input->set('output_shape', $_get_shape_str->(\@inputs));
+    $input->set('n_params', 0);
+    $input->set('trainable', 0);
+    $input->set('shared', 0);
+
+    eval {
+        $self->apply($_register_summary_hook);
+        $self->(@inputs);
+
+        my $line_format = "%20s  %42s %15s\n";
+        print (('-')x80, "\n");
+        printf($line_format, 'Layer (type)', 'Output Shape', 'Param #');
+        print (('=')x80, "\n");
+        my $total_params = 0;
+        my $trainable_params = 0;
+        my $shared_params = 0;
+        for my $layer ($summary->keys)
+        {
+            printf($line_format, $layer, $summary->get($layer)->get('output_shape'), $summary->get($layer)->get('n_params'));
+            $total_params += $summary->get($layer)->get('n_params');
+            $trainable_params += $summary->get($layer)->get('trainable');
+            $shared_params += $summary->get($layer)->get('shared');
+        }
+        print (('=')x80, "\n");
+        print "Total params: $total_params\n";
+        print "Trainable params: $trainable_params\n";
+        print "Non-trainable params: ", $total_params - $trainable_params, "\n";
+        print "Shared params: $shared_params\n";
+        print (('-')x80, "\n");
+    };
+    $_->detach for @hooks;
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon');

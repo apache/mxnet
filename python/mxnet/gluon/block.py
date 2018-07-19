@@ -333,14 +333,19 @@ class Block(object):
         ndarray.save(filename, arg_dict)
 
     def save_params(self, filename):
-        """[Deprecated] Please use save_parameters.
+        """[Deprecated] Please use save_parameters. Note that if you want load
+        from SymbolBlock later, please use export instead.
 
         Save parameters to file.
 
         filename : str
             Path to file.
         """
-        warnings.warn("save_params is deprecated. Please use save_parameters.")
+        warnings.warn("save_params is deprecated. Please use save_parameters. "
+                      "Note that if you want load from SymbolBlock later, please "
+                      "use export instead. For details, see "
+                      "https://mxnet.incubator.apache.org/tutorials/gluon/save_lo"
+                      "ad_params.html")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)
         except ValueError as e:
@@ -613,7 +618,7 @@ class Block(object):
                 params = 0
                 summary[m_key]['trainable'] = 0
                 summary[m_key]['shared'] = 0
-                for p in block._reg_params.values():
+                for p in block.params.values():
                     params += p.data().size
                     summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
                     if p in seen:

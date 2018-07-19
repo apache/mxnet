@@ -31,14 +31,14 @@
 
 ;;; Load the MNIST datasets
 (def train-data (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
-                                       :label (str data-dir "train-labels-idx1-ubyte")
-                                       :label-name "softmax_label"
-                                       :input-shape [784]
-                                       :batch-size 10
-                                       :shuffle true
-                                       :flat true
-                                       :silent false
-                                       :seed 10}))
+                                   :label (str data-dir "train-labels-idx1-ubyte")
+                                   :label-name "softmax_label"
+                                   :input-shape [784]
+                                   :batch-size 10
+                                   :shuffle true
+                                   :flat true
+                                   :silent false
+                                   :seed 10}))
 
 (def test-data (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
                                   :label (str data-dir "t10k-labels-idx1-ubyte")
@@ -60,7 +60,7 @@
       act2 (sym/activation "relu2" {:data fc2 :act-type "relu"})
       fc3 (sym/fully-connected "fc3" {:data act2 :num-hidden 10})
       out (sym/softmax-output "softmax" {:data fc3})]
-  out) ;=> #object[ml.dmlc.mxnet.Symbol 0x2c7b036b "ml.dmlc.mxnet.Symbol@2c7b036b"]
+  out) ;=>#object[org.apache.mxnet.Symbol 0x1f43a406 "org.apache.mxnet.Symbol@1f43a406"]
 
 ;; You can also use as-> for easier threading
 
@@ -94,17 +94,17 @@
 ;;Modules provide high-level APIs for training, predicting, and evaluating. To fit a module, call the `fit` function with some DataIters:
 
 (def mod (m/fit (m/module out) {:train-data train-data :eval-data test-data :num-epoch 1}))
-;; INFO  ml.dmlc.mxnet.module.BaseModule: Epoch[0] Train-accuracy=0.12521666
-;; INFO  ml.dmlc.mxnet.module.BaseModule: Epoch[0] Time cost=7863
-;; INFO  ml.dmlc.mxnet.module.BaseModule: Epoch[0] Validation-accuracy=0.2227
+;; Epoch  0  Train- [accuracy 0.12521666]
+;; Epoch  0  Time cost- 8392
+;; Epoch  0  Validation-  [accuracy 0.2227]
 
 
 ;; You can pass in batch-end callbacks using batch-end-callback and epoch-end callbacks using epoch-end-callback in the `fit-params`. You can also set parameters using functions like in the fit-params like optimizer and eval-metric. To learn more about the fit-params, see the fit-param function options. To predict with a module, call `predict` with a DataIter:
 
 (def results (m/predict mod {:eval-data test-data}))
-(first results) ;=> #object[ml.dmlc.mxnet.NDArray 0x270236e5 "ml.dmlc.mxnet.NDArray@9180e594"]
+(first results) ;=>#object[org.apache.mxnet.NDArray 0x3540b6d3 "org.apache.mxnet.NDArray@a48686ec"]
 
-(first (ndarray/->vec (first results))) ;=> 0.099454574
+(first (ndarray/->vec (first results))) ;=>0.08261358
 
 ;;The module collects and returns all of the prediction results. For more details about the format of the return values, see the documentation for the `predict` function.
 
@@ -131,20 +131,24 @@
 
 (let [save-prefix "my-model"]
   (doseq [epoch-num (range 3)]
-        (mx-io/do-batches train-data (fn [batch
+    (mx-io/do-batches train-data (fn [batch
                                           ;; do something
-                                          ]))
-        (m/save-checkpoint mod {:prefix save-prefix :epoch epoch-num :save-opt-states true})))
+]))
+    (m/save-checkpoint mod {:prefix save-prefix :epoch epoch-num :save-opt-states true})))
 
-;; INFO  ml.dmlc.mxnet.module.Module: Saved checkpoint to my-model-0000.params
-;; INFO  ml.dmlc.mxnet.module.Module: Saved optimizer state to my-model-0000.states
-;; INFO  ml.dmlc.mxnet.module.Module: Saved checkpoint to my-model-0001.params
-;; INFO  ml.dmlc.mxnet.module.Module: Saved optimizer state to my-model-0001.states
+;; INFO  org.apache.mxnet.module.Module: Saved checkpoint to my-model-0000.params
+;; INFO  org.apache.mxnet.module.Module: Saved optimizer state to my-model-0000.states
+;; INFO  org.apache.mxnet.module.Module: Saved checkpoint to my-model-0001.params
+;; INFO  org.apache.mxnet.module.Module: Saved optimizer state to my-model-0001.states
+;; INFO  org.apache.mxnet.module.Module: Saved checkpoint to my-model-0002.params
+;; INFO  org.apache.mxnet.module.Module: Saved optimizer state to my-model-0002.states
+
 
 ;;To load the saved module parameters, call the `load-checkpoint` function:
 
 (def new-mod (m/load-checkpoint {:prefix "my-model" :epoch 1 :load-optimizer-states true}))
-;=> #object[ml.dmlc.mxnet.module.Module 0x352c8590 "ml.dmlc.mxnet.module.Module@352c8590"]
+
+new-mod ;=> #object[org.apache.mxnet.module.Module 0x5304d0f4 "org.apache.mxnet.module.Module@5304d0f4"]
 
 ;;To initialize parameters, Bind the symbols to construct executors first with bind function. Then, initialize the parameters and auxiliary states by calling `init-params` function.
 
@@ -155,28 +159,29 @@
 ;;To get current parameters, use `params`
 
 (let [[arg-params aux-params] (m/params new-mod)]
-     {:arg-params arg-params
-      :aux-params aux-params})
+  {:arg-params arg-params
+   :aux-params aux-params})
 
 ;; {:arg-params
 ;;  {"fc3_bias"
-;;   #object[ml.dmlc.mxnet.NDArray 0x4fcda4a0 "ml.dmlc.mxnet.NDArray@70276e89"],
+;;   #object[org.apache.mxnet.NDArray 0x39adc3b0 "org.apache.mxnet.NDArray@49caf426"],
 ;;   "fc2_weight"
-;;   #object[ml.dmlc.mxnet.NDArray 0x33651972 "ml.dmlc.mxnet.NDArray@b2a396eb"],
+;;   #object[org.apache.mxnet.NDArray 0x25baf623 "org.apache.mxnet.NDArray@a6c8f9ac"],
 ;;   "fc1_bias"
-;;   #object[ml.dmlc.mxnet.NDArray 0x3ad02326 "ml.dmlc.mxnet.NDArray@b4110d31"],
+;;   #object[org.apache.mxnet.NDArray 0x6e089973 "org.apache.mxnet.NDArray@9f91d6eb"],
 ;;   "fc3_weight"
-;;   #object[ml.dmlc.mxnet.NDArray 0x4c088d9b "ml.dmlc.mxnet.NDArray@19399ebd"],
+;;   #object[org.apache.mxnet.NDArray 0x756fd109 "org.apache.mxnet.NDArray@2dd0fe3c"],
 ;;   "fc2_bias"
-;;   #object[ml.dmlc.mxnet.NDArray 0x3cca519d "ml.dmlc.mxnet.NDArray@61012c"],
+;;   #object[org.apache.mxnet.NDArray 0x1dc69c8b "org.apache.mxnet.NDArray@d128f73d"],
 ;;   "fc1_weight"
-;;   #object[ml.dmlc.mxnet.NDArray 0xea5d61c "ml.dmlc.mxnet.NDArray@b16841b4"]},
+;;   #object[org.apache.mxnet.NDArray 0x20abc769 "org.apache.mxnet.NDArray@b8e1c5e8"]},
 ;;  :aux-params {}}
+
 
 ;;To assign parameter and aux state values, use `set-params` function.
 
 (m/set-params new-mod {:arg-params (m/arg-params new-mod) :aux-params (m/aux-params new-mod)})
- ;=>#object[ml.dmlc.mxnet.module.Module 0x11f34e1 "ml.dmlc.mxnet.module.Module@11f34e1"]
+;=> #object[org.apache.mxnet.module.Module 0x5304d0f4 "org.apache.mxnet.module.Module@5304d0f4"]
 
 ;;To resume training from a saved checkpoint, instead of calling `set-params`, directly call `fit`, passing the loaded parameters, so that `fit` knows to start from those parameters instead of initializing randomly:
 
@@ -188,32 +193,5 @@
                 :fit-params (-> (m/fit-params {:begin-epoch 1}))})
 
 ;;Create fit-params, and then use it to set `begin-epoch` so that fit() knows to resume from a saved epoch.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

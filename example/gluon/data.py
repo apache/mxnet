@@ -19,6 +19,7 @@
 """ data iterator for mnist """
 import os
 import random
+import tarfile
 import logging
 import tarfile
 logging.basicConfig(level=logging.INFO)

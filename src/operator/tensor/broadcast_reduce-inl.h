@@ -31,6 +31,7 @@
 #include <string>
 #include <utility>
 #include "../mshadow_op.h"
+#include "../operator_common.h"
 
 namespace mxnet {
 namespace op {
@@ -165,6 +166,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
     coord = unravel(k, rshape);
     Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]), residual);
   }
+  Reducer::Finalize(val, residual);
   assign(&small[idx], addto, val);
 }
 
@@ -204,16 +206,57 @@ void seq_reduce_compute(const int N, const int M, const bool addto,
   }
 }
 
-template<typename Reducer, int ndim, typename DType, typename OP>
-void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
+template <typename Reducer, int ndim, typename DType, typename OP>
+void seq_reduce_compute_extra_mem(const int N, const int M, const bool addto,
+                                  const DType* big, DType* small,
+                                  const Shape<ndim> bshape,
+                                  const Shape<ndim> sshape,
+                                  const Shape<ndim> rshape,
+                                  const Shape<ndim> rstride,
+                                  const index_t* ws_dptr) {
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int idx = 0; idx < N; ++idx) {
+    Shape<ndim> coord = unravel(idx, sshape);
+    int j = ravel(coord, bshape);
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
+    for (int k = 0; k < M; ++k) {
+      Reducer::Reduce(val, OP::Map(big[j + ws_dptr[k]]), residual);
+    }
+    assign(&small[idx], addto, val);
+  }
+}
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
             const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   Shape<ndim> rshape, rstride;
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
   int N = small.shape_.Size(), M = rshape.Size();
   seq_reduce_compute<Reducer, ndim, DType, OP>(
+    N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
+    big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+}
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
+                        const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
+  using namespace mxnet_op;
+  if (req == kNullOp) return;
+  Shape<ndim> rshape, rstride;
+  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
+  index_t* ws_dptr = reinterpret_cast<index_t*>(workspace.dptr_);
+  int N = small.shape_.Size(), M = rshape.Size();
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int k = 0; k < M; k++) {
+    Shape<ndim> coord = unravel(k, rshape);
+    ws_dptr[k] = dot(coord, rstride);
+  }
+
+  seq_reduce_compute_extra_mem<Reducer, ndim, DType, OP>(
     N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
-    small.shape_.get<ndim>(), rshape, rstride);
+    small.shape_.get<ndim>(), rshape, rstride, ws_dptr);
 }
 
 template<int ndim, typename DType>
@@ -256,6 +299,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const int idx, const int M, const bool ad
 
     Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
   }
+  Reducer::Finalize(val, residual);
   assign(&small[idx], addto, val);
 }
 

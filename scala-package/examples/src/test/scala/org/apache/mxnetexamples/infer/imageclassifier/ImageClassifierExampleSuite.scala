@@ -20,7 +20,9 @@ package org.apache.mxnetexamples.infer.imageclassifier
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.net.URL
 
+import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
 
 import sys.process.Process
@@ -38,23 +40,35 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
 
-    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
-      "/resnet-18/resnet-18-symbol.json " + "-P " + tempDirPath + "/resnet18/ -q") !
+    val baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models"
 
-    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models"
-      + "/resnet-18/resnet-18-0000.params " + "-P " + tempDirPath + "/resnet18/ -q") !
-
-    Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
-      "/resnet-18/synset.txt -P " + tempDirPath + "/resnet18/ -q") !
-
-    Process("wget " +
-      "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg " +
-      "-P " + tempDirPath + "/inputImages/") !
+    var tmpFile = new File(tempDirPath + "/resnet18/resnet-18-symbol.json")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-symbol.json"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/resnet18/resnet-18-0000.params")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-0000.params"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/resnet18/synset.txt")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/synset.txt"),
+        tmpFile)
+    }
+    tmpFile = new File(tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg")
+    if (!tmpFile.exists()) {
+      FileUtils.copyURLToFile(
+        new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"),
+        tmpFile
+      )
+    }
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/Pug-Cookie.jpg"
-    val inputImageDir = tempDirPath + File.separator + "inputImages/"
+      "inputImages/resnet18/Pug-Cookie.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/resnet18/"
 
     var context = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&

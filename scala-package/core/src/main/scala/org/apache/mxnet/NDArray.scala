@@ -28,10 +28,11 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.ref.WeakReference
 
 /**
- * NDArray API of mxnet
- */
+  * NDArray Object extends from NDArrayBase for abstract function signatures
+  * Main code will be generated during compile time through Macros
+  */
 @AddNDArrayFunctions(false)
-object NDArray {
+object NDArray extends NDArrayBase {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
@@ -553,11 +554,16 @@ object NDArray {
  * </b>
  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true) extends WarnIfNotDisposed {
+                             val writable: Boolean = true,
+                             addToCollector: Boolean = true) extends WarnIfNotDisposed {
+  if (addToCollector) {
+    NDArrayCollector.collect(this)
+  }
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
-  private var disposed = false
+  @volatile private var disposed = false
   def isDisposed: Boolean = disposed
 
   def serialize(): Array[Byte] = {

@@ -20,43 +20,58 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+import atexit
+import ctypes
+import inspect
 import os
 import sys
-import ctypes
-import atexit
 import warnings
-import inspect
+
 import numpy as np
+
 from . import libinfo
+
 warnings.filterwarnings('default', category=DeprecationWarning)
 
 __all__ = ['MXNetError']
 #----------------------------
 # library loading
 #----------------------------
-if sys.version_info[0] == 3:
-    string_types = str,
-    numeric_types = (float, int, np.generic)
-    integer_types = (int, np.int32, np.int64)
+
+# pylint: disable=pointless-statement
+try:
+    basestring
+    long
+except NameError:
+    basestring = str
+    long = int
+# pylint: enable=pointless-statement
+
+integer_types = (int, long, np.int32, np.int64)
+numeric_types = (float, int, long, np.generic)
+string_types = basestring,
+
+if sys.version_info[0] > 2:
     # this function is needed for python3
     # to convert ctypes.char_p .value back to python str
     py_str = lambda x: x.decode('utf-8')
 else:
-    string_types = basestring,
-    numeric_types = (float, int, long, np.generic)
-    integer_types = (int, long, np.int32, np.int64)
     py_str = lambda x: x
+
 
 class _NullType(object):
     """Placeholder for arguments"""
     def __repr__(self):
         return '_Null'
 
+
 _Null = _NullType()
+
 
 class MXNetError(Exception):
     """Error that will be throwed by all mxnet functions."""
     pass
+
 
 class NotImplementedForSymbol(MXNetError):
     """Error: Not implemented for symbol"""
@@ -65,6 +80,7 @@ class NotImplementedForSymbol(MXNetError):
         self.function = function.__name__
         self.alias = alias
         self.args = [str(type(a)) for a in args]
+
     def __str__(self):
         msg = 'Function {}'.format(self.function)
         if self.alias:
@@ -74,6 +90,7 @@ class NotImplementedForSymbol(MXNetError):
         msg += ' is not implemented for Symbol and only available in NDArray.'
         return msg
 
+
 class NotSupportedForSparseNDArray(MXNetError):
     """Error: Not supported for SparseNDArray"""
     def __init__(self, function, alias, *args):
@@ -81,6 +98,7 @@ class NotSupportedForSparseNDArray(MXNetError):
         self.function = function.__name__
         self.alias = alias
         self.args = [str(type(a)) for a in args]
+
     def __str__(self):
         msg = 'Function {}'.format(self.function)
         if self.alias:
@@ -90,6 +108,7 @@ class NotSupportedForSparseNDArray(MXNetError):
         msg += ' is not supported for SparseNDArray and only available in NDArray.'
         return msg
 
+
 class MXCallbackList(ctypes.Structure):
     """Structure that holds Callback information. Passed to CustomOpProp."""
     _fields_ = [
@@ -97,6 +116,7 @@ class MXCallbackList(ctypes.Structure):
         ('callbacks', ctypes.POINTER(ctypes.CFUNCTYPE(ctypes.c_int))),
         ('contexts', ctypes.POINTER(ctypes.c_void_p))
         ]
+
 
 # Please see: https://stackoverflow.com/questions/5189699/how-to-make-a-class-property
 class _MXClassPropertyDescriptor(object):
@@ -125,6 +145,7 @@ class _MXClassPropertyDescriptor(object):
         self.fset = func
         return self
 
+
 class _MXClassPropertyMetaClass(type):
     def __setattr__(cls, key, value):
         if key in cls.__dict__:
@@ -134,8 +155,9 @@ class _MXClassPropertyMetaClass(type):
 
         return super(_MXClassPropertyMetaClass, cls).__setattr__(key, value)
 
+
 # with_metaclass function obtained from: https://github.com/benjaminp/six/blob/master/six.py
-#pylint: disable=unused-argument
+# pylint: disable=unused-argument
 def with_metaclass(meta, *bases):
     """Create a base class with a metaclass."""
     # This requires a bit of explanation: the basic idea is to make a dummy
@@ -150,14 +172,14 @@ def with_metaclass(meta, *bases):
         def __prepare__(cls, name, this_bases):
             return meta.__prepare__(name, bases)
     return type.__new__(metaclass, 'temporary_class', (), {})
-#pylint: enable=unused-argument
+# pylint: enable=unused-argument
+
 
 def classproperty(func):
     if not isinstance(func, (classmethod, staticmethod)):
         func = classmethod(func)
 
     return _MXClassPropertyDescriptor(func)
-
 
 
 def _load_lib():
@@ -167,6 +189,7 @@ def _load_lib():
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
+
 
 # version number
 __version__ = libinfo.__version__
@@ -192,6 +215,8 @@ RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
 ProfileHandle = ctypes.c_void_p
+
+
 #----------------------------
 # helper function definition
 #----------------------------
@@ -346,6 +371,7 @@ def c_array_buf(ctype, buf):
     """
     return (ctype * len(buf)).from_buffer(buf)
 
+
 def c_handle_array(objs):
     """Create ctypes const void ** from a list of MXNet objects with handles.
 
@@ -362,6 +388,7 @@ def c_handle_array(objs):
     arr = (ctypes.c_void_p * len(objs))()
     arr[:] = [o.handle for o in objs]
     return arr
+
 
 def ctypes2buffer(cptr, length):
     """Convert ctypes pointer to buffer type.
@@ -385,6 +412,7 @@ def ctypes2buffer(cptr, length):
     if not ctypes.memmove(rptr, cptr, length):
         raise RuntimeError('memmove failed')
     return res
+
 
 def ctypes2numpy_shared(cptr, shape):
     """Convert a ctypes pointer to a numpy array.
@@ -455,6 +483,7 @@ def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
 def _notify_shutdown():
     """Notify MXNet about a shutdown."""
     check_call(_LIB.MXNotifyShutdown())
+
 
 atexit.register(_notify_shutdown)
 
@@ -585,7 +614,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
 
-
         if op_name_prefix == '_contrib_':
             hdl = OpHandle()
             check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
@@ -616,17 +644,18 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         """Return the generated module file based on module name."""
         path = os.path.dirname(__file__)
         module_path = module_name.split('.')
-        module_path[-1] = 'gen_'+module_path[-1]
+        module_path[-1] = 'gen_' + module_path[-1]
         file_name = os.path.join(path, '..', *module_path) + '.py'
         module_file = open(file_name, 'w')
         dependencies = {'symbol': ['from ._internal import SymbolBase',
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
-        module_file.write('# File content is auto-generated. Do not modify.'+os.linesep)
-        module_file.write('# pylint: skip-file'+os.linesep)
+        module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
+        module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))
         return module_file
+
     def write_all_str(module_file, module_all_list):
         """Write the proper __all__ based on available operators."""
         module_file.write(os.linesep)
