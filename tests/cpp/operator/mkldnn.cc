@@ -545,7 +545,7 @@ OpAttrs GetLRNBackwardsOp() {
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
 //  TODO: alexzai accept enum of what types of arrays to return back.
-//  need way to filter out ndarrays with different mkldnn dimensions formats as pool / lrn / conv won't work 
+//  need way to filter out ndarrays with different mkldnn dimensions formats as pool / lrn / conv won't work
 std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
@@ -1115,6 +1115,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       //  cannot pool / lrn / conv if dims are not default
       if (in_arr.arr.IsMKLDNNData())
+        continue;
+
+      if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims != in_arr.arr.shape().ndim())
         continue;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
