@@ -6838,6 +6838,10 @@ def test_activation():
                     lambda x: np.log(1. + np.exp(x)),
                     lambda x: 1. - 1 / (1 + np.exp(x)),
                     -3.0, 3.0],
+        'softsign': [lambda x: mx.sym.Activation(x, act_type='softsign'),
+                     lambda x: x / (1. + np.abs(x)),
+                     lambda x: 1. / np.square(1. + np.abs(x)),
+                     -3.0, 3.0],
     }
     # Loop over operators
     for name, op in unary_ops.items():

@@ -174,7 +174,7 @@ void ActivationGradComputeImpl(const nnvm::NodeAttrs& attrs, const OpContext &ct
       break;
     case activation::kSoftSign:
       ActivationBackward<xpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
-          ctx, inputs[0], inputs[1], req[0], outputs[0]);
+          ctx, inputs[0], inputs[2], req[0], outputs[0]);
       break;
     default:
       LOG(FATAL) << "unknown activation type";
