@@ -483,6 +483,7 @@ build_ubuntu_gpu_tensorrt() {
         USE_TENSORRT=1                                      \
         USE_JEMALLOC=0                                      \
         USE_GPERFTOOLS=0                                    \
+        DEBUG=1                                             \
         ONNX_NAMESPACE=onnx                                 \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
         -j$(nproc)
