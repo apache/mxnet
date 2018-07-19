@@ -15,17 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import numpy as np
 import mxnet as mx
 from mxnet import gluon
-import numpy as np
-import copy
-from numpy.testing import assert_allclose
-import unittest
-from mxnet.test_utils import almost_equal, default_context
-from numpy.testing import assert_allclose as assert_almost_equal  # This is more restrictive
+from numpy.testing import assert_allclose, assert_array_equal
+from mxnet.test_utils import *
 from mxnet.base import _as_list
+from common import with_seed
 
 
+@with_seed()
 def test_while_loop_simple_forward():
 
     class _TestBlock(gluon.HybridBlock):
@@ -244,13 +243,14 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         assert_almost_equal(imp_grad, sym_grad, rtol=1e-4, atol=1e-4)
 
 
+@with_seed()
 def test_while_loop_for_foreach():
 
     def make_true_cond():
-        return lambda loop_vars, _: (loop_vars[0] < 1e200).prod()
+        return lambda loop_vars, _: (loop_vars[0] < 1e35).prod()
 
     def make_false_cond():
-        return lambda loop_vars, _: (loop_vars[0] > 1e200).prod()
+        return lambda loop_vars, _: (loop_vars[0] > 1e35).prod()
 
     def make_for_cond(length):
         return lambda loop_vars, _: loop_vars[0] < length
@@ -613,8 +613,8 @@ def test_while_loop_for_foreach():
             (1, ),          # a
             (1, ),          # b
         ],
-        max_iterations=23,
-        n_steps=23,
+        max_iterations=5,
+        n_steps=5,
     )
     # Case 1.2.*
     case_1(
@@ -626,8 +626,8 @@ def test_while_loop_for_foreach():
             (2, 3, 4),      # a
             (2, 3, 4),      # b
         ],
-        max_iterations=31,
-        n_steps=31,
+        max_iterations=3,
+        n_steps=3,
     )
     # Case 1.3.*
     case_1(
@@ -644,7 +644,7 @@ def test_while_loop_for_foreach():
     )
     # Case 2.1.*
     case_2(
-        cond=make_for_cond(length=31),
+        cond=make_for_cond(length=5),
         loop_var_shapes=[
             (1, ),          # i
             (2, ),          # s
@@ -654,11 +654,11 @@ def test_while_loop_for_foreach():
             (2, ),          # f_1
             (3, 4, 5, 6),   # f_2, unused
         ],
-        n_steps=31,
+        n_steps=5,
     )
     # Case 2.2.*
     case_2(
-        cond=make_for_cond(length=25),
+        cond=make_for_cond(length=3),
         loop_var_shapes=[
             (1, ),          # i
             (2, ),          # s
@@ -668,12 +668,12 @@ def test_while_loop_for_foreach():
             (2, ),          # f_1
             (3, 4, 5, 6),   # f_2, unused
         ],
-        n_steps=25,
+        n_steps=3,
     )
     # Case 3.*
     case_3(
-        length=11,
-        cond=make_for_cond(length=11),
+        length=5,
+        cond=make_for_cond(length=5),
         loop_var_shapes=[
             (1, ),          # i
             (2, ),          # s_0
@@ -685,7 +685,7 @@ def test_while_loop_for_foreach():
             (2, ),          # f_0
             (3, 4, 5, 6),   # f_1, unused
         ],
-        n_steps=11,
+        n_steps=5,
     )
     # Case 4.1.*
     case_4(
@@ -784,6 +784,7 @@ def test_while_loop_for_foreach():
     )
 
 
+@with_seed()
 def test_while_loop_nested():
 
     def _to_np_list(arrays):
@@ -891,6 +892,7 @@ def test_while_loop_nested():
             assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
 
 
+@with_seed()
 def test_while_loop_rnn():
     def _array(shape):
         return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
