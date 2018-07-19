@@ -86,9 +86,9 @@ void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &o
   return;
 }
 
-void MKLDNNPoolingFwd::SetNewMem(const NDArray in_data,
-                                 const NDArray out_data,
-                                 const OpReqType req,
+void MKLDNNPoolingFwd::SetNewMem(const NDArray& in_data,
+                                 const NDArray& out_data,
+                                 const OpReqType& req,
                                  const mxnet::NDArray *workspace) {
   auto input_mem = in_data.GetMKLDNNData();
   output_mem_t = CreateMKLDNNMem(out_data, fwd_pd_->dst_primitive_desc(), req);
