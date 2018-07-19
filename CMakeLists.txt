@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 
 message(STATUS "CMAKE_VERSION=${CMAKE_VERSION}")
-message(STATUS "CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}")
 
 # workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
 if(${CMAKE_CROSSCOMPILING})
@@ -18,6 +17,8 @@ endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
 endif()
+
+message(STATUS "CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}")
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
