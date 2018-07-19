@@ -106,4 +106,20 @@ setup(name='mxnet',
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/apache/incubator-mxnet',
       ext_modules=config_cython(),
+      classifiers=[
+          # https://pypi.org/pypi?%3Aaction=list_classifiers
+          'Development Status :: 5 - Production/Stable',
+          'License :: OSI Approved :: Apache Software License',
+          'Programming Language :: C++',
+          'Programming Language :: Cython',
+          'Programming Language :: Other',  # R, Scala
+          'Programming Language :: Perl',
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: Implementation :: CPython',
+      ],
       **kwargs)
