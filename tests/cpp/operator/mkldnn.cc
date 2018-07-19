@@ -367,6 +367,23 @@ struct OpAttrs {
   std::set<OpReqType> requests;
   int num_inputs;
   int num_outputs;
+  int input_types;
+  int output_types;
+};
+
+enum ArrayTypes {
+  Normal = 1,
+  MKLDNN = 2,
+  MKLDNNDiffDim = 4,
+  NormalReshaped = 8,
+  MKLDNNReshaped = 16,
+  MKLDNNReshapedDiffDim = 32,
+  NormalReused = 64,
+  MKLDNNReused = 128,
+  MKLDNNReusedDiffDim = 256,
+  NormalReshapedReused = 512,
+  NormalReusedDiffDtype = 1024,
+  All = 2047,
 };
 
 OpAttrs GetCopyOp() {
@@ -504,6 +521,16 @@ OpAttrs GetLRNOp() {
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.requests.insert(OpReqType::kAddTo);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped;
   return attrs;
 }
 
@@ -520,7 +547,6 @@ OpAttrs GetLRNBackwardsOp() {
   attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
-
 
 /*
  * We want to get a few types of NDArrays for testing:
@@ -544,9 +570,7 @@ OpAttrs GetLRNBackwardsOp() {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-//  TODO: alexzai accept enum of what types of arrays to return back.
-//  need way to filter out ndarrays with different mkldnn dimensions formats as pool / lrn / conv won't work
-std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs = 1, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All, bool rand = false, int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -564,8 +588,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 
     // Type 1.
     NDArray arr(shape, Context());
-    in_arrs.emplace_back(arr, "Normal NDArray");
-    InitDefaultArray(&in_arrs.back().arr, rand);
+    if (types & ArrayTypes::Normal) {
+      in_arrs.emplace_back(arr, "Normal NDArray");
+      InitDefaultArray(&in_arrs.back().arr, rand);
+    }
     for (auto pd : pds) {
       if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
@@ -581,14 +607,19 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
       // Type 2, 3.
       arr = NDArray(shape, Context());
       desc = "MKLDNN NDArray";
+
       if (shape.ndim() != pd.desc().data.ndims) {
         std::stringstream ss;
         ss << "MKLDNN NDArray with different memory layout " <<
            shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd, rand);
-      in_arrs.emplace_back(arr, desc);
+
+      if ((types & ArrayTypes::MKLDNN && shape.ndim() == pd.desc().data.ndims) ||
+          (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != pd.desc().data.ndims)){
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr, desc);
+      }
 
       // Type 4, 5, 6.
       arr = NDArray(shape, Context());
@@ -599,8 +630,13 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
            << shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd, rand);
-      in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
+
+      if ((types & ArrayTypes::MKLDNNReshaped && shape.ndim() == pd.desc().data.ndims) ||
+          (types & ArrayTypes::MKLDNNReshapedDiffDim && shape.ndim() != pd.desc().data.ndims)){
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
+      }
+
     }
   }
   return in_arrs;
@@ -629,7 +665,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 std::vector<NDArrayAttrs> GetTestOutputArrays(
     const TShape &shp,
     const std::vector<mkldnn::memory::primitive_desc> &pds,
-    float num_inputs = 0, int dim = 0, bool rand = true) {
+    float num_inputs = 0, int dim = 0, bool rand = true, int types = ArrayTypes::All) {
   TShape shape = shp;
   if (num_inputs != 0)
     shape[dim] = static_cast<int>(shape[dim] * num_inputs);
@@ -638,39 +674,50 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   std::string desc;
   // Type 1.
   NDArray arr(shape, Context());
-  in_arrs.emplace_back(arr, "Normal NDArray");
-  InitDefaultArray(&in_arrs.back().arr, rand);
 
-  // Type 4.
+  if (types & ArrayTypes::Normal) {
+    in_arrs.emplace_back(arr, "Normal NDArray");
+    InitDefaultArray(&in_arrs.back().arr, rand);
+  }
+
   TShape tmp_shape = shape;
-  tmp_shape[0] = shape[0] * 2;
-  NDArray arr0(tmp_shape, Context());
-  InitDefaultArray(&arr0, rand);
-  in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+  if (types & ArrayTypes::NormalReshaped) {
+    // Type 4.
+    tmp_shape[0] = shape[0] * 2;
+    NDArray arr0(tmp_shape, Context());
+    InitDefaultArray(&arr0, rand);
+    in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
+  }
 
-  // Type 5.
-  // Get a reused version.
   nnvm::TShape s(1);
-  s[0] = shape.Size();
-  NDArray arr1(s, Context());
-  arr1 = arr1.AsArray(shape, arr1.dtype());
-  InitDefaultArray(&arr1, rand);
-  in_arrs.emplace_back(arr1, "Reused NDArray");
+  if (types & ArrayTypes::NormalReused) {
+    // Type 5.
+    // Get a reused version.
+    s[0] = shape.Size();
+    NDArray arr1(s, Context());
+    arr1 = arr1.AsArray(shape, arr1.dtype());
+    InitDefaultArray(&arr1, rand);
+    in_arrs.emplace_back(arr1, "Reused NDArray");
+  }
 
-  // Type 6.
-  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
-  NDArray arr2(s, Context(), true, mshadow::kUint8);
-  arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr2, rand);
-  in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
+  if (types & ArrayTypes::NormalReusedDiffDtype) {
+    // Type 6.
+    s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
+    NDArray arr2(s, Context(), true, mshadow::kUint8);
+    arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
+    InitDefaultArray(&arr2, rand);
+    in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
+  }
 
-  // Type 7
-  s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
-  NDArray arr3(s, Context(), true, mshadow::kUint8);
-  tmp_shape[0] = shape[0] * 2;
-  arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-  InitDefaultArray(&arr3, rand);
-  in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
+  if (types & ArrayTypes::NormalReshapedReused) {
+    // Type 7
+    s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag) * 2;
+    NDArray arr3(s, Context(), true, mshadow::kUint8);
+    tmp_shape[0] = shape[0] * 2;
+    arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
+    InitDefaultArray(&arr3, rand);
+    in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
+  }
 
   for (auto pd : pds) {
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
@@ -680,6 +727,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
       pd = GetExpandedMemPD(pd, num_inputs);
 
     // Type 2, 3.
+
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -688,8 +736,12 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
          << shape.ndim() << "/" << pd.desc().data.ndims;
       desc = ss.str();
     }
-    in_arrs.emplace_back(arr, desc);
-    InitMKLDNNArray(&in_arrs.back().arr, pd, rand);
+
+    if ((types & ArrayTypes::MKLDNN && shape.ndim() == pd.desc().data.ndims) ||
+        (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != pd.desc().data.ndims)) {
+      in_arrs.emplace_back(arr, desc);
+      InitMKLDNNArray(&in_arrs.back().arr, pd, rand);
+    }
 
     // Type 8, 9.
     // Get a reused version.
@@ -705,7 +757,11 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
          << shape.ndim() << "/" << pd.desc().data.ndims;
       desc = ss.str();
     }
-    in_arrs.emplace_back(arr, desc);
+
+    if ((types & ArrayTypes::MKLDNNReused && shape.ndim() == pd.desc().data.ndims) ||
+        (types & ArrayTypes::MKLDNNReusedDiffDim && shape.ndim() != pd.desc().data.ndims)) {
+      in_arrs.emplace_back(arr, desc);
+    }
   }
   return in_arrs;
 }
@@ -1049,7 +1105,7 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(false, attrs.num_outputs, dim);
+    in_arrs = GetTestInputArrays(ArrayTypes::All, false, attrs.num_outputs, dim);
   }
 
   for (auto &in_arr : in_arrs) {
@@ -1102,7 +1158,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -1117,12 +1173,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       if (in_arr.arr.IsMKLDNNData())
         continue;
 
-      if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims != in_arr.arr.shape().ndim())
-        continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
+        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -1152,10 +1205,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         backwards_input[1] = inputs[0];  // input
         backwards_input[2] = outputs[1];  // out norm
 
-        auto tmp_output = GetTestInputArrays()[i1];
+        auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
         backwards_outputs[0] = &tmp_output.arr;
 
-        auto tmp_output2 = GetTestInputArrays()[i1];
+        auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
         backwards_ex_outputs[0] = &tmp_output2.arr;
 
         for (int i = 0; i < backwards_attrs.num_outputs; i++)
@@ -1289,7 +1342,7 @@ TEST(IMPERATIVE, LRNOp) {
 
 TEST(MKLDNN_BASE, MKLDNNSum) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(ArrayTypes::All, true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
@@ -1338,7 +1391,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
 
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(ArrayTypes::All, true);
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
   MKLDNNStream *stream = MKLDNNStream::Get();
