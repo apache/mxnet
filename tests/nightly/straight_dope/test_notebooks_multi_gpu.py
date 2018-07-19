@@ -20,19 +20,26 @@
     This file tests that the notebooks requiring multi GPUs run without
     warning or exception.
 """
+import unittest
 from straight_dope_test_utils import _test_notebook
+from straight_dope_test_utils import _download_straight_dope_notebooks
 
-# Chapter 7
+class StraightDopeMultiGpuTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        assert _download_straight_dope_notebooks()
 
-# TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
-#def test_multiple_gpus_scratch():
-#    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
+    # Chapter 7
 
-def test_multiple_gpus_gluon():
-    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
+    # TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
+    #def test_multiple_gpus_scratch(self):
+    #    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
 
-# Chapter 8
+    def test_multiple_gpus_gluon(self):
+        assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
 
-# TODO(vishaalk): Module skimage needs to be added to docker image.
-# def test_fine_tuning():
-#    assert _test_notebook('chapter08_computer-vision/fine-tuning')
+    # Chapter 8
+
+    # TODO(vishaalk): Module skimage needs to be added to docker image.
+    # def test_fine_tuning(self):
+    #    assert _test_notebook('chapter08_computer-vision/fine-tuning')

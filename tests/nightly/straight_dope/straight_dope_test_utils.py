@@ -22,18 +22,12 @@
 
     env variable MXNET_TEST_KERNEL controls which kernel to use when running
     the notebook. e.g: `export MXNET_TEST_KERNEL=python2`
-
-    env variable MXNET_TEST_NO_CACHE controls whether to clean the
-    temporary directory in which the notebook was run and re-download any
-    resource file. The default behaviour is to not clean the directory. Set to '1'
-    to force clean the directory. e.g: `export MXNET_TEST_NO_CACHE=1`
-    NB: in the real CI, the tests will re-download everything since they start from
-    a clean workspace.
 """
 import io
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 #TODO(vishaalk): Find a cleaner way to import this notebook.
@@ -41,9 +35,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
 from notebook_test import run_notebook
 
 EPOCHS_REGEX = r'epochs\s+=\s+[0-9]+'  # Regular expression that matches 'epochs = #'
+GIT_PATH = '/usr/bin/git'
+GIT_REPO = 'https://github.com/zackchase/mxnet-the-straight-dope'
 KERNEL = os.getenv('MXNET_TEST_KERNEL', None)
-NO_CACHE = os.getenv('MXNET_TEST_NO_CACHE', False)
-NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), 'straight_dope_book')
+NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), 'tmp_notebook')
 
 def _test_notebook(notebook, override_epochs=True):
     """Run Jupyter notebook to catch any execution error.
@@ -58,15 +53,16 @@ def _test_notebook(notebook, override_epochs=True):
     """
     if override_epochs:
         _override_epochs(notebook)
-    return run_notebook(notebook, NOTEBOOKS_DIR, kernel=KERNEL, no_cache=NO_CACHE)
+    return run_notebook(notebook, NOTEBOOKS_DIR, kernel=KERNEL, temp_dir=NOTEBOOKS_DIR)
 
 
 def _override_epochs(notebook):
-    """Overrides the number of epochs in the notebook to 1 epoch.
+    """Overrides the number of epochs in the notebook to 1 epoch. Note this operation is idempotent.
 
     Args:
         notebook : string
             notebook name in folder/notebook format
+
     """
     notebook_path = os.path.join(*([NOTEBOOKS_DIR] + notebook.split('/'))) + ".ipynb"
 
@@ -76,7 +72,35 @@ def _override_epochs(notebook):
 
     # Set number of epochs to 1
     modified_notebook = re.sub(EPOCHS_REGEX, 'epochs = 1', notebook)
-    
+
     # Replace the original notebook with the modified one.
     with io.open(notebook_path, 'w', encoding='utf-8') as f:
         f.write(modified_notebook)
+
+
+def _download_straight_dope_notebooks():
+    """Downloads the Straight Dope Notebooks.
+
+    Returns:
+        True if it succeeds in downloading the notebooks without error.
+    """
+    print('Cleaning and setting up notebooks directory "{}"'.format(NOTEBOOKS_DIR))
+    shutil.rmtree(NOTEBOOKS_DIR, ignore_errors=True)
+
+    cmd = [GIT_PATH,
+           'clone',
+           GIT_REPO,
+           NOTEBOOKS_DIR]
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+    (out, _) = proc.communicate()
+
+    if proc.returncode != 0:
+        msg = 'Error downloading Straight Dope notebooks.\n'
+        msg += out.decode('utf-8')
+        print(msg)
+        return False
+    return True

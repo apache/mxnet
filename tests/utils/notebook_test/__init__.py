@@ -30,10 +30,9 @@ import nbformat
 
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
-TEMP_DIR = 'tmp_notebook'
 TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
 
-def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False):
+def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='tmp_notebook'):
     """Run tutorial Jupyter notebook to catch any execution error.
 
     Parameters
@@ -51,6 +50,8 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False):
         directory.
         NB: in the real CI, the tests will re-download everything since they
         start from a clean workspace.
+    temp_dir: string
+        The temporary sub-directory directory in which to run the notebook.
 
     Returns
     -------
@@ -58,11 +59,11 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False):
     """
 
     notebook_path = os.path.join(*([notebook_dir] + notebook.split('/')))
-    working_dir = os.path.join(*([TEMP_DIR] + notebook.split('/')))
+    working_dir = os.path.join(*([temp_dir] + notebook.split('/')))
 
     if no_cache == '1':
         print("Cleaning and setting up temp directory '{}'".format(working_dir))
-        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     errors = []
     notebook = None

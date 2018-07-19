@@ -23,7 +23,9 @@
 import glob
 import re
 import os
+import unittest
 from straight_dope_test_utils import _test_notebook
+from straight_dope_test_utils import _download_straight_dope_notebooks
 
 NOTEBOOKS_WHITELIST = [
     'chapter01_crashcourse/preface',
@@ -32,298 +34,306 @@ NOTEBOOKS_WHITELIST = [
     'chapter02_supervised-learning/environment',
 ]
 
-def test_completeness():
-    """
-    Make sure that every tutorial that isn't in the whitelist is considered for testing by this
-    file. Exceptions should be added to the whitelist.
-    N.B. If the test is commented out, then that will be viewed as an intentional disabling of the
-    test.
-    """
-    # Open up this test file.
-    with open(__file__, 'r') as f:
-        notebook_test_text = '\n'.join(f.readlines())
 
-    notebooks_path = os.path.join(os.path.dirname(__file__), 'straight_dope_book')
-    notebooks = glob.glob(os.path.join(notebooks_path, '**', '*.ipynb'))
 
-    # Compile a list of notebooks that are tested
-    tested_notebooks = set(re.findall(r"assert _test_notebook\('(.*)'\)", notebook_test_text))
+class StraightDopeSingleGpuTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(self):
+        assert _download_straight_dope_notebooks()
 
-   # Ensure each notebook in the straight dope book directory is on the whitelist or is tested.
-    for notebook in notebooks:
-        friendly_name = '/'.join(notebook.split('/')[-2:]).split('.')[0]
-        if friendly_name not in tested_notebooks and friendly_name not in NOTEBOOKS_WHITELIST:
-            assert False, friendly_name + " has not been added to the nightly/tests/straight_" + \
-                          "dope/test_notebooks_single_gpu.py test_suite. Consider also adding " + \
-                          "it to nightly/tests/straight_dope/test_notebooks_multi_gpu.py as " + \
-                          "well if the notebooks makes use of multiple GPUs."
 
-def test_ndarray():
-    assert _test_notebook('chapter01_crashcourse/ndarray')
+    def test_completeness(self):
+        """
+        Make sure that every tutorial that isn't in the whitelist is considered for testing by this
+        file. Exceptions should be added to the whitelist.
+        N.B. If the test is commented out, then that will be viewed as an intentional disabling of the
+        test.
+        """
+        # Open up this test file.
+        with open(__file__, 'r') as f:
+            notebook_test_text = '\n'.join(f.readlines())
 
-def test_linear_algebra():
-    assert _test_notebook('chapter01_crashcourse/linear-algebra')
+        notebooks_path = os.path.join(os.path.dirname(__file__), 'straight_dope_book')
+        notebooks = glob.glob(os.path.join(notebooks_path, '**', '*.ipynb'))
 
-def test_probability():
-    assert _test_notebook('chapter01_crashcourse/probability')
+        # Compile a list of notebooks that are tested
+        tested_notebooks = set(re.findall(r"assert _test_notebook\('(.*)'\)", notebook_test_text))
 
-# TODO(vishaalk): Notebook contains the word 'Warning'. Needs to be updated to a synonym.
-#def test_autograd():
-#    assert _test_notebook('chapter01_crashcourse/autograd')
+       # Ensure each notebook in the straight dope book directory is on the whitelist or is tested.
+        for notebook in notebooks:
+            friendly_name = '/'.join(notebook.split('/')[-2:]).split('.')[0]
+            if friendly_name not in tested_notebooks and friendly_name not in NOTEBOOKS_WHITELIST:
+                assert False, friendly_name + " has not been added to the nightly/tests/straight_" + \
+                              "dope/test_notebooks_single_gpu.py test_suite. Consider also adding " + \
+                              "it to nightly/tests/straight_dope/test_notebooks_multi_gpu.py as " + \
+                              "well if the notebooks makes use of multiple GPUs."
 
-# Chapter 2
+    def test_ndarray(self):
+        assert _test_notebook('chapter01_crashcourse/ndarray')
 
-def test_linear_regression_scratch():
-    assert _test_notebook('chapter02_supervised-learning/linear-regression-scratch')
+    def test_linear_algebra(self):
+        assert _test_notebook('chapter01_crashcourse/linear-algebra')
 
-def test_linear_regression_gluon():
-    assert _test_notebook('chapter02_supervised-learning/linear-regression-gluon')
+    def test_probability(self):
+        assert _test_notebook('chapter01_crashcourse/probability')
 
-# TODO(vishaalk): There is a relative file path needs to be fixed so that the
-# python code can be run from another directory.
-#def test_logistic_regression_gluon():
-#    assert _test_notebook('chapter02_supervised-learning/logistic-regression-gluon')
+    # TODO(vishaalk): Notebook contains the word 'Warning'. Needs to be updated to a synonym.
+    #def test_autograd(self):
+    #    assert _test_notebook('chapter01_crashcourse/autograd')
 
-def test_softmax_regression_scratch():
-    assert _test_notebook('chapter02_supervised-learning/softmax-regression-scratch')
+    # Chapter 2
 
-def test_softmax_regression_gluon():
-    assert _test_notebook('chapter02_supervised-learning/softmax-regression-gluon')
+    def test_linear_regression_scratch(self):
+        assert _test_notebook('chapter02_supervised-learning/linear-regression-scratch')
 
-def test_regularization_scratch():
-    assert _test_notebook('chapter02_supervised-learning/regularization-scratch')
+    def test_linear_regression_gluon(self):
+        assert _test_notebook('chapter02_supervised-learning/linear-regression-gluon')
 
-# TODO(vishaalk): Notebook does not appear to be JSON: '{\n "cells": [\n  {\n   "cell_type": "m....
-#def test_regularization_gluon():
-#    assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
+    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
+    # python code can be run from another directory.
+    #def test_logistic_regression_gluon(self):
+    #    assert _test_notebook('chapter02_supervised-learning/logistic-regression-gluon')
 
-def test_perceptron():
-    assert _test_notebook('chapter02_supervised-learning/perceptron')
+    def test_softmax_regression_scratch(self):
+        assert _test_notebook('chapter02_supervised-learning/softmax-regression-scratch')
 
-# Chapter 3
+    def test_softmax_regression_gluon(self):
+        assert _test_notebook('chapter02_supervised-learning/softmax-regression-gluon')
 
-def test_mlp_scratch():
-    assert _test_notebook('chapter03_deep-neural-networks/mlp-scratch')
+    def test_regularization_scratch(self):
+        assert _test_notebook('chapter02_supervised-learning/regularization-scratch')
 
-def test_mlp_gluon():
-    assert _test_notebook('chapter03_deep-neural-networks/mlp-gluon')
+    # TODO(vishaalk): Notebook does not appear to be JSON: '{\n "cells": [\n  {\n   "cell_type": "m....
+    #def test_regularization_gluon(self):
+    #    assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
 
-def test_mlp_dropout_scratch():
-    assert _test_notebook('chapter03_deep-neural-networks/mlp-dropout-scratch')
+    def test_perceptron(self):
+        assert _test_notebook('chapter02_supervised-learning/perceptron')
 
-def test_mlp_dropout_gluon():
-    assert _test_notebook('chapter03_deep-neural-networks/mlp-dropout-gluon')
+    # Chapter 3
 
-def test_plumbing():
-    assert _test_notebook('chapter03_deep-neural-networks/plumbing')
+    def test_mlp_scratch(self):
+        assert _test_notebook('chapter03_deep-neural-networks/mlp-scratch')
 
-def test_custom_layer():
-    assert _test_notebook('chapter03_deep-neural-networks/custom-layer')
+    def test_mlp_gluon(self):
+        assert _test_notebook('chapter03_deep-neural-networks/mlp-gluon')
 
-#def test_kaggle_gluon_kfold():
-#    assert _test_notebook('chapter03_deep-neural-networks/kaggle-gluon-kfold')
+    def test_mlp_dropout_scratch(self):
+        assert _test_notebook('chapter03_deep-neural-networks/mlp-dropout-scratch')
 
-# TODO(vishaalk): Load params and Save params are deprecated warning.
-#def test_serialization():
-#    assert _test_notebook('chapter03_deep-neural-networks/serialization')
+    def test_mlp_dropout_gluon(self):
+        assert _test_notebook('chapter03_deep-neural-networks/mlp-dropout-gluon')
 
-# Chapter 4
+    def test_plumbing(self):
+        assert _test_notebook('chapter03_deep-neural-networks/plumbing')
 
-def test_cnn_scratch():
-    assert _test_notebook('chapter04_convolutional-neural-networks/cnn-scratch')
+    def test_custom_layer(self):
+        assert _test_notebook('chapter03_deep-neural-networks/custom-layer')
 
-def test_cnn_gluon():
-    assert _test_notebook('chapter04_convolutional-neural-networks/cnn-gluon')
+    #def test_kaggle_gluon_kfold(self):
+    #    assert _test_notebook('chapter03_deep-neural-networks/kaggle-gluon-kfold')
 
-# TODO(vishaalk): Load params and Save params are deprecated warning.
-#def test_deep_cnns_alexnet():
-#    assert _test_notebook('chapter04_convolutional-neural-networks/deep-cnns-alexnet')
+    # TODO(vishaalk): Load params and Save params are deprecated warning.
+    #def test_serialization(self):
+    #    assert _test_notebook('chapter03_deep-neural-networks/serialization')
 
-def test_very_deep_nets_vgg():
-    assert _test_notebook('chapter04_convolutional-neural-networks/very-deep-nets-vgg')
+    # Chapter 4
 
-def test_cnn_batch_norm_scratch():
-    assert _test_notebook('chapter04_convolutional-neural-networks/cnn-batch-norm-scratch')
+    def test_cnn_scratch(self):
+        assert _test_notebook('chapter04_convolutional-neural-networks/cnn-scratch')
 
-def test_cnn_batch_norm_gluon():
-    assert _test_notebook('chapter04_convolutional-neural-networks/cnn-batch-norm-gluon')
+    def test_cnn_gluon(self):
+        assert _test_notebook('chapter04_convolutional-neural-networks/cnn-gluon')
 
-# Chapter 5
+    # TODO(vishaalk): Load params and Save params are deprecated warning.
+    #def test_deep_cnns_alexnet(self):
+    #    assert _test_notebook('chapter04_convolutional-neural-networks/deep-cnns-alexnet')
 
-# TODO(vishaalk): There is a relative file path needs to be fixed so that the
-# python code can be run from another directory.
-#def test_simple_rnn():
-#    assert _test_notebook('chapter05_recurrent-neural-networks/simple-rnn')
+    def test_very_deep_nets_vgg(self):
+        assert _test_notebook('chapter04_convolutional-neural-networks/very-deep-nets-vgg')
 
-# TODO(vishaalk): There is a relative file path needs to be fixed so that the
-# python code can be run from another directory.
-#def test_lstm_scratch():
-#    assert _test_notebook('chapter05_recurrent-neural-networks/lstm-scratch')
+    def test_cnn_batch_norm_scratch(self):
+        assert _test_notebook('chapter04_convolutional-neural-networks/cnn-batch-norm-scratch')
 
-# TODO(vishaalk): There is a relative file path needs to be fixed so that the
-# python code can be run from another directory.
-#def test_gru_scratch():
-#    assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
+    def test_cnn_batch_norm_gluon(self):
+        assert _test_notebook('chapter04_convolutional-neural-networks/cnn-batch-norm-gluon')
 
-#def test_rnns_gluon():
-#    assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
+    # Chapter 5
 
-# Chapter 6
+    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
+    # python code can be run from another directory.
+    #def test_simple_rnn(self):
+    #    assert _test_notebook('chapter05_recurrent-neural-networks/simple-rnn')
 
-def test_optimization_intro():
-    assert _test_notebook('chapter06_optimization/optimization-intro')
+    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
+    # python code can be run from another directory.
+    #def test_lstm_scratch(self):
+    #    assert _test_notebook('chapter05_recurrent-neural-networks/lstm-scratch')
 
-# TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
-#def test_gd_sgd_scratch():
-#    assert _test_notebook('chapter06_optimization/gd-sgd-scratch')
+    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
+    # python code can be run from another directory.
+    #def test_gru_scratch(self):
+    #    assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
 
-# TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
-#def test_gd_sgd_gluon():
-#    assert _test_notebook('chapter06_optimization/gd-sgd-gluon')
+    #def test_rnns_gluon(self):
+    #    assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
 
-def test_momentum_scratch():
-    assert _test_notebook('chapter06_optimization/momentum-scratch')
+    # Chapter 6
 
-def test_momentum_gluon():
-    assert _test_notebook('chapter06_optimization/momentum-gluon')
+    def test_optimization_intro(self):
+        assert _test_notebook('chapter06_optimization/optimization-intro')
 
-def test_adagrad_scratch():
-    assert _test_notebook('chapter06_optimization/adagrad-scratch')
+    # TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
+    #def test_gd_sgd_scratch(self):
+    #    assert _test_notebook('chapter06_optimization/gd-sgd-scratch')
 
-def test_adagrad_gluon():
-    assert _test_notebook('chapter06_optimization/adagrad-gluon')
+    # TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
+    #def test_gd_sgd_gluon(self):
+    #    assert _test_notebook('chapter06_optimization/gd-sgd-gluon')
 
-def test_rmsprop_scratch():
-    assert _test_notebook('chapter06_optimization/rmsprop-scratch')
+    def test_momentum_scratch(self):
+        assert _test_notebook('chapter06_optimization/momentum-scratch')
 
-def test_rmsprop_gluon():
-    assert _test_notebook('chapter06_optimization/rmsprop-gluon')
+    def test_momentum_gluon(self):
+        assert _test_notebook('chapter06_optimization/momentum-gluon')
 
-def test_adadelta_scratch():
-    assert _test_notebook('chapter06_optimization/adadelta-scratch')
+    def test_adagrad_scratch(self):
+        assert _test_notebook('chapter06_optimization/adagrad-scratch')
 
-def test_adadelta_gluon():
-    assert _test_notebook('chapter06_optimization/adadelta-gluon')
+    def test_adagrad_gluon(self):
+        assert _test_notebook('chapter06_optimization/adagrad-gluon')
 
-def test_adam_scratch():
-    assert _test_notebook('chapter06_optimization/adam-scratch')
+    def test_rmsprop_scratch(self):
+        assert _test_notebook('chapter06_optimization/rmsprop-scratch')
 
-def test_adam_gluon():
-    assert _test_notebook('chapter06_optimization/adam-gluon')
+    def test_rmsprop_gluon(self):
+        assert _test_notebook('chapter06_optimization/rmsprop-gluon')
 
-# Chapter 7
+    def test_adadelta_scratch(self):
+        assert _test_notebook('chapter06_optimization/adadelta-scratch')
 
-def test_hybridize():
-    assert _test_notebook('chapter07_distributed-learning/hybridize')
+    def test_adadelta_gluon(self):
+        assert _test_notebook('chapter06_optimization/adadelta-gluon')
 
-# TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
-#def test_multiple_gpus_scratch():
-#    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
+    def test_adam_scratch(self):
+        assert _test_notebook('chapter06_optimization/adam-scratch')
 
-def test_multiple_gpus_gluon():
-    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
+    def test_adam_gluon(self):
+        assert _test_notebook('chapter06_optimization/adam-gluon')
 
-def test_training_with_multiple_machines():
-    assert _test_notebook('chapter07_distributed-learning/training-with-multiple-machines')
+    # Chapter 7
 
-# Chapter 8
+    def test_hybridize(self):
+        assert _test_notebook('chapter07_distributed-learning/hybridize')
 
-# TODO(vishaalk): Load params and Save params are deprecated warning.
-#def test_object_detection():
-#    assert _test_notebook('chapter08_computer-vision/object-detection')
+    # TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
+    #def test_multiple_gpus_scratch(self):
+    #    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
 
-# TODO(vishaalk): Module skimage needs to be added to docker image.
-#def test_fine_tuning():
-#    assert _test_notebook('chapter08_computer-vision/fine-tuning')
+    def test_multiple_gpus_gluon(self):
+        assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
 
-# TODO(vishaalk):
-#def test_visual_question_answer():
-#    assert _test_notebook('chapter08_computer-vision/visual-question-answer')
+    def test_training_with_multiple_machines(self):
+        assert _test_notebook('chapter07_distributed-learning/training-with-multiple-machines')
 
-# Chapter 9
+    # Chapter 8
 
-def test_tree_lstm():
-    assert _test_notebook('chapter09_natural-language-processing/tree-lstm')
+    # TODO(vishaalk): Load params and Save params are deprecated warning.
+    #def test_object_detection(self):
+    #    assert _test_notebook('chapter08_computer-vision/object-detection')
 
-# Chapter 11
+    # TODO(vishaalk): Module skimage needs to be added to docker image.
+    #def test_fine_tuning(self):
+    #    assert _test_notebook('chapter08_computer-vision/fine-tuning')
 
-# TODO(vishaalk): Deferred initialization failed because shape cannot be inferred.
-#def test_intro_recommender_systems():
-#    assert _test_notebook('chapter11_recommender-systems/intro-recommender-systems')
+    # TODO(vishaalk):
+    #def test_visual_question_answer(self):
+    #    assert _test_notebook('chapter08_computer-vision/visual-question-answer')
 
-# Chapter 12
+    # Chapter 9
 
-def test_lds_scratch():
-    assert _test_notebook('chapter12_time-series/lds-scratch')
+    def test_tree_lstm(self):
+        assert _test_notebook('chapter09_natural-language-processing/tree-lstm')
 
-# TODO(vishaalk): File doesn't appear to be valid JSON.
-#def test_issm_scratch():
-#    assert _test_notebook('chapter12_time-series/issm-scratch')
+    # Chapter 11
 
-# TODO(vishaalk): Error: sequential1_batchnorm0_running_mean' has not been initialized
-# def test_intro_forecasting_gluon():
-#    assert _test_notebook('chapter12_time-series/intro-forecasting-gluon')
+    # TODO(vishaalk): Deferred initialization failed because shape cannot be inferred.
+    #def test_intro_recommender_systems(self):
+    #    assert _test_notebook('chapter11_recommender-systems/intro-recommender-systems')
 
-#def test_intro_forecasting_2_gluon():
-#    assert _test_notebook('chapter12_time-series/intro-forecasting-2-gluon')
+    # Chapter 12
 
-# Chapter 13
+    def test_lds_scratch(self):
+        assert _test_notebook('chapter12_time-series/lds-scratch')
 
-# TODO(vishaalk): Load params and Save params are deprecated warning.
-#def test_vae_gluon():
-#    assert _test_notebook('chapter13_unsupervised-learning/vae-gluon')
+    # TODO(vishaalk): File doesn't appear to be valid JSON.
+    #def test_issm_scratch(self):
+    #    assert _test_notebook('chapter12_time-series/issm-scratch')
 
-# Chapter 14
+    # TODO(vishaalk): Error: sequential1_batchnorm0_running_mean' has not been initialized
+    # def test_intro_forecasting_gluon(self):
+    #    assert _test_notebook('chapter12_time-series/intro-forecasting-gluon')
 
-def test_igan_intro():
-    assert _test_notebook('chapter14_generative-adversarial-networks/gan-intro')
+    #def test_intro_forecasting_2_gluon(self):
+    #    assert _test_notebook('chapter12_time-series/intro-forecasting-2-gluon')
 
-def test_dcgan():
-    assert _test_notebook('chapter14_generative-adversarial-networks/dcgan')
+    # Chapter 13
 
-def test_generative_adversarial_networks():
-    assert _test_notebook('chapter14_generative-adversarial-networks/conditional')
+    # TODO(vishaalk): Load params and Save params are deprecated warning.
+    #def test_vae_gluon(self):
+    #    assert _test_notebook('chapter13_unsupervised-learning/vae-gluon')
 
-# Chapter 16
+    # Chapter 14
 
-# TODO(vishaalk): Checked failed oshape.Size() != dshape.Size()
-#def test_tensor_basics():
-#    assert _test_notebook('chapter16_tensor_methods/tensor_basics')
+    def test_igan_intro(self):
+        assert _test_notebook('chapter14_generative-adversarial-networks/gan-intro')
 
-# TODO(vishaalk): Notebook does not appear to be valid JSON.
-#def test_pixel2pixel():
-#    assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')
+    def test_dcgan(self):
+        assert _test_notebook('chapter14_generative-adversarial-networks/dcgan')
 
-# Chapter 17
+    def test_generative_adversarial_networks(self):
+        assert _test_notebook('chapter14_generative-adversarial-networks/conditional')
 
-# TODO(vishaalk): Requires OpenAI Gym. Also uses deprecated load_params.
-#def test_dqn():
+    # Chapter 16
+
+    # TODO(vishaalk): Checked failed oshape.Size() != dshape.Size()
+    #def test_tensor_basics(self):
+    #    assert _test_notebook('chapter16_tensor_methods/tensor_basics')
+
+    # TODO(vishaalk): Notebook does not appear to be valid JSON.
+    #def test_pixel2pixel(self):
+    #    assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')
+
+    # Chapter 17
+
+    # TODO(vishaalk): Requires OpenAI Gym. Also uses deprecated load_params.
+    #def test_dqn(self):
 #    assert _test_notebook('chapter17_deep-reinforcement-learning/DQN')
 
-#def test_ddqn():
+#def test_ddqn(self):
 #    assert _test_notebook('chapter17_deep-reinforcement-learning/DDQN')
 
 # Chapter 18
 
-#def test_bayes_by_backprop():
+#def test_bayes_by_backprop(self):
 #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop')
 
-#def test_bayes_by_backprop_gluon():
+#def test_bayes_by_backprop_gluon(self):
 #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-gluon')
 
 # TODO(vishaalk): AttributeError: 'list' object has no attribute 'keys'
-#def test_bayes_by_backprop_rnn():
+#def test_bayes_by_backprop_rnn(self):
 #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-rnn')
 
 # Chapter 19
 
 # TODO(vishaalk): Requires deepchem
-#def test_graph_neural_networks():
+#def test_graph_neural_networks(self):
 #    assert _test_notebook('chapter19_graph-neural-networks/Graph-Neural-Networks')
 
 # Cheatsheets
 
 # TODO(vishaalk): There is a relative file path needs to be fixed so that the
 # python code can be run from another directory.
-#def test_kaggle_gluon_kfold():
+#def test_kaggle_gluon_kfold(self):
 #    assert _test_notebook('cheatsheets/kaggle-gluon-kfold')
