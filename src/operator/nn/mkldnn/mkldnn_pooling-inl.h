@@ -54,10 +54,10 @@ class MKLDNNPoolingFwd {
   }
 
   ~MKLDNNPoolingFwd() {}
-  void SetNewMem(const mkldnn::memory &data_mem,
-                                   const NDArray out_data,
-                                   const OpReqType req,
-                                   const mxnet::NDArray *workspace = nullptr);
+  void SetNewMem(const NDArray in_data,
+                 const NDArray out_data,
+                 const OpReqType req,
+                 const mxnet::NDArray *workspace = nullptr);
   void Execute(const NDArray& out_data);
 
  private:
