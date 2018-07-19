@@ -93,9 +93,10 @@ class MKLDNNLRNFwd {
   ~MKLDNNLRNFwd() {}
 
   void SetNewMem(const NDArray &data,
-                 const NDArray &output);
+                 const NDArray &output,
+                 const OpReqType req);
 
-  void Execute();
+  void Execute(const NDArray &out_data);
 
  private:
   std::shared_ptr<mkldnn::lrn_forward> fwd;
@@ -133,16 +134,17 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
 }
 
 void MKLDNNLRNFwd::SetNewMem(const NDArray &in_data,
-                             const NDArray &out_data) {
+                             const NDArray &out_data,
+                             const OpReqType req) {
   const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
-  mkldnn::memory *out_data_mem  = const_cast<NDArray&>(out_data).CreateMKLDNNData(
-                       this->out_mem->get_primitive_desc());
+  output_mem_t= CreateMKLDNNMem(out_data, this->out_mem->get_primitive_desc(), req, &in_data);
   this->in_mem->set_data_handle(in_data_mem->get_data_handle());
-  this->out_mem->set_data_handle(out_data_mem->get_data_handle());
+  this->out_mem->set_data_handle(output_mem_t.second->get_data_handle());
 }
 
-void MKLDNNLRNFwd::Execute() {
+void MKLDNNLRNFwd::Execute(const NDArray &out_data) {
   MKLDNNStream::Get()->RegisterPrim(*(this->fwd));
+  CommitOutput(out_data, output_mem_t);
   MKLDNNStream::Get()->Submit();
 }
 // End of LRN Class and its functions
@@ -189,8 +191,8 @@ void MKLDNNLRNForward(const OpContext &ctx,
                       const OpReqType req,
                       const NDArray &out_data) {
   MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_data);
-  fwd.SetNewMem(in_data, out_data);
-  fwd.Execute();
+  fwd.SetNewMem(in_data, out_data, req);
+  fwd.Execute(out_data);
 }
 
 void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,

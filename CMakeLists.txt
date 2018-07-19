@@ -185,6 +185,8 @@ if(USE_VTUNE)
   list(APPEND mxnet_LINKER_LIBS dl)
 endif()
 
+set(USE_MKLDNN ON)
+
 if(USE_MKLDNN)
   include(cmake/MklDnn.cmake)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
