@@ -482,6 +482,8 @@ build_ubuntu_gpu_tensorrt() {
         USE_CUDNN=1                                         \
         USE_DIST_KVSTORE=0                                  \
         USE_TENSORRT=1                                      \
+        USE_JEMALLOC=0                                      \
+        USE_GPERFTOOLS=0                                    \
         ONNX_NAMESPACE=onnx                                 \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
         -j$(nproc)
@@ -696,7 +698,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    nosetests-3.4 --verbose --processes=1 --process-restartworker tests/python/tensorrt
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose tests/python/tensorrt/
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -993,3 +995,5 @@ EOF
     declare -F | cut -d' ' -f3
     echo
 fi
+
+
