@@ -772,7 +772,7 @@ void AssertEqual(const std::vector<NDArray *> &in_arrs,
   mshadow::default_real_t *d1 = static_cast<mshadow::default_real_t*>(blob1.dptr_);
   mshadow::default_real_t *d2 = static_cast<mshadow::default_real_t*>(blob2.dptr_);
   for (int i = 0; i < tmp1.shape().Size(); i++)
-    ASSERT_NEAR(d1[i], d2[i], fabsf(d1[i])*1e-6);  // compare up to 6 digits of precision
+    ASSERT_NEAR(d1[i], d2[i], fabsf(d1[i])*1e-3);  // compare up to 3 digits of precision
 }
 
 void VerifyActResult(const std::vector<NDArray *> &in_arrs,
@@ -1102,7 +1102,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
