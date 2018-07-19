@@ -232,6 +232,7 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
   MKLDNNStream::Get()->RegisterPrim(
         lrn_backward(pdesc_bwd, mkldnn::primitive::at(*data_mem),
         mkldnn::primitive::at(*diff_mem), *ws_mem, *diff_src_mem.second));
+  CommitOutput(in_grad, diff_src_mem);
   MKLDNNStream::Get()->Submit();
 }
 }  // namespace op
