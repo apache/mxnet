@@ -137,7 +137,7 @@ void MKLDNNLRNFwd::SetNewMem(const NDArray &in_data,
                              const NDArray &out_data,
                              const OpReqType req) {
   const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
-  output_mem_t= CreateMKLDNNMem(out_data, this->out_mem->get_primitive_desc(), req, &in_data);
+  output_mem_t = CreateMKLDNNMem(out_data, this->out_mem->get_primitive_desc(), req, &in_data);
   this->in_mem->set_data_handle(in_data_mem->get_data_handle());
   this->out_mem->set_data_handle(output_mem_t.second->get_data_handle());
 }

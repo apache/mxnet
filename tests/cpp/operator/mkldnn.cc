@@ -570,7 +570,9 @@ OpAttrs GetLRNBackwardsOp() {
  *
  *  num_inputs / dim arguments used to scale shape (used for concat backwards to enlarge input shapes)
  */
-std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All, bool rand = false, int num_inputs = 1, int dim = 0) {
+std::vector<NDArrayAttrs> GetTestInputArrays(
+    int types = ArrayTypes::All, bool rand = false,
+    int num_inputs = 1, int dim = 0) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -616,7 +618,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All, bool r
       }
 
       if ((types & ArrayTypes::MKLDNN && shape.ndim() == pd.desc().data.ndims) ||
-          (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != pd.desc().data.ndims)){
+          (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != pd.desc().data.ndims)) {
         InitMKLDNNArray(&arr, pd, rand);
         in_arrs.emplace_back(arr, desc);
       }
@@ -632,11 +634,10 @@ std::vector<NDArrayAttrs> GetTestInputArrays(int types = ArrayTypes::All, bool r
       }
 
       if ((types & ArrayTypes::MKLDNNReshaped && shape.ndim() == pd.desc().data.ndims) ||
-          (types & ArrayTypes::MKLDNNReshapedDiffDim && shape.ndim() != pd.desc().data.ndims)){
+          (types & ArrayTypes::MKLDNNReshapedDiffDim && shape.ndim() != pd.desc().data.ndims)) {
         InitMKLDNNArray(&arr, pd, rand);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
       }
-
     }
   }
   return in_arrs;
@@ -1174,8 +1175,10 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         continue;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
-        ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
+        out_arrs[i] =
+            GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
+        ex_out_arrs[i] =
+            GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -1193,10 +1196,12 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         Imperative::Get()->set_is_training(true);
 
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
-                                    outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
-                                    ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), forward_attrs.attrs, inputs, outputs, req,
+            DispatchMode::kFCompute, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), forward_attrs.attrs, inputs, ex_outputs, req,
+            DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
 
