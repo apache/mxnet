@@ -105,8 +105,7 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   TRT_Logger trt_logger((nvinfer1::ILogger::Severity)verbosity);
   auto trt_builder = infer_object(nvinfer1::createInferBuilder(trt_logger));
   auto trt_network = infer_object(trt_builder->createNetwork());
-  auto trt_parser  = infer_object(nvonnxparser::createParser(
-                                      *trt_network, trt_logger));
+  auto trt_parser  = infer_object(nvonnxparser::createParser(trt_network.get(), trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
