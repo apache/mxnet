@@ -182,6 +182,7 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.zeros_like
     Symbol.ones_like
+    Symbol.diag
 ```
 
 ### Changing shape and type

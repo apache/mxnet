@@ -365,6 +365,7 @@ The `ndarray` package provides several classes:
     ones_like
     full
     arange
+    diag
     load
     save
 ```
