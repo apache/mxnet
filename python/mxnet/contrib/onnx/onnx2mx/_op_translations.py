@@ -21,7 +21,6 @@
 import numpy as np
 from . import _translation_utils as translation_utils
 from .... import symbol
-
 # Method definitions for the callable objects mapped in the import_helper module
 
 def identity(attrs, inputs, proto_obj):
@@ -209,7 +208,10 @@ def batch_norm(attrs, inputs, proto_obj):
                                                                'is_test': 'fix_gamma'})
     new_attrs = translation_utils._remove_attributes(new_attrs,
                                                      ['spatial', 'consumed_inputs'])
-    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': 1})
+    # Disable cuDNN BN only if epsilon from model is < than minimum cuDNN eps (1e-5)
+    cudnn_min_eps = 1e-5
+    cudnn_off = 0 if attrs.get('epsilon', cudnn_min_eps) >= cudnn_min_eps else 1
+    new_attrs = translation_utils._add_extra_attributes(new_attrs, {'cudnn_off': cudnn_off})
 
     # in test mode "fix_gamma" should be unset.
     new_attrs['fix_gamma'] = not attrs.get('is_test', 1)
@@ -407,8 +409,22 @@ def cast(attrs, inputs, proto_obj):
 
 def split(attrs, inputs, proto_obj):
     """Splits an array along a particular axis into multiple sub-arrays."""
+    split_list = attrs.get('split') if 'split' in attrs else []
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
+    if 'axis' not in attrs:
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'axis': 0})
+
+    if not split_list:
+        num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
+    else:
+        raise NotImplementedError("Operator {} in MXNet does not support variable splits."
+                                  "Tracking the issue to support variable split here: "
+                                  "https://github.com/apache/incubator-mxnet/issues/11594"
+                                  .format('split'))
+
+    new_attrs['num_outputs'] = num_outputs
+
     return 'split', new_attrs, inputs
 
 def _slice(attrs, inputs, proto_obj):

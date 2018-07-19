@@ -19,7 +19,6 @@
   (:require [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet Monitor)))
 
-
 (defmacro monitor
   "Monitor outputs, weights, and gradients for debugging.
   -  interval Number of batches between printing.

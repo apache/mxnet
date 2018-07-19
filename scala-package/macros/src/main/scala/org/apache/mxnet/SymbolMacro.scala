@@ -89,13 +89,16 @@ private[mxnet] object SymbolImplMacros {
       case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
+    // Defines Operators that should not generated
+    val notGenerated = Set("Custom")
+
     // TODO: Put Symbol.api.foo --> Stable APIs
     // Symbol.contrib.bar--> Contrib APIs
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
       else symbolFunctions.filter(!_.name.startsWith("_"))
-    }
+    }.filterNot(ele => notGenerated.contains(ele.name))
 
     val functionDefs = newSymbolFunctions map { symbolfunction =>
 
@@ -230,7 +233,8 @@ private[mxnet] object SymbolImplMacros {
     }
     // scalastyle:on println
     val argList = argNames zip argTypes map { case (argName, argType) =>
-        val typeAndOption = CToScalaUtils.argumentCleaner(argType, "org.apache.mxnet.Symbol")
+        val typeAndOption =
+          CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
         new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new SymbolFunction(aliasName, argList.toList)

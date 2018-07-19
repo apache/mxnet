@@ -32,9 +32,9 @@ parser.add_argument('--batch-size', type=int, default=8192,
 parser.add_argument('--kvstore', type=str, default=None,
                     help='what kvstore to use',
                     choices=["dist_sync", "dist_async", "local"])
-parser.add_argument('--optimizer', type=str, default='ftrl',
+parser.add_argument('--optimizer', type=str, default='sgd',
                     help='what optimizer to use',
-                    choices=["ftrl", "sgd", "adam"])
+                    choices=["adagrad", "sgd", "adam"])
 
 AVAZU = {
     'train': 'avazu-app',
@@ -129,6 +129,9 @@ if __name__ == '__main__':
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['nll_loss'])
         logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
+
+        # prepare the module weight with all row ids before making a checkpoint.
+        mod.prepare(None, all_row_ids)
         mod.save_checkpoint("checkpoint", epoch)
         # reset the iterator for next pass of data
         train_data.reset()

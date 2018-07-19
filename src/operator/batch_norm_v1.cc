@@ -89,6 +89,9 @@ the output. It is often used during inference.
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
 then set ``gamma`` to 1 and its gradient to 0.
 
+There's no sparse support for this operator, and it will exhibit problematic behavior if used with
+sparse tensors.
+
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")

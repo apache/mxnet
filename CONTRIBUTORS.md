@@ -173,3 +173,5 @@ List of Contributors
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
 * [Kou Ding](https://github.com/chinakook)
+* [Istvan Fehervari](https://github.com/ifeherva)
+* [Aaron Markham](https://github.com/aaronmarkham)

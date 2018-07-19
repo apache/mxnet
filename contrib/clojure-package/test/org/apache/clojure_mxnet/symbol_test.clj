@@ -21,7 +21,6 @@
             [org.apache.clojure-mxnet.util :as util]
             [clojure.test :refer :all]))
 
-
 (deftest test-compose
   (let [data (sym/variable "data")
         net1 (sym/fully-connected "fc1" {:data data :num-hidden 10})
@@ -45,8 +44,8 @@
         net1 (sym/fully-connected "fc2" {:data oldfc :num-hidden 100})]
     (is (= ["data" "fc1_weight" "fc1_bias" "fc2_weight" "fc2_bias"] (sym/list-arguments net1)))
     (= (sym/list-arguments oldfc) (-> (sym/get-internals net1)
-                                    (sym/get "fc1_output")
-                                    (sym/list-arguments)))))
+                                      (sym/get "fc1_output")
+                                      (sym/list-arguments)))))
 
 (deftest test-infer-type
   (let [data (sym/variable "data")

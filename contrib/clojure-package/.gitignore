@@ -40,4 +40,5 @@ src/.DS_Store
 src/org/.DS_Store
 test/test-ndarray.clj
 test/test-symbol.clj
+src/org/apache/clojure_mxnet/gen/*
 

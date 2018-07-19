@@ -17,6 +17,7 @@
 
 (defproject pre-trained-models "0.1.0-SNAPSHOT"
   :description "Example of using pre-trained models with MXNet"
+  :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.0-SNAPSHOT"]
                  [net.mikera/imagez "0.12.0"]

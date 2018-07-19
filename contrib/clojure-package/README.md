@@ -135,12 +135,9 @@ To test your installation, you should run `lein test`. This will run the test su
 
 #### Generation of NDArray and Symbol apis
 
-The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. To generate, use the `dev/generator.clj` file. These generated files are checked in as source, so the only time you would need to run them is if you are updated the clojure package with an updated scala jar and want to regenerate the code.
+The bulk of the ndarray and symbol apis are generated via java reflection into the Scala classes. The files are generated as a compile time step (AOT) in the `dev.generator` namespace.
 
-To do this run the leiningen task
-`lein run generate-code`
-
-Or load in the repl and use the functions:
+You may also run this manually with the repl functions:
 
 `(generate-ndarray-file)`
 and
@@ -165,11 +162,19 @@ Do `lein run` for the cpu version or `lein run :gpu` for gpu.
 
 To generate api docs, run `lein codox`. The html docs will be generated in the target/docs directory.
 
-_Note: There is an error thrown in the generated code due to some loading issues, but the docs are all still there._
-
 ## Code Coverage
 
 To run the Code Coverage tool. Run `lein cloverage`.
+
+## Tools to keep style consistent
+
+To keep the style consistent for the project we include the script that make it easier.
+There are two script in the base of the project and in each examples.
+
+To run it just see the following file. `lein-cljfmt-check` and `lein-cljfmt-fix`.
+The first command will run and check and confirm if the code needed to be updated to reflect the community style guide.
+The second command will apply the change and fix any inconsistent indentation in place. This is recommendd to be done
+before the submit a new pull request so we can keep the style consistent throughout the project.
 
 ## FAQ
 
@@ -188,7 +193,7 @@ This command can be very handy too
 timestamp, name, utilization.gpu [%], utilization.memory [%], memory.total [MiB], memory.free [MiB], memory.used [MiB]`
 
 **Supported APIs**
-There are 3 high level apis supported in MxNet: (Model/FeedForward), Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory. The Model/FeedForward Api is deprected.
+There are 3 high level apis supported in MXNet: (Model/FeedForward), Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory. The Model/FeedForward Api is deprected.
 
 Gluon support will come later and may or may not be built on the Scala gluon api (when it lands there)
 
@@ -228,3 +233,4 @@ Special thanks to people that provided testing and feedback to make this possibl
 - Burin Choomnuan
 - Avram Aelony
 - Jim Dunn
+- Kovas Boguta

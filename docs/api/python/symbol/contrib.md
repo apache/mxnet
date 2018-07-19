@@ -52,6 +52,8 @@ In the rest of this document, we list routines provided by the `symbol.contrib` 
     fft
     ifft
     quantize
+    foreach
+    while_loop
 ```
 
 ## API Reference
