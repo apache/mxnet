@@ -277,15 +277,24 @@ NNVM_REGISTER_OP(_broadcast_backward)
 NNVM_REGISTER_OP(broadcast_like)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",                 \
+    [](const NodeAttrs& attrs) {                                      \
+      return std::vector<std::string>{"lhs", "rhs"};                  \
+    }) 
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
-      return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
                                  {{"keepdims", "true"}});
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
-.add_argument("rhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.")
 .describe(R"code(Broadcasts lhs to have the same shape as rhs.
 
 Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
