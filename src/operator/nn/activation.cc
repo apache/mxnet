@@ -125,8 +125,8 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
   bool ret = false;
-#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   if (param.act_type != activation::kReLU) {
     CHECK_EQ(in_attrs->size(), 3U);
     ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
@@ -140,10 +140,17 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                                          in_attrs, out_attrs);
   }
 #else
-  CHECK_EQ(in_attrs->size(), 2U);
-  ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
-                                                       dispatch_mode,
-                                                       in_attrs, out_attrs);
+  if (param.act_type == activation::kSoftSign) {
+    CHECK_EQ(in_attrs->size(), 3U);
+    ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  } else {
+    CHECK_EQ(in_attrs->size(), 2U);
+    ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  }
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
