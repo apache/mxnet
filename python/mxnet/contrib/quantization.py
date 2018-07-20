@@ -329,7 +329,7 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
             if norm != 0:
                 q[start:stop] = float(quantized_bins[j]) / float(num_quantized_bins)
         p = _smooth_distribution(p)
-        # There is a chance that q is a completely zero'd probability distribution.
+        # There is a chance that q is an invalid probability distribution.
         try:
             q = _smooth_distribution(q)
         except ValueError:
