@@ -254,7 +254,9 @@ def _smooth_distribution(p, eps=0.0001):
 # pylint: disable=line-too-long
 def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     """Given a dataset, find the optimal threshold for quantizing it.
-    The reference distribution is `hist`, and the candidate distribution is `full_q`.
+    The reference distribution is `q`, and the candidate distribution is `p`.
+    `q` is a truncated version of the original distribution.
+
     Ref: http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     """
     if isinstance(arr, NDArray):
