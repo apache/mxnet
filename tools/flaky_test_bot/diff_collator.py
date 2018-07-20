@@ -40,28 +40,27 @@ logger.setLevel(logging.INFO)
 
 
 def get_diff_output(args):
-    diff_input = ["git", "diff", "--unified=0"]
+    """Perform a git diff using provided args"""
+    diff_cmd = ["git", "diff", "--unified=0"]
     if args.commits is not None:
-        diff_input.extend([args.commits[0], args.commits[1]])
+        diff_cmd.extend([args.commits[0], args.commits[1]])
     else:
         if args.branches is None:
             # Default to current branch with master
             args.branches = ["master", "HEAD"]
 
         diff_target = args.branches[0] + "..." + args.branches[1]
-        diff_input.append(diff_target)
+        diff_cmd.append(diff_target)
 
     if args.path:
-        diff_input.extend(["--", args.path])
+        diff_cmd.extend(["--", args.path])
 
     try:
-        diff_output = subprocess.check_output(diff_input)
+        return subprocess.check_output(diff_cmd)
     except subprocess.CalledProcessError as e:
         logger.error("git diff returned a non zero exit code: %d",
                       e.returncode)
         sys.exit(1)
-
-    return diff_output
 
 
 def parser(diff_output):
@@ -73,7 +72,6 @@ def parser(diff_output):
     top = str(top, errors="strict")
 
     for patch in diff_output.split("diff --git")[1:]:
-        # split diff_output into patches
         file_name, cs = parse_patch(patch)
         if not cs:
             continue
