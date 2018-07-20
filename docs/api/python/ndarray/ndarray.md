@@ -394,6 +394,7 @@ The `ndarray` package provides several classes:
 
     broadcast_to
     broadcast_axes
+    broadcast_like
     repeat
     tile
     pad
