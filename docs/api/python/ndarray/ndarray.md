@@ -142,6 +142,7 @@ The `ndarray` package provides several classes:
 
     NDArray.broadcast_to
     NDArray.broadcast_axes
+    NDArray.broadcast_like
     NDArray.tile
     NDArray.pad
 ```
@@ -395,6 +396,7 @@ The `ndarray` package provides several classes:
 
     broadcast_to
     broadcast_axes
+    broadcast_like
     repeat
     tile
     pad

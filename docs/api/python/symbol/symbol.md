@@ -208,6 +208,7 @@ Composite multiple symbols into a new one by an operator.
 
     Symbol.broadcast_to
     Symbol.broadcast_axes
+    Symbol.broadcast_like
     Symbol.tile
     Symbol.pad
 ```
@@ -393,6 +394,7 @@ Composite multiple symbols into a new one by an operator.
 
     broadcast_to
     broadcast_axes
+    broadcast_like
     repeat
     tile
     pad
