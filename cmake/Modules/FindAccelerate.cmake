@@ -73,5 +73,5 @@ if(${Accelerate_FOUND})
   mark_as_advanced(${LOOKED_FOR})
 
   message(STATUS "Found Apple Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_LIBRARIES})")
-endif(Accelerate_FOUND)
+endif()
 

@@ -37,19 +37,19 @@ if($ENV{CROSS_ROOT})
   file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
 endif()
 
-if(${CMAKE_CROSSCOMPILING})
+if(CMAKE_CROSSCOMPILING)
   set(Atlas_INCLUDE_SEARCH_PATHS
-      ${CROSS_ROOT}
-      ${CROSS_ROOT}/include
+      "${CROSS_ROOT}"
+      "${CROSS_ROOT}/include"
       )
 endif()
 
 set(Atlas_INCLUDE_SEARCH_PATHS
     ${Atlas_INCLUDE_SEARCH_PATHS}
 
-    ${Atlas_ROOT_DIR}
-    ${Atlas_ROOT_DIR}/include
-    ${Atlas_ROOT_DIR}/include/atlas
+    "${Atlas_ROOT_DIR}"
+    "${Atlas_ROOT_DIR}/include"
+    "${Atlas_ROOT_DIR}/include/atlas"
 
     /usr/include/atlas
     /usr/include/atlas-base
@@ -57,17 +57,17 @@ set(Atlas_INCLUDE_SEARCH_PATHS
 
 if(${CMAKE_CROSSCOMPILING})
   set(Atlas_LIB_SEARCH_PATHS
-      ${CROSS_ROOT}
-      ${CROSS_ROOT}/lib
-      ${CROSS_ROOT}/lib64
+      "${CROSS_ROOT}"
+      "${CROSS_ROOT}/lib"
+      "${CROSS_ROOT}/lib64"
       )
 endif()
 
 set(Atlas_LIB_SEARCH_PATHS
     ${Atlas_LIB_SEARCH_PATHS}
 
-    ${Atlas_ROOT_DIR}
-    ${Atlas_ROOT_DIR}/lib
+    "${Atlas_ROOT_DIR}"
+    "${Atlas_ROOT_DIR}/lib"
 
     /usr/lib/atlas
     /usr/lib/atlas-base
@@ -95,7 +95,7 @@ set(Atlas_LAPACK_FOUND)
 set(Atlas_CLAPACK_INCLUDE_DIR)
 set(Atlas_LAPACK_LIBRARY)
 
-if(${Atlas_NEED_LAPACK})
+if(Atlas_NEED_LAPACK)
   message(STATUS "Looking for LAPACK support...")
 
   # we need another variables (starting with __) because cmake will not overwrite it if already set
@@ -110,7 +110,7 @@ if(${Atlas_NEED_LAPACK})
   include(CheckFunctionExists)
   check_function_exists("cgees_" LAPACK_FOUND)
 
-  if(${LAPACK_FOUND})
+  if(LAPACK_FOUND)
     set(Atlas_LAPACK_FOUND True)
     set(Atlas_CLAPACK_INCLUDE_DIR ${__Atlas_CLAPACK_INCLUDE_DIR})
     set(Atlas_LAPACK_LIBRARY ${__Atlas_LAPACK_LIBRARY})
@@ -130,9 +130,9 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Atlas DEFAULT_MSG ${LOOKED_FOR})
 
-if(${Atlas_FOUND})
-  set(Atlas_INCLUDE_DIRS ${Atlas_CBLAS_INCLUDE_DIR} ${Atlas_CLAPACK_INCLUDE_DIR})
-  set(Atlas_LIBRARIES ${Atlas_LAPACK_LIBRARY} ${Atlas_CBLAS_LIBRARY} ${Atlas_BLAS_LIBRARY})
+if(Atlas_FOUND)
+  set(Atlas_INCLUDE_DIRS "${Atlas_CBLAS_INCLUDE_DIR}" "${Atlas_CLAPACK_INCLUDE_DIR}")
+  set(Atlas_LIBRARIES "${Atlas_LAPACK_LIBRARY}" "${Atlas_CBLAS_LIBRARY}" "${Atlas_BLAS_LIBRARY}")
 
   mark_as_advanced(${LOOKED_FOR})
 
