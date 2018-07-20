@@ -132,7 +132,7 @@ if(OpenBLAS_NEED_LAPACK)
   # LAPACK if present in OpenBLAS build is included into libopenblas
   set(__OpenBLAS_LAPACK_LIBRARY ${OpenBLAS_LIBRARY})
 
-  set(CMAKE_REQUIRED_LIBRARIES ${OpenBLAS_LAPACK_LIBRARY})
+  set(CMAKE_REQUIRED_LIBRARIES ${__OpenBLAS_LAPACK_LIBRARY})
   include(CheckFunctionExists)
   check_function_exists("cheev_" LAPACK_FOUND)
 
