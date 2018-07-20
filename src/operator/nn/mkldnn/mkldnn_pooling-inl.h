@@ -69,7 +69,7 @@ class MKLDNNPoolingFwd {
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> workspace_;
-  mkldnn_output_t output_mem_t;
+  mkldnn_output_t output_mem_t_;
 
  private:
   void Init(const mxnet::NDArray &input,
