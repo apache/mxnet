@@ -1117,6 +1117,7 @@ static bool IfelseShape(const nnvm::NodeAttrs& attrs,
                            params.then_input_locs, true);
   bool succ_2 = infer_subg(attrs.subgraphs[2], &else_out_shape, \
                            params.else_input_locs, true);
+  sync_out_out(&then_out_shape, &else_out_shape, is_udf);
   return succ_0 && succ_1 && succ_2;
 }
 

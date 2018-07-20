@@ -106,6 +106,19 @@ bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
   return true;
 }
 
+template <typename T>
+bool sync_out_out(std::vector<T> *out_1,
+                  std::vector<T> *out_2,
+                  std::function<bool(const T &)> is_empty) {
+  CHECK_EQ(out_1->size(), out_2->size());
+  for (size_t i = 0; i < out_1->size(); ++i) {
+    T &x = out_1->at(i);
+    T &y = out_2->at(i);
+    fill_value(&x, &y, is_empty(x), is_empty(y));
+  }
+  return true;
+}
+
 /*
  * This contains the states for running a loop and provides methods
  * of running the subgraph computation for an iteration.

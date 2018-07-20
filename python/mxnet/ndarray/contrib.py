@@ -364,12 +364,12 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     return stacked_outputs, list(loop_vars)
 
 def ifelse(cond, then_func, else_func, inputs):
-    """Run a if-then-else using user-defined condition and computation
+    """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
     the two customized computations according to the specified condition.
 
-    `inputs` is a list of NDArrays on which the condition and computations reply on.
+    `inputs` is a list of NDArrays on which the condition and computations rely on.
 
     `cond` is a user-defined function, used as the if condition.
     It consumes `inputs`, and produces a scalar MXNet NDArray,
