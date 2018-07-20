@@ -231,32 +231,6 @@ def _collect_layer_outputs(mod, data, include_layer=None, max_num_examples=None,
     return collector.nd_dict, num_examples
 
 
-def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logger=None):
-    """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
-    if stats is None:
-        raise ImportError('scipy.stats is required for running entropy mode of calculating'
-                          ' the optimal thresholds for quantizing FP32 ndarrays into int8.'
-                          ' Please check if the scipy python bindings are installed.')
-    assert isinstance(nd_dict, dict)
-    if logger is not None:
-        logger.info('Calculating optimal thresholds for quantization using KL divergence'
-                    ' with num_bins=%d and num_quantized_bins=%d' % (num_bins, num_quantized_bins))
-    th_dict = {}
-    # copy nd_dict keys since the keys() only returns a view in python3
-    layer_names = list(nd_dict.keys())
-    for name in layer_names:
-        assert name in nd_dict
-        min_val, max_val, min_divergence, opt_th =\
-            _get_optimal_threshold(nd_dict[name], num_bins=num_bins,
-                                   num_quantized_bins=num_quantized_bins)
-        del nd_dict[name]  # release the memory of ndarray
-        th_dict[name] = (-opt_th, opt_th)
-        if logger is not None:
-            logger.info('layer=%s, min_val=%f, max_val=%f, min_divergence=%f, optimal_threshold=%f'
-                        % (name, min_val, max_val, min_divergence, opt_th))
-    return th_dict
-
-
 def _load_sym(sym, logger=logging):
     """Given a str as a path the symbol .json file or a symbol, returns a Symbol object."""
     if isinstance(sym, str):  # sym is a symbol file path
@@ -379,6 +353,32 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     opt_th = thresholds[min_divergence_idx]
     return min_val, max_val, min_divergence, opt_th
 # pylint: enable=line-too-long
+
+
+def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logger=None):
+    """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
+    if stats is None:
+        raise ImportError('scipy.stats is required for running entropy mode of calculating'
+                          ' the optimal thresholds for quantizing FP32 ndarrays into int8.'
+                          ' Please check if the scipy python bindings are installed.')
+    assert isinstance(nd_dict, dict)
+    if logger is not None:
+        logger.info('Calculating optimal thresholds for quantization using KL divergence'
+                    ' with num_bins=%d and num_quantized_bins=%d' % (num_bins, num_quantized_bins))
+    th_dict = {}
+    # copy nd_dict keys since the keys() only returns a view in python3
+    layer_names = list(nd_dict.keys())
+    for name in layer_names:
+        assert name in nd_dict
+        min_val, max_val, min_divergence, opt_th = \
+            _get_optimal_threshold(nd_dict[name], num_bins=num_bins,
+                                   num_quantized_bins=num_quantized_bins)
+        del nd_dict[name]  # release the memory of ndarray
+        th_dict[name] = (-opt_th, opt_th)
+        if logger is not None:
+            logger.info('layer=%s, min_val=%f, max_val=%f, min_divergence=%f, optimal_threshold=%f'
+                        % (name, min_val, max_val, min_divergence, opt_th))
+    return th_dict
 
 
 def _load_params(params, logger=logging):
