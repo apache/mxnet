@@ -41,7 +41,7 @@ function(try_mkldnn)
   message(STATUS "Adding MKLDNN to the build due to USE_MKLDNN=${USE_MKLDNN} and MKL_FOUND=${MKL_FOUND}")
 
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
-  if(NOT MSVC)
+  if(NOT ${MSVC})
     set(ARCH_OPT_FLAGS ${ARCH_OPT_FLAGS} "-mtune=generic" PARENT_SCOPE)
   endif()
 
@@ -136,11 +136,11 @@ function(try_mklml)
 endfunction()
 
 function(try_accelerate)
-  if(NOT APPLE)
+  if(NOT ${APPLE})
     return()
   endif()
 
-  if(BLAS MATCHES "[Mm][Kk][Ll]")
+  if(${BLAS} MATCHES "[Mm][Kk][Ll]")
     return()
   endif()
 
@@ -167,7 +167,7 @@ endif()
 try_accelerate()
 
 # cmake regexp does not support case insensitive match (?i) or //i
-if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
+if(${BLAS} MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   message(STATUS "Using Atlas for BLAS")
 
   set(Atlas_NEED_LAPACK ${USE_LAPACK})
@@ -188,7 +188,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   return()
 endif()
 
-if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
+if(${BLAS} MATCHES "[Oo][Pp][Ee][Nn]")
   message(STATUS "Using OpenBLAS for BLAS")
 
   set(OpenBLAS_NEED_LAPACK ${USE_LAPACK})
@@ -210,7 +210,7 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
   return()
 endif()
 
-if(BLAS MATCHES "[Mm][Kk][Ll]")
+if(${BLAS} MATCHES "[Mm][Kk][Ll]")
   message(STATUS "Using MKL for BLAS")
 
   if(NOT ${MKL_FOUND})
@@ -220,7 +220,7 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
 
-  if(USE_LAPACK)
+  if(${USE_LAPACK})
     include(CheckFunctionExists)
     set(CMAKE_REQUIRED_LIBRARIES ${MKL_LIBRARIES})
     check_function_exists("cgees_" LAPACK_FOUND)
@@ -235,8 +235,8 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   endif()
 endif()
 
-if(BLAS MATCHES "([Aa][Pp][Pp][Ll][Ee]|[Aa][Cc][Cc][Ee][Ll][Ee][Rr][Aa][Tt][Ee])")
-  if(NOT APPLE)
+if(${BLAS} MATCHES "([Aa][Pp][Pp][Ll][Ee]|[Aa][Cc][Cc][Ee][Ll][Ee][Rr][Aa][Tt][Ee])")
+  if(NOT ${APPLE})
     message(FATAL_ERROR "Apple Accelerate framework's BLAS feature is available only on macOS")
     return()
   endif()

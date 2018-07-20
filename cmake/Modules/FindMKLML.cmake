@@ -41,7 +41,7 @@ set(MKLML_INCLUDE_SEARCH_PATHS
     )
 
 # ---[ Find libraries
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+if(${CMAKE_SIZEOF_VOID_P} EQUAL 4)
   set(PATH_SUFFIXES lib lib/ia32)
 else()
   set(PATH_SUFFIXES lib lib/intel64)
@@ -65,7 +65,7 @@ set(LOOKED_FOR
 
 set(MKLML_LIBS iomp5)
 
-if(WIN32)
+if(${WIN32})
   list(APPEND MKLML_LIBS mklml)
 elseif(APPLE)
   list(APPEND MKLML_LIBS mklml)
@@ -94,7 +94,7 @@ endforeach()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MKLML DEFAULT_MSG ${LOOKED_FOR})
 
-if(MKLML_FOUND)
+if(${MKLML_FOUND})
   set(MKLML_INCLUDE_DIRS ${MKLML_INCLUDE_DIR})
 
   mark_as_advanced(${LOOKED_FOR})

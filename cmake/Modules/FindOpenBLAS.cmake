@@ -29,11 +29,19 @@
 # OpenBLAS_INCLUDE_DIRS
 # OpenBLAS_LIBRARIES
 
-file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
-file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
-file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+if($ENV{OpenBLAS_HOME})
+  file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
+endif()
 
-if(CMAKE_CROSSCOMPILING)
+if($ENV{OpenBLAS})
+  file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
+endif()
+
+if($ENV{CROSS_ROOT})
+  file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+endif()
+
+if(${CMAKE_CROSSCOMPILING})
   set(OpenBLAS_INCLUDE_SEARCH_PATHS
       ${CROSS_ROOT}
       ${CROSS_ROOT}/include
@@ -59,7 +67,7 @@ set(OpenBLAS_INCLUDE_SEARCH_PATHS
     ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
     )
 
-if(CMAKE_CROSSCOMPILING)
+if(${CMAKE_CROSSCOMPILING})
   set(Open_BLAS_LIB_SEARCH_PATHS
       ${CROSS_ROOT}
       ${CROSS_ROOT}/include
@@ -69,9 +77,6 @@ endif()
 set(OpenBLAS_LIB_SEARCH_PATHS
     ${OpenBLAS_LIB_SEARCH_PATHS}
 
-    ${OpenBLAS_DIR}
-    ${OpenBLAS_DIR}/lib
-    ${OpenBLAS_DIR}/lib64
     ${OpenBLAS_HOME}
     ${OpenBLAS_HOME}/lib
     ${OpenBLAS_HOME}/lib64
@@ -97,7 +102,7 @@ find_path(OpenBLAS_INCLUDE_DIR
 
 set(OpenBLAS_LIB_NAMES openblas libopenblas.dll.a libopenblas.dll)
 
-if(CMAKE_CROSSCOMPILING)
+if(${CMAKE_CROSSCOMPILING})
   message(STATUS "Will try link to OpenBLAS statically for cross compilation")
   set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
 endif()
@@ -111,11 +116,11 @@ set(LOOKED_FOR
     OpenBLAS_LIBRARY
     )
 
-set(OpenBLAS_LAPACK_FOUND False)
-set(OpenBLAS_LAPACK_LIBRARY "")
-set(OpenBLAS_LAPACK_INCLUDE_DIR "")
+set(OpenBLAS_LAPACK_FOUND)
+set(OpenBLAS_LAPACK_LIBRARY)
+set(OpenBLAS_LAPACK_INCLUDE_DIR)
 
-if(OpenBLAS_NEED_LAPACK)
+if(${OpenBLAS_NEED_LAPACK})
   message(STATUS "Looking for LAPACK support...")
 
   # we need another variable (starting with __) because cmake will not overwrite it if already set
@@ -131,7 +136,7 @@ if(OpenBLAS_NEED_LAPACK)
   include(CheckFunctionExists)
   check_function_exists("cheev_" LAPACK_FOUND)
 
-  if(LAPACK_FOUND)
+  if(${LAPACK_FOUND})
     set(OpenBLAS_LAPACK_FOUND True)
     set(OpenBLAS_LAPACK_INCLUDE_DIR ${__OpenBLAS_LAPACK_INCLUDE_DIR})
     set(OpenBLAS_LAPACK_LIBRARY ${__OpenBLAS_LAPACK_LIBRARY})
@@ -151,7 +156,7 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(OpenBLAS DEFAULT_MSG ${LOOKED_FOR})
 
-if(OpenBLAS_FOUND)
+if(${OpenBLAS_FOUND})
   set(OpenBLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIR} ${OpenBLAS_LAPACK_INCLUDE_DIR})
   set(OpenBLAS_LIBRARIES ${OpenBLAS_LIBRARY} ${OpenBLAS_LAPACK_LIBRARY})
 

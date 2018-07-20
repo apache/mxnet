@@ -19,7 +19,7 @@
 
 message(STATUS "Downloading MKLML...")
 
-if(MSVC)
+if(${MSVC})
   set(MKL_NAME "mklml_win_2018.0.3.20180406")
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.14/${MKL_NAME}.zip" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" EXPECTED_MD5 "8DD73E7D3F19F004551809824C4E8970" SHOW_PROGRESS)
@@ -36,7 +36,7 @@ if(MSVC)
   file(COPY ${MKLROOT}/lib/mklml.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   file(COPY ${MKLROOT}/lib/mklml.lib DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
-elseif(APPLE)
+elseif(${APPLE})
   set(MKL_NAME "mklml_mac_2018.0.3.20180406")
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.14/${MKL_NAME}.tgz" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" EXPECTED_MD5 "23a6f7fd04fb1fa6de0d52a2ec5a2a14" SHOW_PROGRESS)

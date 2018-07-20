@@ -23,7 +23,9 @@
 #  Accelerate_INCLUDE_DIR
 #  Accelerate_LIBRARIES
 
-file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
+if($ENV{Accelerate_HOME})
+  file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
+endif()
 
 set(Accelerate_INCLUDE_SEARCH_PATHS
     /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current
@@ -39,9 +41,9 @@ set(LOOKED_FOR
     Accelerate_CBLAS_INCLUDE_DIR
     )
 
-set(Accelerate_LAPACK_FOUND False)
+set(Accelerate_LAPACK_FOUND)
 
-if(Accelerate_NEED_LAPACK)
+if(${Accelerate_NEED_LAPACK})
   message(STATUS "Looking for LAPACK support...")
 
   # Apple's vecLib should contain LAPACK functionalities included in the Accelerate
@@ -51,7 +53,7 @@ if(Accelerate_NEED_LAPACK)
   set(CMAKE_REQUIRED_LIBRARIES "-framework Accelerate")
   check_function_exists("cgees_" LAPACK_FOUND)
 
-  if(LAPACK_FOUND)
+  if(${LAPACK_FOUND})
     set(Accelerate_LAPACK_FOUND True)
     message(STATUS "LAPACK found")
   else()
@@ -64,9 +66,10 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Accelerate DEFAULT_MSG ${LOOKED_FOR})
 
-if(Accelerate_FOUND)
+if(${Accelerate_FOUND})
   set(Accelerate_INCLUDE_DIR ${Accelerate_CBLAS_INCLUDE_DIR})
   set(Accelerate_LIBRARIES "-framework Accelerate")
+
   mark_as_advanced(${LOOKED_FOR})
 
   message(STATUS "Found Apple Accelerate (include: ${Accelerate_CBLAS_INCLUDE_DIR}, library: ${Accelerate_LIBRARIES})")

@@ -29,9 +29,15 @@
 # Atlas_INCLUDE_DIRS
 # Atlas_LIBRARIES
 
-file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+if($ENV{Atlas_ROOT_DIR})
+  file(TO_CMAKE_PATH "$ENV{Atlas_ROOT_DIR}" CROSS_ROOT)
+endif()
 
-if(CMAKE_CROSSCOMPILING)
+if($ENV{CROSS_ROOT})
+  file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+endif()
+
+if(${CMAKE_CROSSCOMPILING})
   set(Atlas_INCLUDE_SEARCH_PATHS
       ${CROSS_ROOT}
       ${CROSS_ROOT}/include
@@ -39,17 +45,17 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 set(Atlas_INCLUDE_SEARCH_PATHS
-    $ENV{Atlas_INCLUDE_SEARCH_PATHS}
+    ${Atlas_INCLUDE_SEARCH_PATHS}
 
-    $ENV{Atlas_ROOT_DIR}
-    $ENV{Atlas_ROOT_DIR}/include
-    $ENV{Atlas_ROOT_DIR}/include/atlas
+    ${Atlas_ROOT_DIR}
+    ${Atlas_ROOT_DIR}/include
+    ${Atlas_ROOT_DIR}/include/atlas
 
     /usr/include/atlas
     /usr/include/atlas-base
     )
 
-if(CMAKE_CROSSCOMPILING)
+if(${CMAKE_CROSSCOMPILING})
   set(Atlas_LIB_SEARCH_PATHS
       ${CROSS_ROOT}
       ${CROSS_ROOT}/lib
@@ -58,10 +64,10 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 set(Atlas_LIB_SEARCH_PATHS
-    $ENV{Atlas_LIB_SEARCH_PATHS}
+    ${Atlas_LIB_SEARCH_PATHS}
 
-    $ENV{Atlas_ROOT_DIR}
-    $ENV{Atlas_ROOT_DIR}/lib
+    ${Atlas_ROOT_DIR}
+    ${Atlas_ROOT_DIR}/lib
 
     /usr/lib/atlas
     /usr/lib/atlas-base
@@ -85,11 +91,11 @@ set(LOOKED_FOR
     Atlas_BLAS_LIBRARY
     )
 
-set(Atlas_LAPACK_FOUND False)
-set(Atlas_CLAPACK_INCLUDE_DIR "")
-set(Atlas_LAPACK_LIBRARY "")
+set(Atlas_LAPACK_FOUND)
+set(Atlas_CLAPACK_INCLUDE_DIR)
+set(Atlas_LAPACK_LIBRARY)
 
-if(Atlas_NEED_LAPACK)
+if(${Atlas_NEED_LAPACK})
   message(STATUS "Looking for LAPACK support...")
 
   # we need another variables (starting with __) because cmake will not overwrite it if already set
@@ -104,7 +110,7 @@ if(Atlas_NEED_LAPACK)
   include(CheckFunctionExists)
   check_function_exists("cgees_" LAPACK_FOUND)
 
-  if(LAPACK_FOUND)
+  if(${LAPACK_FOUND})
     set(Atlas_LAPACK_FOUND True)
     set(Atlas_CLAPACK_INCLUDE_DIR ${__Atlas_CLAPACK_INCLUDE_DIR})
     set(Atlas_LAPACK_LIBRARY ${__Atlas_LAPACK_LIBRARY})
@@ -124,13 +130,11 @@ endif()
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Atlas DEFAULT_MSG ${LOOKED_FOR})
 
-if(Atlas_FOUND)
+if(${Atlas_FOUND})
   set(Atlas_INCLUDE_DIRS ${Atlas_CBLAS_INCLUDE_DIR} ${Atlas_CLAPACK_INCLUDE_DIR})
   set(Atlas_LIBRARIES ${Atlas_LAPACK_LIBRARY} ${Atlas_CBLAS_LIBRARY} ${Atlas_BLAS_LIBRARY})
 
   mark_as_advanced(${LOOKED_FOR})
 
   message(STATUS "Found Atlas (include: ${Atlas_INCLUDE_DIRS}, libraries: ${Atlas_LIBRARIES})")
-else()
-  message(FATAL "Atlas not found, looked for ${LOOKED_FOR}")
 endif()
