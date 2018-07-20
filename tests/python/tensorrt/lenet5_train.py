@@ -106,8 +106,9 @@ if __name__ == '__main__':
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'
-    model_file = '%s-symbol.json' % model_name
-    params_file = '%s-%04d.params' % (model_name, num_epochs)
+    model_dir = os.getenv("LENET_MODEL_DIR", "/tmp")
+    model_file = '%s/%s-symbol.json' % (model_dir, model_name)
+    params_file = '%s/%s-%04d.params' % (model_dir, model_name, num_epochs)
 
     if not (os.path.exists(model_file) and os.path.exists(params_file)):
         mnist = mx.test_utils.get_mnist()

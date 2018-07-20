@@ -64,8 +64,9 @@ def test_tensorrt_inference():
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'
-    model_file = '%s-symbol.json' % model_name
-    params_file = '%s-%04d.params' % (model_name, num_epochs)
+    model_dir = os.getenv("LENET_MODEL_DIR", "/tmp")
+    model_file = '%s/%s-symbol.json' % (model_dir, model_name)
+    params_file = '%s/%s-%04d.params' % (model_dir, model_name, num_epochs)
 
     _, _, _, all_test_labels = get_iters(mnist, batch_size)
 
