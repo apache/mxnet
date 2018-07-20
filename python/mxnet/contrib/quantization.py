@@ -327,7 +327,8 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
                 stop = start + num_merged_bins
             norm = is_nonzeros[start:stop].sum()
             if norm != 0:
-                q[start:stop] = float(quantized_bins[j]) / float(num_quantized_bins)
+                q[start:stop] = float(quantized_bins[j]) / float(norm)
+        q[p == 0] = 0
         p = _smooth_distribution(p)
         # There is a chance that q is an invalid probability distribution.
         try:

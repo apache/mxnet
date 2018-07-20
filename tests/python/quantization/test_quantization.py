@@ -507,6 +507,7 @@ def test_optimal_threshold_adversarial_case():
     # The threshold should be 2.
     assert res[3] - 2 < 1e-5
 
+
 @with_seed()
 @unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11456")
 def test_get_optimal_thresholds():
