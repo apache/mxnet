@@ -47,7 +47,6 @@ struct ActivationGrad {
 
     const NodeAttrs& attrs = n->attrs;
     int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
-    
     if (act_type == activation::kSoftSign) {
       // for softsign need the inputs to compute the activation.
       heads.push_back(n->inputs[activation::kData]);
