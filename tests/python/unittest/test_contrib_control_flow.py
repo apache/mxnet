@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import copy
 import numpy as np
 import mxnet as mx
 from mxnet import gluon
@@ -1029,6 +1030,7 @@ def check_contrib_rnn(cell_type, num_states):
                     rtol=0.001, atol=0.0001)
 
 
+@with_seed()
 def test_contrib_rnn():
     cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
             (gluon.rnn.GRUCell, 1)]
