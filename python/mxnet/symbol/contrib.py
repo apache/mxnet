@@ -34,7 +34,7 @@ from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "ifelse"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "condition"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
@@ -557,7 +557,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     final_loop_vars = [result[i] for i in range(num_out_data, num_outputs)]
     return outputs, final_loop_vars
 
-def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
+def condition(cond_func, then_func, else_func, inputs, name="cond"):  # pylint: disable=redefined-outer-name
     """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
@@ -565,11 +565,11 @@ def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
 
     `inputs` is a list of Symbols on which the condition and computations rely on.
 
-    `cond` is a user-defined function, used as the if condition.
+    `cond_func` is a user-defined function, used as the if condition.
     It consumes `inputs`, and produces a scalar MXNet symbol,
     indicating which branch of computation should be used.
-    The `cond` is variadic, and its signature should be
-    `cond(*loop_vars) => Symbol`.
+    The `cond_func` is variadic, and its signature should be
+    `cond_func(*loop_vars) => Symbol`.
 
     `then_func` is a user-defined function, used as computation of the then branch.
     It consumes `inputs`, and produces `outputs`.
@@ -588,14 +588,14 @@ def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
 
     Parameters
     ----------
-    cond: a Python function.
+    cond_func: a Python function.
         The branch condition.
     then_func: a Python function.
-        The computation to be executed if `cond` is true.
+        The computation to be executed if `cond_func` is true.
     else_func: a Python function.
-        The computation to be executed if `cond` is false.
+        The computation to be executed if `cond_func` is false.
     inputs: list of Symbols.
-        The variables fed to `cond`, `then_func` and `else_func`.
+        The variables fed to `cond_func`, `then_func` and `else_func`.
 
     Returns
     -------
@@ -603,11 +603,11 @@ def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
 
     Examples
     --------
-    >>> cond = lambda a, b: a * b < 5
+    >>> cond_func = lambda a, b: a * b < 5
     >>> then_func = lambda a, b: (a + 5) * (b + 5)
     >>> else_func = lambda a, b: (a - 5) * (b - 5)
     >>> inputs = (mx.sym.var('a'), mx.sym.var('b'))
-    >>> outputs = mx.sym.contrib.ifelse(cond, then_func, else_func, inputs)
+    >>> outputs = mx.sym.contrib.cond(cond_func, then_func, else_func, inputs)
     """
     def _to_symbol_tuple(inputs, name):
         """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
@@ -681,10 +681,10 @@ def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
     inputs = _to_symbol_tuple(inputs, "inputs")
     if len(inputs) == 0:
         raise ValueError("loop_vars should contain at least one element")
-    # create graph for `cond'
-    cond_g, num_outputs = _create_subgraph(inputs, cond, name + "_cond")
-    if num_outputs != 1:
-        raise ValueError("cond should always produce a single output")
+    # create graph for `cond_func'
+    cond_g, cond_num_outputs = _create_subgraph(inputs, cond_func, name + "_cond")
+    if cond_num_outputs != 1:
+        raise ValueError("cond_func should always produce a single output")
     # create graph for `then`
     then_g, then_num_outputs = _create_subgraph(inputs, then_func, name + "_then")
     # create graph for `else`
@@ -694,7 +694,7 @@ def ifelse(cond, then_func, else_func, inputs, name="ifelse"):
     # find symbols used in either cond_g or func_g
     input_syms, (cond_input_locs, then_input_locs, else_input_locs) = \
         _union_inputs(cond_g, then_g, else_g)
-    result = symbol._internal._ifelse(
+    result = symbol._internal._cond(
         # [cond, then_g, else_g, *input_syms]
         cond_g,
         then_g,

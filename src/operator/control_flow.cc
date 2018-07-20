@@ -913,13 +913,13 @@ WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& og
   return entries;
 }
 
-struct IfelseParam : public dmlc::Parameter<IfelseParam> {
+struct CondParam : public dmlc::Parameter<CondParam> {
   int num_args;
   int num_outputs;
   nnvm::Tuple<dim_t> cond_input_locs;
   nnvm::Tuple<dim_t> then_input_locs;
   nnvm::Tuple<dim_t> else_input_locs;
-  DMLC_DECLARE_PARAMETER(IfelseParam) {
+  DMLC_DECLARE_PARAMETER(CondParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(3)
     .describe("Number of input arguments, including cond, then and else as three symbol inputs.");
     DMLC_DECLARE_FIELD(num_outputs).set_lower_bound(1)
@@ -931,42 +931,42 @@ struct IfelseParam : public dmlc::Parameter<IfelseParam> {
     DMLC_DECLARE_FIELD(else_input_locs)
     .describe("The locations of else's inputs in the given inputs.");
   }
-};  // struct IfelseParam
+};  // struct CondParam
 
-DMLC_REGISTER_PARAMETER(IfelseParam);
+DMLC_REGISTER_PARAMETER(CondParam);
 
-class IfelseState {
+class CondState {
  public:
-  IfelseParam params;
+  CondParam params;
   CachedOpPtr cond_op;
   LoopState then_branch;
   LoopState else_branch;
   int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
 
-  IfelseState(const IfelseParam &params,
-              const Symbol &cond,
-              const Symbol &then_sym,
-              const Symbol &else_sym):
-              params(params),
-              cond_op(LoopState::MakeSharedOp(cond)),
-              then_branch(then_sym),
-              else_branch(else_sym),
-              branch_selection(-1) {
+  CondState(const CondParam &params,
+            const Symbol &cond,
+            const Symbol &then_sym,
+            const Symbol &else_sym):
+            params(params),
+            cond_op(LoopState::MakeSharedOp(cond)),
+            then_branch(then_sym),
+            else_branch(else_sym),
+            branch_selection(-1) {
   }
 };
 
-static void IfelseComputeExCPU(const OpStatePtr& state_ptr,
-                               const OpContext& ctx,
-                               const std::vector<NDArray>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<NDArray>& outputs) {
+static void CondComputeExCPU(const OpStatePtr& state_ptr,
+                             const OpContext& ctx,
+                             const std::vector<NDArray>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<NDArray>& outputs) {
   // The argument `inputs' are loop_vars and other inputs
   // loop_vars are stored in stored in `loop_vars_locs'
   // The argument `outputs' are output and new_loop_vars
   // [0: num_out_data) are outputs at each step.
   // [num_out_data: ) are new_loop_vars
-  IfelseState &state = state_ptr.get_state<IfelseState>();
-  const IfelseParam& params = state.params;
+  CondState &state = state_ptr.get_state<CondState>();
+  const CondParam& params = state.params;
   // a helper function, converting std::vector<NDArray> to std::vector<NDArray*>
   const auto to_ptr_vec = [](std::vector<NDArray> &in, std::vector<NDArray*> *out) {
     out->clear();
@@ -1005,13 +1005,13 @@ static void IfelseComputeExCPU(const OpStatePtr& state_ptr,
   loop_state.Forward(0, func_inputs, req, outputs, ctx.need_grad);
 }
 
-static void IfelseGradComputeExCPU(const OpStatePtr& state_ptr,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& _req,
-                                   const std::vector<NDArray>& outputs) {
-  IfelseState &state = state_ptr.get_state<IfelseState>();
-  const IfelseParam& params = state.params;
+static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& _req,
+                                 const std::vector<NDArray>& outputs) {
+  CondState &state = state_ptr.get_state<CondState>();
+  const CondParam& params = state.params;
   // sanity checks
   CHECK_EQ(outputs.size() + 3U, (size_t) params.num_args);
   CHECK_EQ(outputs.size(), _req.size());
@@ -1034,11 +1034,11 @@ static void IfelseGradComputeExCPU(const OpStatePtr& state_ptr,
   loop_state.Cleanup();
 }
 
-static bool IfelseShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
+static bool CondShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_shape,
+                      std::vector<TShape> *out_shape) {
   using nnvm::ShapeVector;
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   static const std::function<bool(const TShape &)> is_udf = is_shape_udf;
   // sanity checks
   CHECK_EQ(in_shape->size() + 3U, (size_t) params.num_args);
@@ -1121,10 +1121,10 @@ static bool IfelseShape(const nnvm::NodeAttrs& attrs,
   return succ_0 && succ_1 && succ_2;
 }
 
-static bool IfelseType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int> *in_type,
-                       std::vector<int> *out_type) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+static bool CondType(const nnvm::NodeAttrs& attrs,
+                     std::vector<int> *in_type,
+                     std::vector<int> *out_type) {
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   static const std::function<bool(const int &)> is_udf = is_type_udf;
   CHECK_EQ(in_type->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(out_type->size(), (size_t) params.num_outputs);
@@ -1147,12 +1147,12 @@ static bool IfelseType(const nnvm::NodeAttrs& attrs,
   return succ_0 && succ_1 && succ_2;
 }
 
-static bool IfelseStorageType(const nnvm::NodeAttrs& attrs,
-                              const int dev_mask,
-                              DispatchMode* dispatch_mode,
-                              std::vector<int> *in_attrs,
-                              std::vector<int> *out_attrs) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+static bool CondStorageType(const nnvm::NodeAttrs& attrs,
+                            const int dev_mask,
+                            DispatchMode* dispatch_mode,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
   CHECK_EQ(in_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(out_attrs->size(), (size_t) params.num_outputs);
@@ -1182,12 +1182,12 @@ static bool IfelseStorageType(const nnvm::NodeAttrs& attrs,
   return succ_0 && succ_1 && succ_2;
 }
 
-static bool BackwardIfelseStorageType(const nnvm::NodeAttrs& attrs,
-                                      const int dev_mask,
-                                      DispatchMode* dispatch_mode,
-                                      std::vector<int> *in_attrs,
-                                      std::vector<int> *out_attrs) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int> *in_attrs,
+                                    std::vector<int> *out_attrs) {
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
@@ -1230,12 +1230,12 @@ static bool BackwardIfelseStorageType(const nnvm::NodeAttrs& attrs,
   return succ_0 && succ_1;
 }
 
-static OpStatePtr CreateIfelseState(const NodeAttrs& attrs,
-                                    Context ctx,
-                                    const std::vector<TShape>& ishape,
-                                    const std::vector<int>& itype) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
-  return OpStatePtr::Create<IfelseState>(
+static OpStatePtr CreateCondState(const NodeAttrs& attrs,
+                                  Context ctx,
+                                  const std::vector<TShape>& ishape,
+                                  const std::vector<int>& itype) {
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
+  return OpStatePtr::Create<CondState>(
     params,
     *attrs.subgraphs[0],
     *attrs.subgraphs[1],
@@ -1243,8 +1243,8 @@ static OpStatePtr CreateIfelseState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-IfelseGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-  ElemwiseGradUseInOut fgrad{"_backward_ifelse"};
+CondGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  ElemwiseGradUseInOut fgrad{"_backward_cond"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
   return entries;
@@ -1373,21 +1373,21 @@ NNVM_REGISTER_OP(_backward_while_loop)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopGradComputeExCPU)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", WhileLoopGradComputeExCPU);
 
-NNVM_REGISTER_OP(_ifelse)
+NNVM_REGISTER_OP(_cond)
 .MXNET_DESCRIBE("Run a if-then-else using user-defined condition and computation")
-.set_attr_parser(ParamParser<IfelseParam>)
-.set_attr<FInferStorageType>("FInferStorageType", IfelseStorageType)
+.set_attr_parser(ParamParser<CondParam>)
+.set_attr<FInferStorageType>("FInferStorageType", CondStorageType)
 .set_num_inputs([](const NodeAttrs& attrs) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   return params.num_args;
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   return params.num_outputs;
 })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   std::vector<std::string> names;
   names.reserve(params.num_args);
   names.push_back("cond");
@@ -1401,40 +1401,40 @@ NNVM_REGISTER_OP(_ifelse)
     [](const NodeAttrs& attrs) {
   return std::vector<uint32_t>{0, 1, 2};
 })
-.set_attr<nnvm::FGradient>("FGradient", IfelseGradient)
-.set_attr<FCreateOpState>("FCreateOpState", CreateIfelseState)
-.set_attr<nnvm::FInferShape>("FInferShape", IfelseShape)
-.set_attr<nnvm::FInferType>("FInferType", IfelseType)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", IfelseComputeExCPU)
+.set_attr<nnvm::FGradient>("FGradient", CondGradient)
+.set_attr<FCreateOpState>("FCreateOpState", CreateCondState)
+.set_attr<nnvm::FInferShape>("FInferShape", CondShape)
+.set_attr<nnvm::FInferType>("FInferType", CondType)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondComputeExCPU)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
   return ExecType::kSubgraphExec;
 })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", IfelseComputeExCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("cond", "Symbol", "Input graph for the condition.")
 .add_argument("then_branch", "Symbol", "Input graph for the then branch.")
 .add_argument("else_branch", "Symbol", "Input graph for the else branch.")
 .add_argument("data", "NDArray-or-Symbol[]",
               "The input arrays that include data arrays and states.")
-.add_arguments(IfelseParam::__FIELDS__());
+.add_arguments(CondParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_ifelse)
+NNVM_REGISTER_OP(_backward_cond)
 .set_num_inputs([](const NodeAttrs& attrs){
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   return params.num_outputs * 2 + params.num_args - 3;
 })
 .set_num_outputs([](const NodeAttrs& attrs){
-  const IfelseParam& params = nnvm::get<IfelseParam>(attrs.parsed);
+  const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   return params.num_args - 3;
 })
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
   return ExecType::kSubgraphExec;
 })
-.set_attr<FInferStorageType>("FInferStorageType", BackwardIfelseStorageType)
-.set_attr_parser(ParamParser<IfelseParam>)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardCondStorageType)
+.set_attr_parser(ParamParser<CondParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", IfelseGradComputeExCPU)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", IfelseGradComputeExCPU);
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondGradComputeExCPU)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CondGradComputeExCPU);
 }  // namespace op
 }  // namespace mxnet

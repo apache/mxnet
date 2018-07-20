@@ -974,7 +974,7 @@ def test_while_loop_rnn():
                 y = y.asnumpy()
                 assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
 
-def _verify_ifelse(cond, then_func, else_func, input_var_shapes, free_var_shapes, is_train):
+def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_shapes, is_train):
 
     def _create_symbol(prefix, i):
         return mx.sym.var(prefix + str(i))
@@ -1008,8 +1008,8 @@ def _verify_ifelse(cond, then_func, else_func, input_var_shapes, free_var_shapes
             for var in free_vars + input_vars:
                 var.attach_grad()
         with mx.autograd.record(train_mode=is_train):
-            outputs = mx.nd.contrib.ifelse(
-                cond=lambda *__input_vars: cond(__input_vars, free_vars),
+            outputs = mx.nd.contrib.condition(
+                cond_func=lambda *__input_vars: cond_func(__input_vars, free_vars),
                 then_func=lambda *__input_vars: then_func(__input_vars, free_vars),
                 else_func=lambda *__input_vars: else_func(__input_vars, free_vars),
                 inputs=input_vars,
@@ -1025,8 +1025,8 @@ def _verify_ifelse(cond, then_func, else_func, input_var_shapes, free_var_shapes
             return _to_numpy_list(outputs), _to_numpy_list(grads), out_grads
 
     def _get_symbolic_result(out_grads):
-        outputs_sym = mx.sym.contrib.ifelse(
-            cond=lambda *__loop_vars: cond(__loop_vars, _free_syms),
+        outputs_sym = mx.sym.contrib.condition(
+            cond_func=lambda *__loop_vars: cond_func(__loop_vars, _free_syms),
             then_func=lambda *__loop_vars: then_func(__loop_vars, _free_syms),
             else_func=lambda *__loop_vars: else_func(__loop_vars, _free_syms),
             inputs=_input_syms,
@@ -1062,7 +1062,7 @@ def _verify_ifelse(cond, then_func, else_func, input_var_shapes, free_var_shapes
 
 
 @with_seed()
-def test_ifelse():
+def test_cond():
     # whether there are free variables in three graphs
     # whether these three graphs contain input_vars
     # whether to use all input_vars
@@ -1080,8 +1080,8 @@ def test_ifelse():
             return cond
         for is_train in [True, False]:
             for is_inverse in [False, True]:
-                _verify_ifelse(
-                    cond=make_cond(is_inverse),
+                _verify_cond(
+                    cond_func=make_cond(is_inverse),
                     then_func=then_func,
                     else_func=else_func,
                     is_train=is_train,

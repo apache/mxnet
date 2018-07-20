@@ -54,7 +54,7 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     quantize
     foreach
     while_loop
-    ifelse
+    condition
 ```
 
 ## API Reference
