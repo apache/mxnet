@@ -231,20 +231,6 @@ def _collect_layer_outputs(mod, data, include_layer=None, max_num_examples=None,
     return collector.nd_dict, num_examples
 
 
-def _load_sym(sym, logger=logging):
-    """Given a str as a path the symbol .json file or a symbol, returns a Symbol object."""
-    if isinstance(sym, str):  # sym is a symbol file path
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        symbol_file_path = os.path.join(cur_path, sym)
-        logger.info('Loading symbol from file %s' % symbol_file_path)
-        return sym_load(symbol_file_path)
-    elif isinstance(sym, Symbol):
-        return sym
-    else:
-        raise ValueError('_load_sym only accepts Symbol or path to the symbol file,'
-                         ' while received type %s' % str(type(sym)))
-
-
 def _smooth_distribution(p, eps=0.0001):
     """Given a discrete distribution (may have not been normalized to 1),
     smooth it by replacing zeros with eps multiplied by a scaling factor and taking the
@@ -379,6 +365,20 @@ def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logg
             logger.info('layer=%s, min_val=%f, max_val=%f, min_divergence=%f, optimal_threshold=%f'
                         % (name, min_val, max_val, min_divergence, opt_th))
     return th_dict
+
+
+def _load_sym(sym, logger=logging):
+    """Given a str as a path the symbol .json file or a symbol, returns a Symbol object."""
+    if isinstance(sym, str):  # sym is a symbol file path
+        cur_path = os.path.dirname(os.path.realpath(__file__))
+        symbol_file_path = os.path.join(cur_path, sym)
+        logger.info('Loading symbol from file %s' % symbol_file_path)
+        return sym_load(symbol_file_path)
+    elif isinstance(sym, Symbol):
+        return sym
+    else:
+        raise ValueError('_load_sym only accepts Symbol or path to the symbol file,'
+                         ' while received type %s' % str(type(sym)))
 
 
 def _load_params(params, logger=logging):
