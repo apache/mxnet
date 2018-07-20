@@ -46,7 +46,9 @@ struct ActivationGrad {
     heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
 
     const NodeAttrs& attrs = n->attrs;
-    if (dmlc::get<ActivationParam>(attrs.parsed).act_type == activation::kSoftSign) {
+    int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
+    
+    if (act_type == activation::kSoftSign) {
       // for softsign need the inputs to compute the activation.
       heads.push_back(n->inputs[activation::kData]);
     }
@@ -54,8 +56,8 @@ struct ActivationGrad {
 #if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
     // for ReLU, no need to pass input data. This enables inplace optimization during the
     // forward pass.
-    if (dmlc::get<ActivationParam>(attrs.parsed).act_type != activation::kReLU &&
-        dmlc::get<ActivationParam>(attrs.parsed).act_type != activation::kSoftSign) {
+    if (act_type != activation::kReLU &&
+        act_type != activation::kSoftSign) {
       heads.push_back(n->inputs[activation::kData]);
     }
 #endif
