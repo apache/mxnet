@@ -178,15 +178,16 @@ class InplaceABN : public Operator {
           out.dptr_, real_t(param_.slope));
       });
     } else {
-      data = broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
+      Assign(out, req[inplaceabn::kOut],
+             broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
                           data.shape_) * data +
              broadcast<1>(beta - (gamma * moving_mean) /
-                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_);
+                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
           s, out.size(0) * out.size(1) * out.size(2) * out.size(3), out.dptr_,
-          data.dptr_, real_t(param_.slope));
+          out.dptr_, real_t(param_.slope));
       });
     }
   }
@@ -222,14 +223,6 @@ class InplaceABN : public Operator {
       grad = out_grad[inplaceabn::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[inplaceabn::kData].get<xpu, 4, real_t>(s);
     }
-    // recover y and dl/dy
-    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
-      s, data.size(0) * data.size(1) * data.size(2) * data.size(3), data.dptr_,
-      data.dptr_, real_t(1.0f / param_.slope));
-    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
-      s, grad.size(0) * grad.size(1) * grad.size(2) * grad.size(3), grad.dptr_,
-      grad.dptr_, real_t(param_.slope));
-
     Tensor<xpu, 1> mean = out_data[inplaceabn::kMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> var = out_data[inplaceabn::kVar].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gamma = in_data[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
@@ -239,22 +232,41 @@ class InplaceABN : public Operator {
     // update moving avg
     Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[inplaceabn::kMovingVar].get<xpu, 1, real_t>(s);
+    // get the work space
+    size_t data_size = data.shape_[0] * data.shape_[1] * data.shape_[2] * data.shape_[3];
+    size_t mean_size = mean.shape_[0];
+    Tensor<xpu, 1> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+        mshadow::Shape1(2*(data_size + mean_size)), s);
+    real_t *data_ptr = workspace.dptr_;
+    real_t *grad_ptr = workspace.dptr_ + data_size;
+    real_t *sum_grad_ptr = workspace.dptr_ + 2 * data_size;
+    real_t *sum_prod_ptr = workspace.dptr_ + 2 * data_size + mean_size;
+    Tensor<xpu, 4> data_y(data_ptr, data.shape_, s);
+    Tensor<xpu, 4> grad_y(grad_ptr, data.shape_, s);
+    Tensor<xpu, 1> sumGrad(sum_grad_ptr, mean.shape_, s);
+    Tensor<xpu, 1> sumProd(sum_prod_ptr, mean.shape_, s);
+    // recover y and dl/dy
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, data.size(0) * data.size(1) * data.size(2) * data.size(3), data_y.dptr_,
+      data.dptr_, real_t(1.0f / param_.slope));
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, grad.size(0) * grad.size(1) * grad.size(2) * grad.size(3), grad_y.dptr_,
+      grad.dptr_, real_t(param_.slope));
 
     if (ctx.is_train && !param_.use_global_stats) {
       // get requested temp space
-      Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
-          mshadow::Shape2(5, mean.shape_[0]), s);
+      //Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+      //    mshadow::Shape2(5, mean.shape_[0]), s);
 
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // cal
-      Tensor<xpu, 1> sumGrad = workspace[3];
-      Tensor<xpu, 1> sumProd = workspace[4];
-      sumGrad = sumall_except_dim<1>(grad);
-      sumProd = sumall_except_dim<1>(grad * data);
+      sumGrad = sumall_except_dim<1>(grad_y);
+      sumProd = sumall_except_dim<1>(grad_y * data_y);
       if (param_.sync) {
         // get my rank
-        Barrier *global_barrier = inpabn_global_shared_barrier_backward.Register(param_.key, param_.ndev);
+        Barrier *global_barrier = inpabn_global_shared_barrier_backward.Register(
+           param_.key, param_.ndev);
         int myRank = inpabn_global_shared_rank_backward.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedGrad =
           inpabn_global_shared_grad.Register(param_.key, param_.ndev);
@@ -276,17 +288,17 @@ class InplaceABN : public Operator {
       }
       // assign
       Assign(ggamma, req[inplaceabn::kGamma],
-             sumall_except_dim<1>((grad * (data - broadcast<1>(beta, data.shape_)) /
+             sumall_except_dim<1>((grad_y * (data_y - broadcast<1>(beta, data.shape_)) /
                  F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)))));
       Assign(grad_in, req[inplaceabn::kData],
-             (grad * broadcast<1>(gamma, data.shape_)) *
+             (grad_y * broadcast<1>(gamma, data.shape_)) *
                broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps),
                             data.shape_) -
              scale * broadcast<1>(1.0f / F<mshadow_op::square_root>(var + param_.eps),
                                   data.shape_) *
                broadcast<1>(1.0f / gamma, data.shape_)*
                (broadcast<1>(sumProd, data.shape_) - broadcast<1>(beta, data.shape_) *
-               broadcast<1>(sumGrad, data.shape_)) * data -
+               broadcast<1>(sumGrad, data.shape_)) * data_y -
              scale *
                broadcast<1>(1.0f * gamma * sumGrad / F<mshadow_op::square_root>(var + param_.eps),
                             data.shape_) -
@@ -295,17 +307,26 @@ class InplaceABN : public Operator {
                             data.shape_) *
                (broadcast<1>(sumProd, data.shape_) -
                 broadcast<1>(beta * sumGrad, data.shape_)));
-      Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad));
+      Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad_y));
     } else {
       // use global statistics with freeze moving mean and var.
       Assign(ggamma, req[inplaceabn::kGamma],
-             sumall_except_dim<1>((grad * (data - broadcast<1>(beta, data.shape_)) /
+             sumall_except_dim<1>((grad_y * (data_y - broadcast<1>(beta, data.shape_)) /
                  F<mshadow_op::square_root>(broadcast<1>(moving_var + param_.eps, data.shape_)))));
-      Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad));
-      Assign(grad_in, req[inplaceabn::kData], (grad * broadcast<1>(gamma, data.shape_)) *
+      Assign(gbeta, req[inplaceabn::kBeta], sumall_except_dim<1>(grad_y));
+      Assign(grad_in, req[inplaceabn::kData], (grad_y * broadcast<1>(gamma, data.shape_)) *
              broadcast<1>(
                1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
     }
+    /*
+    // change back the data and gradient to avoid problem
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, data.size(0) * data.size(1) * data.size(2) * data.size(3), data.dptr_,
+      data.dptr_, real_t(param_.slope));
+    mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
+      s, grad.size(0) * grad.size(1) * grad.size(2) * grad.size(3), grad.dptr_,
+      grad.dptr_, real_t(1.0f / param_.slope));
+    */
   }
 
  private:
