@@ -6693,7 +6693,7 @@ def test_depthtospace():
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.depth_to_space(data, block)
-    assert_almost_equal(output.asnumpy(), expected)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
     shape_out = (1,1,4,6)
     data = mx.sym.Variable('data')
@@ -6702,6 +6702,24 @@ def test_depthtospace():
 
     check_symbolic_forward(dts_sym, [data_np], [expected])
     check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
+
+    def test_invalid_depth_dim():
+        invalid_shape_inp = (1,3,2,3)
+        block = 2
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+
+    def test_invalid_space_dim():
+        invalid_shape_inp = (1,4,2,3)
+        block = 2
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+
+    def test_invalid_block_size():
+        invalid_shape_inp = (1,0,2,3)
+        block = 2
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
 
 @with_seed()
 def test_spacetodepth():
@@ -6718,7 +6736,7 @@ def test_spacetodepth():
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.space_to_depth(data, block)
-    assert_almost_equal(output.asnumpy(), expected)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
     shape_out = (1,4,2,3)
     data = mx.sym.Variable('data')
@@ -6727,6 +6745,24 @@ def test_spacetodepth():
 
     check_symbolic_forward(dts_sym, [data_np], [expected])
     check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
+
+    def test_invalid_space_dim():
+        invalid_shape_inp = (1,1,2,3)
+        block = 2
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+
+    def test_invalid_block_size():
+        invalid_shape_inp = (1,1,4,2)
+        block = 0
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+    
+    def test_invalid_depth_dim():
+        invalid_shape_inp = (1,0,4,2)
+        block = 2
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
 
 if __name__ == '__main__':
     import nose

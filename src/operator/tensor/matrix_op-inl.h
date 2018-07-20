@@ -2172,11 +2172,10 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
 }
 
 struct DepthToSpaceParam : public dmlc::Parameter<DepthToSpaceParam> {
-  int blockSize;
+  int block_size;
   DMLC_DECLARE_PARAMETER(DepthToSpaceParam) {
-    DMLC_DECLARE_FIELD(blockSize)
-      .describe("The size of chunks that need to be taken from depth and spread across to the"
-                " shape dimension of the tensor and vice versa");
+    DMLC_DECLARE_FIELD(block_size)
+      .describe("Blocks of [block_size. block_size] are moved");
   }
 };
 
@@ -2191,7 +2190,8 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
   TShape expected_out(4);
 
   TShape& in_shape = in_attrs->at(0);
-  int block = param.blockSize;
+  int block = param.block_size;
+  CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[1], 0) << "Depth dimension:1 cannot be 0";
   CHECK_EQ(in_shape[1] % (block * block), 0)
     << "Cannot perform Depth To Space operation on the specified tensor."
@@ -2226,10 +2226,21 @@ inline bool DepthToSpaceOpType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1;
 }
 
-#define UPDATE_INDEX_USING_OFFSET(X) \
-    next_idx_val = idx / dim_size; \
-    inp_index += (idx - next_idx_val * dim_size) * offset_arr[X]; \
-    idx = next_idx_val;
+/*!
+ * \brief This function updates the value of input index from where the data element
+ * needs to be fetched and written out to the ith location in output tensor
+ * \param index_position    index within offset array to get offset of given dimension
+ * \param dim_size          size of current dimension
+ * \param idx               output tensor index
+ * \param inp_index         index within input tensor from where value is retrieved
+ * \param offset_arr        array containing the linear offset of input tensor
+ */
+MSHADOW_XINLINE void update_index(int index_position, int dim_size, int *idx,
+                                  int *inp_index, const int* offset_arr) {
+  int next_idx_val = *idx / dim_size;
+  *inp_index += (*idx - next_idx_val * dim_size) * offset_arr[index_position];
+  *idx = next_idx_val;
+}
 
 /*!
  * \brief This function preforms the tensor transpose (0, 1, 2, 3, 4, 5) ->
@@ -2247,19 +2258,19 @@ struct depth_to_space_forward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
                                   const int block, const int* size, const int* offset_arr) {
-    int inp_index = 0, idx = i, next_idx_val, dim_size;
+    int inp_index = 0, idx = i, dim_size;
     dim_size = block;
-    UPDATE_INDEX_USING_OFFSET(2)
+    update_index(2, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[3];
-    UPDATE_INDEX_USING_OFFSET(5)
+    update_index(5, dim_size, &idx, &inp_index, offset_arr);
     dim_size = block;
-    UPDATE_INDEX_USING_OFFSET(1)
+    update_index(1, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[2];
-    UPDATE_INDEX_USING_OFFSET(4)
+    update_index(4, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[1] / (block * block);
-    UPDATE_INDEX_USING_OFFSET(3)
+    update_index(3, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[0];
-    UPDATE_INDEX_USING_OFFSET(0)
+    update_index(0, dim_size, &idx, &inp_index, offset_arr);
     KERNEL_ASSIGN(out_data[i], req, in_data[inp_index]);
   }
 };
@@ -2311,7 +2322,7 @@ void DepthToSpaceOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data = outputs[0];
   const DepthToSpaceParam& param = nnvm::get<DepthToSpaceParam>(attrs.parsed);
   using namespace mxnet_op;
-  int block = param.blockSize;
+  int block = param.block_size;
 
   mshadow::Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t) * 10), s);
@@ -2343,7 +2354,8 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
   TShape expected_out(in_attrs->at(0).ndim());
 
   TShape& in_shape = in_attrs->at(0);
-  int block = param.blockSize;
+  int block = param.block_size;
+  CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[0], 0)
     << "Operation requires a 4D tensor. Size of dimension:0 cannot be 0";
   CHECK_NE(in_shape[1], 0) << "Depth dimension:1 cannot be 0";
@@ -2397,26 +2409,22 @@ struct space_to_depth_forward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const int block,
                                   const int* size, const int* offset_arr) {
-    int inp_index = 0, idx = i, next_idx_val, dim_size;
+    int inp_index = 0, idx = i, dim_size;
     dim_size = size[3] / block;
-    UPDATE_INDEX_USING_OFFSET(4)
+    update_index(4, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[2] / block;
-    UPDATE_INDEX_USING_OFFSET(2)
+    update_index(2, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[1];
-    UPDATE_INDEX_USING_OFFSET(1)
+    update_index(1, dim_size, &idx, &inp_index, offset_arr);
     dim_size = block;
-    UPDATE_INDEX_USING_OFFSET(5)
+    update_index(5, dim_size, &idx, &inp_index, offset_arr);
     dim_size = block;
-    UPDATE_INDEX_USING_OFFSET(3)
+    update_index(3, dim_size, &idx, &inp_index, offset_arr);
     dim_size = size[0];
-    UPDATE_INDEX_USING_OFFSET(0)
+    update_index(0, dim_size, &idx, &inp_index, offset_arr);
     KERNEL_ASSIGN(out_data[i], req, in_data[inp_index]);
   }
 };
-
-#ifdef UPDATE_INDEX_USING_OFFSET
-#undef UPDATE_INDEX_USING_OFFSET
-#endif
 
 /*!
  * \brief This function calculates the linear offset for each dimension of
@@ -2465,7 +2473,7 @@ void SpaceToDepthOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data = outputs[0];
   const DepthToSpaceParam& param = nnvm::get<DepthToSpaceParam>(attrs.parsed);
   using namespace mxnet_op;
-  int block = param.blockSize;
+  int block = param.block_size;
 
   mshadow::Tensor<xpu, 1, char> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, char>(mshadow::Shape1(sizeof(int32_t) * 10), s);
