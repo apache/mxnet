@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-total_timeout = 120
+total_timeout = 300
 git_timeout = 15
 // assign any caught errors here
 err = null

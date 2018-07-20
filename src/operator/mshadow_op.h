@@ -601,6 +601,15 @@ struct clip : public mxnet_op::tunable {
       return x;
     }
   }
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType x, DType lower_bound, DType upper_bound) {
+    if (x > upper_bound) {
+      return upper_bound;
+    } else if (x < lower_bound) {
+      return lower_bound;
+    }
+    return x;
+  }
 };
 
 /***** gamma ******/

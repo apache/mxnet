@@ -27,7 +27,7 @@ from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled, assertRaises
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
@@ -267,11 +267,11 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
-def np_softmax(x, axis=-1):
+def np_softmax(x, axis=-1, temperature=1.0):
     # fix for old numpy on Travis not supporting keepdims
     # x = x - np.max(x, axis=-1, keepdims=True)
     x = x - np.max(x, axis=axis, keepdims=True)
-    x = np.exp(x)
+    x = np.exp(x/temperature)
     # x /= np.sum(x, axis=-1, keepdims=True)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
@@ -2231,6 +2231,7 @@ def test_broadcast():
         a = mx.symbol.Variable('a')
         sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
         sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        sym_bcast_like = mx.symbol.broadcast_like(a, sym_bcast_to)
         def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
@@ -2247,6 +2248,7 @@ def test_broadcast():
             assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
+        test_broadcasting_ele(sym_bcast_like)
 
 
 @with_seed()
@@ -3650,39 +3652,69 @@ def test_blockgrad():
 
 @with_seed()
 def test_take():
-    def check_output_n_grad(data_shape, idx_shape):
+    def grad_helper(grad_in, axis, idx):
+        if axis == 0:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[idx] += 1.0
+            else:
+                grad_in[idx, :] += 1.0
+        elif axis == 1:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, idx] += 1.0
+            else:
+                grad_in[:, idx, :] += 1.0
+        elif axis == 2:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, :, idx] += 1.0
+            else:
+                grad_in[:, :, idx, :] += 1.0
+        elif axis == 3:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, :, :, idx] += 1.0
+            else:
+                grad_in[:, :, :, idx, :] += 1.0
+        elif axis == 4:
+            grad_in[:, :, :, :, idx] += 1.0
+        else:
+            raise ValueError("axis %d is not supported..." % axis)
+
+    def check_output_n_grad(data_shape, idx_shape, axis, mode):
+        data = mx.sym.Variable('a')
+        idx = mx.sym.Variable('indices')
+        idx = mx.sym.BlockGrad(idx)
+        result = mx.sym.take(a=data, indices=idx, axis=axis, mode=mode)
         exe = result.simple_bind(default_context(), a=data_shape,
-                                 indices=idx_shape)
+                                 indices=idx_shape, axis=axis, mode=mode)
         data_real = np.random.normal(size=data_shape).astype('float32')
-        idx_real = np.random.randint(low=0, high=data_shape[0], size=idx_shape)
-        grad_out = np.ones(idx_shape + data_shape[1:], dtype='float32')
+        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+        if axis < 0:
+            axis += len(data_shape)
+
+        grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
         grad_in = np.zeros(data_shape, dtype='float32')
 
         exe.arg_dict['a'][:] = mx.nd.array(data_real)
         exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
         exe.forward(is_train=True)
-        assert_almost_equal(exe.outputs[0].asnumpy(), data_real[idx_real])
+        assert_almost_equal(exe.outputs[0].asnumpy(), np.take(data_real, idx_real, axis=axis, mode=mode))
 
         for i in np.nditer(idx_real):
-            grad_in[i] += 1.0
+            grad_helper(grad_in, axis, i)
 
         exe.backward([mx.nd.array(grad_out)])
         assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
 
-    data = mx.sym.Variable('a')
-    idx = mx.sym.Variable('indices')
-    idx = mx.sym.BlockGrad(idx)
-    result = mx.sym.take(a=data, indices=idx)
-
-    for data_ndim in range(2, 5):
-        for idx_ndim in range(1, 4):
-            data_shape = ()
-            for _ in range(data_ndim):
-                data_shape += (np.random.randint(low=3, high=6), )
-            idx_shape = ()
-            for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), )
-            check_output_n_grad(data_shape, idx_shape)
+    for mode in ['clip', 'wrap']:
+        for data_ndim in range(1, 5):
+            for idx_ndim in range(1, 4):
+                for axis in range(-data_ndim, data_ndim):
+                    data_shape = ()
+                    for _ in range(data_ndim):
+                        data_shape += (np.random.randint(low=1, high=5), )
+                    idx_shape = ()
+                    for _ in range(idx_ndim):
+                        idx_shape += (np.random.randint(low=1, high=5), )
+                    check_output_n_grad(data_shape, idx_shape, axis, mode)
 
 
 @with_seed()
@@ -4327,6 +4359,18 @@ def test_new_softmax():
             check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
+@with_seed()
+def test_softmax_with_temperature():
+    for ndim in range(1, 5):
+        shape = np.random.randint(1, 5, size=ndim)
+        data = np.random.uniform(-2, 2, size=shape)
+        for temp in range(1, 11):
+            sym = mx.sym.softmax(axis=0, temperature=temp)
+            expected_fwd = np_softmax(data, axis=0, temperature=temp)
+            expected_bwd = np.zeros(shape)
+            check_symbolic_forward(sym, [data], [expected_fwd], rtol=0.05, atol=1e-3)
+            check_symbolic_backward(sym, [data], [np.ones(shape)], [expected_bwd], rtol=0.05, atol=1e-3)
+            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
 @with_seed()
 def test_log_softmax():
@@ -7002,6 +7046,79 @@ def test_op_roi_align():
     test_roi_align_value()
     test_roi_align_value(2)
     test_roi_align_autograd()
+
+@with_seed()
+def test_diag():
+
+    # Test 2d input
+    h = np.random.randint(2,9)
+    w = np.random.randint(2,9)
+    a_np = np.random.random((h, w)).astype(np.float32)
+    a = mx.nd.array(a_np).astype('float32')
+    
+    # k == 0
+    r = mx.nd.diag(a)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np))
+
+    # k == 1
+    k = 1
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # k == -1
+    k = -1
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # random k
+    k = np.random.randint(-min(h,w) + 1, min(h,w))
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # invalid k
+    k = max(h,w) + 1
+    assertRaises(MXNetError, mx.nd.diag, a, k=k)
+
+    # Test 2d backward, k=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # test 1d input
+    d = np.random.randint(2,9)
+    a_np = np.random.random((d))
+    a = mx.nd.array(a_np)
+    
+    # k is random
+    k = np.random.randint(-d,d)
+    r = mx.nd.diag(a, k=k)
+
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # Test 2d backward, k=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 2d backward, k=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1)
+    check_numeric_gradient(diag_sym, [a_np])
 
 
 if __name__ == '__main__':

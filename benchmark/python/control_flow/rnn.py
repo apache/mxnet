@@ -15,175 +15,128 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
+from six.moves import range
+
+import argparse
 import subprocess
+from itertools import product
+from time import time
+
 import mxnet as mx
+import numpy as np
 from mxnet import gluon
-import time
-import copy
 
-def get_gpus():
-    """
-    return a list of GPUs
-    """
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-class TestRNNLayer(gluon.HybridBlock):
-    def __init__(self, cell, prefix=None, params=None):
-        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
+_parser = argparse.ArgumentParser(description='Benchmark foreach and while_loop on RNN tasks.')
+_parser.add_argument('--benchmark', choices=["foreach", "while_loop"], required=True)
+_parser.add_argument('--warmup_rounds', type=int, default=20)
+_parser.add_argument('--test_rounds', type=int, default=100)
+args = _parser.parse_args()
+
+
+class ForeachRNN(gluon.HybridBlock):
+    def __init__(self, cell, length, prefix=None, params=None):
+        super(ForeachRNN, self).__init__(prefix=prefix, params=params)
+        self.length = length
         self.cell = cell
 
     def hybrid_forward(self, F, inputs, states):
         out, states = F.contrib.foreach(self.cell, inputs, states)
         return out
 
-def benchmark_rnn(cell, rnn_data, states):
-    ctx = rnn_data.context
-    num_batches = 20
 
-    # Imperative
-    cell0 = copy.deepcopy(cell)
-    layer0 = TestRNNLayer(cell0)
-    layer0.initialize(ctx=ctx)
+class WhileRNN(gluon.HybridBlock):
+    def __init__(self, cell, length, prefix=None, params=None):
+        super(WhileRNN, self).__init__(prefix=prefix, params=params)
+        self.length = length
+        self.cell = cell
 
-    # Hybridize
-    cell1 = copy.deepcopy(cell)
-    cell1.hybridize()
-    layer1 = TestRNNLayer(cell1)
-    layer1.initialize(ctx=ctx)
+    def hybrid_forward(self, F, inputs, states):
+        def _func(*states):
+            i = states[0]
+            s = states[1: ]
+            data = inputs.take(i).squeeze(axis=0)
+            out, new_s = self.cell(data, s)
+            new_s = [i + 1] + new_s
+            return out, new_s
+        out, states = F.contrib.while_loop(
+            cond=lambda i, *_: i < self.length,
+            func=_func,
+            loop_vars=states,
+            max_iterations=self.length,
+        )
+        assert len(out) == 1
+        return out[0]
 
-    # Hybridize
-    cell2 = copy.deepcopy(cell)
-    layer2 = TestRNNLayer(cell2)
-    layer2.initialize(ctx=ctx)
-    layer2.hybridize()
-    layer2(rnn_data, states)
 
-    # Hybridize
-    cell3 = copy.deepcopy(cell)
-    cell3.hybridize(static_alloc=True)
-    layer3 = TestRNNLayer(cell3)
-    layer3.initialize(ctx=ctx)
+def _zeros(shape, ctx):
+    return mx.nd.zeros(shape=shape, ctx=ctx)
 
-    tic = time.time()
-    for i in range(num_batches):
-        res0 = layer0(rnn_data, states)
-        mx.nd.waitall()
-    print("Imperative inference takes " + str(time.time() - tic))
 
-    tic = time.time()
-    for i in range(num_batches):
-        res1 = layer1(rnn_data, states)
-        mx.nd.waitall()
-    print("Hybrid-cell inference takes " + str(time.time() - tic))
+def _array(shape, ctx):
+    return mx.nd.normal(loc=0.0, scale=1.0, shape=shape, ctx=ctx)
 
-    tic = time.time()
-    for i in range(num_batches):
-        res3 = layer3(rnn_data, states)
-        mx.nd.waitall()
-    print("Static-hybrid-cell inference takes " + str(time.time() - tic))
 
-    tic = time.time()
-    for i in range(num_batches):
-        res2 = layer2(rnn_data, states)
-        mx.nd.waitall()
-    print("Hybrid inference takes " + str(time.time() - tic))
+def _get_gpus():
+    try:
+        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
+    except OSError:
+        return []
+    return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-    layer2.export("foreach_rnn")
-    symnet = mx.symbol.load('foreach_rnn-symbol.json')
-    args1 = {}
-    params = layer2.collect_params()
-    for key in params.keys():
-        args1[key] = params[key].data()
-    args1['data0'] = rnn_data
-    for i in range(len(states)):
-        args1['data' + str(i + 1)] = states[i]
-    exe = symnet.bind(ctx=ctx, args=args1)
-    tic = time.time()
-    for i in range(num_batches):
-        exe.forward(is_train=False)
-        mx.nd.waitall()
-    print("Symbol inference takes " + str(time.time() - tic))
 
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res0 = layer0(rnn_data, states)
-        res0.backward()
-        mx.nd.waitall()
-    print("Imperative training takes " + str(time.time() - tic))
+def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
+    obj = {"foreach": ForeachRNN, "while_loop": WhileRNN}[args.benchmark]
+    inputs = _array((seq_len, batch_size, hidden_dim), ctx)
+    states = [_array((batch_size, hidden_dim), ctx) for _ in cell_type(0).state_info()]
+    if args.benchmark == "while_loop":
+        states.insert(0, _zeros((1, ), ctx))
 
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res1 = layer1(rnn_data, states)
-        res1.backward()
-        mx.nd.waitall()
-    print("Hybrid-cell training takes " + str(time.time() - tic))
+    for is_train, is_hyb_cell, is_hyb_layer in product([True, False], [False, True], [False, True]):
+        cell = cell_type(hidden_dim)
+        if is_hyb_cell:
+            cell.hybridize(static_alloc=True)
+        layer = obj(cell, seq_len)
+        layer.initialize(ctx=ctx)
+        if is_hyb_layer:
+            layer.hybridize(static_alloc=True)
+        print("is_train = %r, hybridize_cell = %r, hybridize_layer = %r" % (is_train, is_hyb_cell, is_hyb_layer))
+        times = []
+        for _ in range(args.warmup_rounds + args.test_rounds):
+            tick = time()
+            if not is_train:
+                res = layer(inputs, states)
+            else:
+                with mx.autograd.record():
+                    res = layer(inputs, states)
+            if is_train:
+                res.backward()
+            mx.nd.waitall()
+            tock = time()
+            times.append((tock - tick) * 1000.0)
+        times = times[args.warmup_rounds: ]
+        print("Time used: mean = %.3f ms, std = %.3f ms" % (np.mean(times), np.std(times)))
 
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res3 = layer3(rnn_data, states)
-        res3.backward()
-        mx.nd.waitall()
-    print("Static-hybrid-cell training takes " + str(time.time() - tic))
 
-    tic = time.time()
-    for i in range(num_batches):
-        with mx.autograd.record():
-            res2 = layer2(rnn_data, states)
-        res2.backward()
-        mx.nd.waitall()
-    print("Hybrid training takes " + str(time.time() - tic))
-
-    # gradients for the backward of the foreach symbol
-    args_grad1 = {}
-    for key in args1.keys():
-        args_grad1[key] = mx.nd.empty(args1[key].shape, ctx=ctx)
-    exe = symnet.bind(ctx=ctx, args=args1, args_grad=args_grad1)
-    tic = time.time()
-    for i in range(num_batches):
-        exe.forward(is_train=True)
-        exe.backward(res2)
-        mx.nd.waitall()
-    print("Symbol training takes " + str(time.time() - tic))
-    print("")
-
-if __name__ == '__main__':
-    ndim = 512
-    seq_len = 100
+def main():
+    # testing configurations
+    cell_types = [gluon.rnn.RNNCell,
+                  gluon.rnn.GRUCell,
+                  gluon.rnn.LSTMCell]
+    ctxs = [mx.cpu(0)] + [mx.gpu(i) for i in _get_gpus()]
+    seq_lens = [100]
     batch_sizes = [1, 32]
-    cells = [gluon.rnn.GRUCell(ndim, prefix='rnn_'),
-             gluon.rnn.LSTMCell(ndim, prefix='rnn_')]
-    ctxs = [mx.cpu(0), mx.gpu(0)]
-    for cell in cells:
-        for ctx in ctxs:
-            for batch_size in batch_sizes:
-                if len(get_gpus()) == 0 and ctx == mx.gpu(0):
-                    continue
+    hidden_dims = [512]
+    print("--------------------------------------")
+    print("Benchmarking", args.benchmark)
+    for cell_type, ctx, seq_len, batch_size, hidden_dim in product(  \
+        cell_types, ctxs, seq_lens, batch_sizes, hidden_dims):
+        print("--------------------------------------")
+        print("cell: %s  ctx: %s  length: %d  batch size: %d dim: %d" % \
+              (cell_type.__name__, str(ctx), seq_len, batch_size, hidden_dim))
+        run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim)
 
-                if isinstance(cell, gluon.rnn.GRUCell):
-                    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, ndim),
-                                            ctx=mx.cpu(0))
-                    states = []
-                    states.append(mx.nd.normal(loc=0, scale=1, shape=(batch_size, ndim),
-                                               ctx=mx.cpu(0)))
-                elif isinstance(cell, gluon.rnn.LSTMCell):
-                    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, ndim),
-                                            ctx=mx.cpu(0))
-                    states = []
-                    states.append(mx.nd.normal(loc=0, scale=1, shape=(batch_size, ndim),
-                                               ctx=mx.cpu(0)))
-                    states.append(mx.nd.normal(loc=0, scale=1, shape=(batch_size, ndim),
-                                               ctx=mx.cpu(0)))
-                if ctx == mx.gpu(0):
-                    dev = "GPU"
-                else:
-                    dev = "CPU"
-                print("Benchmark {} in {} (batch size: {})".format(cell._alias(), dev,
-                                                                   batch_size))
-                benchmark_rnn(cell, rnn_data, states)
+
+if __name__ == "__main__":
+    main()

@@ -11,12 +11,98 @@ This folder contains a variety of scripts to generate the MXNet.io website as we
 * [Dockerfile](Dockerfile) - has all dependencies needed to build and update MXNet.io's static html
 * [update_all_version.sh](update_all_version.sh) - takes the output of `build_all_version.sh` then uses `AddVersion.py` and `AddPackageLink.py` to update the static html
 
+## Dependencies
+
+The `make docs` process triggers several different documentation functions. Most of this logic is found in [mxdoc.py](https://github.com/apache/incubator-mxnet/blob/master/docs/mxdoc.py). If you review this file you will see several functions which will generate different API documentation sets. For example, they are called in this way:
+
+```python
+app.connect("builder-inited", generate_doxygen)
+app.connect("builder-inited", build_scala_docs)
+app.connect("builder-inited", build_clojure_docs)
+# app.connect("builder-inited", build_r_docs)
+```
+
+These four are mentioned here in dependencies since you will need to install several extra packages beyond just Sphinx and its collection of plugins and packages. You can, if you wish, simply comment out any of these lines to skip generating the related docs, thereby eliminating several dependencies, and reducing complexity in your builds.
+
+Note: If you review the file, you will see that the function to generate the R docs is commented out by default. Remove this comment mark to generate R docs manually.
+
+Covering each one, here are the related dependencies.
+
+* core MXNet dependencies - you need to build MXNet from source before generating the docs. Once you have accomplished this, you have further dependencies to consider for docs.
+
+* `generate_doxygen` - this generates the Python and C++ APIs.
+
+To enable this manually, run the following (on Ubuntu). Similar packages can be found for other operating systems, but pay attention to versions. Newer versions have been found to have incompatibilities between packages.
+
+```bash
+apt-get install \
+    doxygen \
+    pandoc
+
+pip install --upgrade pip && pip install \
+    beautifulsoup4 \
+    breathe \
+    CommonMark==0.5.4 \
+    h5py \
+    mock==1.0.1 \
+    pypandoc \
+    recommonmark==0.4.0 \
+    sphinx==1.5.6
+```
+
+* `build_scala_docs` - this generates the MXNet-Scala package & Scala API docs.
+
+To enable this manually, run the following:
+
+```bash
+apt-get install software-properties-common
+apt-get update
+apt-get install openjdk-8-jdk
+apt-get install openjdk-8-jre
+
+echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+apt-key add sbt.gpg
+apt-get update && apt-get install \
+    maven \
+    sbt \
+    scala
+```
+
+* `build_clojure_docs` - this generates the Clojure API docs.
+
+To enable this manually, run the following:
+
+```bash
+wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
+chmod 775 lein
+sudo cp lein /usr/local/bin
+```
+
+* `build_r_docs` - this generates the R API docs in a PDF file found at `/docs/api/r/mxnet-r-reference-manual.pdf`.
+
+To enable this manually, run the following, and be sure to re-enable the `build_r_docs` function in `mxdoc.py` before you run `make docs`:
+
+```bash
+apt-get install \
+    libcairo2-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libxt-dev \
+    r-base \
+    r-base-dev
+
+Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
+cd R-package
+Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+```
+
 
 ## Setting Up a Docs Dev Server
 
-Running docs builds locally on a Mac is not recommended. For these instructions, you will use an Ubuntu machine.
+Running docs builds locally on a Mac is not recommended. See [#10858](https://github.com/apache/incubator-mxnet/issues/10858) for workarounds.
 
-This flow has been tested on a vanilla Ubuntu 16.04 cloud instance on AWS.
+For these instructions, you will use an Ubuntu machine. This flow has been tested on a vanilla Ubuntu 16.04 cloud instance on AWS.
 
 **Step 1:** Spin up your Ubuntu server and SSH in.
 
@@ -30,29 +116,26 @@ source mxnet_docs/bin/activate
 
 **Note:** Using a Python 2.7 environment is required to build older versions of the docs that have Python 3 incompatibilities. If you're only building the latest or version 1.0.0+, then you may use a Python 3 environment.
 
-**Step 3:** Clone the repo.
+**Step 3:** Clone the repo or your own fork of the repo.
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
+cd mxnet/docs/build_version_doc
 ```
 
-**Step 4:** Install dependencies.
+**Step 4:** Install dependencies and build MXNet.
 
-These scripts will install the dependencies for you.
+This script will install the dependencies for you and build MXNet from source.
 
 ```bash
-./ci/docker/install/ubuntu_core.sh
-./ci/docker/install/ubuntu_python.sh
-./ci/docker/install/ubuntu_scala.sh
-./ci/docker/install/ubuntu_docs.sh
+./setup_docs_ubuntu.sh
 ```
 
 **Step 5a:** Make the docs.
 
 Here you have two options (recommended for most situations):
 
-* Build this current branch with the following:
+* Change branches first, or build master with the following:
 
 ```bash
 cd mxnet

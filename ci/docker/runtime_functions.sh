@@ -127,6 +127,10 @@ report_ccache_usage() {
     popd
 }
 
+#
+# ARM builds
+#
+
 build_armv6() {
     set -ex
     pushd .
@@ -192,25 +196,7 @@ build_armv7() {
     popd
 }
 
-build_amzn_linux_cpu() {
-    cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
-        -G Ninja /work/mxnet
-    ninja -v
-    report_ccache_usage
-}
-
-build_arm64() {
+build_armv8() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -218,6 +204,7 @@ build_arm64() {
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
+        -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
@@ -227,12 +214,14 @@ build_arm64() {
     build_wheel
 }
 
+
+#
+# ANDROID builds
+#
+
 build_android_armv7() {
     set -ex
     cd /work/build
-#        -DCMAKE_SYSTEM_NAME=Android\
-#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
-#        -DCMAKE_SYSTEM_VERSION=21\
     cmake \
         -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -251,15 +240,9 @@ build_android_armv7() {
     report_ccache_usage
 }
 
-build_android_arm64() {
+build_android_armv8() {
     set -ex
     cd /work/build
-# There are other ways for CMake to cross compile android, like setting the following variables
-# below. But right not it doesn't work as expected, we need to find what's the best strategy to 
-# build with CMake in Android.
-#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
-#        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
-#        -DCMAKE_SYSTEM_VERSION=21\
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -290,6 +273,25 @@ build_centos7_cpu() {
 
     report_ccache_usage
 }
+
+build_amzn_linux_cpu() {
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF\
+        -DUSE_OPENCV=ON\
+        -DUSE_OPENMP=ON\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF\
+        -DUSE_DIST_KVSTORE=ON\
+        -G Ninja /work/mxnet
+    ninja -v
+    report_ccache_usage
+}
+
 
 build_centos7_mkldnn() {
     set -ex
@@ -743,6 +745,22 @@ integrationtest_ubuntu_gpu_cpp_package() {
     cpp-package/tests/ci_test.sh
 }
 
+integrationtest_ubuntu_cpu_dist_kvstore() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_USE_OPERATOR_TUNING=0
+    cd tests/nightly/
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+}
+
 integrationtest_ubuntu_gpu_scala() {
     set -ex
     make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
@@ -754,11 +772,8 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
 }
 
 test_ubuntu_cpu_python2() {
@@ -813,7 +828,7 @@ build_docs() {
 nightly_test_rat_check() {
     set -e
     pushd .
-    
+
     cd /work/deps/trunk/apache-rat/target
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419

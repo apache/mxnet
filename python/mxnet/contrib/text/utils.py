@@ -29,11 +29,14 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
                           to_lower=False, counter_to_update=None):
     """Counts tokens in the specified string.
 
-    For token_delim='<td>' and seq_delim='<sd>', a specified string of two sequences of tokens may
-    look like::
+    For token_delim=\'<td>\' and seq_delim=\'<sd>\', a specified string of two sequences of
+    tokens may look like::
 
     <td>token1<td>token2<td>token3<td><sd><td>token4<td>token5<td><sd>
 
+    <td> and <sd> are regular expressions. Make use of \\\\ to allow special characters as
+    delimiters. The list of
+    special characters can be found at https://docs.python.org/3/library/re.html.
 
     Parameters
     ----------
@@ -63,6 +66,11 @@ def count_tokens_from_str(source_str, token_delim=' ', seq_delim='\n',
     >>> source_str = ' Life is great ! \\n life is good . \\n'
     >>> count_tokens_from_str(token_line, ' ', '\\n', True)
     Counter({'!': 1, '.': 1, 'good': 1, 'great': 1, 'is': 2, 'life': 2})
+
+
+    >>> source_str = '*Life*is*great*!*\\n*life*is*good*.*\\n'
+    >>> count_tokens_from_str(token_line, '\\*', '\\n', True)
+    Counter({'is': 2, 'life': 2, '!': 1, 'great': 1, 'good': 1, '.': 1})
     """
 
     source_str = filter(None,

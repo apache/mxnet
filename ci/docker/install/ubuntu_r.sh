@@ -29,16 +29,10 @@ cd "$(dirname "$0")"
 # install libraries for mxnet's r package on ubuntu
 echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
 
-key=E084DAB9
-
-gpg --keyserver keyserver.ubuntu.com --recv-key $key || \
-    gpg --keyserver keyserver.pgp.com --recv-keys $key || \
-    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys $key ;
+apt-key add r.gpg
 
 # Installing the latest version (3.3+) that is compatible with MXNet
 add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
-
-gpg -a --export $key | apt-key add -
 
 apt-get update
 apt-get install -y --allow-unauthenticated \
