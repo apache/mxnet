@@ -51,7 +51,7 @@ use AI::MXNet::Gluon;
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
 use AI::MXNet::Engine;
-our $VERSION = '1.31';
+our $VERSION = '1.32';
 
 sub import
 {
@@ -187,9 +187,104 @@ AI::MXNet - Perl interface to MXNet machine learning library
     my $res = $mod->score($val_dataiter, mx->metric->create('acc'));
     ok($res->{accuracy} > 0.8);
 
+    ## Gluon MNIST example
+
+    my $net = nn->Sequential();
+    $net->name_scope(sub {
+        $net->add(nn->Dense(128, activation=>'relu'));
+        $net->add(nn->Dense(64, activation=>'relu'));
+        $net->add(nn->Dense(10));
+    });
+    $net->hybridize;
+
+    # data
+    sub transformer
+    {
+        my ($data, $label) = @_;
+        $data = $data->reshape([-1])->astype('float32')/255;
+        return ($data, $label);
+    }
+    my $train_data = gluon->data->DataLoader(
+        gluon->data->vision->MNIST('./data', train=>1, transform => \&transformer),
+        batch_size=>$batch_size, shuffle=>1, last_batch=>'discard'
+    );
+
+    ## training
+    sub train
+    {
+        my ($epochs, $ctx) = @_;
+        # Collect all parameters from net and its children, then initialize them.
+        $net->initialize(mx->init->Xavier(magnitude=>2.24), ctx=>$ctx);
+        # Trainer is for updating parameters with gradient.
+        my $trainer = gluon->Trainer($net->collect_params(), 'sgd', { learning_rate => $lr, momentum => $momentum });
+        my $metric = mx->metric->Accuracy();
+        my $loss = gluon->loss->SoftmaxCrossEntropyLoss();
+
+        for my $epoch (0..$epochs-1)
+        {
+            # reset data iterator and metric at begining of epoch.
+            $metric->reset();
+            enumerate(sub {
+                my ($i, $d) = @_;
+                my ($data, $label) = @$d;
+                $data = $data->as_in_context($ctx);
+                $label = $label->as_in_context($ctx);
+                # Start recording computation graph with record() section.
+                # Recorded graphs can then be differentiated with backward.
+                my $output;
+                autograd->record(sub {
+                    $output = $net->($data);
+                    my $L = $loss->($output, $label);
+                    $L->backward;
+                });
+                # take a gradient step with batch_size equal to data.shape[0]
+                $trainer->step($data->shape->[0]);
+                # update metric at last.
+                $metric->update([$label], [$output]);
+
+                if($i % $log_interval == 0 and $i > 0)
+                {
+                    my ($name, $acc) = $metric->get();
+                    print "[Epoch $epoch Batch $i] Training: $name=$acc\n";
+                }
+            }, \@{ $train_data });
+
+            my ($name, $acc) = $metric->get();
+            print "[Epoch $epoch] Training: $name=$acc\n";
+
+            my ($val_name, $val_acc) = test($ctx);
+            print "[Epoch $epoch] Validation: $val_name=$val_acc\n"
+        }
+        $net->save_parameters('mnist.params');
+    }
+
+    train($epochs, $cuda ? mx->gpu(0) : mx->cpu);
+
 =head1 DESCRIPTION
 
     Perl interface to MXNet machine learning library.
+    MXNet supports the Perl programming language. 
+    The MXNet Perl package brings flexible and efficient GPU computing and 
+    state-of-art deep learning to Perl.
+    It enables you to write seamless tensor/matrix computation with multiple GPUs in Perl.
+    It also lets you construct and customize the state-of-art deep learning models in Perl,
+    and apply them to tasks, such as image classification and data science challenges.
+
+    One important thing to internalize is that Perl interface is written to be as close as possible to the Python’s API,
+    so most, if not all of Python’s documentation and examples should just work in Perl after making few changes 
+    in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ; 
+    and in 99% of cases that’s all that is needed there.
+    In addition please refer to very detailed MXNet Python API Documentation.
+
+    AI::MXNet supports new imperative PyTorch like Gluon MXNet interface.
+    Please get acquainted with this new interface at Deep Learning - The Straight Dope.
+
+    For specific Perl Gluon usage please refer to Perl examples and tests directories on github,
+    but be assured that the Python and Perl usage are extremely close in order to make the use 
+    of the Python Gluon docs and examples as easy as possible.
+
+    AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL
+    and the results can be transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 
 =head1 BUGS AND INCOMPATIBILITIES
 

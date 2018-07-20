@@ -17,6 +17,13 @@
 
 use strict;
 use warnings;
+package AI::MXNet::Gluon::Contrib::NN::BasicLayers;
+
+=head1 NAME 
+
+    AI::MXNet::Gluon::Contrib::NN::BasicLayers - An additional collection of Gluon's building blocks.
+=cut
+
 use AI::MXNet::Function::Parameters;
 package AI::MXNet::Gluon::NN::Concurrent;
 use AI::MXNet::Gluon::Mouse;
