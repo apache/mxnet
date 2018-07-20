@@ -25,6 +25,7 @@
 
 if($ENV{Accelerate_HOME})
   file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
+  message(STATUS "Accelerate_HOME=${Accelerate_HOME}")
 endif()
 
 set(Accelerate_INCLUDE_SEARCH_PATHS

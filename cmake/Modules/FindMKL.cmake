@@ -34,6 +34,7 @@
 
 if($ENV{MKLROOT})
   file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
+  message(STATUS "MKLROOT=${MKLROOT}")
 endif()
 
 # ---[ Root folders

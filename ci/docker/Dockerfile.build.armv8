@@ -37,7 +37,6 @@ COPY install/arm_openblas.sh /work/
 RUN /work/arm_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh

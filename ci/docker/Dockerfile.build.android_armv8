@@ -73,7 +73,9 @@ ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 # Build ARM dependencies.
 COPY install/android_arm64_openblas.sh /work/
 RUN /work/android_arm64_openblas.sh
-ENV CPLUS_INCLUDE_PATH /work/deps/OpenBLAS
+
+ENV OpenBLAS_HOME=${CROSS_ROOT}
+
 WORKDIR /work/build
 
 COPY runtime_functions.sh /work/

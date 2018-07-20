@@ -71,7 +71,6 @@ COPY install/android_armv7_openblas.sh /work/deps
 RUN /work/deps/android_armv7_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 WORKDIR /work
 

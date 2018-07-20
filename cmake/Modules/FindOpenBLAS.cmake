@@ -31,14 +31,12 @@
 
 if($ENV{OpenBLAS_HOME})
   file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
-endif()
-
-if($ENV{OpenBLAS})
-  file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
+  message(STATUS "OpenBLAS_HOME=${OpenBLAS_HOME}")
 endif()
 
 if($ENV{CROSS_ROOT})
   file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+  message(STATUS "CROSS_ROOT=${CROSS_ROOT}")
 endif()
 
 if(CMAKE_CROSSCOMPILING)

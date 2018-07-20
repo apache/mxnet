@@ -30,11 +30,13 @@
 # Atlas_LIBRARIES
 
 if($ENV{Atlas_ROOT_DIR})
-  file(TO_CMAKE_PATH "$ENV{Atlas_ROOT_DIR}" CROSS_ROOT)
+  file(TO_CMAKE_PATH "$ENV{Atlas_ROOT_DIR}" Atlas_ROOT_DIR)
+  message(STATUS "Atlas_ROOT_DIR=${Atlas_ROOT_DIR}")
 endif()
 
 if($ENV{CROSS_ROOT})
   file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
+  message(STATUS "CROSS_ROOT=${CROSS_ROOT}")
 endif()
 
 if(CMAKE_CROSSCOMPILING)
