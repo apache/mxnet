@@ -18,8 +18,10 @@
 
 package org.apache.mxnetexamples.rnn
 
-import org.apache.mxnet.{DataBatch, DataIter, NDArray, Shape}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.slf4j.LoggerFactory
+
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
@@ -95,7 +97,8 @@ object BucketIo {
       path: String, vocab: Map[String, Int], var buckets: IndexedSeq[Int],
       _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
       seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
-      readContent: ReadContent = defaultReadContent) extends DataIter {
+      readContent: ReadContent = defaultReadContent, layout: String = "NT",
+      dtype : DType = DType.Float32) extends DataIter {
 
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
 
@@ -165,7 +168,17 @@ object BucketIo {
     private val _provideData = { val tmp = ListMap("data" -> Shape(_batchSize, _defaultBucketKey))
       tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
     }
+
     private val _provideLabel = ListMap("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
+
+    private val _provideDataDesc = {
+      val tmp = IndexedSeq(new DataDesc("data",
+        Shape(_batchSize, _defaultBucketKey), dtype, layout))
+      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dtype, layout))
+    }
+
+    private val _provideLabelDesc = IndexedSeq(new DataDesc("softmax_label",
+      Shape(_batchSize, _defaultBucketKey), dtype, layout))
 
     private var iBucket = 0
 
@@ -197,7 +210,7 @@ object BucketIo {
                     getIndex(),
                     getPad(),
                     this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel)
+                    batchProvideData, batchProvideLabel, dtype, layout)
     }
 
     /**
@@ -228,18 +241,28 @@ object BucketIo {
      */
     override def getIndex(): IndexedSeq[Long] = IndexedSeq[Long]()
 
+    /**
+      * get the number of padding examples
+      * in current batch
+      * @return number of padding examples in current batch
+      */
+    override def getPad(): Int = 0
+
+    override def getDType(): DType = dtype
+
+    override def getLayout(): String = layout
+
     // The name and shape of label provided by this iterator
     override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
-    /**
-     * get the number of padding examples
-     * in current batch
-     * @return number of padding examples in current batch
-     */
-    override def getPad(): Int = 0
-
     // The name and shape of data provided by this iterator
     override def provideData: ListMap[String, Shape] = this._provideData
+
+    // Provide type:DataDesc of the data
+    override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
+
+    // Provide type:DataDesc of the label
+    override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
 
     override def hasNext: Boolean = {
       iBucket < bucketPlan.length

@@ -140,7 +140,9 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // use ListMap to indicate the order of data/label loading
                 // (must match the order of input data/label)
                 private val providedData: ListMap[String, Shape] = null,
-                private val providedLabel: ListMap[String, Shape] = null) {
+                private val providedLabel: ListMap[String, Shape] = null,
+                val dtype: DType = Base.MX_REAL_TYPE,
+                val layout: String = "NCHW") {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -170,6 +172,8 @@ object DataBatch {
     private var label: IndexedSeq[NDArray] = null
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
+    private var layout: String = "NCHW"
+    private var dtype: DType = Base.MX_REAL_TYPE
     private var bucketKey: AnyRef = null
     private var datatShapes: ListMap[String, Shape] = null
     private var labelShapes: ListMap[String, Shape] = null
@@ -217,6 +221,26 @@ object DataBatch {
     }
 
     /**
+      * Set the dtype.
+      * @param dtype The dtype of the label, default is Float32
+      * @return this
+      */
+    def setDType(dtype: DType): Builder = {
+      this.dtype = dtype
+      this
+    }
+
+    /**
+      * Set the layout.
+      * @param layout The layout of the label, default is NCHW
+      * @return this
+      */
+    def setLayout(layout: String): Builder = {
+      this.layout = layout
+      this
+    }
+
+    /**
      * Set the bucket key, used for bucketing module.
      * @param bucketKey the bucket key related to this batch.
      * @return this.
@@ -258,7 +282,7 @@ object DataBatch {
 
     def build(): DataBatch = {
       require(data != null, "data is required.")
-      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes)
+      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes, dtype, layout)
     }
   }
 }
@@ -280,7 +304,8 @@ abstract class DataIter extends Iterator[DataBatch] {
    */
   @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
-    new DataBatch(getData(), getLabel(), getIndex(), getPad())
+    new DataBatch(getData(), getLabel(), getIndex(), getPad(),
+      dtype = getDType(), layout = getLayout())
   }
 
   /**
@@ -303,6 +328,18 @@ abstract class DataIter extends Iterator[DataBatch] {
   def getPad(): Int
 
   /**
+    * Get the DType
+    * @return DType of the DataIter
+    */
+  def getDType(): DType
+
+  /**
+    * Get the layout
+    * @return layout of the DataIter
+    */
+  def getLayout(): String
+
+  /**
    * Get the index of current batch
    * @return the index of current batch
    */
@@ -313,6 +350,12 @@ abstract class DataIter extends Iterator[DataBatch] {
 
   // The name and shape of label provided by this iterator
   def provideLabel: ListMap[String, Shape]
+
+  // Provide type:DataDesc of the data
+  def provideDataDesc: IndexedSeq[DataDesc]
+
+  // Provide type:DataDesc of the label
+  def provideLabelDesc: IndexedSeq[DataDesc]
 
   // For bucketing io only
   // The bucket key for the default symbol.

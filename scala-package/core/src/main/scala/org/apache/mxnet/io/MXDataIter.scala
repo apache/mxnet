@@ -18,7 +18,8 @@
 package org.apache.mxnet.io
 
 import org.apache.mxnet.Base._
-import org.apache.mxnet.{DataBatch, DataIter, DataPack, NDArray, Shape, WarnIfNotDisposed}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.apache.mxnet.IO._
 import org.slf4j.LoggerFactory
 
@@ -42,20 +43,41 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   private var currentBatch: DataBatch = null
 
   private val (_provideData: ListMap[String, Shape],
-               _provideLabel: ListMap[String, Shape],
-               _batchSize: Int) =
+               _provideLabel: ListMap[String, Shape]) =
     if (hasNext) {
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
       // properties
-      val res = (ListMap(dataName -> data.shape), ListMap(labelName -> label.shape), data.shape(0))
+      val res = (ListMap(dataName -> data.shape), ListMap(labelName -> label.shape))
+      currentBatch.dispose()
+      reset()
+      res
+    } else {
+      (null, null)
+    }
+
+  private val (_provideDataDesc: IndexedSeq[DataDesc],
+               _provideLabelDesc: IndexedSeq[DataDesc],
+               _batchSize: Int) = {
+    if (hasNext) {
+      iterNext()
+      val data = currentBatch.data(0)
+      val label = currentBatch.label(0)
+      val dType = currentBatch.dtype
+      val layout = currentBatch.layout
+      // properties
+      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dType, layout)),
+        IndexedSeq(new DataDesc(labelName, label.shape, dType, layout)),
+        data.shape(0))
       currentBatch.dispose()
       reset()
       res
     } else {
       (null, null, 0)
     }
+  }
+
 
   private var disposed = false
   protected def isDisposed = disposed
@@ -101,10 +123,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   private def iterNext(): Boolean = {
     val next = new RefInt
     checkCall(_LIB.mxDataIterNext(handle, next))
-    currentBatch = null
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
         index = getIndex(), pad = getPad())
+    } else {
+      currentBatch = null
     }
     next.value > 0
   }
@@ -151,11 +174,33 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     out.value
   }
 
+  /**
+    * Get the DType
+    * @return DType
+    */
+  def getDType(): DType = {
+    currentBatch.dtype
+  }
+
+  /**
+    * Get the layout
+    * @return layout
+    */
+  def getLayout(): String = {
+    currentBatch.layout
+  }
+
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
   override def provideLabel: ListMap[String, Shape] = _provideLabel
+
+  // Provide type:DataDesc of the data
+  override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
+
+  // Provide type:DataDesc of the label
+  override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
 
   override def hasNext: Boolean = {
     if (currentBatch != null) {

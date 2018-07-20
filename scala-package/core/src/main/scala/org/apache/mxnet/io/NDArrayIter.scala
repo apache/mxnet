@@ -20,6 +20,7 @@ package org.apache.mxnet.io
 import java.util.NoSuchElementException
 
 import org.apache.mxnet.Base._
+import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 
@@ -42,7 +43,7 @@ import scala.collection.immutable.ListMap
 class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   label: IndexedSeq[(String, NDArray)],
                   private val dataBatchSize: Int, shuffle: Boolean,
-                  lastBatchHandle: String) extends DataIter {
+                  lastBatchHandle: String, dtype: DType, layout: String) extends DataIter {
 
   /**
    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
@@ -59,10 +60,11 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
   def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
-           dataName: String = "data", labelName: String = "label") {
+           dataName: String = "data", labelName: String = "label",
+           dType: DType = MX_REAL_TYPE, layout: String = "NCHW") {
     this(IO.initData(data, allowEmpty = false, dataName),
       IO.initData(label, allowEmpty = true, labelName),
-      dataBatchSize, shuffle, lastBatchHandle)
+      dataBatchSize, shuffle, lastBatchHandle, dType, layout)
   }
 
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
@@ -107,6 +109,13 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     (pData, pLabel)
   }
 
+  private val (_provideDataDesc: IndexedSeq[DataDesc],
+  _provideLabelDesc: IndexedSeq[DataDesc]) = {
+    val pData = initData.map(ele => new DataDesc(ele._1, getShape(ele)._2, dtype, layout))
+    val pLabel = initLabel.map(ele => new DataDesc(ele._1, getShape(ele)._2, dtype, layout))
+    (pData, pLabel)
+  }
+
   /**
    * get shape via dataBatchSize
    * @param dataItem
@@ -148,7 +157,8 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
   override def next(): DataBatch = {
     if (hasNext) {
       cursor += dataBatchSize
-      new DataBatch(getData(), getLabel(), getIndex(), getPad())
+      new DataBatch(getData(), getLabel(), getIndex(), getPad(),
+        dtype = getDType(), layout = getLayout())
     } else {
       throw new NoSuchElementException
     }
@@ -223,11 +233,33 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     }
   }
 
+  /**
+    * Get the DType
+    * @return DType
+    */
+  def getDType(): DType = {
+    dtype
+  }
+
+  /**
+    * Get the layout
+    * @return layout
+    */
+  def getLayout(): String = {
+    layout
+  }
+
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
   override def provideLabel: ListMap[String, Shape] = _provideLabel
+
+  // Provide type:DataDesc of the data
+  override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
+
+  // Provide type:DataDesc of the label
+  override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
 
   override def batchSize: Int = dataBatchSize
 }
@@ -242,6 +274,8 @@ object NDArrayIter {
     private var label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty
     private var dataBatchSize: Int = 1
     private var lastBatchHandle: String = "pad"
+    private var layout: String = "NCHW"
+    private var dtype: DType = Base.MX_REAL_TYPE
 
     /**
      * Add one data input with its name.
@@ -286,11 +320,31 @@ object NDArrayIter {
     }
 
     /**
+      * Set the dtype.
+      * @param dtype The dtype of the label, default is Float32
+      * @return this
+      */
+    def setDType(dtype: DType): Builder = {
+      this.dtype = dtype
+      this
+    }
+
+    /**
+      * Set the layout.
+      * @param layout The layout of the label, default is NCHW
+      * @return this
+      */
+    def setLayout(layout: String): Builder = {
+      this.layout = layout
+      this
+    }
+
+    /**
      * Build the NDArrayIter object.
      * @return the built object.
      */
     def build(): NDArrayIter = {
-      new NDArrayIter(data, label, dataBatchSize, false, lastBatchHandle)
+      new NDArrayIter(data, label, dataBatchSize, false, lastBatchHandle, dtype, layout)
     }
   }
 }

@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.spark.io
 
-import org.apache.mxnet.{NDArray, DataBatch, DataIter, Shape}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.apache.spark.mllib.linalg.Vector
 
 import scala.collection.immutable.ListMap
@@ -32,7 +33,9 @@ class PointIter private[mxnet](
   private val dimension: Shape,
   private val _batchSize: Int,
   private val dataName: String = "data",
-  private val labelName: String = "label") extends DataIter {
+  private val labelName: String = "label",
+  private val dtype: DType = DType.Float32,
+  private val layout: String = "NCHW") extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1
@@ -71,7 +74,8 @@ class PointIter private[mxnet](
       }
       val pad = batchSize - instNum
       val dataBatch = new LongLivingDataBatch(
-        IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad)
+        IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad,
+        layout, dtype)
       cache += dataBatch
       dataBatch
     }
@@ -123,12 +127,24 @@ class PointIter private[mxnet](
     ListMap(dataName -> dataShape)
   }
 
+  override def provideDataDesc: IndexedSeq[DataDesc] = {
+    IndexedSeq(new DataDesc(dataName, dataShape, dtype, layout))
+  }
+
+  override def provideLabelDesc: IndexedSeq[DataDesc] = {
+    IndexedSeq(new DataDesc(labelName, Shape(_batchSize), dtype, layout))
+  }
+
   /**
    * Get the number of padding examples
    * in current batch
    * @return number of padding examples in current batch
    */
   override def getPad(): Int = 0
+
+  override def getDType(): DType = dtype
+
+  override def getLayout(): String = layout
 
   override def batchSize: Int = _batchSize
 
