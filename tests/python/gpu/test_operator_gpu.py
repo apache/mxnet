@@ -46,8 +46,8 @@ from test_sparse_operator import *
 from test_ndarray import *
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm
-del test_support_vector_machine_l2_svm
+del test_support_vector_machine_l1_svm  # noqa
+del test_support_vector_machine_l2_svm  # noqa
 
 
 def check_countsketch(in_dim,out_dim,n):
