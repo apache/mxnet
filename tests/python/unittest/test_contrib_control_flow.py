@@ -1009,10 +1009,9 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
                 var.attach_grad()
         with mx.autograd.record(train_mode=is_train):
             outputs = mx.nd.contrib.condition(
-                cond_func=lambda *__input_vars: cond_func(__input_vars, free_vars),
-                then_func=lambda *__input_vars: then_func(__input_vars, free_vars),
-                else_func=lambda *__input_vars: else_func(__input_vars, free_vars),
-                inputs=input_vars,
+                cond=cond_func(input_vars, free_vars),
+                then_func=lambda: then_func(input_vars, free_vars),
+                else_func=lambda: else_func(input_vars, free_vars),
             )
             outputs = [x * 2 for x in outputs]
             grads = []
@@ -1026,10 +1025,9 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
 
     def _get_symbolic_result(out_grads):
         outputs_sym = mx.sym.contrib.condition(
-            cond_func=lambda *__loop_vars: cond_func(__loop_vars, _free_syms),
-            then_func=lambda *__loop_vars: then_func(__loop_vars, _free_syms),
-            else_func=lambda *__loop_vars: else_func(__loop_vars, _free_syms),
-            inputs=_input_syms,
+            cond=cond_func(_input_syms, _free_syms),
+            then_func=lambda: then_func(_input_syms, _free_syms),
+            else_func=lambda: else_func(_input_syms, _free_syms),
         )
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)

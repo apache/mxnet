@@ -363,45 +363,38 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             ))
     return stacked_outputs, list(loop_vars)
 
-def condition(cond_func, then_func, else_func, inputs):  # pylint: disable=redefined-outer-name
+def condition(cond, then_func, else_func):
     """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
     the two customized computations according to the specified condition.
 
-    `inputs` is a list of NDArrays on which the condition and computations rely on.
-
-    `cond_func` is a user-defined function, used as the if condition.
-    It consumes `inputs`, and produces a scalar MXNet NDArray,
+    `cond` is a scalar MXNet NDArray,
     indicating which branch of computation should be used.
-    The `cond_func` is variadic, and its signature should be
-    `cond_func(*loop_vars) => NDArray`.
 
     `then_func` is a user-defined function, used as computation of the then branch.
-    It consumes `inputs`, and produces `outputs`.
-    The `then_func` is variadic, and its signature should be
-    `then_func(*loop_vars) => List[NDArray]`.
+    It produces `outputs`, which is a list of NDArrays.
+    The signature of `then_func` should be
+    `then_func() => List[NDArray]`.
 
     `else_func` is a user-defined function, used as computation of the else branch.
-    It also consumes `inputs`, and produces `outputs`.
-    The `else_func` is variadic, and its signature should be
-    `else_func(*loop_vars) => List[NDArray]`.
+    It produces `outputs`, which is a list of NDArrays.
+    The signature of `else_func` should be
+    `else_func() => List[NDArray]`.
 
     The `outputs` produces by `then_func` and `else_func` should have the same number
     of elements, all of which should be in the same shape, of the same dtype and stype.
 
-    This function returns a list of NDArrays, representing the computation result.
+    This function returns a list of symbols, representing the computation result.
 
     Parameters
     ----------
-    cond_func: a Python function.
+    cond: a MXNet NDArray representing a scalar.
         The branch condition.
     then_func: a Python function.
-        The computation to be executed if `cond_func` is true.
+        The computation to be executed if `cond` is true.
     else_func: a Python function.
-        The computation to be executed if `cond_func` is false.
-    inputs: list of NDArrays.
-        The variables fed to `cond_func`, `then_func` and `else_func`.
+        The computation to be executed if `cond` is false.
 
     Returns
     -------
@@ -409,11 +402,11 @@ def condition(cond_func, then_func, else_func, inputs):  # pylint: disable=redef
 
     Examples
     --------
-    >>> cond_func = lambda a, b: a * b < 5
+    >>> a, b = mx.nd.array([1]), mx.nd.array([2])
+    >>> cond = a * b < 5
     >>> then_func = lambda a, b: (a + 5) * (b + 5)
     >>> else_func = lambda a, b: (a - 5) * (b - 5)
-    >>> inputs = (mx.nd.array([1]), mx.nd.array([2]))
-    >>> outputs = mx.nd.contrib.cond(cond_func, then_func, else_func, inputs)
+    >>> outputs = mx.nd.contrib.cond(cond, then_func, else_func)
     >>> outputs[0]
     [42.]
     <NDArray 1 @cpu(0)>
@@ -445,14 +438,11 @@ def condition(cond_func, then_func, else_func, inputs):  # pylint: disable=redef
                 raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
         return inputs
 
-    inputs = _to_ndarray_tuple(inputs, "inputs")
-    if len(inputs) == 0:
-        raise ValueError("inputs should contain at least one element")
-    branch = _to_python_scalar(cond_func(*inputs), bool, "Return value of cond_func")
+    branch = _to_python_scalar(cond, bool, "cond")
     if branch:
-        outputs = then_func(*inputs)
+        outputs = then_func()
         outputs = _to_ndarray_tuple(outputs, "outputs of then_func")
     else:
-        outputs = else_func(*inputs)
+        outputs = else_func()
         outputs = _to_ndarray_tuple(outputs, "outputs of else_func")
     return list(outputs)
