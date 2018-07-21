@@ -170,7 +170,6 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
   const TShape stride = conv_param.stride;
   const TShape dilate = conv_param.dilate;
   const TShape pad = conv_param.pad;
-  // const uint32_t num_filter = conv_param.num_filter;
   const uint32_t num_group = conv_param.num_group;
   // const bool no_bias = conv_param.no_bias;
   const dmlc::optional<int> layout = conv_param.layout;
@@ -227,7 +226,6 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   const TShape stride = pooling_param.stride;
   const TShape pad = pooling_param.pad;
   const int pool_type = pooling_param.pool_type;
-  // const int pooling_convention = pooling_param.pooling_convention;
   const bool global_pool = pooling_param.global_pool;
 
   if (global_pool) {
