@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -40,17 +41,17 @@ def generate_stats(warnings):
 
 def print_summary(time, warnings):
     sorted_warnings, total_count = generate_stats(warnings)
-    print "START - Compilation warnings count"
-    print total_count, 'warnings'
-    print "END - Compilation warnings count"
-    print 'START - Compilation warnings summary'
-    print 'Time taken to compile:', time, 's'
-    print 'Total number of warnings:', total_count, '\n'
+    print("START - Compilation warnings count")
+    print(total_count, 'warnings')
+    print("END - Compilation warnings count")
+    print('START - Compilation warnings summary')
+    print('Time taken to compile:', time, 's')
+    print('Total number of warnings:', total_count, '\n')
     if total_count>0:
-        print 'Below is the list of unique warnings and the number of occurrences of that warning'
+        print('Below is the list of unique warnings and the number of occurrences of that warning')
         for warning, count in sorted_warnings:
-            print count, ': ', warning
-    print 'END - Compilation warnings summary'
+            print(count, ': ', warning)
+    print('END - Compilation warnings summary')
 
 c_output = open(sys.argv[1],'r')
 time, warnings = process_output(c_output.read())

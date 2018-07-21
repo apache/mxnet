@@ -37,11 +37,11 @@
   (let [trained-mod (m/load-checkpoint {:prefix model-prefix :epoch epoch-num})
         trained-arg-params (m/arg-params trained-mod)
         model (lstm/lstm-inference-model {:num-lstm-layer 3
-                                     :input-size (inc (count vocab))
-                                     :num-label (inc (count vocab))
-                                     :num-hidden num-hidden
-                                     :num-embed num-embed
-                                     :arg-params trained-arg-params})
+                                          :input-size (inc (count vocab))
+                                          :num-label (inc (count vocab))
+                                          :num-hidden num-hidden
+                                          :num-embed num-embed
+                                          :arg-params trained-arg-params})
         input-ndarray (ndarray/zeros [1])
         revert-vocab (util/make-revert-vocab vocab)
         fix-dict (into [""]
@@ -68,7 +68,6 @@
                      output
                      (str output next-char)))))))))
 
-
 (comment
 
   (rnn-test "data/obama" 75 200 false)
@@ -76,4 +75,4 @@
 
   (rnn-test "data/obama" 75 200 true)
   ;=>"The joke before them prepared for five years ago, we only hear a chance to lose our efforts and they made striggling procedural deficit at the city between a politics in the efforts on the Edmund Pett"
-  )
+)

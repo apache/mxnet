@@ -67,25 +67,56 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
     return "nvidia-docker" if use_nvidia_docker else "docker"
 
 
-def build_docker(platform: str, docker_binary: str, registry: str) -> None:
+def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int) -> None:
     """
     Build a container for the given platform
     :param platform: Platform
     :param docker_binary: docker binary to use (docker/nvidia-docker)
     :param registry: Dockerhub registry name
+    :param num_retries: Number of retries to build the docker image
     :return: Id of the top level image
     """
 
     tag = get_docker_tag(platform=platform, registry=registry)
     logging.info("Building container tagged '%s' with %s", tag, docker_binary)
-    cmd = [docker_binary, "build",
-           "-f", get_dockerfile(platform),
-           "--build-arg", "USER_ID={}".format(os.getuid()),
-           "--cache-from", tag,
-           "-t", tag,
-           "docker"]
-    logging.info("Running command: '%s'", ' '.join(cmd))
-    check_call(cmd)
+    #
+    # We add a user with the same group as the executing non-root user so files created in the
+    # container match permissions of the local user. Same for the group.
+    #
+    # These variables are used in the docker files to create user and group with these ids.
+    # see: docker/install/ubuntu_adduser.sh
+    #
+    # cache-from is needed so we use the cached images tagged from the remote via
+    # docker pull see: docker_cache.load_docker_cache
+    #
+    # This doesn't work with multi head docker files.
+    # 
+
+    for i in range(num_retries):
+        logging.info('%d out of %d tries to build the docker image.', i + 1, num_retries)
+
+        cmd = [docker_binary, "build",
+               "-f", get_dockerfile(platform),
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid()),
+               "--cache-from", tag,
+               "-t", tag,
+               "docker"]
+        logging.info("Running command: '%s'", ' '.join(cmd))
+        try:
+            check_call(cmd)
+            # Docker build was successful. Call break to break out of the retry mechanism
+            break
+        except subprocess.CalledProcessError as e:
+            saved_exception = e
+            logging.error('Failed to build docker image')
+            # Building the docker image failed. Call continue to trigger the retry mechanism
+            continue
+    else:
+        # Num retries exceeded
+        logging.exception('Exception during build of docker image', saved_exception)
+        logging.fatal('Failed to build the docker image, aborting...')
+        sys.exit(1)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
@@ -149,7 +180,7 @@ def container_run(platform: str,
                   local_ccache_dir: str,
                   command: List[str],
                   dry_run: bool = False,
-                  into_container: bool = False) -> str:
+                  interactive: bool = False) -> str:
     tag = get_docker_tag(platform=platform, registry=docker_registry)
     mx_root = get_mxnet_root()
     local_build_folder = buildir()
@@ -169,23 +200,27 @@ def container_run(platform: str,
                '-e', "CCACHE_LOGFILE=/tmp/ccache.log",  # a container-scoped log, useful for ccache verification.
                tag]
     runlist.extend(command)
-    cmd = ' '.join(runlist)
-    if not dry_run and not into_container:
+    cmd = '\\\n\t'.join(runlist)
+    ret = 0
+    if not dry_run and not interactive:
         logging.info("Running %s in container %s", command, tag)
-        logging.info("Executing: %s", cmd)
+        logging.info("Executing:\n%s\n", cmd)
         ret = call(runlist)
 
-    into_cmd = deepcopy(runlist)
-    idx = into_cmd.index('-u') + 2
-    into_cmd[idx:idx] = ['-ti', '--entrypoint', '/bin/bash']
-    docker_run_cmd = ' '.join(into_cmd)
-    if not dry_run and into_container:
-        check_call(into_cmd)
+    docker_run_cmd = ' '.join(runlist)
+    if not dry_run and interactive:
+        into_cmd = deepcopy(runlist)
+        # -ti can't be after the tag, as is interpreted as a command so hook it up after the -u argument
+        idx = into_cmd.index('-u') + 2
+        into_cmd[idx:idx] = ['-ti']
+        cmd = '\\\n\t'.join(into_cmd)
+        logging.info("Executing:\n%s\n", cmd)
+        docker_run_cmd = ' '.join(into_cmd)
+        ret = call(into_cmd)
 
-    if not dry_run and ret != 0:
-        logging.error("Running of command in container failed (%s): %s", ret, cmd)
-        logging.error("You can try to get into the container by using the following command: %s", docker_run_cmd)
-
+    if not dry_run and not interactive and ret != 0:
+        logging.error("Running of command in container failed (%s):\n%s\n", ret, cmd)
+        logging.error("You can get into the container by adding the -i option")
         raise subprocess.CalledProcessError(ret, cmd)
 
     return docker_run_cmd
@@ -249,7 +284,7 @@ def main() -> int:
                         help="print docker run command for manual inspection",
                         action='store_true')
 
-    parser.add_argument("-i", "--into-container",
+    parser.add_argument("-i", "--interactive",
                         help="go in a shell inside the container",
                         action='store_true')
 
@@ -257,6 +292,11 @@ def main() -> int:
                         help="Dockerhub registry name to retrieve cache from. Default is 'mxnetci'",
                         default='mxnetci',
                         type=str)
+
+    parser.add_argument("-r", "--docker-build-retries",
+                        help="Number of times to retry building the docker image. Default is 1",
+                        default=1,
+                        type=int)
 
     parser.add_argument("-c", "--cache", action="store_true",
                         help="Enable docker registry cache")
@@ -277,6 +317,7 @@ def main() -> int:
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
     shared_memory_size = args.shared_memory_size
+    num_docker_build_retires = args.docker_build_retries
 
     if args.list:
         list_platforms()
@@ -285,26 +326,31 @@ def main() -> int:
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
         if use_cache():
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform, docker_binary, registry=args.docker_registry)
+        build_docker(platform, docker_binary, registry=args.docker_registry, num_retries=num_docker_build_retires)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=command, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir)
+                          command=command, docker_registry=args.docker_registry,
+                          local_ccache_dir=args.ccache_dir, interactive=args.interactive)
         elif args.print_docker_run:
             print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
                                 command=[], dry_run=True, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir))
-        elif args.into_container:
+        elif args.interactive:
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=[], dry_run=False, into_container=True, docker_registry=args.docker_registry,
-                          local_ccache_dir=args.ccache_dir)
+                          command=command, docker_registry=args.docker_registry,
+                          local_ccache_dir=args.ccache_dir, interactive=args.interactive)
+
         else:
+            # With no commands, execute a build function for the target platform
+            assert not args.interactive, "when running with -i must provide a command"
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
             container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
-                          command=cmd, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir)
+                          command=cmd, docker_registry=args.docker_registry,
+                          local_ccache_dir=args.ccache_dir)
 
     elif args.all:
         platforms = get_platforms()
@@ -314,7 +360,7 @@ def main() -> int:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             if use_cache():
                 load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary, args.docker_registry)
+            build_docker(platform, docker_binary, args.docker_registry, num_retries=num_docker_build_retires)
             if args.build_only:
                 continue
             build_platform = "build_{}".format(platform)
@@ -343,9 +389,9 @@ Examples:
 
 ./build.py -p armv7 --print-docker-run
 
-    Will print a docker run command to get inside the container in an interactive shell
+    Will print a docker run command to get inside the container in a shell
 
-./build.py -p armv7 --into-container
+./build.py -p armv7 --interactive
 
     Will execute a shell into the container
 

@@ -32,7 +32,7 @@ from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
 from test_operator import *
 from test_optimizer import *
 from test_random import *
@@ -46,12 +46,15 @@ from test_sparse_operator import *
 from test_ndarray import *
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm
-del test_support_vector_machine_l2_svm
+del test_support_vector_machine_l1_svm  # noqa
+del test_support_vector_machine_l2_svm  # noqa
 
 
 def check_countsketch(in_dim,out_dim,n):
-    sym = mx.sym.contrib.count_sketch(name='countsketch',out_dim = out_dim)
+    data = mx.sym.Variable("data")
+    h = mx.sym.Variable("h")
+    s = mx.sym.Variable("s")
+    sym = mx.sym.contrib.count_sketch(data=data, h=h, s=s, name='countsketch',out_dim = out_dim)
     shape = [(n,in_dim), (1,in_dim),(1,in_dim)]     #shape of input x, hash h and hash s
 
     arr = [mx.nd.empty(shape[i]) for i in range(3)]
@@ -62,46 +65,33 @@ def check_countsketch(in_dim,out_dim,n):
     arr[1][:] = h                                 #hash h
     s = np.random.randint(0, 2, shape[2])*2-np.ones(shape[2])
     arr[2][:] = s                                 #hash s
-    # forward
-    exe_list = [sym.bind(mx.gpu(0), arr, arr_grad)]
-    for exe in exe_list:
-        exe.forward(is_train= True)
-    out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-
+    locations = {"data": x, "h": h, "s": s}
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
-    assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-
-    # backward
+    check_symbolic_forward(sym, locations, [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
-    for exe in exe_list:
-        exe.backward([out_grad])
-
-        a = np.zeros((n,in_dim))
-        for j in np.arange(0,n):
-            for i in np.arange(0,in_dim):
-                a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
-    assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
+    a = np.zeros((n,in_dim))
+    for j in np.arange(0,n):
+        for i in np.arange(0,in_dim):
+            a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
+    check_symbolic_backward(sym, locations, [out_grad], [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10988")
-@with_seed(0)
+@with_seed()
 def test_countsketch():
-    nrepeat = 2
     minindim = 40
     maxindim = 100
     minoutdim = 5
     maxoutdim = 30
     maxn = 200
-    for repeat in range(nrepeat):
-        in_dim = np.random.randint(minindim, maxindim)
-        out_dim = np.random.randint(minoutdim, maxoutdim)
-        n = np.random.randint(1,maxn)
-        check_countsketch(in_dim, out_dim, n)
+    in_dim = np.random.randint(minindim, maxindim)
+    out_dim = np.random.randint(minoutdim, maxoutdim)
+    n = np.random.randint(1, maxn)
+    check_countsketch(in_dim, out_dim, n)
 
 
 def check_ifft(shape):
@@ -274,6 +264,7 @@ def test_fft():
 
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10087")
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
@@ -422,6 +413,7 @@ def test_batchnorm_versions():
 
 
 @with_seed(1234)
+@assert_raises_cudnn_disabled()
 def test_convolution_with_type():
     sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
@@ -1316,6 +1308,7 @@ def check_rnn_consistency(cell1, cell2):
     assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnn():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
 
@@ -1327,6 +1320,7 @@ def test_rnn():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_lstm_forget_bias():
     forget_bias = 2.0
     fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
@@ -1348,6 +1342,7 @@ def test_lstm_forget_bias():
     assert_allclose(args[bias_name].asnumpy(), expected_bias)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
 
@@ -1359,6 +1354,7 @@ def test_gru():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_bidirectional():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
             bidirectional=True)
@@ -1377,6 +1373,7 @@ def test_bidirectional():
     check_rnn_consistency(stack, fused)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_unfuse():
     for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
         fused = mx.rnn.FusedRNNCell(
@@ -1483,6 +1480,8 @@ def test_deformable_convolution_with_type():
 
 @with_seed()
 def test_deformable_convolution_options():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3}
     # 2D convolution
 
     # Pad > 0
@@ -1495,13 +1494,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                #  'deformable_offset': (2, 18, 7, 7),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Stride > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
@@ -1513,13 +1508,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                # 'deformable_conv_offset': (2, 18, 3, 3),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Dilate > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
@@ -1531,13 +1522,9 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                # 'deformable_conv_offset': (2, 18, 3, 3),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Deformable group > 1
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
@@ -1558,6 +1545,7 @@ def test_deformable_convolution_options():
                                                name='deformable_conv')
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
             mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
@@ -1613,6 +1601,7 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
     check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
@@ -1728,7 +1717,6 @@ def test_cross_device_autograd():
 
     assert_almost_equal(dx, x.grad.asnumpy())
 
-@unittest.skip("JIRA issue: https://issues.apache.org/jira/projects/MXNET/issues/MXNET-130")
 @with_seed()
 def test_multi_proposal_op():
     # paramters
@@ -1737,7 +1725,6 @@ def test_multi_proposal_op():
     ratios = (0.5, 1, 2)
     rpn_pre_nms_top_n = 12000
     rpn_post_nms_top_n = 2000
-    threshold = 0.7
     rpn_min_size = feature_stride
 
     feat_len = (1000 + 15) // 16
@@ -1768,7 +1755,7 @@ def test_multi_proposal_op():
             im_info[i, :] = [im_size[0], im_size[1], im_scale]
         return cls_prob, bbox_pred, im_info
 
-    def check_proposal_consistency(op, batch_size):
+    def check_proposal_consistency(op, batch_size, with_nms=False):
         '''
         op is mx.nd.contrib.Proposal or mx.nd.contrib.MultiProposal
         '''
@@ -1782,7 +1769,7 @@ def test_multi_proposal_op():
                 ratios = ratios,
                 rpn_pre_nms_top_n = rpn_pre_nms_top_n,
                 rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = threshold,
+                threshold = 0.7 if with_nms else 1.0,
                 rpn_min_size = rpn_min_size, output_score = True)
 
         gpu_ctx = mx.gpu(0)
@@ -1801,7 +1788,7 @@ def test_multi_proposal_op():
                 ratios = ratios,
                 rpn_pre_nms_top_n = rpn_pre_nms_top_n,
                 rpn_post_nms_top_n = rpn_post_nms_top_n,
-                threshold = threshold,
+                threshold = 0.7 if with_nms else 1.0,
                 rpn_min_size = rpn_min_size, output_score = True)
 
         rois_cpu_np = rois_cpu.asnumpy()
@@ -1810,11 +1797,18 @@ def test_multi_proposal_op():
         score_cpu_np = score_cpu.asnumpy()
         score_gpu_np = score_gpu.asnumpy()
 
-        assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
-        assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+        if not with_nms:
+            assert_almost_equal(score_cpu_np, score_gpu_np, atol = 1e-3, rtol = 1e-3)
+            assert_almost_equal(rois_cpu_np, rois_gpu_np, atol = 1e-3, rtol = 1e-3)
+        else:
+            # no 100% gurantee with nms
+            assert(np.sum(np.abs(score_cpu_np - score_gpu_np) < 1e-3) >= 10)
+            assert(np.sum(np.abs(rois_cpu_np - rois_gpu_np) < 1e-3) >= 40)
 
     check_proposal_consistency(mx.nd.contrib.Proposal, 1)
-    check_proposal_consistency(mx.nd.contrib.MultiProposal, 20)
+    check_proposal_consistency(mx.nd.contrib.MultiProposal, 5)
+    check_proposal_consistency(mx.nd.contrib.Proposal, 1, with_nms=True)
+    check_proposal_consistency(mx.nd.contrib.MultiProposal, 5, with_nms=True)
 
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
@@ -1913,6 +1907,84 @@ def test_softmax_activation():
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
+
+def _check_batchnorm_result(input, num_devices=1, cuda=False):
+    from mxnet.gluon.utils import split_and_load
+    def _find_bn(module):
+        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            return module
+        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            return module.module
+
+        raise RuntimeError('BN not found')
+
+    def _syncParameters(bn1, bn2, ctx):
+        ctx = input.context
+        bn2.gamma.set_data(bn1.gamma.data(ctx))
+        bn2.beta.set_data(bn1.beta.data(ctx))
+        bn2.running_mean.set_data(bn1.running_mean.data(ctx))
+        bn2.running_var.set_data(bn1.running_var.data(ctx))
+
+    input1 = input.copy()
+    input2 = input.copy()
+
+    if cuda:
+        input1 = input.as_in_context(mx.gpu(0))
+        ctx_list = [mx.gpu(i) for i in range(num_devices)]
+    else:
+        ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+
+    nch = input.shape[1]
+    bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
+    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
+
+    bn1.initialize(ctx=ctx_list[0])
+    bn2.initialize(ctx=ctx_list)
+
+    # using the same values for gamma and beta
+    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
+
+    input1.attach_grad()
+    inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+    for xi in inputs2:
+        xi.attach_grad()
+
+    with mx.autograd.record():
+        output1 = bn1(input1)
+        output2  = [bn2(xi) for xi in inputs2]
+        loss1 = (output1 ** 2).sum()
+        loss2 = [(output ** 2).sum() for output in output2]
+        mx.autograd.backward(loss1)
+        mx.autograd.backward(loss2)
+
+    output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
+    # assert forwarding
+    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+                        _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
+                        atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+                        _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
+                        atol=1e-3, rtol=1e-3)
+    input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
+
+def test_sync_batchnorm():
+    def get_num_devices():
+        for i in range(100):
+            try:
+                mx.nd.zeros((1,), ctx=mx.gpu(i))
+            except:
+                return i
+    # no need to use SyncBN with 1 gpu
+    if get_num_devices() < 2:
+        return
+    ndev = 2
+    # check with unsync version
+    for i in range(10):
+        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
+                                num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
     import nose
