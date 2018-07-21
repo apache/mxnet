@@ -119,20 +119,27 @@ class CommDeviceTree : public CommDevice {
       for (int level = depth_; level > 0; --level) {
         int start = scan_[root][level  ];
         int end = scan_[root][level+1];
+        //LOG(WARNING) << "Reduce level: " << level;
+        //LOG(WARNING) << "From " << start << " to " << end;
 
         unsigned is_dest = 0;
         int dest_id = 0;
         for (int j = start; j < end; ++j) {
           int topo_id = topology[j];
           dest_id = (is_dest == 0) ? topo_id : dest_id;
+          //LOG(WARNING) << is_dest << ": " << topo_id << " -> " << dest_id;
 
           TreeBufferEntry& buf_dest = tree_merge_buf_[dest_id][key];
           TreeBufferEntry& buf_from = tree_merge_buf_[topo_id][key];
 
           if (!is_dest) {
-            reduce[dest_id].push_back(buf_dest.merged[merged_row]);
+            if (reduce[dest_id].size() == 0) {
+              reduce[dest_id].push_back(buf_dest.merged[merged_row]);
+              //LOG(WARNING) << topo_id << " == " << dest_id;
+            }
           } else {
             if (dest_id != topo_id) {
+              //LOG(WARNING) << "Reduce from " << dest_id << " " << topo_id;
               CopyFromTo(buf_from.merged[merged_row],
                   &(buf_dest.copy_buf[merged_row][is_dest-1]),
                   priority);
@@ -149,11 +156,16 @@ class CommDeviceTree : public CommDevice {
         end = scan_[root][level];
         for (int i = start; i < end; ++i) {
           int gpu_id = topology[i];
+          //LOG(WARNING) << "Doing reduce on GPU" << gpu_id;
+          //LOG(WARNING) << "With #elems " << reduce[gpu_id].size();
 
           // conditional to detect whether operation must be done
           if (reduce[gpu_id].size() > 1) {
             TreeBufferEntry& buf = tree_merge_buf_[gpu_id][key];
             ElementwiseSum(reduce[gpu_id], &(buf.merged[merged_row]), priority);
+            //LOG(WARNING) << "reduce input 1 " << reduce[gpu_id][0].ctx();
+            //LOG(WARNING) << "reduce input 2 " << reduce[gpu_id][1].ctx();
+            //LOG(WARNING) << "buf.mg output  " << buf.merged[merged_row].ctx();
           }
         }
 
@@ -196,7 +208,7 @@ class CommDeviceTree : public CommDevice {
     const NDArrayStorageType stype = src[0].storage_type();
     // normal dense reduce
     if (stype == kDefaultStorage) {
-      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+      if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         // Find slice bounds
         slice_scan[0] = 0;
         int slice_size = (first_size + devs_.size()-1)/devs_.size();
@@ -204,6 +216,7 @@ class CommDeviceTree : public CommDevice {
           slice_scan[i] = slice_scan[i-1] + slice_size;
         }
         slice_scan[devs_.size()] = src[0].shape()[0];
+        LOG(WARNING) << "Using multiple tree";
 
         // row: which slice
         // col: which gpu
@@ -228,6 +241,7 @@ class CommDeviceTree : public CommDevice {
           BroadcastInner(key, *(broadcast_slice[i][i]), broadcast_slice[i], i, i, priority);
         }
       } else {
+        LOG(WARNING) << "Using single tree";
         int root = 0;
         ReduceInner(key, src, root, 0, priority);
 
@@ -240,6 +254,7 @@ class CommDeviceTree : public CommDevice {
       return src[gpu_id];
     } else {
       // sparse reduce
+      //LOG(WARNING) << "Using sparse reduce";
       return ReduceRowSparse(key, src, priority);
     }
   }
@@ -266,6 +281,7 @@ class CommDeviceTree : public CommDevice {
         src_id = (is_src == 0) ? topo_id : src_id;
 
         if (is_src && src_id != topo_id) {
+          //LOG(WARNING) << "Broadcast from " << src_id << " " << topo_id;
           CopyFromTo(temp[src_id], dst[topo_id], priority);
           temp[topo_id] = *dst[topo_id];
         }
@@ -289,7 +305,10 @@ class CommDeviceTree : public CommDevice {
     } else {
       int total_size = src.shape().Size();
       unsigned first_size = src.shape()[0];
-      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+      const NDArrayStorageType stype = src.storage_type();
+      // normal dense reduce
+      if (stype == kDefaultStorage) {
+      if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         std::vector<int> slice_scan(devs_.size()+1);
         slice_scan[0] = 0;
         int slice_size = (dst[0]->shape()[0]+devs_.size()-1)/devs_.size();
@@ -310,6 +329,8 @@ class CommDeviceTree : public CommDevice {
       } else {
         int root = 0;
         BroadcastInner(key, src, dst, root, -1, priority);
+      }} else {
+        LOG(FATAL) << "Only dense input supported for now";
       }
     }
   }
@@ -418,7 +439,7 @@ class CommDeviceTree : public CommDevice {
           TShape shape_copy = shape;
           int total_size = shape.Size();
           unsigned first_size = shape[0];
-          if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+          if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
             // Find slice bounds
             int slice_size = (first_size+devs_.size()-1)/devs_.size();
             int last_slice = first_size-(devs_.size()-1)*slice_size;
