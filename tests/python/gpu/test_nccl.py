@@ -61,8 +61,6 @@ def test_device_pushpull():
                 kv_device.push(cur_key, arr_list)
                 kv_device.pull(cur_key, res)
                 for x in range(n_gpus):
-                    if np.sum(np.abs((res[x]-n_gpus).asnumpy()))!=0:
-                        print(shape, key, n_gpus, x, (res[x]-n_gpus).asnumpy())
                     assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
 
     envs1 = '1'
@@ -72,8 +70,7 @@ def test_device_pushpull():
     for i in range(2):
         for val2 in envs2:
             with EnvManager(key2, val2):
-                print(i, val2)
-                #check_dense_pushpull('local')
+                check_dense_pushpull('local')
                 check_dense_pushpull('device')
 
         os.environ[key1] = envs1

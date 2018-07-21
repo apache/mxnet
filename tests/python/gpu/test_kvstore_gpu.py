@@ -113,7 +113,6 @@ def test_rsp_push_pull():
     key  = "MXNET_KVSTORE_USETREE"
     for val in envs:
         with EnvManager(key, val):
-            print('done')
             if val is "1":
                 sparse_pull = False
             else:
