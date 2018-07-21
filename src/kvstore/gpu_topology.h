@@ -163,15 +163,27 @@ inline void GetP2PWeight(const std::vector<Context>& devs, std::vector<T>* matri
       max_value = max[i];
   }
 
-  // If all GPUs are  connected by NVLink, then we can use NVLink only
-  // to communicate instead of going over PCI-E
+  // If all GPUs are connected by NVLink, then we can use NVLink only
+  // to communicate instead of going over PCI-E, so we set PCI-E links to 0
+  //
+  // Otherwise, we will make distinction between PCI-E GPUDirect links and
+  // PCI-E through CPU links, which are slower and show queueing effect (i.e.
+  // The most packets there are, the slower).
+  //
+  // For the latter links, we will set links that were 0 to 1/num_gpus to
+  // account for this queuing effect.
   bool connected = IsConnected(*matrix, num_gpus);
 
   if (connected) {
     for (auto& matrix_value : *matrix) {
       matrix_value = (matrix_value == 1) ? 0 : matrix_value;
     }
+  } else {
+    for (auto& matrix_value : *matrix) {
+      matrix_value = (matrix_value == 1) ? 1./num_gpus : matrix_value;
+    }
   }
+
   if (kLogTree)
     PrintMatrix("Weight W", *matrix, num_gpus, num_gpus);
 #else

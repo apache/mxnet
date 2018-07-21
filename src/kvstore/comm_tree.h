@@ -130,7 +130,9 @@ class CommDeviceTree : public CommDevice {
           TreeBufferEntry& buf_from = tree_merge_buf_[topo_id][key];
 
           if (!is_dest) {
-            reduce[dest_id].push_back(buf_dest.merged[merged_row]);
+            if (reduce[dest_id].size() == 0) {
+              reduce[dest_id].push_back(buf_dest.merged[merged_row]);
+            }
           } else {
             if (dest_id != topo_id) {
               CopyFromTo(buf_from.merged[merged_row],
@@ -196,7 +198,7 @@ class CommDeviceTree : public CommDevice {
     const NDArrayStorageType stype = src[0].storage_type();
     // normal dense reduce
     if (stype == kDefaultStorage) {
-      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+      if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         // Find slice bounds
         slice_scan[0] = 0;
         int slice_size = (first_size + devs_.size()-1)/devs_.size();
@@ -289,7 +291,10 @@ class CommDeviceTree : public CommDevice {
     } else {
       int total_size = src.shape().Size();
       unsigned first_size = src.shape()[0];
-      if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+      const NDArrayStorageType stype = src.storage_type();
+      // normal dense reduce
+      if (stype == kDefaultStorage) {
+      if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         std::vector<int> slice_scan(devs_.size()+1);
         slice_scan[0] = 0;
         int slice_size = (dst[0]->shape()[0]+devs_.size()-1)/devs_.size();
@@ -310,6 +315,8 @@ class CommDeviceTree : public CommDevice {
       } else {
         int root = 0;
         BroadcastInner(key, src, dst, root, -1, priority);
+      }} else {
+        LOG(FATAL) << "Only dense input supported for now";
       }
     }
   }
@@ -418,7 +425,7 @@ class CommDeviceTree : public CommDevice {
           TShape shape_copy = shape;
           int total_size = shape.Size();
           unsigned first_size = shape[0];
-          if (total_size > gpuarray_bound_ && first_size >= devs_.size()) {
+          if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
             // Find slice bounds
             int slice_size = (first_size+devs_.size()-1)/devs_.size();
             int last_slice = first_size-(devs_.size()-1)*slice_size;
