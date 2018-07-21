@@ -202,10 +202,6 @@ if(USE_MKLDNN)
   list(APPEND mxnet_LINKER_LIBS mkldnn)
 endif()
 
-# Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-
 if(USE_CUDA)
   find_package(CUDA REQUIRED)
   add_definitions(-DMSHADOW_USE_CUDA=1)
@@ -608,8 +604,16 @@ if(UNIX)
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+  target_include_directories(mxnet_static PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    PRIVATE src)
 else()
   add_library(mxnet SHARED ${SOURCE})
+  target_include_directories(mxnet PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    PRIVATE src)
 endif()
 
 if(USE_CUDA)
@@ -640,7 +644,7 @@ if(USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
 endif()
 
-target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+target_link_libraries(mxnet PRIVATE ${mxnet_LINKER_LIBS})
 
 if(USE_PLUGINS_WARPCTC)
   target_link_libraries(mxnet PUBLIC debug ${WARPCTC_LIB_DEBUG})
@@ -666,7 +670,7 @@ else()
     is required for im2rec, im2rec will not be available")
 endif()
 
-target_link_libraries(mxnet PUBLIC dmlc)
+target_link_libraries(mxnet PRIVATE dmlc)
 
 if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
@@ -675,13 +679,15 @@ endif()
 add_subdirectory(tests)
 
 include(GNUInstallDirs)
-install(TARGETS ${MXNET_INSTALL_TARGETS}
+install(TARGETS ${MXNET_INSTALL_TARGETS} EXPORT MXNetConfig
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY 3rdparty/tvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY 3rdparty/tvm/nnvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (INSTALL_EXAMPLES)
   install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 endif()
@@ -732,3 +738,5 @@ endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
+
+install(EXPORT MXNetConfig DESTINATION cmake)

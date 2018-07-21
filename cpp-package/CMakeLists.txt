@@ -20,4 +20,5 @@ if(USE_CPP_PACKAGE)
     add_subdirectory(example)
   endif()
 
+  install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include/mxnet-cpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
