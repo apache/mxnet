@@ -28,11 +28,12 @@
 
 #include "./onnx_to_tensorrt.h"
 
+#include <onnx/onnx.pb.h>
+
+#include <NvInfer.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
-#include <NvInfer.h>
-#include <onnx/onnx.pb.h>
 #include <onnx-tensorrt/NvOnnxParser.h>
 #include <onnx-tensorrt/NvOnnxParserRuntime.h>
 #include <onnx-tensorrt/PluginFactory.hpp>
@@ -54,7 +55,7 @@ struct InferDeleter {
 };
 
 template<typename T>
-inline std::shared_ptr<T> infer_object(T* obj) {
+inline std::shared_ptr<T> InferObject(T *obj) {
   if ( !obj ) {
     throw std::runtime_error("Failed to create object");
   }
@@ -70,7 +71,7 @@ std::string onnx_ir_version_string(int64_t ir_version = onnx::IR_VERSION) {
     std::to_string(onnx_ir_patch));
 }
 
-void print_version() {
+void PrintVersion() {
   cout << "Parser built against:" << endl;
   cout << "  ONNX IR version:  " << onnx_ir_version_string(onnx::IR_VERSION) << endl;
   cout << "  TensorRT version: "
@@ -80,33 +81,18 @@ void print_version() {
 }
 
 nvinfer1::ICudaEngine* onnxToTrtCtx(
-        std::string onnx_model,
+        const std::string &onnx_model,
         int32_t max_batch_size,
         size_t max_workspace_size,
-        int model_dtype_nbits,
         nvinfer1::ILogger::Severity verbosity,
-        bool print_layer_info,
         bool debug_builder) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  nvinfer1::DataType model_dtype = nvinfer1::DataType::kFLOAT;
-  switch ( model_dtype_nbits ) {
-    case 32:
-      model_dtype = nvinfer1::DataType::kFLOAT;
-      break;
-    case 16:
-      model_dtype = nvinfer1::DataType::kHALF;
-      break;
-    default:
-      cerr << "ERROR: Invalid model data type bit depth: " << model_dtype_nbits << endl;
-      break;
-  }
-
-  TRT_Logger trt_logger((nvinfer1::ILogger::Severity)verbosity);
-  auto trt_builder = infer_object(nvinfer1::createInferBuilder(trt_logger));
-  auto trt_network = infer_object(trt_builder->createNetwork());
-  auto trt_parser  = infer_object(nvonnxparser::createParser(
-                                      *trt_network, trt_logger));
+  TRT_Logger trt_logger(verbosity);
+  auto trt_builder = InferObject(nvinfer1::createInferBuilder(trt_logger));
+  auto trt_network = InferObject(trt_builder->createNetwork());
+  auto trt_parser  = InferObject(nvonnxparser::createParser(
+      *trt_network, trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
@@ -123,7 +109,7 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
             parsed_model.graph().node(error->node());
           cerr << "While parsing node number " << error->node()
                << " [" << node.op_type();
-          if ( node.output().size() ) {
+          if ( !node.output().empty() ) {
             cerr << " -> \"" << node.output(0) << "\"";
           }
           cerr << "]:" << endl;
@@ -150,11 +136,8 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   if ( fp16 && dmlc::GetEnv("MXNET_TENSORRT_USE_FP16_FOR_FP32", false) ) {
     LOG(INFO) << "WARNING: TensorRT using fp16 given original MXNet graph in fp32 !!!";
     trt_builder->setHalf2Mode(true);
-  } else if ( model_dtype == nvinfer1::DataType::kINT8 ) {
-    // Add Int8 support
-    // trt_builder->setInt8Mode(true);
-    LOG(FATAL) << "ERROR: Int8 mode not yet supported";
   }
+
   trt_builder->setDebugSync(debug_builder);
   nvinfer1::ICudaEngine* trt_engine = trt_builder->buildCudaEngine(*trt_network.get());
   return trt_engine;

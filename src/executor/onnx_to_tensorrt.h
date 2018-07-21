@@ -65,14 +65,11 @@ class TRT_Logger : public nvinfer1::ILogger {
 };
 
 nvinfer1::ICudaEngine* onnxToTrtCtx(
-        std::string onnx_model,
+        const std::string &onnx_model,
         int32_t max_batch_size = 32,
         size_t max_workspace_size = 1L << 30,
-        int model_dtype_nbits = 32,
         nvinfer1::ILogger::Severity verbosity = nvinfer1::ILogger::Severity::kWARNING,
-        bool print_layer_info = false,
         bool debug_builder = false);
-
 }  // namespace onnx_to_tensorrt
 
 #endif  // MXNET_USE_TENSORRT
