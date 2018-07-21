@@ -1941,7 +1941,13 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
-    test_bmod(a, b)
+    '''
+    Flaky Test Disabled due to master build failure: 
+    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline 
+    Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
+    
+    test_bmod(a, b) 
+    '''
     test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
