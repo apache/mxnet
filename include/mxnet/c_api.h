@@ -1714,6 +1714,13 @@ MXNET_DLL int MXExecutorReshape(int partial_shaping,
                                 NDArrayHandle** aux_states,
                                 ExecutorHandle shared_exec,
                                 ExecutorHandle *out);
+
+/*!
+ * \brief get optimized graph from graph executor
+ */
+MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
+                                           SymbolHandle *out);
+
 /*!
  * \brief set a call back to notify the completion of operation
  */

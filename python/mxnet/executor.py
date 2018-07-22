@@ -24,8 +24,9 @@ from array import array as py_array
 import ctypes
 import copy
 import numpy as np
+import mxnet as mx
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
+from .base import mx_uint, NDArrayHandle, ExecutorHandle, SymbolHandle, py_str
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
@@ -73,6 +74,7 @@ class Executor(object):
         self.aux_arrays = []
         self.outputs = self._get_outputs()
         self._symbol = copy.deepcopy(symbol)
+        self._optimized_symbol = None
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None
@@ -322,6 +324,20 @@ class Executor(object):
             self._output_dict = Executor._get_dict(
                 self._symbol.list_outputs(), self.outputs)
         return self._output_dict
+
+    @property
+    def optimized_symbol(self):
+        """Get optimized symbol.
+
+        Returns
+        -------
+        symbol : nnvm::Symbol
+            The nnvm symbol optimized.
+        """
+        if self._optimized_symbol is None:
+            handle = SymbolHandle()
+            check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(handle)))
+        return mx.sym.Symbol(handle=handle)
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
