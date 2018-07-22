@@ -64,7 +64,7 @@ OpStatePtr GetPtrMapping(nvinfer1::ICudaEngine* trt_engine,
   return OpStatePtr::Create<TRTEngineParam>(param);
 }
 
-OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs,
+OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context /*ctx*/,
                           const std::vector<TShape>& ishape,
                           const std::vector<int>& itype) {
   const auto& node_param = nnvm::get<TRTParam>(attrs.parsed);
@@ -77,7 +77,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs,
   auto graph = model_proto.graph();
   auto first_input_type = graph.input(0).type().tensor_type();
   auto dim_value = first_input_type.shape().dim(0).dim_value();
-  uint64_t batch_size = static_cast<uint64_t>(dim_value);
+  auto batch_size = static_cast<int32_t >(dim_value);
   // Need to set up max workspace size based on device properties
   nvinfer1::ICudaEngine* const trt_engine = ::onnx_to_tensorrt::onnxToTrtCtx(
       node_param.serialized_onnx_graph, batch_size, 1 << 30);
@@ -114,7 +114,7 @@ void TRTParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param_);
 }
 
-inline bool TRTInferShape(const NodeAttrs& attrs,
+inline bool TRTInferShape(const NodeAttrs& attrs, std::vector<TShape>* /*in_shape*/,
                           std::vector<TShape>* out_shape) {
   const auto node_param = nnvm::get<TRTParam>(attrs.parsed);
   for (auto& el : node_param.output_map) {
@@ -123,7 +123,9 @@ inline bool TRTInferShape(const NodeAttrs& attrs,
   return true;
 }
 
-inline bool TRTInferStorageType(DispatchMode* dispatch_mode,
+inline bool TRTInferStorageType(const NodeAttrs& /*attrs*/, const int /*dev_mask*/,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int>* /*in_storage_type*/,
                                 std::vector<int>* out_storage_type) {
   return storage_type_assign(out_storage_type, mxnet::kDefaultStorage,
                              dispatch_mode, DispatchMode::kFCompute);
