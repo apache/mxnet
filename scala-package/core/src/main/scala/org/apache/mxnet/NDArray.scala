@@ -89,6 +89,7 @@ object NDArray extends NDArrayBase {
         output match {
           case nd: NDArray => (Array(nd), Array(nd.handle))
           case ndFuncRet: NDArrayFuncReturn => (ndFuncRet.arr, ndFuncRet.arr.map(_.handle))
+         // Seq[NDArray] erasure problem explained here https://stackoverflow.com/questions/1094173/
           case ndArr: Seq[NDArray @unchecked] =>
             if (ndArr.head.isInstanceOf[NDArray]) (ndArr.toArray, ndArr.toArray.map(_.handle))
             else throw new IllegalArgumentException(
