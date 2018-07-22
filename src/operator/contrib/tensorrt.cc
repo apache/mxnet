@@ -65,8 +65,8 @@ OpStatePtr GetPtrMapping(nvinfer1::ICudaEngine* trt_engine,
 }
 
 OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context /*ctx*/,
-                          const std::vector<TShape>& ishape,
-                          const std::vector<int>& itype) {
+                          const std::vector<TShape>& /*ishape*/,
+                          const std::vector<int>& /*itype*/) {
   const auto& node_param = nnvm::get<TRTParam>(attrs.parsed);
 
   ::onnx::ModelProto model_proto;
@@ -90,8 +90,6 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context /*ctx*/,
 }
 
 void TRTParamParser(nnvm::NodeAttrs* attrs) {
-  using namespace mshadow;
-
   TRTParam param_;
 
   try {
@@ -116,7 +114,7 @@ void TRTParamParser(nnvm::NodeAttrs* attrs) {
 
 inline bool TRTInferShape(const NodeAttrs& attrs, std::vector<TShape>* /*in_shape*/,
                           std::vector<TShape>* out_shape) {
-  const auto node_param = nnvm::get<TRTParam>(attrs.parsed);
+  const auto &node_param = nnvm::get<TRTParam>(attrs.parsed);
   for (auto& el : node_param.output_map) {
     (*out_shape)[std::get<0>(el.second)] = std::get<1>(el.second);
   }
@@ -131,7 +129,7 @@ inline bool TRTInferStorageType(const NodeAttrs& /*attrs*/, const int /*dev_mask
                              dispatch_mode, DispatchMode::kFCompute);
 }
 
-inline bool TRTInferType(const NodeAttrs& attrs, std::vector<int>* in_dtype,
+inline bool TRTInferType(const NodeAttrs& attrs, std::vector<int>* /*in_dtype*/,
                          std::vector<int>* out_dtype) {
   const auto& node_param = nnvm::get<TRTParam>(attrs.parsed);
   for (auto& el : node_param.output_map) {
