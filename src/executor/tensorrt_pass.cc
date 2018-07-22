@@ -212,7 +212,6 @@ class BidirectionalGraph {
   friend class Graph;
 
   bool IsTRTCompatible(nnvm::Node* nodeptr) {
-
     if (nodeptr->op() == nullptr) {
       return true;
     }
