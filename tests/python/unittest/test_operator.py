@@ -748,24 +748,25 @@ def test_leaky_relu():
         elif act_type == 'leaky':
             out[neg_indices] = slope
         return out * grad
-    shape = (3, 4)
-    x = mx.symbol.Variable("x")
-    slp = 0.25
-    for dtype in [np.float16, np.float32, np.float64]:
-        xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-        eps = 1e-4
-        rtol = 1e-2
-        atol = 1e-3
-        xa[abs(xa) < eps] = 1.0
-        for act_type in ['elu', 'leaky']:
-            y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
-            ya = fleaky_relu(xa, slope=slp, act_type=act_type)
-            ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
-            # Skip numeric check for float16 type to get rid of flaky behavior
-            if dtype is not np.float16:
-                check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+    for ndim in range(1, 4):
+        shape = rand_shape_nd(ndim)
+        x = mx.symbol.Variable("x")
+        slp = 0.25
+        for dtype in [np.float16, np.float32, np.float64]:
+            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            eps = 1e-4
+            rtol = 1e-2
+            atol = 1e-3
+            xa[abs(xa) < eps] = 1.0
+            for act_type in ['elu', 'leaky']:
+                y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
+                ya = fleaky_relu(xa, slope=slp, act_type=act_type)
+                ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
+                # Skip numeric check for float16 type to get rid of flaky behavior
+                if dtype is not np.float16:
+                    check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
 
 
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
