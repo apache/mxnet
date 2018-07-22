@@ -26,16 +26,16 @@
 
 #if MXNET_USE_TENSORRT
 
+#include <NvInfer.h>
 #include <mxnet/base.h>
-#include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/operator.h>
 #include <nnvm/graph_attr_types.h>
 #include <onnx/onnx.pb.h>
-#include <NvInfer.h>
 
-#include "./onnx_to_tensorrt.h"
-#include "./exec_pass.h"
 #include "../operator/contrib/nnvm_to_onnx-inl.h"
+#include "./exec_pass.h"
+#include "./onnx_to_tensorrt.h"
 
 namespace mxnet {
 namespace exec {
@@ -212,21 +212,28 @@ class BidirectionalGraph {
   friend class Graph;
 
   bool IsTRTCompatible(nnvm::Node* nodeptr) {
-    if (nodeptr->op() != nullptr) {
-      const std::string op_name = nodeptr->op()->name;
-      if (op_name == "Pooling") {
-        return (nodeptr->attrs.dict.at("pool_type") == "avg" ||
-          nodeptr->attrs.dict.at("pool_type") == "max");
-      } else if (unconditionalTRTop.count(op_name)) {
-        return true;
-      } else if (op_name == "Activation") {
-        return nodeptr->attrs.dict.at("act_type") == "relu" ||
-          nodeptr->attrs.dict.at("act_type") == "tanh" ||
-          nodeptr->attrs.dict.at("act_type") == "sigmoid";
-      }
-      return false;
+
+    if (nodeptr->op() == nullptr) {
+      return true;
     }
-    return true;
+
+    const std::string op_name = nodeptr->op()->name;
+    if (op_name == "Pooling") {
+      return (nodeptr->attrs.dict.at("pool_type") == "avg" ||
+          nodeptr->attrs.dict.at("pool_type") == "max");
+    }
+
+    if (unconditionalTRTop.count(op_name)) {
+      return true;
+    }
+
+    if (op_name == "Activation") {
+      return nodeptr->attrs.dict.at("act_type") == "relu" ||
+        nodeptr->attrs.dict.at("act_type") == "tanh" ||
+        nodeptr->attrs.dict.at("act_type") == "sigmoid";
+    }
+
+    return false;
   }
 };  // class BidirectionalGraph
 
@@ -300,7 +307,7 @@ std::vector<nnvm::NodeEntry> GetSubgraphInterfaceNodes(Graph g,
   return inputs;
 }
 
-std::unordered_map<uint32_t, uint32_t> GetGraphInputsMap(Graph g) {
+std::unordered_map<uint32_t, uint32_t> GetGraphInputsMap(const Graph& g) {
   std::unordered_map<uint32_t, uint32_t> outputs;
   auto& idx = g.indexed_graph();
   outputs.reserve(idx.num_nodes());
@@ -549,11 +556,11 @@ Graph ReplaceSubgraph(Graph&& g,
     }
   });
 
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    auto it = sub_outputs_in_main_to_pos.find(g.outputs[i]);
+  for (auto& output : g.outputs) {
+    auto it = sub_outputs_in_main_to_pos.find(output);
     if (it != sub_outputs_in_main_to_pos.end()) {
-      g.outputs[i].index = it->second;
-      g.outputs[i].node = trtnodeptr;
+      output.index = it->second;
+      output.node = trtnodeptr;
     }
   }
 

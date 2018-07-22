@@ -65,7 +65,7 @@ class TRT_Logger : public nvinfer1::ILogger {
 };
 
 nvinfer1::ICudaEngine* onnxToTrtCtx(
-        const std::string &onnx_model,
+        const std::string& onnx_model,
         int32_t max_batch_size = 32,
         size_t max_workspace_size = 1L << 30,
         nvinfer1::ILogger::Severity verbosity = nvinfer1::ILogger::Severity::kWARNING,

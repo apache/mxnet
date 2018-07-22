@@ -55,7 +55,7 @@ struct InferDeleter {
 };
 
 template<typename T>
-inline std::shared_ptr<T> InferObject(T *obj) {
+inline std::shared_ptr<T> InferObject(T* obj) {
   if ( !obj ) {
     throw std::runtime_error("Failed to create object");
   }
@@ -81,7 +81,7 @@ void PrintVersion() {
 }
 
 nvinfer1::ICudaEngine* onnxToTrtCtx(
-        const std::string &onnx_model,
+        const std::string& onnx_model,
         int32_t max_batch_size,
         size_t max_workspace_size,
         nvinfer1::ILogger::Severity verbosity,
