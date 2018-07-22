@@ -38,7 +38,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "./tensorrt-inl.h"
 #include "../../common/serialization.h"
 #include "../../common/utils.h"
 #include "../../ndarray/ndarray_function.h"
@@ -48,10 +47,11 @@
 #include "../../operator/nn/fully_connected-inl.h"
 #include "../../operator/nn/pooling-inl.h"
 #include "../../operator/softmax_output-inl.h"
+#include "./tensorrt-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
 #include <onnx/checker.h>
-#endif // MXNET_USE_TENSORRT_ONNX_CHECKER
+#endif  // MXNET_USE_TENSORRT_ONNX_CHECKER
 
 namespace mxnet {
 namespace op {
@@ -154,14 +154,14 @@ op::TRTParam ConvertNnvmGraphToOnnx(
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
   onnx::checker::check_model(model_proto);
-#endif // MXNET_USE_TENSORRT_ONNX_CHECKER
+#endif  // MXNET_USE_TENSORRT_ONNX_CHECKER
 
   return trt_param;
 }
 
 void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
-                        const nnvm::IndexedGraph& ig,
-                        const array_view<IndexedGraph::NodeEntry>& inputs) {
+                        const nnvm::IndexedGraph& /*ig*/,
+                        const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   const auto& conv_param = nnvm::get<op::ConvolutionParam>(attrs.parsed);
 
   node_proto->set_op_type("Conv");
@@ -217,8 +217,8 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
 }  // end ConvertConvolution
 
 void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
-                    const nnvm::IndexedGraph& ig,
-                    const array_view<IndexedGraph::NodeEntry>& inputs) {
+                    const nnvm::IndexedGraph& /*ig*/,
+                    const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   const auto& pooling_param = nnvm::get<op::PoolingParam>(attrs.parsed);
 
   const TShape kernel = pooling_param.kernel;
@@ -234,45 +234,43 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
       node_proto->set_op_type("GlobalAveragePool");
     }
     return;
-
-  } else {
-    // kernel_shape
-    AttributeProto* const kernel_shape = node_proto->add_attribute();
-    kernel_shape->set_name("kernel_shape");
-    kernel_shape->set_type(AttributeProto::INTS);
-    for (int kval : kernel) {
-      kernel_shape->add_ints(static_cast<int64>(kval));
-    }
-
-    // pads
-    AttributeProto* const pads = node_proto->add_attribute();
-    pads->set_name("pads");
-    pads->set_type(AttributeProto::INTS);
-    for (int kval : pad) {
-      pads->add_ints(static_cast<int64>(kval));
-    }
-
-    // strides
-    AttributeProto* const strides = node_proto->add_attribute();
-    strides->set_name("strides");
-    strides->set_type(AttributeProto::INTS);
-    for (int kval : stride) {
-      strides->add_ints(static_cast<int64>(kval));
-    }
-
-    if (pool_type == 0) {
-      node_proto->set_op_type("MaxPool");
-
-    } else {
-      node_proto->set_op_type("AveragePool");
-    }  // average pooling
-    // not global pooling
   }
+
+  // kernel_shape
+  AttributeProto* const kernel_shape = node_proto->add_attribute();
+  kernel_shape->set_name("kernel_shape");
+  kernel_shape->set_type(AttributeProto::INTS);
+  for (int kval : kernel) {
+    kernel_shape->add_ints(static_cast<int64>(kval));
+  }
+
+  // pads
+  AttributeProto* const pads = node_proto->add_attribute();
+  pads->set_name("pads");
+  pads->set_type(AttributeProto::INTS);
+  for (int kval : pad) {
+    pads->add_ints(static_cast<int64>(kval));
+  }
+
+  // strides
+  AttributeProto* const strides = node_proto->add_attribute();
+  strides->set_name("strides");
+  strides->set_type(AttributeProto::INTS);
+  for (int kval : stride) {
+    strides->add_ints(static_cast<int64>(kval));
+  }
+
+  if (pool_type == 0) {
+    node_proto->set_op_type("MaxPool");
+  } else {
+    node_proto->set_op_type("AveragePool");
+  }  // average pooling
+  // not global pooling
 }  // end ConvertPooling
 
 void ConvertActivation(NodeProto* node_proto, const NodeAttrs& attrs,
-                       const nnvm::IndexedGraph& ig,
-                       const array_view<IndexedGraph::NodeEntry>& inputs) {
+                       const nnvm::IndexedGraph& /*ig*/,
+                       const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   const auto& act_param = nnvm::get<op::ActivationParam>(attrs.parsed);
   std::string act_type;
   switch (act_param.act_type) {
@@ -297,8 +295,8 @@ void ConvertActivation(NodeProto* node_proto, const NodeAttrs& attrs,
 }
 
 void ConvertFullyConnected(NodeProto* node_proto, const NodeAttrs& attrs,
-                           const nnvm::IndexedGraph& ig,
-                           const array_view<IndexedGraph::NodeEntry>& inputs) {
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   const auto& act_param = nnvm::get<op::FullyConnectedParam>(attrs.parsed);
   if (act_param.no_bias) {
       node_proto->set_op_type("MatMul");
@@ -332,9 +330,9 @@ void ConvertFullyConnected(NodeProto* node_proto, const NodeAttrs& attrs,
   }
 }
 
-void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& attrs,
-                          const nnvm::IndexedGraph& ig,
-                          const array_view<IndexedGraph::NodeEntry>& inputs) {
+void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                          const nnvm::IndexedGraph& /*ig*/,
+                          const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Softmax");
 
   // Setting by default to 1 since MXNet doesn't provide such an attribute for softmax in its
@@ -346,9 +344,9 @@ void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& attrs,
   axis->set_i(1);
 }
 
-void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& attrs,
-                    const nnvm::IndexedGraph& ig,
-                    const array_view<IndexedGraph::NodeEntry>& inputs) {
+void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                    const nnvm::IndexedGraph& /*ig*/,
+                    const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Flatten");
 
   // Setting by default to 1 since MXNet doesn't provide such an attribute for Flatten in its
@@ -361,8 +359,8 @@ void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& attrs,
 }
 
 void ConvertBatchNorm(NodeProto* node_proto, const NodeAttrs& attrs,
-                      const nnvm::IndexedGraph& ig,
-                      const array_view<IndexedGraph::NodeEntry>& inputs) {
+                      const nnvm::IndexedGraph& /*ig*/,
+                      const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("BatchNormalization");
   const auto& param = nnvm::get<op::BatchNormParam>(attrs.parsed);
 
@@ -396,9 +394,9 @@ void ConvertBatchNorm(NodeProto* node_proto, const NodeAttrs& attrs,
   }
 }
 
-void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& attrs,
-                           const nnvm::IndexedGraph& ig,
-                           const array_view<IndexedGraph::NodeEntry>& inputs) {
+void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                           const nnvm::IndexedGraph& /*ig*/,
+                           const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Add");
   AttributeProto* const axis = node_proto->add_attribute();
   axis->set_name("axis");
