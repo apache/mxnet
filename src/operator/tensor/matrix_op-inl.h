@@ -686,7 +686,7 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (b - e - 1) / (-s) + 1;
     }
-  } // else leave oshape[i] as 0 for partial infer
+  }  // else leave oshape[i] as 0 for partial infer
 }
 
 inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
