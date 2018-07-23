@@ -149,11 +149,17 @@ class CommDeviceTree : public CommDevice {
 
         start = scan_[root][level-1];
         end = scan_[root][level];
+        int source = end;
         for (int i = start; i < end; ++i) {
           int gpu_id = topology[i];
 
+          // source keeps track of 2 leaf nodes, while start keeps track of parent
+          int dest_id = topology[source];
+          int from_id = topology[source+1];
+          source += 2;
+
           // conditional to detect whether operation must be done
-          if (reduce[gpu_id].size() > 1) {
+          if (reduce[gpu_id].size() > 1 && dest_id != from_id) {
             TreeBufferEntry& buf = tree_merge_buf_[gpu_id][key];
             ElementwiseSum(reduce[gpu_id], &(buf.merged[merged_row]), priority);
           }
@@ -201,7 +207,7 @@ class CommDeviceTree : public CommDevice {
       if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         // Find slice bounds
         slice_scan[0] = 0;
-        int slice_size = (first_size + devs_.size()-1)/devs_.size();
+        int slice_size = first_size/devs_.size();
         for (unsigned i = 1; i < devs_.size(); ++i) {
           slice_scan[i] = slice_scan[i-1] + slice_size;
         }
@@ -297,7 +303,7 @@ class CommDeviceTree : public CommDevice {
       if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
         std::vector<int> slice_scan(devs_.size()+1);
         slice_scan[0] = 0;
-        int slice_size = (dst[0]->shape()[0]+devs_.size()-1)/devs_.size();
+        int slice_size = (dst[0]->shape()[0])/devs_.size();
         for (unsigned i = 1; i < devs_.size(); ++i) {
           slice_scan[i] = slice_scan[i-1] + slice_size;
         }
@@ -427,7 +433,7 @@ class CommDeviceTree : public CommDevice {
           unsigned first_size = shape[0];
           if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
             // Find slice bounds
-            int slice_size = (first_size+devs_.size()-1)/devs_.size();
+            int slice_size = first_size/devs_.size();
             int last_slice = first_size-(devs_.size()-1)*slice_size;
             shape_copy[0]   = slice_size;
             buf.merged.resize(devs_.size());
