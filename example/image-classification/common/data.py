@@ -95,14 +95,6 @@ def add_data_aug_args(parser):
                      help='whether to use random resized crop')
     return aug
 
-def set_resnet_imagenet_aug(aug):
-    # standard data augmentation setting for resnet training
-    aug.set_defaults(rgb_mean='123.68,116.779,103.939', rgb_std='58.393,57.12,57.375')
-    aug.set_defaults(random_crop=0, random_resized_crop=1, random_mirror=1)
-    aug.set_defaults(min_random_area=0.08)
-    aug.set_defaults(max_random_aspect_ratio=4./3., min_random_aspect_ratio=3./4.)
-    aug.set_defaults(brightness=0.4, contrast=0.4, saturation=0.4, pca_noise=0.1)
-
 class SyntheticDataIter(DataIter):
     def __init__(self, num_classes, data_shape, max_iter, dtype):
         self.batch_size = data_shape[0]

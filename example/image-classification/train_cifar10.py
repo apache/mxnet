@@ -36,7 +36,6 @@ def set_cifar_aug(aug):
     aug.set_defaults(random_mirror=1, pad=4, fill_value=0, random_crop=1)
     aug.set_defaults(min_random_size=32, max_random_size=32)
 
-
 if __name__ == '__main__':
     # download data
     (train_fname, val_fname) = download_cifar10()
@@ -47,7 +46,8 @@ if __name__ == '__main__':
     fit.add_fit_args(parser)
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
-    data.set_cifar_aug(parser)
+    # uncomment to set standard cifar augmentations
+    # set_cifar_aug(parser)
     parser.set_defaults(
         # network
         network        = 'resnet',
