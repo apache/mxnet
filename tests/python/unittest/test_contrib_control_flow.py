@@ -1008,8 +1008,8 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
             for var in free_vars + input_vars:
                 var.attach_grad()
         with mx.autograd.record(train_mode=is_train):
-            outputs = mx.nd.contrib.condition(
-                cond=cond_func(input_vars, free_vars),
+            outputs = mx.nd.contrib.cond(
+                pred=cond_func(input_vars, free_vars),
                 then_func=lambda: then_func(input_vars, free_vars),
                 else_func=lambda: else_func(input_vars, free_vars),
             )
@@ -1024,8 +1024,8 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
             return _to_numpy_list(outputs), _to_numpy_list(grads), out_grads
 
     def _get_symbolic_result(out_grads):
-        outputs_sym = mx.sym.contrib.condition(
-            cond=cond_func(_input_syms, _free_syms),
+        outputs_sym = mx.sym.contrib.cond(
+            pred=cond_func(_input_syms, _free_syms),
             then_func=lambda: then_func(_input_syms, _free_syms),
             else_func=lambda: else_func(_input_syms, _free_syms),
         )
@@ -1130,5 +1130,6 @@ def test_cond():
                 )
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    # import nose
+    # nose.runmodule()
+    test_cond()

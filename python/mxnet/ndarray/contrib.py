@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import, unused-wildcard-import
+# pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib NDArray API of MXNet."""
 import math
 from ..context import current_context
@@ -28,7 +28,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "condition"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -363,13 +363,13 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             ))
     return stacked_outputs, list(loop_vars)
 
-def condition(cond, then_func, else_func):
+def cond(pred, then_func, else_func):
     """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
     the two customized computations according to the specified condition.
 
-    `cond` is a scalar MXNet NDArray,
+    `pred` is a scalar MXNet NDArray,
     indicating which branch of computation should be used.
 
     `then_func` is a user-defined function, used as computation of the then branch.
@@ -389,12 +389,12 @@ def condition(cond, then_func, else_func):
 
     Parameters
     ----------
-    cond: a MXNet NDArray representing a scalar.
+    pred: a MXNet NDArray representing a scalar.
         The branch condition.
     then_func: a Python function.
-        The computation to be executed if `cond` is true.
+        The computation to be executed if `pred` is true.
     else_func: a Python function.
-        The computation to be executed if `cond` is false.
+        The computation to be executed if `pred` is false.
 
     Returns
     -------
@@ -403,10 +403,10 @@ def condition(cond, then_func, else_func):
     Examples
     --------
     >>> a, b = mx.nd.array([1]), mx.nd.array([2])
-    >>> cond = a * b < 5
+    >>> pred = a * b < 5
     >>> then_func = lambda a, b: (a + 5) * (b + 5)
     >>> else_func = lambda a, b: (a - 5) * (b - 5)
-    >>> outputs = mx.nd.contrib.cond(cond, then_func, else_func)
+    >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
     [42.]
     <NDArray 1 @cpu(0)>
@@ -438,7 +438,7 @@ def condition(cond, then_func, else_func):
                 raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
         return inputs
 
-    branch = _to_python_scalar(cond, bool, "cond")
+    branch = _to_python_scalar(pred, bool, "pred")
     if branch:
         outputs = then_func()
         outputs = _to_ndarray_tuple(outputs, "outputs of then_func")

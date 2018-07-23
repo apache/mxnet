@@ -34,7 +34,7 @@ from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "condition"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
@@ -557,13 +557,13 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     final_loop_vars = [result[i] for i in range(num_out_data, num_outputs)]
     return outputs, final_loop_vars
 
-def condition(cond, then_func, else_func, name="cond"):
+def cond(pred, then_func, else_func, name="cond"):
     """Run an if-then-else using user-defined condition and computation
 
     This operator simulates a if-like branch which chooses to do one of
     the two customized computations according to the specified condition.
 
-    `cond` is a scalar MXNet Symbol,
+    `pred` is a scalar MXNet Symbol,
     indicating which branch of computation should be used.
 
     `then_func` is a user-defined function, used as computation of the then branch.
@@ -583,12 +583,12 @@ def condition(cond, then_func, else_func, name="cond"):
 
     Parameters
     ----------
-    cond: a MXNet Symbol representing a scalar.
+    pred: a MXNet Symbol representing a scalar.
         The branch condition.
     then_func: a Python function.
-        The computation to be executed if `cond` is true.
+        The computation to be executed if `pred` is true.
     else_func: a Python function.
-        The computation to be executed if `cond` is false.
+        The computation to be executed if `pred` is false.
 
     Returns
     -------
@@ -597,10 +597,10 @@ def condition(cond, then_func, else_func, name="cond"):
     Examples
     --------
     >>> a, b = mx.sym.var('a'), mx.sym.var('b')
-    >>> cond = a * b < 5
+    >>> pred = a * b < 5
     >>> then_func = lambda: (a + 5) * (b + 5)
     >>> else_func = lambda: (a - 5) * (b - 5)
-    >>> outputs = mx.sym.contrib.cond(cond, then_func, else_func)
+    >>> outputs = mx.sym.contrib.cond(pred, then_func, else_func)
     """
     def _to_symbol_tuple(inputs, name):
         """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
@@ -673,9 +673,9 @@ def condition(cond, then_func, else_func, name="cond"):
         return inputs, locs
     inputs = []
     # create graph for `cond_func'
-    cond_g, cond_num_outputs = _create_subgraph(inputs, lambda: cond, name + "_cond")
+    cond_g, cond_num_outputs = _create_subgraph(inputs, lambda: pred, name + "_pred")
     if cond_num_outputs != 1:
-        raise ValueError("cond should always be a single output")
+        raise ValueError("pred should always be a single output")
     # create graph for `then`
     then_g, then_num_outputs = _create_subgraph(inputs, then_func, name + "_then")
     # create graph for `else`
