@@ -21,4 +21,5 @@ package org.apache.mxnet
   * Main code will be generated during compile time through Macros
   */
 object NDArrayAPI extends NDArrayAPIBase {
+  // TODO: Implement CustomOp for NDArray
 }

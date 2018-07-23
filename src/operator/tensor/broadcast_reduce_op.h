@@ -333,6 +333,31 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TShape& lhs_shape = (*in_attrs)[0];
+  TShape& rhs_shape = (*in_attrs)[1];
+  TShape oshape = TShape(rhs_shape);
+  if (lhs_shape.ndim() == 0 || lhs_shape.ndim() == 0) return false;
+
+  CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
+    << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
+
+  for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
+    if (rhs_shape[i] != 0) {
+      CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
+        << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
+    } else {
+      oshape[i] = lhs_shape[i];
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
 inline void BroadcastReduceShapeCompact(const TShape& big, const TShape& small,
                                         TShape *new_big, TShape *new_small) {
   index_t idim = std::max<index_t>(big.ndim(), MXNET_SPECIAL_MAX_NDIM);

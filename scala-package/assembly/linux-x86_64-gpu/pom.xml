@@ -46,6 +46,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
+            <id>binary-jar</id>
             <phase>package</phase>
             <goals>
               <goal>single</goal>
@@ -54,6 +55,34 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptors>
                 <descriptor>src/main/assembly/assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sources-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>true</appendAssemblyId>
+              <classifier>sources</classifier>
+              <descriptors>
+                <descriptor>${project.parent.basedir}/src/source.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+          <execution>
+            <id>javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>true</appendAssemblyId>
+              <classifier>javadoc</classifier>
+              <descriptors>
+                <descriptor>${project.parent.basedir}/src/javadoc.xml</descriptor>
               </descriptors>
             </configuration>
           </execution>

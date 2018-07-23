@@ -409,7 +409,7 @@ class CTCLossOp : public Operator {
 
     // since the input is activation before softmax and cudnn ctc takes softmax
     // apply softmax to inputs first.
-    mxnet_op::Softmax<mxnet_op::softmax_fwd>(s, data.dptr_, prob.dptr_, data.shape_, 2);
+    mxnet_op::Softmax<mxnet_op::softmax_fwd>(s, data.dptr_, prob.dptr_, data.shape_, 2, 1.0);
 
     CUDNN_CALL(cudnnCTCLoss(s->dnn_handle_,
                             prob_desc_,
@@ -427,7 +427,7 @@ class CTCLossOp : public Operator {
 
     if (req_grad) {
       mxnet_op::SoftmaxGrad<mshadow_op::mul, mxnet_op::softmax_bwd>(s,
-          prob.dptr_, grad.dptr_, grad.dptr_, data.shape_, 2);
+          prob.dptr_, grad.dptr_, grad.dptr_, data.shape_, 2, 1.0);
       Assign(grad, mxnet::kWriteInplace, grad * alphabet_size);
     }
   }

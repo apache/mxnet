@@ -94,7 +94,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 3, DType> out;
     Tensor<xpu, 3, DType> mask;
     int n = in_data[leakyrelu::kData].shape_[0];
-    int k = in_data[leakyrelu::kData].shape_[1];
+    int k = (in_data[leakyrelu::kData].ndim() > 1) ? in_data[leakyrelu::kData].shape_[1] : 1;
     Shape<3> dshape = Shape3(n, k, in_data[leakyrelu::kData].Size()/n/k);
     data = in_data[leakyrelu::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     out = out_data[leakyrelu::kOut].get_with_shape<xpu, 3, DType>(dshape, s);
@@ -207,7 +207,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 3, DType> grad;
     Tensor<xpu, 3, DType> mask;
     int n = out_grad[leakyrelu::kOut].shape_[0];
-    int k = out_grad[leakyrelu::kOut].shape_[1];
+    int k = (out_grad[leakyrelu::kOut].ndim() > 1) ? out_grad[leakyrelu::kOut].shape_[1] : 1;
     Shape<3> dshape = Shape3(n, k, out_grad[leakyrelu::kOut].Size()/n/k);
     grad = out_grad[leakyrelu::kOut].get_with_shape<xpu, 3, DType>(dshape, s);
     gdata = in_grad[leakyrelu::kData].get_with_shape<xpu, 3, DType>(dshape, s);

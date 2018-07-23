@@ -489,9 +489,9 @@ try {
         }
       }
     },
-    'Raspberry / ARMv7':{
+    'ARMv7':{
       node('mxnetlinux-cpu') {
-        ws('workspace/build-raspberry-armv7') {
+        ws('workspace/build-ARMv7') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('armv7', 'build_armv7', false)
@@ -499,9 +499,9 @@ try {
         }
       }
     },
-    'Raspberry / ARMv6':{
+    'ARMv6':{
       node('mxnetlinux-cpu') {
-        ws('workspace/build-raspberry-armv6') {
+        ws('workspace/build-ARMv6') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('armv6', 'build_armv6', false)
@@ -509,12 +509,22 @@ try {
         }
       }
     },
-    'Android / ARM64':{
+    'ARMv8':{
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-ARMv8') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('armv8', 'build_armv8', false)
+          }
+        }
+      }
+    },
+    'Android / ARMv8':{
       node('mxnetlinux-cpu') {
         ws('workspace/android64') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
-            docker_run('android_arm64', 'build_android_arm64', false)
+            docker_run('android_armv8', 'build_android_armv8', false)
           }
         }
       }
@@ -1011,6 +1021,10 @@ try {
         }
       }
     },
+    /*  Disabled due to master build failure:
+     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
+     *  https://github.com/apache/incubator-mxnet/issues/11801
+
     'dist-kvstore tests CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/it-dist-kvstore') {
@@ -1022,7 +1036,7 @@ try {
           }
         }
       }
-    },
+    }, */
     'Scala: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-scala-gpu') {

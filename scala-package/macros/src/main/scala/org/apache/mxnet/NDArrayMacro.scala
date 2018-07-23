@@ -85,14 +85,16 @@ private[mxnet] object NDArrayMacro {
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
+    // Defines Operators that should not generated
+    val notGenerated = Set("Custom")
 
     val newNDArrayFunctions = {
       if (isContrib) ndarrayFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
       else ndarrayFunctions.filterNot(_.name.startsWith("_"))
-    }
+    }.filterNot(ele => notGenerated.contains(ele.name))
 
-    val functionDefs = newNDArrayFunctions map { ndarrayfunction =>
+    val functionDefs = newNDArrayFunctions.map { ndarrayfunction =>
 
       // Construct argument field
       var argDef = ListBuffer[String]()
