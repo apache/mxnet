@@ -33,7 +33,7 @@ def add_data_args(parser):
     data.add_argument('--pad-size', type=int, default=0,
                       help='padding the input image')
     data.add_argument('--fill-value', type=int, default=127,
-                      help='Set the padding pixes value into fill_value')
+                      help='Set the padding pixels value to fill_value')
     data.add_argument('--image-shape', type=str,
                       help='the image shape feed into the network, e.g. (3,224,224)')
     data.add_argument('--num-classes', type=int, help='the number of classes')
