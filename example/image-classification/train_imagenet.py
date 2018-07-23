@@ -23,6 +23,8 @@ from common import find_mxnet, data, fit
 from common.util import download_file
 import mxnet as mx
 
+
+
 if __name__ == '__main__':
     # parse args
     parser = argparse.ArgumentParser(description="train imagenet-1k",
@@ -31,7 +33,7 @@ if __name__ == '__main__':
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
     # uncomment to set standard augmentation for resnet training
-    # data.set_resnet_aug(parser)
+    # data.set_resnet_imagenet_aug(parser)
     parser.set_defaults(
         # network
         network          = 'resnet',
