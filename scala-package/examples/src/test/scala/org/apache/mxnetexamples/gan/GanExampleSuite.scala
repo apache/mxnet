@@ -23,19 +23,16 @@ import java.net.URL
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
+@Ignore
 class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
   private val logger = LoggerFactory.getLogger(classOf[GanExampleSuite])
 
   test("Example CI: Test GAN MNIST") {
-    val disableTest = true
-    if (disableTest) {
-       logger.info("Temporarily disable this test due to the Memory leaks")
-    } else {
       if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
         System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
         logger.info("Downloading mnist model")
@@ -61,6 +58,5 @@ class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
       } else {
         logger.info("GPU test only, skipped...")
       }
-    }
   }
 }
