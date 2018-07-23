@@ -164,14 +164,7 @@ bool InferSubgraphShape(const nnvm::Symbol &subgraph,
 LoopState::LoopState(const Symbol &g) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
-
-  std::vector<std::pair<std::string, std::string> > kwargs;
-  kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  // We turn on static_alloc for two reasons.
-  // It avoids the overhead of unnecessary memory allocation.
-  // only static_alloc supports nested call of CachedOp.
-  kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
-  iter_op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+  this->iter_op = LoopState::MakeSharedOp(g);
 }
 
 void LoopState::Forward(int iter_no,

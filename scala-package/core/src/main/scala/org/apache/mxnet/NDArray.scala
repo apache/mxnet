@@ -89,7 +89,11 @@ object NDArray extends NDArrayBase {
         output match {
           case nd: NDArray => (Array(nd), Array(nd.handle))
           case ndFuncRet: NDArrayFuncReturn => (ndFuncRet.arr, ndFuncRet.arr.map(_.handle))
-          case ndArr: Seq[NDArray] => (ndArr.toArray, ndArr.toArray.map(_.handle))
+         // Seq[NDArray] erasure problem explained here https://stackoverflow.com/questions/1094173/
+          case ndArr: Seq[NDArray @unchecked] =>
+            if (ndArr.head.isInstanceOf[NDArray]) (ndArr.toArray, ndArr.toArray.map(_.handle))
+            else throw new IllegalArgumentException(
+              "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
           case _ => throw new IllegalArgumentException(
             "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
         }
@@ -554,11 +558,16 @@ object NDArray extends NDArrayBase {
  * </b>
  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true) extends WarnIfNotDisposed {
+                             val writable: Boolean = true,
+                             addToCollector: Boolean = true) extends WarnIfNotDisposed {
+  if (addToCollector) {
+    NDArrayCollector.collect(this)
+  }
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
-  private var disposed = false
+  @volatile private var disposed = false
   def isDisposed: Boolean = disposed
 
   def serialize(): Array[Byte] = {

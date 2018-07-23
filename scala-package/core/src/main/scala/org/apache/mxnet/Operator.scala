@@ -72,9 +72,9 @@ abstract class CustomOp {
       val tensors = (0 until 5).toArray.map( x => ArrayBuffer[NDArray]() )
       for (i <- 0 until numNdarray) {
         if (tags(i) == 1 || tags(i) == 4) {
-          tensors(tags(i)) += new NDArray(ndarraies(i), writable = true)
+          tensors(tags(i)) += new NDArray(ndarraies(i), writable = true, addToCollector = false)
         } else {
-          tensors(tags(i)) += new NDArray(ndarraies(i), writable = false)
+          tensors(tags(i)) += new NDArray(ndarraies(i), writable = false, addToCollector = false)
         }
       }
       val reqEnum = Array("null", "write", "inplace", "add")

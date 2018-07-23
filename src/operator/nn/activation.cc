@@ -44,11 +44,19 @@ struct ActivationGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
-#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+
     const NodeAttrs& attrs = n->attrs;
+    int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
+    if (act_type == activation::kSoftSign) {
+      // for softsign need the inputs to compute the activation.
+      heads.push_back(n->inputs[activation::kData]);
+    }
+
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
     // for ReLU, no need to pass input data. This enables inplace optimization during the
     // forward pass.
-    if (dmlc::get<ActivationParam>(attrs.parsed).act_type != activation::kReLU) {
+    if (act_type != activation::kReLU &&
+        act_type != activation::kSoftSign) {
       heads.push_back(n->inputs[activation::kData]);
     }
 #endif
@@ -118,8 +126,8 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
   bool ret = false;
-#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
   if (param.act_type != activation::kReLU) {
     CHECK_EQ(in_attrs->size(), 3U);
     ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
@@ -133,10 +141,17 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                                          in_attrs, out_attrs);
   }
 #else
-  CHECK_EQ(in_attrs->size(), 2U);
-  ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
-                                                       dispatch_mode,
-                                                       in_attrs, out_attrs);
+  if (param.act_type == activation::kSoftSign) {
+    CHECK_EQ(in_attrs->size(), 3U);
+    ret = ElemwiseStorageType<3, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  } else {
+    CHECK_EQ(in_attrs->size(), 2U);
+    ret = ElemwiseStorageType<2, 1, false, false, false>(attrs, dev_mask,
+                                                         dispatch_mode,
+                                                         in_attrs, out_attrs);
+  }
 #endif
   CHECK_EQ(out_attrs->size(), 1U);
 #if MXNET_USE_MKLDNN == 1
