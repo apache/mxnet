@@ -77,6 +77,8 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
     GenerateMatrix(&W, num_gpus, k, gen);
     satisfied = IsSatisfactory(W, num_gpus, depth);
   }
+  //LOG(WARNING) << "num_gpus: " << num_gpus;
+  //mxnet::kvstore::PrintMatrix("Link topo", W, num_gpus, num_gpus);
 
   std::vector<std::vector<size_t>> topo;
   std::vector<std::vector<size_t>> scan;
@@ -84,7 +86,9 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
 
   unsigned correct_topo_size = (1 << (depth + 1)) - 1;
   unsigned correct_scan_size = depth+2;
-  for (int i = 0; i < num_gpus; ++i) {
+  //LOG(WARNING) << topo.size() << " " << num_gpus;
+  ASSERT_EQ(topo.size(), static_cast<unsigned>(num_gpus));
+  for (int i = 0; i < topo.size(); ++i) {
     ASSERT_EQ(correct_topo_size, topo[i].size());
     ASSERT_EQ(correct_scan_size, scan[i].size());
   }
@@ -188,6 +192,8 @@ TEST(GpuTopology, TestPostprocess) {
 }
 
 TEST(GpuTopology, TestDepth) {
+  ASSERT_EQ(mxnet::kvstore::ComputeDepth(2), 1);
+  ASSERT_EQ(mxnet::kvstore::ComputeDepth(3), 2);
   ASSERT_EQ(mxnet::kvstore::ComputeDepth(8), 3);
   ASSERT_EQ(mxnet::kvstore::ComputeDepth(7), 3);
   ASSERT_EQ(mxnet::kvstore::ComputeDepth(5), 3);
@@ -555,12 +561,13 @@ TEST(GpuTopology, TestIsConnected3) {
 
 // ComputeTreesTest with backtracking
 // TODO(carlyang): comment out test for now
-/*TEST(GpuTopology, TestComputeTrees1) {
+TEST(GpuTopology, TestComputeTrees1) {
   std::mt19937 gen(1);
   float alpha = 0.7;
   bool backtrack = true;
   // Do 5 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
+    LOG(WARNING) << "Testing " << num_gpus << " x " << num_gpus;
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized(num_gpus, alpha, backtrack, &gen);
     }
@@ -574,11 +581,12 @@ TEST(GpuTopology, TestComputeTrees2) {
   bool backtrack = false;
   // Do 5 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
+    LOG(WARNING) << "Testing " << num_gpus << " x " << num_gpus;
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized(num_gpus, alpha, backtrack, &gen);
     }
   }
-}*/
+}
 
 TEST(GpuTopology, TestPermuteMatrix) {
   std::vector<int> W = {0, 2, 2, 3, 3, 1, 1, 1,

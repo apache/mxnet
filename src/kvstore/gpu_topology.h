@@ -734,10 +734,18 @@ inline T ComputeTreeWeight(const std::vector<T>& W, const std::vector<int>& resu
 //     3     1
 //   3   0   1   5
 // 3 3 0 4 1 2 5 6
-inline void FormTopology(const std::vector<int>& result,
+//
+// Returns false if invalid tree in result
+// Otherwise returns true
+inline bool FormTopology(const std::vector<int>& result,
                          std::vector<size_t>* topo_row,
                          std::vector<size_t>* scan_row,
                          int depth) {
+  //PrintVector("Best result", result);
+  for (unsigned i = 0; i < result.size(); ++i)
+    if (result[i] == -1)
+      return false;
+
   scan_row->push_back(topo_row->size());
   for (int i = depth; i > 0; --i) {
     int stride = 1 << i;
@@ -751,6 +759,7 @@ inline void FormTopology(const std::vector<int>& result,
   // Insert at the end, result vector
   topo_row->insert(topo_row->end(), result.begin(), result.end());
   scan_row->push_back(topo_row->size());
+  return true;
 }
 
 // Recursive function that finds a spanning tree, which fulfills the following
@@ -813,6 +822,8 @@ inline void IterativeBacktrack(const std::vector<T>& W,
     // a) if stack is empty, break and stop search
     // b) if stack is not empty, pop stack and set current position to next
     //    position backtrack to previous row
+    //LOG(WARNING) << "Stack size: " << state_stack.size();
+    //PrintVector("state", *state);
     while (!state_stack.empty() && pos >= num_elements) {
       pos = state_stack.top();
       pos++;
@@ -838,8 +849,11 @@ inline void IterativeBacktrack(const std::vector<T>& W,
     // Pop stack, set current position to next position
     // Backtrack to find next solution
     if (row == static_cast<int>(state->size())) {
+      //LOG(WARNING) << row << " == " << state->size();
       std::vector<int> result = *state;
+      //PrintVector("Best result", result);
       Postprocess(&result, num_elements, depth);
+      //PrintVector("Best result", result);
       T weight = ComputeTreeWeight(W, result, num_elements, depth, true);
 
       // Save this spanning tree if it is highest weight tree found so far
@@ -852,7 +866,8 @@ inline void IterativeBacktrack(const std::vector<T>& W,
       pos = state_stack.top();
       pos++;
       state_stack.pop();
-      (*state)[state_stack.size()+1] = -1;
+      //LOG(WARNING) << "Setting " << state_stack.size() << " to 1";
+      (*state)[state_stack.size()] = -1;
       row--;
     }
   }
@@ -882,7 +897,7 @@ inline void UpdateWeight(std::vector<T>* W, const std::vector<size_t>& topo_row,
 // 2) maximize edge weight
 // 3) tree is binary
 template <typename T>
-inline void BacktrackGenerateBinaryTree(std::vector<T>* W,
+inline bool BacktrackGenerateBinaryTree(std::vector<T>* W,
                                         int num_elements,
                                         int root,
                                         std::vector<size_t>* topo_row,
@@ -893,13 +908,14 @@ inline void BacktrackGenerateBinaryTree(std::vector<T>* W,
 
   // Compute depth
   // num_elements: depth
-  // 5: 3
-  // 6: 3
-  // 7: 3
-  // 8: 3
-  // 9: 4
+  // 5: 3 8
+  // 6: 3 8
+  // 7: 3 8
+  // 8: 3 8
+  // 9: 4 16
   int depth = ComputeDepth(num_elements);
   int depth_leaves = 1 << depth;
+  //LOG(WARNING) << num_elements << " " << depth << " " << depth_leaves;
 
   // State vector
   // -1 means unplaced
@@ -913,13 +929,15 @@ inline void BacktrackGenerateBinaryTree(std::vector<T>* W,
   // Seek optimal solution until depth <= 3 i.e. 8 GPUs
   // For larger numbers of GPUs, settle for first tree found (non-optimal), but
   // this saves a lot of runtime, because Backtrack is exponential time
-  if (depth <= 3)
+  if (depth <= 3) {
     IterativeBacktrack(*W, &state, &result, &result_weight, 1, num_elements,
                        depth, true);
-  else
+  } else {
     IterativeBacktrack(*W, &state, &result, &result_weight, 1, num_elements,
                        depth, false);
-  FormTopology(result, topo_row, scan_row, depth);
+  }
+  //LOG(WARNING) << "Exit Iterative backtrack " << num_elements;
+  return FormTopology(result, topo_row, scan_row, depth);
 }
 
 // ComputeTreesFromRoot does the same thing as ComputeTrees, with the only
@@ -991,16 +1009,22 @@ inline void ComputeTreesFromRoot(std::vector<T>* W,
     if (level > 10) break;
   }
 
+  //LOG(WARNING) << "ComputeFromRoot: " << num_elements;
+
+  bool success = true;
   if (reset == 1) {
     // if (!backtrack)
     //  LOG(WARNING) << "No valid binary tree found from root " << root << ", try backtracking";
-    BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
+    success = BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
     *topo = topo_temp;
     *scan = scan_temp;
     scan->push_back(topo->size());
   }
-  UpdateWeight(W, *topo, num_elements, alpha);
+  if (success)
+    UpdateWeight(W, *topo, num_elements, alpha);
+  else
+    LOG(FATAL) << "No valid binary tree found from root " << root << " using backtracking";
 }
 
 // ComputeTrees computes balanced binary spanning trees of maximum edge weight
@@ -1022,6 +1046,7 @@ inline void ComputeTrees(const std::vector<T>& W,
 
   topo->clear();
   scan->clear();
+  //LOG(WARNING) << "ComputeTrees: " << num_elements;
   for (int i = 0; i < num_elements; ++i) {
     topo->push_back(std::vector<size_t>());
     scan->push_back(std::vector<size_t>());
