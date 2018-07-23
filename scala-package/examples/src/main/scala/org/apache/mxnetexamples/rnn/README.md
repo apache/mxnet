@@ -1,14 +1,14 @@
 # RNN Example for MXNet Scala
 This folder contains the following examples writing in new Scala type-safe API:
 - [x] LSTM Bucketing
-- [ ] CharRNN Inference (still fixing issues)
-- [x] CharRNN Training
+- [ ] CharRNN Inference (still fixing issues): Generate similar text based on the model
+- [x] CharRNN Training: Training the language model using RNN
 
 These example is only for Illustration and not modeled to achieve the best accuracy.
 
 ## Setup
-### Download the source File
-`obama.zip` contains the required files for CharCNN examples and `sherlockholmes` contains the data for LSTM Bucketing
+### Download the Network Definition, Weights and Training Data
+`obama.zip` contains the training inputs (Obama's speech) for CharCNN examples and `sherlockholmes` contains the data for LSTM Bucketing
 ```bash
 https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/RNN/obama.zip
 https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/RNN/sherlockholmes.train.txt
