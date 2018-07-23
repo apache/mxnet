@@ -118,7 +118,7 @@ For CPU-only package:
 1. Clone the MXNet github repo.
 
 ```sh
-git clone --recursive https://github.com/dmlc/mxnet
+git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
@@ -184,7 +184,7 @@ To install MXNet on a computer with a GPU processor, choose from two options:
 
 However, few dependencies remains same for both options.  You will need the following:
 
-* Install Microsoft Visual Studio 2017 (required by CUDA)
+* Install [Microsoft Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (required by CUDA)
 
 * Install  [NVidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
 
@@ -210,7 +210,7 @@ After you have installed above softwares
 1. Clone the MXNet github repo.
 
 ```sh
-git clone --recursive https://github.com/dmlc/mxnet
+git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
