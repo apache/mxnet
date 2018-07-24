@@ -122,8 +122,11 @@ git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
+
 2. Download prebuilt GPU-enabled MXNet libraries for Windows from [Windows release](https://github.com/yajiedesign/mxnet/releases). You will need `mxnet_x64_vc14_cpu.7z` and `prebuildbase_win10_x64_vc14.7z` where X stands for your CUDA toolkit version
+
 3. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
+
 4. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
 ```
 libgcc_s_seh-1.dll
@@ -196,7 +199,7 @@ To install MXNet on a computer with a GPU processor, choose from two options:
 * Use the prebuilt binary package
 * Build the library from source code
 
-However, few dependencies remains same for both options.  You will need the following:
+However, a few dependencies remain for both options.  You will need the following:
 * Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended. 
 
 * Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (VS2015 or VS2017 is required by CUDA)
@@ -229,8 +232,11 @@ git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 The `--recursive` is to clone all the submodules used by MXNet. You will be editing the ```"/mxnet/R-package"``` folder.
+
 2. Download prebuilt GPU-enabled MXNet libraries for Windows from https://github.com/yajiedesign/mxnet/releases. You will need `mxnet_x64_vc14_gpu_cuX.7z` and `prebuildbase_win10_x64_vc14.7z` where X stands for your CUDA toolkit version
+
 3. Create a folder called ```R-package/inst/libs/x64```. MXNet supports only 64-bit operating systems, so you need the x64 folder.
+
 4. Copy the following shared libraries (.dll files) into the ```R-package/inst/libs/x64``` folder:
 ```
 libgcc_s_seh-1.dll
