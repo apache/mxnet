@@ -77,7 +77,9 @@ object TrainMnist {
       "shuffle" -> "True",
       "flat" -> flat,
       "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
+      "part_index" -> kv.`rank`.toString,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"))
 
     val eval = IO.MNISTIter(Map(
       "image" -> (dataDir + "t10k-images-idx3-ubyte"),
@@ -87,7 +89,9 @@ object TrainMnist {
       "batch_size" -> batchSize.toString,
       "flat" -> flat,
       "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
+      "part_index" -> kv.`rank`.toString,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"))
 
     (train, eval)
   }

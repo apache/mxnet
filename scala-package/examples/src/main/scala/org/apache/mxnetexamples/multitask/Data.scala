@@ -21,9 +21,6 @@ import org.apache.mxnet.Shape
 import org.apache.mxnet.IO
 import org.apache.mxnet.DataIter
 
-/**
- * @author Depeng Liang
- */
 object Data {
 
   // return train and val iterators for mnist
@@ -35,7 +32,9 @@ object Data {
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
       "shuffle" -> "True",
-      "flat" -> flat
+      "flat" -> flat,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"
     )
     val trainDataIter = IO.MNISTIter(trainParams)
     val testParams = Map(
@@ -43,7 +42,9 @@ object Data {
       "label" -> s"$dataPath/t10k-labels-idx1-ubyte",
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
-      "flat" -> flat
+      "flat" -> flat,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"
     )
     val testDataIter = IO.MNISTIter(testParams)
     (trainDataIter, testDataIter)

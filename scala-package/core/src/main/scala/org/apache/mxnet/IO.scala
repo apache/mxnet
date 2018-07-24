@@ -354,9 +354,11 @@ abstract class DataIter extends Iterator[DataBatch] {
   def getIndex(): IndexedSeq[Long]
 
   // The name and shape of data provided by this iterator
+  @deprecated
   def provideData: ListMap[String, Shape]
 
   // The name and shape of label provided by this iterator
+  @deprecated
   def provideLabel: ListMap[String, Shape]
 
   // Provide type:DataDesc of the data
