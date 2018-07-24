@@ -152,8 +152,22 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     
 ```
 6. Make sure that R is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
-7. Also make sure that Rtools in installed and added to your ```PATH``` in the environment variables.
-8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in R-package/src/mxnet.cc.
+7. Also make sure that Rtools is installed and added to your ```PATH``` in the environment variables.
+8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/incubator-mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
+```bat
+#include "./kvstore.h"
+#include "./export.h"
+//#include "./im2rec.h"
+......
+......
+  DataIterCreateFunction::InitRcppModule();
+  KVStore::InitRcppModule();
+  Exporter::InitRcppModule();
+//  IM2REC::InitRcppModule();
+}
+
+```
+
 9. Now open the Windows CMD with admin rights and change the directory to the `mxnet` folder(cloned repository). Then use the following commands
 to build R package:
 
@@ -183,18 +197,19 @@ To install MXNet on a computer with a GPU processor, choose from two options:
 * Build the library from source code
 
 However, few dependencies remains same for both options.  You will need the following:
+* Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended. 
 
-* Install [Microsoft Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (required by CUDA)
+* Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (VS2015 or VS2017 is required by CUDA)
 
-* Install  [NVidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)
+* Install  [NVidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)(cu92 is recommended though we support cu80, cu90, cu91 and cu92)
 
-* Download and install [CuDNN 7](https://developer.nvidia.com/cudnn) (to provide a Deep Neural Network library)
+* Download and install [CuDNN](https://developer.nvidia.com/cudnn) (to provide a Deep Neural Network library). Latest version recommended.
 
 Note: A pre-requisite to above softwares is [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) which we assume is installed.
 
 #### Installing MXNet with the Prebuilt Binary Package(GPU)
 For Windows users, MXNet provides prebuilt binary packages.
-You can install the package directly in the R console after you have the above softwares installed
+You can install the package directly in the R console after you have the above software installed.
 
 For GPU package:
 
@@ -206,7 +221,7 @@ For GPU package:
 ```
 Change X to 80,90,91 or 92 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 #### Building MXNet from Source Code(GPU)
-After you have installed above softwares 
+After you have installed above software, continue with the following steps to build MXNet-R: 
 1. Clone the MXNet github repo.
 
 ```sh
@@ -243,8 +258,21 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     
 ```
 6. Make sure that R is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
-7. Also make sure that Rtools in installed and added to your ```PATH``` in the environment variables.
-8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in R-package/src/mxnet.cc.
+7. Also make sure that Rtools is installed and added to your ```PATH``` in the environment variables.
+8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/incubator-mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
+```bat
+#include "./kvstore.h"
+#include "./export.h"
+//#include "./im2rec.h"
+......
+......
+  DataIterCreateFunction::InitRcppModule();
+  KVStore::InitRcppModule();
+  Exporter::InitRcppModule();
+//  IM2REC::InitRcppModule();
+}
+
+```
 9. Now open the Windows CMD with admin rights and change the directory to the `mxnet` folder(cloned repository). Then use the following commands
 to build R package:
 
