@@ -94,17 +94,17 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - Values: 0(false) or 1(true) ```(default=0)```
   - If true and MXNET_KVSTORE_USETREE is set to 1, MXNet will log the reduction trees that have been generated.
 
-* MXNET_KVSTORE_GPUARRAY_BOUND
+* MXNET_KVSTORE_TREE_ARRAY_BOUND
   - Values: Int ```(default=10000000)```
   - The minimum size of a "big array".
   - When the array size is bigger than this threshold and MXNET_KVSTORE_USETREE is set to 1, multiple trees are used to load balance the big gradient being communicated in order to better saturate link bandwidth.
 
-* MXNET_KVSTORE_BACKTRACK
-  - Values: 0(false) or 1(true) ```(Default=0)
+* MXNET_KVSTORE_TREE_BACKTRACK
+  - Values: 0(false) or 1(true) ```(default=0)
   - If true and MXNET_KVSTORE_USETREE is set to 1, MXNet tries to use backtracking to generate the trees required for tree reduction.
   - If false and MXNET_KVSTORE_USETREE is set to 1, MXNet tries to use Kernighan-Lin heuristic to generate the trees required for tree reduction.
 
-* MXNET_KVSTORE_LINK_USAGE_PENALTY
+* MXNET_KVSTORE_TREE_LINK_USAGE_PENALTY
   - Values: Float ```(default=0.7)```
   - The multiplicative penalty term to a link being used once.
 

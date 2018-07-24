@@ -64,7 +64,7 @@ def test_device_pushpull():
                     assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
 
     envs1 = '1'
-    key1 = 'MXNET_KVSTORE_GPUARRAY_BOUND'
+    key1 = 'MXNET_KVSTORE_TREE_ARRAY_BOUND'
     envs2 = ['','1']
     key2  = 'MXNET_KVSTORE_USETREE'
     for i in range(2):

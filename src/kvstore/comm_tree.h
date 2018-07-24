@@ -51,9 +51,9 @@ class CommDeviceTree : public CommDevice {
  public:
   CommDeviceTree() {
     inited_ = false;
-    gpuarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_GPUARRAY_BOUND", 10000000);
-    backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_BACKTRACK", 0);
-    link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_LINK_USAGE_PENALTY", 0.7);
+    gpuarray_bound_ = dmlc::GetEnv("MXNET_KVSTORE_TREE_ARRAY_BOUND", 10000000);
+    backtrack_ = dmlc::GetEnv("MXNET_KVSTORE_TREE_BACKTRACK", 0);
+    link_usage_penalty_ = dmlc::GetEnv("MXNET_KVSTORE_TREE_LINK_USAGE_PENALTY", 0.7);
   }
 
   virtual ~CommDeviceTree() { }
