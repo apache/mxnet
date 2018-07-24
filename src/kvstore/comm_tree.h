@@ -375,9 +375,9 @@ class CommDeviceTree : public CommDevice {
     std::vector<float> link_matrix(devs_.size()*devs_.size());
     GetP2PWeight(devs_, &link_matrix);
     if (backtrack_)
-      LOG(WARNING) << "Using Backtracking to generate trees";
+      LOG(INFO) << "Using Backtracking to generate trees";
     else
-      LOG(WARNING) << "Using Kernighan-Lin to generate trees";
+      LOG(INFO) << "Using Kernighan-Lin to generate trees";
     ComputeTrees(link_matrix, devs_.size(), link_usage_penalty_, backtrack_,
         &topology_, &scan_);
 
@@ -388,7 +388,7 @@ class CommDeviceTree : public CommDevice {
   using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBufferTree() {
-    LOG(WARNING) << "Using Tree";
+    LOG(INFO) << "Using Tree";
 
     // same as all-reduce, except:
     // 1) Allocate copy_buf here instead of in Reduce()
@@ -413,14 +413,30 @@ class CommDeviceTree : public CommDevice {
       int start = scan_[0][depth_];
       int end = scan_[0][depth_+1];
 
-      // In order to generalize to any number of GPUs, we use strategy of having
-      // found the mapping from 0, 1, ..., n_gpus to dev_id i.e.
+      // In order to generalize to any number of GPUs in arbitrary order, we use
+      // strategy of having found the mapping from 0, 1, ..., n_gpus to dev_id.
+      // For example, if the user wants to use --gpus 4,2,3,1,7,5,0, they can do      // so:
+      //
       //   idx:    0 1 2 3 4 5 6
       //   dev_id: 4 2 3 1 7 5 0
-      // and generated an n_gpus x n_gpus link topology matrix:
       //
-      // 1) The reduction trees are saved as indices on 0, 1, ..., n_gpus
-      // 2) We use the mapping to retrieve dev_id and device context
+      // From this, we:
+      // 1) generate a link topology matrix with dimensions n_gpus x n_gpus
+      //    (link_matrix)
+      //
+      // 2) the reduction trees are saved as indices from 0, 1, ..., n_gpus
+      //    in a vector of vectors (topology_):
+      //
+      //    index  | topology_[index]
+      //    -------------------------
+      //    0      | [Tree 0]
+      //    1      | [Tree 1]
+      //           .
+      //           .
+      //           .
+      //    n_gpus | [Tree n_gpus]
+      //
+      // 3) We use the mapping (devs_) to retrieve dev_id and device context
       for (int j = start; j < end; ++j) {
         int topo_id = topology_[0][j];
         auto& buf = tree_merge_buf_[topo_id][key];
@@ -469,7 +485,7 @@ class CommDeviceTree : public CommDevice {
     }
 
     for (auto it = key_dist.begin(); it != key_dist.end(); ++it) {
-      LOG(WARNING) << "Size " << it->first << " occurs " << it->second << " times";
+      LOG(INFO) << "Size " << it->first << " occurs " << it->second << " times";
     }
     inited_ = true;
   }
@@ -501,8 +517,6 @@ class CommDeviceTree : public CommDevice {
   std::vector<std::vector<size_t>> scan_;
   std::vector<Context> devs_;
 
-  /// \brief Highest numbered device
-  int max_dev_;
   int depth_;
   int gpuarray_bound_;
   bool backtrack_;
