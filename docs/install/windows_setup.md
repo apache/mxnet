@@ -252,6 +252,7 @@ vcomp140.dll
 wget.exe
 ```
 These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc14_gpu_cuX/build`, `mxnet_x64_vc14_gpu_cuX/lib`.
+
 5. Copy the header files from `dmlc`, `mxnet`, `mxshadow` and `nnvm` from mxnet_x64_vc14_gpuX/include and mxnet_x64_vc14_gpuX/nvnm/include into `./R-package/inst/include`. It should look like:
 
 ```
