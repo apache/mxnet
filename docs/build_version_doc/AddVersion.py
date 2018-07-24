@@ -36,7 +36,7 @@ if __name__ == '__main__':
     tag_list = list()
     with open('tag_list.txt', 'r') as tag_file:
         for line in tag_file:
-            tag_list.append(line.lstrip().rstrip().replace("0.12.0","0.12.1").replace("1.2.0","1.2.1"))
+            tag_list.append(line.lstrip().rstrip())
 
     version_str = '<span id="dropdown-menu-position-anchor-version" ' \
                   'style="position: relative">' \
