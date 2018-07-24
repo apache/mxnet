@@ -606,7 +606,6 @@ inline void GetIndexRange(const TShape& dshape,
                           common::StaticArray<int, ndim>* end,
                           common::StaticArray<int, ndim>* step) {
   CHECK_NE(dshape.ndim(), 0U);
-  CHECK_NE(dshape.Size(), 0U);
   CHECK_LE(param_begin.ndim(), dshape.ndim())
     << "Slicing axis exceeds data dimensions";
   CHECK_LE(param_end.ndim(), dshape.ndim())
@@ -633,32 +632,36 @@ inline void GetIndexRange(const TShape& dshape,
       }
     }
 
-    if (param_begin[i].has_value()) {
-      b = param_begin[i].value();
-      if (b < 0) {
-        b += len;
-        CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
-                       << b - len << " exceeds limit of " << len;
+    if (len) {
+      if (param_begin[i].has_value()) {
+        b = param_begin[i].value();
+        if (b < 0) {
+          b += len;
+          CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
+                         << b - len << " exceeds limit of " << len;
+        }
+      } else if (s < 0) {
+        b = len - 1;
       }
-    } else if (s < 0) {
-      b = len - 1;
-    }
-    CHECK_LT(b, len) << "slicing with begin[" << i << "]="
-                     << b << " exceends limit of " << len;
+      CHECK_LT(b, len) << "slicing with begin[" << i << "]="
+                       << b << " exceends limit of " << len;
 
-    if (param_end[i].has_value()) {
-      e = param_end[i].value();
-      if (e < 0) {
-        e += len;
-        CHECK_GE(e, 0) << "slicing with end[" << i << "]="
-                       << e - len << " exceeds limit of " << len;
+      if (param_end[i].has_value()) {
+        e = param_end[i].value();
+        if (e < 0) {
+          e += len;
+          CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                         << e - len << " exceeds limit of " << len;
+        }
+      } else if (s < 0) {
+        e = -1;
       }
-    } else if (s < 0) {
-      e = -1;
+      CHECK_LE(e, len) << "slicing with end[" << i << "]="
+                       << e << " exceeds limit of " << len;
+    } else {
+      b = 0;
+      e = 0;
     }
-    CHECK_LE(e, len) << "slicing with end[" << i << "]="
-                     << e << " exceeds limit of " << len;
-
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
@@ -673,15 +676,17 @@ inline void GetIndexRange(const TShape& dshape,
 inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     const int e, const int s,
                                     TShape* oshape) {
-  if (s > 0) {
-    CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                   << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (e - b - 1) / s + 1;
-  } else {
-    CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
-                   << e << ", and step[" << i << "]=" << s << " is invalid";
-    (*oshape)[i] = (b - e - 1) / (-s) + 1;
-  }
+  if (e != b) {
+    if (s > 0) {
+      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                     << e << ", and step[" << i << "]=" << s << " is invalid";
+      (*oshape)[i] = (e - b - 1) / s + 1;
+    } else {
+      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+                     << e << ", and step[" << i << "]=" << s << " is invalid";
+      (*oshape)[i] = (b - e - 1) / (-s) + 1;
+    }
+  }  // else leave oshape[i] as 0 for partial infer
 }
 
 inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
@@ -690,9 +695,10 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0 || dshape.Size() == 0) return false;
+  if (dshape.ndim() == 0) return false;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   TShape oshape = dshape;
+
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<int, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
@@ -703,7 +709,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   });
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return oshape.ndim() != 0 && oshape.Size() != 0;
+  return !shape_is_none(dshape) && !shape_is_none(oshape);
 }
 
 template<int ndim, int req, typename xpu>
@@ -1091,18 +1097,25 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const TShape& ishape
   if (*begin < 0) {
     *begin += axis_size;
   }
-  if (!static_cast<bool>(param.end)) {
-    *end = axis_size;
-  } else {
-    *end = param.end.value();
-    if (*end < 0) {
-      *end += axis_size;
+  if (axis_size) {
+    if (!static_cast<bool>(param.end)) {
+      *end = axis_size;
+    } else {
+      *end = param.end.value();
+      if (*end < 0) {
+        *end += axis_size;
+      }
     }
+    CHECK(*end <= axis_size) << "Invalid end for end=" << *end << " as axis_size is " << axis_size;
+    CHECK((*begin < *end))
+      << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+  } else {
+    *begin = 0;
+    *end = 0;
   }
-  CHECK((*end <= axis_size) && (*end >= 0))
+  CHECK(*end >= 0)
     << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
-  CHECK((*begin < *end) && (*begin >= 0))
-    << "Invalid begin, end, get begin=" << param.begin << ", end=" << param.end;
+  CHECK(*begin >= 0) << "Invalid begin for begin=" << param.begin;
 }
 
 inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,

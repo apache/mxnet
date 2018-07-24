@@ -210,27 +210,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.0.2</version>
-        <executions>
-          <execution>
-            <id>empty-javadoc-jar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-            <configuration>
-              <includes>
-                <include>**/*</include>
-              </includes>
-              <classifier>javadoc</classifier>
-              <classesDirectory>${basedir}/javadoc</classesDirectory>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>2.5.5</version>
       </plugin>
@@ -320,22 +299,6 @@
             <goals>
               <goal>compile</goal>
               <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9.1</version>
-        <configuration>
-          <excludePackageNames>org.kohsuke.*</excludePackageNames>
-        </configuration>
-        <executions>
-          <execution>
-            <id>attach-javadocs</id>
-            <goals>
-              <goal>jar</goal>
             </goals>
           </execution>
         </executions>

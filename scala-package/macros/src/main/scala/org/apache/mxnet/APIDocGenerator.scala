@@ -22,8 +22,7 @@ import org.apache.mxnet.utils.CToScalaUtils
 import java.io._
 import java.security.MessageDigest
 
-import scala.collection.mutable.ListBuffer
-import scala.io.Source
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
   * This object will generate the Scala documentation of the new Scala API
@@ -109,9 +108,12 @@ private[mxnet] object APIDocGenerator{
 
   // Generate ScalaDoc type
   def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
-    val desc = func.desc.split("\n").map({ currStr =>
-      s"  * $currStr<br>"
+    val desc = ArrayBuffer[String]()
+    desc += "  * <pre>"
+      func.desc.split("\n").foreach({ currStr =>
+      desc += s"  * $currStr"
     })
+    desc += "  * </pre>"
     val params = func.listOfArgs.map({ absClassArg =>
       val currArgName = absClassArg.argName match {
                 case "var" => "vari"
