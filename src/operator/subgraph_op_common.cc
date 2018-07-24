@@ -161,6 +161,34 @@ bool InferSubgraphShape(const nnvm::Symbol &subgraph,
   return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
 }
 
+template <typename T>
+T _asscalar(const NDArray &a) {
+  CHECK_EQ(a.shape().Size(), 1U);
+  T data;
+  a.SyncCopyToCPU(&data, 1U);
+  return data;
+}
+
+bool as_bool_scalar(const NDArray &a) {
+  MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
+    return static_cast<bool>(_asscalar<DType>(a));
+  });
+  LOG(FATAL) << "Unknown dtype";
+  return false;
+}
+
+bool is_shape_udf(const TShape &x) {
+  return x.ndim() == 0 || x.Size() == 0;
+}
+
+bool is_stype_udf(const int &x) {
+  return x == exec::kBadStorageID;
+}
+
+bool is_type_udf(const int &x) {
+  return x == -1;
+}
+
 LoopState::LoopState(const Symbol &g) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
