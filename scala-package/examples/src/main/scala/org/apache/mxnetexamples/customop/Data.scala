@@ -20,6 +20,7 @@ package org.apache.mxnetexamples.customop
 import org.apache.mxnet.{DataIter, IO, Shape}
 
 object Data {
+
   // return train and val iterators for mnist
   def mnistIterator(dataPath: String, batchSize: Int, inputShape: Shape): (DataIter, DataIter) = {
     val flat = if (inputShape.length == 3) "False" else "True"
@@ -29,7 +30,9 @@ object Data {
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
       "shuffle" -> "True",
-      "flat" -> flat
+      "flat" -> flat,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"
     )
     val trainDataIter = IO.MNISTIter(trainParams)
     val testParams = Map(
@@ -37,7 +40,9 @@ object Data {
       "label" -> s"$dataPath/t10k-labels-idx1-ubyte",
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
-      "flat" -> flat
+      "flat" -> flat,
+      "dataLayout" -> "NT",
+      "labelLayout" -> "N"
     )
     val testDataIter = IO.MNISTIter(testParams)
     (trainDataIter, testDataIter)
