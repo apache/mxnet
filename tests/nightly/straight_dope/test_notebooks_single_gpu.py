@@ -32,8 +32,10 @@ NOTEBOOKS_WHITELIST = [
     'chapter01_crashcourse/introduction',
     'chapter01_crashcourse/chapter-one-problem-set',
     'chapter02_supervised-learning/environment',
+    'chapter07_distributed-learning/multiple-gpus-scratch',
+    'chapter07_distributed-learning/multiple-gpus-gluon',
+    'chapter07_distributed-learning/training-with-multiple-machines'
 ]
-
 
 
 class StraightDopeSingleGpuTests(unittest.TestCase):
@@ -226,15 +228,6 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_hybridize(self):
         assert _test_notebook('chapter07_distributed-learning/hybridize')
 
-    # TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
-    #def test_multiple_gpus_scratch(self):
-    #    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
-
-    def test_multiple_gpus_gluon(self):
-        assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
-
-    def test_training_with_multiple_machines(self):
-        assert _test_notebook('chapter07_distributed-learning/training-with-multiple-machines')
 
     # Chapter 8
 
