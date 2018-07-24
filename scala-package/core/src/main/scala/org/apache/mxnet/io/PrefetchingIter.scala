@@ -189,8 +189,8 @@ class PrefetchingIter(
     * Get the layout
     * @return layout
     */
-  def getLayout(): String = {
-    currentBatch.layout
+  def getLayout(): (String, String) = {
+    (currentBatch.dataLayout, currentBatch.labelLayout)
   }
 
   // The name and shape of label provided by this iterator
@@ -224,7 +224,8 @@ class PrefetchingIter(
         labels.toIndexedSeq.flatten,
         nextBatch(0).index,
         nextBatch(0).pad,
-        layout = nextBatch(0).layout,
+        dataLayout = nextBatch(0).dataLayout,
+        labelLayout = nextBatch(0).labelLayout,
         dtype = nextBatch(0).dtype)
       for (e <- dataTaken) e.release()
       true

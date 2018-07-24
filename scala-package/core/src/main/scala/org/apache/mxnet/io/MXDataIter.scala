@@ -32,7 +32,10 @@ import scala.collection.mutable.ListBuffer
  */
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                                 dataName: String = "data",
-                                labelName: String = "label")
+                                labelName: String = "label",
+                                dtype: DType = DType.Float32,
+                                dataLayout: String = "NCHW",
+                                labelLayout: String = "N")
   extends DataIter with WarnIfNotDisposed {
 
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
@@ -65,10 +68,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
       val dType = currentBatch.dtype
-      val layout = currentBatch.layout
+      val dataLayout = currentBatch.dataLayout
+      val labelLayout = currentBatch.labelLayout
       // properties
-      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dType, layout)),
-        IndexedSeq(new DataDesc(labelName, label.shape, dType, layout)),
+      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dType, dataLayout)),
+        IndexedSeq(new DataDesc(labelName, label.shape, dType, labelLayout)),
         data.shape(0))
       currentBatch.dispose()
       reset()
@@ -126,7 +130,8 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
         index = getIndex(), pad = getPad(),
-        dtype = currentBatch.dtype, layout = currentBatch.layout)
+        dtype = getDType(), dataLayout = getLayout()._1,
+        labelLayout = getLayout()._2)
     } else {
       currentBatch = null
     }
@@ -179,17 +184,13 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     * Get the DType
     * @return DType
     */
-  def getDType(): DType = {
-    currentBatch.dtype
-  }
+  def getDType(): DType = dtype
 
   /**
     * Get the layout
     * @return layout
     */
-  def getLayout(): String = {
-    currentBatch.layout
-  }
+  def getLayout(): (String, String) = (dataLayout, labelLayout)
 
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData

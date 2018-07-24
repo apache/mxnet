@@ -67,7 +67,8 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, dtype = batch.dtype, layout = batch.layout)
+          batch.pad, dtype = batch.dtype, dataLayout = batch.dataLayout,
+          labelLayout = batch.labelLayout)
       } else {
         throw new NoSuchElementException
       }
@@ -128,7 +129,7 @@ object ExampleMultiTask {
 
     override def getDType(): DType = this.dataIter.getDType()
 
-    override def getLayout(): String = this.dataIter.getLayout()
+    override def getLayout(): (String, String) = this.dataIter.getLayout()
 
     // The name and shape of data provided by this iterator
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData

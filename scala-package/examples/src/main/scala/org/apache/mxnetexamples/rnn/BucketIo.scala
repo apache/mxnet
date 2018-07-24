@@ -97,7 +97,9 @@ object BucketIo {
       path: String, vocab: Map[String, Int], var buckets: IndexedSeq[Int],
       _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
       seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
-      readContent: ReadContent = defaultReadContent, layout: String = "NT",
+      readContent: ReadContent = defaultReadContent,
+      dataLayout: String = "NT",
+      labelLayout: String = "N",
       dtype : DType = DType.Float32) extends DataIter {
 
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
@@ -173,12 +175,12 @@ object BucketIo {
 
     private val _provideDataDesc = {
       val tmp = IndexedSeq(new DataDesc("data",
-        Shape(_batchSize, _defaultBucketKey), dtype, layout))
-      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dtype, layout))
+        Shape(_batchSize, _defaultBucketKey), dtype, dataLayout))
+      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dtype, dataLayout))
     }
 
     private val _provideLabelDesc = IndexedSeq(new DataDesc("softmax_label",
-      Shape(_batchSize, _defaultBucketKey), dtype, layout))
+      Shape(_batchSize, _defaultBucketKey), dtype, labelLayout))
 
     private var iBucket = 0
 
@@ -210,7 +212,8 @@ object BucketIo {
                     getIndex(),
                     getPad(),
                     this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel, dtype, layout)
+                    batchProvideData, batchProvideLabel, getDType(),
+                    getLayout()._1, getLayout()._2)
     }
 
     /**
@@ -250,7 +253,7 @@ object BucketIo {
 
     override def getDType(): DType = dtype
 
-    override def getLayout(): String = layout
+    override def getLayout(): (String, String) = (dataLayout, labelLayout)
 
     // The name and shape of label provided by this iterator
     override def provideLabel: ListMap[String, Shape] = this._provideLabel

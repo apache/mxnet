@@ -106,7 +106,10 @@ object IO {
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
     val dataName = params.getOrElse("data_name", "data")
     val labelName = params.getOrElse("label_name", "label")
-    new MXDataIter(out.value, dataName, labelName)
+    val dataLayout = params.getOrElse("dataLayout", "NCHW")
+    val labelLayout = params.getOrElse("labelLayout", "N")
+    new MXDataIter(out.value, dataName, labelName,
+      dataLayout = dataLayout, labelLayout = labelLayout)
   }
 
   // Convert data into canonical form.
@@ -142,7 +145,8 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 private val providedData: ListMap[String, Shape] = null,
                 private val providedLabel: ListMap[String, Shape] = null,
                 val dtype: DType = Base.MX_REAL_TYPE,
-                val layout: String = "NCHW") {
+                val dataLayout: String = "NCHW",
+                val labelLayout: String = "N") {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -172,7 +176,8 @@ object DataBatch {
     private var label: IndexedSeq[NDArray] = null
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
-    private var layout: String = "NCHW"
+    private var dataLayout: String = "NCHW"
+    private var labelLayout: String = "N"
     private var dtype: DType = Base.MX_REAL_TYPE
     private var bucketKey: AnyRef = null
     private var datatShapes: ListMap[String, Shape] = null
@@ -232,11 +237,13 @@ object DataBatch {
 
     /**
       * Set the layout.
-      * @param layout The layout of the label, default is NCHW
+      * @param dataLayout The layout of the data, default is NCHW
+      * @param labelLayout The layout of the label, default is N
       * @return this
       */
-    def setLayout(layout: String): Builder = {
-      this.layout = layout
+    def setLayout(dataLayout: String, labelLayout: String): Builder = {
+      this.dataLayout = dataLayout
+      this.labelLayout = labelLayout
       this
     }
 
@@ -282,7 +289,8 @@ object DataBatch {
 
     def build(): DataBatch = {
       require(data != null, "data is required.")
-      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes, dtype, layout)
+      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes,
+        dtype, dataLayout, labelLayout)
     }
   }
 }
@@ -305,7 +313,7 @@ abstract class DataIter extends Iterator[DataBatch] {
   @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
     new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-      dtype = getDType(), layout = getLayout())
+      dtype = getDType(), dataLayout = getLayout()._1, labelLayout = getLayout()._2)
   }
 
   /**
@@ -335,9 +343,9 @@ abstract class DataIter extends Iterator[DataBatch] {
 
   /**
     * Get the layout
-    * @return layout of the DataIter
+    * @return data and label layout of the DataIter
     */
-  def getLayout(): String
+  def getLayout(): (String, String)
 
   /**
    * Get the index of current batch

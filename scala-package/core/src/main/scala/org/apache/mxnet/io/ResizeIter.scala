@@ -141,8 +141,8 @@ class ResizeIter(
     * Get the layout
     * @return layout
     */
-  def getLayout(): String = {
-    currentBatch.layout
+  def getLayout(): (String, String) = {
+    (currentBatch.dataLayout, currentBatch.labelLayout)
   }
 
   override def batchSize: Int = {
