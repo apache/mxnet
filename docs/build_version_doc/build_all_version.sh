@@ -30,13 +30,24 @@ set -x
 
 if [ -z "$1" ]
   then
-    echo "Please provide a list of version tags you wish to run."
+    echo "Please provide a list of version tags you wish to build."
     exit 1
   else
     IFS=$';'
-    tag_list=$1
-    echo "Using these tags: $tag_list"
-    for tag in $tag_list; do echo $tag; done
+    tags_to_build=$1
+    echo "Using these tags: $tags_to_build"
+    for tag in $tags_to_build; do echo $tag; done
+fi
+
+if [ -z "$2" ]
+  then
+    echo "Please provide a list of version tags you wish to display."
+    exit 1
+  else
+    IFS=$';'
+    tags_to_display=$2
+    echo "Using these tags: $tags_to_display"
+    for tag in $tags_to_display; do echo $tag; done
 fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
@@ -53,8 +64,9 @@ if [ ! -d "$built" ]; then
   mkdir "$built/versions"
 fi
 
-# Build all versions and use latest version(First version number in $tag_list) as landing page.
-for tag in $tag_list; do
+# Build all versions and use latest version(First version number in $tags_to_build) as landing page.
+i = 0;
+for tag in $tags_to_build; do
     cd "$mxnet_folder"
     git fetch
     if [ $tag == 'master' ]
@@ -72,12 +84,14 @@ for tag in $tag_list; do
     make clean
     make html USE_OPENMP=1 || exit 1
     cd ../../
-    file_loc="$built/versions/$tag"
+    ancillary = $tags_to_display[$i]
+    file_loc="$built/versions/$ancillary"
     if [ -d "$file_loc" ] ; then
         rm -rf "$file_loc"
     fi
     mkdir "$file_loc"
     cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
+    i = $((i+1));
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
