@@ -136,8 +136,8 @@ class CommDeviceTree : public CommDevice {
           } else {
             if (dest_id != topo_id) {
               CopyFromTo(buf_from.merged[merged_row],
-                  &(buf_dest.copy_buf[merged_row][is_dest-1]),
-                  priority);
+                         &(buf_dest.copy_buf[merged_row][is_dest-1]),
+                         priority);
               reduce[dest_id].push_back(
                   buf_dest.copy_buf[merged_row][is_dest-1]);
             }
