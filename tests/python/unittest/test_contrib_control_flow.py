@@ -975,6 +975,160 @@ def test_while_loop_rnn():
                 y = y.asnumpy()
                 assert_almost_equal(x, y, rtol=1e-4, atol=1e-4)
 
+def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_shapes, is_train):
+
+    def _create_symbol(prefix, i):
+        return mx.sym.var(prefix + str(i))
+
+    def _create_array(shape):
+        return mx.nd.random.uniform(-1.0, 1.0, shape=shape)
+
+    def _to_numpy_list(arrays):
+        return [x.asnumpy() if x is not None else x for x in arrays]
+
+    def _merge_dict(*dicts):
+        result = {}
+        for item in dicts:
+            result.update(item)
+        return result
+
+    _input_syms = [_create_symbol("InputVar", i) for i, _ in enumerate(input_var_shapes)]
+    _free_syms = [_create_symbol("FreeVar", i) for i, _ in enumerate(free_var_shapes)]
+    _input_vars = [_create_array(x) for x in input_var_shapes]
+    _free_vars = [_create_array(x) for x in free_var_shapes]
+    _args_dict = _merge_dict(
+        {"InputVar" + str(i): x for i, x in enumerate(_input_vars)},
+        {"FreeVar" + str(i): x for i, x in enumerate(_free_vars)},
+    )
+
+    def _get_imperative_result():
+        free_vars = [x.copy() for x in _free_vars]
+        input_vars = [x.copy() for x in _input_vars]
+        out_grads = []
+        if is_train:
+            for var in free_vars + input_vars:
+                var.attach_grad()
+        with mx.autograd.record(train_mode=is_train):
+            outputs = mx.nd.contrib.cond(
+                pred=cond_func(input_vars, free_vars),
+                then_func=lambda: then_func(input_vars, free_vars),
+                else_func=lambda: else_func(input_vars, free_vars),
+            )
+            outputs = [x * 2 for x in outputs]
+            grads = []
+            if is_train:
+                out_grads = [_create_array(x.shape) for x in outputs]
+                cat_out = mx.nd.concat(*[x.reshape(-1) for x in outputs], dim=0)
+                cat_out.backward(out_grad=mx.nd.concat(*[x.reshape(-1) for x in out_grads], dim=0))
+                grads = [free_vars[i].grad for i, _ in enumerate(free_var_shapes)] \
+                      + [input_vars[i].grad for i, _ in enumerate(input_var_shapes)]
+            return _to_numpy_list(outputs), _to_numpy_list(grads), out_grads
+
+    def _get_symbolic_result(out_grads):
+        outputs_sym = mx.sym.contrib.cond(
+            pred=cond_func(_input_syms, _free_syms),
+            then_func=lambda: then_func(_input_syms, _free_syms),
+            else_func=lambda: else_func(_input_syms, _free_syms),
+        )
+        outputs_sym = [x * 2 for x in outputs_sym]
+        outputs_sym = mx.sym.Group(outputs_sym)
+        executor = outputs_sym.bind(
+            ctx=default_context(),
+            args={name: _args_dict[name].copy() for name in outputs_sym.list_inputs()},
+            args_grad=None if not is_train else _merge_dict(
+                {"InputVar" + str(i): mx.nd.zeros(s) for i, s in enumerate(input_var_shapes)},
+                {"FreeVar" + str(i): mx.nd.zeros(s) for i, s in enumerate(free_var_shapes)},
+            ),
+        )
+        outputs = executor.forward(is_train=is_train)
+        grads = []
+        if is_train:
+            executor.backward(out_grads=out_grads)
+            grads = [executor.grad_dict.get("FreeVar" + str(i), None) for i, _ in enumerate(free_var_shapes)] \
+                  + [executor.grad_dict.get("InputVar" + str(i), None) for i, _ in enumerate(input_var_shapes)]
+        return _to_numpy_list(outputs), _to_numpy_list(grads)
+
+    imp_outs, imp_grads, out_grads = _get_imperative_result()
+    sym_outs, sym_grads = _get_symbolic_result(out_grads)
+    for imp_out, sym_out in zip(imp_outs, sym_outs):
+        if imp_out is None or sym_out is None:
+            continue
+        assert_almost_equal(imp_out, sym_out, rtol=1e-5, atol=1e-5)
+    for imp_grad, sym_grad in zip(imp_grads, sym_grads):
+        if imp_grad is None or sym_grad is None:
+            continue
+        assert_almost_equal(imp_grad, sym_grad, rtol=1e-5, atol=1e-5)
+
+
+@with_seed()
+def test_cond():
+    # whether there are free variables in three graphs
+    # whether these three graphs contain input_vars
+    # whether to use all input_vars
+    # which branch to choose
+    def run_case(cond_func, then_func, else_func, **params):
+        def make_cond(is_inverse):
+            def cond(inputs, free):
+                x = cond_func(inputs, free)
+                if is_inverse:
+                    if isinstance(x, mx.sym.Symbol):
+                        return mx.sym.logical_not(x)
+                    else:
+                        return mx.nd.logical_not(x)
+                return x
+            return cond
+        for is_train in [True, False]:
+            for is_inverse in [False, True]:
+                _verify_cond(
+                    cond_func=make_cond(is_inverse),
+                    then_func=then_func,
+                    else_func=else_func,
+                    is_train=is_train,
+                    **params
+                )
+    # Each function can
+    # 1. use_free_vars or not: T/F
+    # 2. use_input_vars or not: T/F
+    # 3. use_all_input_vars or not: T/F
+    # (a, b, c) are inputs, (d, e, f) are free_vars
+    cond_funcs = [
+        lambda a, b, c, d, e, f: (a * b).sum() < 0.5,               # F, T, F
+        lambda a, b, c, d, e, f: (a + b + c).sum() < 0.5,           # F, T, T
+        lambda a, b, c, d, e, f: (d + e).sum() < 0.5,               # T, F, F
+        lambda a, b, c, d, e, f: (d + e * a).sum() < 0.5,           # T, T, F
+        lambda a, b, c, d, e, f: (d + e * a + b * c).sum() < 0.5,   # T, T, T
+    ]
+    body_funcs = [
+        lambda a, b, c, d, e, f: a * b,                             # F, T, F
+        lambda a, b, c, d, e, f: a * b * c,                         # F, T, T
+        lambda a, b, c, d, e, f: d * e,                             # T, F, F
+        lambda a, b, c, d, e, f: d * e * a,                         # T, T, F
+        lambda a, b, c, d, e, f: d * e * a * b * c,                 # T, T, T
+        # some extra tests
+        lambda a, b, c, d, e, f: b * c,
+        lambda a, b, c, d, e, f: a * c,
+        lambda a, b, c, d, e, f: (a + b) * c,
+        lambda a, b, c, d, e, f: c * (b - a),
+    ]
+    # enumerate all kinds of possible combinations
+    for cond_func in cond_funcs:
+        for then_func in body_funcs:
+            for else_func in body_funcs:
+                run_case(
+                    cond_func=lambda x, y: cond_func(x[0], x[1], x[2], y[0], y[1], y[2]),
+                    then_func=lambda x, y: then_func(x[0], x[1], x[2], y[0], y[1], y[2]),
+                    else_func=lambda x, y: else_func(x[0], x[1], x[2], y[0], y[1], y[2]),
+                    input_var_shapes=[
+                        (2, 3),
+                        (2, 3),
+                        (2, 3),
+                    ],
+                    free_var_shapes=[
+                        (2, 3),
+                        (2, 3),
+                        (2, 3),
+                    ]
+                )
 
 class TestRNNLayer(gluon.HybridBlock):
     def __init__(self, cell_type, hidden_size, prefix=None, params=None):
@@ -1510,5 +1664,6 @@ def test_foreach_rnn():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    # import nose
+    # nose.runmodule()
+    test_cond()
