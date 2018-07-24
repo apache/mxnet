@@ -33,7 +33,9 @@ MXNETDIR=$2
 
 # below routine shamelessly copied from
 # https://github.com/apache/incubator-mxnet/blob/master/setup-utils/install-mxnet-osx-python.sh
-
+# This routine executes a command, 
+# prints error message on the console on non-zero exit codes and
+# returns the exit code to the caller.
 chkret() {
 	cmd=$*
 	echo "$cmd"
@@ -79,7 +81,6 @@ then
 elif [[ $PLATFORM == "linux-x86_64-gpu" ]]
 then
     echo "Building MXNet Backend on Linux GPU"
-    echo "Building MXNet Backend on Linux CPU"
     echo "ADD_CFLAGS += -I/usr/local/include/opencv" >> ./config.mk
     echo "ADD_LDFLAGS += -L/usr/local/lib" >> ./config.mk
     echo "USE_OPENCV=1" >> ./config.mk
