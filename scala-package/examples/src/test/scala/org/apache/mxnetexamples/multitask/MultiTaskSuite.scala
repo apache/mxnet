@@ -45,9 +45,9 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   */
 class MultiTaskSuite extends FunSuite {
   test("Multitask Test") {
+    val logger = LoggerFactory.getLogger(classOf[MultiTaskSuite])
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      val logger = LoggerFactory.getLogger(classOf[MultiTaskSuite])
       logger.info("Multitask Test...")
 
       val batchSize = 100
