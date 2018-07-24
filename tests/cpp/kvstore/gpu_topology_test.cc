@@ -77,8 +77,6 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
     GenerateMatrix(&W, num_gpus, k, gen);
     satisfied = IsSatisfactory(W, num_gpus, depth);
   }
-  //LOG(WARNING) << "num_gpus: " << num_gpus;
-  //mxnet::kvstore::PrintMatrix("Link topo", W, num_gpus, num_gpus);
 
   std::vector<std::vector<size_t>> topo;
   std::vector<std::vector<size_t>> scan;
@@ -86,9 +84,8 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
 
   unsigned correct_topo_size = (1 << (depth + 1)) - 1;
   unsigned correct_scan_size = depth+2;
-  //LOG(WARNING) << topo.size() << " " << num_gpus;
   ASSERT_EQ(topo.size(), static_cast<unsigned>(num_gpus));
-  for (int i = 0; i < topo.size(); ++i) {
+  for (unsigned i = 0; i < topo.size(); ++i) {
     ASSERT_EQ(correct_topo_size, topo[i].size());
     ASSERT_EQ(correct_scan_size, scan[i].size());
   }
@@ -567,7 +564,7 @@ TEST(GpuTopology, TestComputeTrees1) {
   bool backtrack = true;
   // Do 5 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
-    LOG(WARNING) << "Testing " << num_gpus << " x " << num_gpus;
+    LOG(INFO) << "Testing " << num_gpus << " x " << num_gpus;
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized(num_gpus, alpha, backtrack, &gen);
     }
@@ -581,7 +578,7 @@ TEST(GpuTopology, TestComputeTrees2) {
   bool backtrack = false;
   // Do 5 randomized tests per GPU count from 2 to 16
   for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
-    LOG(WARNING) << "Testing " << num_gpus << " x " << num_gpus;
+    LOG(INFO) << "Testing " << num_gpus << " x " << num_gpus;
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized(num_gpus, alpha, backtrack, &gen);
     }
