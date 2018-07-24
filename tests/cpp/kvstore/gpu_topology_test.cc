@@ -557,7 +557,6 @@ TEST(GpuTopology, TestIsConnected3) {
 }
 
 // ComputeTreesTest with backtracking
-// TODO(carlyang): comment out test for now
 TEST(GpuTopology, TestComputeTrees1) {
   std::mt19937 gen(1);
   float alpha = 0.7;
