@@ -278,8 +278,8 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   bool support_mkldnn_pool = SupportMKLDNNPooling(param);
 
-  return dispatched = MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
-                                        dispatch_mode, in_attrs, out_attrs);
+  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
+                           dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
@@ -292,8 +292,8 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
   bool support_mkldnn_pool = SupportMKLDNNPooling(param);
 
-  return dispatched = MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
-                                        dispatch_mode, in_attrs, out_attrs);
+  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
+                           dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
