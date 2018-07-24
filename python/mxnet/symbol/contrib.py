@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import, unused-wildcard-import
+# pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib Symbol API of MXNet."""
 import math
 import ctypes
