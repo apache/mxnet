@@ -1664,6 +1664,5 @@ def test_foreach_rnn():
 
 
 if __name__ == '__main__':
-    # import nose
-    # nose.runmodule()
-    test_cond()
+    import nose
+    nose.runmodule()
