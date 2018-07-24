@@ -20,7 +20,10 @@ import os
 import tempfile
 import warnings
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 import mxnet as mx
 import requests
 from nose.tools import raises
