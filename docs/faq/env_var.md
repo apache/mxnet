@@ -98,6 +98,7 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - Values: Int ```(default=10000000)```
   - The minimum size of a "big array".
   - When the array size is bigger than this threshold and MXNET_KVSTORE_USETREE is set to 1, multiple trees are used to load balance the big gradient being communicated in order to better saturate link bandwidth.
+  - Note: This environmental variable only takes effect if Tree KVStore is being used (MXNET_KVSTORE_USETREE=1).
 
 * MXNET_KVSTORE_TREE_BACKTRACK
   - Values: 0(false) or 1(true) ```(default=0)
