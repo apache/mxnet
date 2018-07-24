@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import sys
+from time import sleep
 
 #TODO(vishaalk): Find a cleaner way to import this notebook.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'utils'))
@@ -92,15 +93,38 @@ def _download_straight_dope_notebooks():
            GIT_REPO,
            NOTEBOOKS_DIR]
 
+    proc, msg = _run_command(cmd)
+
+    if proc.returncode != 0:
+        err_msg = 'Error downloading Straight Dope notebooks.\n'
+        err_msg += msg
+        print(err_msg)
+        return False
+    return True
+
+def _run_command(cmd, timeout_secs=300):
+    """ Runs a command with a specified timeout.
+
+    Args:
+        cmd : list of string
+            The command with arguments to run.
+        timeout_secs: integer
+            The timeout in seconds
+
+    Returns:
+        Returns the process and the output as a pair.
+    """
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT)
-    (out, _) = proc.communicate()
 
-    if proc.returncode != 0:
-        msg = 'Error downloading Straight Dope notebooks.\n'
-        msg += out.decode('utf-8')
-        print(msg)
-        return False
-    return True
+    for i in range(timeout_secs):
+        sleep(1)
+        if proc.poll() is not None:
+            (out, _) = proc.communicate()
+            return proc, out.decode('utf-8')
+
+    proc.kill()
+    return proc, "Timeout of %s secs exceeded." % timeout_secs
+
