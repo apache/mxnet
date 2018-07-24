@@ -192,16 +192,25 @@ for e in range(epochs):
     accuracy.reset()
 ```
 
-    Epoch: 0, Training loss: 0.43, Validation loss: 0.36, Validation accuracy: 0.85, F1 score: 0.00
-    Epoch: 1, Training loss: 0.22, Validation loss: 0.14, Validation accuracy: 0.96, F1 score: 0.35
-    Epoch: 2, Training loss: 0.09, Validation loss: 0.11, Validation accuracy: 0.97, F1 score: 0.48
-    Epoch: 3, Training loss: 0.07, Validation loss: 0.09, Validation accuracy: 0.96, F1 score: 0.53
-    Epoch: 4, Training loss: 0.06, Validation loss: 0.09, Validation accuracy: 0.97, F1 score: 0.58
-    Epoch: 5, Training loss: 0.04, Validation loss: 0.12, Validation accuracy: 0.97, F1 score: 0.59
-    Epoch: 6, Training loss: 0.05, Validation loss: 0.09, Validation accuracy: 0.99, F1 score: 0.62
-    Epoch: 7, Training loss: 0.05, Validation loss: 0.10, Validation accuracy: 0.97, F1 score: 0.62
-    Epoch: 8, Training loss: 0.05, Validation loss: 0.12, Validation accuracy: 0.95, F1 score: 0.63
-    Epoch: 9, Training loss: 0.04, Validation loss: 0.09, Validation accuracy: 0.98, F1 score: 0.65
+    Epoch: 0, Training loss: 0.43, Validation loss: 0.36, Validation accuracy: 0.85, F1 score: 0.00 <!--notebook-skip-line-->
+
+    Epoch: 1, Training loss: 0.22, Validation loss: 0.14, Validation accuracy: 0.96, F1 score: 0.35 <!--notebook-skip-line-->
+
+    Epoch: 2, Training loss: 0.09, Validation loss: 0.11, Validation accuracy: 0.97, F1 score: 0.48 <!--notebook-skip-line-->
+
+    Epoch: 3, Training loss: 0.07, Validation loss: 0.09, Validation accuracy: 0.96, F1 score: 0.53 <!--notebook-skip-line-->
+
+    Epoch: 4, Training loss: 0.06, Validation loss: 0.09, Validation accuracy: 0.97, F1 score: 0.58 <!--notebook-skip-line-->
+
+    Epoch: 5, Training loss: 0.04, Validation loss: 0.12, Validation accuracy: 0.97, F1 score: 0.59 <!--notebook-skip-line-->
+    
+    Epoch: 6, Training loss: 0.05, Validation loss: 0.09, Validation accuracy: 0.99, F1 score: 0.62 <!--notebook-skip-line-->
+    
+    Epoch: 7, Training loss: 0.05, Validation loss: 0.10, Validation accuracy: 0.97, F1 score: 0.62 <!--notebook-skip-line-->
+    
+    Epoch: 8, Training loss: 0.05, Validation loss: 0.12, Validation accuracy: 0.95, F1 score: 0.63 <!--notebook-skip-line-->
+    
+    Epoch: 9, Training loss: 0.04, Validation loss: 0.09, Validation accuracy: 0.98, F1 score: 0.65 <!--notebook-skip-line-->
 
 
 In our case we hit the accuracy of 0.98 and F1 score of 0.65.
@@ -225,3 +234,5 @@ In this tutorial I explained some potential pitfalls to be aware of. When doing 
 1. Encode class labels as 0 or 1
 1. Use `SigmoidBinaryCrossEntropyLoss`
 1. Convert probabilities to classes before calculating Accuracy
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
