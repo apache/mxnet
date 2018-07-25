@@ -337,7 +337,8 @@ class Executor(object):
         if self._optimized_symbol is None:
             handle = SymbolHandle()
             check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(handle)))
-        return mx.sym.Symbol(handle=handle)
+            self._optimized_symbol = mx.sym.Symbol(handle=handle)
+        return self._optimized_symbol
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
