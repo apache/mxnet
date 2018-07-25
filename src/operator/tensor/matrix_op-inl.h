@@ -2243,7 +2243,7 @@ MSHADOW_XINLINE void update_index(int index_position, int dim_size, int *idx,
 }
 
 /*!
- * \brief This function preforms the tensor transpose (0, 1, 2, 3, 4, 5) ->
+ * \brief This function performs the tensor transpose (0, 1, 2, 3, 4, 5) ->
  * (0, 3, 4, 1, 5, 2) by computing linear index within input tensor to be mapped
  * to the ith index of output tensor
  * \param i           tensor index
@@ -2361,12 +2361,12 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_NE(in_shape[1], 0) << "Depth dimension:1 cannot be 0";
   CHECK_NE(in_shape[2], 0)
     << "Operation requires a 4D tensor. Size of dimension:2 cannot be 0";
-  CHECK_EQ(in_shape[2]%block, 0)
+  CHECK_EQ(in_shape[2] % block, 0)
     << "Cannot perform Depth To Space operation on the specified tensor."
        " Dimension:2(1st Space dimension) should be a multiple of 'block' ";
   CHECK_NE(in_shape[3], 0)
     << "Operation requires a 4D tensor. Size of dimension:3 cannot be 0";
-  CHECK_EQ(in_shape[3]%block, 0)
+  CHECK_EQ(in_shape[3] % block, 0)
     << "Cannot perform Depth To Space operation on the specified tensor."
        " Dimension:3(2nd space dimension) should be a multiple of 'block' ";
 

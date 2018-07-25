@@ -910,20 +910,22 @@ NNVM_REGISTER_OP(_backward_squeeze)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
 
 NNVM_REGISTER_OP(depth_to_space)
-.describe(R"code(Similar to ONNX DepthToSpace operator:
+.describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
+Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
-Rearranges(permutes) data from depth into blocks of spatial data. 
 The output is a new tensor where the values from depth dimension are moved in spatial blocks 
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
 .. math::
 
-    x \prime = reshape(x, [N, block_size, block_size, C / (block_size ^ 2), H * block_size, W * block_size]), 
-    x \prime \prime = transpose(x \prime, [0, 3, 4, 1, 5, 2])
-    y = reshape(x \prime \prime, [N, C / (block ^ 2), H * block_size, W * block_size]\)
+    \begin{gather*}
+    x \prime = reshape(x, [N, block\_size, block\_size, C / (block\_size ^ 2), H * block\_size, W * block\_size]) \\
+    x \prime \prime = transpose(x \prime, [0, 3, 4, 1, 5, 2]) \\
+    y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
+    \end{gather*}
 
 where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
-and :math:`y` is the output tensor of layout :math:`[N, C / (block_size ^ 2), H * block_size, W * block_size]`
+and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 
 Example::
 
@@ -960,20 +962,23 @@ Example::
 .add_arguments(DepthToSpaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(space_to_depth)
-.describe(R"code(Similar to ONNX SpaceToDepth operator:
+.describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
+Similar to ONNX SpaceToDepth operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
-Rearranges(permutes) blocks of spatial data into depth. 
+
 The output is a new tensor where the values from height and width dimension are 
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 
 .. math::
 
-    x \prime = reshape(x, [N, C, H / block_size, block_size, W / block_size, block_size]), 
-    x \prime \prime = transpose(x \prime, [0, 3, 5, 1, 2, 4])
-    y = reshape(x \prime \prime, [N, C * (block ^ 2), H / block_size, W / block_size]\)
+    \begin{gather*}
+    x \prime = reshape(x, [N, C, H / block\_size, block\_size, W / block\_size, block\_size]) \\
+    x \prime \prime = transpose(x \prime, [0, 3, 5, 1, 2, 4]) \\
+    y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
+    \end{gather*}
 
 where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
-and :math:`y` is the output tensor of layout :math:`[N, C * (block ^ 2), H / block, W / block]`
+and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 
 Example::
 

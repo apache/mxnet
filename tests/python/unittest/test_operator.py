@@ -6687,15 +6687,20 @@ def test_depthtospace():
         y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
         return y
 
-    shape_inp = (1,4,2,3)
-    block = 2
+    block = random.randint(2, 4)
+    rand_mul1 = random.randint(1, 4)
+    n = random.randint(1, 5)
+    c = block * block * rand_mul1
+    h = random.randint(1, 5)
+    w = random.randint(1, 5)
+    shape_inp = (n, c, h, w)
     data = rand_ndarray(shape_inp, 'default')
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.depth_to_space(data, block)
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
-    shape_out = (1,1,4,6)
+    shape_out = (n, c // (block ** 2), h * block, w * block)
     data = mx.sym.Variable('data')
     dts_sym = mx.sym.depth_to_space(data, block)
     check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
@@ -6704,22 +6709,24 @@ def test_depthtospace():
     check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
 
     def test_invalid_depth_dim():
-        invalid_shape_inp = (1,3,2,3)
-        block = 2
+        invalid_shape_inp = (n, block - 1, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
 
     def test_invalid_space_dim():
-        invalid_shape_inp = (1,4,2,3)
-        block = 2
+        invalid_shape_inp = (n, block ** 2, 0, block + 1)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
 
     def test_invalid_block_size():
-        invalid_shape_inp = (1,0,2,3)
-        block = 2
+        block = 0
+        invalid_shape_inp = (n , c, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+        
+    test_invalid_depth_dim()
+    test_invalid_space_dim()
+    test_invalid_block_size()
 
 @with_seed()
 def test_spacetodepth():
@@ -6730,15 +6737,21 @@ def test_spacetodepth():
         y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
         return y
 
-    shape_inp = (1,1,4,6)
-    block = 2
+    block = random.randint(2, 4)
+    rand_mul1 = random.randint(1, 4)
+    rand_mul2 = random.randint(1, 4)
+    n = random.randint(1, 5)
+    c = random.randint(1, 5)
+    h = block * rand_mul1
+    w = block * rand_mul2
+    shape_inp = (n, c, h, w)
     data = rand_ndarray(shape_inp, 'default')
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.space_to_depth(data, block)
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
-    shape_out = (1,4,2,3)
+    shape_out = (n, c * (block ** 2), h // block, w // block)
     data = mx.sym.Variable('data')
     dts_sym = mx.sym.space_to_depth(data, block)
     check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
@@ -6747,22 +6760,24 @@ def test_spacetodepth():
     check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
 
     def test_invalid_space_dim():
-        invalid_shape_inp = (1,1,2,3)
-        block = 2
+        invalid_shape_inp = (n , c, block - 1, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
 
     def test_invalid_block_size():
-        invalid_shape_inp = (1,1,4,2)
         block = 0
+        invalid_shape_inp = (n, c, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
     
     def test_invalid_depth_dim():
-        invalid_shape_inp = (1,0,4,2)
-        block = 2
+        invalid_shape_inp = (n, 0, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+    
+    test_invalid_space_dim()
+    test_invalid_block_size()
+    test_invalid_depth_dim()
 
 if __name__ == '__main__':
     import nose
