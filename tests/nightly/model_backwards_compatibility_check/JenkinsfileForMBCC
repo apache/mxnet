@@ -53,7 +53,8 @@ try {
     parallel 'ModelBackwardsCompat: CPU': {
       node('mxnetlinux-cpu') {
         ws('workspace/modelBackwardsCompat') {
-          	init_git()
+          		    init_git()
+			    
 		  	    docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
 		    } 
       }

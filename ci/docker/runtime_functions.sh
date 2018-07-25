@@ -899,7 +899,6 @@ nightly_test_javascript() {
 nightly_model_backwards_compat_test() {
     set -ex
     export PYTHONPATH=./python/
-    pip install boto3
     ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
 }
 

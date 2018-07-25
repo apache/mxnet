@@ -33,16 +33,9 @@ install_mxnet() {
 	pip install mxnet==$version
 }
 
-install_boto3(){
-	echo "Intalling boto3"
-	pip install boto3
-}
-
 echo `pwd`
 cd tests/nightly/model_backwards_compatibility_check
 echo `pwd`
-
-install_boto3
 
 ## Fetch the latest release tags, filtering out 'rcs' and filtering out some other irrelevant ones
 ## This list is sorted in descending order chronologically. Keeping n = 5 for a precautionary check.
