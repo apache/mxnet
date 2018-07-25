@@ -170,18 +170,18 @@ class InplaceABN : public Operator {
       // update running mean and var
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
-      Tensor<xpu, 4> tmp = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
-          out.shape_, s);
       // batch normalization
-      tmp = broadcast<1>(gamma, out.shape_) *
+      // Tensor<xpu, 4> tmp = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+      //     out.shape_, s);
+      Assign(out, req[inplaceabn::kOut], broadcast<1>(gamma, out.shape_) *
          (data - broadcast<1>(mean, data.shape_)) /
          F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-         broadcast<1>(beta, out.shape_);
+         broadcast<1>(beta, out.shape_));
       // leaky relu forward
       MXNET_ASSIGN_REQ_SWITCH(req[inplaceabn::kOut], Req, {
         mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
           s, out.size(0) * out.size(1) * out.size(2) * out.size(3), out.dptr_,
-          tmp.dptr_, real_t(param_.slope));
+          out.dptr_, real_t(param_.slope));
       });
       // TODO FIXME
       // data = 1.0f * out;
@@ -222,9 +222,7 @@ class InplaceABN : public Operator {
       Shape<4> dshape = Shape4(out_grad[inplaceabn::kOut].shape_[0],
                                out_grad[inplaceabn::kOut].shape_[1], 1, 1);
       // data is the output
-      // TODO FIXME
       out = out_data[inplaceabn::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      // out = in_data[inplaceabn::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_out = out_grad[inplaceabn::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[inplaceabn::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
     } else {
@@ -239,7 +237,6 @@ class InplaceABN : public Operator {
     Tensor<xpu, 1> beta = in_data[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> ggamma = in_grad[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbeta = in_grad[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
-    // update moving avg
     // Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[inplaceabn::kMovingVar].get<xpu, 1, real_t>(s);
     // get the work space
@@ -258,8 +255,6 @@ class InplaceABN : public Operator {
     // recover y and dl/dy
     mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
       s, data_size, data_y.dptr_, out.dptr_, real_t(1.0f / param_.slope));
-    // mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
-    //   s, data_size, grad_y.dptr_, grad_out.dptr_, real_t(param_.slope));
     mxnet_op::Kernel<mxnet_op::op_with_req<
       mxnet_op::backward_grad_tuned<mshadow_op::xelu_grad>, kWriteTo>, xpu>::Launch(
         s, data_size, grad_y.dptr_, grad_out.dptr_,
@@ -418,11 +413,6 @@ class InplaceABNProp : public OperatorProperty {
            };
   }
 
-  std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
   std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
@@ -467,6 +457,14 @@ class InplaceABNProp : public OperatorProperty {
       const std::vector<int> &in_data,
       const std::vector<void*> &out_data) const {
     return {{in_data[inplaceabn::kData], out_data[inplaceabn::kOut]}};
+  }
+
+  std::vector<std::pair<int, void*> > BackwardInplaceOption(
+      const std::vector<int> &out_grad,
+      const std::vector<int> &in_data,
+      const std::vector<int> &out_data,
+      const std::vector<void*> &in_grad) const override {
+    return {{out_grad[inplaceabn::kOut], in_grad[inplaceabn::kData]}};
   }
 
  private:

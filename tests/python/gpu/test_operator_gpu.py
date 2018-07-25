@@ -2085,13 +2085,13 @@ def _check_inplace_abn2(input, training=True, ndev=1):
         layer1.add(mx.gluon.nn.Conv2D(in_channels=ch, channels=ch, kernel_size=1))
         layer1.add(NormAct(in_channels=ch, slope=0.01))
         layer1.add(mx.gluon.nn.Conv2D(in_channels=ch, channels=ch, kernel_size=1))
-        #layer1.add(NormAct(in_channels=ch, slope=0.01))
+        layer1.add(NormAct(in_channels=ch, slope=0.01))
     layer2 = mx.gluon.nn.Sequential()
     with layer2.name_scope():
         layer2.add(mx.gluon.nn.Conv2D(in_channels=ch, channels=ch, kernel_size=1))
         layer2.add(mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01))
         layer2.add(mx.gluon.nn.Conv2D(in_channels=ch, channels=ch, kernel_size=1))
-        #layer2.add(mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01))
+        layer2.add(mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01))
 
     layer1.initialize(ctx=ctx_list)
     layer2.initialize(ctx=ctx_list)
@@ -2101,7 +2101,6 @@ def _check_inplace_abn2(input, training=True, ndev=1):
         conv2.weight.set_data(conv1.weight.data(ctx))
         conv2.bias.set_data(conv1.bias.data(ctx))
     _syncParameters(layer1[0], layer2[0], mx.gpu(0))
-    #_syncParameters(layer1[1], layer2[1], mx.gpu(0))
     _syncParameters(layer1[2], layer2[2], mx.gpu(0))
 
     input1 = input.copy()
@@ -2122,44 +2121,9 @@ def _check_inplace_abn2(input, training=True, ndev=1):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    print('output1', output1[0])
-    print('output2', output2[0])
-    print('input1.grad', input1.grad[0])
-    print('input2.grad', input2.grad[0])
-
-    print('layer1[2].weight.grad', layer1[2].weight.data(mx.gpu(0)).grad)
-    print('layer2[2].weight.grad', layer2[2].weight.data(mx.gpu(0)).grad)
-    print('layer1[2].bias.grad', layer1[2].bias.data(mx.gpu(0)).grad)
-    print('layer2[2].bias.grad', layer2[2].bias.data(mx.gpu(0)).grad)
-    """
-    print('layer1[1].weight.grad', layer1[1].weight.data(mx.gpu(0)).grad)
-    print('layer2[1].weight.grad', layer2[1].weight.data(mx.gpu(0)).grad)
-    print('layer1[1].bias.grad', layer1[1].bias.data(mx.gpu(0)).grad)
-    print('layer2[1].bias.grad', layer2[1].bias.data(mx.gpu(0)).grad)
-    """
-
-    print('layer1[0].weight.grad', layer1[0].weight.data(mx.gpu(0)).grad)
-    print('layer2[0].weight.grad', layer2[0].weight.data(mx.gpu(0)).grad)
-    print('layer1[0].bias.grad', layer1[0].bias.data(mx.gpu(0)).grad)
-    print('layer2[0].bias.grad', layer2[0].bias.data(mx.gpu(0)).grad)
-
     assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(layer1[2].weight.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[2].weight.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(layer1[2].bias.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[2].bias.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
-    """
-    assert_almost_equal(layer1[1].weight.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[1].weight.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(layer1[1].bias.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[1].bias.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
-    """
-    assert_almost_equal(layer1[0].weight.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[0].weight.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(layer1[0].bias.data(mx.gpu(0)).grad.asnumpy(),
-                        layer2[0].bias.data(mx.gpu(0)).grad.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
 def test_inpabn():
@@ -2173,8 +2137,8 @@ def test_inpabn():
         target_shape = np.random.randint(2, 6, size=(4,))
         print(i, target_shape)
         _check_inplace_abn(mx.nd.random.uniform(shape=tuple(target_shape)), True, 1)
-        #_check_inplace_abn(mx.nd.random.uniform(shape=tuple(target_shape)), False, 1)
-        #_check_inplace_abn2(mx.nd.random.uniform(shape=tuple(target_shape)), True, 1)
+        _check_inplace_abn(mx.nd.random.uniform(shape=tuple(target_shape)), False, 1)
+        _check_inplace_abn2(mx.nd.random.uniform(shape=tuple(target_shape)), True, 1)
     # no need to use SyncBN with 1 gpu
     if get_num_devices() < 2:
         return
