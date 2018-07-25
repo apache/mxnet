@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory
 import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
-import scala.reflect.runtime.universe._
 /**
  * IO iterators for loading training & validation data
  */
@@ -112,8 +111,8 @@ object IO {
     val labelDType = params.getOrElse("labelDType", "Int32")
     new MXDataIter(out.value, dataName, labelName,
       dataLayout = dataLayout, labelLayout = labelLayout,
-      dataDType = q"DType ${TermName(dataDType)}".asInstanceOf[DType],
-      labelDType = q"DType ${TermName(labelDType)}".asInstanceOf[DType])
+      dataDType = DType.getType(dataDType),
+      labelDType = DType.getType(labelDType))
   }
 
   // Convert data into canonical form.
