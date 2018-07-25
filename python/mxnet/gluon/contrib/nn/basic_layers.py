@@ -240,6 +240,8 @@ class SyncBatchNorm(BatchNorm):
 class InplaceABN(BatchNorm):
     """Inplace Activated Batch normalization (InplaceABN)
 
+    Inplace ABN acts the same as standard BatchNorm with LeakyReLU activation.
+    It saves the memory by recalculating featuremaps.
     Parameters
     ----------
     in_channels : int, default 0
@@ -287,13 +289,15 @@ class InplaceABN(BatchNorm):
     """
     def __init__(self, in_channels=0, sync=False, num_devices=None, slope=0.01,
                  momentum=0.9, epsilon=1e-5, center=True, use_global_stats=False,
-                 beta_initializer='zeros', gamma_initializer='ones', running_mean_initializer='zeros',
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
         super(InplaceABN, self).__init__(1, momentum, epsilon, center, True, use_global_stats,
                                             beta_initializer, gamma_initializer,
                                             running_mean_initializer, running_variance_initializer,
                                             in_channels, **kwargs)
-        num_devices = 1 if not sync else self._get_num_devices() if num_devices is None else num_devices
+        num_devices = 1 if not sync else self._get_num_devices() \
+            if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'use_global_stats': use_global_stats, 'sync' : sync,
                         'ndev': num_devices, 'slope' : slope, 'key': self.prefix}

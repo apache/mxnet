@@ -48,6 +48,8 @@ DMLC_REGISTER_PARAMETER(InplaceABNParam);
 MXNET_REGISTER_OP_PROPERTY(_contrib_InplaceABN, InplaceABNProp)
 .describe(R"code(Inplace Activated Batch normalization [1]_.
 
+Inplace ABN acts the same as standard BatchNorm with LeakyReLU activation.
+It saves the memory by recalculating featuremaps.
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
 well as offset ``beta``.
 Standard BN [2]_ implementation only normalize the data within each device.
@@ -112,6 +114,5 @@ NNVM_REGISTER_OP(_contrib_InplaceABN)
         var->attrs.dict["__init__"] = "[\"one\", {}]";
       }
     });
-
 }  // namespace op
 }  // namespace mxnet
