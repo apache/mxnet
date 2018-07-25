@@ -20,23 +20,39 @@
 # This script is for locally building website for all versions
 # Built files are stored in $built
 
-# Takes one argument:
-# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+# Takes two arguments:
+# tag list - semicolon delimited list of Github tags
+#   Example: "1.2.0;1.1.0;master"
+# display list - semicolon delimited list of what to display on website
+#   Example: "1.2.1;1.1.0;master"
+# The number of tags for the two arguments must be the same.
 # Example Usage:
-# ./build_all_version.sh "1.1.0 1.0.0 master"
+#   ./build_all_version.sh "1.2.0;1.1.0;master" "1.2.1;1.1.0;master"
+#   ./build_all_version.sh "1.2.0" "1.2.1"
 
 set -e
 set -x
 
 if [ -z "$1" ]
   then
-    echo "Please provide a list of version tags you wish to run."
+    echo "Please provide a list of branches or tags you wish to build."
     exit 1
   else
     IFS=$';'
     tag_list=$1
     echo "Using these tags: $tag_list"
     for tag in $tag_list; do echo $tag; done
+fi
+
+if [ -z "$2" ]
+  then
+    echo "Please provide a list of version tags you wish to display on the site."
+    exit 1
+  else
+    IFS=$';'
+    tags_to_display=$2
+    echo "Displaying these tags: $tags_to_display"
+    for tag in $tags_to_display; do echo $tag; done
 fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
@@ -53,7 +69,9 @@ if [ ! -d "$built" ]; then
   mkdir "$built/versions"
 fi
 
-# Build all versions and use latest version(First version number in $tag_list) as landing page.
+# Checkout each tag and build it
+# Then store it in a folder according to the desired display tag
+i=0
 for tag in $tag_list; do
     cd "$mxnet_folder"
     git fetch
@@ -61,8 +79,11 @@ for tag in $tag_list; do
         then
             git checkout master
             git pull
+            echo "Building master..."
         else
-            git checkout "v$tag"
+            # Use "v$tag" for branches or pass that in from jenkins
+            git checkout "$tag"
+            echo "Building $tag..."
     fi
 
     git submodule update --init --recursive || exit 1
@@ -72,12 +93,15 @@ for tag in $tag_list; do
     make clean
     make html USE_OPENMP=1 || exit 1
     cd ../../
-    file_loc="$built/versions/$tag"
+    altname=$tags_to_display[$i]
+    file_loc="$built/versions/$altname"
     if [ -d "$file_loc" ] ; then
         rm -rf "$file_loc"
     fi
     mkdir "$file_loc"
+    echo "Storing artifacts for $tag in $file_loc folder..."
     cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
+    i=$((i+1));
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
