@@ -209,6 +209,7 @@ bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *iattr,
                         std::vector<int> *oattr);
 
+#if MXNET_USE_TENSORRT
 /*!
  * \brief Replace subgraphs by TRT (forward only)
  */
@@ -218,6 +219,7 @@ Graph ReplaceSubgraph(Graph&& g,
 
 std::vector<std::unordered_set<nnvm::Node*>> GetTrtCompatibleSubsets(const Graph& g,
     std::unordered_map<std::string, NDArray>* const params_map);
+#endif
 
 }  // namespace exec
 }  // namespace mxnet
