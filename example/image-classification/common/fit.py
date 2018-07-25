@@ -216,7 +216,7 @@ def fit(args, network, data_loader, **kwargs):
         'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
-    has_momentum = {'sgd', 'dcasgd', 'nag'}
+    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum', 'lbsgd'}
     if args.optimizer in has_momentum:
         optimizer_params['momentum'] = args.mom
 

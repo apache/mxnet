@@ -24,6 +24,8 @@
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <vector>
+#include <utility>
+#include <string>
 #include "../imperative/cached_op.h"
 #include "../imperative/imperative_utils.h"
 
@@ -55,6 +57,68 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs);
 
+bool as_bool_scalar(const NDArray &a);
+
+bool is_shape_udf(const TShape &x);
+
+bool is_stype_udf(const int &x);
+
+bool is_type_udf(const int &x);
+
+template <typename T>
+void extract_by_loc(const std::vector<T> &array,
+                    const nnvm::Tuple<dim_t> input_locs,
+                    std::vector<T> *out) {
+  out->clear();
+  out->reserve(input_locs.ndim());
+  for (dim_t i : input_locs) {
+    out->push_back(array[i]);
+  }
+}
+
+template <typename T>
+bool fill_value(T *x, T *y, bool x_empty, bool y_empty) {
+  if (*x == *y || (x_empty && y_empty)) {
+    return true;
+  }
+  if (!x_empty && !y_empty) {
+    return false;
+  }
+  if (x_empty) {
+    *x = *y;
+  }
+  if (y_empty) {
+    *y = *x;
+  }
+  return true;
+}
+
+template <typename T>
+bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
+                         std::vector<T> *in,
+                         std::vector<T> *subg_in,
+                         std::function<bool(const T &)> is_empty) {
+  for (size_t i = 0; i < input_locs.ndim(); ++i) {
+    T &x = in->at(input_locs[i]);
+    T &y = subg_in->at(i);
+    fill_value(&x, &y, is_empty(x), is_empty(y));
+  }
+  return true;
+}
+
+template <typename T>
+bool sync_out_out(std::vector<T> *out_1,
+                  std::vector<T> *out_2,
+                  std::function<bool(const T &)> is_empty) {
+  CHECK_EQ(out_1->size(), out_2->size());
+  for (size_t i = 0; i < out_1->size(); ++i) {
+    T &x = out_1->at(i);
+    T &y = out_2->at(i);
+    fill_value(&x, &y, is_empty(x), is_empty(y));
+  }
+  return true;
+}
+
 /*
  * This contains the states for running a loop and provides methods
  * of running the subgraph computation for an iteration.
@@ -69,8 +133,8 @@ class LoopState {
   // For training, each iteration has a cached op because each iteration
   // needs to maintain a set of memory buffers for all computation states,
   // which will be used in the backward.
-  CachedOpPtr iter_op;
   std::vector<OpStatePtr> all_states;
+  CachedOpPtr iter_op;
   Symbol subgraph_sym;
   nnvm::Graph subgraph;
 
@@ -90,6 +154,16 @@ class LoopState {
     all_outputs.clear();
     all_inputs.clear();
     all_states.clear();
+  }
+  static CachedOpPtr MakeSharedOp(const Symbol &sym) {
+    // We turn on static_alloc for two reasons.
+    // It avoids the overhead of unnecessary memory allocation.
+    // only static_alloc supports nested call of CachedOp.
+    std::vector<std::pair<std::string, std::string> > kwargs = {
+      {"inline_limit", "0"},
+      {"static_alloc", "1"}
+    };
+    return std::make_shared<CachedOp>(sym, kwargs);
   }
 };
 

@@ -67,12 +67,13 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
     return "nvidia-docker" if use_nvidia_docker else "docker"
 
 
-def build_docker(platform: str, docker_binary: str, registry: str) -> None:
+def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int) -> None:
     """
     Build a container for the given platform
     :param platform: Platform
     :param docker_binary: docker binary to use (docker/nvidia-docker)
     :param registry: Dockerhub registry name
+    :param num_retries: Number of retries to build the docker image
     :return: Id of the top level image
     """
 
@@ -90,15 +91,32 @@ def build_docker(platform: str, docker_binary: str, registry: str) -> None:
     #
     # This doesn't work with multi head docker files.
     # 
-    cmd = [docker_binary, "build",
-           "-f", get_dockerfile(platform),
-           "--build-arg", "USER_ID={}".format(os.getuid()),
-           "--build-arg", "GROUP_ID={}".format(os.getgid()),
-           "--cache-from", tag,
-           "-t", tag,
-           "docker"]
-    logging.info("Running command: '%s'", ' '.join(cmd))
-    check_call(cmd)
+
+    for i in range(num_retries):
+        logging.info('%d out of %d tries to build the docker image.', i + 1, num_retries)
+
+        cmd = [docker_binary, "build",
+               "-f", get_dockerfile(platform),
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid()),
+               "--cache-from", tag,
+               "-t", tag,
+               "docker"]
+        logging.info("Running command: '%s'", ' '.join(cmd))
+        try:
+            check_call(cmd)
+            # Docker build was successful. Call break to break out of the retry mechanism
+            break
+        except subprocess.CalledProcessError as e:
+            saved_exception = e
+            logging.error('Failed to build docker image')
+            # Building the docker image failed. Call continue to trigger the retry mechanism
+            continue
+    else:
+        # Num retries exceeded
+        logging.exception('Exception during build of docker image', saved_exception)
+        logging.fatal('Failed to build the docker image, aborting...')
+        sys.exit(1)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
@@ -275,6 +293,11 @@ def main() -> int:
                         default='mxnetci',
                         type=str)
 
+    parser.add_argument("-r", "--docker-build-retries",
+                        help="Number of times to retry building the docker image. Default is 1",
+                        default=1,
+                        type=int)
+
     parser.add_argument("-c", "--cache", action="store_true",
                         help="Enable docker registry cache")
 
@@ -294,6 +317,7 @@ def main() -> int:
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
     shared_memory_size = args.shared_memory_size
+    num_docker_build_retires = args.docker_build_retries
 
     if args.list:
         list_platforms()
@@ -302,7 +326,7 @@ def main() -> int:
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
         if use_cache():
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform, docker_binary, registry=args.docker_registry)
+        build_docker(platform, docker_binary, registry=args.docker_registry, num_retries=num_docker_build_retires)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
@@ -336,7 +360,7 @@ def main() -> int:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             if use_cache():
                 load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary, args.docker_registry)
+            build_docker(platform, docker_binary, args.docker_registry, num_retries=num_docker_build_retires)
             if args.build_only:
                 continue
             build_platform = "build_{}".format(platform)

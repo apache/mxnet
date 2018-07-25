@@ -3,10 +3,10 @@
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
   <div class="dropdown">
-    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.0
+    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
     <span class="caret"></span></button>
     <ul class="dropdown-menu opt-group">
-      <li class="opt active versions"><a href="#">v1.2.0</a></li>
+      <li class="opt active versions"><a href="#">v1.2.1</a></li>
       <li class="opt versions"><a href="#">v1.1.0</a></li>
       <li class="opt versions"><a href="#">v1.0.0</a></li>
       <li class="opt versions"><a href="#">v0.12.1</a></li>
@@ -95,7 +95,7 @@ $ sudo apt-get install -y wget python gcc
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
@@ -116,7 +116,7 @@ pip install graphviz
 $ pip install mxnet-mkl
 ```
 
-</div> <!-- End of v1-2-0 -->
+</div> <!-- End of v1-2-1 -->
 
 <div class="v1-1-0">
 
@@ -289,7 +289,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 $ pip install --upgrade pip
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Install *MXNet* with OpenBLAS acceleration.
 
@@ -297,7 +297,7 @@ Install *MXNet* with OpenBLAS acceleration.
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -511,7 +511,7 @@ $ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.2
 
@@ -543,7 +543,7 @@ pip install graphviz
 $ pip install mxnet-cu90mkl
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 
 <div class="v1-1-0">
@@ -709,7 +709,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 ```
 
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
 Check your CUDA version with the following command:
@@ -728,7 +728,7 @@ Install *MXNet* with GPU support using CUDA 9.2:
 
 Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 
 <div class="v1-1-0">
@@ -969,30 +969,9 @@ $ make rpkg
 <div class="scala">
 <div class="gpu">
 
-```html
-<dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of gpu -->
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<div class="cpu">
-
-```html
-<dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of cpu -->
-</div> <!-- End of scala -->
-
-
-<div class="scala">
-<div class="gpu">
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
@@ -1004,6 +983,10 @@ $ make rpkg
 </div> <!-- End of gpu -->
 
 <div class="cpu">
+
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
@@ -1066,14 +1049,14 @@ $ pip install --upgrade pip
 $ pip install --upgrade setuptools
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Then use pip to install MXNet:
 
 ```bash
 $ pip install mxnet
 ```
-</div> <!-- End of v1-2-0 -->
+</div> <!-- End of v1-2-1 -->
 
 
 <div class="v1-1-0">
@@ -1195,7 +1178,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade setuptools
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Install *MXNet* with OpenBLAS acceleration.
 
@@ -1203,7 +1186,7 @@ Install *MXNet* with OpenBLAS acceleration.
 (mxnet)$ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -1454,6 +1437,10 @@ Will be available soon.
 <div class="scala">
 <div class="cpu">
 
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
@@ -1504,7 +1491,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet*.
 
@@ -1512,7 +1499,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -1595,7 +1582,7 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
 
@@ -1614,7 +1601,7 @@ $ pip install mxnet-cu92
 
 Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -2425,7 +2412,7 @@ You should see the following output:
 <div class="linux">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
     </div>
   </div>
 
@@ -2441,7 +2428,7 @@ Will be available soon.
 <div class="macos">
   <div class="scala">
     <div class="cpu gpu">
-      Refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a>.
+      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
     </div>
   </div>
   <div class="julia perl cpp">
