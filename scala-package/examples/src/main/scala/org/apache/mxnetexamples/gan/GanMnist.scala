@@ -131,7 +131,7 @@ object GanMnist {
       "input_shape" -> s"(1, 28, 28)",
       "batch_size" -> s"$batchSize",
       "shuffle" -> "True",
-      "dataLayout" -> "NT",
+      "dataLayout" -> "NCHW",
       "labelLayout" -> "N"
     )
 

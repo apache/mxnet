@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory
 import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
-
+import scala.reflect.runtime.universe._
 /**
  * IO iterators for loading training & validation data
  */
@@ -108,8 +108,12 @@ object IO {
     val labelName = params.getOrElse("label_name", "label")
     val dataLayout = params.getOrElse("dataLayout", "NCHW")
     val labelLayout = params.getOrElse("labelLayout", "N")
+    val dataDType = params.getOrElse("dataDType", "Float32")
+    val labelDType = params.getOrElse("labelDType", "Int32")
     new MXDataIter(out.value, dataName, labelName,
-      dataLayout = dataLayout, labelLayout = labelLayout)
+      dataLayout = dataLayout, labelLayout = labelLayout,
+      dataDType = q"DType ${TermName(dataDType)}".asInstanceOf[DType],
+      labelDType = q"DType ${TermName(labelDType)}".asInstanceOf[DType])
   }
 
   // Convert data into canonical form.
@@ -144,7 +148,8 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // (must match the order of input data/label)
                 private val providedData: ListMap[String, Shape] = null,
                 private val providedLabel: ListMap[String, Shape] = null,
-                val dtype: DType = Base.MX_REAL_TYPE,
+                val dataDType: DType = Base.MX_REAL_TYPE,
+                val labelDType: DType = DType.Int32,
                 val dataLayout: String = "NCHW",
                 val labelLayout: String = "N") {
   /**
@@ -178,7 +183,8 @@ object DataBatch {
     private var pad: Int = 0
     private var dataLayout: String = "NCHW"
     private var labelLayout: String = "N"
-    private var dtype: DType = Base.MX_REAL_TYPE
+    private var dataDType: DType = Base.MX_REAL_TYPE
+    private var labelDType: DType = DType.Int32
     private var bucketKey: AnyRef = null
     private var datatShapes: ListMap[String, Shape] = null
     private var labelShapes: ListMap[String, Shape] = null
@@ -227,11 +233,13 @@ object DataBatch {
 
     /**
       * Set the dtype.
-      * @param dtype The dtype of the label, default is Float32
+      * @param dataDType The dtype of the data, default is Float32
+      * @param labelDType The dtype of the label, default is Int32
       * @return this
       */
-    def setDType(dtype: DType): Builder = {
-      this.dtype = dtype
+    def setDType(dataDType: DType, labelDType: DType): Builder = {
+      this.dataDType = dataDType
+      this.labelDType = labelDType
       this
     }
 
@@ -290,7 +298,7 @@ object DataBatch {
     def build(): DataBatch = {
       require(data != null, "data is required.")
       new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes,
-        dtype, dataLayout, labelLayout)
+        dataDType, labelDType, dataLayout, labelLayout)
     }
   }
 }
@@ -313,7 +321,8 @@ abstract class DataIter extends Iterator[DataBatch] {
   @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
     new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-      dtype = getDType(), dataLayout = getLayout()._1, labelLayout = getLayout()._2)
+      dataDType = getDType()._1, labelDType = getDType()._2,
+      dataLayout = getLayout()._1, labelLayout = getLayout()._2)
   }
 
   /**
@@ -337,9 +346,9 @@ abstract class DataIter extends Iterator[DataBatch] {
 
   /**
     * Get the DType
-    * @return DType of the DataIter
+    * @return data and label DType of the DataIter
     */
-  def getDType(): DType
+  def getDType(): (DType, DType)
 
   /**
     * Get the layout

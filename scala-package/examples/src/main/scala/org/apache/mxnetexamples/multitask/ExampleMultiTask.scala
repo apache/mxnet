@@ -67,8 +67,8 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, dtype = batch.dtype, dataLayout = batch.dataLayout,
-          labelLayout = batch.labelLayout)
+          batch.pad, dataDType = batch.dataDType, labelDType = batch.labelDType,
+          dataLayout = batch.dataLayout, labelLayout = batch.labelLayout)
       } else {
         throw new NoSuchElementException
       }
@@ -127,7 +127,7 @@ object ExampleMultiTask {
      */
     override def getPad(): Int = this.dataIter.getPad()
 
-    override def getDType(): DType = this.dataIter.getDType()
+    override def getDType(): (DType, DType) = this.dataIter.getDType()
 
     override def getLayout(): (String, String) = this.dataIter.getLayout()
 

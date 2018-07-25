@@ -133,8 +133,8 @@ class ResizeIter(
     * Get the DType
     * @return DType
     */
-  def getDType(): DType = {
-    currentBatch.dtype
+  def getDType(): (DType, DType) = {
+    (currentBatch.dataDType, currentBatch.labelDType)
   }
 
   /**

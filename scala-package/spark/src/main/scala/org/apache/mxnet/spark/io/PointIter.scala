@@ -34,7 +34,8 @@ class PointIter private[mxnet](
   private val _batchSize: Int,
   private val dataName: String = "data",
   private val labelName: String = "label",
-  private val dtype: DType = DType.Float32,
+  private val dataDType: DType = DType.Float32,
+  private val labelDType: DType = DType.Int32,
   private val dataLayout: String = "NCHW",
   private val labelLayout: String = "N") extends DataIter {
 
@@ -76,7 +77,7 @@ class PointIter private[mxnet](
       val pad = batchSize - instNum
       val dataBatch = new LongLivingDataBatch(
         IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad,
-        dataLayout, labelLayout, dtype)
+        dataLayout, labelLayout, dataDType, labelDType)
       cache += dataBatch
       dataBatch
     }
@@ -129,11 +130,11 @@ class PointIter private[mxnet](
   }
 
   override def provideDataDesc: IndexedSeq[DataDesc] = {
-    IndexedSeq(new DataDesc(dataName, dataShape, dtype, dataLayout))
+    IndexedSeq(new DataDesc(dataName, dataShape, dataDType, dataLayout))
   }
 
   override def provideLabelDesc: IndexedSeq[DataDesc] = {
-    IndexedSeq(new DataDesc(labelName, Shape(_batchSize), dtype, labelLayout))
+    IndexedSeq(new DataDesc(labelName, Shape(_batchSize), labelDType, labelLayout))
   }
 
   /**
@@ -143,7 +144,7 @@ class PointIter private[mxnet](
    */
   override def getPad(): Int = 0
 
-  override def getDType(): DType = dtype
+  override def getDType(): (DType, DType) = (dataDType, labelDType)
 
   override def getLayout(): (String, String) = (dataLayout, labelLayout)
 

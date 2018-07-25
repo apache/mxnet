@@ -181,8 +181,8 @@ class PrefetchingIter(
     * Get the DType
     * @return DType
     */
-  def getDType(): DType = {
-    currentBatch.dtype
+  def getDType(): (DType, DType) = {
+    (currentBatch.dataDType, currentBatch.labelDType)
   }
 
   /**
@@ -226,7 +226,8 @@ class PrefetchingIter(
         nextBatch(0).pad,
         dataLayout = nextBatch(0).dataLayout,
         labelLayout = nextBatch(0).labelLayout,
-        dtype = nextBatch(0).dtype)
+        dataDType = nextBatch(0).dataDType,
+        labelDType = nextBatch(0).labelDType)
       for (e <- dataTaken) e.release()
       true
     }

@@ -100,7 +100,8 @@ object BucketIo {
       readContent: ReadContent = defaultReadContent,
       dataLayout: String = "NT",
       labelLayout: String = "N",
-      dtype : DType = DType.Float32) extends DataIter {
+      dataDType : DType = DType.Float32,
+      labelDType: DType = DType.Int32) extends DataIter {
 
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
 
@@ -175,12 +176,12 @@ object BucketIo {
 
     private val _provideDataDesc = {
       val tmp = IndexedSeq(new DataDesc("data",
-        Shape(_batchSize, _defaultBucketKey), dtype, dataLayout))
-      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dtype, dataLayout))
+        Shape(_batchSize, _defaultBucketKey), dataDType, dataLayout))
+      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dataDType, dataLayout))
     }
 
     private val _provideLabelDesc = IndexedSeq(new DataDesc("softmax_label",
-      Shape(_batchSize, _defaultBucketKey), dtype, labelLayout))
+      Shape(_batchSize, _defaultBucketKey), labelDType, labelLayout))
 
     private var iBucket = 0
 
@@ -212,7 +213,8 @@ object BucketIo {
                     getIndex(),
                     getPad(),
                     this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel, getDType(),
+                    batchProvideData, batchProvideLabel,
+                    getDType()._1, getDType()._2,
                     getLayout()._1, getLayout()._2)
     }
 
@@ -251,7 +253,7 @@ object BucketIo {
       */
     override def getPad(): Int = 0
 
-    override def getDType(): DType = dtype
+    override def getDType(): (DType, DType) = (dataDType, labelDType)
 
     override def getLayout(): (String, String) = (dataLayout, labelLayout)
 

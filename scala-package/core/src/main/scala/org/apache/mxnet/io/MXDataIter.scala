@@ -35,7 +35,9 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                                 labelName: String = "label",
                                 dtype: DType = DType.Float32,
                                 dataLayout: String = "NCHW",
-                                labelLayout: String = "N")
+                                labelLayout: String = "N",
+                                dataDType: DType = DType.Float32,
+                                labelDType: DType = DType.Int32)
   extends DataIter with WarnIfNotDisposed {
 
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
@@ -45,40 +47,30 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   // fix me if any better way found)
   private var currentBatch: DataBatch = null
 
-  private val (_provideData: ListMap[String, Shape],
-               _provideLabel: ListMap[String, Shape]) =
-    if (hasNext) {
-      iterNext()
-      val data = currentBatch.data(0)
-      val label = currentBatch.label(0)
-      // properties
-      val res = (ListMap(dataName -> data.shape), ListMap(labelName -> label.shape))
-      currentBatch.dispose()
-      reset()
-      res
-    } else {
-      (null, null)
-    }
-
   private val (_provideDataDesc: IndexedSeq[DataDesc],
                _provideLabelDesc: IndexedSeq[DataDesc],
+                _provideData: ListMap[String, Shape],
+                _provideLabel: ListMap[String, Shape],
                _batchSize: Int) = {
     if (hasNext) {
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
-      val dType = currentBatch.dtype
+      val dataType = currentBatch.dataDType
+      val labelDType = currentBatch.labelDType
       val dataLayout = currentBatch.dataLayout
       val labelLayout = currentBatch.labelLayout
       // properties
-      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dType, dataLayout)),
-        IndexedSeq(new DataDesc(labelName, label.shape, dType, labelLayout)),
+      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dataDType, dataLayout)),
+        IndexedSeq(new DataDesc(labelName, label.shape, labelDType, labelLayout)),
+        ListMap(dataName -> data.shape),
+        ListMap(labelName -> label.shape),
         data.shape(0))
       currentBatch.dispose()
       reset()
       res
     } else {
-      (null, null, 0)
+      (null, null, null, null, 0)
     }
   }
 
@@ -130,8 +122,8 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
         index = getIndex(), pad = getPad(),
-        dtype = getDType(), dataLayout = getLayout()._1,
-        labelLayout = getLayout()._2)
+        dataDType = getDType()._1, labelDType = getDType()._2,
+        dataLayout = getLayout()._1, labelLayout = getLayout()._2)
     } else {
       currentBatch = null
     }
@@ -184,7 +176,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     * Get the DType
     * @return DType
     */
-  def getDType(): DType = dtype
+  def getDType(): (DType, DType) = (dataDType, labelDType)
 
   /**
     * Get the layout

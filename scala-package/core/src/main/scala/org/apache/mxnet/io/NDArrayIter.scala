@@ -44,7 +44,8 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   label: IndexedSeq[(String, NDArray)],
                   private val dataBatchSize: Int, shuffle: Boolean,
                   lastBatchHandle: String,
-                  dtype: DType, dataLayout: String, labelLayout: String) extends DataIter {
+                  dataDType: DType, labelDType: DType,
+                  dataLayout: String, labelLayout: String) extends DataIter {
 
   /**
    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
@@ -62,11 +63,11 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label",
-           dType: DType = MX_REAL_TYPE, dataLayout: String = "NCHW",
-           labelLayout: String = "N") {
+           dataDType: DType = MX_REAL_TYPE, labelDType: DType = DType.Int32,
+           dataLayout: String = "NCHW", labelLayout: String = "N") {
     this(IO.initData(data, allowEmpty = false, dataName),
       IO.initData(label, allowEmpty = true, labelName),
-      dataBatchSize, shuffle, lastBatchHandle, dType, dataLayout, labelLayout)
+      dataBatchSize, shuffle, lastBatchHandle, dataDType, labelDType, dataLayout, labelLayout)
   }
 
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
@@ -113,8 +114,9 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
 
   private val (_provideDataDesc: IndexedSeq[DataDesc],
   _provideLabelDesc: IndexedSeq[DataDesc]) = {
-    val pData = initData.map(ele => new DataDesc(ele._1, getShape(ele)._2, dtype, dataLayout))
-    val pLabel = initLabel.map(ele => new DataDesc(ele._1, getShape(ele)._2, dtype, labelLayout))
+    val pData = initData.map(ele => new DataDesc(ele._1, getShape(ele)._2, dataDType, dataLayout))
+    val pLabel = initLabel.map(ele =>
+      new DataDesc(ele._1, getShape(ele)._2, labelDType, labelLayout))
     (pData, pLabel)
   }
 
@@ -160,7 +162,8 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     if (hasNext) {
       cursor += dataBatchSize
       new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-        dtype = getDType(), dataLayout = getLayout()._1, labelLayout = getLayout()._2)
+        dataDType = getDType()._1, labelDType = getDType()._2,
+        dataLayout = getLayout()._1, labelLayout = getLayout()._2)
     } else {
       throw new NoSuchElementException
     }
@@ -239,8 +242,8 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     * Get the DType
     * @return DType
     */
-  def getDType(): DType = {
-    dtype
+  def getDType(): (DType, DType) = {
+    (dataDType, labelDType)
   }
 
   /**
@@ -278,7 +281,8 @@ object NDArrayIter {
     private var lastBatchHandle: String = "pad"
     private var dataLayout: String = "NCHW"
     private var labelLayout: String = "N"
-    private var dtype: DType = Base.MX_REAL_TYPE
+    private var dataDType: DType = Base.MX_REAL_TYPE
+    private var labelDType: DType = DType.Int32
 
     /**
      * Add one data input with its name.
@@ -324,11 +328,13 @@ object NDArrayIter {
 
     /**
       * Set the dtype.
-      * @param dtype The dtype of the label, default is Float32
+      * @param dataDType The dtype of the data, default is Float32
+      * @param labelDType The dtype of the label, default is Int32
       * @return this
       */
-    def setDType(dtype: DType): Builder = {
-      this.dtype = dtype
+    def setDType(dataDType: DType, labelDType: DType): Builder = {
+      this.dataDType = dataDType
+      this.labelDType = labelDType
       this
     }
 
@@ -350,7 +356,7 @@ object NDArrayIter {
      */
     def build(): NDArrayIter = {
       new NDArrayIter(data, label, dataBatchSize, false, lastBatchHandle,
-        dtype, dataLayout, labelLayout)
+        dataDType, labelDType, dataLayout, labelLayout)
     }
   }
 }
