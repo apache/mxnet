@@ -2042,23 +2042,6 @@ def _check_inplace_abn(input, training=True, ndev=1):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    """
-    print('output1', output1[0])
-    print('output2', output2[0])
-    print('loss1', loss1)
-    print('loss2', loss2)
-    print('input1.grad', input1.grad[0])
-    print('input2.grad', input2.grad[0])
-    print('layer1.running_mean', layer1.running_mean.data(mx.gpu(0)))
-    print('layer2.running_mean', layer2.running_mean.data(mx.gpu(0)))
-    print('layer1.running_var', layer1.running_var.data(mx.gpu(0)))
-    print('layer2.running_var', layer2.running_var.data(mx.gpu(0)))
-    print('layer1.gamma.grad', layer1.gamma.data(mx.gpu(0)).grad)
-    print('layer2.gamma.grad', layer2.gamma.data(mx.gpu(0)).grad)
-    print('layer1.beta.grad', layer1.beta.data(mx.gpu(0)).grad)
-    print('layer2.beta.grad', layer2.beta.data(mx.gpu(0)).grad)
-    """
-
     assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
     assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
@@ -2145,6 +2128,5 @@ def test_inpabn():
     ndev = 2
 
 if __name__ == '__main__':
-    test_inpabn()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

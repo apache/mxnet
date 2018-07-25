@@ -24,7 +24,6 @@ import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 import unittest
-from common import with_seed
 
 def test_box_nms_op():
     def test_box_nms_forward(data, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1, cid=0,
@@ -245,6 +244,5 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
 if __name__ == '__main__':
-    test_inpabn()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

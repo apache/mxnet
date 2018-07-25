@@ -108,10 +108,11 @@ class InplaceABN : public Operator {
     if (ctx.is_train) {
       CHECK_EQ(out_data.size(), 3U);
       CHECK_EQ(req.size(), 3U);
+      // CHECK_EQ(req[inplaceabn::kOut], kWriteInplace);
     } else {
       CHECK_GE(out_data.size(), 1U);
       CHECK_GE(req.size(), 1U);
-      CHECK_EQ(req[inplaceabn::kOut], kWriteTo);
+      // CHECK_EQ(req[inplaceabn::kOut], kWriteInplace);
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -146,7 +147,8 @@ class InplaceABN : public Operator {
       // whether use synchronized batch normalization
       if (param_.sync) {
         // get my rank
-        Barrier *global_barrier = inpabn_global_shared_barrier_forward.Register(param_.key, param_.ndev);
+        Barrier *global_barrier = inpabn_global_shared_barrier_forward.Register(
+            param_.key, param_.ndev);
         int myRank = inpabn_global_shared_rank_forward.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
           inp_abn_global_shared_mean.Register(param_.key, param_.ndev);
@@ -171,8 +173,6 @@ class InplaceABN : public Operator {
       moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
       moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // batch normalization
-      // Tensor<xpu, 4> tmp = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
-      //     out.shape_, s);
       Assign(out, req[inplaceabn::kOut], broadcast<1>(gamma, out.shape_) *
          (data - broadcast<1>(mean, data.shape_)) /
          F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
@@ -183,8 +183,6 @@ class InplaceABN : public Operator {
           s, out.size(0) * out.size(1) * out.size(2) * out.size(3), out.dptr_,
           out.dptr_, real_t(param_.slope));
       });
-      // TODO FIXME
-      // data = 1.0f * out;
     } else {
       Assign(out, req[inplaceabn::kOut],
              broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
