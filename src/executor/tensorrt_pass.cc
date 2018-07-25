@@ -466,6 +466,9 @@ Graph ReplaceSubgraph(Graph&& g,
 
   const auto sub_outputs_in_main = GetSubgraphOutputs(g, set_subgraph);
   subgraph.outputs = sub_outputs_in_main;
+  
+  // old2new will link raw pointer of the nodes in the graph to
+  // the corresponding shared_ptr of the nodes in the generated subgraph
   std::unordered_map<nnvm::Node*, nnvm::NodePtr> old2new;
   std::deque<nnvm::Node*> stack;
   std::unordered_set<nnvm::Node*> visited;
@@ -473,10 +476,14 @@ Graph ReplaceSubgraph(Graph&& g,
   old2new.reserve(reservation);
   visited.reserve(reservation);
 
+  // Create the shared_ptr using the same raw pointer don't really matter
   for (auto& n : set_subgraph) {
     old2new[n] = std::make_shared<nnvm::Node>(*n);
   }
 
+  // To generate a subgraph an input have to be replace by data node (no op)
+  // and it have to be agnostic to the node from which it's an output
+  // (For exemple even if two inputs are two different outputs from the same node)
   nnvm::NodeEntryMap<nnvm::NodeEntry> main_input_entry_to_sub;
   for (auto& e : GetSubgraphInterfaceNodes(g, set_subgraph)) {
     auto node = nnvm::Node::Create();
@@ -489,7 +496,8 @@ Graph ReplaceSubgraph(Graph&& g,
     e.node = old2new[e.node.get()];
     stack.emplace_back(e.node.get());
   }
-
+  
+  // link all nodes in the subgraph to nodes in the subgraph instead of main graph
   while (!stack.empty()) {
     auto vertex = stack.front();
     stack.pop_front();
@@ -506,7 +514,8 @@ Graph ReplaceSubgraph(Graph&& g,
       }
     }
   }
-
+  
+  // Remove the control dependencies of the subgraph to nodes that are not in the subgraph
   DFSVisit(subgraph.outputs, [&set_subgraph, &old2new](const nnvm::NodePtr& node) {
     std::remove_if(node->control_deps.begin(),
                    node->control_deps.end(),
@@ -530,6 +539,7 @@ Graph ReplaceSubgraph(Graph&& g,
     sub_input_entryid_to_main[sub_idx.entry_id(p.second)] = p.first;
   }
 
+  // Plug the nodes from the main graph as inputs of the trt node
   trtnodeptr->inputs.resize(main_input_entry_to_sub.size());
   {
     uint32_t counter = 0;
@@ -540,11 +550,13 @@ Graph ReplaceSubgraph(Graph&& g,
       }
     }
   }
-
+  
+  
   nnvm::NodeEntryMap<uint32_t> sub_outputs_in_main_to_pos;
   for (uint32_t i = 0; i < sub_outputs_in_main.size(); ++i) {
     sub_outputs_in_main_to_pos[sub_outputs_in_main[i]] = i;
   }
+  // Plug the trt node as inputs to the main graph nodes
   DFSVisit(g.outputs, [&sub_outputs_in_main_to_pos, &trtnodeptr](const nnvm::NodePtr& n) {
     for (auto& e : n->inputs) {
       auto it = sub_outputs_in_main_to_pos.find(e);
