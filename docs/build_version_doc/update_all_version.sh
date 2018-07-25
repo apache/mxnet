@@ -23,12 +23,12 @@
 # the tags you want to update.
 
 # Takes three arguments:
-# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
+# * tag list - semicolon delimited list of tags to display on site; Example: "1.1.0;1.0.0;master"
 # * default tag - which version should the site default to; Example: 1.0.0
 # * root URL - for the versions dropdown to change to production or dev server; Example: http://mxnet.incubator.apache.org/
 
 # Example Usage:
-# ./update_all_version.sh "1.1.0 1.0.0 master" 1.0.0 http://mxnet.incubator.apache.org/
+# ./update_all_version.sh "1.1.0;1.0.0;master" 1.0.0 http://mxnet.incubator.apache.org/
 
 set -e
 set -x
@@ -36,7 +36,6 @@ set -x
 MASTER_SOURCE_DIR="../../docs"
 STATIC_FILES_DIR="_static"
 MXNET_THEME_DIR="_static/mxnet-theme"
-BUILD_HTML_DIR="_build/html"
 
 if [ -z "$1" ]
   then
@@ -132,4 +131,3 @@ for tag in $tag_list; do
 done
 
 echo "The output of this process can be found in the VersionedWeb folder."
-
