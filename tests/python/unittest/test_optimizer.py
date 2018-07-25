@@ -835,8 +835,7 @@ class PyRMSProp(mx.optimizer.Optimizer):
         if self.clip_weights:
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
-@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
-@with_seed(0)
+@with_seed()
 def test_rms():
     opt1 = PyRMSProp
     opt2 = mx.optimizer.RMSProp
@@ -848,6 +847,9 @@ def test_rms():
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
     for dtype in [np.float16, np.float32]:
+        # Reduce foating point compare tolerance to avoid flaky test failure.
+        rtol, atol = (1e-1, 1e-1) if dtype is np.float16 else (1e-2, 1e-2)
+
         for cw_option in cw_options:
             for cg_option in cg_options:
                 for center_option in center_options:
@@ -865,9 +867,9 @@ def test_rms():
                                         ('multi_precision' not in kwarg or
                                             not kwarg['multi_precision'])):
                                     continue
-                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=rtol, atol=atol)
                                 if (default_context() == mx.cpu()):
-                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse', rtol=rtol, atol=atol)
 
 class PyFtrl(mx.optimizer.Optimizer):
     """The Ftrl optimizer.

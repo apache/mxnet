@@ -2014,6 +2014,14 @@ class Symbol(SymbolBase):
         """
         return op.broadcast_to(self, *args, **kwargs)
 
+    def broadcast_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_like`.
+
+        The arguments are the same as for :py:func:`broadcast_like`, with
+        this array as data.
+        """
+        return op.broadcast_like(self, *args, **kwargs)
+
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
 
@@ -2037,6 +2045,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.flip(self, *args, **kwargs)
+
+    def diag(self, k=0, **kwargs):
+        """Convenience fluent method for :py:func:`diag`.
+
+        The arguments are the same as for :py:func:`diag`, with
+        this array as data.
+        """
+        return op.diag(self, k, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.

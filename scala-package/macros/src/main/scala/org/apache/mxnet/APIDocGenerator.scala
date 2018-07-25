@@ -22,8 +22,7 @@ import org.apache.mxnet.utils.CToScalaUtils
 import java.io._
 import java.security.MessageDigest
 
-import scala.collection.mutable.ListBuffer
-import scala.io.Source
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
   * This object will generate the Scala documentation of the new Scala API
@@ -56,7 +55,12 @@ private[mxnet] object APIDocGenerator{
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    val absFuncs = absClassFunctions.map(absClassFunction => {
+    // Defines Operators that should not generated
+    val notGenerated = Set("Custom")
+    // TODO: Add Filter to the same location in case of refactor
+    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
+      .filterNot(ele => notGenerated.contains(ele.name))
+      .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)
       val defBody = generateAPISignature(absClassFunction, isSymbol)
       s"$scalaDoc\n$defBody"
@@ -104,9 +108,12 @@ private[mxnet] object APIDocGenerator{
 
   // Generate ScalaDoc type
   def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
-    val desc = func.desc.split("\n").map({ currStr =>
-      s"  * $currStr<br>"
+    val desc = ArrayBuffer[String]()
+    desc += "  * <pre>"
+      func.desc.split("\n").foreach({ currStr =>
+      desc += s"  * $currStr"
     })
+    desc += "  * </pre>"
     val params = func.listOfArgs.map({ absClassArg =>
       val currArgName = absClassArg.argName match {
                 case "var" => "vari"
@@ -178,9 +185,6 @@ private[mxnet] object APIDocGenerator{
 
     _LIB.mxSymbolGetAtomicSymbolInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-
-    val realName = if (aliasName == name.value) "" else s"(a.k.a., ${name.value})"
-
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
       val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
       new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
