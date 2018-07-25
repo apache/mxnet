@@ -38,7 +38,7 @@ from mxnet.test_utils import assert_almost_equal
 # Set fixed random seeds.
 mx.random.seed(7)
 np.random.seed(7)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 # get the current mxnet version we are running on
 mxnet_version = mx.__version__
@@ -47,6 +47,9 @@ data_folder = 'mxnet-model-backwards-compatibility-data'
 backslash = '/'
 s3 = boto3.resource('s3')
 ctx = mx.cpu(0)
+
+def get_model_path(model_name):
+    return os.path.join(os.getcwd(), 'models', str(mxnet_version), model_name)
 
 def get_module_api_model_definition():
     input = mx.symbol.Variable('data')
@@ -61,7 +64,9 @@ def get_module_api_model_definition():
 
 def save_inference_results(inference_results, model_name):
     assert (isinstance(inference_results, mx.ndarray.ndarray.NDArray))
-    mx.nd.save(model_name + '-inference', {'inference' : inference_results})
+    save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-inference']))
+
+    mx.nd.save(save_path, {'inference': inference_results})
 
 def load_inference_results(model_name):
     inf_dict = mx.nd.load(model_name+'-inference')
@@ -70,7 +75,9 @@ def load_inference_results(model_name):
 def save_data_and_labels(test_data, test_labels, model_name):
     assert (isinstance(test_data, mx.ndarray.ndarray.NDArray))
     assert (isinstance(test_labels, mx.ndarray.ndarray.NDArray))
-    mx.nd.save(model_name + '-data', {'data' : test_data, 'labels' : test_labels})
+
+    save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-data']))
+    mx.nd.save(save_path, {'data': test_data, 'labels': test_labels})
 
 def upload_data_and_labels_to_s3(model_name):
     s3 = boto3.client('s3')
@@ -91,19 +98,6 @@ def clean_model_files(files, model_name):
         if os.path.isfile(file):
             os.remove(file)
 
-def download_data_from_s3(model_name):
-    logging.info('Downloading data files for %s from bucket %s' %(model_name, model_bucket_name + backslash + data_folder))
-    bucket = s3.Bucket(model_bucket_name)
-    prefix = data_folder + backslash + model_name + '-data'
-    data_files_meta = list(bucket.objects.filter(Prefix = prefix))
-    if len(data_files_meta) == 0:
-        logging.error('No data files found for %s', model_name)
-        return None
-
-    bucket.download_file(data_folder + backslash + model_name+'-data', model_name+'-data')
-
-    data = mx.nd.load(model_name+'-data')
-    return data
 
 def download_model_files_from_s3(model_name, folder_name):
     model_files = list()
@@ -138,6 +132,11 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
         folder_list.append(obj['Prefix'].strip(backslash))
 
     return folder_list
+
+def create_model_folder(model_name):
+    path = get_model_path(model_name)
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 class Net(gluon.Block):
     def __init__(self, **kwargs):

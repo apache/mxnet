@@ -22,15 +22,6 @@ from common import *
 def test_module_checkpoint_api():
 	model_name = 'module_checkpoint_api'
 	print ('Performing inference for model/API %s' %model_name)
-	data = download_data_from_s3(model_name)
-	if data is None:
-		logging.error ('No data files found for %s' %model_name)
-		return
-
-	test_data = data['data']
-	test_label = data['labels']
-
-	data_iter = mx.io.NDArrayIter(test_data, test_label, batch_size=10)
 
 	## For each MXNet version that has the saved models
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
@@ -39,6 +30,9 @@ def test_module_checkpoint_api():
 		if len(model_files) == 0:
 			logging.warn ('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
+		
+		data = mx.nd.load(''.join([model_name, '-data']))
+		data_iter = mx.io.NDArrayIter(data['data'], data['labels'], batch_size=10)
 	        ## Load the model and perform inference
 	        loaded_model = get_module_api_model_definition()
 
@@ -59,13 +53,6 @@ def test_module_checkpoint_api():
 def test_lenet_gluon_load_params_api():
 	model_name = 'lenet_gluon_save_params_api'
 	logging.info ('Performing inference for model/API %s' %model_name)
-	## Get data from S3
-	data = download_data_from_s3(model_name)
-	if data is None:
-		logging.error ('No data files found for %s' %model_name)
-		return
-	
-	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
 		logging.info ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
@@ -73,6 +60,9 @@ def test_lenet_gluon_load_params_api():
 		if len(model_files) == 0:
 			logging.warn ('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
+
+		data = mx.nd.load(''.join([model_name, '-data']))
+		test_data = data['data']	
 	        ## Load the model and perform inference
 	        loaded_model = Net()
 	        loaded_model.load_params(model_name+'-params')
@@ -86,13 +76,6 @@ def test_lenet_gluon_load_params_api():
 def test_lenet_gluon_hybrid_imports_api():
 	model_name = 'lenet_gluon_hybrid_export_api'
 	logging.info ('Performing inference for model/API %s' %model_name)
-	## Get data from S3
-	data = download_data_from_s3(model_name)
-	if data is None:
-		logging.error ('No data files found for %s' %model_name)
-		return
-	
-	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
 		logging.info ('Fetching files for MXNet version : %s and model %s' %(folder, model_name))
@@ -101,6 +84,8 @@ def test_lenet_gluon_hybrid_imports_api():
 			logging.warn('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue  
 	        ## Load the model and perform inference
+		data = mx.nd.load(''.join([model_name, '-data']))
+		test_data = data['data']
 	        loaded_model = HybridNet()
 	        loaded_model = gluon.SymbolBlock.imports(model_name + '-symbol.json', ['data'], model_name + '-0001.params')
 	        output = loaded_model(test_data)
@@ -118,13 +103,6 @@ def test_lstm_gluon_load_parameters_api():
 
 	model_name = 'lstm_gluon_save_parameters_api'
 	logging.info ('Performing inference for model/API %s and model'%model_name)
-	## Get data from S3
-	data = download_data_from_s3(model_name)
-	if data is None:
-		logging.error ('No data files found for %s' %model_name)
-		return
-
-	test_data = data['data']
 
 	for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
 		logging.info ('Fetching files for MXNet version : %s' %folder)
@@ -132,6 +110,9 @@ def test_lstm_gluon_load_parameters_api():
 		if len(model_files) == 0:
 			logging.warn('No training files found for %s for MXNet version : %s'%(model_name, folder))
 			continue
+		
+		data = mx.nd.load(''.join([model_name, '-data']))
+		test_data = data['data']
 	        ## Load the model and perform inference
 	        loaded_model = SimpleLSTMModel()
 	        loaded_model.load_parameters(model_name+'-params')
