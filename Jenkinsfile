@@ -849,6 +849,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
@@ -893,6 +894,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
