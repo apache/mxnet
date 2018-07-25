@@ -41,7 +41,7 @@ if [ -z "$1" ]
     IFS=$';'
     tag_list=$1
     echo "Using these tags: $tag_list"
-    for tag in $tag_list; do echo $tag; done
+    build_arr=($tag_list)
 fi
 
 if [ -z "$2" ]
@@ -52,7 +52,10 @@ if [ -z "$2" ]
     IFS=$';'
     tags_to_display=$2
     echo "Displaying these tags: $tags_to_display"
-    for tag in $tags_to_display; do echo $tag; done
+    display_arr=($tags_to_display)
+    for key in ${!build_arr[@]}; do
+        echo "Branch/tag ${build_arr[${key}]} will be displayed as ${display_arr[${key}]}"
+    done
 fi
 
 mxnet_url="https://github.com/apache/incubator-mxnet.git"
@@ -67,12 +70,16 @@ fi
 if [ ! -d "$built" ]; then
   mkdir $built
   mkdir "$built/versions"
+  else
+    if [ ! -d "$built/versions" ]; then
+      mkdir "$built/versions"
+    fi
 fi
 
 # Checkout each tag and build it
 # Then store it in a folder according to the desired display tag
-i=0
-for tag in $tag_list; do
+for key in ${!build_arr[@]}; do
+    tag=${build_arr[${key}]}
     cd "$mxnet_folder"
     git fetch
     if [ $tag == 'master' ]
@@ -93,15 +100,14 @@ for tag in $tag_list; do
     make clean
     make html USE_OPENMP=1 || exit 1
     cd ../../
-    altname=$tags_to_display[$i]
-    file_loc="$built/versions/$altname"
+    # Use the display tag name for the folder name
+    file_loc="$built/versions/${display_arr[${key}]}"
     if [ -d "$file_loc" ] ; then
         rm -rf "$file_loc"
     fi
     mkdir "$file_loc"
     echo "Storing artifacts for $tag in $file_loc folder..."
     cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
-    i=$((i+1));
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
