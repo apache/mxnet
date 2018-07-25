@@ -24,7 +24,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.apache.mxnetexamples.util.DownloadUtil
+import org.apache.mxnet.util.DownloadUtil
 
 import sys.process.Process
 

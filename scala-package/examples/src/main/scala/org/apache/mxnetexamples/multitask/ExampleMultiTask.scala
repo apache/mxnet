@@ -35,7 +35,7 @@ import org.apache.mxnet.Context
 import org.apache.mxnet.Xavier
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnet.Executor
-import org.apache.mxnetexamples.util.DownloadUtil
+import org.apache.mxnet.util.DownloadUtil
 
 import scala.collection.immutable.ListMap
 import scala.sys.process.Process

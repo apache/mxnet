@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnetexamples.util
+package org.apache.mxnet.util
 
 import java.io.File
 import java.net.URL
