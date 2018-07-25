@@ -285,7 +285,7 @@ class InplaceABN(BatchNorm):
           deep network training by reducing internal covariate shift." *ICML 2015*
         .. [2] Bulò, Samuel Rota, Lorenzo Porzi, and Peter Kontschieder. \
           In-Place Activated BatchNorm for Memory-Optimized Training of DNNs CVPR 2018
-          
+
     """
     def __init__(self, in_channels=0, sync=False, num_devices=None, slope=0.01,
                  momentum=0.9, epsilon=1e-5, center=True, use_global_stats=False,
@@ -293,9 +293,9 @@ class InplaceABN(BatchNorm):
                  running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
         super(InplaceABN, self).__init__(1, momentum, epsilon, center, True, use_global_stats,
-                                            beta_initializer, gamma_initializer,
-                                            running_mean_initializer, running_variance_initializer,
-                                            in_channels, **kwargs)
+                                         beta_initializer, gamma_initializer,
+                                         running_mean_initializer, running_variance_initializer,
+                                         in_channels, **kwargs)
         num_devices = 1 if not sync else self._get_num_devices() \
             if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
