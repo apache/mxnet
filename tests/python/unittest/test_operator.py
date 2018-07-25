@@ -2506,8 +2506,9 @@ def test_stn_valid_sampling():
     ) + target_shape))
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1234)
+# @haojin2: Getting rid of fixed seed as flakiness could not be reproduced,
+# tracked at https://github.com/apache/incubator-mxnet/issues/11714
+@with_seed()
 def test_dot():
     ctx=default_context()
     dtypes = ['float32', 'float64']
