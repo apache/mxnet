@@ -94,9 +94,9 @@ class MKLDNNPoolingBwd {
                    bool with_ws);
 
   ~MKLDNNPoolingBwd() {}
-  void SetDataHandle(const mxnet::NDArray *workspace,
-                     const mxnet::NDArray &out_grad,
-                     const mkldnn::memory *diff_src_mem);
+  void SetNewMem(const mxnet::NDArray *workspace,
+                 const mxnet::NDArray &out_grad,
+                 const mkldnn::memory *diff_src_mem);
   const mkldnn::pooling_backward &GetBwd();
   const mkldnn::pooling_backward::primitive_desc &GetPd();
 };
