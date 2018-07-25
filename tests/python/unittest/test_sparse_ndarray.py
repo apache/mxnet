@@ -379,12 +379,11 @@ def test_sparse_nd_broadcast():
     sample_num = 1000
     # TODO(haibin) test with more than 2 dimensions
     def test_broadcast_to(stype):
-        for i in range(sample_num):
+        for _ in range(sample_num):
             ndim = 2
             target_shape = np.random.randint(1, 11, size=ndim)
             shape = target_shape.copy()
             axis_flags = np.random.randint(0, 2, size=ndim)
-            axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
                     shape[axis] = 1
@@ -397,9 +396,31 @@ def test_sparse_nd_broadcast():
             assert (ndarray_ret.shape == target_shape).all()
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
+
+    def test_broadcast_like(stype):
+        for _ in range(sample_num):
+            ndim = 2
+            target_shape = np.random.randint(1, 11, size=ndim)
+            target = mx.nd.ones(shape=tuple(target_shape))
+            shape = target_shape.copy()
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    shape[axis] = 1
+            dat = np.random.rand(*shape) - 0.5
+            numpy_ret = dat
+            ndarray = mx.nd.array(dat).tostype(stype)
+            ndarray_ret = ndarray.broadcast_like(target)
+            if type(ndarray_ret) is mx.ndarray.NDArray:
+                ndarray_ret = ndarray_ret.asnumpy()
+            assert (ndarray_ret.shape == target_shape).all()
+            err = np.square(ndarray_ret - numpy_ret).mean()
+            assert err < 1E-8
+
     stypes = ['csr', 'row_sparse']
     for stype in stypes:
         test_broadcast_to(stype)
+        test_broadcast_like(stype)
 
 
 @with_seed()
@@ -856,17 +877,16 @@ def test_sparse_nd_fluent():
             else:
                 assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
-    common_func = ['zeros_like', 'square']
-    rsp_func = ['round', 'rint', 'fix', 'floor', 'ceil', 'trunc',
-                'abs', 'sign', 'sin', 'degrees', 'radians', 'expm1']
-    for func in common_func:
+    all_funcs = ['zeros_like', 'square', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc',
+                 'abs', 'sign', 'sin', 'degrees', 'radians', 'expm1']
+    for func in all_funcs:
         check_fluent_regular('csr', func, {})
-    for func in common_func + rsp_func:
         check_fluent_regular('row_sparse', func, {})
 
-    rsp_func = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
+    all_funcs = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
                 'arcsinh', 'arctanh', 'log1p', 'sqrt', 'relu']
-    for func in rsp_func:
+    for func in all_funcs:
+        check_fluent_regular('csr', func, {}, equal_nan=True)
         check_fluent_regular('row_sparse', func, {}, equal_nan=True)
 
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))

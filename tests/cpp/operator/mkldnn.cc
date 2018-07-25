@@ -25,12 +25,16 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <mkldnn_types.h>
 #include <cmath>
 #include <climits>
+#include <set>
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../../src/operator/nn/pooling-inl.h"
 
 using namespace mxnet;
 
@@ -161,12 +165,12 @@ static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
 }
 
 static mkldnn::memory::primitive_desc GetExpandedMemPD(
-    mkldnn::memory::primitive_desc pd, float num_input, int dim = 0) {
+    mkldnn::memory::primitive_desc pd, float scale, int dim = 0) {
   CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
   nnvm::TShape s(pd.desc().data.ndims);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
-  s[dim] = static_cast<int>(s[dim] * num_input);
+  s[dim] = static_cast<int>(s[dim] * scale);
   return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
                   static_cast<mkldnn::memory::format>(pd.desc().data.format));
 }
@@ -363,6 +367,7 @@ struct NDArrayAttrs {
 struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
+  std::set<OpReqType> requests;
   int num_inputs;
   int num_outputs;
 };
@@ -375,6 +380,9 @@ OpAttrs GetCopyOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -386,6 +394,9 @@ OpAttrs GetCopyBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -399,6 +410,9 @@ OpAttrs GetReluOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -412,6 +426,9 @@ OpAttrs GetReluBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -423,6 +440,9 @@ OpAttrs GetSumOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -434,6 +454,9 @@ OpAttrs GetSumBackwardsOp() {
   attrs.dispatches.resize(2);
   attrs.dispatches[0] = DispatchMode::kFCompute;
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
@@ -464,6 +487,45 @@ OpAttrs GetConcatBackwardsOp(int num_args, int dim) {
   attrs.dispatches[1] = DispatchMode::kFComputeEx;
   return attrs;
 }
+
+std::string CreateShapeString(int value, int dim) {
+  std::stringstream ss;
+  ss << "(";
+  for (int i = 0; i < dim; i++) {
+    ss << value;
+    if (i != dim - 1) ss << ",";
+  }
+  ss << ")";
+  return ss.str();
+}
+
+
+OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Pooling");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = dim == 2 ? 2 : 1;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"pool_type" , "max"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
+OpAttrs GetPoolingBackwardsOp(int kernel, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Pooling");
+  attrs.num_inputs = dim == 2 ? 5 : 3;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"pool_type" , "max"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
 
 void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
   TShape t1 = arr1.arr.shape();
@@ -578,10 +640,11 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false, int num_inputs =
 std::vector<NDArrayAttrs> GetTestOutputArrays(
     const TShape &shp,
     const std::vector<mkldnn::memory::primitive_desc> &pds,
-    float num_inputs = 0, int dim = 0) {
+    std::vector<float>scale = {1}) {
   TShape shape = shp;
-  if (num_inputs != 0)
-    shape[dim] = static_cast<int>(shape[dim] * num_inputs);
+
+  for (int dim = 0; dim < scale.size(); dim++)
+    shape[dim] = static_cast<int>(shape[dim] * scale[dim]);
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
@@ -625,12 +688,13 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
     if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
       continue;
 
-    if (num_inputs != 0)
-      pd = GetExpandedMemPD(pd, num_inputs);
+    if (scale.size() > pd.desc().data.ndims)
+      continue;
 
+    for (int dim = 0; dim < scale.size(); dim++)
+      pd = GetExpandedMemPD(pd, scale[dim]);
 
     // Type 2, 3.
-
     arr = NDArray(shape, Context());
     desc = "MKLDNN NDArray";
     if (shape.ndim() != pd.desc().data.ndims) {
@@ -691,7 +755,11 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
           continue;
         std::cout << "Extending " << shape << " dim " <<
                   dim << " and " << num_inputs << "num_inputs\n";
-        auto output_arrs = GetTestOutputArrays(shape, pds, num_inputs, dim);
+        std::vector<float> scale_vector(shape.ndim());
+        for (int i = 0; i < shape.ndim(); i++)
+          scale_vector[i] = 1;
+        scale_vector[dim] = num_inputs;
+        auto output_arrs = GetTestOutputArrays(shape, pds, scale_vector);
         for (auto &out_arr : output_arrs) {
           auto out_shape = out_arr.arr.shape();
           EXPECT_EQ(shape.Size() * num_inputs, out_arr.arr.shape().Size());
@@ -787,7 +855,7 @@ int GetDim(TShape input_shape, TShape output_shape) {
 }
 
 /*
- * Calculates the size of continuous block of array inside arger concatenated array
+ * Calculates the size of continuous block of array inside larger concatenated array
  * Used to verify concat/concat backwards operator
  */
 int GetBlockSize(TShape shape, int dim) {
@@ -821,6 +889,21 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
   }
 }
 
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  CHECK(original_outputs.size() == new_outputs.size());
+  std::vector<NDArray*> tmp_outputs;
+  NDArray tmp;
+  for (size_t i = 0; i < new_outputs.size(); i++) {
+    tmp = new_outputs[i]->Reorder2Default() - original_outputs[i]->Reorder2Default();
+    tmp_outputs.push_back(&tmp);
+  }
+  Engine::Get()->WaitForAll();
+  verify_fn(in_arrs, tmp_outputs);
+}
+
 void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
   // in_arrs is larger array, out_arr is ammler
@@ -844,15 +927,6 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
                   out_data[(block_num * num_inputs + input_num) * block_size + i]);
     }
   }
-}
-
-void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
-                      const std::vector<NDArray*> &original_outputs,
-                      const std::vector<NDArray*> &new_outputs,
-                      VerifyFunc verify_fn) {
-  NDArray tmp = new_outputs[0]->Reorder2Default() - original_outputs[0]->Reorder2Default();
-  tmp.WaitToRead();
-  verify_fn(in_arrs, {&tmp});
 }
 
 TEST(MKLDNN_NDArray, CopyFrom) {
@@ -879,54 +953,88 @@ void TestOp(const OpAttrs &attrs, VerifyFunc verify_fn) {
   std::vector<NDArray*> inputs(attrs.num_inputs);
   std::vector<NDArray*> outputs(attrs.num_outputs);
   std::vector<OpReqType> req(attrs.num_outputs);
+  std::vector<NDArrayAttrs> in_arrs;
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
   std::vector<DispatchMode> dispatches = attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
-  for (auto &in_arr : in_arrs) {
-    for (auto &dispatch : dispatches) {
-      std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
-      for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &in_arr.arr;
-      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        for (int i = 0; i < attrs.num_outputs; i++) {
-          req[i] = kWriteTo;
-          outputs[i] = &out_arrs[i][output_i].arr;
+  if (attrs.requests.find(OpReqType::kWriteTo) != attrs.requests.end()) {
+    std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        std::vector<std::vector<NDArrayAttrs>> out_arrs(attrs.num_outputs);
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          for (int i = 0; i < attrs.num_outputs; i++) {
+            req[i] = kWriteTo;
+            outputs[i] = &out_arrs[i][output_i].arr;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          verify_fn(inputs, outputs);
         }
-        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
-                                    outputs, req, dispatch, mxnet::OpStatePtr());
-        Engine::Get()->WaitForAll();
-        verify_fn(inputs, outputs);
       }
     }
   }
 
-  for (auto &dispatch : dispatches) {
-    in_arrs = GetTestInputArrays();
-    for (auto &arr : in_arrs) {
-      // If the array is a view, we shouldn't write data to it.
-      if (arr.arr.IsView())
-        continue;
-      NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < attrs.num_inputs; i++)
-        inputs[i] = &arr.arr;
-      for (int i = 0; i < attrs.num_outputs; i++) {
-        req[i] = kWriteInplace;
-        outputs[i] = &arr.arr;
+  if (attrs.requests.find(OpReqType::kWriteInplace) != attrs.requests.end()) {
+    for (auto &dispatch : dispatches) {
+      in_arrs = GetTestInputArrays();
+      for (auto &arr : in_arrs) {
+        // If the array is a view, we shouldn't write data to it.
+        if (arr.arr.IsView())
+          continue;
+        NDArrayAttrs orig(arr.arr.Copy(arr.arr.ctx()), "InPlace Copy");
+        for (int i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &arr.arr;
+        for (int i = 0; i < attrs.num_outputs; i++) {
+          req[i] = kWriteInplace;
+          outputs[i] = &arr.arr;
+        }
+        PrintVerifyMsg(orig, arr);
+        Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
+                                    dispatch, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        std::vector<NDArray *> orig_inputs(attrs.num_inputs);
+        for (int i = 0; i < attrs.num_inputs; i++)
+          orig_inputs[i] = &orig.arr;
+        verify_fn(orig_inputs, outputs);
       }
-      PrintVerifyMsg(orig, arr);
-      Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs, outputs, req,
-                                  dispatch, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      std::vector<NDArray *> orig_inputs(attrs.num_inputs);
-      for (int i = 0; i < attrs.num_inputs; i++)
-        orig_inputs[i] = &orig.arr;
-      verify_fn(orig_inputs, outputs);
+    }
+  }
+
+  if (attrs.requests.find(OpReqType::kAddTo) != attrs.requests.end()) {
+    std::vector<NDArray*> original_outputs(attrs.num_outputs);
+    in_arrs = GetTestInputArrays();
+    for (auto &in_arr : in_arrs) {
+      for (auto &dispatch : dispatches) {
+        for (int i = 0; i < attrs.num_outputs; i++)
+          out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds);
+        for (size_t i = 0; i < attrs.num_inputs; i++)
+          inputs[i] = &in_arr.arr;
+        for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+          NDArray tmp;
+          for (size_t i = 0; i < attrs.num_outputs; i++) {
+            auto out_arr = out_arrs[i][output_i];
+            tmp = out_arr.arr.Copy(out_arr.arr.ctx());
+            original_outputs[i] =  &tmp;
+            outputs[i] = &out_arrs[i][output_i].arr;
+            req[i] = kAddTo;
+          }
+          PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+          Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
+                                      outputs, req, dispatch, mxnet::OpStatePtr());
+          Engine::Get()->WaitForAll();
+          VerifyAddRequest(inputs, original_outputs, outputs, verify_fn);
+        }
+      }
     }
   }
 }
@@ -960,8 +1068,13 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
         continue;
       float scale = backwards ? 1 / static_cast<float>(attrs.num_outputs) :
           static_cast<float>(attrs.num_inputs);
+
+      std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+      for (int i = 0; i < in_arr.arr.shape().ndim(); i++)
+        scale_vector[i] = 1;
+      scale_vector[dim] = scale;
       for (int i = 0; i < attrs.num_outputs; i++)
-        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale, dim);
+        out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
 
       for (int i = 0; i < attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
@@ -971,13 +1084,122 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
         }
-
         PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
         Imperative::Get()->InvokeOp(Context(), attrs.attrs, inputs,
                                     outputs, req, dispatch, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         verify_fn(inputs, outputs);
       }
+    }
+  }
+}
+
+int CalculateWidthPoolOutput(int width, int kernel, int padding, int stride) {
+  return (width - kernel + 2 * padding) / stride  + 1;
+}
+
+void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
+  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
+  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
+
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+
+
+  std::vector<OpReqType> req(forward_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  mxnet::op::PoolingParam param;
+  param.Init(forward_attrs.attrs.dict);
+  TShape kernel = param.kernel;
+  TShape padding = param.pad;
+  TShape stride = param.stride;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
+  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
+
+  for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+    auto in_arr = in_arrs[i1];
+
+    // can only pool only 3D and 4D inputs
+    TShape input_shape = in_arr.arr.shape();
+    if (input_shape.ndim() != kernel.ndim() + 2)
+      continue;
+    // cannot pool if ndarray and mkldnn memory have different ndim
+    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
+        != in_arr.arr.shape().ndim())
+      continue;
+    std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+    for (int i = 0; i < in_arr.arr.shape().ndim(); i++) {
+      if (i < 2)
+        scale_vector[i] = 1;
+      else
+        scale_vector[i] = CalculateWidthPoolOutput(
+            input_shape[i], kernel[i-2], padding[i-2], stride[i-2]) /
+            static_cast<float>(input_shape[i]);
+    }
+    for (int i = 0; i < forward_attrs.num_outputs; i++) {
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+    }
+
+    for (int i = 0; i < forward_attrs.num_inputs; i++)
+      inputs[i] = &in_arr.arr;
+
+    for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+        req[i] = kWriteTo;
+        outputs[i] = &out_arrs[i][output_i].arr;
+        ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+      }
+      Imperative::Get()->set_is_training(true);
+
+      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(outputs, ex_outputs);
+
+
+      // backwards test performed same time since output needed
+      if (backwards_attrs.num_inputs == 3) {
+        backwards_input[0] = outputs[0];  // output grad
+        backwards_input[1] = inputs[0];  // input
+        backwards_input[2] = outputs[0];  // output
+      } else if (backwards_attrs.num_inputs == 5) {
+        backwards_input[0] = outputs[0];  // output grad
+        backwards_input[1] = outputs[0];  // workspace grad
+        backwards_input[2] = inputs[0];  // input
+        backwards_input[3] = outputs[0];  // output
+        backwards_input[4] = ex_outputs[1];  // workspace
+      }
+
+      // needs copies of inputs since they be reused in next iteration
+      // cannot use Copy method since we need to maintain MKLDNN format
+      auto tmp_output = GetTestInputArrays()[i1];
+      auto tmp_output2 = GetTestInputArrays()[i1];
+      backwards_outputs[0] = &tmp_output.arr;
+      backwards_ex_outputs[0] = &tmp_output2.arr;
+      back_req[0] = kWriteTo;
+      std::cout << "Backwards: ";
+      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
     }
   }
 }
@@ -1026,6 +1248,22 @@ TEST(IMPERATIVE, ConcatBackwardsOp) {
     for (int dim = 0; dim < 5; dim++) {
       OpAttrs attrs = GetConcatBackwardsOp(num_inputs, dim);
       TestConcatOp(attrs, VerifyConcatBackwardsResult, true);
+    }
+  }
+}
+
+TEST(IMPERATIVE, PoolingOp) {
+  for (int dim = 2; dim < 4; dim++) {
+    for (int kernel = 1; kernel < 4; kernel++) {
+      for (int stride = 1; stride < 3; stride++) {
+        for (int pad = 0; pad < 2; pad++) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs forward_attrs = GetPoolingOp(kernel, dim, stride, pad);
+          OpAttrs backwards_attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
+          TestPoolingOp(forward_attrs, backwards_attrs);
+        }
+      }
     }
   }
 }

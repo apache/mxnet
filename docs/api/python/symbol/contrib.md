@@ -53,6 +53,8 @@ In the rest of this document, we list routines provided by the `symbol.contrib` 
     ifft
     quantize
     foreach
+    while_loop
+    cond
 ```
 
 ## API Reference

@@ -22,8 +22,10 @@ import copy
 from numpy.testing import assert_allclose
 import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
+from common import assert_raises_cudnn_disabled
 
 
+@assert_raises_cudnn_disabled()
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -35,61 +37,6 @@ def test_rnn():
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
-
-
-class TestRNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
-        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = cell_type(hidden_size, prefix='rnn_')
-
-    def hybrid_forward(self, F, inputs, states):
-        out, states = F.contrib.foreach(self.cell, inputs, states)
-        return out
-
-def check_contrib_rnn(cell_type, num_states):
-    batch_size = 10
-    hidden_size = 100
-    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(5, batch_size, 50))
-    state_shape = (batch_size, hidden_size)
-    states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
-    layer = TestRNNLayer(cell_type, hidden_size)
-    layer.initialize(ctx=mx.cpu(0))
-    res1 = layer(rnn_data, states)
-    params1 = layer.collect_params()
-    orig_params1 = copy.deepcopy(params1)
-
-    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
-    with mx.autograd.record():
-        res1 = layer(rnn_data, states)
-    res1.backward()
-    trainer.step(batch_size)
-
-    layer = TestRNNLayer(cell_type, hidden_size)
-    layer.initialize(ctx=mx.cpu(0))
-    layer.hybridize()
-    res2 = layer(rnn_data, states)
-    params2 = layer.collect_params()
-    for key, val in orig_params1.items():
-        params2[key].set_data(val.data())
-
-    trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
-    with mx.autograd.record():
-        res2 = layer(rnn_data, states)
-    assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
-    res2.backward()
-    trainer.step(batch_size)
-
-    for key, val in params1.items():
-        weight1 = val.data()
-        weight2 = params2[key].data()
-        assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(), rtol=0.001, atol=0.0001)
-
-
-def test_contrib_rnn():
-    cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
-            (gluon.rnn.GRUCell, 1)]
-    for cell_type, num_states in cell_types:
-        check_contrib_rnn(cell_type, num_states)
 
 
 def test_lstm():
@@ -104,6 +51,7 @@ def test_lstm():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
+@assert_raises_cudnn_disabled()
 def test_lstm_forget_bias():
     forget_bias = 2.0
     stack = gluon.rnn.SequentialRNNCell()
@@ -124,6 +72,8 @@ def test_lstm_forget_bias():
                                forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
     assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
 
+
+@assert_raises_cudnn_disabled()
 def test_lstm_cpu_inference():
     # should behave the same as lstm cell
     EXPECTED_LSTM_OUTPUT = np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
@@ -139,6 +89,7 @@ def test_lstm_cpu_inference():
                                       rtol=1e-3, atol=1e-5)
 
 
+@assert_raises_cudnn_disabled()
 def test_gru():
     cell = gluon.rnn.GRUCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -419,6 +370,7 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
+@assert_raises_cudnn_disabled()
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True), mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)))
@@ -531,6 +483,8 @@ def test_cell_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
     assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
 
+
+@assert_raises_cudnn_disabled()
 def test_layer_fill_shape():
     layer = gluon.rnn.LSTM(10)
     layer.hybridize()

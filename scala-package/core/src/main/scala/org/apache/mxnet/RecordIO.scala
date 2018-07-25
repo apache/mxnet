@@ -98,7 +98,7 @@ object MXRecordIO {
 
   /**
    * pack an string into MXImageRecord.
-   * @param
+   * @param header
    *  header of the image record.
    *  header.label an array.
    * @param s string to pack

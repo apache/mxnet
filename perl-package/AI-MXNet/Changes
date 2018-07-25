@@ -1,4 +1,9 @@
 Revision history for Perl extension AI::MXNet
+1.31    Tue Jul 10 21:19:13 PDT 2018
+        - Memory leak fix for Gluon API
+        - Added summary function for Gluon models
+        - Improved graphviz vizualizations
+        - Added artistic style transfer example for Gluon API
 
 1.3     Tue Jun 26 20:57:40 PDT 2018
         - Major Gluon update towards parity with Python's API.

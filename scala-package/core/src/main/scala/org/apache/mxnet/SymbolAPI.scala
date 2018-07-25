@@ -16,6 +16,8 @@
  */
 package org.apache.mxnet
 
+import scala.collection.mutable
+
 
 @AddSymbolAPIs(false)
 /**
@@ -23,4 +25,10 @@ package org.apache.mxnet
   * Main code will be generated during compile time through Macros
   */
 object SymbolAPI extends SymbolAPIBase {
+  def Custom (op_type : String, kwargs : mutable.Map[String, Any],
+             name : String = null, attr : Map[String, String] = null) : Symbol = {
+    val map = kwargs
+    map.put("op_type", op_type)
+    Symbol.createSymbolGeneral("Custom", name, attr, Seq(), map.toMap)
+  }
 }

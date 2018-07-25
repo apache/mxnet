@@ -356,6 +356,10 @@ object DataDesc {
   }
 
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
-    shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+    if (shapes != null) {
+      shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+    } else {
+      null
+    }
   }
 }
