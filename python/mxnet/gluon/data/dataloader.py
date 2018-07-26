@@ -150,6 +150,14 @@ def default_mp_batchify_fn(data):
                         ctx=context.Context('cpu_shared', 0))
 
 
+def pin_memory_batch(data):
+    """Move data into cpu_pinned memory. """
+    if isinstance(data, nd.NDArray):
+        return data.as_in_context(context.cpu_pinned())
+    elif isinstance(data, (list, tuple)):
+        return [pin_memory_batch(d) for d in data]
+    return data
+
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
     dataset._fork()
@@ -171,7 +179,7 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False):
                 batch = batch.as_in_context(context.cpu_pinned())
             except:
                 pass
-        batch = batch.as_in_context(context.cpu())
+        batch = pin_memory_batch(batch)
         data_buffer[idx] = batch
 
 class _MultiWorkerIter(object):
@@ -343,7 +351,7 @@ class DataLoader(object):
                 for batch in self._batch_sampler:
                     ret = self._batchify_fn([self._dataset[idx] for idx in batch])
                     if self._pin_memory:
-                        ret = ret.as_in_context(context.cpu_pinned())
+                        ret = pin_memory_batch(ret)
                     yield ret
             return same_process_iter()
 
