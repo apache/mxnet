@@ -363,7 +363,7 @@ def global_avgpooling(attrs, inputs, proto_obj):
 
 def global_lppooling(attrs, inputs, proto_obj):
     """Performs global lp pooling on the input."""
-    p_value = attrs['p'] if 'p' in attrs else 2
+    p_value = attrs.get('p', 2)
     new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'lp',
@@ -639,7 +639,7 @@ def avg_pooling(attrs, inputs, proto_obj):
 
 def lp_pooling(attrs, inputs, proto_obj):
     """LP Pooling"""
-    p_value = attrs['p'] if 'p' in attrs else 2
+    p_value = attrs.get('p', 2)
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
                                                         'strides': 'stride',
