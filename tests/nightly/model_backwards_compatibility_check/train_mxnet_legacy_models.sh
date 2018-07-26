@@ -30,7 +30,7 @@ run_models() {
 install_mxnet() {
 	version=$1
 	echo "Installing MXNet "$version
-	pip install mxnet==$version
+	pip install mxnet==$version --user
 }
 
 echo `pwd`
