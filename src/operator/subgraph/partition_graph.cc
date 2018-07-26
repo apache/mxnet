@@ -147,7 +147,7 @@ bool LabelSubgraph(const Graph& g,
   // key: nodes that serve as input/output nodes to the subgraph
   // value: pair of vectors of nodes in the subgraph. The first vector contains the
   // output nodes of the key in the subgraph, and the second vector contains the
-  // input ndoes of the key in the subgraph. If both vectors are non-empty,
+  // input nodes of the key in the subgraph. If both vectors are non-empty,
   // it means there is a loop between the subgraph and the key node.
   // When breaking the loop, we want to start removing the node with the largest node id.
   std::unordered_map<const nnvm::Node*,
@@ -208,7 +208,8 @@ bool LabelSubgraph(const Graph& g,
     non_subgraph_nodes.push_back(kv.first);
   }
   // check whether there is a cycle between the subgraph and its input/output nodes
-  auto is_ancestor = [&](const nnvm::Node* ancestor, const nnvm::Node* descendant) {
+  auto is_ancestor = [&](const nnvm::Node* ancestor, const nnvm::Node* descendant,
+                         const std::vector<nnvm::Node*>& snodes) {
     if (ancestor == descendant) return true;
     std::stack<const nnvm::Node*> s;
     s.push(descendant);
@@ -223,7 +224,11 @@ bool LabelSubgraph(const Graph& g,
         return true;
       }
       for (const auto& entry : top->inputs) {
-        s.push(entry.node.get());
+        // when searching for the ancestor, the path cannot cross any subgraph node
+        auto it = std::find(snodes.begin(), snodes.end(), entry.node.get());
+        if (it == snodes.end()) {
+          s.push(entry.node.get());
+        }
       }
     }
     return false;
@@ -240,7 +245,7 @@ bool LabelSubgraph(const Graph& g,
       const auto node_id = std::max(indexed_graph.node_id(output_nodes.back()),
                                     indexed_graph.node_id(input_nodes.back()));
       excluded_node_id = std::max(excluded_node_id, static_cast<int>(node_id));
-    } else if (!output_nodes.empty()) {
+    } else if (!input_nodes.empty()) {
       // node i is an input to the subgraph, find out if there is a node j
       // which is an output of the subgraph and also a child of node i.
       for (size_t j = i + 1; j < non_subgraph_nodes.size(); ++j) {
@@ -248,10 +253,10 @@ bool LabelSubgraph(const Graph& g,
         CHECK(it2 != non_subgraph_node_map.end());
         // i is topologically before j, j might be a direct/indirect output node of i
         CHECK_LT(indexed_graph.node_id(it1->first), indexed_graph.node_id(it2->first));
-        if (!it2->second.second.empty() && is_ancestor(it1->first, it2->first)) {
+        if (!it2->second.first.empty() && is_ancestor(it1->first, it2->first, *subgraph_nodes)) {
           // found a loop
-          const auto node_id = std::max(indexed_graph.node_id(output_nodes.back()),
-                                        indexed_graph.node_id(it2->second.second.back()));
+          const auto node_id = std::max(indexed_graph.node_id(input_nodes.back()),
+                                        indexed_graph.node_id(it2->second.first.back()));
           excluded_node_id = std::max(excluded_node_id, static_cast<int>(node_id));
         }
       }

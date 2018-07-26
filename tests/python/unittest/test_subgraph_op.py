@@ -119,7 +119,7 @@ def test_subgraph_exe():
         data = mx.sym.Variable('data', shape=(1,))
         ret1 = mx.sym.sin(data)
         ret2 = mx.sym.cos(ret1)
-        for _ in range(1):
+        for _ in range(5):
             ret2 = mx.sym.cos(ret2)
         ret = ret1 + ret2
         check_subgraph_exe(ret, ['sin', 'elemwise_add', '_plus', '_Plus'])
