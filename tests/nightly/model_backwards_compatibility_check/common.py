@@ -48,8 +48,10 @@ backslash = '/'
 s3 = boto3.resource('s3')
 ctx = mx.cpu(0)
 
+
 def get_model_path(model_name):
     return os.path.join(os.getcwd(), 'models', str(mxnet_version), model_name)
+
 
 def get_module_api_model_definition():
     input = mx.symbol.Variable('data')
@@ -57,10 +59,11 @@ def get_module_api_model_definition():
 
     fc1 = mx.symbol.FullyConnected(data=input, name='fc1', num_hidden=128)
     act1 = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(data=fc1, name='fc2', num_hidden=2)
+    fc2 = mx.symbol.FullyConnected(data=act1, name='fc2', num_hidden=2)
     op = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
     model = mx.mod.Module(symbol=op, context=ctx, data_names=['data'], label_names=['softmax_label'])
     return model
+
 
 def save_inference_results(inference_results, model_name):
     assert (isinstance(inference_results, mx.ndarray.ndarray.NDArray))
@@ -68,9 +71,11 @@ def save_inference_results(inference_results, model_name):
 
     mx.nd.save(save_path, {'inference': inference_results})
 
+
 def load_inference_results(model_name):
     inf_dict = mx.nd.load(model_name+'-inference')
     return inf_dict['inference']
+
 
 def save_data_and_labels(test_data, test_labels, model_name):
     assert (isinstance(test_data, mx.ndarray.ndarray.NDArray))
@@ -79,16 +84,19 @@ def save_data_and_labels(test_data, test_labels, model_name):
     save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-data']))
     mx.nd.save(save_path, {'data': test_data, 'labels': test_labels})
 
+
 def upload_data_and_labels_to_s3(model_name):
     s3 = boto3.client('s3')
     file = model_name + '-data'
     s3.upload_file(file, model_bucket_name, data_folder + backslash +  file)
     logging.info('data files successfully uploaded to s3')
 
+
 def upload_model_files_to_s3(files, folder_name):
     s3 = boto3.client('s3')
     for file in files:
         s3.upload_file(file, model_bucket_name, folder_name + file)
+
 
 def clean_model_files(files, model_name):
     files.append(model_name + '-inference')
@@ -110,19 +118,21 @@ def download_model_files_from_s3(model_name, folder_name):
     for obj in model_files_meta:
         file_name = obj.key.split('/')[2]
         model_files.append(file_name)
-            ## Download this file---
+        # Download this file
         bucket.download_file(obj.key, file_name)
 
     return model_files
 
+
 def get_top_level_folders_in_bucket(s3client, bucket_name):
-    '''This function returns the top level folders in the S3Bucket. These folders help us to navigate to the trained model files stored for different MXNet versions. '''
+    # This function returns the top level folders in the S3Bucket.
+    # These folders help us to navigate to the trained model files stored for different MXNet versions.
     bucket = s3client.Bucket(bucket_name)
-    result = bucket.meta.client.list_objects(Bucket=bucket.name,
-                                         Delimiter=backslash)
+    result = bucket.meta.client.list_objects(Bucket=bucket.name, Delimiter=backslash)
     folder_list = list()
     if 'CommonPrefixes' not in result:
-        logging.error('No trained models found in S3 bucket : %s for this file. Please train the models and run inference again' %bucket_name)
+        logging.error('No trained models found in S3 bucket : %s for this file. '
+                      'Please train the models and run inference again' % bucket_name)
         return folder_list
     for obj in result['CommonPrefixes']:
         folder_name = obj['Prefix'].strip(backslash)
@@ -133,10 +143,12 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
 
     return folder_list
 
+
 def create_model_folder(model_name):
     path = get_model_path(model_name)
     if not os.path.exists(path):
         os.makedirs(path)
+
 
 class Net(gluon.Block):
     def __init__(self, **kwargs):
@@ -144,10 +156,10 @@ class Net(gluon.Block):
         with self.name_scope():
             # layers created in name_scope will inherit name space
             # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+            self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
+            self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+            self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
+            self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
             self.fc1 = nn.Dense(500)
             self.fc2 = nn.Dense(2)
 
@@ -161,16 +173,17 @@ class Net(gluon.Block):
         x = F.tanh(self.fc2(x))
         return x
 
+
 class HybridNet(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(HybridNet, self).__init__(**kwargs)
         with self.name_scope():
             # layers created in name_scope will inherit name space
             # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+            self.conv1 = nn.Conv2D(20, kernel_size=(5, 5))
+            self.pool1 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
+            self.conv2 = nn.Conv2D(50, kernel_size=(5, 5))
+            self.pool2 = nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2))
             self.fc1 = nn.Dense(500)
             self.fc2 = nn.Dense(2)
 
@@ -184,6 +197,7 @@ class HybridNet(gluon.HybridBlock):
         x = F.tanh(self.fc2(x))
         return x
 
+
 class SimpleLSTMModel(gluon.Block):
     def __init__(self, **kwargs):
         super(SimpleLSTMModel, self).__init__(**kwargs)
@@ -196,9 +210,9 @@ class SimpleLSTMModel(gluon.Block):
                 self.model.add(mx.gluon.nn.Dropout(0.5))
                 self.model.add(mx.gluon.nn.Dense(2, flatten=True, activation='tanh'))
 
-
     def forward(self, x):
         return self.model(x)
+
 
 def compare_versions(version1, version2):
     '''
