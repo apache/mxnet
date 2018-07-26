@@ -53,7 +53,7 @@ do
 	if [[ "$count" -gt 1 ]]
 	then
 		echo "Successfully trained files for the previous two MXNet release versions"
-		exit 1
+		exit 0
 	fi
 
 	## If MXNet major version starts with a number >=1. with a wildcard match for the minor version numbers
