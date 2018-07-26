@@ -56,7 +56,7 @@ try {
         // Train models on older versions
         docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
         // upload files to S3 here outside of the docker environment
-        sh ./tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh
+        sh "./tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh"
       }
     }
   }
