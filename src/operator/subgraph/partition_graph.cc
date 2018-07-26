@@ -194,23 +194,70 @@ bool LabelSubgraph(const Graph& g,
       }
     }
   }
+  // prepare to check if there is a cycle
   auto node_cmp = [&] (const nnvm::Node* node1, const nnvm::Node* node2) {
     return indexed_graph.node_id(node1) < indexed_graph.node_id(node2);
   };
-  // check whether there is a loop between the subgraph and its input/output nodes
-  int excluded_node_id = -1;
+  std::vector<const nnvm::Node*> non_subgraph_nodes;
+  non_subgraph_nodes.reserve(non_subgraph_node_map.size());
   for (auto& kv : non_subgraph_node_map) {
     auto& output_nodes = kv.second.first;
+    std::sort(output_nodes.begin(), output_nodes.end(), node_cmp);
     auto& input_nodes = kv.second.second;
+    std::sort(input_nodes.begin(), input_nodes.end(), node_cmp);
+    non_subgraph_nodes.push_back(kv.first);
+  }
+  // check whether there is a cycle between the subgraph and its input/output nodes
+  auto is_ancestor = [&](const nnvm::Node* ancestor, const nnvm::Node* descendant) {
+    if (ancestor == descendant) return true;
+    std::stack<const nnvm::Node*> s;
+    s.push(descendant);
+    size_t count = 0;
+    while (!s.empty()) {
+      CHECK_LT(count, indexed_graph.num_nodes()) << "Finding ancestor failed. There is probably"
+                                                    " a loop in the graph";
+      ++count;
+      const nnvm::Node* top = s.top();
+      s.pop();
+      if (top == ancestor) {
+        return true;
+      }
+      for (const auto& entry : top->inputs) {
+        s.push(entry.node.get());
+      }
+    }
+    return false;
+  };
+  std::sort(non_subgraph_nodes.begin(), non_subgraph_nodes.end(), node_cmp);
+  int excluded_node_id = -1;
+  for (size_t i = 0; i < non_subgraph_nodes.size(); ++i) {
+    auto it1 = non_subgraph_node_map.find(non_subgraph_nodes[i]);
+    CHECK(it1 != non_subgraph_node_map.end());
+    auto& output_nodes = it1->second.first;  // has been top sorted
+    auto& input_nodes = it1->second.second;  // has been top sorted
     if (!output_nodes.empty() && !input_nodes.empty()) {
-      // there is a loop between kv->first and the subgraph
-      std::sort(output_nodes.begin(), output_nodes.end(), node_cmp);
-      std::sort(input_nodes.begin(), input_nodes.end(), node_cmp);
+      // there is a loop between node i and the subgraph
       const auto node_id = std::max(indexed_graph.node_id(output_nodes.back()),
                                     indexed_graph.node_id(input_nodes.back()));
       excluded_node_id = std::max(excluded_node_id, static_cast<int>(node_id));
+    } else if (!output_nodes.empty()) {
+      // node i is an input to the subgraph, find out if there is a node j
+      // which is an output of the subgraph and also a child of node i.
+      for (size_t j = i + 1; j < non_subgraph_nodes.size(); ++j) {
+        auto it2 = non_subgraph_node_map.find(non_subgraph_nodes[j]);
+        CHECK(it2 != non_subgraph_node_map.end());
+        // i is topologically before j, j might be a direct/indirect output node of i
+        CHECK_LT(indexed_graph.node_id(it1->first), indexed_graph.node_id(it2->first));
+        if (!it2->second.second.empty() && is_ancestor(it1->first, it2->first)) {
+          // found a loop
+          const auto node_id = std::max(indexed_graph.node_id(output_nodes.back()),
+                                        indexed_graph.node_id(it2->second.second.back()));
+          excluded_node_id = std::max(excluded_node_id, static_cast<int>(node_id));
+        }
+      }
     }
   }
+
   if (excluded_node_id != -1) {
     CHECK_LT(excluded_node_id, static_cast<int>(simple_nodes.size()));
     CHECK_NE(excluded_node_id, static_cast<int>(snid))
