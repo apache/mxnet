@@ -8,13 +8,18 @@ This folder contains the scripts that are required to run the nightly job of ver
 ## JenkinsfileForMBCC
 This is configuration file for jenkins job.
 
-## Details
-- The `model_backward_compat_checker.sh` is a top level script that invokes the inference files in python. 
+## Details 
 - Currently the APIs that covered for model saving/loading are : do_checkpoint/load_checkpoint, save_params/load_params, save_parameters/load_parameters(added v1.2.1 onwards), export/gluon.SymbolBlock.imports. 
-- These APIs are covered over models with architectures such as : MLP, RNNs, LeNet covering the four scenarios described above.
+- These APIs are covered over models with architectures such as : MLP, RNNs, LeNet, LSTMs covering the four scenarios described above.
 - More operators/models will be added in the future to extend the operator coverage. 
 - The model train file is suffixed by `_train.py` and the trained models are hosted in AWS S3.
-- The trained models for now are backfilled into S3 starting from every MXNet release version v1.1.0.
-- The script for training the models on older versions of MXNet is : `train_mxnet_legacy_models.sh`.
-- The inference file is suffixed by `_inference.py`.
+- The trained models for now are backfilled into S3 starting from every MXNet release version v1.1.0 via the `train_mxnet_legacy_models.sh`. 
+- `train_mxnet_legacy_models.sh` script checks out the previous two releases using git tag command and trains and uploads models to S3 on those MXNet versions.
+- The S3 bucket's folder structure looks like this : 
+    * 1.1.0/<model-1-files>  1.1.0/<model-2-files> 
+    * 1.2.0/<model-1-files> 1.2.0/<model-2-files>
+- The <model-1-files> is also a folder which contains the trained model symbol definitions, toy datasets it was trained on, weights and parameters of the model and other relevant files required to reload the model.
+- Over a period of time, the training script would have accumulated a repository of models trained over several versions of MXNet (both major and minor releases).
+- The inference part is checked via the script `model_backwards_compat_inference.sh`.
+- The inference script scans the S3 bucket for MXNet version folders as described above and runs the inference code for each model folder found.
 
