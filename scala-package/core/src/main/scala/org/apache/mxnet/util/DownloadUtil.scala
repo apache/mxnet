@@ -29,7 +29,7 @@ object DownloadUtil {
     var retry = maxRetry.getOrElse(3)
     var success = false
     if (!tmpFile.exists()) {
-      while (retry > 0 || success) {
+      while (retry > 0 && !success) {
         try {
           FileUtils.copyURLToFile(new URL(url), tmpFile)
           success = true
@@ -37,6 +37,8 @@ object DownloadUtil {
           case e: Exception => retry -= 1
         }
       }
+    } else {
+      success = true
     }
    if (!success) throw new Exception(s"$url Download failed!")
   }
