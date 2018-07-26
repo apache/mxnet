@@ -270,6 +270,8 @@ class GraphExecutor : public Executor {
   std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
+  // use TensorRT optimization pass for inference
+  bool use_tensorrt_ = false;
 };
 
 }  // namespace exec

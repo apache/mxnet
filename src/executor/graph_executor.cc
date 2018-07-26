@@ -46,6 +46,7 @@ namespace exec {
 
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
+  use_tensorrt_ = dmlc::GetEnv("MXNET_USE_TENSORRT", false); 
   need_grad_ = false;
 }
 
@@ -790,7 +791,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         aux_state_vec->emplace_back(aux_nd);
       } else {
         auto it = shared_buffer->find(arg_name);
-        if ( it != shared_buffer->end() ) {
+        if (it != shared_buffer->end()) {
           aux_state_vec->push_back(std::move(it->second.Copy(aux_state_ctxes[aux_top])));
         } else {
           aux_state_vec->push_back(std::move(InitZeros(inferred_stype, inferred_shape,
@@ -855,7 +856,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       } else {  // !shared_arg_names.count(arg_name)
         // model parameter, row_sparse ndarray sharing enabled
         bool enable_row_sparse_sharing = true;
-        if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
+        if (use_tensorrt_) {
             #if MXNET_USE_TENSORRT
                 auto it = shared_buffer->find(arg_name);
                 if (it != shared_buffer->end()) {
@@ -1155,7 +1156,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                                 g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
-  if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
+  if (use_tensorrt_) {
       #if MXNET_USE_TENSORRT
           auto trt_groups = GetTrtCompatibleSubsets(g, shared_buffer);
           for (auto trt_group : trt_groups) {
