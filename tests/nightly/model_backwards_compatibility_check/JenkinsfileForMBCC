@@ -61,7 +61,7 @@ try {
     }
   }
 
-  stage('MBCC Inference)'{
+  stage('MBCC Inference'){
     node('mxnetlinux-cpu') {
       ws('workspace/modelBackwardsCompat') {
         init_git()
