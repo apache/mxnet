@@ -44,6 +44,7 @@
 #include "./sort_op.h"
 #include "./init_op.h"
 #include "../../engine/openmp.h"
+#include "../../common/utils.h"
 #ifdef __CUDACC__
 #include "./indexing_op-inl.cuh"
 #endif
@@ -528,13 +529,6 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
-// Returns integer log2(a) rounded up
-inline int ilog2(unsigned int a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
-}
-
 /*! \brief cast to type and clip to range [0, K - 1]
  */
 struct tcast_clip {
@@ -906,7 +900,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
         s, idxshape.Size(), sorted_idx_ptr, sorted_idx_ptr, static_cast<int>(arrshape[axis]));
     }
     Tensor<cpu, 1, int> original_idx(original_idx_ptr, Shape1(idxshape.Size()), s);
-    int num_bits = ilog2(static_cast<unsigned int>(idxshape.Size()) - 1);
+    int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
     Tensor<cpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
     SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
     for (size_t i = 0; i < idxshape.Size(); ++i) {
@@ -1000,7 +994,7 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
     }
     Tensor<gpu, 1, int> original_idx(original_idx_ptr, Shape1(idxshape.Size()), s);
     Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
-    int num_bits = ilog2(static_cast<unsigned int>(idxshape.Size()) - 1);
+    int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
     Tensor<gpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
     SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
     cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
