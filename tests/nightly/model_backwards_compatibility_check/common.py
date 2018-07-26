@@ -85,19 +85,6 @@ def save_data_and_labels(test_data, test_labels, model_name):
     mx.nd.save(save_path, {'data': test_data, 'labels': test_labels})
 
 
-def upload_data_and_labels_to_s3(model_name):
-    s3 = boto3.client('s3')
-    file = model_name + '-data'
-    s3.upload_file(file, model_bucket_name, data_folder + backslash +  file)
-    logging.info('data files successfully uploaded to s3')
-
-
-def upload_model_files_to_s3(files, folder_name):
-    s3 = boto3.client('s3')
-    for file in files:
-        s3.upload_file(file, model_bucket_name, folder_name + file)
-
-
 def clean_model_files(files, model_name):
     files.append(model_name + '-inference')
     files.append(model_name + '-data')
