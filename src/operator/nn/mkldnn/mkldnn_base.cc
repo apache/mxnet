@@ -276,7 +276,7 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   if (mem->get_primitive_desc() == target_pd) return mem;
 
   auto ret = TmpMemMgr::Get()->Alloc(target_pd);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *ret));
+  //MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*mem, *ret));
   return ret;
 }
 

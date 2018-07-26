@@ -30,6 +30,7 @@
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_convolution-inl.h"
+#include <sys/time.h>
 
 namespace mxnet {
 namespace op {
@@ -243,13 +244,78 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
+
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+  NDArray data = in_data[conv::kData];
   NDArray weight = in_data[conv::kWeight];
-  MKLDNNConvForward &fwd = GetConvFwd(attrs, ctx.is_train, in_data[conv::kData], weight,
+
+  bool overhead = false;
+  //reorder data ndarray
+  auto dataN = in_data[conv::kData].shape()[0];
+  auto dataC = in_data[conv::kData].shape()[1];
+  auto dataH = in_data[conv::kData].shape()[2];
+  auto dataW = in_data[conv::kData].shape()[3];
+  if (dataC > 16 && dataC % 16 != 0) {
+    overhead = true;
+    auto Padding_IC = dataC + 16 - dataC % 16;
+    NDArray data_temp = NDArray({dataN, Padding_IC, dataH, dataW}, data.ctx(), false, data.dtype());
+    NDArray temp2D = NDArray({dataH, dataW}, data.ctx(), false, data.dtype());
+    temp2D = {0};
+    for (int i=0;i<dataN;i++) {
+      for (int j=0;j<Padding_IC;j++) {
+        if (j < dataC)
+          data_temp.At(i).At(j) = data.At(i).At(j);
+        else
+          data_temp.At(i).At(j) = temp2D;
+      }
+    }
+    data = data_temp;
+    dataC = Padding_IC;
+  }
+
+  auto NumFilter = weight.shape()[0];
+  auto weight_OC = weight.shape()[1];
+  auto weight_K0 = weight.shape()[2];
+  auto weight_K1 = weight.shape()[3];
+
+  if (NumFilter % 16 != 0 || weight_OC % 16 != 0) {
+    overhead = true;
+    auto Padding_numFilter = NumFilter;
+    auto Paddign_OC = dataC;
+    if (NumFilter % 16 != 0)
+      Padding_numFilter = NumFilter + 16 - NumFilter % 16;
+    NDArray weight_temp = NDArray({Padding_numFilter, Paddign_OC, weight_K0, weight_K1}, weight.ctx(), false, weight.dtype());
+    NDArray temp3D = NDArray({Paddign_OC, weight_K0, weight_K1}, weight.ctx(), false, weight.dtype());
+    NDArray temp2D = NDArray({weight_K0, weight_K1}, weight.ctx(), false, weight.dtype());
+    temp3D = {0};
+    temp2D = {0};
+    for (auto i=0; i<Padding_numFilter; i++) {
+      if (i < NumFilter) {
+        for (auto j=0; j<dataC; j++) {
+          if (j < weight_OC)
+            weight_temp.At(i).At(j) = weight.At(i);
+          else
+            weight_temp.At(i).At(j) = temp2D;
+        }
+      }
+      else
+        weight_temp.At(i) = temp3D;
+    }
+    weight = weight_temp;
+    NumFilter = Padding_numFilter;
+  }
+  NDArray output = out_data[conv::kOut];
+  if (overhead) {
+    NDArray outtemp = NDArray({output.shape()[0], NumFilter, output.shape()[2], output.shape()[3]}, output.ctx(), false, output.dtype());
+    output = outtemp;
+  }
+
+  MKLDNNConvForward &fwd = GetConvFwd(attrs, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
 
-  auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
+  auto data_mem = data.GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem;
+
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
@@ -262,6 +328,8 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
+      //LOG(INFO) << "weight shape:" << weight.shape();
+      //LOG(INFO) << "weight dst size:" << fwd.fwd_pd.weights_primitive_desc().get_size();
       weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
@@ -271,15 +339,16 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
       CHECK(weight_mem->get_primitive_desc() == fwd.fwd_pd.weights_primitive_desc());
     }
   }
-  auto out_mem = CreateMKLDNNMem(out_data[conv::kOut], fwd.fwd_pd.dst_primitive_desc(),
-                                 req[conv::kOut]);
+
+  auto aut_mem = out_data[conv::kOut].GetMKLDNNData();
+  auto out_temp_mem = CreateMKLDNNMem(output, fwd.fwd_pd.dst_primitive_desc(), req[conv::kOut]);
   const mkldnn::memory *bias_mem = nullptr;
   if (!param.no_bias)
     bias_mem = in_data[conv::kBias].GetMKLDNNDataReorder(fwd.fwd_pd.bias_primitive_desc());
-  fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
+  fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_temp_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
-
-  CommitOutput(out_data[conv::kOut], out_mem);
+  CommitOutput(output, out_temp_mem);
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*out_temp_mem.second, *aut_mem));
   MKLDNNStream::Get()->Submit();
 }
 
@@ -293,7 +362,6 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwdImpl(param, ctx.is_train,
       inputs[conv::kData + 1], inputs[conv::kWeight + 1],
       param.no_bias ? nullptr : &inputs[conv::kBias + 1], inputs[conv::kOut]);
-
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
   mkldnn::convolution_backward_data::primitive_desc bwdData_pd
     = GetConvBwdData(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1],
