@@ -101,6 +101,7 @@ DMLC_REGISTER_PARAMETER(TileParam);
 DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
+DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
@@ -907,6 +908,112 @@ NNVM_REGISTER_OP(_backward_squeeze)
 .set_attr_parser(ParamParser<SqueezeParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>);
+
+NNVM_REGISTER_OP(depth_to_space)
+.describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
+Similar to ONNX DepthToSpace operator:
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
+The output is a new tensor where the values from depth dimension are moved in spatial blocks 
+to height and width dimension. The reverse of this operation is ``space_to_depth``.
+
+.. math::
+
+    \begin{gather*}
+    x \prime = reshape(x, [N, block\_size, block\_size, C / (block\_size ^ 2), H * block\_size, W * block\_size]) \\
+    x \prime \prime = transpose(x \prime, [0, 3, 4, 1, 5, 2]) \\
+    y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
+    \end{gather*}
+
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
+
+Example::
+
+  x = [[[[0, 1, 2],
+         [3, 4, 5]],
+        [[6, 7, 8],
+         [9, 10, 11]],
+        [[12, 13, 14],
+         [15, 16, 17]],
+        [[18, 19, 20],
+         [21, 22, 23]]]]
+
+  depth_to_space(x, 2) = [[[[0, 6, 1, 7, 2, 8],
+                            [12, 18, 13, 19, 14, 20],
+                            [3, 9, 4, 10, 5, 11],
+                            [15, 21, 16, 22, 17, 23]]]]
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<DepthToSpaceParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", DepthToSpaceOpShape)
+.set_attr<nnvm::FInferType>("FInferType", DepthToSpaceOpType)
+.set_attr<FCompute>("FCompute<cpu>", DepthToSpaceOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"space_to_depth"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(DepthToSpaceParam::__FIELDS__());
+
+NNVM_REGISTER_OP(space_to_depth)
+.describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
+Similar to ONNX SpaceToDepth operator:
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
+
+The output is a new tensor where the values from height and width dimension are 
+moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
+
+.. math::
+
+    \begin{gather*}
+    x \prime = reshape(x, [N, C, H / block\_size, block\_size, W / block\_size, block\_size]) \\
+    x \prime \prime = transpose(x \prime, [0, 3, 5, 1, 2, 4]) \\
+    y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
+    \end{gather*}
+
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
+
+Example::
+
+  x = [[[[0, 6, 1, 7, 2, 8],
+         [12, 18, 13, 19, 14, 20],
+         [3, 9, 4, 10, 5, 11],
+         [15, 21, 16, 22, 17, 23]]]]
+  
+  
+  space_to_depth(x, 2) = [[[[0, 1, 2],
+                            [3, 4, 5]],
+                           [[6, 7, 8],
+                            [9, 10, 11]],
+                           [[12, 13, 14],
+                            [15, 16, 17]],
+                           [[18, 19, 20],
+                            [21, 22, 23]]]]
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<DepthToSpaceParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SpaceToDepthOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SpaceToDepthOpType)
+.set_attr<FCompute>("FCompute<cpu>", SpaceToDepthOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(DepthToSpaceParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

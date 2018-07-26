@@ -156,6 +156,8 @@ The `ndarray` package provides several classes:
     NDArray.transpose
     NDArray.swapaxes
     NDArray.flip
+    NDArray.depth_to_space
+    NDArray.space_to_depth
 ```
 
 ### Array reduction
@@ -411,6 +413,8 @@ The `ndarray` package provides several classes:
     transpose
     swapaxes
     flip
+    depth_to_space
+    space_to_depth
 ```
 
 ### Joining and splitting arrays
