@@ -49,21 +49,25 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 }
 
 try {
-  stage('MBCC'){
-    parallel 'ModelBackwardsCompat: CPU': {
-      node('mxnetlinux-cpu') {
-        ws('workspace/modelBackwardsCompat') {
+  stage('MBCC Train'){
+    node('mxnetlinux-cpu') {
+      ws('workspace/modelBackwardsCompat') {
+        init_git()
+        // Train models on older versions
+        docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
+        // upload files to S3 here outside of the docker environment
+        sh ./tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh
+	  }
+    }
+  }
 
-                init_git()
-                // Train models on older versions
-                docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
-                // upload files to S3 here outside of the docker environment
-                sh /tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh
-                // Perform inference on these models
-                docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
-
-		    } 
-      }
+  stage('MBCC Inference)'{
+    node('mxnetlinux-cpu') {
+      ws('workspace/modelBackwardsCompat') {
+        init_git()
+        // Perform inference on the latest version of MXNet
+        docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
+	  }
     }
   }
 } catch (caughtError) {
