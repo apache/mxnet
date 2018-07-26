@@ -46,7 +46,7 @@ namespace exec {
 
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
-  use_tensorrt_ = dmlc::GetEnv("MXNET_USE_TENSORRT", false); 
+  use_tensorrt_ = dmlc::GetEnv("MXNET_USE_TENSORRT", false);
   need_grad_ = false;
 }
 
@@ -1158,6 +1158,11 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
 
   if (use_tensorrt_) {
       #if MXNET_USE_TENSORRT
+      if (shared_buffer->empty()) {
+        LOG(FATAL) << "MXNET_USE_TENSORRT = 1 but shared_buffer is empty."
+          << "Please provide weights and other parameters, such as "
+          << "BatchNorm moments, via the shared_buffer, during simple bind call.";
+      }
           auto trt_groups = GetTrtCompatibleSubsets(g, shared_buffer);
           for (auto trt_group : trt_groups) {
             if (trt_group.size() > 1) {

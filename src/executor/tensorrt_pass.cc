@@ -466,7 +466,6 @@ Graph ReplaceSubgraph(Graph&& g,
 
   const auto sub_outputs_in_main = GetSubgraphOutputs(g, set_subgraph);
   subgraph.outputs = sub_outputs_in_main;
-  
   // old2new will link raw pointer of the nodes in the graph to
   // the corresponding shared_ptr of the nodes in the generated subgraph
   std::unordered_map<nnvm::Node*, nnvm::NodePtr> old2new;
@@ -496,7 +495,6 @@ Graph ReplaceSubgraph(Graph&& g,
     e.node = old2new[e.node.get()];
     stack.emplace_back(e.node.get());
   }
-  
   // link all nodes in the subgraph to nodes in the subgraph instead of main graph
   while (!stack.empty()) {
     auto vertex = stack.front();
@@ -514,7 +512,6 @@ Graph ReplaceSubgraph(Graph&& g,
       }
     }
   }
-  
   // Remove the control dependencies of the subgraph to nodes that are not in the subgraph
   DFSVisit(subgraph.outputs, [&set_subgraph, &old2new](const nnvm::NodePtr& node) {
     std::remove_if(node->control_deps.begin(),
@@ -550,8 +547,6 @@ Graph ReplaceSubgraph(Graph&& g,
       }
     }
   }
-  
-  
   nnvm::NodeEntryMap<uint32_t> sub_outputs_in_main_to_pos;
   for (uint32_t i = 0; i < sub_outputs_in_main.size(); ++i) {
     sub_outputs_in_main_to_pos[sub_outputs_in_main[i]] = i;
