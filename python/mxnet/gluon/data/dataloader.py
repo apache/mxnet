@@ -277,7 +277,6 @@ class DataLoader(object):
 
     num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
-        `num_workers > 0` is not supported on Windows yet.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
@@ -315,9 +314,10 @@ class DataLoader(object):
 
     def __iter__(self):
         if self._num_workers == 0:
-            generator = lambda: [(yield self._batchify_fn([self._dataset[idx] for idx in batch]))
-                                 for batch in self._batch_sampler]
-            return generator()
+            def single_worker_iter():
+                for batch in self._batch_sampler:
+                    yield self._batchify_fn([self._dataset[idx] for idx in batch])
+            return single_worker_iter()
 
         # multi-worker
         return _MultiWorkerIter(self._num_workers, self._dataset,
