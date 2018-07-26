@@ -856,7 +856,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       } else {  // !shared_arg_names.count(arg_name)
         // model parameter, row_sparse ndarray sharing enabled
         bool enable_row_sparse_sharing = true;
-        if (use_tensorrt_) {
+
+        if (use_tensorrt_ && !need_grad_) {
             #if MXNET_USE_TENSORRT
                 auto it = shared_buffer->find(arg_name);
                 if (it != shared_buffer->end()) {
@@ -870,6 +871,9 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                   << "built with TensorRT. Add USE_TENSORRT = 1 in config.mk";
             #endif
         } else {
+            if (use_tensorrt_) {
+                LOG(WARNING) << "USE_TENSORRT=1 but grads required. Running without TensorRT";
+            }
             in_arg_vec->emplace_back(ReshapeOrCreate(
                 arg_name, inferred_shape, inferred_dtype, inferred_stype,
                 in_arg_ctxes[arg_top], shared_buffer, enable_row_sparse_sharing));
@@ -1156,8 +1160,9 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                                 g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
-  if (use_tensorrt_) {
+  if (use_tensorrt_ && !need_grad_) {
       #if MXNET_USE_TENSORRT
+      // check that this graph is inference-only
       if (shared_buffer->empty()) {
         LOG(FATAL) << "MXNET_USE_TENSORRT = 1 but shared_buffer is empty."
           << "Please provide weights and other parameters, such as "

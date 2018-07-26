@@ -262,7 +262,7 @@ using NodeEntrySet = std::unordered_set<nnvm::NodeEntry, nnvm::NodeEntryHash,
  * \brief get the output nodes of the subgraph in the main graph
  * \return a vector of the output nodes
 */
-std::vector<nnvm::NodeEntry> GetSubgraphOutputs(Graph g,
+std::vector<nnvm::NodeEntry> GetSubgraphNodeEntries(Graph g,
     std::unordered_set<nnvm::Node*> set_subgraph) {
   std::vector<nnvm::NodeEntry> outputs;
   NodeEntrySet _outputs;
@@ -464,7 +464,7 @@ Graph ReplaceSubgraph(Graph&& g,
   // Create MXNet subgraph
   Graph subgraph;
 
-  const auto sub_outputs_in_main = GetSubgraphOutputs(g, set_subgraph);
+  const auto sub_outputs_in_main = GetSubgraphNodeEntries(g, set_subgraph);
   subgraph.outputs = sub_outputs_in_main;
   // old2new will link raw pointer of the nodes in the graph to
   // the corresponding shared_ptr of the nodes in the generated subgraph
