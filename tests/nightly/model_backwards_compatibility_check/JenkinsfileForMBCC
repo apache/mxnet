@@ -20,6 +20,7 @@
 //This is a Jenkinsfile for the model backwards compatibility checker. The format and some functions have been picked up from the top-level Jenkinsfile.
 
 err = null
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 def init_git() {
   deleteDir()
@@ -36,6 +37,24 @@ def init_git() {
       sleep 2
     }
   }
+}
+
+// pack libraries for later use
+def pack_lib(name, libs=mx_lib) {
+  sh """
+echo "Packing ${libs} into ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
+  stash includes: libs, name: name
+}
+
+// unpack libraries saved before
+def unpack_lib(name, libs=mx_lib) {
+  unstash name
+  sh """
+echo "Unpacked ${libs} from ${name}"
+echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+"""
 }
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
@@ -61,10 +80,21 @@ try {
     }
   }
 
+  stage('MXNet Build'){
+    node('mxnetlinux-cpu') {
+      ws('workspace/build-cpu') {
+        init_git()
+        docker_run('ubuntu_cpu','build_ubuntu_cpu', false)
+        pack_lib('cpu', mx_lib)
+      }
+    }
+  }
+
   stage('MBCC Inference'){
     node('mxnetlinux-cpu') {
       ws('workspace/modelBackwardsCompat') {
         init_git()
+        unpack_lib('cpu', mx_lib)
         // Perform inference on the latest version of MXNet
         docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
       }
