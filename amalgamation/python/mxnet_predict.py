@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import ctypes
+import logging
 import numpy as np
 
 __all__ = ["Predictor", "load_ndarray_file"]
@@ -56,6 +57,7 @@ def _find_lib_path():
         lib_path = [amalgamation_lib_path]
         return lib_path
     else:
+        logging.info('Cannot find libmxnet_predict.so. Will search for MXNet library using libinfo.py then.')
         try:
             from mxnet.libinfo import find_lib_path
             lib_path = find_lib_path()
@@ -68,7 +70,7 @@ def _find_lib_path():
                 lib_path = libinfo['find_lib_path']()
                 return lib_path
             else:
-                raise RuntimeError('Cannot find libinfo.py at %s.\n' % libinfo_path)
+                raise RuntimeError('Cannot find libinfo.py at %s.' % libinfo_path)
 
 
 def _load_lib():
