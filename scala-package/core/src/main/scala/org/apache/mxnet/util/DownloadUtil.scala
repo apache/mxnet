@@ -24,10 +24,20 @@ import org.apache.commons.io.FileUtils
 
 object DownloadUtil {
 
-  def downloadUrl(url: String, filePath: String) : Unit = {
+  def downloadUrl(url: String, filePath: String, maxRetry: Option[Int] = None) : Unit = {
     val tmpFile = new File(filePath)
+    var retry = maxRetry.getOrElse(3)
+    var success = false
     if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(url), tmpFile)
+      while (retry > 0 || success) {
+        try {
+          FileUtils.copyURLToFile(new URL(url), tmpFile)
+          success = true
+        } catch {
+          case e: Exception => retry -= 1
+        }
+      }
     }
+   if (!success) throw new Exception(s"$url Download failed!")
   }
 }
