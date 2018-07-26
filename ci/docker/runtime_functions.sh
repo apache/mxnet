@@ -906,12 +906,7 @@ nightly_model_backwards_compat_test() {
 nightly_model_backwards_compat_train() {
     set -ex
     export PYTHONPATH=./python/
-    VENV=mbcc_py2_venv
-    virtualenv -p `which python2` $VENV
-    source $VENV/bin/activate
     ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
-    #Deactivate the virtual env once we are done with it
-    deactivate
 }
 
 # Nightly 'MXNet: The Straight Dope' Single-GPU Tests
