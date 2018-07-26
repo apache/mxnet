@@ -77,14 +77,18 @@ def test_lstm_forget_bias():
 def test_lstm_cpu_inference():
     # should behave the same as lstm cell
     EXPECTED_LSTM_OUTPUT = np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
-                                  [0.72045636, 0.72045636, 0.95215213, 0.95215213]],
-                                 [[0.95215213, 0.95215213, 0.72045636, 0.72045636],
-                                  [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
+                                      [0.72045636, 0.72045636, 0.95215213, 0.95215213]],
+                                     [[0.95215213, 0.95215213, 0.72045636, 0.72045636],
+                                      [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
     x = mx.nd.ones(shape=(2, 2, 2))
     model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
+    model_cell = model._unfuse()
     model.initialize(mx.init.One())
     y = model(x).asnumpy()
+    y_cell = model_cell.unroll(2, x, layout='TNC', merge_outputs=True)[0].asnumpy()
 
+    mx.test_utils.assert_almost_equal(y_cell, EXPECTED_LSTM_OUTPUT,
+                                      rtol=1e-3, atol=1e-5)
     mx.test_utils.assert_almost_equal(y, EXPECTED_LSTM_OUTPUT,
                                       rtol=1e-3, atol=1e-5)
 
@@ -341,9 +345,12 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
     layer.collect_params().initialize()
     inputs.attach_grad()
     with mx.autograd.record():
-        out = layer(inputs, states)
+        if states is None:
+            out = layer(inputs)
+        else:
+            out = layer(inputs, states)
         if states is not None:
-            assert isinstance(out, tuple) and len(out) == 2
+            assert isinstance(out, (list, tuple)) and len(out) == 2
             out = out[0]
         else:
             assert isinstance(out, mx.nd.NDArray)
@@ -355,15 +362,19 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
     layer.hybridize()
 
     with mx.autograd.record():
-        out = layer(inputs, states)
         if states is not None:
-            assert isinstance(out, tuple) and len(out) == 2
+            out = layer(inputs, states)
+            assert isinstance(out, (list, tuple)) and len(out) == 2
             out = out[0]
         else:
+            out = layer(inputs)
             assert isinstance(out, mx.nd.NDArray)
         out.backward()
 
-    layer(inputs, states) # test is_training = false
+    if states is not None:
+        layer(inputs, states) # test is_training = false
+    else:
+        layer(inputs)
 
     if not run_only:
         mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-3, atol=1e-5)
@@ -393,14 +404,25 @@ def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.GRU(10, 2, bidirectional=True, dropout=0.5),
                             mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)), run_only=True)
 
-    net = gluon.nn.Sequential()
-    net.add(gluon.rnn.LSTM(10, 2, bidirectional=True))
+    net = gluon.nn.HybridSequential()
+    net.add(gluon.rnn.LSTM(10, bidirectional=True))
     net.add(gluon.nn.BatchNorm(axis=2))
     net.add(gluon.nn.Flatten())
     net.add(gluon.nn.Dense(3, activation='relu'))
+    net.hybridize()
     net.collect_params().initialize()
     with mx.autograd.record():
         net(mx.nd.ones((2, 3, 10))).backward()
+
+    net2 = gluon.nn.HybridSequential()
+    net2.add(gluon.rnn.LSTM(10, bidirectional=True))
+    net2.add(gluon.nn.BatchNorm(axis=2))
+    net2.add(gluon.nn.Flatten())
+    net2.add(gluon.nn.Dense(3, activation='relu'))
+    net2.hybridize()
+    net2.collect_params().initialize()
+    with mx.autograd.record():
+        net2(mx.nd.ones((2, 3, 10))).backward()
 
 
 def test_rnn_unroll_variant_length():
@@ -490,7 +512,7 @@ def test_layer_fill_shape():
     layer.hybridize()
     check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
     print(layer)
-    assert layer.i2h_weight[0].shape[1] == 7, layer.i2h_weight[0].shape[1]
+    assert layer.l0_i2h_weight.shape[1] == 7, layer.l0_i2h_weight.shape[1]
 
 
 if __name__ == '__main__':
