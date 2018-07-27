@@ -114,12 +114,23 @@ def test_subgraph_exe():
         for sym, op_names in get_graph():
             check_subgraph_exe(sym, op_names)
 
+    def test_network_structure_7():
+        # in this graph, the subgraph node and the other two external nodes form a cycle
+        data = mx.sym.Variable('data', shape=(1,))
+        ret1 = mx.sym.sin(data)
+        ret2 = mx.sym.cos(ret1)
+        for _ in range(5):
+            ret2 = mx.sym.cos(ret2)
+        ret = ret1 + ret2
+        check_subgraph_exe(ret, ['sin', 'elemwise_add', '_plus', '_Plus'])
+
     test_network_structure_1()
     test_network_structure_2()
     test_network_structure_3()
     test_network_structure_4()
     test_network_structure_5()
     test_network_structure_6()
+    test_network_structure_7()
 
 
 if __name__ == '__main__':
