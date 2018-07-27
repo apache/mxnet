@@ -351,7 +351,7 @@ class DataLoader(object):
                 for batch in self._batch_sampler:
                     ret = self._batchify_fn([self._dataset[idx] for idx in batch])
                     if self._pin_memory:
-                        ret = _as_in_context(ret, context.cpu_shared())
+                        ret = _as_in_context(ret, context.cpu_pinned())
                     yield ret
             return same_process_iter()
 
