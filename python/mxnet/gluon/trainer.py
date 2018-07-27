@@ -187,7 +187,8 @@ class Trainer(object):
             arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
-            if 'async' in kvstore.type and not config['update_on_kvstore']:
+            if 'async' in kvstore.type and config['update_on_kvstore'] is not None\
+                    and config['update_on_kvstore']:
                 raise ValueError("Please set update_on_kvstore to true "
                                  "when training in async mode.")
 
