@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.util
+package org.apache.mxnetexamples
 
 import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
 
-object DownloadUtil {
+object Util {
 
   def downloadUrl(url: String, filePath: String, maxRetry: Option[Int] = None) : Unit = {
     val tmpFile = new File(filePath)

@@ -22,7 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.apache.mxnet.util.DownloadUtil
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -39,7 +39,7 @@ class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
       val tempDirPath = System.getProperty("java.io.tmpdir")
       val modelDirPath = tempDirPath + File.separator + "mnist/"
       logger.info("tempDirPath: %s".format(tempDirPath))
-      DownloadUtil.downloadUrl(baseUrl + "/mnist/mnist.zip",
+      Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
         tempDirPath + "/mnist/mnist.zip")
       // TODO: Need to confirm with Windows
       Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "

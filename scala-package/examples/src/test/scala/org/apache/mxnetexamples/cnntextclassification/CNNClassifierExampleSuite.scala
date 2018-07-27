@@ -22,7 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.apache.mxnet.util.DownloadUtil
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -47,12 +47,12 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
       logger.info("Downloading CNN text...")
       val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala"
-      DownloadUtil.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.pos",
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.pos",
         tempDirPath + "/CNN/rt-polarity.pos")
-      DownloadUtil.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.neg",
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.neg",
         tempDirPath + "/CNN/rt-polarity.neg")
       logger.info("Downloading pretrianed Word2Vec Model, may take a while")
-      DownloadUtil.downloadUrl(baseUrl + "/scala-example-ci/CNN/" + w2vModelName,
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/" + w2vModelName,
         tempDirPath + "/CNN/" + w2vModelName)
 
       val modelDirPath = tempDirPath + File.separator + "CNN"

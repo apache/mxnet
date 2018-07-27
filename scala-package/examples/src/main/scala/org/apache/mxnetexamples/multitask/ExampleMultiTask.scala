@@ -35,7 +35,7 @@ import org.apache.mxnet.Context
 import org.apache.mxnet.Xavier
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnet.Executor
-import org.apache.mxnet.util.DownloadUtil
+import org.apache.mxnetexamples.Util
 
 import scala.collection.immutable.ListMap
 import scala.sys.process.Process
@@ -202,7 +202,7 @@ object ExampleMultiTask {
     val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val modelDirPath = tempDirPath + File.separator + "multitask/"
-    DownloadUtil.downloadUrl(baseUrl + "/mnist/mnist.zip",
+    Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
       tempDirPath + "/multitask/mnist.zip")
 
     // TODO: Need to confirm with Windows

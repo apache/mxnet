@@ -22,7 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.apache.mxnet.util.DownloadUtil
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -40,13 +40,13 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
-    DownloadUtil.downloadUrl(modelBase + "resnet50_ssd_model-symbol.json",
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-symbol.json",
       tempDirPath + "/resnetssd/resnet50_ssd_model-symbol.json")
-    DownloadUtil.downloadUrl(modelBase + "resnet50_ssd_model-0000.params",
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-0000.params",
       tempDirPath + "/resnetssd/resnet50_ssd_model-0000.params")
-    DownloadUtil.downloadUrl(modelBase + "synset.txt",
+    Util.downloadUrl(modelBase + "synset.txt",
       tempDirPath + "/resnetssd/synset.txt")
-    DownloadUtil.downloadUrl(imageBase + "dog-ssd.jpg",
+    Util.downloadUrl(imageBase + "dog-ssd.jpg",
       tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
 
     val modelDirPath = tempDirPath + File.separator + "resnetssd/"
