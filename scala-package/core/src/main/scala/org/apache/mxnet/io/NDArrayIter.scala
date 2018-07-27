@@ -21,6 +21,7 @@ import java.util.NoSuchElementException
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
+import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 
@@ -45,31 +46,34 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   private val dataBatchSize: Int, shuffle: Boolean,
                   lastBatchHandle: String,
                   dataDType: DType, labelDType: DType,
-                  dataLayout: String, labelLayout: String) extends DataIter {
-
+                  dataLayout: Layout, labelLayout: Layout) extends DataIter {
+// scalastyle:off
   /**
-   * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
-   * @param label Same as data, but is not fed to the model during testing.
-   *              Label names will be label_0, label_1, ..., etc.
-   * @param dataBatchSize Batch Size
-   * @param shuffle Whether to shuffle the data
-   * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
-   *
-   * This iterator will pad, discard or roll over the last batch if
-   * the size of data does not match batch_size. Roll over is intended
-   * for training and can cause problems if used for prediction.
-   */
+    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
+    * @param label Same as data, but is not fed to the model during testing.
+    *              Label names will be label_0, label_1, ..., etc.
+    * @param dataBatchSize Batch Size
+    * @param shuffle Whether to shuffle the data
+    * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
+    *
+    * This iterator will pad, discard or roll over the last batch if
+    * the size of data does not match batch_size. Roll over is intended
+    * for training and can cause problems if used for prediction.
+    */
   def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label",
-           dataDType: DType = MX_REAL_TYPE, labelDType: DType = DType.Int32,
-           dataLayout: String = "NCHW", labelLayout: String = "N") {
+           dataDType: DType = Base.MX_REAL_TYPE,
+           labelDType: DType = DType.Int32,
+           dataLayout: Layout = Layout.NCHW,
+           labelLayout : Layout = Layout.N) {
     this(IO.initData(data, allowEmpty = false, dataName),
       IO.initData(label, allowEmpty = true, labelName),
-      dataBatchSize, shuffle, lastBatchHandle, dataDType, labelDType, dataLayout, labelLayout)
+      dataBatchSize, shuffle, lastBatchHandle, dataDType, labelDType,
+      dataLayout, labelLayout)
   }
-
+// scalastyle:on
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
 
   val (initData: IndexedSeq[(String, NDArray)], initLabel: IndexedSeq[(String, NDArray)]) = {
@@ -250,7 +254,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     * Get the layout
     * @return layout
     */
-  def getLayout(): (String, String) = {
+  def getLayout(): (Layout, Layout) = {
     (dataLayout, labelLayout)
   }
 
@@ -279,8 +283,8 @@ object NDArrayIter {
     private var label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty
     private var dataBatchSize: Int = 1
     private var lastBatchHandle: String = "pad"
-    private var dataLayout: String = "NCHW"
-    private var labelLayout: String = "N"
+    private var dataLayout: Layout = Layout.NCHW
+    private var labelLayout: Layout = Layout.N
     private var dataDType: DType = Base.MX_REAL_TYPE
     private var labelDType: DType = DType.Int32
 
@@ -344,7 +348,7 @@ object NDArrayIter {
       * @param labelLayout The layout of the label, default is N
       * @return this
       */
-    def setLayout(dataLayout: String, labelLayout: String): Builder = {
+    def setLayout(dataLayout: Layout, labelLayout: Layout): Builder = {
       this.dataLayout = dataLayout
       this.labelLayout = labelLayout
       this

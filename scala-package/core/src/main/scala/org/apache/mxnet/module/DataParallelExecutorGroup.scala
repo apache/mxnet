@@ -330,7 +330,7 @@ class DataParallelExecutorGroup private[module](
    */
   private def decideSlices(dataShapes: Seq[DataDesc]): Seq[Int] = {
     require(dataShapes.size > 0)
-    val majorAxis = dataShapes.map(data => DataDesc.getBatchAxis(Option(data.layout)))
+    val majorAxis = dataShapes.map(data => DataDesc.getBatchAxis(Option(data.layoutStr)))
 
     for ((dataDesc, axis) <- dataShapes.zip(majorAxis)) {
       if (axis != -1) {

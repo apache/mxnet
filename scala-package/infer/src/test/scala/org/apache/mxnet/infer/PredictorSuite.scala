@@ -19,7 +19,7 @@ package org.apache.mxnet.infer
 
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet.module.{BaseModule, Module}
-import org.apache.mxnet.{DataDesc, NDArray, Shape}
+import org.apache.mxnet.{DataDesc, Layout, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -45,7 +45,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
     val mockPredictor = new MyPredictor("xyz", inputDescriptor)
 
     assert(mockPredictor.getBatchSize == 1)
-    assert(mockPredictor.getBatchIndex == inputDescriptor(0).layout.indexOf('N'))
+    assert(mockPredictor.getBatchIndex == inputDescriptor(0).layout.toString.indexOf('N'))
 
     val inputDescriptor2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)),
       new DataDesc("data", Shape(2, 3, 2, 2)))
@@ -55,7 +55,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     // batchsize is defaulted to 1
-    val iDesc2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(3, 2, 2), layout = "CHW"))
+    val iDesc2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(3, 2, 2), layout = Layout.CHW))
     val p2 = new MyPredictor("xyz", inputDescriptor)
     assert(p2.getBatchSize == 1, "should use a default batch size of 1")
 

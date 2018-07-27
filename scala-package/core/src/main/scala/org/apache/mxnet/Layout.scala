@@ -15,27 +15,34 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.spark.io
-
-import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
-import org.apache.mxnet.{DataBatch, NDArray}
+package org.apache.mxnet
 
 /**
- * Dispose only when 'disposeForce' called
- * @author Yizhi Liu
- */
-class LongLivingDataBatch(
-  override val data: IndexedSeq[NDArray],
-  override val label: IndexedSeq[NDArray],
-  override val index: IndexedSeq[Long],
-  override val pad: Int,
-  override val dataLayout: Layout,
-  override val labelLayout: Layout,
-  override val dataDType: DType,
-  override val labelDType: DType) extends DataBatch(data, label, index, pad,
-  dataLayout = dataLayout, labelLayout = labelLayout,
-  dataDType = dataDType, labelDType = labelDType) {
-  override def dispose(): Unit = {}
-  def disposeForce(): Unit = super.dispose()
+  * Layout type that represent what inside of a shape
+  * N Batch size
+  * C number of channels
+  * H height (image)
+  * W width (image)
+  * T temporal axis representing time (NLP)
+  */
+
+object Layout extends Enumeration {
+  type Layout = Value
+  val NCHW = Value("NCHW")
+  val TNC = Value("TNC")
+  val CHW = Value("CHW")
+  val NT = Value("NT")
+  val N = Value("N")
+
+  private[mxnet] def getLayout(layoutStr: String): Layout = {
+    layoutStr match {
+      case "NCHW" => NCHW
+      case "TNC" => TNC
+      case "CHW" => CHW
+      case "NT" => NT
+      case "N" => N
+      case _ => throw new RuntimeException(
+        s"Unknown $layoutStr defined!, please check Layout.scala")
+    }
+  }
 }

@@ -25,12 +25,12 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
-
 import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, NDArray, Shape, Symbol, Xavier}
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnet.Executor
 import org.apache.mxnetexamples.Util
+import org.apache.mxnet.Layout.Layout
 
 import scala.collection.immutable.ListMap
 import scala.sys.process.Process
@@ -129,7 +129,7 @@ object ExampleMultiTask {
 
     override def getDType(): (DType, DType) = this.dataIter.getDType()
 
-    override def getLayout(): (String, String) = this.dataIter.getLayout()
+    override def getLayout(): (Layout, Layout) = this.dataIter.getLayout()
 
     // The name and shape of data provided by this iterator
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData

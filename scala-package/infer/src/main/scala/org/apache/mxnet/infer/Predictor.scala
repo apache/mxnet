@@ -18,7 +18,7 @@
 package org.apache.mxnet.infer
 
 import org.apache.mxnet.io.NDArrayIter
-import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
+import org.apache.mxnet._
 import org.apache.mxnet.module.Module
 
 import scala.collection.mutable.ListBuffer
@@ -76,15 +76,15 @@ class Predictor(modelPathPrefix: String,
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
 
-  require(inputDescriptors.head.layout.size != 0, "layout size should not be zero")
+  require(inputDescriptors.head.layout.toString.size != 0, "layout size should not be zero")
 
-  protected[infer] var batchIndex = inputDescriptors(0).layout.indexOf('N')
+  protected[infer] var batchIndex = inputDescriptors(0).layout.toString.indexOf('N')
   protected[infer] var batchSize = if (batchIndex != -1) inputDescriptors(0).shape(batchIndex)
     else 1
 
   protected[infer] var iDescriptors = inputDescriptors
 
-  inputDescriptors.foreach((f: DataDesc) => require(f.layout.indexOf('N') == batchIndex,
+  inputDescriptors.foreach((f: DataDesc) => require(f.layout.toString.indexOf('N') == batchIndex,
     "batch size should be in the same index for all inputs"))
 
   if (batchIndex != -1) {
@@ -94,7 +94,7 @@ class Predictor(modelPathPrefix: String,
     // Note: this is assuming that the input needs a batch
     logger.warn("InputDescriptor does not have batchSize, using 1 as the default batchSize")
     iDescriptors = inputDescriptors.map((f: DataDesc) => new DataDesc(f.name,
-      Shape(1 +: f.shape.toVector), f.dtype, 'N' +: f.layout))
+      Shape(1 +: f.shape.toVector), f.dtype, Layout.getLayout('N' +: f.layout.toString)))
     batchIndex = 1
   }
 

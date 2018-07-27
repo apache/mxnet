@@ -19,6 +19,7 @@
 package org.apache.mxnetexamples.rnn
 
 import org.apache.mxnet.DType.DType
+import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 
@@ -98,8 +99,8 @@ object BucketIo {
       _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
       seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
       readContent: ReadContent = defaultReadContent,
-      dataLayout: String = "NT",
-      labelLayout: String = "N",
+      dataLayout: Layout = Layout.NT,
+      labelLayout: Layout = Layout.N,
       dataDType : DType = DType.Float32,
       labelDType: DType = DType.Int32) extends DataIter {
 
@@ -255,7 +256,7 @@ object BucketIo {
 
     override def getDType(): (DType, DType) = (dataDType, labelDType)
 
-    override def getLayout(): (String, String) = (dataLayout, labelLayout)
+    override def getLayout(): (Layout, Layout) = (dataLayout, labelLayout)
 
     // The name and shape of label provided by this iterator
     override def provideLabel: ListMap[String, Shape] = this._provideLabel
