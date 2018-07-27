@@ -1,5 +1,13 @@
 # MXNet FAQ
 
+```eval_rst
+.. toctree::
+   :hidden:
+   :glob:
+
+   *
+```
+
 This section addresses common questions about how to use _MXNet_. These include performance issues, e.g., how to train with multiple GPUs.
 They also include workflow questions, e.g., how to visualize a neural network computation graph.
 These answers are fairly focused. For more didactic, self-contained introductions to neural networks
