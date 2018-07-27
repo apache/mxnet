@@ -151,7 +151,7 @@ def default_mp_batchify_fn(data):
 
 
 def _as_in_context(data, ctx):
-    """Move data into new context. """
+    """Move data into new context."""
     if isinstance(data, nd.NDArray):
         return data.as_in_context(ctx)
     elif isinstance(data, (list, tuple)):
