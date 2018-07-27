@@ -147,9 +147,12 @@ bool LabelSubgraph(const Graph& g,
   // key: nodes that serve as input/output nodes to the subgraph
   // value: pair of vectors of nodes in the subgraph. The first vector contains the
   // output nodes of the key in the subgraph, and the second vector contains the
-  // input nodes of the key in the subgraph. If both vectors are non-empty,
-  // it means there is a loop between the subgraph and the key node.
-  // When breaking the loop, we want to start removing the node with the largest node id.
+  // input nodes of the key in the subgraph.
+  // If a non-subgraph node has inputs from the subgraph and the other non-subgraph node
+  // has outputs to the subgraph, and the first non-subgraph node is an ancestor
+  // of the second non-subgraph node, there exits a cycle.
+  // When breaking the cycle, we want to start from removing the node with the largest node id
+  // in the subgraph.
   std::unordered_map<const nnvm::Node*,
     std::pair<std::vector<const nnvm::Node*>,
               std::vector<const nnvm::Node*>>> non_subgraph_node_map;
