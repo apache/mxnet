@@ -1,5 +1,24 @@
 # Tutorials
 
+```eval_rst
+.. toctree::
+   :hidden:
+
+   basic/index.md
+   c++/index.md
+   embedded/index.md
+   gluon/index.md
+   nlp/index.md
+   onnx/index.md
+   python/index.md
+   r/index.md
+   scala/index.md
+   sparse/index.md
+   speech_recognition/index.md
+   unsupervised_learning/index.md
+   vision/index.md
+```
+
 MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, C++ and R) and we have a different tutorial section for each language.
 
 Are you new to MXNet, and don't have a preference on language? We currently recommend starting with Python, and specifically the Gluon APIs (versus Module APIs) as they're more flexible and easier to debug.
