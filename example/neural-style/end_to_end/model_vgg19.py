@@ -90,6 +90,7 @@ def get_executor_with_style(style, content, input_size, ctx):
                         arg_dict=arg_dict)
 
 def get_executor_content(content, input_size, ctx):
+    out = mx.sym.Group([content])
     arg_shapes, output_shapes, aux_shapes = content.infer_shape(data=(1, 3, input_size[0], input_size[1]))
     arg_names = out.list_arguments()
     arg_dict = dict(zip(arg_names, [mx.nd.zeros(shape, ctx=ctx) for shape in arg_shapes]))

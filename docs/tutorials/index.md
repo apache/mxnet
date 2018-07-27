@@ -173,6 +173,17 @@ Select API:&nbsp;
 
 <hr>
 
+## Perl Tutorials
+
+* Getting Started
+    * [Machine learning in Perl](http://blogs.perl.org/users/sergey_kolychev/2017/02/machine-learning-in-perl.html)
+    * [Calculator and Robo-Shakespeare](http://blogs.perl.org/users/sergey_kolychev/2017/04/machine-learning-in-perl-part2-a-calculator-handwritten-digits-and-roboshakespeare.html)
+* Gluon
+    * [DCGAN](http://blogs.perl.org/users/sergey_kolychev/2017/10/machine-learning-in-perl-part3-deep-convolutional-generative-adversarial-network.html)
+    * [Image classification and Style transfer](http://blogs.perl.org/users/sergey_kolychev/2018/07/machine-learning-in-perl-kyuubi-goes-to-a-modelzoo-during-the-starry-night.html)
+
+<hr>
+
 ## Contributing Tutorials
 
 We really appreciate contributions, and tutorials are a great way to share your knowledge and help the community. After you have followed [these steps](https://github.com/apache/incubator-mxnet/tree/master/example#contributing), please submit a pull request on Github.

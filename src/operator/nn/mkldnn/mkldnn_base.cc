@@ -473,9 +473,11 @@ void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
   auto ctx = inputs_[0].ctx();
   CHECK(!MKLDNNStream::Get()->HasOps());
   for (size_t i = 0; i < inputs_.size(); i++) {
-    inputs.emplace_back(inputs_[i].shape(), ctx,
-                        false, inputs_[i].dtype());
-    auto mem = inputs_[i].GetMKLDNNData();
+    NDArray data = inputs_[i];
+    inputs.emplace_back(data.shape(), ctx, false, data.dtype());
+    if (data.IsMKLDNNData() && data.IsView())
+        data = data.Reorder2Default();
+    auto mem = data.GetMKLDNNData();
     inputs[i].CopyFrom(*mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
@@ -494,6 +496,11 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
                   const std::vector<mxnet::NDArray> &inputs_,
                   const std::vector<mxnet::OpReqType> &req,
                   const std::vector<mxnet::NDArray> &outputs_) {
+  static auto& is_excluded = Op::GetAttr<bool>("TExcludeMKLDNNDebug");
+  if (is_excluded.get(attrs.op, false)) {
+    LOG(WARNING) << attrs.op->name << " not checked. TExcludeMKLDNNDebug flag present";
+    return;
+  }
   std::vector<mxnet::TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
   std::vector<mxnet::TBlob> out_blobs(outputs.size());
@@ -509,7 +516,7 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
     if (req[i] == kNullOp)
       continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
-      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-3);
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
       if (!similar) {
         LOG(ERROR) << attrs.op->name << " fails";
       }
