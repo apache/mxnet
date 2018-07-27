@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=ungrouped-imports
 """Dataset generator."""
 __all__ = ['DataLoader']
 
