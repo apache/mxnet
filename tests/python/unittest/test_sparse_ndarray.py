@@ -534,7 +534,7 @@ def test_sparse_nd_pickle():
                 assert same(a.asnumpy(), b.asnumpy())
 
 
-@with_seed(0)
+@with_seed()
 def test_sparse_nd_save_load():
     repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
