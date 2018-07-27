@@ -898,14 +898,14 @@ nightly_test_javascript() {
 #Tests Model backwards compatibility on MXNet
 nightly_model_backwards_compat_test() {
     set -ex
-    export PYTHONPATH=./python/
+    export PYTHONPATH=/work/mxnet/python/
     ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
 }
 
 #Backfills S3 bucket with models trained on earlier versions of mxnet
 nightly_model_backwards_compat_train() {
     set -ex
-    export PYTHONPATH=./python/
+    export PYTHONPATH=/work/mxnet/python/
     ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
 }
 
