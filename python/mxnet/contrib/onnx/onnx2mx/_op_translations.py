@@ -81,7 +81,7 @@ def divide(attrs, inputs, proto_obj):
     return 'broadcast_div', new_attr, inputs
 
 def mean(attrs, inputs, proto_obj):
-    """Mean of two input tensors."""
+    """Mean of all the input tensors."""
     concat_input = [symbol.expand_dims(op_input, axis=0) for op_input in inputs]
     concat_sym = symbol.concat(*concat_input, dim=0)
     mean_sym = symbol.mean(concat_sym, axis=0)
