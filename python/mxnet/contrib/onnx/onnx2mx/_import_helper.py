@@ -20,8 +20,9 @@
 """Operator attributes conversion"""
 from ._op_translations import identity, random_uniform, random_normal
 from ._op_translations import add, subtract, multiply, divide, absolute, negative, add_n
-from ._op_translations import tanh
-from ._op_translations import ceil, floor
+from ._op_translations import tanh, arccos, arcsin, arctan, _cos, _sin, _tan
+from ._op_translations import softplus, shape, gather, lp_pooling
+from ._op_translations import ceil, floor, hardsigmoid, global_lppooling
 from ._op_translations import concat
 from ._op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
 from ._op_translations import global_avgpooling, global_maxpooling, linalg_gemm
@@ -30,12 +31,13 @@ from ._op_translations import dropout, local_response_norm, conv, deconv
 from ._op_translations import reshape, cast, split, _slice, transpose, squeeze, flatten
 from ._op_translations import reciprocal, squareroot, power, exponent, _log, unsqueeze
 from ._op_translations import reduce_max, reduce_mean, reduce_min, reduce_sum
-from ._op_translations import reduce_prod, avg_pooling, max_pooling
+from ._op_translations import reduce_prod, avg_pooling, max_pooling, instance_norm
 from ._op_translations import argmax, argmin, maximum, minimum
 from ._op_translations import clip, reduce_log_sum, reduce_log_sum_exp
-from ._op_translations import reduce_sum_square, reduce_l2, max_roi_pooling, instance_norm
+from ._op_translations import reduce_sum_square, reduce_l1, reduce_l2, max_roi_pooling
 from ._op_translations import log_softmax, softsign, lesser, greater, equal
 from ._op_translations import logical_and, logical_or, logical_xor, logical_not
+from ._op_translations import mean
 
 # convert_map defines maps of ONNX operator names to converter functor(callable)
 # defined in the op_translations module.
@@ -77,6 +79,7 @@ _convert_map = {
     'FC'                : fully_connected,
     'GlobalAveragePool' : global_avgpooling,
     'GlobalMaxPool'     : global_maxpooling,
+    'GlobalLpPool'      : global_lppooling,
     'Gemm'              : linalg_gemm,
     'LRN'               : local_response_norm,
     'Dropout'           : dropout,
@@ -113,6 +116,7 @@ _convert_map = {
     'ReduceLogSum'      : reduce_log_sum,
     'ReduceLogSumExp'   : reduce_log_sum_exp,
     'ReduceSumSquare'   : reduce_sum_square,
+    'ReduceL1'          : reduce_l1,
     'ReduceL2'          : reduce_l2,
     'MaxRoiPool'        : max_roi_pooling,
     'InstanceNormalization' : instance_norm,
@@ -124,5 +128,17 @@ _convert_map = {
     'And'               : logical_and,
     'Xor'               : logical_xor,
     'Not'               : logical_not,
-    'Or'                : logical_or
+    'Or'                : logical_or,
+    'Mean'              : mean,
+    'Acos'              : arccos,
+    'Asin'              : arcsin,
+    'Atan'              : arctan,
+    'Cos'               : _cos,
+    'Sin'               : _sin,
+    'Softplus'          : softplus,
+    'Tan'               : _tan,
+    'Shape'             : shape,
+    'Gather'            : gather,
+    'HardSigmoid'       : hardsigmoid,
+    'LpPool'            : lp_pooling
 }
