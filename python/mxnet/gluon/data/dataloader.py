@@ -175,11 +175,9 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False):
         if idx is None:
             break
         if pin_memory:
-            try:
-                batch = _as_in_context(batch, context.cpu_pinned())
-            except:
-                pass
-        batch = _as_in_context(batch, context.cpu())
+            batch = _as_in_context(batch, context.cpu_pinned())
+        else:
+            batch = _as_in_context(batch, context.cpu())
         data_buffer[idx] = batch
 
 class _MultiWorkerIter(object):
