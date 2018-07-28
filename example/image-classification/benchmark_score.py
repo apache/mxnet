@@ -79,13 +79,16 @@ if __name__ == '__main__':
         logging.info('network: %s', net)
         for d in devs:
             logging.info('device: %s', d)
+            logged_fp16_warning = False
             for b in batch_sizes:
                 for dtype in ['float32', 'float16']:
                     if d == mx.cpu() and dtype == 'float16':
                         #float16 is not supported on CPU
                         continue
-                    elif net in ['inception-bn', 'alexnet'] and dt == 'float16':
-                        logging.info('{} does not support float16'.format(net))
+                    elif net in ['inception-bn', 'alexnet'] and dtype == 'float16':
+                        if not logged_fp16_warning:
+                            logging.info('Model definition for {} does not support float16'.format(net))
+                            logged_fp16_warning = True
                     else:
                         speed = score(network=net, dev=d, batch_size=b, num_batches=10, dtype=dtype)
-                        logging.info('batch size %2d, dtype %s image/sec: %f', b, dtype, speed)
+                        logging.info('batch size %2d, dtype %s, images/sec: %f', b, dtype, speed)
