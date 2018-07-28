@@ -136,17 +136,15 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
     // for ReLU activation, the backward pass only needs ograd and output
     CHECK_EQ(in_attrs->size(), 2U);
   }
-#if MXNET_USE_MKLDNN == 1
-  bool should_enter =
-      dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param);
-  ret = MKLDNNStorageType(attrs, dev_mask, should_enter, dispatch_mode,
-                          in_attrs, out_attrs);
-#endif
 #if MXNET_USE_CUDNN == 1
   ret = ElemwiseStorageAttr<false, false, false>(attrs, dev_mask, dispatch_mode,
                                                  in_attrs, out_attrs);
 #endif
-
+#if MXNET_USE_MKLDNN == 1
+  bool should_enter = SupportMKLDNNAct(param);
+  ret = MKLDNNStorageType(attrs, dev_mask, should_enter, dispatch_mode,
+                          in_attrs, out_attrs);
+#endif
 #else
   if (param.act_type == activation::kSoftSign) {
     CHECK_EQ(in_attrs->size(), 3U);
