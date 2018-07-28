@@ -130,26 +130,23 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = false;
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
 #if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
-  bool should_continue = true;
-#if MXNET_USE_MKLDNN == 1
-  if (!(dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param))) {
-    should_continue = false;
-  }
-#endif
-  if (should_continue) {
-    if (param.act_type != activation::kReLU) {
-      CHECK_EQ(in_attrs->size(), 3U);
-      ret = ElemwiseStorageType<3, 1, false, false, false>(
-          attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
-    } else {
-      // for ReLU activation, the backward pass only needs ograd and output
-      CHECK_EQ(in_attrs->size(), 2U);
-      ret = ElemwiseStorageType<2, 1, false, false, false>(
-          attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
-    }
+  if (param.act_type != activation::kReLU) {
+    CHECK_EQ(in_attrs->size(), 3U);
   } else {
-    ret = op::dispatch_fallback(out_attrs, dispatch_mode);
+    // for ReLU activation, the backward pass only needs ograd and output
+    CHECK_EQ(in_attrs->size(), 2U);
   }
+#if MXNET_USE_MKLDNN == 1
+  bool should_enter =
+      dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param);
+  ret = MKLDNNStorageType(attrs, dev_mask, should_enter, dispatch_mode,
+                          in_attrs, out_attrs);
+#endif
+#if MXNET_USE_CUDNN == 1
+  ret = ElemwiseStorageAttr<false, false, false>(attrs, dev_mask, dispatch_mode,
+                                                 in_attrs, out_attrs);
+#endif
+
 #else
   if (param.act_type == activation::kSoftSign) {
     CHECK_EQ(in_attrs->size(), 3U);
