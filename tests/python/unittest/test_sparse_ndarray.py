@@ -534,7 +534,9 @@ def test_sparse_nd_pickle():
                 assert same(a.asnumpy(), b.asnumpy())
 
 
-@with_seed(0)
+# @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11741
+@with_seed()
 def test_sparse_nd_save_load():
     repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
