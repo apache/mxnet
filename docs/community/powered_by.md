@@ -3,60 +3,101 @@
 <div class="section-inst">
 <div class="container">
 <div class="row">
-<div class="col-lg-4 col-sm-6">
-    <img height="60px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/aws-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Amazon.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/baidu-logo.jpg">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Banjo.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/cmu-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Borealis_AI.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/dato-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Celgene.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="70px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/intel-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Curalate.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/ms-logo.png">
-</div>
-        
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/mit-logo.png">
-</div>
-        
-<div class="col-lg-4 col-sm-6">
-    <img height="40px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/nvidia-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Gum_Gum.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/nyu-logo.jpg">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Intel.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="55px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/hkust-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Jam_City.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/tusimple-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Julia_Computing.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/university-alberta-logo.png">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Lohika.png">
+</div>   
+          
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/NTT_Docomo.png">
+</div>
+             
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/PIXM.png">
+</div>
+    
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Samsung_SDS.png">
+</div> 
+    
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/SKT.png">
+</div>
+         
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Sigopt.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/university-washington-logo.jpg">
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Teamwork.png">
 </div>
 
-<div class="col-lg-4 col-sm-6">
-    <img height="45px" src="https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo/wolfram-logo.png">
+
+<div class="col-lg-3 divit col-sm-6">
+    <br/>
+</div>
+
+<div class="col-lg-3 divit col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Tusimple.png">
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Wolfram.png">
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <br/>
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/CMU.png">
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Emory_NLP.png">
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/MNLAB_KAIST.png">
+</div>
+
+<div class="col-lg-3 col-sm-6">
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/SPL_Seoul_National_University.png">
 </div>
 </div>
     <p>
