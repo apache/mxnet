@@ -23,30 +23,35 @@ from matplotlib import pyplot as plt
 from binary_rbm import BinaryRBMBlock
 from binary_rbm import estimate_log_likelihood
 
-mx.random.seed(pyrnd.getrandbits(32))
-ctx = mx.gpu()
-
 
 ### Helper function
 
 def get_non_auxiliary_params(rbm):
     return rbm.collect_params('^(?!.*_aux_.*).*$')
 
-### Set hyperparameters
+### Command line arguments
 
 parser = argparse.ArgumentParser(description='Restricted Boltzmann machine learning MNIST')
 parser.add_argument('--num-hidden', type=int, default=500, help='number of hidden units')
-parser.add_argument('--k', type=int, default=20, help='number of Gibbs sampling steps used in the PCD algorithm')
-parser.add_argument('--batch-size', type=int, default=10, help='batch size')
-parser.add_argument('--num-epoch', type=int, default=10, help='number of epochs')
+parser.add_argument('--k', type=int, default=30, help='number of Gibbs sampling steps used in the PCD algorithm')
+parser.add_argument('--batch-size', type=int, default=80, help='batch size')
+parser.add_argument('--num-epoch', type=int, default=130, help='number of epochs')
 parser.add_argument('--learning-rate', type=float, default=0.1, help='learning rate for stochastic gradient descent') # The optimizer rescales this with `1 / batch_size`
-parser.add_argument('--momentum', type=float, default=0, help='momentum for the stochastic gradient descent')
+parser.add_argument('--momentum', type=float, default=0.3, help='momentum for the stochastic gradient descent')
 parser.add_argument('--ais-batch-size', type=int, default=100, help='batch size for AIS to estimate the log-likelihood')
 parser.add_argument('--ais-num-batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
 parser.add_argument('--ais-intermediate-steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
 parser.add_argument('--ais-burn-in-steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
+parser.add_argument('--cuda', action='store_true', default=True, help='train on GPU with CUDA')
+parser.add_argument('--device-id', type=int, default=0, help='GPU device id')
 
 args = parser.parse_args()
+print(args)
+
+### Global environment
+
+mx.random.seed(pyrnd.getrandbits(32))
+ctx = mx.gpu(args.device_id) if args.cuda else mx.cpu()
 
 
 ### Prepare data
@@ -73,6 +78,7 @@ trainer = mx.gluon.Trainer(
     get_non_auxiliary_params(rbm),
     'sgd', {'learning_rate': args.learning_rate, 'momentum': args.momentum})
 for epoch in range(args.num_epoch):
+    # Update parameters
     for i, (batch, _) in enumerate(train_data):
         batch = batch.as_in_context(ctx).reshape((args.batch_size, num_visible))
         with mx.autograd.record():
@@ -80,20 +86,31 @@ for epoch in range(args.num_epoch):
         out[0].backward()
         trainer.step(batch.shape[0])
     mx.nd.waitall() # To restrict memory usage
+
+    # Monitor the performace of the model
     params = get_non_auxiliary_params(rbm)
-    l = estimate_log_likelihood(
-            params['rbm_visible_layer_bias'].data().as_in_context(ctx), 
-            params['rbm_hidden_layer_bias'].data().as_in_context(ctx), 
-            params['rbm_interaction_weight'].data().as_in_context(ctx),
+    param_visible_layer_bias = params['rbm_visible_layer_bias'].data(ctx=ctx)
+    param_hidden_layer_bias = params['rbm_hidden_layer_bias'].data(ctx=ctx)
+    param_interaction_weight = params['rbm_interaction_weight'].data(ctx=ctx)
+    test_log_likelihood, _ = estimate_log_likelihood(
+            param_visible_layer_bias, param_hidden_layer_bias, param_interaction_weight,
             args.ais_batch_size, args.ais_num_batch, args.ais_intermediate_steps, args.ais_burn_in_steps, test_data, ctx)
-    print("Epoch %d completed with test log-likelihood %f and partition function %f" % (epoch, l[0], l[1]))
+    train_log_likelihood, _ = estimate_log_likelihood(
+            param_visible_layer_bias, param_hidden_layer_bias, param_interaction_weight,
+            args.ais_batch_size, args.ais_num_batch, args.ais_intermediate_steps, args.ais_burn_in_steps, train_data, ctx)
+    print("Epoch %d completed with test log-likelihood %f and train log-likelihood %f" % (epoch, test_log_likelihood, train_log_likelihood))
 
 
-### Show some samples. Each sample is obtained by 1000 steps of Gibbs sampling starting from a real data.
+### Show some samples.
+
+# Each sample is obtained by 3000 steps of Gibbs sampling starting from a real sample.
+# Starting from the real data is just for convenience of implmentation.
+# There must be no correlation between the initial states and the resulting samples.
+# You can start from random states and run the Gibbs chain for sufficiently long time.
 
 print("Preparing showcase")
 
-showcase_gibbs_sampling_steps = 1000
+showcase_gibbs_sampling_steps = 3000
 showcase_num_samples_w = 15
 showcase_num_samples_h = 15
 showcase_num_samples = showcase_num_samples_w * showcase_num_samples_h
