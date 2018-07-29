@@ -24,7 +24,6 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
-#include <ctime>
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
