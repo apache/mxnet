@@ -44,6 +44,7 @@ parser.add_argument('--ais-intermediate-steps', type=int, default=10, help='numb
 parser.add_argument('--ais-burn-in-steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
 parser.add_argument('--cuda', action='store_true', default=True, help='train on GPU with CUDA')
 parser.add_argument('--device-id', type=int, default=0, help='GPU device id')
+parser.add_argument('--data-loader-num-worker', type=int, default=4, help='number of multithreading workers for the data loader')
 
 args = parser.parse_args()
 print(args)
@@ -66,8 +67,8 @@ img_width = mnist_train_dataset[0][0].shape[1]
 num_visible = img_width * img_height
 
 # This generates arrays with shape (batch_size, height = 28, width = 28, num_channel = 1)
-train_data = mx.gluon.data.DataLoader(mnist_train_dataset, args.batch_size, shuffle=True)
-test_data = mx.gluon.data.DataLoader(mnist_test_dataset, args.batch_size, shuffle=True)
+train_data = mx.gluon.data.DataLoader(mnist_train_dataset, args.batch_size, shuffle=True, num_workers=args.data_loader_num_worker)
+test_data = mx.gluon.data.DataLoader(mnist_test_dataset, args.batch_size, shuffle=True, num_workers=args.data_loader_num_worker)
 
 ### Train
 
