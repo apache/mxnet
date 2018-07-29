@@ -80,7 +80,7 @@ trainer = mx.gluon.Trainer(
     'sgd', {'learning_rate': args.learning_rate, 'momentum': args.momentum})
 for epoch in range(args.num_epoch):
     # Update parameters
-    for i, (batch, _) in enumerate(train_data):
+    for batch, _ in train_data:
         batch = batch.as_in_context(ctx).flatten()
         with mx.autograd.record():
             out = rbm(batch)
