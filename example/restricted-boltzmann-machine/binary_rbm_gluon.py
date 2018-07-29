@@ -80,7 +80,7 @@ trainer = mx.gluon.Trainer(
 for epoch in range(args.num_epoch):
     # Update parameters
     for i, (batch, _) in enumerate(train_data):
-        batch = batch.as_in_context(ctx).reshape((args.batch_size, num_visible))
+        batch = batch.as_in_context(ctx).flatten()
         with mx.autograd.record():
             out = rbm(batch)
         out[0].backward()
@@ -125,7 +125,7 @@ showcase_rbm = BinaryRBMBlock(
 showcase_iter = iter(mx.gluon.data.DataLoader(mnist_train_dataset, showcase_num_samples_h, shuffle=True))
 showcase_img = np.zeros(showcase_img_shape)
 for i in range(showcase_num_samples_w):
-    data_batch = next(showcase_iter)[0].as_in_context(ctx).reshape((showcase_num_samples_h, num_visible))
+    data_batch = next(showcase_iter)[0].as_in_context(ctx).flatten()
     sample_batch = showcase_rbm(data_batch)
     # Each pixel is the probability that the unit is 1.
     showcase_img[:, i * img_width : (i + 1) * img_width] = sample_batch[0].reshape(showcase_img_column_shape).asnumpy()
