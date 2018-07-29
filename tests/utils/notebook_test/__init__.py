@@ -21,6 +21,7 @@
     warning or exception.
 """
 import io
+import logging
 import os
 import shutil
 import time
@@ -57,12 +58,12 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
     -------
        Returns true if the workbook runs with no warning or exception.
     """
-
+    logging.info("Running notebook '{}'".format(notebook))
     notebook_path = os.path.join(*([notebook_dir] + notebook.split('/')))
     working_dir = os.path.join(*([temp_dir] + notebook.split('/')))
 
     if no_cache == '1':
-        print("Cleaning and setting up temp directory '{}'".format(working_dir))
+        logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     errors = []
@@ -92,6 +93,6 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
                 if "Warning:" in line:
                     errors.append("Warning:\n" + line)
         if len(errors) > 0:
-            print('\n'.join(errors))
+            logging.error('\n'.join(errors))
             return False
         return True

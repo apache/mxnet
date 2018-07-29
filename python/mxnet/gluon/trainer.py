@@ -187,6 +187,11 @@ class Trainer(object):
             arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
+            if kvstore and 'async' in kvstore.type and config['update_on_kvstore'] is not None\
+                    and not config['update_on_kvstore']:
+                raise ValueError("Please set update_on_kvstore to true "
+                                 "when training in async mode.")
+
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
         if kvstore:
@@ -195,7 +200,8 @@ class Trainer(object):
             self._distributed = 'dist' in kvstore.type
             if self._distributed:
                 # kv.pull(row_sparse_grad) is not supported for dist kvstore
-                update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad
+                update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad \
+                                    or 'async' in kvstore.type
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
