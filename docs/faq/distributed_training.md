@@ -76,7 +76,17 @@ to see an example usage.
 ### Updating weights
 KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally. 
 
-When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) object. 
+When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) object like this:
+
+```
+trainer = gluon.Trainer(net.collect_params(), optimizer='sgd',
+                        optimizer_params={'learning_rate': opt.lr,
+                                          'wd': opt.wd,
+                                          'momentum': opt.momentum,
+                                          'multi_precision': True},
+                        kvstore=kv,
+                        update_on_kvstore=True)
+```
 
 When using the symbolic interface, it performs the weight updates on the server without the user having to do anything special.
 
