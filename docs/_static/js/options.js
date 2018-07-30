@@ -2,6 +2,7 @@ var versionSelect   = defaultVersion = 'v1.2.0';
 var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';
+var iotSelect = 'raspberry-pi';
 var environSelect   = 'Pip';
 
 $(document).ready(function () {
@@ -38,6 +39,10 @@ $(document).ready(function () {
             processorSelect = urlParams.get('processor');
         $('button:contains(' + processorSelect + ')').siblings().removeClass('active');
         $('button:contains(' + processorSelect + ')').addClass('active');
+        if (urlParams.get('iot'))
+            environSelect = urlParams.get('iot');
+        $('button:contains(' + iotSelect + ')').siblings().removeClass('active');
+        $('button:contains(' + iotSelect + ')').addClass('active');
         if (urlParams.get('environ'))
             environSelect = urlParams.get('environ');
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
@@ -45,9 +50,9 @@ $(document).ready(function () {
         showContent();
         if (window.location.href.indexOf("/install/index.html") >= 0) {
             if (versionSelect.indexOf(defaultVersion) >= 0) {
-                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect + '&iot=' + iotSelect);
             } else {
-                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect + '&iot=' + iotSelect);
             }
         } 
     }
