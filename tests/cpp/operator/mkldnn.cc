@@ -1277,6 +1277,10 @@ int CalculateWidthConvOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
 }
 
+int CalculateWidthDeconvOutput(int width, int kernel, int padding, int stride) {
+  return stride * (width - 1) + kernel - 2 * padding;
+}
+
 NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
   CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
   TShape target_shape(4);
@@ -1300,7 +1304,7 @@ NDArray CreateBiasNDArray(int num_filters) {
   return arr;
 }
 
-void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
+void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs, bool is_deconv = false) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
@@ -1342,6 +1346,11 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
     float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0])
         / static_cast<float>(input_shape[2]);
+
+    if (is_deconv) {
+      scale = CalculateWidthDeconvOutput(input_shape[2], kernel[0], padding[0], stride[0])
+          / static_cast<float>(input_shape[2]);
+    }
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     scale_vector[0] = 1;
     scale_vector[1] = static_cast<float>(num_filter) / input_shape[1];
@@ -1502,7 +1511,7 @@ TEST(IMPERATIVE, DeconvOp) {
             continue;
           OpAttrs forward_attrs = GetDeconvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetDeconvBackwardOp(kernel, num_filters, dim, stride, pad);
-          TestConvOp(forward_attrs, backwards_attrs);
+          TestConvOp(forward_attrs, backwards_attrs, true);
         }
       }
     }
