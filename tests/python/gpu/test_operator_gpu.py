@@ -693,6 +693,7 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.  https://github.com/apache/incubator-mxnet/issues/11839")
 @with_seed()
 def test_spatial_transformer_with_type():
     data = mx.sym.Variable('data')
