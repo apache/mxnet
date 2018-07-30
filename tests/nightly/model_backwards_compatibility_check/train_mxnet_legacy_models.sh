@@ -38,14 +38,14 @@ cd tests/nightly/model_backwards_compatibility_check
 echo `pwd`
 
 ## Fetch the latest release tags, filtering out 'rcs' and filtering out some other irrelevant ones
-## This list is sorted in descending order chronologically. Keeping n = 5 for a precautionary check.
+## This list is sorted in descending order chronologically.
 ## Sample output for the below git tag command is : 1.2.0 utils 1.1.0 1.0.0 0.12.1
 ## so from this sample we will pick up the top two : 1.2.0 and 1.1.0 and train models on them
 ## Now while performing inference the latest version could be 1.3.0, which will help in validating models trained
 ## on 1.1.0 and 1.2.0 by loading them on the latest version (1.3.0)
 ## Over a period of time, the model repository will grow since with every new release we
 ## upload models trained on newer versions as well through this script
-previous_versions=($(git tag --sort=-creatordate | grep --invert-match rc | head -n 5))
+previous_versions=($(git tag --sort=-creatordate | grep --invert-match rc))
 count=0
 for version in ${previous_versions[*]}
 do
@@ -57,10 +57,10 @@ do
 	fi
 
 	## If MXNet major version starts with a number >=1. with a wildcard match for the minor version numbers
-	if [[ $version = [1-9]* ]]
+	if [[ $version = [1-9].[0-9].[0-9] ]]
 	then
 		count=$((count + 1))
-		# echo $version
+		#echo $version
 		install_mxnet $version
 		run_models
 	fi
