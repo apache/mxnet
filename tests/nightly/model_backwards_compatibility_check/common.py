@@ -20,19 +20,13 @@
 
 import boto3
 import mxnet as mx
-import json
 import os
 import numpy as np
 import logging
-from mxnet import nd, autograd, gluon
-import mxnet.ndarray as nd
-from mxnet.gluon.data.vision import transforms, datasets
-from mxnet import autograd as ag
+from mxnet import gluon
 import mxnet.ndarray as F
-from mxnet.gluon import nn, rnn
+from mxnet.gluon import nn
 import re
-import time
-import sys
 from mxnet.test_utils import assert_almost_equal
 
 # Set fixed random seeds.

@@ -79,7 +79,13 @@ def train_lenet_gluon_hybrid_export_api():
 
     mx.nd.save(os.path.join(get_model_path(model_name), ''.join([model_name, '-data'])), {'data': test_data})
     save_inference_results(output, model_name)
-    net.export(os.path.join(get_model_path(model_name), model_name), epoch=1)
+    if compare_versions(str(mxnet_version) , '1.1.0') < 0:
+        # v1.0.0 does not have the epoch param in the .exports API. Hence adding this safety net
+        net.export(os.path.join(get_model_path(model_name), model_name))
+    else:
+        # Saving with 0 since by default on 1.0.0 it was saved with 0, so simplifying things
+        net.export(os.path.join(get_model_path(model_name), model_name), epoch=0)
+
 
 
 def train_lstm_gluon_save_parameters_api():

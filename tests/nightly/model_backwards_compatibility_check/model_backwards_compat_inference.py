@@ -89,7 +89,7 @@ def test_lenet_gluon_hybrid_imports_api():
         data = mx.nd.load(''.join([model_name, '-data']))
         test_data = data['data']
         loaded_model = HybridNet()
-        loaded_model = gluon.SymbolBlock.imports(model_name + '-symbol.json', ['data'], model_name + '-0001.params')
+        loaded_model = gluon.SymbolBlock.imports(model_name + '-symbol.json', ['data'], model_name + '-0000.params')
         output = loaded_model(test_data)
         old_inference_results = mx.nd.load(model_name + '-inference')['inference']
         assert_almost_equal(old_inference_results.asnumpy(), output.asnumpy())
