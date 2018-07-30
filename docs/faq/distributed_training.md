@@ -73,6 +73,23 @@ These can be passed as arguments to the iterator.
 You can look at [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)
 to see an example usage.
 
+### Updating weights
+KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally. 
+
+When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) object like this:
+
+```
+trainer = gluon.Trainer(net.collect_params(), optimizer='sgd',
+                        optimizer_params={'learning_rate': opt.lr,
+                                          'wd': opt.wd,
+                                          'momentum': opt.momentum,
+                                          'multi_precision': True},
+                        kvstore=kv,
+                        update_on_kvstore=True)
+```
+
+When using the symbolic interface, it performs the weight updates on the server without the user having to do anything special.
+
 ### Different Modes of Distributed Training
 Distributed training itself is enabled when kvstore creation string contains the word `dist`.
 
@@ -86,9 +103,9 @@ In this mode, if a worker crashes, then it halts the progress of all workers.
 - `dist_async`: In asynchronous distributed training, the server receives gradients from one worker and immediately updates its store, which it uses to respond to any future pulls.
 This means that a worker who finishes processing a batch can pull the current parameters from server and start the next batch,
 even if other workers haven't finished processing the earlier batch.
-This is faster than `dist_sync` but can take more epochs to converge.
-In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode.
+This is faster than `dist_sync` because there is no cost of synchronization, but can take more epochs to converge.
 The update of weights is atomic, meaning no two updates happen on the same weight at the same time. However, the order  of updates is not guaranteed.
+In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode. Hence, when using Gluon with `async` mode we need to set `update_on_kvstore` to `True`. 
 
 - `dist_sync_device`: Same as `dist_sync` except that when there are multiple GPUs being used on each node,
 this mode aggregates gradients and updates weights on GPU while dist_sync does so on CPU memory.
