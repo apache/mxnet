@@ -69,7 +69,7 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 
 try {
   stage('MBCC Train'){
-    node('mxnetlinux-cpu') {
+    node('restricted-mxnetlinux-cpu') {
       ws('workspace/modelBackwardsCompat') {
         init_git()
         // Train models on older versions
@@ -81,7 +81,7 @@ try {
   }
 
   stage('MXNet Build'){
-    node('mxnetlinux-cpu') {
+    node('restricted-mxnetlinux-cpu') {
       ws('workspace/build-cpu') {
         init_git()
         docker_run('ubuntu_cpu','build_ubuntu_cpu', false)
@@ -91,7 +91,7 @@ try {
   }
 
   stage('MBCC Inference'){
-    node('mxnetlinux-cpu') {
+    node('restricted-mxnetlinux-cpu') {
       ws('workspace/modelBackwardsCompat') {
         init_git()
         unpack_lib('cpu', mx_lib)
@@ -101,13 +101,13 @@ try {
     }
   }
 } catch (caughtError) {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     sh "echo caught ${caughtError}"
     err = caughtError
     currentBuild.result = "FAILURE"
   }
 } finally {
-  node("mxnetlinux-cpu") {
+  node("restricted-mxnetlinux-cpu") {
     // Only send email if model backwards compat test failed
     if (currentBuild.result == "FAILURE") {
     	emailext body: 'Nightly tests for model backwards compatibity on MXNet branch : ${BRANCH_NAME} failed. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[MODEL BACKWARDS COMPATIBILITY TEST FAILED] build ${BUILD_NUMBER}', to: '${EMAIL}'
