@@ -72,12 +72,13 @@ class CuDNNAlgoReg {
             cudnnDataType_t cudnn_forward_compute_type,
             cudnnDataType_t cudnn_backward_compute_type,
             int sm_arch,
+            bool add_to_weight,
             CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
             CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> *bwd,
             CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt) {
     CHECK(in_shape.size() == 2 || in_shape.size() == 3);
     ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
-                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch};
+                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch, add_to_weight};
     std::lock_guard<std::mutex> guard(lock_);
     auto i = reg_.find(key);
     if (i != reg_.end()) {
@@ -96,12 +97,13 @@ class CuDNNAlgoReg {
                 cudnnDataType_t cudnn_forward_compute_type,
                 cudnnDataType_t cudnn_backward_compute_type,
                 int sm_arch,
+                bool add_to_weight,
                 const CuDNNAlgo<cudnnConvolutionFwdAlgo_t> &fwd,
                 const CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> &bwd,
                 const CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> &flt) {
     CHECK(in_shape.size() == 2 || in_shape.size() == 3);
     ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
-                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch};
+                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch, add_to_weight};
     std::lock_guard<std::mutex> guard(lock_);
     if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
       LOG(INFO) << "Running performance tests to find the best convolution "
@@ -140,6 +142,7 @@ class CuDNNAlgoReg {
     cudnnDataType_t cudnn_forward_compute_type;
     cudnnDataType_t cudnn_backward_compute_type;
     int sm_arch;
+    bool add_to_weight;
 
     bool operator==(const ParamKey& other) const {
       return this->param == other.param &&
@@ -149,7 +152,8 @@ class CuDNNAlgoReg {
              this->cudnn_data_type == other.cudnn_data_type &&
              this->cudnn_forward_compute_type == other.cudnn_forward_compute_type &&
              this->cudnn_backward_compute_type == other.cudnn_backward_compute_type &&
-             this->sm_arch == other.sm_arch;
+             this->sm_arch == other.sm_arch &&
+             this->add_to_weight == other.add_to_weight;
     }
   };
 
@@ -164,6 +168,7 @@ class CuDNNAlgoReg {
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_forward_compute_type));
       ret = dmlc::HashCombine(ret, static_cast<int>(key.cudnn_backward_compute_type));
       ret = dmlc::HashCombine(ret, key.sm_arch);
+      ret = dmlc::HashCombine(ret, key.add_to_weight);
       return ret;
     }
   };

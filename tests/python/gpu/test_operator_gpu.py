@@ -522,6 +522,65 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_convolution_large_c():
+    problematic_c = 64 * 1024
+    # The convolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
+
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_deconvolution_large_c():
+    problematic_c = 64 * 1024
+    # The deconvolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCW', num_filter=problematic_c, kernel=(2,), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
 
 @with_seed()
 def test_convolution_versions():
