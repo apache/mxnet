@@ -19,6 +19,8 @@
 
 #Author: Piyush Ghai
 
+set -ex
+
 echo "Invoking model_backwards_compat_checker.sh script"
 echo `pwd`
 cd tests/nightly/model_backwards_compatibility_check

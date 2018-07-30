@@ -19,6 +19,8 @@
 
 #Author: Piyush Ghai
 
+set -ex
+
 run_models() {
 	echo '=========================='
 	echo "Running training files and preparing models"
