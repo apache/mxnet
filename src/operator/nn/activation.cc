@@ -139,8 +139,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_CUDNN == 1
   ret = ElemwiseStorageAttr<false, false, false>(attrs, dev_mask, dispatch_mode,
                                                  in_attrs, out_attrs);
-#endif
-#if MXNET_USE_MKLDNN == 1
+#elif MXNET_USE_MKLDNN == 1
   bool should_enter = SupportMKLDNNAct(param);
   ret = MKLDNNStorageType(attrs, dev_mask, should_enter, dispatch_mode,
                           in_attrs, out_attrs);
