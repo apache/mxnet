@@ -33,7 +33,7 @@ echo `pwd`
 for dir in $(ls `pwd`/)
 do
     echo $dir
-    aws s3 cp $dir/ s3://mxnet-model-backwards-compatibility-models/$dir/ --recursive
+    aws s3 cp $dir/ s3://mxnet-ci-prod-backwards-compatibility-models/$dir/ --recursive
 done
 
 echo "Deleting model files"
