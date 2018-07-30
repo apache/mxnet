@@ -202,9 +202,6 @@ def _batchify(data):
 
 @with_seed()
 def test_multi_worker_forked_data_loader():
-    """
-    Test should successfully run its course of multi-process/forked data loader without errors
-    """
     data = _Dummy(False)
     loader = DataLoader(data, batch_size=40, batchify_fn=_batchify, num_workers=2)
     for epoch in range(1):
