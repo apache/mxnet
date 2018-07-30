@@ -59,7 +59,9 @@ do
 	fi
 
 	## If MXNet major version starts with a number >=1. with a wildcard match for the minor version numbers
-	if [[ $version = [1-9].[0-9].[0-9] ]]
+	## Could have used a [[:digit:]]+. as well but it was not working as a traditional regex in bash.
+	## so had to resort to using [[:digit:]] [[:digit:]]* to indicate multi-digit version regex match
+	if [[ $version = [[:digit:][[:digit]:]*.[[:digit:]].[[:digit:]] ]]
 	then
 		count=$((count + 1))
 		#echo $version
