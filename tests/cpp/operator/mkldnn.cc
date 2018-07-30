@@ -528,6 +528,35 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
   return attrs;
 }
 
+OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Deconvolution");
+  attrs.num_inputs = 3;
+  attrs.num_outputs = 1;
+  // add dilate
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
+OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Deconvolution");
+  attrs.num_inputs = 4;
+  attrs.num_outputs = 3;
+  // add dilate
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
+
 OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Pooling");
@@ -1456,6 +1485,23 @@ TEST(IMPERATIVE, ConvOp) {
             continue;
           OpAttrs forward_attrs = GetConvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
+          TestConvOp(forward_attrs, backwards_attrs);
+        }
+      }
+    }
+  }
+}
+
+TEST(IMPERATIVE, DeconvOp) {
+  int dim = 2;  // MKLDNN conv only supports 2d kernels
+  for (int num_filters = 2; num_filters < 3; num_filters++) {
+    for (int kernel = 1; kernel < 4; kernel++) {
+      for (int stride = 1; stride < 3; stride++) {
+        for (int pad = 0; pad < 2; pad++) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs forward_attrs = GetDeconvOp(kernel, num_filters, dim, stride, pad);
+          OpAttrs backwards_attrs = GetDeconvBackwardOp(kernel, num_filters, dim, stride, pad);
           TestConvOp(forward_attrs, backwards_attrs);
         }
       }
