@@ -22,6 +22,8 @@ __all__ = ['VariationalDropoutCell', 'LSTMPCell']
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell, HybridRecurrentCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
 from ... import tensor_types
+from .... import symbol, ndarray
+from ....base import _as_list
 
 class VariationalDropoutCell(ModifierCell):
     """
@@ -320,3 +322,64 @@ class LSTMPCell(HybridRecurrentCell):
 
         return next_r, [next_r, next_c]
     # pylint: enable= arguments-differ
+
+
+def _format_sequence(inputs, layout, in_layout=None):
+    assert inputs is not None, \
+        "unroll(inputs=None) has been deprecated. " \
+        "Please create input variables outside unroll."
+
+    axis = layout.find('T')
+    batch_axis = layout.find('N')
+    batch_size = 0
+    in_axis = in_layout.find('T') if in_layout is not None else axis
+    assert isinstance(inputs, tensor_types)
+    if isinstance(inputs, symbol.Symbol):
+        F = symbol
+    else:
+        F = ndarray
+        batch_size = inputs.shape[batch_axis]
+
+    if axis != in_axis:
+        inputs = F.swapaxes(inputs, dim1=axis, dim2=in_axis)
+
+    return inputs, axis, F, batch_size
+
+
+def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
+           layout='NTC', valid_length=None):
+    inputs, axis, F, batch_size = _format_sequence(inputs, layout)
+    states = begin_state
+
+    if drop_inputs:
+        inputs = F.Dropout(inputs, p=drop_inputs, axes=(axis,))
+
+    if valid_length is None:
+        def loop_body(inputs, states):
+            return cell(inputs, states)
+    else:
+        zeros = []
+        for i in range(len(states)):
+            zeros.append(F.zeros_like(states[i]))
+        states = _as_list(states)
+        states.append(F.zeros((1)))
+        def loop_body(inputs, states):
+            cell_states = states[:-1]
+            iter_no = states[-1]
+            out, new_states = cell(inputs, cell_states)
+            for i in range(len(new_states)):
+                new_states[i] = F.where(F.broadcast_greater(valid_length, iter_no),
+                                        new_states[i], zeros[i])
+            new_states.append(iter_no + 1)
+            return out, new_states
+
+    outputs, states = F.contrib.foreach(loop_body, inputs, states)
+    if drop_outputs:
+        outputs = F.Dropout(outputs, p=drop_outputs, axes=(axis,))
+    if valid_length is not None:
+        outputs = F.SequenceMask(outputs, sequence_length=valid_length,
+                                 use_sequence_length=True, axis=axis)
+        # the last state is the iteration number. We don't need it.
+        return outputs, states[:-1]
+    else:
+        return outputs, states
