@@ -22,6 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -46,22 +47,13 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
       logger.info("Downloading CNN text...")
       val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala"
-      var tmpFile = new File(tempDirPath + "/CNN/rt-polarity.pos")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/scala-example-ci/CNN/rt-polarity.pos"),
-          tmpFile)
-      }
-      tmpFile = new File(tempDirPath + "/CNN/rt-polarity.neg")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/scala-example-ci/CNN/rt-polarity.neg"),
-          tmpFile)
-      }
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.pos",
+        tempDirPath + "/CNN/rt-polarity.pos")
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/rt-polarity.neg",
+        tempDirPath + "/CNN/rt-polarity.neg")
       logger.info("Downloading pretrianed Word2Vec Model, may take a while")
-      tmpFile = new File(tempDirPath + "/CNN/" + w2vModelName)
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/scala-example-ci/CNN/" + w2vModelName),
-          tmpFile)
-      }
+      Util.downloadUrl(baseUrl + "/scala-example-ci/CNN/" + w2vModelName,
+        tempDirPath + "/CNN/" + w2vModelName)
 
       val modelDirPath = tempDirPath + File.separator + "CNN"
 
