@@ -125,11 +125,19 @@ def get_top_level_folders_in_bucket(s3client, bucket_name):
         return folder_list
     for obj in result['CommonPrefixes']:
         folder_name = obj['Prefix'].strip(backslash)
+        # We only compare models from the same major versions. i.e. 1.x.x compared with latest 1.y.y etc
+        if str(folder_name).split('.')[0] != str(mxnet_version).split('.')[0]:
+            continue
         # The top level folders contain MXNet Version # for trained models. Skipping the data folder here
         if folder_name == data_folder:
             continue
         folder_list.append(obj['Prefix'].strip(backslash))
 
+    if len(folder_list) == 0:
+        logging.error('No trained models found in S3 bucket : %s for this file. '
+                      'Please train the models and run inference again' % bucket_name)
+        raise Exception("No trained models found in S3 bucket : %s for this file. "
+                        "Please train the models and run inference again" % bucket_name)
     return folder_list
 
 
