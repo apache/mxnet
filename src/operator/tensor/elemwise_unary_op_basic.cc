@@ -434,7 +434,9 @@ Example::
   y = [[0, -4], [3, 2], [2, 2]]
   reshape_like(x, y) = [[1, 2], [3, 4], [5, 6]]
 
-More precise control over how dimensions are inherited is achieved by specifying slices over the `lhs` and `rhs` array dimensions.
+More precise control over how dimensions are inherited is achieved by specifying \
+slices over the `lhs` and `rhs` array dimensions. Only the sliced `lhs` dimensions \
+are reshaped to the `rhs` sliced dimensions, with the non-sliced `lhs` dimensions staying the same. 
 
   Examples::
 
