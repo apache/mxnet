@@ -67,8 +67,7 @@
     <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Teamwork.png">
 </div>
 
-
-<div class="col-lg-3 divit col-sm-6">
+<div class="col-lg-3 divit nomobile col-sm-6">
     <br/>
 </div>
 
@@ -76,11 +75,11 @@
     <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Tusimple.png">
 </div>
 
-<div class="col-lg-3 col-sm-6">
+<div class="col-lg-3 divit col-sm-6">
     <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/powered-by/Wolfram.png">
 </div>
 
-<div class="col-lg-3 col-sm-6">
+<div class="col-lg-3 divit nomobile col-sm-6">
     <br/>
 </div>
 
