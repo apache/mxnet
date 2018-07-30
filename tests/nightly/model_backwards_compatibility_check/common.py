@@ -42,7 +42,7 @@ logging.basicConfig(level=logging.INFO)
 
 # get the current mxnet version we are running on
 mxnet_version = mx.__version__
-model_bucket_name = 'mxnet-model-backwards-compatibility-models'
+model_bucket_name = 'mxnet-ci-prod-backwards-compatibility-models'
 data_folder = 'mxnet-model-backwards-compatibility-data'
 backslash = '/'
 s3 = boto3.resource('s3')
