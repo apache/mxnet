@@ -19,6 +19,8 @@
 
 #Author: Piyush Ghai
 
+set -ex
+
 echo "uploading model files to s3"
 
 echo `pwd`
