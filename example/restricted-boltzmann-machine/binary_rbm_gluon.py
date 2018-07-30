@@ -42,9 +42,11 @@ parser.add_argument('--ais-batch-size', type=int, default=100, help='batch size 
 parser.add_argument('--ais-num-batch', type=int, default=10, help='number of batches for AIS to estimate the log-likelihood')
 parser.add_argument('--ais-intermediate-steps', type=int, default=10, help='number of intermediate distributions for AIS to estimate the log-likelihood')
 parser.add_argument('--ais-burn-in-steps', type=int, default=10, help='number of burn in steps for each intermediate distributions of AIS to estimate the log-likelihood')
-parser.add_argument('--cuda', action='store_true', default=True, help='train on GPU with CUDA')
+parser.add_argument('--cuda', action='store_true', dest='cuda', help='train on GPU with CUDA')
+parser.add_argument('--no-cuda', action='store_false', dest='cuda', help='train on CPU')
 parser.add_argument('--device-id', type=int, default=0, help='GPU device id')
 parser.add_argument('--data-loader-num-worker', type=int, default=4, help='number of multithreading workers for the data loader')
+parser.set_defaults(cuda=True)
 
 args = parser.parse_args()
 print(args)
