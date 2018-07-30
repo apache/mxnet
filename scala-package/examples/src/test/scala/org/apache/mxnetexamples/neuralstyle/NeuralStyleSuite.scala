@@ -17,11 +17,8 @@
 
 package org.apache.mxnetexamples.neuralstyle
 
-import java.io.File
-import java.net.URL
-
-import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
+import org.apache.mxnetexamples.Util
 import org.apache.mxnetexamples.neuralstyle.end2end.{BoostInference, BoostTrain}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -36,22 +33,16 @@ import scala.sys.process.Process
 class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[NeuralStyleSuite])
 
-  def downloadUrl(url: String, filePath: String) : Unit = {
-    val tmpFile = new File(filePath)
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(url), tmpFile)
-    }
-  }
 
   override def beforeAll(): Unit = {
     logger.info("Downloading vgg model")
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
     val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/NeuralStyle/"
-    downloadUrl(baseUrl + "IMG_4343.jpg", tempDirPath + "/NS/IMG_4343.jpg")
-    downloadUrl(baseUrl + "starry_night.jpg", tempDirPath + "/NS/starry_night.jpg")
-    downloadUrl(baseUrl + "model.zip", tempDirPath + "/NS/model.zip")
-    downloadUrl(baseUrl + "vgg19.params", tempDirPath + "/NS/vgg19.params")
+    Util.downloadUrl(baseUrl + "IMG_4343.jpg", tempDirPath + "/NS/IMG_4343.jpg")
+    Util.downloadUrl(baseUrl + "starry_night.jpg", tempDirPath + "/NS/starry_night.jpg")
+    Util.downloadUrl(baseUrl + "model.zip", tempDirPath + "/NS/model.zip")
+    Util.downloadUrl(baseUrl + "vgg19.params", tempDirPath + "/NS/vgg19.params")
     // TODO: Need to confirm with Windows
     Process(s"unzip $tempDirPath/NS/model.zip -d $tempDirPath/NS/") !
 
