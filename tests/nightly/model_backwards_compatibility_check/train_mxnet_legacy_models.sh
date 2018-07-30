@@ -44,7 +44,14 @@ get_major_version() {
 
 ## We read the current major version from libinfo.py file. And we extract the major version from it.
 curr_mxnet_version=$(grep -w "__version__" python/mxnet/libinfo.py | grep -o '".*"' | sed 's/"//g')
-curr_major_version=$(get_major_version $curr_mxnet_version)
+## Expected in <numeric>.<numeric>.<numeric> format
+if [[ $curr_mxnet_version = [[:digit:][[:digit:]]*.[[:digit:][[:digit:]]*.[[:digit:][[:digit:]]* ]]
+then
+    curr_major_version=$(get_major_version $curr_mxnet_version)
+else
+    echo "The current major version does not comply with the regex expected. Exiting here."
+    exit 1
+fi
 
 echo `pwd`
 cd tests/nightly/model_backwards_compatibility_check
