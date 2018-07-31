@@ -1281,11 +1281,11 @@ int CalculateWidthDeconvOutput(int width, int kernel, int padding, int stride) {
   return stride * (width - 1) + kernel - 2 * padding;
 }
 
-NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input) {
+NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input, bool is_deconv = false) {
   CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
   TShape target_shape(4);
-  target_shape[0] = num_filters;
-  target_shape[1] = input[1];
+  target_shape[0] = is_deconv ? input[1] : num_filters;
+  target_shape[1] = is_deconv ? num_filters : input[1];
   target_shape[2] = kernel[0];
   target_shape[3] = kernel[1];
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
@@ -1361,7 +1361,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs, bo
       out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
       ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
     }
-    NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+    NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
     NDArray ndbias = CreateBiasNDArray(num_filter);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
@@ -1389,7 +1389,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs, bo
       backwards_input[3] = inputs[2];  // bias
 
       auto tmp_output = GetTestInputArrays(true)[i1];
-      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias = CreateBiasNDArray(num_filter);
 
       backwards_outputs[0] = &tmp_output.arr;
@@ -1397,7 +1397,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs, bo
       backwards_outputs[2] = &tmp_bias;
 
       auto tmp_output2 = GetTestInputArrays(true)[i1];
-      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape());
+      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
       backwards_ex_outputs[0] = &tmp_output2.arr;
       backwards_ex_outputs[1] = &tmp_kernel2;
