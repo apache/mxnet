@@ -3018,17 +3018,18 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 
-# TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
-@with_seed(1234)
+# @haojin2: getting rid of the fixed seed as the flakiness could not be reproduced.
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11717
+@with_seed()
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
-            for nbatch in [1, 4]:
-                for nchannel in [3, 5]:
-                    for height in [4, 6]:
-                        check_l2_normalization((nbatch, nchannel, height), mode, dtype)
-                        for width in [5, 7]:
-                            check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
+            nbatch = random.randint(1, 4)
+            nchannel = random.randint(3, 5)
+            height = random.randint(4, 6)
+            check_l2_normalization((nbatch, nchannel, height), mode, dtype)
+            width = random.randint(5, 7)
+            check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
 
 
 def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
