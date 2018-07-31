@@ -821,11 +821,11 @@ OpStatePtr CachedOp::DynamicForward(
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  // We don't need to record when running the graph. The computation is recorded
-  // in forward.
+  // If we are already recording, we don't need RunGraph to record all
+  // computation again.
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes,
-           recording && !inlining_ ? false : true);
+           !recording || inlining_);
 
   return op_state;
 }
