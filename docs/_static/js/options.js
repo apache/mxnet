@@ -9,6 +9,15 @@ $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
     }
+
+    function unlabel(lbl) {
+        if (lbl === "raspberry-pi") {
+            return "Raspberry Pi";
+        } else if (lbl === "nvidia-jetson-tx2") {
+            return "NVIDIA Jetson TX2";
+        }
+        return lbl;
+    }
    
     function urlSearchParams(searchString) {
         let urlDict = new Map();
@@ -40,9 +49,9 @@ $(document).ready(function () {
         $('button:contains(' + processorSelect + ')').siblings().removeClass('active');
         $('button:contains(' + processorSelect + ')').addClass('active');
         if (urlParams.get('iot'))
-            environSelect = urlParams.get('iot');
-        $('button:contains(' + iotSelect + ')').siblings().removeClass('active');
-        $('button:contains(' + iotSelect + ')').addClass('active');
+            iotSelect = urlParams.get('iot');
+        $('button:contains(' + unlabel(iotSelect) + ')').siblings().removeClass('active');
+        $('button:contains(' + unlabel(iotSelect) + ')').addClass('active');
         if (urlParams.get('environ'))
             environSelect = urlParams.get('environ');
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
@@ -94,6 +103,9 @@ $(document).ready(function () {
         }
         else if ($(this).hasClass("processors")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
+        }
+        else if ($(this).hasClass("iots")) {
+            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('iot'), label($(this).text() )));
         }
         showContent();
         //window.location.search = window.location.search.replace( urlParams.get('version'), $(this).text() );
