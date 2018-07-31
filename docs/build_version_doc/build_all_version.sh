@@ -86,7 +86,16 @@ built="VersionedWeb"
 if [ ! -d "$mxnet_folder" ]; then
   mkdir $mxnet_folder
   git clone $mxnet_url $mxnet_folder --recursive
+  echo "Adding MXNet upstream repo..."
+  cd $mxnet_folder
+  git remote add upstream https://github.com/apache/incubator-mxnet
+  cd ..
 fi
+
+# Refresh branches
+cd $mxnet_folder
+git fetch upstream
+cd ..
 
 if [ ! -d "$built" ]; then
   mkdir $built
