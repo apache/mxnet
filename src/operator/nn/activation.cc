@@ -31,6 +31,8 @@
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
 #endif  // MXNET_USE_MKLDNN
+#include "../operator_common.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {

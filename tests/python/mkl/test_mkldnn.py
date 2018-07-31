@@ -92,7 +92,7 @@ def test_mkldnn_engine_threading():
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
-        # output should be 016711406 (non-mkldnn mode output) 
+        # output should be 016711406 (non-mkldnn mode output)
         assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
 
@@ -239,6 +239,125 @@ def test_batchnorm():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_batchnorm_training(stype)
+
+
+@with_seed()
+def test_softmax():
+    def check_softmax_training(stype):
+        for shape in [(2, 3), (2, 3, 2, 2)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.softmax(data, axis=-1)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_softmax_training(stype)
+
+
+@with_seed()
+def test_pooling():
+    def check_pooling_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 20, 20)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Pooling(data=data, kernel=(3,), stride=(2), pool_type='avg')
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='avg')
+            else:
+                return 0
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_pooling_training(stype)
+
+
+@with_seed()
+def test_activation():
+    def check_activation_training(stype):
+        for shape in [(2, 3, 3), (2, 3, 2, 2)]:
+            data_tmp = np.random.normal(-0.1, 1, size=shape)
+
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.Activation(data, act_type="relu")
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_activation_training(stype)
+
+
+def test_convolution():
+    def check_convolution_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+            data_tmp = np.random.normal(-0.1, 1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Convolution(data=data, kernel=(3,), stride=(2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3))
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Convolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
+            else:
+                return 0
+            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                           mx.nd.array(bias_tmp).tostype(stype)]
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_convolution_training(stype)
+
+
+def test_Deconvolution():
+    def check_Deconvolution_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+            data_tmp = np.random.randint(256, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Deconvolution(data=data, kernel=(3,), stride=(2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3))
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
+            else:
+                return 0
+            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                           mx.nd.array(bias_tmp).tostype(stype)]
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_Deconvolution_training(stype)
+
+
+@with_seed()
+def test_LRN():
+    def check_LRN_training(stype):
+        for shape in [(3, 4, 5, 5)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.LRN(data, nsize=3)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_LRN_training(stype)
 
 
 @with_seed()

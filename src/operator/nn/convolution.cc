@@ -26,11 +26,14 @@
 
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
-#include "./mkldnn/mkldnn_ops-inl.h"
-#include "./mkldnn/mkldnn_base-inl.h"
+#include "../operator_common.h"
 #if MXNET_USE_NNPACK == 1
 #include "../nnpack/nnpack_pooling-inl.h"
 #endif  // MXNET_USE_NNPACK
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_base-inl.h"
+#include "./mkldnn/mkldnn_ops-inl.h"
+#endif  // MXNET_USE_MKLDNN
 
 namespace mxnet {
 namespace op {
@@ -288,25 +291,19 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+#if MXNET_USE_MKLDNN == 1
 inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
-                                   std::vector<int> *in_attrs,
-                                   std::vector<int> *out_attrs) {
+                                   std::vector<int>* in_attrs,
+                                   std::vector<int>* out_attrs) {
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
   uint32_t in_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), 1);
 
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
 
 inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
@@ -320,16 +317,10 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), in_expected);
   CHECK_EQ(out_attrs->size(), out_expected);
 
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
+#endif
 
 void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
   using namespace mshadow;
@@ -488,7 +479,9 @@ There are other options to tune the performance.
 })
 .set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionComputeExCPU)
@@ -508,7 +501,9 @@ NNVM_REGISTER_OP(_backward_Convolution)
   return params.no_bias ? 2 : 3;
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardConvStorageType)
+#endif
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
