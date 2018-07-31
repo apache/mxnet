@@ -26,6 +26,16 @@ import pypandoc
 # import StringIO from io for python3 compatibility
 from io import StringIO
 import contextlib
+from ConfigParser import SafeConfigParser
+
+parser = SafeConfigParser()
+parser.read('settings.ini')
+
+_MXNET_DOCS_BUILD_MXNET = parser.get('mxnet', 'build_mxnet')
+_SCALA_DOCS = parser.get('document_sets', 'scala_docs')
+_CLOJURE_DOCS = parser.get('document_sets', 'clojure_docs')
+_DOXYGEN_DOCS = parser.get('document_sets', 'doxygen_docs')
+_R_DOCS = parser.get('document_sets', 'r_docs')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
 _EVAL_WHILTELIST = []
@@ -383,13 +393,16 @@ def setup(app):
 
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
-    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1':
+    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
         app.connect("builder-inited", build_mxnet)
-    app.connect("builder-inited", generate_doxygen)
-    app.connect("builder-inited", build_scala_docs)
-    app.connect("builder-inited", build_clojure_docs)
-    # skipped to build r, it requires to install latex, which is kinds of too heavy
-    # app.connect("builder-inited", build_r_docs)
+    if _DOXYGEN_DOCS:
+        app.connect("builder-inited", generate_doxygen)
+    if _SCALA_DOCS:
+        app.connect("builder-inited", build_scala_docs)
+    if _CLOJURE_DOCS:
+        app.connect("builder-inited", build_clojure_docs)
+    if _R_DOCS:
+        app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {
