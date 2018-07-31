@@ -19,16 +19,26 @@
 
 # This script is for locally building website for all versions
 # Built files are stored in $built
-
-# Takes two arguments:
-# tag list - semicolon delimited list of Github tags
+# Default repo is mxnet_url="https://github.com/apache/incubator-mxnet.git"
+# Default build directory is mxnet_folder="apache-mxnet"
+# Takes two required arguments and one optional:
+# tag list (required)- semicolon delimited list of Github tags
 #   Example: "1.2.0;1.1.0;master"
-# display list - semicolon delimited list of what to display on website
+# display list (required) - semicolon delimited list of what to display on website
 #   Example: "1.2.1;1.1.0;master"
-# The number of tags for the two arguments must be the same.
+# NOTE: The number of tags for the two arguments must be the same.
+# Repo URL (optional) - a GitHub URL that is a fork of the MXNet project
+#   When this is used the build directory will be {github_username}-mxnet
+
 # Example Usage:
-#   ./build_all_version.sh "1.2.0;1.1.0;master" "1.2.1;1.1.0;master"
+#  Build the content of the 1.2.0 branch in the main repo to the 1.2.1 folder.
 #   ./build_all_version.sh "1.2.0" "1.2.1"
+#  Using the main project repo, map the 1.2.0 branch to output to a 1.2.1 directory; others as is:
+#   ./build_all_version.sh "1.2.0;1.1.0;master" "1.2.1;1.1.0;master"
+#  Using a custom branch and fork of the repo, map the branch to master,
+#    map 1.2.0 branch to 1.2.1 and leave 1.1.0 in 1.1.0:
+#   ./build_all_version.sh "sphinx_error_reduction;1.2.0;1.1.0" \
+#   "master;1.2.1;1.1.0" https://github.com/aaronmarkham/incubator-mxnet.git
 
 set -e
 set -x
@@ -58,8 +68,19 @@ if [ -z "$2" ]
     done
 fi
 
-mxnet_url="https://github.com/apache/incubator-mxnet.git"
-mxnet_folder="apache_mxnet"
+if [ -z "$3" ]
+  then
+    echo "Using the main project URL."
+    mxnet_url="https://github.com/apache/incubator-mxnet.git"
+    mxnet_folder="apache-mxnet"
+  else
+    mxnet_url=$3
+    fork=${mxnet_url##"https://github.com/"}
+    fork_user=${fork%%"/incubator-mxnet.git"}
+    mxnet_folder=$fork_user"-mxnet"
+    echo "Building with a user supplied fork: $mxnet_url"
+fi
+
 built="VersionedWeb"
 
 if [ ! -d "$mxnet_folder" ]; then
@@ -111,3 +132,5 @@ for key in ${!build_arr[@]}; do
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
+echo "The following pattern is recommended (tags, default tag, url base):"
+echo "./update_all_version.sh "$tags_to_display " master http://mxnet.incubator.apache.org/"
