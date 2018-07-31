@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -20,11 +21,14 @@ import mxnet as mx
 import numpy as np
 import sys
 import os
+from collections import namedtuple
+
+from six.moves import xrange
+
 current_working_directory = os.getcwd()
 sys.path.append(current_working_directory + "/..")
 sys.path.append(current_working_directory + "/../converter/")
 import _mxnet_converter as mxnet_converter
-from collections import namedtuple
 
 
 def _mxnet_remove_batch(input_data):
@@ -116,7 +120,7 @@ class ModelsTest(unittest.TestCase):
             self.assertEqual(len(mxnet_pred), len(coreml_pred))
             div.append(_kl_divergence(mxnet_pred, coreml_pred))
 
-        print "Average KL divergence is % s" % np.mean(div)
+        print("Average KL divergence is % s" % np.mean(div))
         self.assertTrue(np.mean(div) < 1e-4)
 
     def test_pred_inception_bn(self):

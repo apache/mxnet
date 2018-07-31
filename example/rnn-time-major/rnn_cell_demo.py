@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""A simple demo of new RNN cell with PTB language model."""
+"""A simple demo of new RNN cell with Sherlock Holmes language model."""
 
 ################################################################################
 # Speed test (time major is 1.5~2 times faster than batch major).
@@ -93,16 +93,16 @@ if __name__ == '__main__':
     gpu_count = 1
     contexts = [mx.context.gpu(i) for i in range(gpu_count)]
 
-    vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
+    vocab = default_build_vocab(os.path.join(data_dir, 'sherlockholmes.train.txt'))
 
     init_h = [mx.io.DataDesc('LSTM_state', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
     init_c = [mx.io.DataDesc('LSTM_state_cell', (num_lstm_layer, batch_size, num_hidden), layout='TNC')]
     init_states = init_c + init_h
 
-    data_train = BucketSentenceIter(os.path.join(data_dir, 'ptb.train.txt'),
+    data_train = BucketSentenceIter(os.path.join(data_dir, 'sherlockholmes.train.txt'),
                                     vocab, buckets, batch_size, init_states,
                                     time_major=True)
-    data_val = BucketSentenceIter(os.path.join(data_dir, 'ptb.valid.txt'),
+    data_val = BucketSentenceIter(os.path.join(data_dir, 'sherlockholmes.valid.txt'),
                                   vocab, buckets, batch_size, init_states,
                                   time_major=True)
 

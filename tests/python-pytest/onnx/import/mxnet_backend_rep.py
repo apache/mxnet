@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """MXNet backend rep for onnx test infrastructure"""
-import numpy as np
 try:
     from onnx.backend.base import BackendRep
 except ImportError:
@@ -83,4 +82,7 @@ class MXNetBackendRep(BackendRep):
         # run inference
         mod.forward(mx.io.DataBatch(data_forward))
         result = mod.get_outputs()[0].asnumpy()
+        # split operator inference returns 1 less dimension
+        if self.symbol.name.startswith('split'):
+            return [i.asnumpy() for i in mod.get_outputs()]
         return [result]

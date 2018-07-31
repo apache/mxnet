@@ -73,6 +73,18 @@ def test_recordimage_dataset():
         assert y.asscalar() == i
 
 @with_seed()
+def test_recordimage_dataset_with_data_loader_multiworker():
+    # This test is pointless on Windows because Windows doesn't fork
+    if platform.system() != 'Windows':
+        recfile = prepare_record()
+        dataset = gluon.data.vision.ImageRecordDataset(recfile)
+        loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+
+        for i, (x, y) in enumerate(loader):
+            assert x.shape[0] == 1 and x.shape[3] == 3
+            assert y.asscalar() == i
+
+@with_seed()
 def test_sampler():
     seq_sampler = gluon.data.SequentialSampler(10)
     assert list(seq_sampler) == list(range(10))

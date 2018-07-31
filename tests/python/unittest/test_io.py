@@ -317,6 +317,8 @@ def test_CSVIter():
         entry_str = '1'
         if dtype is 'int32':
             entry_str = '200000001'
+        if dtype is 'int64':
+            entry_str = '2147483648'
         with open(data_path, 'w') as fout:
             for i in range(1000):
                 fout.write(','.join([entry_str for _ in range(8*8)]) + '\n')
@@ -332,10 +334,10 @@ def test_CSVIter():
             assert_almost_equal(data_batch.asnumpy(), expected.asnumpy())
             assert data_batch.asnumpy().dtype == expected.asnumpy().dtype
 
-    for dtype in ['int32', 'float32']:
+    for dtype in ['int32', 'int64', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
 
-
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11359")
 def test_ImageRecordIter_seed_augmentation():
     get_cifar10()
     seed_aug = 3
@@ -407,7 +409,8 @@ def test_ImageRecordIter_seed_augmentation():
         mean_img="data/cifar/cifar10_mean.bin",
         shuffle=False,
         data_shape=(3, 28, 28),
-        batch_size=3)
+        batch_size=3,
+        seed_aug=seed_aug)
     batch = dataiter.next()
     data = batch.data[0].asnumpy().astype(np.uint8)
 

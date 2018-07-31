@@ -66,11 +66,8 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	RETURN_STRING := $(shell ./prepare_mkldnn.sh $(MKLDNN_ROOT))
-	LAST_WORD_INDEX := $(words $(RETURN_STRING))
-	# fetch the 2nd last word as MKLDNNROOT
-	MKLDNNROOT := $(word $(shell echo $$(($(LAST_WORD_INDEX) - 1))),$(RETURN_STRING))
-	MKLROOT := $(lastword $(RETURN_STRING))
+	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
+	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	export USE_MKLML = 1
 endif
 
@@ -159,12 +156,20 @@ endif
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
-ifeq (,$(wildcard /lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
+endif
+endif
 endif
 endif
 endif
@@ -434,11 +439,11 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc
+build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-build/src/%_gpu.o: src/%.cu
+build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
@@ -507,6 +512,7 @@ ifeq ($(USE_CPP_PACKAGE), 1)
 include cpp-package/cpp-package.mk
 endif
 
+include mkldnn.mk
 include tests/cpp/unittest.mk
 
 extra-packages: $(EXTRA_PACKAGES)
@@ -583,25 +589,52 @@ scalaclean:
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
-scalatest:
+scalaunittest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn verify -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
+
+scalaintegrationtest:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests=true -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
+scalarelease-dryrun:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
+scalarelease-prepare:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:clean release:prepare -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
+scalarelease-perform:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:perform -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn deploy -Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
@@ -619,10 +652,9 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz \
-		3rdparty/mkldnn/install/*
+		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

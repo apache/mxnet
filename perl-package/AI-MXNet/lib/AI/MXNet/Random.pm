@@ -43,19 +43,39 @@ use AI::MXNet::Function::Parameters;
 
     Parameters
     ----------
-    seed_state : int
-        The random number seed to set to all devices.
+    $seed_state : int
+        The random number seed.
 
+    :$ctx : [Str|AI::MXNet::Context]
+        The device context of the generator. The default Str is "all" which means seeding random
+        number generators of all devices.
     Notes
     -----
-    The random number generator of mxnet is by default device specific.
-    This means if you set the same seed, the random number sequence
-    generated from GPU0 can be different from CPU.
+    Random number generators in MXNet are device specific.
+    mx->random->seed($seed_state) sets the state of each generator using $seed_state and the
+    device id. Therefore, random numbers generated from different devices can be different
+    even if they are seeded using the same seed.
+
+    To produce identical random number sequences independent of the device id,
+    set optional ctx argument. 
+    For example mx->random->seed($seed_state, ctx => mx->gpu(0))
+    This produces the same sequence of random numbers independent
+    of the device id, but the sequence can be different on different kind of devices as MXNet's
+    random number generators for CPU and GPU use different algorithms.
 =cut
 
-method seed(Int $seed_state)
+method seed(Int $seed_state, Str|AI::MXNet::Context :$ctx='all')
 {
-    check_call(AI::MXNetCAPI::RandomSeed($seed_state));
+    if(not ref $ctx)
+    {
+        confess("ctx argument could be either string 'all' or AI::MXNet::Context")
+            unless $ctx eq 'all';
+        check_call(AI::MXNetCAPI::RandomSeed($seed_state));
+    }
+    else
+    {
+        check_call(AI::MXNetCAPI::RandomSeedContext($seed_state, $ctx->device_type_id, $ctx->device_id));
+    }
 }
 
 sub AUTOLOAD {

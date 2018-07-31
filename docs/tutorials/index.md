@@ -34,6 +34,7 @@ Select API:&nbsp;
 * Models
     * [Model Zoo: using pre-trained models](/tutorials/gluon/pretrained_models.html)
     * [Linear Regression](http://gluon.mxnet.io/chapter02_supervised-learning/linear-regression-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+    * [Logistic Regression](/tutorials/gluon/logistic_regression_explained.html)
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
@@ -42,6 +43,9 @@ Select API:&nbsp;
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
+    * [Learning Rate Finder](/tutorials/gluon/learning_rate_finder.html)
+    * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
+    * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
 * API Guides
     * Core APIs
@@ -117,13 +121,13 @@ Select API:&nbsp;
 <hr>
 
 ## Scala Tutorials
-
+* [MXNet-Scala Tutorials Overview](/tutorials/scala/)
 * Getting Started
     * [MXNet and JetBrain's IntelliJ](/tutorials/scala/mxnet_scala_on_intellij.html)
 * Models
     * [MNIST Handwritten Digit Recognition with Fully Connected Network](/tutorials/scala/mnist.html)
     * [Barack Obama speech generation with Character-level LSTM](/tutorials/scala/char_lstm.html)
-
+* [MXNet-Scala  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples)
 <hr>
 
 ## C++ Tutorials
@@ -147,9 +151,9 @@ Select API:&nbsp;
     * [Callbacks](/tutorials/r/CallbackFunction.html)
     * [Custom Data Iterators](/tutorials/r/CustomIterator.html)
     * [Custom Loss Functions](/tutorials/r/CustomLossFunction.html)
- 
+
 <hr>
- 
+
 ## Contributing Tutorials
 
 We really appreciate contributions, and tutorials are a great way to share your knowledge and help the community. After you have followed [these steps](https://github.com/apache/incubator-mxnet/tree/master/example#contributing), please submit a pull request on Github.

@@ -25,6 +25,8 @@ use Hash::Ordered;
 
 sub test_loss_ndarray
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $output     = mx->nd->array([1, 2, 3, 4]);
     my $label      = mx->nd->array([1, 3, 5, 7]);
     my $weighting  = mx->nd->array([0.5, 1, 0.5, 1]);
@@ -72,6 +74,8 @@ sub get_net
 
 sub test_ce_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $nclass = 10;
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, $nclass]);
@@ -93,6 +97,8 @@ test_ce_loss();
 
 sub test_bce_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 20]);
     my $label = mx->nd->array([qw/1 1 0 1 0 0 0 1 1 1 1 1 0 0 1 0 0 0 0 0/], dtype=>'float32');
@@ -114,6 +120,8 @@ test_bce_loss();
 
 sub test_bce_equal_ce2
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 100;
     my $loss1 = gluon->loss->SigmoidBCELoss(from_sigmoid=>1);
     my $loss2 = gluon->loss->SoftmaxCELoss(from_logits=>1);
@@ -127,6 +135,8 @@ test_bce_equal_ce2();
 
 sub test_kl_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->nd->softmax(mx->random->uniform(0, 1, shape=>[$N, 2]));
@@ -147,6 +157,8 @@ test_kl_loss();
 
 sub test_l2_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->nd->softmax(mx->random->uniform(-1, 1, shape=>[$N, 1]));
@@ -167,6 +179,8 @@ test_l2_loss();
 
 sub test_l1_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->nd->softmax(mx->random->uniform(-1, 1, shape=>[$N, 1]));
@@ -187,6 +201,8 @@ test_l1_loss();
 
 sub test_ctc_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $loss = gluon->loss->CTCLoss();
     my $l = $loss->(mx->nd->ones([2,20,4]), mx->nd->array([[1,0,-1,-1],[2,1,1,-1]]));
     ok(almost_equal($l->aspdl, mx->nd->array([18.82820702, 16.50581741])->aspdl));
@@ -216,6 +232,8 @@ test_ctc_loss();
 
 sub test_ctc_loss_train
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 20, 10]);
     my $label = mx->nd->arange(start => 4, repeat=>$N)->reshape([$N, 4]);
@@ -227,7 +245,7 @@ sub test_ctc_loss_train
     $loss = mx->sym->make_loss($loss);
     local($AI::MXNet::Logging::silent) = 1;
     my $mod = mx->mod->Module($loss, data_names=>['data'], label_names=>['label']);
-    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 1},
+    $mod->fit($data_iter, num_epoch=>200, optimizer_params=>{learning_rate => 0.01},
             initializer=>mx->init->Xavier(magnitude=>2), eval_metric=>mx->metric->Loss(),
             optimizer=>'adam');
     ok($mod->score($data_iter, mx->metric->Loss())->{loss} < 20);
@@ -237,6 +255,8 @@ test_ctc_loss_train();
 
 sub test_sample_weight_loss
 {
+    mx->random->seed(1234);
+    srand(1234);
     my $nclass = 10;
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, $nclass]);
@@ -278,6 +298,7 @@ test_sample_weight_loss();
 sub test_saveload
 {
     mx->random->seed(1234);
+    srand(1234);
     my $nclass = 10;
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, $nclass]);
@@ -306,6 +327,7 @@ test_saveload();
 sub test_logistic_loss_equal_bce
 {
     mx->random->seed(1234);
+    srand(1234);
     my $N = 100;
     my $loss_binary = gluon->loss->LogisticLoss(label_format=>'binary');
     my $loss_signed = gluon->loss->LogisticLoss(label_format=>'signed');
@@ -321,6 +343,7 @@ test_logistic_loss_equal_bce();
 sub test_huber_loss
 {
     mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
@@ -343,6 +366,7 @@ test_huber_loss();
 sub test_hinge_loss
 {
     mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
@@ -365,6 +389,7 @@ test_hinge_loss();
 sub test_squared_hinge_loss
 {
     mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $label = mx->random->uniform(-1, 1, shape=>[$N, 1]);
@@ -387,6 +412,7 @@ test_squared_hinge_loss();
 sub test_triplet_loss
 {
     mx->random->seed(1234);
+    srand(1234);
     my $N = 20;
     my $data = mx->random->uniform(-1, 1, shape=>[$N, 10]);
     my $pos = mx->random->uniform(-1, 1, shape=>[$N, 10]);

@@ -319,6 +319,36 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   return false;
 }
 
+/*! \brief returns true if storage type of any array in `ndarrays`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype) {
+  if (!ndarrays.empty()) {
+    for (const auto& nd : ndarrays) {
+      if (nd.storage_type() == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/*! \brief returns true if any storage type `ndstype` in `ndstypes`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<int>& ndstypes,
+                                const NDArrayStorageType stype) {
+  if (!ndstypes.empty()) {
+    for (const auto& ndstype : ndstypes) {
+      if (ndstype == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {
   switch (x) {
@@ -631,6 +661,18 @@ constexpr size_t MaxIntegerValue() {
 template <>
 constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
   return size_t(2) << 10;
+}
+
+MSHADOW_XINLINE int ilog2ul(size_t a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
+}
+
+MSHADOW_XINLINE int ilog2ui(unsigned int a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
 }
 
 }  // namespace common

@@ -21,10 +21,11 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 import os
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, same, DummyIter
+from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
+import unittest
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -462,6 +463,7 @@ def test_quantize_model():
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
 
+
 @with_seed()
 def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
@@ -485,6 +487,29 @@ def test_quantize_sym_with_calib():
 
 
 @with_seed()
+def test_smooth_distribution():
+    assert_exception(lambda: mx.contrib.quant._smooth_distribution(np.zeros((2,)), eps=1e-3), ValueError)
+    dirac_delta = np.zeros((5,))
+    dirac_delta[2] = 1
+    smooth_dirac_delta = dirac_delta.copy()
+    smooth_dirac_delta += 1e-3
+    smooth_dirac_delta[2] -= 5e-3
+    assert_almost_equal(mx.contrib.quant._smooth_distribution(dirac_delta, eps=1e-3), smooth_dirac_delta)
+
+
+@with_seed()
+def test_optimal_threshold_adversarial_case():
+    # The worst case for the optimal_threshold function is when the values are concentrated
+    # at one edge: [0, 0, ..., 1000]. (histogram)
+    # We want to make sure that the optimal threshold in this case is the max.
+    arr = np.array([2]*1000)
+    res = mx.contrib.quant._get_optimal_threshold(arr, num_quantized_bins=5)
+    # The threshold should be 2.
+    assert res[3] - 2 < 1e-5
+
+
+@with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11456")
 def test_get_optimal_thresholds():
     # Given an ndarray with elements following a uniform distribution, the optimal threshold
     # for quantizing the ndarray should be either abs(min(nd)) or abs(max(nd)).

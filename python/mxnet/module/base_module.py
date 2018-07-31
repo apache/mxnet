@@ -514,12 +514,6 @@ class BaseModule(object):
                     monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
-                try:
-                    # pre fetch next batch
-                    next_data_batch = next(data_iter)
-                    self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
-                except StopIteration:
-                    end_of_batch = True
 
                 if isinstance(data_batch, list):
                     self.update_metric(eval_metric,
@@ -527,6 +521,13 @@ class BaseModule(object):
                                        pre_sliced=True)
                 else:
                     self.update_metric(eval_metric, data_batch.label)
+
+                try:
+                    # pre fetch next batch
+                    next_data_batch = next(data_iter)
+                    self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
+                except StopIteration:
+                    end_of_batch = True
 
                 if monitor is not None:
                     monitor.toc_print()

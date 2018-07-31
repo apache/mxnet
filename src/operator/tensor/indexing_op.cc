@@ -226,8 +226,15 @@ Examples::
                             [ 10.,  11.,  12.,  13.,  14.]]]
 
 
-The storage type of weight can be either row_sparse or default, while
-the storage type of weight's grad depends on the value of "sparse_grad".
+The storage type of weight can be either row_sparse or default.
+
+.. Note::
+
+    If "sparse_grad" is set to True, the storage type of gradient w.r.t weights will be
+    "row_sparse". Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
+    and Adam. Note that by default lazy updates is turned on, which may perform differently
+    from standard updates. For more details, please check the Optimization API at:
+    https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
 
 )code" ADD_FILELINE)
 .set_num_inputs(2)
@@ -360,36 +367,46 @@ NNVM_REGISTER_OP(take)
 
 This function slices the input array along a particular axis with the provided indices.
 
-Given an input array with shape ``(d0, d1, d2)`` and indices with shape ``(i0, i1)``, the output
-will have shape ``(i0, i1, d1, d2)``, computed by::
-
-  output[i,j,:,:] = input[indices[i,j],:,:]
-
-.. note::
-   - `axis`- Only slicing along axis 0 is supported for now.
-   - `mode`- Only `clip` mode is supported for now.
+Given data tensor of rank r >= 1, and indices tensor of rank q, gather entries of the axis
+dimension of data (by default outer-most one as axis=0) indexed by indices, and concatenates them
+in an output tensor of rank q + (r - 1).
 
 Examples::
   x = [4.  5.  6.]
 
   // Trivial case, take the second element along the first axis.
+
   take(x, [1]) = [ 5. ]
+
+  // The other trivial case, axis=-1, take the third element along the first axis
+
+  take(x, [3], axis=-1, mode='clip') = [ 6. ]
 
   x = [[ 1.,  2.],
        [ 3.,  4.],
        [ 5.,  6.]]
 
   // In this case we will get rows 0 and 1, then 1 and 2. Along axis 0
+
   take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
                              [ 3.,  4.]],
 
                             [[ 3.,  4.],
                              [ 5.,  6.]]]
 
+  // In this case we will get rows 0 and 1, then 1 and 2 (calculated by wrapping around).
+  // Along axis 1
+
+  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.,  2.],
+                                                       [ 3.,  4.]],
+
+                                                      [[ 3.,  4.],
+                                                       [ 5.,  6.]]]
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(TakeParamParser<TakeParam>)
+.set_attr_parser(ParamParser<TakeParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "indices"};
@@ -413,6 +430,7 @@ Examples::
 NNVM_REGISTER_OP(_backward_take)
 .set_num_inputs(2)
 .set_num_outputs(2)
+.set_attr_parser(ParamParser<TakeParam>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

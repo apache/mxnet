@@ -612,7 +612,7 @@ extern "C" void KVStoreUpdaterCallbackFunc
 
   // find java NDArray constructor
   jclass ndObjClass = env->FindClass("org/apache/mxnet/NDArray");
-  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
+  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZZ)V");
 
   jobject ndRecv = env->NewObject(ndObjClass, ndObjConstructor,
                                   reinterpret_cast<jlong>(recv), true);

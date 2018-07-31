@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -20,12 +21,14 @@ import numpy as np
 import unittest
 import sys
 import os
+
+from six.moves import xrange
+
 current_working_directory = os.getcwd()
 sys.path.append(current_working_directory + "/..")
 sys.path.append(current_working_directory + "/../converter/")
 import _mxnet_converter as mxnet_converter
 from converter.utils import load_model
-
 
 VAL_DATA = 'data/val-5k-256.rec'
 URL = 'http://data.mxnet.io/data/val-5k-256.rec'
@@ -107,27 +110,27 @@ class ImageNetTest(unittest.TestCase):
                 num_batch += 1
             if (num_batch == 5): break # we only use a subset of the batches.
 
-        print "MXNet acc %s" % np.mean(mxnet_acc)
-        print "Coreml acc %s" % np.mean(coreml_acc)
-        print "MXNet top 5 acc %s" % np.mean(mxnet_top_5_acc)
-        print "Coreml top 5 acc %s" % np.mean(coreml_top_5_acc)
+        print("MXNet acc %s" % np.mean(mxnet_acc))
+        print("Coreml acc %s" % np.mean(coreml_acc))
+        print("MXNet top 5 acc %s" % np.mean(mxnet_top_5_acc))
+        print("Coreml top 5 acc %s" % np.mean(coreml_top_5_acc))
         self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc), delta=1e-4)
         self.assertAlmostEqual(np.mean(mxnet_top_5_acc), np.mean(coreml_top_5_acc), delta=1e-4)
 
     def test_squeezenet(self):
-        print "Testing Image Classification with Squeezenet"
+        print("Testing Image Classification with Squeezenet")
         self._test_image_prediction(model_name='squeezenet_v1.1', epoch=0, label_name='prob_label')
 
     def test_inception_with_batch_normalization(self):
-        print "Testing Image Classification with Inception/BatchNorm"
+        print("Testing Image Classification with Inception/BatchNorm")
         self._test_image_prediction(model_name='Inception-BN', epoch=126, label_name='softmax_label')
 
     def test_resnet18(self):
-        print "Testing Image Classification with ResNet18"
+        print("Testing Image Classification with ResNet18")
         self._test_image_prediction(model_name='resnet-18', epoch=0, label_name='softmax_label')
 
     def test_vgg16(self):
-        print "Testing Image Classification with vgg16"
+        print("Testing Image Classification with vgg16")
         self._test_image_prediction(model_name='vgg16', epoch=0, label_name='prob_label')
 
 

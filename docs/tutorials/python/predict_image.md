@@ -57,8 +57,8 @@ from collections import namedtuple
 Batch = namedtuple('Batch', ['data'])
 
 def get_image(url, show=False):
-    # download and show the image
-    fname = mx.test_utils.download(url)
+    # download and show the image. Remove query string from the file name.
+    fname = mx.test_utils.download(url, fname=url.split('/')[-1].split('?')[0])
     img = mx.image.imread(fname)
     if img is None:
         return None

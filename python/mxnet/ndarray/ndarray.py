@@ -46,7 +46,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle"]
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -1254,6 +1254,22 @@ fixed-size items.
         """
         return op.flatten(self, *args, **kwargs)
 
+    def shape_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`shape_array`.
+
+        The arguments are the same as for :py:func:`shape_array`, with
+        this array as data.
+        """
+        return op.shape_array(self, *args, **kwargs)
+
+    def size_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`size_array`.
+
+        The arguments are the same as for :py:func:`size_array`, with
+        this array as data.
+        """
+        return op.size_array(self, *args, **kwargs)
+
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
 
@@ -1285,6 +1301,30 @@ fixed-size items.
         this array as data.
         """
         return op.flip(self, *args, **kwargs)
+
+    def depth_to_space(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`depth_to_space`.
+
+        The arguments are the same as for :py:func:`depth_to_space`, with
+        this array as data.
+        """
+        return op.depth_to_space(self, *args, **kwargs)
+
+    def space_to_depth(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`space_to_depth`.
+
+        The arguments are the same as for :py:func:`space_to_depth`, with
+        this array as data.
+        """
+        return op.space_to_depth(self, *args, **kwargs)
+
+    def diag(self, k=0, **kwargs):
+        """Convenience fluent method for :py:func:`diag`.
+
+        The arguments are the same as for :py:func:`diag`, with
+        this array as data.
+        """
+        return op.diag(self, k, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.
@@ -1698,6 +1738,44 @@ fixed-size items.
         else:
             return op.broadcast_to(self, shape=tuple(shape))
     # pylint: enable= undefined-variable
+
+    def broadcast_like(self, other):
+        """Broadcasts the input array to the shape of other.
+
+        Broadcasting is only allowed on axes with size 1. The new shape cannot change
+        the number of dimensions.
+        For example, you could broadcast from shape (2, 1) to (2, 3), but not from
+        shape (2, 3) to (2, 3, 3).
+
+        Parameters
+        ----------
+        other : NDArray
+            Array with shape of the desired array.
+
+        Returns
+        -------
+        NDArray
+            A NDArray with the desired shape that is not sharing data with this
+            array, even if the new shape is the same as ``self.shape``.
+
+        Examples
+        --------
+        >>> x = mx.nd.arange(0,3).reshape((1,3,1))
+        >>> x.asnumpy()
+        array([[[ 0.],
+                [ 1.],
+                [ 2.]]], dtype=float32)
+        >>> y = x.broadcast_like(mx.nd.ones((2,3,3)))
+        >>> y.asnumpy()
+        array([[[ 0.,  0.,  0.],
+                [ 1.,  1.,  1.],
+                [ 2.,  2.,  2.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.],
+                [ 1.,  1.,  1.],
+                [ 2.,  2.,  2.]]], dtype=float32)
+        """
+        return self.broadcast_to(other.shape)
 
     def wait_to_read(self):
         """Waits until all previous write operations on the current array are finished.
@@ -3740,3 +3818,36 @@ def empty(shape, ctx=None, dtype=None):
     if dtype is None:
         dtype = mx_real_t
     return NDArray(handle=_new_alloc_handle(shape, ctx, False, dtype))
+
+
+# pylint: disable= redefined-builtin
+def histogram(a, bins=10, range=None):
+    """Compute the histogram of the input data.
+
+    Parameters
+    ----------
+    a : NDArray
+        Input data. The histogram is computed over the flattened array.
+    bins : int or sequence of scalars
+        If bins is an int, it defines the number of equal-width bins in the
+        given range (10, by default). If bins is a sequence, it defines the bin edges,
+        including the rightmost edge, allowing for non-uniform bin widths.
+    range : (float, float), optional
+        The lower and upper range of the bins. If not provided, range is simply (a.min(), a.max()).
+        Values outside the range are ignored. The first element of the range must be less than or
+        equal to the second. range affects the automatic bin computation as well, the range will
+        be equally divided by the number of bins.
+    """
+
+    # pylint: disable= no-member, protected-access
+    if isinstance(bins, NDArray):
+        return _internal._histogram(data=a, bins=bins)
+    elif isinstance(bins, integer_types):
+        if range is None:
+            warnings.warn("range is not specified, using numpy's result "
+                          "to ensure consistency with numpy")
+            res, bin_bounds = np.histogram(a.asnumpy(), bins=bins)
+            return array(res), array(bin_bounds)
+        return _internal._histogram(data=a, bin_cnt=bins, range=range)
+    raise ValueError("bins argument should be either an integer or an NDArray")
+    # pylint: enable= no-member, protected-access, redefined-builtin

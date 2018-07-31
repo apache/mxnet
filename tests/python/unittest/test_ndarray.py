@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+from distutils.version import LooseVersion
 import os
 import pickle as pkl
 import unittest
@@ -27,6 +28,7 @@ from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
+from mxnet.test_utils import random_sample, rand_shape_nd
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
@@ -513,12 +515,11 @@ def test_reduce():
 def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
-        for i in range(sample_num):
+        for _ in range(sample_num):
             ndim = np.random.randint(1, 6)
             target_shape = np.random.randint(1, 11, size=ndim)
             shape = target_shape.copy()
             axis_flags = np.random.randint(0, 2, size=ndim)
-            axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
                     shape[axis] = 1
@@ -530,7 +531,28 @@ def test_broadcast():
             assert (ndarray_ret.shape == target_shape).all()
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
+
+    def test_broadcast_like():
+        for _ in range(sample_num):
+            ndim = np.random.randint(1, 6)
+            target_shape = np.random.randint(1, 11, size=ndim)
+            target = mx.nd.ones(shape=tuple(target_shape))
+            shape = target_shape.copy()
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    shape[axis] = 1
+            dat = np.random.rand(*shape) - 0.5
+            numpy_ret = dat
+            ndarray_ret = mx.nd.array(dat).broadcast_like(target)
+            if type(ndarray_ret) is mx.ndarray.NDArray:
+                ndarray_ret = ndarray_ret.asnumpy()
+            assert (ndarray_ret.shape == target_shape).all()
+            err = np.square(ndarray_ret - numpy_ret).mean()
+            assert err < 1E-8
+
     test_broadcast_to()
+    test_broadcast_like()
 
 
 @with_seed()
@@ -931,8 +953,8 @@ def test_ndarray_fluent():
                 assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
     for func in ['flatten', 'norm', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc', 'zeros_like',
-                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians',
-                 'exp', 'expm1', 'square', 'reciprocal', 'argmax_channel']:
+                 'ones_like', 'abs', 'sign', 'sin', 'cos', 'degrees', 'radians', 'exp', 'expm1',
+                 'square', 'reciprocal', 'argmax_channel', 'shape_array', 'size_array']:
         check_fluent_regular(func, {})
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
@@ -1275,33 +1297,36 @@ def test_ndarray_astype():
 
 @with_seed()
 def test_norm(ctx=default_context()):
-    np_arr = np.random.uniform(size=(3, 3, 3, 3))
+    try:
+        import scipy
+        assert LooseVersion(scipy.__version__) >= LooseVersion('0.1')
+        from scipy.linalg import norm as sp_norm
+    except (AssertionError, ImportError):
+        print("Could not import scipy.linalg.norm or scipy is too old. "
+              "Falling back to numpy.linalg.norm which is not numerically stable.")
+        from numpy.linalg import norm as sp_norm
+
+    def l1norm(input_data, axis=0, keepdims=False):
+        return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
+    def l2norm(input_data, axis=0, keepdims=False): 
+        return sp_norm(input_data, axis=axis, keepdims=keepdims)
+
+    in_data_dim = random_sample([4,5,6], 1)[0]
+    in_data_shape = rand_shape_nd(in_data_dim)
+    np_arr = np.random.uniform(-1, 1, in_data_shape).astype(np.float32)
     mx_arr = mx.nd.array(np_arr, ctx=ctx)
-    arr1 = np.linalg.norm(np_arr, keepdims=False)
-    arr2 = mx.nd.norm(mx_arr, keepdims=False)
-    print(arr1)
-    print(arr2.asnumpy())
-    mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy()[0])
-
-    for i in range(4):
-        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=False)
-        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=False)
-        assert arr1.shape == arr2.shape
-        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-
-        arr1 = np.linalg.norm(np_arr, axis=i, keepdims=True)
-        arr2 = mx.nd.norm(mx_arr, axis=i, keepdims=True)
-        assert arr1.shape == arr2.shape
-        mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-        if (i < 3):
-            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=False)
-            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=False)
-            assert arr1.shape == arr2.shape
-            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
-            arr1 = np.linalg.norm(np_arr, axis=(i, i+1), keepdims=True)
-            arr2 = mx.nd.norm(mx_arr, axis=(i, i+1), keepdims=True)
-            assert arr1.shape == arr2.shape
-            mx.test_utils.assert_almost_equal(arr1, arr2.asnumpy())
+    for ord in [1,2]:
+        for keep_dims in [True, False]:
+            for i in range(4):
+                npy_out = l1norm(np_arr, i, keep_dims) if ord==1 else l2norm(np_arr, i, keep_dims)
+                mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
+                assert npy_out.shape == mx_out.shape
+                mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                if (i < 3):
+                    npy_out = l1norm(np_arr, (i, i+1), keep_dims) if ord==1 else l2norm(np_arr, (i, i+1), keep_dims)
+                    mx_out = mx.nd.norm(mx_arr, ord=ord, axis=(i, i+1), keepdims=keep_dims)
+                    assert npy_out.shape == mx_out.shape
+                    mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
 
 @with_seed()
 def test_ndarray_cpu_shared_ctx():
