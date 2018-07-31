@@ -64,7 +64,16 @@ if [ -z "$3" ]
     root_url=$3
 fi
 
-mxnet_folder="apache_mxnet"
+
+if [ -z "$4" ]
+  then
+    echo "Custom fork folder not provided. Using default."
+    mxnet_folder="apache-mxnet"
+  else
+    mxnet_folder=$4
+fi
+
+#mxnet_folder="apache_mxnet"
 built="VersionedWeb"
 tag_file="tag_list.txt"
 
