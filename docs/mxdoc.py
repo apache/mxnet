@@ -72,7 +72,7 @@ def build_mxnet(app):
 def build_r_docs(app):
     """build r pdf"""
     r_root = app.builder.srcdir + '/../R-package'
-    pdf_path = root_path + '/docs/api/r/mxnet-r-reference-manual.pdf'
+    pdf_path = app.builder.srcdir + '/api/r/mxnet-r-reference-manual.pdf'
     _run_cmd('cd ' + r_root +
              '; R -e "roxygen2::roxygenize()"; R CMD Rd2pdf . --no-preview -o ' + pdf_path)
     dest_path = app.builder.outdir + '/api/r/'
