@@ -656,7 +656,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
            shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd);
+      InitMKLDNNArray(&arr, pd, rand);
       in_arrs.emplace_back(arr, desc);
 
       // Type 4, 5, 6.
@@ -668,7 +668,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
            << shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
       }
-      InitMKLDNNArray(&arr, pd);
+      InitMKLDNNArray(&arr, pd, rand);
       in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
     }
   }
