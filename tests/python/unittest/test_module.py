@@ -557,7 +557,7 @@ def test_executor_group():
     for opt in sparse_embedding_opt:
         check_shared_exec_group(opt)
 
-@with_seed(11)
+@with_seed()
 def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
