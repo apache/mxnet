@@ -531,7 +531,7 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
 OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Deconvolution");
-  attrs.num_inputs = 3;
+  attrs.num_inputs = 2;
   attrs.num_outputs = 1;
   // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
