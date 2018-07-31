@@ -1304,7 +1304,8 @@ NDArray CreateBiasNDArray(int num_filters) {
   return arr;
 }
 
-void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs, bool is_deconv = false) {
+void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
+                bool is_deconv = false) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
