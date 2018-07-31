@@ -1189,7 +1189,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   TShape stride = param.stride;
   int num_filter = param.num_filter;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
