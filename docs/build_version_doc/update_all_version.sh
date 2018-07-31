@@ -22,18 +22,29 @@
 # It assumes you have already run build_all_version.sh for
 # the tags you want to update.
 
-# Takes three arguments:
-# * tag list - semicolon delimited list of tags to display on site; Example: "1.1.0;1.0.0;master"
-# * default tag - which version should the site default to; Example: 1.0.0
-# * root URL - for the versions dropdown to change to production or dev server; Example: http://mxnet.incubator.apache.org/
+# Takes three required arguments and one optional:
+# * tag list (required) - semicolon delimited list of tags to display on site
+#     Example: "1.1.0;1.0.0;master"
+# * default tag (required) - which version should the site default to
+#     Example: 1.0.0
+# * root URL (required) - for the versions dropdown to change to production or
+#     dev server.
+#     Example: http://mxnet.incubator.apache.org/
+# * custom build folder (optional) - If using a custom fork from the
+#     build_all_version.sh script, you will want to tell this script to use your
+#     fork's build folder.
+#     Example: aaronmarkham-mxnet
 
 # Example Usage:
-# ./update_all_version.sh "1.1.0;1.0.0;master" 1.0.0 http://mxnet.incubator.apache.org/
+# ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
+#   http://mxnet.incubator.apache.org/
+# Using a custom fork - place the build directory in last argument:
+# ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
+#   http://mxnet.incubator.apache.org/ aaronmarkham-mxnet
 
 set -e
 set -x
 
-MASTER_SOURCE_DIR="../../docs"
 STATIC_FILES_DIR="_static"
 MXNET_THEME_DIR="_static/mxnet-theme"
 
@@ -95,7 +106,7 @@ function update_mxnet_css {
   # copy <master folder location> <version folder location>
 
   echo "Copying mxnet.css from master branch to all versions...."
-  cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
+  cp "$mxnet_folder/docs/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
 
   echo "Update fixes complete.."
 }
