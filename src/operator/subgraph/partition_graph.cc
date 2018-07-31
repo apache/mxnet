@@ -741,6 +741,11 @@ Graph PartitionGraph(Graph&& g) {
 #endif
     CreateSubgraphNode(&g, simple_nodes, subgraph_nodes[i], i, &entry_top_order_map);
   }
+#if SUBGRAPH_DEBUG
+  if (subgraph_nodes.size() == 0) {
+    LOG(INFO) << "The graph has no fuseable nodes, the original graph is returned.";
+  }
+#endif
   return g;
 }
 

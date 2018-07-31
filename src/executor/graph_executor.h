@@ -184,6 +184,9 @@ class GraphExecutor : public Executor {
                   const std::vector<Context>& in_arg_ctxes,
                   const std::vector<Context>& arg_grad_ctxes,
                   const std::vector<Context>& aux_state_ctxes,
+                  nnvm::ShapeVector &arg_shapes,
+                  nnvm::DTypeVector &arg_dtypes,
+                  StorageTypeVector &arg_stypes,
                   const std::vector<OpReqType>& grad_req_types);
   // intialize the full graph for simple bind, including gradient
   Graph InitFullGraph(nnvm::Symbol symbol,
