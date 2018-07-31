@@ -17,17 +17,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+#Author: Piyush Ghai
 
 set -ex
-# install libraries for mxnet's python package on ubuntu
-apt-get install -y python-dev python3-dev virtualenv
 
-# the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-python2 get-pip.py
+echo "uploading model files to s3"
 
-pip2 install nose cpplint==1.3.0 pylint==1.8.3 'numpy<1.15.0,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
-pip3 install nose cpplint==1.3.0 pylint==1.8.3 'numpy<1.15.0,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+echo `pwd`
+cd ./tests/nightly/model_backwards_compatibility_check/models/
+echo `pwd`
+
+# The directory structure will be as follows :
+# <mxnet-version>/<model-files> eg :
+# ls /tests/nightly/model_backwards_compatibility_check/models/
+# 1.1.0/   1.2.0/   1.2.1/
+# we upload these folders to S3 and the inference files understand them and pull of models off them
+for dir in $(ls `pwd`/)
+do
+    echo $dir
+    aws s3 cp $dir/ s3://mxnet-ci-prod-backwards-compatibility-models/$dir/ --recursive
+done
+
+echo "Deleting model files"
+cd ../
+rm -rf `pwd`/models

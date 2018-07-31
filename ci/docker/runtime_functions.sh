@@ -899,6 +899,20 @@ nightly_test_javascript() {
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
+#Tests Model backwards compatibility on MXNet
+nightly_model_backwards_compat_test() {
+    set -ex
+    export PYTHONPATH=/work/mxnet/python/
+    ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
+}
+
+#Backfills S3 bucket with models trained on earlier versions of mxnet
+nightly_model_backwards_compat_train() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
+}
+
 # Nightly 'MXNet: The Straight Dope' Single-GPU Tests
 nightly_straight_dope_python2_single_gpu_tests() {
     set -ex
