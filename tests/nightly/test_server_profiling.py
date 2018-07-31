@@ -53,18 +53,17 @@ if __name__ == "__main__":
     mx.profiler.set_state(state='stop', profile_process='server')
     mx.profiler.set_state(state='stop', profile_process='worker')
 
+    import glob, os
+
     # will only work when launcher mode is local, as used for integration test
     if kv.rank == 0:
         for rank in range(kv.num_workers):
             for suffix in [worker_filename_suffix, server_filename_suffix]:
                 # throws value error if file is not proper json
-                try:
-                    filename = 'rank' + str(rank) + '_' + suffix
-                    json.loads(filename)
-                except ValueError as e:
-                    print(e)
-                    print(filename)
-
+                filename = 'rank' + str(rank) + '_' + suffix
+                print(glob.glob('*'), os.getcwd())
+                with open(filename, 'r') as f:
+                    j = json.load(f)
 
 
 
