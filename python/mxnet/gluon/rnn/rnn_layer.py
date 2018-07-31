@@ -71,11 +71,11 @@ class _RNNLayer(Block):
                 self.i2h_bias.append(
                     self.params.get('%s%d_i2h_bias'%(j, i), shape=(ng*nh,),
                                     init=i2h_bias_initializer,
-                                    allow_deferred_init=True))
+                                    wd_mult=0.0, allow_deferred_init=True))
                 self.h2h_bias.append(
                     self.params.get('%s%d_h2h_bias'%(j, i), shape=(ng*nh,),
                                     init=h2h_bias_initializer,
-                                    allow_deferred_init=True))
+                                    wd_mult=0.0, allow_deferred_init=True))
             ni = nh * self._dir
 
         self._unfused = self._unfuse()

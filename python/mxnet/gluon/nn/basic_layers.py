@@ -208,7 +208,7 @@ class Dense(HybridBlock):
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
                                             init=bias_initializer, dtype=dtype,
-                                            allow_deferred_init=True)
+                                            wd_mult=0.0, allow_deferred_init=True)
             else:
                 self.bias = None
             if activation is not None:
@@ -334,7 +334,7 @@ class BatchNorm(HybridBlock):
                                      differentiable=scale)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True,
+                                    wd_mult=0.0, allow_deferred_init=True,
                                     differentiable=center)
         self.running_mean = self.params.get('running_mean', grad_req='null',
                                             shape=(in_channels,),
@@ -509,7 +509,7 @@ class InstanceNorm(HybridBlock):
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+                                    wd_mult=0.0, allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
         if self._axis == 1:
@@ -597,7 +597,7 @@ class LayerNorm(HybridBlock):
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+                                    wd_mult=0.0, allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
         norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)

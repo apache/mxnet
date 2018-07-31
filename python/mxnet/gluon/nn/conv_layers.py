@@ -118,7 +118,7 @@ class _Conv(HybridBlock):
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=wshapes[2],
-                                            init=bias_initializer,
+                                            init=bias_initializer, wd_mult=0.0,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
