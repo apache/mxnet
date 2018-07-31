@@ -629,7 +629,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(bool rand = false,
       continue;
 
     for (int dim = 0; dim < scale.size(); dim++)
-      shape[dim] = shape[dim] * scale[dim];
+      shape[dim] = static_cast<int>(round(shape[dim] * scale[dim]));
 
     // Type 1.
     NDArray arr(shape, Context());
@@ -702,7 +702,7 @@ std::vector<NDArrayAttrs> GetTestOutputArrays(
   TShape shape = shp;
 
   for (int dim = 0; dim < scale.size(); dim++)
-    shape[dim] = static_cast<int>(shape[dim] * scale[dim]);
+    shape[dim] = static_cast<int>(round(shape[dim] * scale[dim]));
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
