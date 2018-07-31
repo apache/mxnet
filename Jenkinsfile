@@ -115,7 +115,7 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -849,6 +849,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
@@ -893,6 +894,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""

@@ -2046,6 +2046,22 @@ class Symbol(SymbolBase):
         """
         return op.flip(self, *args, **kwargs)
 
+    def depth_to_space(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`depth_to_space`.
+
+        The arguments are the same as for :py:func:`depth_to_space`, with
+        this array as data.
+        """
+        return op.depth_to_space(self, *args, **kwargs)
+
+    def space_to_depth(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`space_to_depth`.
+
+        The arguments are the same as for :py:func:`space_to_depth`, with
+        this array as data.
+        """
+        return op.space_to_depth(self, *args, **kwargs)
+
     def diag(self, k=0, **kwargs):
         """Convenience fluent method for :py:func:`diag`.
 

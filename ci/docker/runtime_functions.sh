@@ -814,7 +814,11 @@ build_docs() {
     set -ex
     pushd .
     cd /work/mxnet/docs/build_version_doc
-    ./build_all_version.sh $1
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1 is the list of branches to build; $2 is the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    ./build_all_version.sh $1 $2
+    # $3 is the default version tag for the website; $4 is the base URL
     ./update_all_version.sh $2 $3 $4
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
@@ -893,6 +897,44 @@ nightly_test_javascript() {
     ./emcc
     touch ~/.emscripten
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
+}
+
+# Nightly 'MXNet: The Straight Dope' Single-GPU Tests
+nightly_straight_dope_python2_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+# Nightly 'MXNet: The Straight Dope' Multi-GPU Tests
+nightly_straight_dope_python2_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
 }
 
 # Deploy

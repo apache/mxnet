@@ -494,7 +494,7 @@ inline void LogUnimplementedOp(const nnvm::NodeAttrs& attrs,
 }
 
 class OpSignature {
-  std::vector<int> eles;
+  std::vector<int64_t> eles;
   uint64_t hash;
 
  public:
