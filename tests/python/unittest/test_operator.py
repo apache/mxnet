@@ -292,17 +292,17 @@ def check_elementwise_sum_with_shape(shape, n):
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0].asnumpy()
     out = sum(a.asnumpy() for a  in arr)
-    assert_almost_equal(out, out1)
+    assert_almost_equal(out, out1, rtol=1e-5, atol=1e-5)
 
     out_grad = mx.nd.empty(shape)
     out_grad[:] = np.random.uniform(-10, 10, shape)
     # backward
     exec1.backward([out_grad])
     for a in arr_grad:
-        assert_almost_equal(a.asnumpy(), out_grad.asnumpy())
+        assert_almost_equal(a.asnumpy(), out_grad.asnumpy(), rtol=1e-5, atol=1e-5)
 
 
-@with_seed(0)
+@with_seed()
 def test_elementwise_sum():
     nrepeat = 2
     maxdim = 4
