@@ -38,7 +38,7 @@ What's New
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
 * [Updated Image Classification with new Pre-trained Models](./example/image-classification)
 * [Python Notebooks for How to Use MXNet](https://github.com/dmlc/mxnet-notebooks)
-* [MKLDNN for Faster CPU Performance](./MKL_README.md)
+* [MKLDNN for Faster CPU Performance](./MKLDNN_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](https://mxnet.incubator.apache.org/faq/torch.html)
