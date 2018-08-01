@@ -112,6 +112,8 @@ def test_bind():
     check_bind(False)
 
 
+# @roywei: Removing fixed seed as flakiness in this test is fixed
+# tracked at https://github.com/apache/incubator-mxnet/issues/11686
 @with_seed()
 def test_dot():
     nrepeat = 10
