@@ -25,7 +25,6 @@ from mxnet.test_utils import almost_equal, assert_almost_equal
 from common import assert_raises_cudnn_disabled
 
 
-@assert_raises_cudnn_disabled()
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -51,7 +50,6 @@ def test_lstm():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-@assert_raises_cudnn_disabled()
 def test_lstm_forget_bias():
     forget_bias = 2.0
     stack = gluon.rnn.SequentialRNNCell()
@@ -93,7 +91,6 @@ def test_lstm_cpu_inference():
                                       rtol=1e-3, atol=1e-5)
 
 
-@assert_raises_cudnn_disabled()
 def test_gru():
     cell = gluon.rnn.GRUCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
