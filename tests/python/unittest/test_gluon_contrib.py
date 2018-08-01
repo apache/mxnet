@@ -316,36 +316,46 @@ def test_sampler():
 
 
 class TestRNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
+    def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
         super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
         self.cell = cell_type(hidden_size, prefix='rnn_')
+        self.layout = layout
 
     def hybrid_forward(self, F, inputs, states, valid_length):
         if isinstance(valid_length, list) and len(valid_length) == 0:
             valid_length = None
         return contrib.rnn.rnn_cell.unroll(self.cell, inputs, states,
-                                           valid_length=valid_length, layout='TNC')
+                                           valid_length=valid_length, layout=self.layout)
 
-def check_unroll(cell_type, num_states):
-    batch_size = 10
+def check_unroll(cell_type, num_states, layout):
+    batch_size = 20
     input_size = 50
     hidden_size = 30
     seq_len = 10
-    rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    if layout == 'TNC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    elif layout == 'NTC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(batch_size, seq_len, input_size))
+    else:
+        print("Wrong layout")
+        return
     valid_length = mx.nd.round(mx.nd.random.uniform(low=1, high=10, shape=(batch_size)))
     state_shape = (batch_size, hidden_size)
     states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
 
     cell = cell_type(hidden_size, prefix='rnn_')
     cell.initialize(ctx=default_context())
-    cell(rnn_data[0], states)
+    if layout == 'TNC':
+        cell(rnn_data[0], states)
+    else:
+        cell(rnn_data[:,0,:], states)
     params1 = cell.collect_params()
     orig_params1 = copy.deepcopy(params1)
 
     trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
     with mx.autograd.record():
         res1, states1 = cell.unroll(seq_len, rnn_data, states, valid_length=valid_length,
-                                    layout='TNC', merge_outputs=True)
+                                    layout=layout, merge_outputs=True)
     res1.backward()
     trainer.step(batch_size)
 
@@ -360,7 +370,7 @@ def check_unroll(cell_type, num_states):
     if valid_length is None:
         valid_length = []
     for config in configs:
-        layer = TestRNNLayer(cell_type, hidden_size)
+        layer = TestRNNLayer(cell_type, hidden_size, layout)
         layer.initialize(ctx=default_context())
         config(layer)
         res2, states2 = layer(rnn_data, states, valid_length)
@@ -391,7 +401,8 @@ def test_contrib_unroll():
     cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
             (gluon.rnn.GRUCell, 1)]
     for cell_type, num_states in cell_types:
-        check_unroll(cell_type, num_states)
+        check_unroll(cell_type, num_states, 'TNC')
+        check_unroll(cell_type, num_states, 'NTC')
 
 
 if __name__ == '__main__':

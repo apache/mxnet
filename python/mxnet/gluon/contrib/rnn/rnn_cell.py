@@ -387,6 +387,12 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     """
 
     inputs, axis, F, _ = _contrib_format_sequence(inputs, layout)
+    if axis != 0:
+        axes = list(range(len(layout)))
+        tmp = axes[0]
+        axes[0] = axes[axis]
+        axes[axis] = tmp
+        inputs = F.transpose(inputs, axes=axes)
     states = begin_state
 
     if drop_inputs:
@@ -415,9 +421,13 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     if drop_outputs:
         outputs = F.Dropout(outputs, p=drop_outputs, axes=(axis,))
     if valid_length is not None:
+        if axis != 0:
+            outputs = F.transpose(outputs, axes)
         outputs = F.SequenceMask(outputs, sequence_length=valid_length,
                                  use_sequence_length=True, axis=axis)
         # the last state is the iteration number. We don't need it.
         return outputs, states[:-1]
     else:
+        if axis != 0:
+            outputs = F.transpose(outputs, axes)
         return outputs, states
