@@ -350,6 +350,9 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
            layout='NTC', valid_length=None):
     """Unrolls an RNN cell across time steps.
 
+    Currently, 'TNC' is a preferred layout. unroll on the input of this layout
+    runs much faster.
+
     Parameters
     ----------
     cell : an object whose base class is RNNCell.
@@ -384,6 +387,29 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     states : list of Symbol
         The new state of this RNN after this unrolling.
         The type of this symbol is same as the output of `begin_state`.
+
+    Examples
+    --------
+    >>> seq_len = 3
+    >>> batch_size = 2
+    >>> input_size = 5
+    >>> cell = mx.gluon.rnn.LSTMCell(input_size, prefix='rnn_')
+    >>> cell.initialize(ctx=mx.cpu())
+    >>> rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    >>> state_shape = (batch_size, input_size)
+    >>> states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
+    >>> valid_length = mx.nd.array([2, 3])
+    >>> output, states = mx.gluon.contrib.rnn.rnn_cell.unroll(cell, rnn_data, states,
+                                                              valid_length=valid_length,
+                                                              layout='TNC')
+    >>> print(output)
+    [[[ 0.00767238  0.00023103  0.03973929 -0.00925503 -0.05660512]
+      [ 0.00881535  0.05428379 -0.02493718 -0.01834097  0.02189514]]
+     [[-0.00676967  0.01447039  0.01287002 -0.00574152 -0.05734247]
+      [ 0.01568508  0.02650866 -0.04270559 -0.04328435  0.00904011]]
+     [[ 0.          0.          0.          0.          0.        ]
+      [ 0.01055336  0.02734251 -0.03153727 -0.03742751 -0.01378113]]]
+     <NDArray 3x2x5 @cpu(0)>
     """
 
     inputs, axis, F, _ = _contrib_format_sequence(inputs, layout)
