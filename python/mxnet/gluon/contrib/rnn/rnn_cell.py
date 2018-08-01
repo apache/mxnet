@@ -347,7 +347,7 @@ def _contrib_format_sequence(inputs, layout, in_layout=None):
 
 
 def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
-           layout='NTC', valid_length=None):
+           layout='TNC', valid_length=None):
     """Unrolls an RNN cell across time steps.
 
     Currently, 'TNC' is a preferred layout. unroll on the input of this layout
