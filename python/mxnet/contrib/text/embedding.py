@@ -497,7 +497,7 @@ class GloVe(_TokenEmbedding):
     ----------
     pretrained_file_name : str, default 'glove.840B.300d.txt'
         The name of the pre-trained token embedding file.
-    embedding_root : str, default $MXNET_DATA_DIR/embeddings
+    embedding_root : str, default $MXNET_HOME/embeddings
         The root directory for storing embedding-related files.
     init_unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown token.
@@ -601,7 +601,7 @@ class FastText(_TokenEmbedding):
     ----------
     pretrained_file_name : str, default 'wiki.en.vec'
         The name of the pre-trained token embedding file.
-    embedding_root : str, default $MXNET_DATA_DIR/embeddings
+    embedding_root : str, default $MXNET_HOME/embeddings
         The root directory for storing embedding-related files.
     init_unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown token.

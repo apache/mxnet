@@ -115,7 +115,7 @@ class WikiText2(_WikiText):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/wikitext-2
+    root : str, default $MXNET_HOME/datasets/wikitext-2
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -153,7 +153,7 @@ class WikiText103(_WikiText):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/wikitext-103
+    root : str, default $MXNET_HOME/datasets/wikitext-103
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.

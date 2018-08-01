@@ -80,7 +80,7 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     ----------
     name : str
         Name of the model.
-    root : str, default $MXNET_DATA_DIR/models
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
 
     Returns
@@ -124,7 +124,7 @@ def purge(root=os.path.join(base.data_dir(), 'models')):
 
     Parameters
     ----------
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     root = os.path.expanduser(root)

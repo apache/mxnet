@@ -76,7 +76,7 @@ def data_dir():
 
     :return: data directory in the filesystem for storage, for example when downloading models
     """
-    return os.getenv('MXNET_DATA_DIR', data_dir_default())
+    return os.getenv('MXNET_HOME', data_dir_default())
 
 
 class _NullType(object):

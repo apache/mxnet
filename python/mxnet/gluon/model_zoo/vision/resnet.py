@@ -373,7 +373,7 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default $MXNET_DATA_DIR/models
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     assert num_layers in resnet_spec, \
@@ -401,7 +401,7 @@ def resnet18_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 18, **kwargs)
@@ -416,7 +416,7 @@ def resnet34_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 34, **kwargs)
@@ -431,7 +431,7 @@ def resnet50_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 50, **kwargs)
@@ -446,7 +446,7 @@ def resnet101_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 101, **kwargs)
@@ -461,7 +461,7 @@ def resnet152_v1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(1, 152, **kwargs)
@@ -476,7 +476,7 @@ def resnet18_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 18, **kwargs)
@@ -491,7 +491,7 @@ def resnet34_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 34, **kwargs)
@@ -506,7 +506,7 @@ def resnet50_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 50, **kwargs)
@@ -521,7 +521,7 @@ def resnet101_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 101, **kwargs)
@@ -536,7 +536,7 @@ def resnet152_v2(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_resnet(2, 152, **kwargs)

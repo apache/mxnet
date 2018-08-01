@@ -26,25 +26,25 @@ import platform
 
 class MXNetDataDirTest(unittest.TestCase):
     def setUp(self):
-        self.mxnet_data_dir = os.environ.get('MXNET_DATA_DIR')
-        if 'MXNET_DATA_DIR' in os.environ:
-            del os.environ['MXNET_DATA_DIR']
+        self.mxnet_data_dir = os.environ.get('MXNET_HOME')
+        if 'MXNET_HOME' in os.environ:
+            del os.environ['MXNET_HOME']
 
     def tearDown(self):
         if self.mxnet_data_dir:
-            os.environ['MXNET_DATA_DIR'] = self.mxnet_data_dir
+            os.environ['MXNET_HOME'] = self.mxnet_data_dir
         else:
-            if 'MXNET_DATA_DIR' in os.environ:
-                del os.environ['MXNET_DATA_DIR']
+            if 'MXNET_HOME' in os.environ:
+                del os.environ['MXNET_HOME']
 
     def test_data_dir(self,):
         prev_data_dir = data_dir()
         system = platform.system()
         if system != 'Windows':
             self.assertEqual(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
-        os.environ['MXNET_DATA_DIR'] = '/tmp/mxnet_data'
+        os.environ['MXNET_HOME'] = '/tmp/mxnet_data'
         self.assertEqual(data_dir(), '/tmp/mxnet_data')
-        del os.environ['MXNET_DATA_DIR']
+        del os.environ['MXNET_HOME']
         self.assertEqual(data_dir(), prev_data_dir)
 
 

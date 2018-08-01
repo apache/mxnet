@@ -40,7 +40,7 @@ class MNIST(dataset._DownloadedDataset):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/mnist
+    root : str, default $MXNET_HOME/datasets/mnist
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -101,7 +101,7 @@ class FashionMNIST(MNIST):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/fashion-mnist'
+    root : str, default $MXNET_HOME/datasets/fashion-mnist'
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -134,7 +134,7 @@ class CIFAR10(dataset._DownloadedDataset):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/cifar10
+    root : str, default $MXNET_HOME/datasets/cifar10
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -197,7 +197,7 @@ class CIFAR100(CIFAR10):
 
     Parameters
     ----------
-    root : str, default $MXNET_DATA_DIR/datasets/cifar100
+    root : str, default $MXNET_HOME/datasets/cifar100
         Path to temp folder for storing data.
     fine_label : bool, default False
         Whether to load the fine-grained (100 classes) or coarse-grained (20 super-classes) labels.

@@ -204,7 +204,7 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default $MXNET_DATA_DIR/models
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = MobileNet(multiplier, **kwargs)
@@ -236,7 +236,7 @@ def get_mobilenet_v2(multiplier, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default $MXNET_DATA_DIR/models
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = MobileNetV2(multiplier, **kwargs)

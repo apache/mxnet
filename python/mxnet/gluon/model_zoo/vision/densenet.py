@@ -135,7 +135,7 @@ def get_densenet(num_layers, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default $MXNET_DATA_DIR/models
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     num_init_features, growth_rate, block_config = densenet_spec[num_layers]
@@ -155,7 +155,7 @@ def densenet121(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_densenet(121, **kwargs)
@@ -170,7 +170,7 @@ def densenet161(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_densenet(161, **kwargs)
@@ -185,7 +185,7 @@ def densenet169(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_densenet(169, **kwargs)
@@ -200,7 +200,7 @@ def densenet201(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '$MXNET_DATA_DIR/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_densenet(201, **kwargs)
