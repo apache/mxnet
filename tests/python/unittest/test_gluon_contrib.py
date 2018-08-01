@@ -372,9 +372,9 @@ def check_unroll(cell_type, num_states):
             res2, states2 = layer(rnn_data, states, valid_length)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
         assert len(states1) == len(states2)
-        #for i in range(len(states1)):
-        #    assert_almost_equal(states1[i].asnumpy(), states2[i].asnumpy(),
-        #                        rtol=0.001, atol=0.0001)
+        for i in range(len(states1)):
+            assert_almost_equal(states1[i].asnumpy(), states2[i].asnumpy(),
+                                rtol=0.001, atol=0.0001)
         res2.backward()
         trainer.step(batch_size)
 

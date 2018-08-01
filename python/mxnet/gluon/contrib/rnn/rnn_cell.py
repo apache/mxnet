@@ -369,7 +369,7 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
             out, new_states = cell(inputs, cell_states)
             for i in range(len(new_states)):
                 new_states[i] = F.where(F.broadcast_greater(valid_length, iter_no),
-                                        new_states[i], zeros[i])
+                                        new_states[i], cell_states[i])
             new_states.append(iter_no + 1)
             return out, new_states
 
