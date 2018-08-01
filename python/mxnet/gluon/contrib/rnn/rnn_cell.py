@@ -399,7 +399,7 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
         zeros = []
         for s in states:
             zeros.append(F.zeros_like(s))
-        states = _as_list(states)
+        states = list(_as_list(states))
         states.append(F.zeros((1)))
         def loop_body(inputs, states):
             cell_states = states[:-1]

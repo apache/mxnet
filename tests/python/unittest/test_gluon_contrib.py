@@ -350,10 +350,11 @@ def check_unroll(cell_type, num_states):
     trainer.step(batch_size)
 
     configs = [
-            {},
-            {'static_alloc': True},
-            {'static_alloc': True, 'static_shape': True}
-            ]
+            lambda layer: None,
+            lambda layer: layer.hybridize(),
+            lambda layer: layer.hybridize({'inline_limit': 0}),
+            lambda layer: layer.hybridize({'static_alloc': True}),
+            lambda layer: layer.hybridize({'static_alloc': True, 'static_shape': True}) ]
     # We can't pass None to a hybrid block, but it accepts an empty list.
     # so we use an empty list to represent valid_length if it's None.
     if valid_length is None:
@@ -361,7 +362,7 @@ def check_unroll(cell_type, num_states):
     for config in configs:
         layer = TestRNNLayer(cell_type, hidden_size)
         layer.initialize(ctx=default_context())
-        layer.hybridize(**config)
+        config(layer)
         res2, states2 = layer(rnn_data, states, valid_length)
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
