@@ -20,7 +20,6 @@ package org.apache.mxnet.io
 import java.util.NoSuchElementException
 
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 
@@ -142,7 +141,7 @@ class ResizeIter(
     * Get the layout
     * @return layout
     */
-  def getLayout(): (Layout, Layout) = {
+  def getLayout(): (String, String) = {
     (currentBatch.dataLayout, currentBatch.labelLayout)
   }
 

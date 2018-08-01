@@ -21,7 +21,6 @@ import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 import org.apache.mxnet.IO._
-import org.apache.mxnet.Layout.Layout
 import org.slf4j.LoggerFactory
 
 import scala.collection.immutable.ListMap
@@ -34,8 +33,9 @@ import scala.collection.mutable.ListBuffer
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                                 dataName: String = "data",
                                 labelName: String = "label",
-                                dataLayout: Layout = Layout.NCHW,
-                                labelLayout: Layout = Layout.N,
+                                dtype: DType = DType.Float32,
+                                dataLayout: String = "NCHW",
+                                labelLayout: String = "N",
                                 dataDType: DType = DType.Float32,
                                 labelDType: DType = DType.Int32)
   extends DataIter with WarnIfNotDisposed {
@@ -56,7 +56,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
-      val dataDType = currentBatch.dataDType
+      val dataType = currentBatch.dataDType
       val labelDType = currentBatch.labelDType
       val dataLayout = currentBatch.dataLayout
       val labelLayout = currentBatch.labelLayout
@@ -182,7 +182,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     * Get the layout
     * @return layout
     */
-  def getLayout(): (Layout, Layout) = (dataLayout, labelLayout)
+  def getLayout(): (String, String) = (dataLayout, labelLayout)
 
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData

@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.infer.objectdetector
 
 import java.io.File
 
-import org.apache.mxnet._
+import org.apache.mxnet.{Context, DType, DataDesc, Shape}
 import org.apache.mxnet.infer._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -58,7 +58,7 @@ object SSDClassifierExample {
     val inputShape = Shape(1, 3, 512, 512)
     // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
     val outputShape = Shape(1, 6132, 6)
-    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, Layout.NCHW))
+    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
     val img = ImageClassifier.loadImageFromFile(inputImagePath)
     val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
     val output = objDetector.imageObjectDetect(img, Some(3))
@@ -73,7 +73,7 @@ object SSDClassifierExample {
     val inputShape = Shape(1, 3, 512, 512)
     // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
     val outputShape = Shape(1, 6132, 6)
-    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, Layout.NCHW))
+    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
     val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
     // Loading batch of images from the directory path
     val batchFiles = generateBatches(inputImageDir, 20)

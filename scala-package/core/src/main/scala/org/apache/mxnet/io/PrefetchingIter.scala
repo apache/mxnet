@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Semaphore
 
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
 
 import scala.collection.immutable.ListMap
 
@@ -190,7 +189,7 @@ class PrefetchingIter(
     * Get the layout
     * @return layout
     */
-  def getLayout(): (Layout, Layout) = {
+  def getLayout(): (String, String) = {
     (currentBatch.dataLayout, currentBatch.labelLayout)
   }
 

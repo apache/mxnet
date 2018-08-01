@@ -19,7 +19,6 @@ package org.apache.mxnet
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet.io.{MXDataIter, MXDataPack}
 import org.slf4j.LoggerFactory
 
@@ -111,8 +110,7 @@ object IO {
     val dataDType = params.getOrElse("dataDType", "Float32")
     val labelDType = params.getOrElse("labelDType", "Int32")
     new MXDataIter(out.value, dataName, labelName,
-      dataLayout = Layout.getLayout(dataLayout),
-      labelLayout = Layout.getLayout(labelLayout),
+      dataLayout = dataLayout, labelLayout = labelLayout,
       dataDType = DType.getType(dataDType),
       labelDType = DType.getType(labelDType))
   }
@@ -151,8 +149,8 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 private val providedLabel: ListMap[String, Shape] = null,
                 val dataDType: DType = Base.MX_REAL_TYPE,
                 val labelDType: DType = DType.Int32,
-                val dataLayout: Layout = Layout.NCHW,
-                val labelLayout: Layout = Layout.N) {
+                val dataLayout: String = "NCHW",
+                val labelLayout: String = "N") {
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -182,8 +180,8 @@ object DataBatch {
     private var label: IndexedSeq[NDArray] = null
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
-    private var dataLayout: Layout = Layout.NCHW
-    private var labelLayout: Layout = Layout.N
+    private var dataLayout: String = "NCHW"
+    private var labelLayout: String = "N"
     private var dataDType: DType = Base.MX_REAL_TYPE
     private var labelDType: DType = DType.Int32
     private var bucketKey: AnyRef = null
@@ -250,7 +248,7 @@ object DataBatch {
       * @param labelLayout The layout of the label, default is N
       * @return this
       */
-    def setLayout(dataLayout: Layout, labelLayout: Layout): Builder = {
+    def setLayout(dataLayout: String, labelLayout: String): Builder = {
       this.dataLayout = dataLayout
       this.labelLayout = labelLayout
       this
@@ -355,7 +353,7 @@ abstract class DataIter extends Iterator[DataBatch] {
     * Get the layout
     * @return data and label layout of the DataIter
     */
-  def getLayout(): (Layout, Layout)
+  def getLayout(): (String, String)
 
   /**
    * Get the index of current batch
@@ -395,11 +393,10 @@ abstract class DataPack() extends Iterable[DataBatch] {
 
 // Named data desc description contains name, shape, type and other extended attributes.
 case class DataDesc(name: String, shape: Shape,
-                    dtype: DType = Base.MX_REAL_TYPE, layout: Layout = Layout.NCHW) {
-  val layoutStr = layout.toString
-  require(shape.length == layoutStr.length, ("number of dimensions in shape :%d with" +
+                    dtype: DType = Base.MX_REAL_TYPE, layout: String = "NCHW") {
+  require(shape.length == layout.length, ("number of dimensions in shape :%d with" +
     " shape: %s should match the length of the layout: %d with layout: %s").
-    format(shape.length, shape.toString, layoutStr.length, layoutStr))
+    format(shape.length, shape.toString, layout.length, layout))
 
   override def toString(): String = {
     s"DataDesc[$name,$shape,$dtype,$layout]"

@@ -18,7 +18,6 @@
 package org.apache.mxnet.spark.io
 
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet.{DataBatch, NDArray}
 
 /**
@@ -30,8 +29,8 @@ class LongLivingDataBatch(
   override val label: IndexedSeq[NDArray],
   override val index: IndexedSeq[Long],
   override val pad: Int,
-  override val dataLayout: Layout,
-  override val labelLayout: Layout,
+  override val dataLayout: String,
+  override val labelLayout: String,
   override val dataDType: DType,
   override val labelDType: DType) extends DataBatch(data, label, index, pad,
   dataLayout = dataLayout, labelLayout = labelLayout,

@@ -49,11 +49,10 @@ class ImageClassifier(modelPathPrefix: String,
                       extends Classifier(modelPathPrefix,
                       inputDescriptors, contexts, epoch) {
 
-  protected[infer] val inputLayout = inputDescriptors.head.layout.toString
+  protected[infer] val inputLayout = inputDescriptors.head.layout
 
   require(inputDescriptors.nonEmpty, "Please provide input descriptor")
-  require(inputDescriptors.head.layout.toString == "NCHW",
-    "Provided layout doesn't match NCHW format")
+  require(inputDescriptors.head.layout == "NCHW", "Provided layout doesn't match NCHW format")
 
   protected[infer] val inputShape = inputDescriptors.head.shape
 

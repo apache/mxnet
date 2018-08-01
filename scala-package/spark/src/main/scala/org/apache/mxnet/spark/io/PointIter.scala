@@ -18,7 +18,6 @@
 package org.apache.mxnet.spark.io
 
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.Layout.Layout
 import org.apache.mxnet._
 import org.apache.spark.mllib.linalg.Vector
 
@@ -37,8 +36,8 @@ class PointIter private[mxnet](
   private val labelName: String = "label",
   private val dataDType: DType = DType.Float32,
   private val labelDType: DType = DType.Int32,
-  private val dataLayout: Layout = Layout.NCHW,
-  private val labelLayout: Layout = Layout.N) extends DataIter {
+  private val dataLayout: String = "NCHW",
+  private val labelLayout: String = "N") extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1
@@ -147,7 +146,7 @@ class PointIter private[mxnet](
 
   override def getDType(): (DType, DType) = (dataDType, labelDType)
 
-  override def getLayout(): (Layout, Layout) = (dataLayout, labelLayout)
+  override def getLayout(): (String, String) = (dataLayout, labelLayout)
 
   override def batchSize: Int = _batchSize
 

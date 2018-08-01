@@ -17,9 +17,10 @@
 
 package org.apache.mxnetexamples.infer.imageclassifier
 
-import org.apache.mxnet._
+import org.apache.mxnet.Shape
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
+import org.apache.mxnet.{DType, DataDesc, Context}
 import org.apache.mxnet.infer.ImageClassifier
 
 import scala.collection.JavaConverters._
@@ -45,7 +46,7 @@ object ImageClassifierExample {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)
 
-    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, Layout.NCHW))
+    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 
     // Create object of ImageClassifier class
     val imgClassifier: ImageClassifier = new
@@ -66,7 +67,7 @@ object ImageClassifierExample {
     val dType = DType.Float32
     val inputShape = Shape(1, 3, 224, 224)
 
-    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, Layout.NCHW))
+    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 
     // Create object of ImageClassifier class
     val imgClassifier: ImageClassifier = new

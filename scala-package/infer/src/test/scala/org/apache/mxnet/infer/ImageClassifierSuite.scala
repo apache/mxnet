@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet._
+import org.apache.mxnet.{DType, DataDesc, Shape, NDArray, Context}
+
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
@@ -59,7 +60,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
   test("ImageClassifierSuite-testConvertBufferedImageToNDArray") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 2, 2),
-      dType, Layout.NCHW))
+      dType, "NCHW"))
 
     val image1 = new BufferedImage(100, 200, BufferedImage.TYPE_BYTE_GRAY)
     val image2 = ImageClassifier.reshapeImage(image1, 2, 2)
@@ -72,7 +73,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
   test("ImageClassifierSuite-testWithInputImage") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
-      dType, Layout.NCHW))
+      dType, "NCHW"))
 
     val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
 
@@ -110,7 +111,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
   test("ImageClassifierSuite-testWithInputBatchImage") {
     val dType = DType.Float32
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
-      dType, Layout.NCHW))
+      dType, "NCHW"))
 
     val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
     val imageBatch = IndexedSeq[BufferedImage](inputImage, inputImage)
