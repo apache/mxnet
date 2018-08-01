@@ -324,7 +324,7 @@ class LSTMPCell(HybridRecurrentCell):
     # pylint: enable= arguments-differ
 
 
-def _format_sequence(inputs, layout, in_layout=None):
+def _contrib_format_sequence(inputs, layout, in_layout=None):
     assert inputs is not None, \
         "unroll(inputs=None) has been deprecated. " \
         "Please create input variables outside unroll."
@@ -348,7 +348,45 @@ def _format_sequence(inputs, layout, in_layout=None):
 
 def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
            layout='NTC', valid_length=None):
-    inputs, axis, F, batch_size = _format_sequence(inputs, layout)
+    """Unrolls an RNN cell across time steps.
+
+    Parameters
+    ----------
+    cell : an object whose base class is RNNCell.
+        The RNN cell to run on the input sequence.
+    inputs : Symbol
+        It should have shape (batch_size, length, ...) if `layout` is 'NTC',
+        or (length, batch_size, ...) if `layout` is 'TNC'.
+    begin_state : nested list of Symbol
+        The initial states of the RNN sequence.
+    drop_inputs : float, default 0.
+        The dropout rate for inputs. Won't apply dropout if it equals 0.
+    drop_outputs : float, default 0.
+        The dropout rate for outputs. Won't apply dropout if it equals 0.
+    layout : str, optional
+        `layout` of input symbol. Only used if inputs
+        is a single Symbol.
+    valid_length : Symbol, NDArray or None
+        `valid_length` specifies the length of the sequences in the batch without padding.
+        This option is especially useful for building sequence-to-sequence models where
+        the input and output sequences would potentially be padded.
+        If `valid_length` is None, all sequences are assumed to have the same length.
+        If `valid_length` is a Symbol or NDArray, it should have shape (batch_size,).
+        The ith element will be the length of the ith sequence in the batch.
+        The last valid state will be return and the padded outputs will be masked with 0.
+        Note that `valid_length` must be smaller or equal to `length`.
+
+    Returns
+    -------
+    outputs : Symbol
+        the output of the RNN from this unrolling.
+
+    states : list of Symbol
+        The new state of this RNN after this unrolling.
+        The type of this symbol is same as the output of `begin_state`.
+    """
+
+    inputs, axis, F, _ = _contrib_format_sequence(inputs, layout)
     states = begin_state
 
     if drop_inputs:
@@ -359,17 +397,17 @@ def unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
             return cell(inputs, states)
     else:
         zeros = []
-        for i in range(len(states)):
-            zeros.append(F.zeros_like(states[i]))
+        for s in states:
+            zeros.append(F.zeros_like(s))
         states = _as_list(states)
         states.append(F.zeros((1)))
         def loop_body(inputs, states):
             cell_states = states[:-1]
             iter_no = states[-1]
             out, new_states = cell(inputs, cell_states)
-            for i in range(len(new_states)):
+            for i, state in enumerate(cell_states):
                 new_states[i] = F.where(F.broadcast_greater(valid_length, iter_no),
-                                        new_states[i], cell_states[i])
+                                        new_states[i], state)
             new_states.append(iter_no + 1)
             return out, new_states
 
