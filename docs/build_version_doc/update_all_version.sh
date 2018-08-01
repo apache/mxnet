@@ -140,11 +140,11 @@ for tag in $tag_list; do
 
     # Copy the latest README.md from master
     if [ $tag == 'master' ]; then
-        cd $mxnet_folder
+        cd ""$mxnet_folder/master"
         git stash
         git checkout master
-        cp README.md ../$built
-        cd ..
+        cp README.md ../../$built
+        cd ../..
     fi
 done
 

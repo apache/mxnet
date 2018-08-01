@@ -43,6 +43,7 @@
 set -e
 set -x
 
+# $1 is the list of branches/tags to build
 if [ -z "$1" ]
   then
     echo "Please provide a list of branches or tags you wish to build."
@@ -54,6 +55,7 @@ if [ -z "$1" ]
     build_arr=($tag_list)
 fi
 
+# $2 is the list of output folders which will be displayed on the site
 if [ -z "$2" ]
   then
     echo "Please provide a list of version tags you wish to display on the site."
@@ -68,6 +70,7 @@ if [ -z "$2" ]
     done
 fi
 
+# $3 is the GitHub project URL or fork
 if [ -z "$3" ]
   then
     echo "Using the main project URL."
@@ -81,21 +84,47 @@ if [ -z "$3" ]
     echo "Building with a user supplied fork: $mxnet_url"
 fi
 
+# This is the output folder
 built="VersionedWeb"
+
+
+function create_repo () {
+  repo_folder=$1
+  mxnet_url=$2
+  git clone $mxnet_url $repo_folder --recursive
+  echo "Adding MXNet upstream repo..."
+  cd $repo_folder
+  git remote add upstream https://github.com/apache/incubator-mxnet
+  cd ..
+}
+
+
+function refresh_branches () {
+  repo_folder=$1
+  cd $repo_folder
+  git fetch
+  git fetch upstream
+  cd ..
+}
+
+
+function checkout () {
+  repo_folder=$1
+  cd $repo_folder
+  # Overriding configs later will cause a conflict here, so stashing...
+  git stash
+  git checkout "$repo_folder"
+  if [ $tag == 'master' ]; then
+    git pull
+  fi
+  git submodule update --init --recursive
+  cd ..
+}
+
 
 if [ ! -d "$mxnet_folder" ]; then
   mkdir $mxnet_folder
-  git clone $mxnet_url $mxnet_folder --recursive
-  echo "Adding MXNet upstream repo..."
-  cd $mxnet_folder
-  git remote add upstream https://github.com/apache/incubator-mxnet
-  cd ..
 fi
-
-# Refresh branches
-cd $mxnet_folder
-git fetch upstream
-cd ..
 
 if [ ! -d "$built" ]; then
   mkdir $built
@@ -111,18 +140,15 @@ fi
 for key in ${!build_arr[@]}; do
     tag=${build_arr[${key}]}
     cd "$mxnet_folder"
-    git fetch
-    git stash
-    if [ $tag == 'master' ]
-        then
-            git checkout master
-            git pull
-            echo "Building master..."
-        else
-            # Use "v$tag" for branches or pass that in from jenkins
-            git checkout "$tag"
-            echo "Building $tag..."
+
+    # Each tag will get its own subfolder
+    if [ ! -d "$tag" ]; then
+      create_repo "$tag" "$mxnet_url"
     fi
+
+    refresh_branches $tag
+
+    checkout $tag
 
     # Bring over the current configurations, so we can anticipate results.
     cp ../../mxdoc.py $tag/docs/
@@ -130,13 +156,13 @@ for key in ${!build_arr[@]}; do
     cp ../../conf.py $tag/docs/
     cp ../../Doxyfile $tag/docs/
 
-    git submodule update --init --recursive || exit 1
-
-    make clean
-    cd docs
-    make clean
+    echo "Building $tag..."
+    # make clean
+    cd $tag/docs
+    # make clean
     make html USE_OPENMP=1 || exit 1
-    cd ../../
+    # Navigate back to build_version_doc folder
+    cd ../../../
     # Use the display tag name for the folder name
     file_loc="$built/versions/${display_arr[${key}]}"
     if [ -d "$file_loc" ] ; then
@@ -144,7 +170,7 @@ for key in ${!build_arr[@]}; do
     fi
     mkdir "$file_loc"
     echo "Storing artifacts for $tag in $file_loc folder..."
-    cp -a "$mxnet_folder/docs/_build/html/." "$file_loc"
+    cp -a "$mxnet_folder/$tag/docs/_build/html/." "$file_loc"
 done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
