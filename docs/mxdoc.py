@@ -31,11 +31,17 @@ from ConfigParser import SafeConfigParser
 parser = SafeConfigParser()
 parser.read('settings.ini')
 
-_MXNET_DOCS_BUILD_MXNET = parser.get('mxnet', 'build_mxnet')
-_SCALA_DOCS = parser.get('document_sets', 'scala_docs')
-_CLOJURE_DOCS = parser.get('document_sets', 'clojure_docs')
-_DOXYGEN_DOCS = parser.get('document_sets', 'doxygen_docs')
-_R_DOCS = parser.get('document_sets', 'r_docs')
+for section in [ 'document_sets' ]:
+    print("Document sets to generate:")
+    for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
+        print '%-12s  : %s' % (candidate, parser.get(section, candidate))
+    print
+
+_MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
+_SCALA_DOCS = parser.getboolean('document_sets', 'scala_docs')
+_CLOJURE_DOCS = parser.getboolean('document_sets', 'clojure_docs')
+_DOXYGEN_DOCS = parser.getboolean('document_sets', 'doxygen_docs')
+_R_DOCS = parser.getboolean('document_sets', 'r_docs')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
 _EVAL_WHILTELIST = []
@@ -394,14 +400,19 @@ def setup(app):
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
     if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
+        print("Building MXNet!")
         app.connect("builder-inited", build_mxnet)
     if _DOXYGEN_DOCS:
+        print("Building Doxygen!")
         app.connect("builder-inited", generate_doxygen)
     if _SCALA_DOCS:
+        print("Building Scala Docs!")
         app.connect("builder-inited", build_scala_docs)
     if _CLOJURE_DOCS:
+        print("Building Clojure Docs!")
         app.connect("builder-inited", build_clojure_docs)
     if _R_DOCS:
+        print("Building R Docs!")
         app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)

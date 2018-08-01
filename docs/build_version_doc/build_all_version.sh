@@ -122,6 +122,12 @@ for key in ${!build_arr[@]}; do
             git checkout "$tag"
             echo "Building $tag..."
     fi
+    
+    # Bring over the current configurations, so we can anticipate results.
+    cp ../mxdoc.py $mxnet_folder/docs/
+    cp ../settings.ini $mxnet_folder/docs/
+    cp ../conf.py $mxnet_folder/docs/
+    cp ../Doxyfile $mxnet_folder/docs/
 
     git submodule update --init --recursive || exit 1
 
