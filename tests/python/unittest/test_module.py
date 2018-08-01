@@ -381,7 +381,7 @@ def test_module_set_params():
                  aux_params={}, allow_missing=True, allow_extra=False)
 
 
-@with_seed(11)
+@with_seed()
 def test_monitor():
     # data iter
     data = mx.nd.array([[0.05, .10]]);
