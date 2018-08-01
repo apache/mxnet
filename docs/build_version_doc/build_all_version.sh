@@ -112,6 +112,7 @@ for key in ${!build_arr[@]}; do
     tag=${build_arr[${key}]}
     cd "$mxnet_folder"
     git fetch
+    git stash
     if [ $tag == 'master' ]
         then
             git checkout master
