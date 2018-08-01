@@ -28,20 +28,27 @@ from io import StringIO
 import contextlib
 from ConfigParser import SafeConfigParser
 
+_BUILD_VER = os.getenv('BUILD_VER')
+print("Building version {}".format(_BUILD_VER))
+_DOC_SET = 'document_sets_' + _BUILD_VER
+
 parser = SafeConfigParser()
 parser.read('settings.ini')
 
-for section in [ 'document_sets' ]:
+if _DOC_SET not in parser.sections():
+    _DOC_SET = 'document_sets_default'
+
+for section in [ _DOC_SET ]:
     print("Document sets to generate:")
     for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
         print '%-12s  : %s' % (candidate, parser.get(section, candidate))
     print
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
-_SCALA_DOCS = parser.getboolean('document_sets', 'scala_docs')
-_CLOJURE_DOCS = parser.getboolean('document_sets', 'clojure_docs')
-_DOXYGEN_DOCS = parser.getboolean('document_sets', 'doxygen_docs')
-_R_DOCS = parser.getboolean('document_sets', 'r_docs')
+_SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
+_CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
+_DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
+_R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
 _EVAL_WHILTELIST = []
