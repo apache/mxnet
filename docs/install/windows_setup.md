@@ -222,7 +222,7 @@ For GPU package:
   options(repos = cran)
   install.packages("mxnet")
 ```
-Change X to 80,90,91 or 92 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Change X to 80, 90, 91 or 92 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 #### Building MXNet from Source Code(GPU)
 After you have installed above software, continue with the following steps to build MXNet-R: 
 1. Clone the MXNet github repo.
