@@ -47,6 +47,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   dataDType: DType, labelDType: DType,
                   dataLayout: String, labelLayout: String) extends DataIter {
 
+  // scalastyle:off
   /**
    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
    * @param label Same as data, but is not fed to the model during testing.
@@ -69,6 +70,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
       IO.initData(label, allowEmpty = true, labelName),
       dataBatchSize, shuffle, lastBatchHandle, dataDType, labelDType, dataLayout, labelLayout)
   }
+  // scalastyle:on
 
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
 
