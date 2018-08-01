@@ -147,6 +147,17 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   }
 };
 
+struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
+  TShape input_axes;
+  TShape other_axes;
+  DMLC_DECLARE_PARAMETER(BroadcastLikeParam) {
+    DMLC_DECLARE_FIELD(input_axes).set_default(TShape())
+      .describe("Axes to perform broadcast on in the input array");
+    DMLC_DECLARE_FIELD(other_axes).set_default(TShape())
+      .describe("Axes to copy from the other array");
+  }
+};
+
 inline int CheckAxis(int axis, int ndim) {
   CHECK(axis < ndim && axis >= -ndim)
     << "axis " << axis << " exceeds the input dimension of " << ndim;
@@ -350,20 +361,33 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& lhs_shape = (*in_attrs)[0];
   TShape& rhs_shape = (*in_attrs)[1];
-  TShape oshape = TShape(rhs_shape);
-  if (lhs_shape.ndim() == 0 || lhs_shape.ndim() == 0) return false;
 
-  CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
+  if (lhs_shape.ndim() == 0 || lhs_shape.ndim() == 0) return false;
+    CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
     << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
 
-  for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
-    if (rhs_shape[i] != 0) {
-      CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
-        << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
-    } else {
-      oshape[i] = lhs_shape[i];
+  const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
+  TShape oshape;
+  CHECK(param.other_axes.ndim() == param.input_axes.ndim()) << "Input_axis and other_axis size does not match";
+  if (param.input_axes.ndim() == 0) {
+    oshape = TShape(rhs_shape);
+    for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
+      if (rhs_shape[i] != 0) {
+        CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
+          << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
+      } else {
+        oshape[i] = lhs_shape[i];
+      }
+    }
+  } else {
+    oshape = TShape(lhs_shape);
+    for (index_t i = 0; i < param.input_axes.ndim(); ++i) {
+      CHECK(lhs_shape[param.input_axes[i]] == 1) << "Input axis " << param.input_axes[i] << " cannot be broadcasted to " << rhs_shape[param.other_axes[i]];
+      oshape[param.input_axes[i]] = rhs_shape[param.other_axes[i]];
     }
   }
+
+  
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }

@@ -31,6 +31,7 @@ DMLC_REGISTER_PARAMETER(NormParam);
 DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
+DMLC_REGISTER_PARAMETER(BroadcastLikeParam);
 
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
   std::string doc = R"code(Computes the __op__ of array elements over given axes.
@@ -310,6 +311,8 @@ For example::
                                                    [ 1.,  2.,  3.]])
 
 )code" ADD_FILELINE)
+.set_attr_parser(ParamParser<BroadcastLikeParam>)
+.add_arguments(BroadcastLikeParam::__FIELDS__())
 .set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
