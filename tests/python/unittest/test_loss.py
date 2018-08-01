@@ -127,7 +127,9 @@ def test_logistic_loss_equal_bce():
     assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
     assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
 
-@with_seed(1234)
+# @anirudhacharya - removing the fixed seed for this test.
+# Issue to track - https://github.com/apache/incubator-mxnet/issues/11697
+@with_seed()
 def test_kl_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
