@@ -486,16 +486,16 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
         "reshaped. Supports negative indices.");
     DMLC_DECLARE_FIELD(lhs_end)
         .set_default(dmlc::optional<int>())
-        .describe("Defaults to None. The ending index to be used, "
+        .describe("Defaults to None. "
                   "The ending index along which the lhs dimensions are to be "
-                  "reshaped. Supports negative indices.");
+                  "used for reshaping. Supports negative indices.");
     DMLC_DECLARE_FIELD(rhs_begin).set_default(0).describe(
         "Defaults to 0. "
         "The beginning index along which the rhs dimensions are to be used for "
         "reshaping. Supports negative indices.");
     DMLC_DECLARE_FIELD(rhs_end)
         .set_default(dmlc::optional<int>())
-        .describe("Defaults to None."
+        .describe("Defaults to None. "
                   "The ending index along which the rhs dimensions are to be "
                   "used for reshaping. Supports negative indices.");
   }

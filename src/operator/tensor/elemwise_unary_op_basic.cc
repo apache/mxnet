@@ -357,7 +357,7 @@ void ReshapeLikeRangeCanonicalize(int ndims, const char *side, int begin,
   if (*cbegin < 0)
     *cbegin += ndims;
 
-  if (!static_cast<bool>(end)) {
+  if (!end.has_value()) {
     *cend = ndims;
   } else {
     *cend = end.value();
@@ -424,7 +424,7 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
 
 DMLC_REGISTER_PARAMETER(ReshapeLikeParam);
 NNVM_REGISTER_OP(reshape_like)
-.describe(R"code(Reshape `lhs` to have the same shape as `rhs`.
+.describe(R"code(Reshape some or all dimensions of `lhs` to have the same shape as some or all dimensions of `rhs`.
 
 Returns a **view** of the `lhs` array with a new shape without altering any data.
 
