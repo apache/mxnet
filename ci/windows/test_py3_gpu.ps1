@@ -18,6 +18,7 @@
 7z x -y windows_package.7z
 $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+c:\Anaconda3\envs\py3\Scripts\pip install mock
 c:\Anaconda3\envs\py3\python.exe -m nose -v tests\python\unittest
 if (! $?) { Throw ("Error running unittest") }
 c:\Anaconda3\envs\py3\python.exe -m nose -v tests\python\gpu\test_operator_gpu.py

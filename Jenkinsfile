@@ -806,6 +806,7 @@ try {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
+              unstash 'windows_package_gpu'
               powershell 'ci/windows/test_py2_gpu.ps1'
             } finally {
               collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
