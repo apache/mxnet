@@ -64,7 +64,6 @@ def get_net(num_hidden, flatten=True):
     fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
     return fc3
 
-# @lanking520: adding Xavier initializer and problem solved
 # tracked at: https://github.com/apache/incubator-mxnet/issues/11692
 @with_seed()
 def test_ce_loss():
