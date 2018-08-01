@@ -5465,8 +5465,9 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1896893923)
+# @piyushghai - Removing the fixed seed for this test.
+# Issue for flakiness is tracked at - https://github.com/apache/incubator-mxnet/issues/11721
+@with_seed()
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
