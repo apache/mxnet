@@ -218,11 +218,11 @@ For GPU package:
 
 ```r
   cran <- getOption("repos")
-  cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU/cuX"
+  cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU/cu80"
   options(repos = cran)
   install.packages("mxnet")
 ```
-Change X to 80, 90, 91 or 92 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Change cu80 to cu90, cu91 or cu92 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 #### Building MXNet from Source Code(GPU)
 After you have installed above software, continue with the following steps to build MXNet-R: 
 1. Clone the MXNet github repo.
