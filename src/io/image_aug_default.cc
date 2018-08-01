@@ -178,7 +178,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
         .describe("Rotate by an angle. If set, it overwrites the ``max_rotate_angle`` option.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Set the padding pixes value into ``fill_value``.");
+        .describe("Set the padding pixels value to ``fill_value``.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
         .describe("The shape of a output image.");

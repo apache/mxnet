@@ -33,77 +33,29 @@
     a clean workspace.
 """
 import os
-import warnings
-import imp
-import shutil
-import time
-import argparse
-import traceback
-import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'utils'))
+from notebook_test import run_notebook
 
-# Maximum 10 minutes per test
-# Reaching timeout causes test failure
-TIME_OUT = 10*60
-# Pin to ipython version 4
-IPYTHON_VERSION = 4
-temp_dir = 'tmp_notebook'
+
+TUTORIAL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', '_build', 'html', 'tutorials')
+KERNEL = os.getenv('MXNET_TUTORIAL_TEST_KERNEL', None)
+NO_CACHE = os.getenv('MXNET_TUTORIAL_TEST_NO_CACHE', False)
 
 def _test_tutorial_nb(tutorial):
-    """Run tutorial jupyter notebook to catch any execution error.
+    """Run tutorial Jupyter notebook to catch any execution error.
 
     Parameters
     ----------
     tutorial : str
-        tutorial name in folder/tutorial format
+        the name of the tutorial to be tested
+
+    Returns
+    -------
+        True if there are no warnings or errors.
     """
-
-    tutorial_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', '_build', 'html', 'tutorials')
-    tutorial_path = os.path.join(*([tutorial_dir] + tutorial.split('/')))
-
-    # see env variable docs in the doc string of the file
-    kernel = os.getenv('MXNET_TUTORIAL_TEST_KERNEL', None)
-    no_cache = os.getenv('MXNET_TUTORIAL_TEST_NO_CACHE', False)
-
-    working_dir = os.path.join(*([temp_dir] + tutorial.split('/')))
-
-    if no_cache == '1':
-        print("Cleaning and setting up temp directory '{}'".format(working_dir))
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-    errors = []
-    notebook = None
-    if not os.path.isdir(working_dir):
-        os.makedirs(working_dir)
-    try:
-        notebook = nbformat.read(tutorial_path + '.ipynb', as_version=IPYTHON_VERSION)
-        # Adding a small delay to allow time for sockets to be freed
-        # stop-gap measure to battle the 1000ms linger of socket hard coded
-        # in the kernel API code
-        time.sleep(1.1) 
-        if kernel is not None:
-            eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
-        else:
-            eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
-        nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
-    except Exception as err:
-        err_msg = str(err)
-        errors.append(err_msg)
-    finally:
-        if notebook is not None:
-            output_file = os.path.join(working_dir, "output.txt")
-            nbformat.write(notebook, output_file)
-            output_nb = open(output_file, mode='r')
-            for line in output_nb:
-                if "Warning:" in line:
-                    errors.append("Warning:\n"+line)
-        if len(errors) > 0:
-            print('\n'.join(errors))
-            return False
-        return True
-
+    return run_notebook(tutorial, TUTORIAL_DIR, kernel=KERNEL, no_cache=NO_CACHE)
 
 
 def test_basic_ndarray():
@@ -181,8 +133,11 @@ def test_onnx_inference_on_onnx_model():
 def test_python_matrix_factorization():
     assert _test_tutorial_nb('python/matrix_factorization')
 
-def test_python_linear_regression() :
+def test_python_linear_regression():
     assert _test_tutorial_nb('python/linear-regression')
+
+def test_python_logistic_regression() :
+    assert _test_tutorial_nb('gluon/logistic_regression_explained')
 
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
@@ -204,7 +159,7 @@ def test_python_types_of_data_augmentation():
 
 def test_python_profiler():
     assert _test_tutorial_nb('python/profiler')
-    
+
 def test_sparse_row_sparse():
     assert _test_tutorial_nb('sparse/row_sparse')
 

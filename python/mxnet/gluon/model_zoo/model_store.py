@@ -55,10 +55,10 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('ee79a8098a91fbe05b7a973fed2017a6117723a8', 'vgg11_bn'),
     ('6bc5de58a05a5e2e7f493e2d75a580d83efde38c', 'vgg13'),
     ('7d97a06c3c7a1aecc88b6e7385c2b373a249e95e', 'vgg13_bn'),
-    ('ef8c5d7fdddb7ef143bbcccbfecdea42552c51d1', 'vgg16'),
-    ('0cebe2f070390db194f0bfa367df00d42de7be29', 'vgg16_bn'),
-    ('02c12a31188a4f9da8651647b64fc2b944a72a40', 'vgg19'),
-    ('11ee6adf98209813dbe929acb57a539ac081e954', 'vgg19_bn')]}
+    ('e660d4569ccb679ec68f1fd3cce07a387252a90a', 'vgg16'),
+    ('7f01cf050d357127a73826045c245041b0df7363', 'vgg16_bn'),
+    ('ad2f660d101905472b83590b59708b71ea22b2e5', 'vgg19'),
+    ('f360b758e856f1074a85abd5fd873ed1d98297c3', 'vgg19_bn')]}
 
 apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 _url_format = '{repo_url}gluon/models/{file_name}.zip'
