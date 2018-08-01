@@ -45,9 +45,6 @@
 set -e
 set -x
 
-STATIC_FILES_DIR="_static"
-MXNET_THEME_DIR="_static/mxnet-theme"
-
 if [ -z "$1" ]
   then
     echo "Please provide a list of version tags you wish to run."
@@ -105,8 +102,8 @@ function update_mxnet_css {
   # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
   # copy <master folder location> <version folder location>
 
-  echo "Copying mxnet.css from master branch to all versions...."
-  cp "$mxnet_folder/docs/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
+  echo "Copying mxnet.css from artifacts folder..."
+  cp "artifacts/mxnet.css"  "$built/versions/$tag/_static"
 
   echo "Update fixes complete.."
 }
