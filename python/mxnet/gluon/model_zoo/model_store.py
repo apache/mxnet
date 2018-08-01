@@ -21,8 +21,10 @@ from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
+import logging
 
 from ..utils import download, check_sha1
+from ... import base, util
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -68,7 +70,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
+def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -78,7 +80,7 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     ----------
     name : str
         Name of the model.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_DATA_DIR/models
         Location for keeping the model parameters.
 
     Returns
@@ -95,12 +97,11 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
         if check_sha1(file_path, sha1_hash):
             return file_path
         else:
-            print('Mismatch in the content of model file detected. Downloading again.')
+            logging.warning('Mismatch in the content of model file detected. Downloading again.')
     else:
-        print('Model file is not found. Downloading.')
+        logging.info('Model file not found. Downloading to %s.', file_path)
 
-    if not os.path.exists(root):
-        os.makedirs(root)
+    util.makedirs(root)
 
     zip_file_path = os.path.join(root, file_name+'.zip')
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
@@ -118,12 +119,12 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
 
-def purge(root=os.path.join('~', '.mxnet', 'models')):
+def purge(root=os.path.join(base.data_dir(), 'models')):
     r"""Purge all pretrained model files in local file store.
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_DATA_DIR/models'
         Location for keeping the model parameters.
     """
     root = os.path.expanduser(root)
