@@ -68,15 +68,14 @@ li, dt a, dt span {
 /* } */
 
 /*------------------ Headings -------------------*/
-h1, h2, h3 {
+h1, h2, h3, h4 {
     font-family: AmazonEmber;
     margin-top: 18px;
-    margin-bottom: 18px;
     color: #444;
 }
 
 h1 {
-    margin-top: 0px;
+    margin-top: 5px;
     margin-bottom: 25px;
     font-size: 28px;
     font-weight: bold;
@@ -84,14 +83,20 @@ h1 {
 
 h2 {
     font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 15px;
 }
 
 h3 {
     font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
 }
 
 h4 {
     font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
 }
 
 img {
@@ -209,7 +214,7 @@ img {
     font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
-    font-weight: 500; 
+    font-weight: 500;
 }
 
 .main-nav-link:hover {
@@ -218,10 +223,10 @@ img {
     text-decoration: none;
 }
 
-#dropdown-menu-position-anchor, 
+#dropdown-menu-position-anchor,
 #dropdown-menu-position-anchor-docs,
 #dropdown-menu-position-anchor-community,
-#dropdown-menu-position-anchor-version, 
+#dropdown-menu-position-anchor-version,
 #dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
@@ -300,7 +305,7 @@ img {
         width: 120px;
         margin-right: 10px;
     }
-    
+
     .searchBox {
         width: 120px;
     }
@@ -490,7 +495,7 @@ li.dropdown-submenu ul.dropdown-menu a {
         position: fixed;
         left: 45px;
     }
-    
+
     #burgerMenu {
         position: fixed;
         left: 0;
@@ -501,7 +506,7 @@ li.dropdown-submenu ul.dropdown-menu a {
         background-attachment: initial;
         background-size: cover;
     }
-    
+
     #burgerMenu a {
         display: block;
         font-size: 19px;
@@ -511,17 +516,17 @@ li.dropdown-submenu ul.dropdown-menu a {
         color: #fff;
         text-decoration: none;
     }
-    
+
     #burgerMenu a:hover {
         color: initial;
         background-color: inherit;
     }
-    
+
     #burgerMenu li {
         border-bottom: 1px solid lightgray;
         height: 50px;
     }
-    
+
     #logo-wrap {
         margin-left: 30px;
     }
@@ -605,7 +610,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     #install_blk, #install_blk{
         display: block;
     }
-    
+
     #install_blk {
         padding-left: 0;
         margin-top: 0;
@@ -699,7 +704,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-tout .row div {
         padding-left: 45px;
     }
-    
+
     .section-tout .row p {
         padding-bottom: 10px;
     }
@@ -725,7 +730,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .section-util .row div h2 {
     font-family: AmazonEmber;
-    color: #fff;   
+    color: #fff;
 }
 
 #model-zoo-blk {
