@@ -809,8 +809,8 @@ try {
               unstash 'windows_package_gpu'
               powershell 'ci/windows/test_py2_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
             }
           }
         }
@@ -825,8 +825,8 @@ try {
               unstash 'windows_package_gpu'
               powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
             }
           }
         }
@@ -841,8 +841,8 @@ try {
               unstash 'windows_package_gpu_mkldnn'
               powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
             }
           }
         }
