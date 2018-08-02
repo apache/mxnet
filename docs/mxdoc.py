@@ -28,7 +28,7 @@ from io import StringIO
 import contextlib
 from ConfigParser import SafeConfigParser
 
-_BUILD_VER = os.getenv('BUILD_VER')
+_BUILD_VER = os.getenv('BUILD_VER') or 'default'
 print("Building version {}".format(_BUILD_VER))
 _DOC_SET = 'document_sets_' + _BUILD_VER
 
