@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,23 +14,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""general utility functions"""
+
+import os
+import sys
 
 
-set -evx
-
-if [ ! -z "$MXNET_HOME" ]; then
-  data_path="$MXNET_HOME"
-else
-  data_path="./data"
-fi
-
-if [ ! -d "$data_path" ]; then
-  mkdir -p "$data_path"
-fi
-
-cifar_data_path="$data_path/cifar10.zip"
-if [ ! -f "$cifar_data_path" ]; then
-  wget http://data.mxnet.io/mxnet/data/cifar10.zip -P $data_path
-  cd $data_path
-  unzip -u cifar10.zip
-fi
+def makedirs(d):
+    """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
+    available in Python2"""
+    if sys.version_info[0] < 3:
+        from distutils.dir_util import mkpath
+        mkpath(d)
+    else:
+        os.makedirs(d, exist_ok=True)

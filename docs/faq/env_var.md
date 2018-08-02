@@ -152,6 +152,10 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
   - The repository url to be used for Gluon datasets and pre-trained models.
 
+* MXNET_HOME
+  - Data directory in the filesystem for storage, for example when downloading gluon models.
+  - Default in *nix is .mxnet APPDATA/mxnet in windows.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
