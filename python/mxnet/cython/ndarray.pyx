@@ -52,7 +52,7 @@ cdef class NDArrayBase:
         def __get__(self):
             return bool(self.cwritable)
 
-    def __init__(self, handle, writable=True, stype=-1):
+    def __init__(self, handle, writable=True):
         self._set_handle(handle)
         self.cwritable = writable
 
