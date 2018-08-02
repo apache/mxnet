@@ -362,13 +362,14 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   TShape& lhs_shape = (*in_attrs)[0];
   TShape& rhs_shape = (*in_attrs)[1];
 
-  if (lhs_shape.ndim() == 0 || lhs_shape.ndim() == 0) return false;
+  if ((lhs_shape.ndim() == 0) || (lhs_shape.ndim() == 0)) return false;
     CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
     << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
 
   const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
   TShape oshape;
-  CHECK(param.other_axes.ndim() == param.input_axes.ndim()) << "Input_axis and other_axis size does not match";
+  CHECK(param.other_axes.ndim() == param.input_axes.ndim())
+  << "Input_axis and other_axis size does not match";
   if (param.input_axes.ndim() == 0) {
     oshape = TShape(rhs_shape);
     for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
@@ -382,12 +383,12 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   } else {
     oshape = TShape(lhs_shape);
     for (index_t i = 0; i < param.input_axes.ndim(); ++i) {
-      CHECK(lhs_shape[param.input_axes[i]] == 1) << "Input axis " << param.input_axes[i] << " cannot be broadcasted to " << rhs_shape[param.other_axes[i]];
+      CHECK(lhs_shape[param.input_axes[i]] == 1) << "Input axis " << param.input_axes[i]
+      << " cannot be broadcasted to " << rhs_shape[param.other_axes[i]];
       oshape[param.input_axes[i]] = rhs_shape[param.other_axes[i]];
     }
   }
 
-  
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
