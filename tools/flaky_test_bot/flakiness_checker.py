@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -33,7 +34,7 @@ logger.setLevel(logging.INFO)
 
 DEFAULT_NUM_TRIALS = 10000
 
-def run_test_trials(test_file, test_name, num_trials, seed=None):
+def run_test_trials(test_file, test_name, num_trials, seed=None, args=None):
     test_path = test_file + ":" + test_name
     logger.info("Testing-- %s", test_path)
 
@@ -45,11 +46,17 @@ def run_test_trials(test_file, test_name, num_trials, seed=None):
     else:
         new_env["MXNET_TEST_SEED"] = str(seed)
 
-    return  subprocess.call(["nosetests", test_path], env = new_env)
+    command = ["nosetests", test_path]
+    if args:
+        command.extend(args)
+
+    logger.debug("Nosetests command: %s", command)
+
+    return  subprocess.call(command, env = new_env)
 
 class NameAction(argparse.Action):
     """Parses command line argument to get test file and test name"""
-    def find_test_path(test_file):
+    def find_test_path(self, test_file):
         """Searches for the test file and returns the path if found
         As a default, the currend working directory is the top of the search.
         If a directory was provided as part of the argument, the directory 
@@ -63,12 +70,13 @@ class NameAction(argparse.Action):
         for (path, dirs, files) in os.walk(top):
             if test_path[1] in files:
                 return  os.path.join(path, test_path[1])
-        raise FileNotFoundError("Could not find " + test_path[1] + 
-                                "in directory: " + top)
+        raise IOError("Could not find " + test_path[1] + 
+                " in directory: " + top)
 
     def __call__(self, parser, namespace, values, option_string=None):
         name = re.split("\.py:|\.", values)
         if len(name) != 2:
+            logger.error("Invalid test specifier: %s", name)
             raise ValueError("Invalid argument format for test. Format: "
                              "<file-name>.<test-name> or"
                              " <directory>/<file>:<test-name>")
@@ -86,18 +94,24 @@ def parse_args():
     parser.add_argument("-n", "--num-trials", metavar="N",
                         default=DEFAULT_NUM_TRIALS, type=int,
                         help="number of test trials, passed as "
-                        "MXNET_TEST_COUNT, defaults to 500")
+                        "MXNET_TEST_COUNT, defaults to 10000")
 
-    parser.add_argument("-s", "--seed", type=int,
+    parser.add_argument("--seed", type=int,
                         help="test seed, passed as MXNET_TEST_SEED, "
                         "defaults to random seed") 
+
+    parser.add_argument("args", nargs=argparse.REMAINDER,
+                        help="args to pass to nosetests")
 
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     args = parse_args()
+    logger.debug(args)
 
-    run_test_trials(args.test_path, args.test_name, args.num_trials, args.seed)
+    run_test_trials(args.test_path, args.test_name, args.num_trials,
+        args.seed, args.args)
     logger.info("Nosetests terminated with exit code %d", code)

@@ -25,7 +25,7 @@ the current and master branches are used as targets for git diff, but the user
 may specify their own targets. Then, the raw output is parsed to retrieve info
 about each of the changes bnetween the targets, including file name, top-level
 funtion name, and line numbers for each change. Finally, the list of changes
-is outputted with each change on a separate line.
+is outputted.
 """
 
 import os
@@ -65,11 +65,11 @@ def get_diff_output(args):
 
 def parser(diff_output):
     """Split diff output into patches and parse each patch individually"""
-    diff_output = str(diff_output, errors="strict")
+    diff_output = diff_output.decode("utf-8")
     changes = {}
     
     top = subprocess.check_output(["git","rev-parse", "--top-level"])
-    top = str(top, errors="strict")
+    top = top.decode("utf-8")
 
     for patch in diff_output.split("diff --git")[1:]:
         file_name, cs = parse_patch(patch)
@@ -134,6 +134,20 @@ def parse_patch(patch):
 
 
 def output_changes(changes, verbosity):
+    """ Output changes in an easy to understand format
+    
+    Three verbosity levels: 1 - only file names, 2- file and functions names,
+    3- file and function names and line numbers.
+
+    Example:
+    file1
+        func_a
+            1:2
+            3:4
+        func_b
+            5:5
+        func_c
+    """
     if not verbosity:
         verbosity = 2
     logger.debug("verbosity: %d", verbosity)
@@ -174,7 +188,7 @@ def parse_args():
     filters.add_argument("--filter-path", "-p", dest="path", 
         help="specify directory or file in which to search for changes")
     filters.add_argument(
-        "--filter", "-f", "-e", dest="expr", metavar="REGEX", default=".*",
+            "--filter", "-f", dest="expr", metavar="REGEX", default=".*",
         help="filter files with given python regular expression")
     
     args = arg_parser.parse_args()
@@ -182,6 +196,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     args = parse_args()
     diff_output = get_diff_output(args)
 

@@ -924,6 +924,12 @@ nightly_straight_dope_python3_multi_gpu_tests() {
       test_notebooks_multi_gpu.py --nologcapture
 }
 
+# check commit for flaky tests
+run_flakiness_checker(){
+    set -ex
+    python tools/flaky_test_bot/check_branch.py -b HEAD~1 HEAD
+}
+
 # Deploy
 
 deploy_docs() {

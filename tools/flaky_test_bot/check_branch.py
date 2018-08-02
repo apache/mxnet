@@ -1,4 +1,5 @@
 import logging
+import signal
 import os
 import subprocess
 import json
@@ -7,34 +8,26 @@ import flakiness_checker
 import diff_collator
 import dependency_analyzer
 
-DEFAULT_DIR = os.path.dirname(__file__)
-DEFAULT_CONFIG_FILE = os.path.join(DEFAULT_DIR, "config.json")
-DEFAULT_LOGGING_FILE = os.path.join(DEFAULT_DIR, "results.log")
-DEFAULT_TESTS_DIRECTORY = "tests/python"
-DEFAULT_NUM_TRIALS = 5000
+LOGGING_FILE = os.path.join(os.path.dirname(__file__), "results.log")
+
+TESTS_DIRECTORY = "tests/python"
+TEST_TRIALS = 10000
+TIME_BUDGET = 60 #7200 # 2 hours, in seconds
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
-fh = logging.FileHandler(DEFAULT_LOGGING_FILE)
+fh = logging.FileHandler(LOGGING_FILE)
 fh.setLevel(logging.INFO)
 fh.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 logger.addHandler(fh)
-
-logging.getLogger().setLevel(logging.DEBUG)
-sh = logging.StreamHandler()
-sh.setFormatter(logging.Formatter(
-    "[%(levelname)s] %(name)s: %(message)s"))
-sh.setLevel(logging.DEBUG)
-logging.getLogger().addHandler(sh)
-
-
+ 
 def select_tests(changes):
     """returns tests that are dependent on given changes
     """
 
     top = subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    top = str(top, errors="strict").splitlines()[0]
+    top = top.decode("utf-8").splitlines()[0]
 
     tests = dependency_analyzer.find_dependents(changes, top)
 
@@ -45,11 +38,41 @@ def select_tests(changes):
 
     return tests
 
+def check_tests(tests):
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    signal.signal(signal.SIGALRM, handler)
+    
+    flaky, nonflaky = [], []
+    q = TIME_BUDGET // len(tests)
+    for t in tests:
+        try:
+            signal.alarm(q)
+            res = flakiness_checker.run_test_trials(t[0], t[1], TEST_TRIALS)
+            signal.alarm(0)
+        except TimeoutError:
+            res = 0
+            logger.warning("flakiness checker exceeded time budget")
+
+        if res != 0:
+            flaky.append(t)
+        else:
+            nonflaky.append(t)
+    
+    return flaky, nonflaky
+
+
+
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     args = diff_collator.parse_args()
     diff_output = diff_collator.get_diff_output(args)
     changes = diff_collator.parser(diff_output)
-    diff_collator.output_changes(changes, args.verbosity)
 
     changes = {k:set(v.keys()) for k, v in  changes.items()}
     tests = select_tests(changes)
@@ -60,15 +83,10 @@ if __name__ == "__main__":
             logger.debug("\t%s", func)
 
     #check for flakiness
-    flaky = nonflaky = []
-    for filename, funcs in tests.items():
-        for func in funcs:
-            res = flakiness_checker.run_test_trials(filename, func,
-                    DEFAULT_NUM_TRIALS)
-            if res != 0:
-                flaky.append((filename,func))
-            else:
-                nonflaky.append((filename, func))
+    flaky, nonflaky = [], []
+    if tests:
+        flaky, nonflaky = check_tests(
+            [(fi, fu) for fi in tests.keys() for fu in tests[fi]])
 
     print("Following tests failed flakiness checker:")
     if not flaky:
@@ -80,8 +98,10 @@ if __name__ == "__main__":
     if not nonflaky:
         print("None")
     for test in nonflaky:
-        print("%s:%s".format(test[0], test[1]))
+        print("{}:{}".format(test[0], test[1]))
 
     logger.info("Tested: %d | Flaky: %d, Non-flaky: %d",
         len(flaky) + len(nonflaky), len(flaky), len(nonflaky))
 
+    if flaky:
+        sys.exit(1)

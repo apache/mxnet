@@ -22,7 +22,7 @@ DEFAULT_CONFIG_FILE = os.path.join(
     os.path.dirname(__file__), "config.json")
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 def read_config(filename):
     """Reads cross-file dependencies from json file"""
@@ -37,7 +37,7 @@ def find_dependents(dependencies, top):
         funcs = dependencies[filename]
         abs_path = os.path.join(top, filename)
         deps = set(funcs)
-        deps |= find_dependents_file(funcs, abs_path)
+        deps |= find_dependents_file(deps, abs_path)
         dependents[filename] = deps
 
     try:
@@ -68,10 +68,6 @@ def find_dependents_file(dependencies, filename):
                 return "{}.{}".format(node.value.id, node.attr)
             except AttributeError:
                 return "{}.{}".format(self.generic_visit(node), node.attr)
-
-    if not dependencies:
-        return dependencies
-    dependencies = set(dependencies)
 
     if os.path.splitext(filename)[1] !=".py":
         logger.debug("Skipping non-python file: %s", filename)
@@ -139,6 +135,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     args = parse_args()
     logger.debug("args: %s", args)
     
