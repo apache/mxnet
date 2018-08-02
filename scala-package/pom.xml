@@ -8,7 +8,7 @@
   </parent>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-parent_2.11</artifactId>
-  <version>1.2.2-SNAPSHOT</version>
+  <version>1.2.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
   <description>
