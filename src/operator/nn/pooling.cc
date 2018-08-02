@@ -57,19 +57,19 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   attrs->parsed = std::move(param);
 }
 
-size_t GetNumOutputs(const PoolingParam &param) {
+int GetNumOutputs(const PoolingParam &param) {
 #if MXNET_USE_MKLDNN == 1
-  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2U : 1U;
+  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 2 : 1;
 #else
-  return 1U;
+  return 1;
 #endif
 }
 
-size_t GetNumBackInputs(const PoolingParam &param) {
+int GetNumBackInputs(const PoolingParam &param) {
 #if MXNET_USE_MKLDNN == 1
-  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 5U : 3U;
+  return MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param) ? 5 : 3;
 #else
-  return 3U;
+  return 3;
 #endif
 }
 

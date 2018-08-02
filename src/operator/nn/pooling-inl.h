@@ -135,8 +135,8 @@ namespace op {
  * When MKLDNN is enabled, we might want 2 outputs instead of one inputs, which
  * also changes the number of inputs for backward.
  */
-size_t GetNumOutputs(const PoolingParam &param);
-size_t GetNumBackInputs(const PoolingParam &param);
+int GetNumOutputs(const PoolingParam &param);
+int GetNumBackInputs(const PoolingParam &param);
 
 template<typename xpu, typename DType>
 class PoolingOp {

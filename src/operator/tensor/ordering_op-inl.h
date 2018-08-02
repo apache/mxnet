@@ -359,16 +359,19 @@ void TopKImpl(RunContext ctx,
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   Tensor<xpu, 3, real_t> dat = src.FlatTo3D<xpu, real_t>(axis, axis, s);
-  size_t temp_size = 0;
+  index_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, real_t, xpu>(src.Size()));
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<real_t, int, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+    static_cast<index_t>(mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size())));
+  temp_size = std::max(temp_size,
+    static_cast<index_t>(mxnet::op::SortByKeyWorkspaceSize<int, real_t, xpu>(src.Size())));
+  temp_size = std::max(temp_size,
+    static_cast<index_t>(mxnet::op::SortByKeyWorkspaceSize<real_t, int, xpu>(src.Size())));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += sizeof(int) * src.Size();
   // Temp space for cpu sorts.
-  temp_size = std::max(temp_size, sizeof(real_t) * static_cast<size_t>(src.Size()));
-  size_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int) * src.Size();
+  temp_size = std::max(temp_size, static_cast<index_t>(sizeof(real_t)) * src.Size());
+  index_t workspace_size = temp_size + sizeof(real_t) * src.Size() + sizeof(int) * src.Size();
   if (param.ret_typ == topk_enum::kReturnMask) {
     workspace_size += sizeof(int) * batch_size * k + sizeof(real_t) * batch_size * k;
   }
