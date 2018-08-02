@@ -1052,9 +1052,11 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   nnvm::ShapeVector sym_arg_shapes;
   nnvm::DTypeVector sym_arg_dtypes;
   StorageTypeVector sym_arg_stypes;
-  GetTypes(symbol, arg_shape_map, arg_dtype_map, arg_stype_map, sym_arg_shapes, sym_arg_dtypes, sym_arg_stypes);
-  nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
-                            aux_state_ctxes, sym_arg_shapes, sym_arg_dtypes, sym_arg_stypes, grad_req_types);
+  GetTypes(symbol, arg_shape_map, arg_dtype_map, arg_stype_map, sym_arg_shapes,
+           sym_arg_dtypes, sym_arg_stypes);
+  nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes,
+                            arg_grad_ctxes, aux_state_ctxes, sym_arg_shapes,
+                            sym_arg_dtypes, sym_arg_stypes, grad_req_types);
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
   // should do this differently.
@@ -1250,9 +1252,14 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                     grad_req_types,
                     num_forward_inputs,
                     num_forward_outputs);
+
+  // infer & add types/shape attrs to graph before calling partition pass
   Infer(gp, num_forward_inputs, arg_shapes, arg_dtypes, arg_stypes);
-  mxnet::op::SubgraphPropertyPtr property
-      = std::make_shared<mxnet::op::DefaultSubgraphProperty>(std::unordered_set<std::string>{});
+
+  // partition pass with default subgraph property
+  mxnet::op::SubgraphPropertyPtr property =
+      std::make_shared<mxnet::op::DefaultSubgraphProperty>(
+          std::unordered_set<std::string>{});
   gp.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
   gp = ApplyPass(std::move(gp), "PartitionGraph");
   auto sym = symbol.Copy();
