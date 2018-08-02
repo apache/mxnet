@@ -63,7 +63,7 @@ cdef class NDArrayBase:
         return (_ndarray_cls, (None,), self.__getstate__())
 
 
-_ndarray_cls = NDArrayBase
+_ndarray_cls = None
 
 def _set_ndarray_class(cls):
     global _ndarray_cls
