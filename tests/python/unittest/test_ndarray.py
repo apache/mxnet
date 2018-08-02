@@ -552,10 +552,21 @@ def test_broadcast():
             assert err < 1E-8
 
     def test_broadcast_like_axis():
-        input = mx.nd.ones(shape=(1, 2, 1, 3))
-        other = mx.nd.ones(shape=(5, 6, 7, 8))
-        output = mx.nd.broadcast_like(input, other, input_axes=(0,2), other_axes=(1,3))
-        assert output.shape == (6, 2, 8, 3)
+
+        testcases = [
+            # Lhs shape, rhs shape, lhs axis, rhs axis, result
+            [(1, 2, 1, 3), (5, 6, 7, 8), (0,2), (1,3), (6, 2, 8, 3)],
+            [(1,), (5,), (0,), (-1,), (5,)],
+            [(1, 7, 9, 1, 1), (9,), (-2,), (0,), (1, 7, 9, 9, 1)],
+            [(1, 7, 9, 1, 1), (9, 1), (-2, -1), (-2, -1), (1, 7, 9, 9, 1)],
+            [(2, 1), (1, 7, 9, 1, 1), (1,), (-3,), (2, 9)]
+        ]
+        
+        for test_data in testcases:
+            lhs = mx.nd.random.uniform(shape=test_data[0])
+            rhs = mx.nd.random.uniform(shape=test_data[1])
+            output = mx.nd.broadcast_like(lhs, rhs, lhs_axes=test_data[2], rhs_axes=test_data[3])
+            assert output.shape == test_data[4]
 
     test_broadcast_to()
     test_broadcast_like()

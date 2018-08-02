@@ -310,6 +310,8 @@ For example::
    broadcast_like([[1,2,3]], [[5,6,7],[7,8,9]]) = [[ 1.,  2.,  3.],
                                                    [ 1.,  2.,  3.]])
 
+   broadcast_like([9], [1,2,3,4,5], lhs_axes=(0,), rhs_axes=(-1,)) = [9,9,9,9,9]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastLikeParam>)
 .add_arguments(BroadcastLikeParam::__FIELDS__())
