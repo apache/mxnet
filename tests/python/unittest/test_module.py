@@ -317,8 +317,9 @@ def test_module_switch_bucket():
     assert total_bytes_after == total_bytes_before
 
 
-
-@with_seed(11)
+# roywei: Getting rid of fixed seed as flakiness could not be reproduced,
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11705
+@with_seed()
 def test_module_set_params():
     # data iter
     data = mx.nd.array([[0.05, .10]]);
