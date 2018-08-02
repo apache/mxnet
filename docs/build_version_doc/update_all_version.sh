@@ -22,7 +22,7 @@
 # It assumes you have already run build_all_version.sh for
 # the tags you want to update.
 
-# Takes three required arguments and one optional:
+# Takes three required arguments:
 # * tag list (required) - semicolon delimited list of tags to display on site
 #     Example: "1.1.0;1.0.0;master"
 # * default tag (required) - which version should the site default to
@@ -30,17 +30,11 @@
 # * root URL (required) - for the versions dropdown to change to production or
 #     dev server.
 #     Example: http://mxnet.incubator.apache.org/
-# * custom build folder (optional) - If using a custom fork from the
-#     build_all_version.sh script, you will want to tell this script to use your
-#     fork's build folder.
-#     Example: aaronmarkham-mxnet
 
 # Example Usage:
 # ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
 #   http://mxnet.incubator.apache.org/
-# Using a custom fork - place the build directory in last argument:
-# ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
-#   http://mxnet.incubator.apache.org/ aaronmarkham-mxnet
+
 
 set -e
 set -x
@@ -72,16 +66,6 @@ if [ -z "$3" ]
     root_url=$3
 fi
 
-
-if [ -z "$4" ]
-  then
-    echo "Custom fork folder not provided. Using default."
-    mxnet_folder="apache-mxnet"
-  else
-    mxnet_folder=$4
-fi
-
-#mxnet_folder="apache_mxnet"
 built="VersionedWeb"
 tag_file="tag_list.txt"
 
