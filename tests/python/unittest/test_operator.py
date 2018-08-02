@@ -1943,11 +1943,11 @@ def test_broadcast_binary_op():
     test_bmul(a, b)
     test_bdiv(a, b)
     '''
-    Flaky Test Disabled due to master build failure: 
-    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline 
+    Flaky Test Disabled due to master build failure:
+    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline
     Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
-    
-    test_bmod(a, b) 
+
+    test_bmod(a, b)
     '''
     test_bmod_int(a, b)
     test_bpow(a, b)
@@ -2065,6 +2065,23 @@ def test_reshape():
         assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7, \
             'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
             %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
+
+        for i in range(len(src_shape)):
+            holdout_src_shape = list(src_shape)
+            holdout_src_shape[i] = 0
+            holdout_src_shape = tuple(holdout_src_shape)
+            net = mx.sym.Variable('data')
+            net = mx.sym.elemwise_add(net.reshape(shape_args, reverse=reverse), mx.sym.ones(shape=dst_shape))
+            input_shape, output_shape, __ = net.infer_shape(data=holdout_src_shape)
+            assert output_shape[0] == dst_shape, \
+                'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
+                'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
+                                      str(dst_shape), str(output_shape[0]))
+            assert input_shape[0] == src_shape, \
+                'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
+                'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
+                                      str(dst_shape), str(output_shape[0]))
+
     # Test new api (Using shape)
     test_cases = [
         [(2, 3, 5, 5),  (0, -1),          False, (2, 75)],
@@ -4946,8 +4963,9 @@ def _make_lower_triangle_symm(a, ndims, m, dtype=np.float32):
     lt_mask = mx.sym.reshape(lt_mask, shape=shp)
     return mx.sym.broadcast_mul(a, lt_mask)
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(42)
+# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11718
+@with_seed()
 def test_laop():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -5448,8 +5466,9 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1896893923)
+# @piyushghai - Removing the fixed seed for this test.
+# Issue for flakiness is tracked at - https://github.com/apache/incubator-mxnet/issues/11721
+@with_seed()
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
@@ -6615,7 +6634,7 @@ def test_diag():
     w = np.random.randint(2,9)
     a_np = np.random.random((h, w)).astype(np.float32)
     a = mx.nd.array(a_np).astype('float32')
-    
+
     # k == 0
     r = mx.nd.diag(a)
     assert_almost_equal(r.asnumpy(), np.diag(a_np))
@@ -6658,7 +6677,7 @@ def test_diag():
     d = np.random.randint(2,9)
     a_np = np.random.random((d))
     a = mx.nd.array(a_np)
-    
+
     # k is random
     k = np.random.randint(-d,d)
     r = mx.nd.diag(a, k=k)
@@ -6725,7 +6744,7 @@ def test_depthtospace():
         invalid_shape_inp = (n , c, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
-        
+
     test_invalid_depth_dim()
     test_invalid_space_dim()
     test_invalid_block_size()
@@ -6771,12 +6790,12 @@ def test_spacetodepth():
         invalid_shape_inp = (n, c, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
-    
+
     def test_invalid_depth_dim():
         invalid_shape_inp = (n, 0, h, w)
         data = rand_ndarray(invalid_shape_inp, 'default')
         assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
-    
+
     test_invalid_space_dim()
     test_invalid_block_size()
     test_invalid_depth_dim()

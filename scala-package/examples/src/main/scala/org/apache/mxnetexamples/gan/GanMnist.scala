@@ -181,7 +181,7 @@ object GanMnist {
     try {
       parser.parseArgument(args.toList.asJava)
 
-      val dataPath = if (anst.mnistDataPath == null) System.getenv("MXNET_DATA_DIR")
+      val dataPath = if (anst.mnistDataPath == null) System.getenv("MXNET_HOME")
       else anst.mnistDataPath
 
       assert(dataPath != null)
