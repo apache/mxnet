@@ -185,8 +185,8 @@ class SoftmaxOutputOp : public Operator {
           ctx.requested[softmaxout_enum::kTempSpace].get_host_space_typed<2, DType>(
           label.shape_);
         Copy(workspace, label, label.stream_);
-        for (index_t i = 0; i < workspace.size(0); ++i) {
-          for (index_t j = 0; j < workspace.size(1); ++j) {
+        for (size_t i = 0; i < workspace.size(0); ++i) {
+          for (size_t j = 0; j < workspace.size(1); ++j) {
             if (static_cast<int>(workspace[i][j]) == i_label) {
               valid_cnt--;
             }
@@ -245,7 +245,7 @@ class SoftmaxOutputOp : public Operator {
           ctx.requested[softmaxout_enum::kTempSpace].get_host_space_typed<1, DType>(
           label.shape_);
         Copy(workspace, label, label.stream_);
-        for (index_t i = 0; i < label.size(0); ++i) {
+        for (size_t i = 0; i < label.size(0); ++i) {
           if (static_cast<int>(workspace[i]) == i_label) {
             valid_cnt--;
           }
@@ -333,7 +333,7 @@ class SoftmaxOutputProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {

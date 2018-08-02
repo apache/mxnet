@@ -258,7 +258,7 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), GetNumOutputs(param));
+  CHECK_EQ(outputs.size(), static_cast<size_t>(GetNumOutputs(param));
   if (!param.global_pool) {
     // check if filter size assigned correctly
     CHECK_GT(param.kernel.ndim(), 0U)
