@@ -980,8 +980,8 @@ handler: {
       }
     }
   }
-},
-
+}
+,
 failure_handler: {
   // Only send email if master or release branches failed
   if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
