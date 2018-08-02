@@ -28,7 +28,6 @@ from io import StringIO
 import contextlib
 from ConfigParser import SafeConfigParser
 
-_MXNET_ROOT = os.getenv('MXNET_ROOT') or '../'
 _BUILD_VER = os.getenv('BUILD_VER')
 print("Building version {}".format(_BUILD_VER))
 _DOC_SET = 'document_sets_' + _BUILD_VER
@@ -96,7 +95,7 @@ def build_mxnet(app):
 def build_r_docs(app):
     """build r pdf"""
     r_root = app.builder.srcdir + '/../R-package'
-    pdf_path = _MXNET_ROOT + '/docs/api/r/mxnet-r-reference-manual.pdf'
+    pdf_path = app.builder.srcdir + '/api/r/mxnet-r-reference-manual.pdf'
     _run_cmd('cd ' + r_root +
              '; R -e "roxygen2::roxygenize()"; R CMD Rd2pdf . --no-preview -o ' + pdf_path)
     dest_path = app.builder.outdir + '/api/r/'
