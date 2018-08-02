@@ -135,8 +135,8 @@ namespace op {
  * When MKLDNN is enabled, we might want 2 outputs instead of one inputs, which
  * also changes the number of inputs for backward.
  */
-int GetNumOutputs(const PoolingParam &param);
-int GetNumBackInputs(const PoolingParam &param);
+size_t GetNumOutputs(const PoolingParam &param);
+size_t GetNumBackInputs(const PoolingParam &param);
 
 template<typename xpu, typename DType>
 class PoolingOp {
@@ -258,7 +258,7 @@ void PoolingCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& outputs) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), static_cast<size_t>(GetNumOutputs(param));
+  CHECK_EQ(outputs.size(), GetNumOutputs(param));
   if (!param.global_pool) {
     // check if filter size assigned correctly
     CHECK_GT(param.kernel.ndim(), 0U)

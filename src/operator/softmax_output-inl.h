@@ -185,8 +185,8 @@ class SoftmaxOutputOp : public Operator {
           ctx.requested[softmaxout_enum::kTempSpace].get_host_space_typed<2, DType>(
           label.shape_);
         Copy(workspace, label, label.stream_);
-        for (size_t i = 0; i < workspace.size(0); ++i) {
-          for (size_t j = 0; j < workspace.size(1); ++j) {
+        for (index_t i = 0; i < workspace.size(0); ++i) {
+          for (index_t j = 0; j < workspace.size(1); ++j) {
             if (static_cast<int>(workspace[i][j]) == i_label) {
               valid_cnt--;
             }
@@ -245,7 +245,7 @@ class SoftmaxOutputOp : public Operator {
           ctx.requested[softmaxout_enum::kTempSpace].get_host_space_typed<1, DType>(
           label.shape_);
         Copy(workspace, label, label.stream_);
-        for (size_t i = 0; i < label.size(0); ++i) {
+        for (index_t i = 0; i < label.size(0); ++i) {
           if (static_cast<int>(workspace[i]) == i_label) {
             valid_cnt--;
           }

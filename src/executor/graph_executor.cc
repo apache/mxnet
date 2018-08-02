@@ -1576,7 +1576,7 @@ void GraphExecutor::ExecuteMonCallback(size_t nid) {
     }
   }
   CHECK_EQ(opnode.exec->out_array.size(), output_names.size());
-  for (index_t i = 0; i < opnode.exec->out_array.size(); ++i) {
+  for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
     std::string name = inode.source->attrs.name + "_" + output_names[i];
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
