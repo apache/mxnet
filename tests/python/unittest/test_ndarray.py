@@ -551,8 +551,15 @@ def test_broadcast():
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
 
+    def test_broadcast_like_axis():
+        input = mx.nd.ones(shape=(1, 2, 1, 3))
+        other = mx.nd.ones(shape=(5, 6, 7, 8))
+        output = mx.nd.broadcast_like(input, other, input_axes=(0,2), other_axes=(1,3))
+        assert output.shape == (6, 2, 8, 3)
+
     test_broadcast_to()
     test_broadcast_like()
+    test_broadcast_like_axis()
 
 
 @with_seed()
