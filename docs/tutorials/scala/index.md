@@ -6,7 +6,7 @@ Using MXNet-Scala is easiest with Maven. You have a couple of options for settin
 
 **Note:** Windows is not yet supported.
 
-* [MXNet-Scala Setup Guide Using Maven](../install/scala_setup.html)
+* [MXNet-Scala Setup Guide Using Maven](../../install/scala_setup.html)
 * [Setup Scala with MXNet and Create a MXNet-Scala Project with IntelliJ](mxnet_scala_on_intellij.html)
 
 ## Tutorials
