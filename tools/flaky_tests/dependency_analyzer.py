@@ -1,12 +1,29 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 """
 Output dependent functions given a list of function dependnecies
 
 This module searches the given directory or file for functions that are
-dependent on the given list of functions. The current directory is used 
-if none is provided. This script is designed only for python files-- 
+dependent on the given list of functions. The current directory is used
+if none is provided. This script is designed only for python files--
 it uses python's ast module parse files and find function calls.
-The function calls are then compared to the list of dependencies 
-and if there is a match, the top-level function name is added to 
+The function calls are then compared to the list of dependencies
+and if there is a match, the top-level function name is added to
 the set of dependent functions. Cross-file dependencies are handled
 by storing them in a json file, which currently is updated manually.
 """
@@ -16,7 +33,7 @@ import argparse
 import ast
 import logging
 import re
-import itertools 
+import itertools
 import json
 
 DEFAULT_CONFIG_FILE = os.path.join(
@@ -95,7 +112,7 @@ def find_dependents_file(dependencies, filename):
                 func = cv.visit(n.func)
                 if func in dependencies:
                     dependents.add(name)
-    
+
     try:
         dependents |= find_dependents_file(dependents - dependencies, filename)
     except RecursionError as re:
@@ -155,7 +172,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
         logging.warning("Invalid logging level: %s", args.level)
     logger.debug("args: %s", args)
-    
+
     dependents = find_dependents(args.dependencies, args.path)
     output_results(dependents)
 
