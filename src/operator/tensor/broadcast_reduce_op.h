@@ -365,12 +365,12 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   if ((lhs_shape.ndim() == 0) || (lhs_shape.ndim() == 0)) {
     return false;
   }
-  
+
   const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
   TShape oshape;
   CHECK(param.rhs_axes.ndim() == param.lhs_axes.ndim())
   << "Input_axis and other_axis size does not match";
-  
+
   if (param.lhs_axes.ndim() == 0) {
     CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
     << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
