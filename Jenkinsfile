@@ -168,10 +168,46 @@ def python3_gpu_ut_nocudnn(docker_container_name) {
   }
 }
 
-try {
+NODE_LINUX_CPU = 'mxnetlinux-cpu'
+NODE_LINUX_GPU = 'mxnetlinux-gpu'
+NODE_LINUX_GPU_P3 = 'mxnetlinux-gpu-p3'
+NODE_WINDOWS_CPU = 'mxnetwindows-cpu'
+NODE_WINDOWS_GPU = 'mxnetwindows-gpu'
+
+def main_wrapper(args) {
+  // hander: Core logic
+  // failure_handler: Failure handler
+
+  try {
+    // Call actual handler
+    args['handler']()
+
+    // set build status to success at the end
+    currentBuild.result = "SUCCESS"
+  } catch (caughtError) {
+    node(NODE_LINUX_CPU) {
+      sh "echo caught ${caughtError}"
+      err = caughtError
+      currentBuild.result = "FAILURE"
+    }
+  } finally {
+    node(NODE_LINUX_CPU) {
+      // Call failure handler
+      args['failure_handler']()
+      
+      // Remember to rethrow so the build is marked as failing
+      if (err) {
+        throw err
+      }
+    }
+  }
+}
+
+main_wrapper(
+handler: {
   stage('Sanity Check') {
     parallel 'Lint': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/sanity-lint') {
           init_git()
           docker_run('ubuntu_cpu', 'sanity_check', false)
@@ -179,7 +215,7 @@ try {
       }
     },
     'RAT License': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/sanity-rat') {
           init_git()
           docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
@@ -190,7 +226,7 @@ try {
 
   stage('Build') {
     parallel 'CPU: CentOS 7': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -201,7 +237,7 @@ try {
       }
     },
     'CPU: CentOS 7 MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-mkldnn') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -212,7 +248,7 @@ try {
       }
     },
     'GPU: CentOS 7': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -223,7 +259,7 @@ try {
       }
     },
     'CPU: Openblas': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-openblas') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -234,7 +270,7 @@ try {
       }
     },
     'CPU: Clang 3.9': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-clang39') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -244,7 +280,7 @@ try {
       }
     },
     'CPU: Clang 5': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-clang50') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -254,7 +290,7 @@ try {
       }
     },
     'CPU: Clang 3.9 MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-mkldnn-clang39') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -265,7 +301,7 @@ try {
       }
     },
     'CPU: Clang 5 MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-mkldnn-clang50') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -276,7 +312,7 @@ try {
       }
     },
     'CPU: MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -287,7 +323,7 @@ try {
       }
     },
     'GPU: MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -298,7 +334,7 @@ try {
       }
     },
     'GPU: MKLDNN_CUDNNOFF': {
-       node('mxnetlinux-cpu') {
+       node(NODE_LINUX_CPU) {
          ws('workspace/build-mkldnn-gpu-nocudnn') {
            timeout(time: max_time, unit: 'MINUTES') {
              init_git()
@@ -309,7 +345,7 @@ try {
        }
     },
     'GPU: CUDA9.1+cuDNN7': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -330,7 +366,7 @@ try {
       }
     },
     'Amalgamation MIN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/amalgamationmin') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -340,7 +376,7 @@ try {
       }
     },
     'Amalgamation': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/amalgamation') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -351,7 +387,7 @@ try {
     },
 
     'GPU: CMake MKLDNN': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cmake-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -362,7 +398,7 @@ try {
       }
     },
     'GPU: CMake': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-cmake-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -373,7 +409,7 @@ try {
       }
     },
     'Build CPU windows':{
-      node('mxnetwindows-cpu') {
+      node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/build-cpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
@@ -407,7 +443,7 @@ try {
     },
 
     'Build GPU windows':{
-      node('mxnetwindows-cpu') {
+      node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
@@ -439,7 +475,7 @@ try {
       }
     },
     'Build GPU MKLDNN windows':{
-      node('mxnetwindows-cpu') {
+      node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
@@ -480,7 +516,7 @@ try {
       }
     },
     'NVidia Jetson / ARMv8':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-jetson-armv8') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -490,7 +526,7 @@ try {
       }
     },
     'ARMv7':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv7') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -500,7 +536,7 @@ try {
       }
     },
     'ARMv6':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv6') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -510,7 +546,7 @@ try {
       }
     },
     'ARMv8':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv8') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -520,7 +556,7 @@ try {
       }
     },
     'Android / ARMv8':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/android64') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -530,7 +566,7 @@ try {
       }
     },
     'Android / ARMv7':{
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/androidv7') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -544,7 +580,7 @@ try {
 
   stage('Tests') {
     parallel 'Python2: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-cpu') {
           try {
             init_git()
@@ -560,7 +596,7 @@ try {
       }
     },
     'Python3: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
             init_git()
@@ -575,7 +611,7 @@ try {
       }
     },
     'Python2: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-python2-gpu') {
           try {
             init_git()
@@ -589,7 +625,7 @@ try {
       }
     },
     'Python3: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu') {
           try {
             init_git()
@@ -603,7 +639,7 @@ try {
       }
     },
     'Python2: Quantize GPU': {
-      node('mxnetlinux-gpu-p3') {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/ut-python2-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
@@ -619,7 +655,7 @@ try {
       }
     },
     'Python3: Quantize GPU': {
-      node('mxnetlinux-gpu-p3') {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/ut-python3-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
@@ -635,7 +671,7 @@ try {
       }
     },
     'Python2: MKLDNN-CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-mkldnn-cpu') {
           try {
             init_git()
@@ -651,7 +687,7 @@ try {
       }
     },
     'Python2: MKLDNN-GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-python2-mkldnn-gpu') {
           try {
             init_git()
@@ -665,7 +701,7 @@ try {
       }
     },
     'Python3: MKLDNN-CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
             init_git()
@@ -680,7 +716,7 @@ try {
       }
     },
     'Python3: MKLDNN-GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             init_git()
@@ -694,7 +730,7 @@ try {
       }
     },
     'Python3: MKLDNN-GPU-NOCUDNN': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             init_git()
@@ -708,7 +744,7 @@ try {
       }
     },
     'Python3: CentOS 7 CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
@@ -725,7 +761,7 @@ try {
       }
     },
     'Python3: CentOS 7 GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
@@ -741,7 +777,7 @@ try {
       }
     },
     'Scala: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -753,7 +789,7 @@ try {
       }
     },
     'Clojure: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-clojure-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -765,7 +801,7 @@ try {
       }
     },
     'Perl: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-perl-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -777,7 +813,7 @@ try {
       }
     },
     'Perl: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -789,7 +825,7 @@ try {
       }
     },
     'Cpp: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -801,7 +837,7 @@ try {
       }
     },
     'Cpp: MKLDNN+GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -813,7 +849,7 @@ try {
       }
     },
     'R: CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/ut-r-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -825,7 +861,7 @@ try {
       }
     },
     'R: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -838,7 +874,7 @@ try {
     },
 
     'Python 2: CPU Win':{
-      node('mxnetwindows-cpu') {
+      node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-cpu') {
             try {
@@ -861,7 +897,7 @@ try {
       }
     },
     'Python 3: CPU Win': {
-      node('mxnetwindows-cpu') {
+      node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-cpu') {
             try {
@@ -883,7 +919,7 @@ try {
       }
     },
     'Python 2: GPU Win':{
-      node('mxnetwindows-gpu') {
+      node(NODE_WINDOWS_GPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
@@ -907,7 +943,7 @@ try {
       }
     },
     'Python 3: GPU Win':{
-      node('mxnetwindows-gpu') {
+      node(NODE_WINDOWS_GPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
@@ -930,7 +966,7 @@ try {
       }
     },
     'Python 3: MKLDNN-GPU Win':{
-      node('mxnetwindows-gpu') {
+      node(NODE_WINDOWS_GPU) {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/ut-python-gpu') {
             try {
@@ -953,7 +989,7 @@ try {
       }
     },
     'Onnx CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -965,7 +1001,7 @@ try {
       }
     },
     'Python GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -978,7 +1014,7 @@ try {
     },
     // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
     // 'Caffe GPU': {
-    //   node('mxnetlinux-gpu') {
+    //   node(NODE_LINUX_GPU) {
     //     ws('workspace/it-caffe') {
     //       timeout(time: max_time, unit: 'MINUTES') {
     //         init_git()
@@ -990,7 +1026,7 @@ try {
     //   }
     // },
     'cpp-package GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -1012,7 +1048,7 @@ try {
       }
     },
     'dist-kvstore tests GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -1028,7 +1064,7 @@ try {
      *  https://github.com/apache/incubator-mxnet/issues/11801
 
     'dist-kvstore tests CPU': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -1040,7 +1076,7 @@ try {
       }
     }, */
     'Scala: GPU': {
-      node('mxnetlinux-gpu') {
+      node(NODE_LINUX_GPU) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
@@ -1054,7 +1090,7 @@ try {
   }
 
   stage('Deploy') {
-    node('mxnetlinux-cpu') {
+    node(NODE_LINUX_CPU) {
       ws('workspace/docs') {
         timeout(time: max_time, unit: 'MINUTES') {
           init_git()
@@ -1064,24 +1100,12 @@ try {
       }
     }
   }
+},
 
-  // set build status to success at the end
-  currentBuild.result = "SUCCESS"
-} catch (caughtError) {
-  node("mxnetlinux-cpu") {
-    sh "echo caught ${caughtError}"
-    err = caughtError
-    currentBuild.result = "FAILURE"
-  }
-} finally {
-  node("mxnetlinux-cpu") {
-    // Only send email if master or release branches failed
-    if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
-      emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
-    }
-    // Remember to rethrow so the build is marked as failing
-    if (err) {
-      throw err
-    }
+failure_handler: {
+  // Only send email if master or release branches failed
+  if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
+    emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
   }
 }
+)
