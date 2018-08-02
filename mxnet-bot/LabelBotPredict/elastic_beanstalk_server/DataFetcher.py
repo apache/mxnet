@@ -25,9 +25,6 @@ import pandas as pd
 import logging
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger('boto3').setLevel(logging.CRITICAL)
-logging.getLogger('botocore').setLevel(logging.CRITICAL)
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -42,9 +39,9 @@ class DataFetcher:
     def __init__(self):
         self.json_data = None
 
-    def cleanstr(self, s, e):
-        # convert all non-alphanumeric charaters into e
-        cleanstr = re.sub("[^0-9a-zA-Z]", e, s)
+    def cleanstr(self, string, substring):
+        # convert all non-alphanumeric charaters into substring
+        cleanstr = re.sub("[^0-9a-zA-Z]", substring, string)
         return cleanstr.lower()
 
     def count_pages(self, state):
@@ -52,7 +49,7 @@ class DataFetcher:
         # state could be "open"/"closed"/"all", available to issues
         response = requests.get(self.REPO_URL, {'state': state},
                                 auth=self.AUTH)
-        assert response.headers["Status"] == "200 OK", "Authorization failed"
+        assert response.status_code == 200, "Authorization failed"
         if "link" not in response.headers:
             # That means only 1 page exits
             return 1
@@ -125,12 +122,3 @@ class DataFetcher:
             json.dump(data, write_file)
         LOGGER.info("{} json file is ready!".format(filename))
         return filename
-
-
-
-
-
-
-
-
-

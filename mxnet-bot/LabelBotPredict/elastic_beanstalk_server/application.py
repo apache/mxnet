@@ -20,15 +20,19 @@
 from flask import Flask, jsonify, request, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-import predict_labels
+from Predictor import Predictor
+from Trainer import Trainer
 import plot_piechart
-import train
 import timeit
 import atexit
+import logging
 
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger(__name__)
 
 application = Flask(__name__)
 
+predictor = Predictor()
 
 # GET '/'
 @application.route('/')
@@ -40,7 +44,7 @@ def index():
 # return predictions of an issue
 @application.route('/issues/<issue>')
 def get_prediction(issue):
-    l = predict_labels.predict([issue])
+    l = predictor.predict([issue])
     return " ".join(l[0])
 
 
@@ -51,7 +55,8 @@ def predict():
     # get prediction results of multiple issues
     # data would be a json file {"issues":[1,2,3]}
     data = request.get_json()["issues"]
-    predictions = predict_labels.predict(data)
+    #predictions = predict_labels.predict(data)
+    predictions = predictor.predict(data)
     response = []
     for i in range(len(data)):
         response.append({"number":data[i], "predictions":predictions[i]})
@@ -73,11 +78,14 @@ def plot():
 # helper function
 def train_models():
     start = timeit.default_timer()
-    train.train_general_labels()
-    train.train_operator_label()
+    trainer = Trainer()
+    trainer.train()
     stop = timeit.default_timer()
+    # reload models
+    predictor.reload()
     time = int(stop - start)
-    return "Training completed! Time cost: {} min, {} seconds".format(str(int(time/60)), str(time%60))
+    LOGGER.info("Training completed! Time cost: {} min, {} seconds".format(str(int(time/60)), str(time%60)))
+    return 
 
 
 # Once the server is running, it will retrain ML models every 24 hours
@@ -102,6 +110,6 @@ initialize()
 if __name__ == "__main__":
     # Set debug to True enables debug output.
     # This 'application.debug = True' should be removed before deploying a production app.
-    # application.debug = True
+    application.debug = True
     application.threaded = True
     application.run('0.0.0.0', 8000)

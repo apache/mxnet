@@ -31,24 +31,13 @@ import pandas as pd
 import re
 import sys
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger(__name__)
 
 # English Stopwords
-stopwords = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", "you've", 
-             "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself',
-             'she', "she's", 'her', 'hers', 'herself', 'it', "it's", 'its', 'itself', 'they', 'them',
-             'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', "that'll",
-             'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
-             'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as',
-             'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through',
-             'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off',
-             'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how',
-             'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
-             'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', "don't",
-             'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn',
-             "couldn't", 'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't",
-             'isn', "isn't", 'ma', 'mightn', "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't",
-             'shouldn', "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't", 'wouldn', "wouldn't"]
+with open('stopwords.txt') as file:
+    stopwords = file.read().split()
+file.close()
 
 
 class SentenceParser:
@@ -75,9 +64,9 @@ class SentenceParser:
 
     # pandas read csv/json/xlsx files to dataframe format
     def read_file(self, filepath, filetype, encod='ISO-8859-1', header=None):
-        logger.info('Start reading File')
+        LOGGER.info('Start reading File')
         if not os.path.isfile(filepath):
-            logger.error("File Not Exist!")
+            LOGGER.error("File Not Exist!")
             sys.exit()
         if filetype == 'csv':
             df = pd.read_csv(filepath, encoding=encod, header=header)
@@ -86,28 +75,23 @@ class SentenceParser:
         elif filetype == 'xlsx':
             df = pd.read_excel(filepath, encoding=encod, header=header)
         else:
-            logger.error("Extension Type not Accepted!")
+            LOGGER.error("Extension Type not Accepted!")
             sys.exit()
 
-        logger.debug(df)
+        LOGGER.debug(df)
         self.data = df
 
     # Operation on the DataFrame
     def merge_column(self, columns, name):
-        logger.info('Merge headers %s to %s', str(columns), name)
+        LOGGER.info('Merge headers %s to %s', str(columns), name)
         self.data[name] = ''
         for header in columns:
             self.data[name] += ' ' + self.data[header]
-
-    def get_all_headers(self):
-        return list(self.data.columns.values)
-
-    def get_column(self, column):
-        return self.data[column].values.tolist()
-    
+  
+    # Remove template
     def clean_body(self, column, remove_template=True, remove_code=True):
         # clean issue's description from template
-        logger.info("Start Removing Templates..")
+        LOGGER.info("Start Removing Templates..")
         for i in range(len(self.data)):
             # remove 'Environment info' part
             if remove_template and "## Environment info" in self.data[column][i]:
@@ -121,12 +105,13 @@ class SentenceParser:
 
     # Start cleaning the text from column
     def process_text(self, column, remove_symbol=True, remove_stopwords=False, stemming=False):
-        logger.info("Start Data Cleaning...")
+        LOGGER.info("Start Data Cleaning...")
         # remove some symbols
         self.data[column] = self.data[column].str.replace(r'[\n\r\t]+', ' ')
         # remove URLs
         self.data[column] = self.data[column].str.replace(self.regex_str[3], ' ')
         tempcol = self.data[column].values.tolist()
+
         for i in range(len(tempcol)):
             row = BeautifulSoup(tempcol[i], 'html.parser').get_text().lower()
             # remove symbols
@@ -141,5 +126,4 @@ class SentenceParser:
                 words = [self.porter.stem(w) for w in words] 
             row = ' '.join(words)
             tempcol[i] = row.lower()
-        print("\n")
         return tempcol

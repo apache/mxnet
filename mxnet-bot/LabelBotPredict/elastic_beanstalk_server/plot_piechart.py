@@ -20,6 +20,10 @@ import matplotlib
 # set 'agg' as matplotlib backend
 matplotlib.use('agg', warn=False, force=True)
 from matplotlib import pyplot as plt
+import logging
+
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger(__name__)
 
 
 def make_autopct(values):

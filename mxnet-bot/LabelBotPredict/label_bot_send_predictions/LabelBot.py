@@ -16,18 +16,20 @@
 # under the License.
 
 from __future__ import print_function
-import datetime
-import operator
-import os
 from collections import defaultdict
-import boto3
 from botocore.vendored import requests
-import re
 from botocore.exceptions import ClientError
+from botocore.exceptions import NoCredentialsError
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
+import datetime
+import operator
+import os
+import boto3
+import re
 import logging
+
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('boto3').setLevel(logging.CRITICAL)
 logging.getLogger('botocore').setLevel(logging.CRITICAL)
@@ -49,11 +51,11 @@ class LabelBot:
     REPO = os.environ.get("REPO")
     AUTH = (GITHUB_USER, GITHUB_OAUTH_TOKEN)
     # Sender's email address must be verified. 
-    # ie: SENDER = "a@gmail.com"
+    # ie: SENDER = "a@email.com"
     sender = os.environ.get("SENDER")
     # Recipients' email address must be verified
-    # ie: RECIPIENTS = "a@gmail.com, b@gmail.com"
-    recipients = [s.strip() for s in os.environ.get("RECIPIENTS").split(",")]
+    # ie: RECIPIENTS = "a@email.com, b@email.com"
+    recipients = [s.strip() for s in os.environ.get("RECIPIENTS").split(",")] if os.environ.get("RECIPIENTS") else None
     # If necessary, replace us-west-2 with the AWS Region you're using for Amazon SES.
     # ie: AWS_REGION = "us-west-2"
     aws_region = os.environ.get('AWS_REGION')
@@ -61,12 +63,14 @@ class LabelBot:
     # ie: EB_URL = "http://cathydocker-env.63rbye2pys.us-west-2.elasticbeanstalk.com"
     elastic_beanstalk_url = os.environ.get("EB_URL")
 
-    def __init__(self):
+
+    def __init__(self, img_file="/tmp/img_file.png"):
         self.opendata = None
         self.closeddata = None
         self.sorted_open_issues = None
         self.start = datetime.datetime.strptime("2015-01-01", "%Y-%m-%d")
         self.end = datetime.datetime.today()
+        self.img_file = img_file
 
     def __clean_string(self, raw_string, sub_string):
         # covert all non-alphanumeric characters from raw_string to sub_string
@@ -96,7 +100,7 @@ class LabelBot:
                                     auth=self.AUTH)
         else:
             response = requests.get(url, auth=self.AUTH)
-        assert response.headers["Status"] == "200 OK", response.headers["Status"]
+        assert response.status_code == 200, response.status_code
         if "link" not in response.headers:
             # That means only 1 page exits
             return 1
@@ -223,7 +227,7 @@ class LabelBot:
         pic_data = {"fracs": fracs, "labels": labels}
         response = requests.post(url, json=pic_data)
         if response.status_code == 200:
-            with open("/tmp/sample.png", "wb") as f:
+            with open(self.img_file, "wb") as f:
                 f.write(response.content)
         htmltable = [["Count of issues with no response:", str(len(data['non_responded']))],
                      ["List of issues with no response:", data['non_responded_urls']],
@@ -291,7 +295,7 @@ class LabelBot:
         msg.attach(msg_body)
 
         # Attach Image
-        fg = open('/tmp/sample.png', 'rb')
+        fg = open(self.img_file, 'rb')
         msg_image = MIMEImage(fg.read())
         fg.close()
         msg_image.add_header('Content-ID', '<image1>')
@@ -308,6 +312,8 @@ class LabelBot:
         # Display an error if something goes wrong. 
         except ClientError as e:
             LOGGER.error(e.response['Error']['Message'])
+        except NoCredentialsError as e:
+            LOGGER.error("Can't recognize credentials")
         else:
             LOGGER.info("Email sent! Message ID:"),
             LOGGER.info(response['MessageId'])
