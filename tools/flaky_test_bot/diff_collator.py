@@ -16,16 +16,16 @@
 # under the License.
 
 """
-Output a list of differences between current git branch and master
+Output a list of differences between current branch and master
 
 Precondition: this script is run inside an existing git repository
 
 This script first retrieves the raw output from git diff. By default,
-the current and master branches are used as targets for git diff, but the user
-may specify their own targets. Then, the raw output is parsed to retrieve info
-about each of the changes bnetween the targets, including file name, top-level
-funtion name, and line numbers for each change. Finally, the list of changes
-is outputted.
+the current and master branches are used as targets for git diff,
+but the user may specify their own targets. Then, the raw output is 
+parsed to retrieve info about each of the changes between the targets, 
+including file name, top-level funtion name, and line numbers. 
+Finally, the list of changes is outputted.
 """
 
 import os
@@ -36,7 +36,6 @@ import argparse
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def get_diff_output(args):
@@ -45,16 +44,15 @@ def get_diff_output(args):
     if args.commits is not None:
         diff_cmd.extend([args.commits[0], args.commits[1]])
     else:
-        if args.branches is None:
-            # Default to current branch with master
+        if args.branches is None:            
             args.branches = ["master", "HEAD"]
-
         diff_target = args.branches[0] + "..." + args.branches[1]
         diff_cmd.append(diff_target)
 
     if args.path:
         diff_cmd.extend(["--", args.path])
 
+    logger.debug("Command: %s", diff_cmd)
     try:
         return subprocess.check_output(diff_cmd)
     except subprocess.CalledProcessError as e:
@@ -64,12 +62,11 @@ def get_diff_output(args):
 
 
 def parser(diff_output):
-    """Split diff output into patches and parse each patch individually"""
+    """Split diff output into patches and parse each indiviudally"""
     diff_output = diff_output.decode("utf-8")
-    changes = {}
-    
     top = subprocess.check_output(["git","rev-parse", "--top-level"])
     top = top.decode("utf-8")
+    changes = {}
 
     for patch in diff_output.split("diff --git")[1:]:
         file_name, cs = parse_patch(patch)
@@ -83,18 +80,17 @@ def parser(diff_output):
 def parse_patch(patch):
     """ Parse changes in a single patch
 
-    Git diff outputs results as patches, each of which corresponds to a single
-    that has been changed.  Each patch consists of a header with one or more
-    hunks that show differing lines between files.  Hunks themselves have
-    headers that include line numbers changed and function names.
+    Git diff outputs results as patches, each of which corresponds 
+    to a single file that has been changed. Each patch consists of 
+    a header and one or more hunks that show differing lines between 
+    files versions. Hunks themselves have headers, which include 
+    line numbers changed and function names.
     """
     lines = patch.splitlines()
-
-    changes = {}
     file_name  = lines[0].split()[-1][2:]
+    changes = {}
     
     logger.debug("Parsing: %s", file_name)
-
     for line in patch.splitlines():
         # parse hunk header
         if line.startswith("@"):
@@ -126,6 +122,7 @@ def parse_patch(patch):
                 changes[hunk_name] = []
             changes[hunk_name].append((start, end))
 
+        # newly defined top-level function
         if line.startswith("+def "):
             func_name = line.split()[1].split("(")[0]
             changes[func_name] = []
@@ -136,10 +133,12 @@ def parse_patch(patch):
 def output_changes(changes, verbosity):
     """ Output changes in an easy to understand format
     
-    Three verbosity levels: 1 - only file names, 2- file and functions names,
+    Three verbosity levels: 
+    1 - only file names, 
+    2- file and functions names,
     3- file and function names and line numbers.
 
-    Example:
+    Example (verbosity 3):
     file1
         func_a
             1:2
@@ -174,6 +173,9 @@ def parse_args():
     arg_parser.add_argument(
         "--verbosity", "-v", action="count", 
         help="verbosity level, repeat up to 3 times, defaults to 2")
+    arg_parser.add_argument(
+        "--logging-level", "-l", dest="level", default="INFO",
+        help="logging level, defaults to INFO")
 
     targets = arg_parser.add_mutually_exclusive_group()
     targets.add_argument(
@@ -185,10 +187,11 @@ def parse_args():
 
     filters = arg_parser.add_argument_group(
         "filters", "filter which files should be included in output")
-    filters.add_argument("--filter-path", "-p", dest="path", 
+    filters.add_argument(
+        "--filter-path", "-p", dest="path", 
         help="specify directory or file in which to search for changes")
     filters.add_argument(
-            "--filter", "-f", dest="expr", metavar="REGEX", default=".*",
+        "--filter", "-f", dest="expr", metavar="REGEX", default=".*",
         help="filter files with given python regular expression")
     
     args = arg_parser.parse_args()
@@ -196,8 +199,15 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     args = parse_args()
+    
+    try:
+        logging.basicConfig(level=getattr(logging, args.level))
+    except AttributeError:
+        logging.basicConfig(level=logging.INFO)
+        logging.warning("Invalid logging level: %s", args.level)
+    logging.debug("args: %s", args)
+
     diff_output = get_diff_output(args)
 
     changes = parser(diff_output)
