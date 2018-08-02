@@ -168,11 +168,13 @@ def python3_gpu_ut_nocudnn(docker_container_name) {
   }
 }
 
-NODE_LINUX_CPU = 'mxnetlinux-cpu'
-NODE_LINUX_GPU = 'mxnetlinux-gpu'
-NODE_LINUX_GPU_P3 = 'mxnetlinux-gpu-p3'
-NODE_WINDOWS_CPU = 'mxnetwindows-cpu'
-NODE_WINDOWS_GPU = 'mxnetwindows-gpu'
+def assign_node_labels(args) {
+  NODE_LINUX_CPU = args.linux_cpu
+  NODE_LINUX_GPU = args.linux_gpu
+  NODE_LINUX_GPU_P3 = args.linux_gpu_p3
+  NODE_WINDOWS_CPU = args.windows_cpu
+  NODE_WINDOWS_GPU = args.windows_gpu
+}
 
 def main_wrapper(args) {
   // hander: Core logic
@@ -202,6 +204,8 @@ def main_wrapper(args) {
     }
   }
 }
+
+assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_cpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 main_wrapper(
 handler: {
