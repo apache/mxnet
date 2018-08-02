@@ -381,6 +381,50 @@ def test_fullyconnected():
     for stype in stypes:
         check_fullyconnected_training(stype)
 
+@with_seed()
+def test_non_mkldnn_fcomputeex():
+    # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
+    # conv is example where MKLDNN NDArray is created from regular NDArrays
+    # CustomOps is example of non-mkldnn fcomputeex operator
+
+    @mx.operator.register("custom")
+    class CustomProp(mx.operator.CustomOpProp):
+        def __int__(self):
+            super(CustomProp, self).__init__(need_top_grad=False)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            data_shape = in_shape[0]
+            output_shape = in_shape[0]
+            return [data_shape], [output_shape], []
+
+        def infer_type(self, in_type):
+            dtype = in_type[0]
+            return [dtype], [dtype], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return Custom()
+
+
+    class Custom(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            print(in_data[0])
+            self.assign(out_data[0], req[0], in_data[0])
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], out_grad)
+
+    data = mx.symbol.Variable('data')
+    conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
+    mlp = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
+    exec1 = mlp.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    exec1.forward()
+
 
 if __name__ == '__main__':
     install.test_mkldnn_install()
