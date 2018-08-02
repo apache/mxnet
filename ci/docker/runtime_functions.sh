@@ -345,6 +345,25 @@ build_ubuntu_cpu_openblas() {
     report_ccache_usage
 }
 
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
 
