@@ -139,6 +139,9 @@ def test_python_linear_regression():
 def test_python_logistic_regression() :
     assert _test_tutorial_nb('gluon/logistic_regression_explained')
 
+def test_python_numpy_gotchas() :
+    assert _test_tutorial_nb('gluon/gotchas_numpy_in_mxnet')
+
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
 
