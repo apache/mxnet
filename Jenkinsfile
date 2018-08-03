@@ -28,6 +28,8 @@ mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3r
 mx_cython_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
+mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // timeout in minutes
@@ -243,6 +245,17 @@ try {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
             pack_lib('cpu', mx_cython_dist_lib)
+          }
+        }
+      }
+    },
+    'CPU: Openblas, debug': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-openblas') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
+            pack_lib('cpu_debug', mx_cmake_lib_debug)
           }
         }
       }
@@ -584,6 +597,20 @@ try {
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
             collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
+          }
+        }
+      }
+    },
+    'Python3: CPU debug': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-python3-cpu-debug') {
+          try {
+            init_git()
+            unpack_lib('cpu_debug', mx_cmake_lib_debug)
+            python3_ut('ubuntu_cpu')
+          } finally {
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
           }
         }
       }

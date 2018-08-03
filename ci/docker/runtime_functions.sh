@@ -76,6 +76,21 @@ build_ccache_wrappers() {
     export CXX=`pwd`/cxx
 }
 
+build_cython() {
+    set -ex
+    pushd .
+
+    PYTHON_DIR=${1:-/work/mxnet/python}
+    BUILD_DIR=${2:-/work/build}
+
+    export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
+
+    cd ${PYTHON_DIR}
+    python setup.py build_ext --inplace --with-cython
+
+    popd
+}
+
 build_wheel() {
 
     set -ex
@@ -122,23 +137,6 @@ build_jetson() {
     popd
 }
 
-report_ccache_usage() {
-    set -ex
-    pushd .
-
-    # Show global ccache summary at the end of each run.
-    ccache -s
-    if [ -e $CCACHE_LOGFILE ]
-    then
-        # Display local ccache log, excluding some overly verbose output.
-        cat $CCACHE_LOGFILE | grep -v "Config:" | grep -v "stats.lock"
-    else
-        echo "No ccache log found."
-    fi
-
-    popd
-}
-
 #
 # ARM builds
 #
@@ -171,7 +169,6 @@ build_armv6() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
@@ -203,7 +200,6 @@ build_armv7() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
@@ -222,7 +218,6 @@ build_armv8() {
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
     build_wheel
 }
 
@@ -249,7 +244,6 @@ build_android_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
 }
 
 build_android_armv8() {
@@ -282,8 +276,6 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_amzn_linux_cpu() {
@@ -301,7 +293,6 @@ build_amzn_linux_cpu() {
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
 }
 
 
@@ -318,8 +309,6 @@ build_centos7_mkldnn() {
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_centos7_gpu() {
@@ -353,31 +342,39 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+}
 
-    report_ccache_usage
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        /work/mxnet
 
-    export CC="gcc"
-    export CXX="g++"
-    make cython PYTHON=python2
-    make cython PYTHON=python3
+    ninja -v
+    build_cython
+    popd
 }
 
 build_ubuntu_cpu_clang39() {
     set -ex
-
-    export CXX=clang++-3.9
+     export CXX=clang++-3.9
     export CC=clang-3.9
-
-    build_ccache_wrappers
-
-    make \
+     build_ccache_wrappers
+     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50() {
@@ -394,8 +391,6 @@ build_ubuntu_cpu_clang50() {
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
@@ -412,8 +407,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
@@ -430,8 +423,6 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_mkldnn() {
@@ -445,8 +436,6 @@ build_ubuntu_cpu_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu() {
@@ -467,8 +456,6 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu_mkldnn_nocudnn() {
@@ -484,8 +471,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=0                   \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu_cuda91_cudnn7() {
@@ -535,7 +520,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
     cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
     mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
@@ -557,7 +541,6 @@ build_ubuntu_gpu_cmake() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
 }
 
 
