@@ -147,8 +147,7 @@ class InplaceABN : public Operator {
       // whether use synchronized batch normalization
       if (param_.sync) {
         // get my rank
-        Barrier *global_barrier = inpabn_global_shared_barrier_forward.Register(
-            param_.key, param_.ndev);
+        Barrier *global_barrier = inpabn_global_shared_barrier_forward.Register(param_.key, param_.ndev);
         int myRank = inpabn_global_shared_rank_forward.Register(param_.key, param_.ndev);
         SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
           inp_abn_global_shared_mean.Register(param_.key, param_.ndev);
@@ -169,10 +168,15 @@ class InplaceABN : public Operator {
         mshadow::Copy(var, var_cpu, s);
       }
       var = var - F<mshadow_op::square>(mean);
-      // update running mean and var
-      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
-      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // batch normalization
+      /*
+      Tensor<xpu, 4> tmp = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+          out.shape_, s);
+      tmp = broadcast<1>(gamma, out.shape_) *
+         (data - broadcast<1>(mean, data.shape_)) /
+         F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+         broadcast<1>(beta, out.shape_);
+      */
       Assign(out, req[inplaceabn::kOut], broadcast<1>(gamma, out.shape_) *
          (data - broadcast<1>(mean, data.shape_)) /
          F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
@@ -184,6 +188,10 @@ class InplaceABN : public Operator {
           out.dptr_, real_t(param_.slope));
       });
     } else {
+      /*
+      Tensor<xpu, 4> tmp = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+          out.shape_, s);
+      */
       Assign(out, req[inplaceabn::kOut],
              broadcast<1>(gamma / F<mshadow_op::square_root>(moving_var + param_.eps),
                           data.shape_) * data +
@@ -235,7 +243,7 @@ class InplaceABN : public Operator {
     Tensor<xpu, 1> beta = in_data[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> ggamma = in_grad[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbeta = in_grad[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
-    // Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[inplaceabn::kMovingVar].get<xpu, 1, real_t>(s);
     // get the work space
     size_t data_size = out.shape_[0] * out.shape_[1] * out.shape_[2] * out.shape_[3];
@@ -250,6 +258,15 @@ class InplaceABN : public Operator {
     Tensor<xpu, 4> grad_y(grad_ptr, out.shape_, s);
     Tensor<xpu, 1> sumGrad(sum_grad_ptr, mean.shape_, s);
     Tensor<xpu, 1> sumProd(sum_prod_ptr, mean.shape_, s);
+    /*
+    // hacky, inplace memory
+    Tensor<xpu, 4> data_y(out.dptr_, out.shape_, s);
+    Tensor<xpu, 4> grad_y(grad_out.dptr_, out.shape_, s);
+    Tensor<xpu, 2> workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu>(
+          mshadow::Shape2(2, mean.shape_[0]), s);
+    Tensor<xpu, 1> sumGrad = workspace[0];
+    Tensor<xpu, 1> sumProd = workspace[1];
+    */
     // recover y and dl/dy
     mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, kWriteTo>, xpu>::Launch(
       s, data_size, data_y.dptr_, out.dptr_, real_t(1.0f / param_.slope));
@@ -259,6 +276,9 @@ class InplaceABN : public Operator {
         out.dptr_, real_t(param_.slope));
 
     if (ctx.is_train && !param_.use_global_stats) {
+      // update running mean and var
+      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
+      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // cal
       sumGrad = sumall_except_dim<1>(grad_y);
       sumProd = sumall_except_dim<1>(grad_y * data_y);
@@ -411,6 +431,11 @@ class InplaceABNProp : public OperatorProperty {
            };
   }
 
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
+  }
+
   std::vector<ResourceRequest> BackwardResource(
       const std::vector<TShape> &in_shape) const override {
     return {ResourceRequest::kTempSpace};
@@ -451,6 +476,7 @@ class InplaceABNProp : public OperatorProperty {
     return param_;
   }
 
+  /*
   std::vector<std::pair<int, void*> > ForwardInplaceOption(
       const std::vector<int> &in_data,
       const std::vector<void*> &out_data) const {
@@ -464,6 +490,7 @@ class InplaceABNProp : public OperatorProperty {
       const std::vector<void*> &in_grad) const override {
     return {{out_grad[inplaceabn::kOut], in_grad[inplaceabn::kData]}};
   }
+  */
 
  private:
   InplaceABNParam param_;
