@@ -59,9 +59,11 @@ class CuDNNConvolutionOp {
             int backward_compute_type,
             const std::vector<TShape>& in_shape,
             const std::vector<TShape>& out_shape,
-            const RunContext& rctx) {
+            const RunContext& rctx,
+            bool add_to_weight) {
     using namespace mshadow;
     this->param_ = param;
+    this->add_to_weight_ = add_to_weight;
     InitBufferForParam();
     auto cudnn_forward_compute_type = convertToCuDNNDataType(forward_compute_type);
     auto cudnn_backward_compute_type = convertToCuDNNDataType(backward_compute_type);
@@ -247,6 +249,7 @@ class CuDNNConvolutionOp {
                                             gbias.dptr_));
     }
     if (req[conv::kWeight] != kNullOp) {
+        CHECK_EQ(add_to_weight_, req[conv::kWeight] == kAddTo);
         CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
             &alpha,
             in_desc_,
@@ -610,8 +613,8 @@ class CuDNNConvolutionOp {
                   cudnnDataType_t cudnn_backward_compute_type) {
     if (!CuDNNConvAlgoReg::Get()->Find(param_, in_shape, out_shape, dtype_,
                                        cudnn_forward_compute_type, cudnn_backward_compute_type,
-                                       SMArch(rctx.ctx.dev_id), &forward_algo_, &back_algo_,
-                                       &back_algo_w_)) {
+                                       SMArch(rctx.ctx.dev_id), add_to_weight_,
+                                       &forward_algo_, &back_algo_, &back_algo_w_)) {
       mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
       CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
       size_t workspace_byte = static_cast<size_t>(param_.workspace * sizeof(DType));
@@ -645,6 +648,8 @@ class CuDNNConvolutionOp {
       auto max_bwd_filt_algos = MaxBackwardFilterAlgos(s->dnn_handle_);
       std::vector<cudnnConvolutionBwdFilterAlgoPerf_t> bwd_filt_results(max_bwd_filt_algos);
       int actual_bwd_filter_algos = 0;
+      // In cudnn v7.1.4, find() returned wgrad algos that could fail for large c if we
+      // were summing into the output (i.e. beta != 0).  Get() returned OK algos though.
       auto bwd_filter_algo_discoverer =
         param_.cudnn_tune.value() == conv::kOff ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
                                                 : cudnnFindConvolutionBackwardFilterAlgorithm;
@@ -792,6 +797,13 @@ class CuDNNConvolutionOp {
         }
       }
       #endif  // CUDNN_MAJOR < 7
+
+      // Fix for issue #11241
+      int cudnn_find_issue_max_features = 64 * 1024;
+      if (add_to_weight_ && Features(in_shape[conv::kData]) >= cudnn_find_issue_max_features) {
+        this->back_algo_w_.Set(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1, true);
+      }
+
       // An algo specification by the user may be cached here, but another
       // convolution will match only if identically specified.
       // We're caching results of *Get* as well as *Find*, but these records
@@ -799,7 +811,8 @@ class CuDNNConvolutionOp {
       CuDNNConvAlgoReg::Get()->Register(param_, in_shape, out_shape, dtype_,
                                         cudnn_forward_compute_type,
                                         cudnn_backward_compute_type,
-                                        SMArch(rctx.ctx.dev_id), this->forward_algo_,
+                                        SMArch(rctx.ctx.dev_id), this->add_to_weight_,
+                                        this->forward_algo_,
                                         this->back_algo_, this->back_algo_w_);
     }
     // If we're allowing Tensor Core variants of the algos to be considered in
@@ -921,6 +934,19 @@ class CuDNNConvolutionOp {
     return tensor.MSize() * sizeof(DType);
   }
 
+  // Given a tensor shape of this operation, return the number of features 'c'
+  int64_t Features(const TShape &dshape) {
+    int c = 0;
+    switch (dshape.ndim()) {
+      case 3: c = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW)[1]; break;
+      case 4: c = ConvertLayout(dshape.get<4>(), param_.layout.value(), kNCHW)[1]; break;
+      case 5: c = ConvertLayout(dshape.get<5>(), param_.layout.value(), kNCDHW)[1]; break;
+      default:
+        LOG(FATAL) << "Unexpected convolution data dimension " << dshape.ndim();
+    }
+    return c;
+  }
+
   std::vector<int> param_stride_;
   std::vector<int> param_dilate_;
   std::vector<int> param_pad_;
@@ -953,6 +979,8 @@ class CuDNNConvolutionOp {
   cudnnTensorFormat_t format_;
   // Allow TensorCore algo policy
   bool cudnn_tensor_core_;
+  // Is req[kWeight] == conv::kAddTo ?
+  bool add_to_weight_;
   ConvolutionParam param_;
 };
 #endif  // __CUDACC__ && CUDNN

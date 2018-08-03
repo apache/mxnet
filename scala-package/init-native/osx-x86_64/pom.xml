@@ -30,6 +30,13 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
 
@@ -55,7 +62,7 @@
             <compilerStartOption>-std=c++0x</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include</compilerEndOption>
+            <compilerEndOption>-I${project.basedir}/../../../include</compilerEndOption>
             <compilerEndOption>${cflags}</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
@@ -66,7 +73,7 @@
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
             <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ../../../lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>-force_load ${project.basedir}/../../../lib/libmxnet.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
             <linkerEndOption>${ldflags}</linkerEndOption>

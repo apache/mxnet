@@ -345,6 +345,25 @@ build_ubuntu_cpu_openblas() {
     report_ccache_usage
 }
 
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
 
@@ -814,7 +833,11 @@ build_docs() {
     set -ex
     pushd .
     cd /work/mxnet/docs/build_version_doc
-    ./build_all_version.sh $1
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1 is the list of branches to build; $2 is the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    ./build_all_version.sh $1 $2
+    # $3 is the default version tag for the website; $4 is the base URL
     ./update_all_version.sh $2 $3 $4
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
@@ -893,6 +916,58 @@ nightly_test_javascript() {
     ./emcc
     touch ~/.emscripten
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
+}
+
+#Tests Model backwards compatibility on MXNet
+nightly_model_backwards_compat_test() {
+    set -ex
+    export PYTHONPATH=/work/mxnet/python/
+    ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
+}
+
+#Backfills S3 bucket with models trained on earlier versions of mxnet
+nightly_model_backwards_compat_train() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
+}
+
+# Nightly 'MXNet: The Straight Dope' Single-GPU Tests
+nightly_straight_dope_python2_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+# Nightly 'MXNet: The Straight Dope' Multi-GPU Tests
+nightly_straight_dope_python2_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
 }
 
 # Deploy

@@ -1943,11 +1943,11 @@ def test_broadcast_binary_op():
     test_bmul(a, b)
     test_bdiv(a, b)
     '''
-    Flaky Test Disabled due to master build failure: 
-    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline 
+    Flaky Test Disabled due to master build failure:
+    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline
     Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
-    
-    test_bmod(a, b) 
+
+    test_bmod(a, b)
     '''
     test_bmod_int(a, b)
     test_bpow(a, b)
@@ -2065,6 +2065,23 @@ def test_reshape():
         assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7, \
             'Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s'\
             %(str(src_shape), str(shape_args), str(reverse), str(dst_shape))
+
+        for i in range(len(src_shape)):
+            holdout_src_shape = list(src_shape)
+            holdout_src_shape[i] = 0
+            holdout_src_shape = tuple(holdout_src_shape)
+            net = mx.sym.Variable('data')
+            net = mx.sym.elemwise_add(net.reshape(shape_args, reverse=reverse), mx.sym.ones(shape=dst_shape))
+            input_shape, output_shape, __ = net.infer_shape(data=holdout_src_shape)
+            assert output_shape[0] == dst_shape, \
+                'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
+                'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
+                                      str(dst_shape), str(output_shape[0]))
+            assert input_shape[0] == src_shape, \
+                'Holdout Src Shape = %s, Shape Arguments = %s, Reverse = %s, Dst Shape = %s, ' \
+                'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
+                                      str(dst_shape), str(output_shape[0]))
+
     # Test new api (Using shape)
     test_cases = [
         [(2, 3, 5, 5),  (0, -1),          False, (2, 75)],
@@ -2416,9 +2433,6 @@ def test_flip():
 
 
 @with_seed()
-# The test is disabled with USE_CUDA=ON and USE_CUDNN=OFF because of failures with the SpatialTransformer op.
-# Tracked at https://github.com/apache/incubator-mxnet/issues/11568
-@assert_raises_cudnn_disabled(assertion_error=True)
 def test_stn():
     np.set_printoptions(threshold=np.nan)
     num_filter = 2  # conv of loc net
@@ -2507,8 +2521,9 @@ def test_stn_valid_sampling():
     ) + target_shape))
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1234)
+# @haojin2: Getting rid of fixed seed as flakiness could not be reproduced,
+# tracked at https://github.com/apache/incubator-mxnet/issues/11714
+@with_seed()
 def test_dot():
     ctx=default_context()
     dtypes = ['float32', 'float64']
@@ -3020,17 +3035,18 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
 
 
-# TODO(szha): Seeding this masks failures. We need to do a deep dive for failures without this seed.
-@with_seed(1234)
+# @haojin2: getting rid of the fixed seed as the flakiness could not be reproduced.
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11717
+@with_seed()
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
-            for nbatch in [1, 4]:
-                for nchannel in [3, 5]:
-                    for height in [4, 6]:
-                        check_l2_normalization((nbatch, nchannel, height), mode, dtype)
-                        for width in [5, 7]:
-                            check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
+            nbatch = random.randint(1, 4)
+            nchannel = random.randint(3, 5)
+            height = random.randint(4, 6)
+            check_l2_normalization((nbatch, nchannel, height), mode, dtype)
+            width = random.randint(5, 7)
+            check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
 
 
 def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
@@ -5449,8 +5465,9 @@ def test_laop_3():
             check_grad(test_syevd_l_4, [a_batch])
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1896893923)
+# @piyushghai - Removing the fixed seed for this test.
+# Issue for flakiness is tracked at - https://github.com/apache/incubator-mxnet/issues/11721
+@with_seed()
 def test_laop_4():
     # Currently disabled on GPU as syevd needs cuda8
     # and MxNet builds use cuda 7.5
@@ -6015,6 +6032,27 @@ def test_slice():
     slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
     check_numeric_gradient(slice_sym, [in_data])
 
+def test_slice_partial_infer():
+    def check_slice_partial_infer(data, begin, end, step, expected_out_shape):
+        out = mx.sym.slice(data, begin=begin, end=end, step=step)
+        assert (out.infer_shape_partial()[1][0] == expected_out_shape), out.infer_shape_partial()[1]
+
+    def check_slice_axis_partial_infer(data, axis, begin, end, expected_out_shape):
+        out = mx.sym.slice_axis(data, axis=axis, begin=begin, end=end)
+        assert (out.infer_shape_partial()[1][0] == expected_out_shape), out.infer_shape_partial()[1]
+
+    var1 = mx.sym.var(name="data", shape=(0, 20))
+    check_slice_partial_infer(var1, (None, None), (None, 10), [], (0, 10))
+    check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (0, 5))
+    check_slice_partial_infer(var1, (None, 3), (None, 10), [], (0, 7))
+    check_slice_partial_infer(var1, (None, 3), (5, 10), [], (0, 7))
+    check_slice_partial_infer(var1, (2, 3), (None, 10), [], (0, 7))
+    check_slice_partial_infer(var1, (2, 3), (None, 10), (None, 1), (0, 7))
+    check_slice_partial_infer(var1, (2, 3), (None, 10), (3, 3), (0, 3))
+
+    var1 = mx.sym.var(name="data", shape=(10, 0))
+    check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
+    check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
 @with_seed()
 def test_float16_min_max():
@@ -6595,7 +6633,7 @@ def test_diag():
     w = np.random.randint(2,9)
     a_np = np.random.random((h, w)).astype(np.float32)
     a = mx.nd.array(a_np).astype('float32')
-    
+
     # k == 0
     r = mx.nd.diag(a)
     assert_almost_equal(r.asnumpy(), np.diag(a_np))
@@ -6638,7 +6676,7 @@ def test_diag():
     d = np.random.randint(2,9)
     a_np = np.random.random((d))
     a = mx.nd.array(a_np)
-    
+
     # k is random
     k = np.random.randint(-d,d)
     r = mx.nd.diag(a, k=k)
@@ -6660,6 +6698,106 @@ def test_diag():
     diag_sym = mx.sym.diag(data=data, k=-1)
     check_numeric_gradient(diag_sym, [a_np])
 
+@with_seed()
+def test_depthtospace():
+    def f(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, blocksize, blocksize, c // (blocksize**2), h, w])
+        tmp = np.transpose(tmp, [0, 3, 4, 1, 5, 2])
+        y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
+        return y
+
+    block = random.randint(2, 4)
+    rand_mul1 = random.randint(1, 4)
+    n = random.randint(1, 5)
+    c = block * block * rand_mul1
+    h = random.randint(1, 5)
+    w = random.randint(1, 5)
+    shape_inp = (n, c, h, w)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = f(data_np, block)
+    output = mx.nd.depth_to_space(data, block)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+
+    shape_out = (n, c // (block ** 2), h * block, w * block)
+    data = mx.sym.Variable('data')
+    dts_sym = mx.sym.depth_to_space(data, block)
+    check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
+
+    check_symbolic_forward(dts_sym, [data_np], [expected])
+    check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
+
+    def test_invalid_depth_dim():
+        invalid_shape_inp = (n, block - 1, h, w)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+
+    def test_invalid_space_dim():
+        invalid_shape_inp = (n, block ** 2, 0, block + 1)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+
+    def test_invalid_block_size():
+        block = 0
+        invalid_shape_inp = (n , c, h, w)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.depth_to_space, data, block)
+
+    test_invalid_depth_dim()
+    test_invalid_space_dim()
+    test_invalid_block_size()
+
+@with_seed()
+def test_spacetodepth():
+    def f(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, c, h // blocksize, blocksize, w // blocksize, blocksize])
+        tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
+        y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
+        return y
+
+    block = random.randint(2, 4)
+    rand_mul1 = random.randint(1, 4)
+    rand_mul2 = random.randint(1, 4)
+    n = random.randint(1, 5)
+    c = random.randint(1, 5)
+    h = block * rand_mul1
+    w = block * rand_mul2
+    shape_inp = (n, c, h, w)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = f(data_np, block)
+    output = mx.nd.space_to_depth(data, block)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+
+    shape_out = (n, c * (block ** 2), h // block, w // block)
+    data = mx.sym.Variable('data')
+    dts_sym = mx.sym.space_to_depth(data, block)
+    check_numeric_gradient(dts_sym, [np.ones(shape_inp)])
+
+    check_symbolic_forward(dts_sym, [data_np], [expected])
+    check_symbolic_backward(dts_sym, [data_np], [np.ones(shape_out)], [np.ones(shape_inp)])
+
+    def test_invalid_space_dim():
+        invalid_shape_inp = (n , c, block - 1, w)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+
+    def test_invalid_block_size():
+        block = 0
+        invalid_shape_inp = (n, c, h, w)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+
+    def test_invalid_depth_dim():
+        invalid_shape_inp = (n, 0, h, w)
+        data = rand_ndarray(invalid_shape_inp, 'default')
+        assertRaises(MXNetError, mx.nd.space_to_depth, data, block)
+
+    test_invalid_space_dim()
+    test_invalid_block_size()
+    test_invalid_depth_dim()
 
 if __name__ == '__main__':
     import nose

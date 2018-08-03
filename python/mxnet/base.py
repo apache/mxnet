@@ -22,11 +22,11 @@ from __future__ import absolute_import
 
 import atexit
 import ctypes
-import inspect
 import os
 import sys
 import warnings
-
+import inspect
+import platform
 import numpy as np
 
 from . import libinfo
@@ -57,6 +57,26 @@ if sys.version_info[0] > 2:
     py_str = lambda x: x.decode('utf-8')
 else:
     py_str = lambda x: x
+
+
+def data_dir_default():
+    """
+
+    :return: default data directory depending on the platform and environment variables
+    """
+    system = platform.system()
+    if system == 'Windows':
+        return os.path.join(os.environ.get('APPDATA'), 'mxnet')
+    else:
+        return os.path.join(os.path.expanduser("~"), '.mxnet')
+
+
+def data_dir():
+    """
+
+    :return: data directory in the filesystem for storage, for example when downloading models
+    """
+    return os.getenv('MXNET_HOME', data_dir_default())
 
 
 class _NullType(object):

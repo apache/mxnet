@@ -112,7 +112,7 @@ object TrainMnist {
     try {
       parser.parseArgument(args.toList.asJava)
 
-      val dataPath = if (inst.dataDir == null) System.getenv("MXNET_DATA_DIR")
+      val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
         else inst.dataDir
 
       val (dataShape, net) =

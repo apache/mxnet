@@ -26,6 +26,8 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdpart
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
+mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // timeout in minutes
@@ -115,7 +117,7 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 
 
 def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -229,6 +231,17 @@ try {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
             pack_lib('cpu', mx_dist_lib)
+          }
+        }
+      }
+    },
+    'CPU: Openblas, debug': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/build-cpu-openblas') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            init_git()
+            docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
+            pack_lib('cpu_debug', mx_cmake_lib_debug)
           }
         }
       }
@@ -574,6 +587,20 @@ try {
         }
       }
     },
+    'Python3: CPU debug': {
+      node('mxnetlinux-cpu') {
+        ws('workspace/ut-python3-cpu-debug') {
+          try {
+            init_git()
+            unpack_lib('cpu_debug', mx_cmake_lib_debug)
+            python3_ut('ubuntu_cpu')
+          } finally {
+            collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
+            collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
+          }
+        }
+      }
+    },
     'Python2: GPU': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python2-gpu') {
@@ -849,6 +876,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
                 C:\\mxnet\\test_cpu.bat"""
@@ -893,6 +921,7 @@ try {
               bat """xcopy C:\\mxnet\\data data /E /I /Y
                 xcopy C:\\mxnet\\model model /E /I /Y
                 call activate py2
+                pip install mock
                 set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
                 del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
                 C:\\mxnet\\test_gpu.bat"""
