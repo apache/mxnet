@@ -86,7 +86,8 @@ build_cython() {
     export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
 
     cd ${PYTHON_DIR}
-    python setup.py build_ext --inplace --with-cython
+    python2 setup.py build_ext --inplace --with-cython
+    python3 setup.py build_ext --inplace --with-cython
 
     popd
 }
