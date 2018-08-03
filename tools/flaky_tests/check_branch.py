@@ -32,6 +32,7 @@ import dependency_analyzer
 
 LOGGING_FILE = os.path.join(os.path.dirname(__file__), "results.log")
 TESTS_DIRECTORY = "tests/python"
+TEST_PREFIX = "test_"
 PROFILING_TRIALS = 10
 TIME_BUDGET = 5400 
 
@@ -44,6 +45,10 @@ logger.addHandler(fh)
  
 def select_tests(changes):
     """returns tests that are dependent on given changes
+
+    All python unit tests are top-level function with the prefix 
+    "test_" in the function name. To get all tests, we simply 
+    filter our changes by this prefix, stored in TEST_PREFIX.
     """
     top = subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
     top = top.decode("utf-8").splitlines()[0]
@@ -52,7 +57,7 @@ def select_tests(changes):
     return [(filename, test) 
             for filename in deps.keys() 
             for test in deps[filename] 
-            if test.startswith("test_")]
+            if test.startswith(TEST_PREFIX)]
 
 
 def calculate_test_trials(tests):
@@ -80,7 +85,12 @@ def calculate_test_trials(tests):
     for t in tests:
         total_time += time_test(t)
 
-    n = int(TIME_BUDGET / total_time)
+    try:
+        n = int(TIME_BUDGET / total_time)
+    except ZeroDivisionError:
+        logger.Error("Total time for tests was 0")
+        return []
+    
     logger.debug("total_time: %f | num_trials: %d", total_time, n)
     return [(t, n) for t in tests]
 
