@@ -4963,8 +4963,9 @@ def _make_lower_triangle_symm(a, ndims, m, dtype=np.float32):
     lt_mask = mx.sym.reshape(lt_mask, shape=shp)
     return mx.sym.broadcast_mul(a, lt_mask)
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(42)
+# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11718
+@with_seed()
 def test_laop():
     dtype = np.float64
     rtol_fw = 1e-7
