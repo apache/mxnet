@@ -292,7 +292,7 @@ def test_huber_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_hinge_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -307,7 +307,7 @@ def test_hinge_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.06
 
 
 @with_seed(1234)
