@@ -560,6 +560,7 @@ def test_executor_group():
 @with_seed()
 def test_factorization_machine_module():
     """ Test factorization machine model with sparse operators """
+    # this unit test is to test the flow, training accuracy is tested in another test
     def check_factorization_machine_module(num_epochs=None):
         print("check_factorization_machine_module")
 
@@ -619,7 +620,7 @@ def test_factorization_machine_module():
                                rescale_grad=1.0/batch_size)
         mod.init_optimizer(optimizer=sgd)
         if num_epochs is None:
-            num_epochs = 10
+            num_epochs = 50
         expected_accuracy = 0.02
 
 	# use accuracy as the metric
