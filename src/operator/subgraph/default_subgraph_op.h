@@ -38,16 +38,16 @@ class SubgraphSelector {
  public:
   virtual ~SubgraphSelector() {}
   // Determine if the node should be selected for a subgraph.
-  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) = 0;
+  virtual bool Select(const nnvm::Graph &g, const nnvm::Node &n) = 0;
   // Determine if the input node should be selected for a subgraph.
-  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n,
+  virtual bool SelectInput(const nnvm::Graph &g, const nnvm::Node &n,
                            const nnvm::Node &new_node) = 0;
   // Determine if the output node should be selected for a subgraph.
-  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
+  virtual bool SelectOutput(const nnvm::Graph &g, const nnvm::Node &n,
                             const nnvm::Node &new_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
-  virtual std::vector<nnvm::Node *> Filter(nnvm::Graph *g,
+  virtual std::vector<nnvm::Node *> Filter(const nnvm::Graph &g,
                                            const std::vector<nnvm::Node *> &candidates) {
     return candidates;
   }
@@ -86,39 +86,17 @@ class ContainOpSelector : public SubgraphSelector {
     this->op_names = op_names;
   }
 
-  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) {
+  virtual bool Select(const nnvm::Graph &g, const nnvm::Node &n) {
     return !n.is_variable() && op_names->count(n.op()->name);
   }
 
-  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n, const nnvm::Node &new_node) {
+  virtual bool SelectInput(const nnvm::Graph &g, const nnvm::Node &n, const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 
-  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
+  virtual bool SelectOutput(const nnvm::Graph &g, const nnvm::Node &n,
                             const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
-  }
-};
-
-/*
- * This selector can use types/shape of given graph.
- */
-class ShapeTypesSelector : public SubgraphSelector {
- public:
-  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) { 
-    // use g->GetAttr shape/dtype/storage_type for node selection
-    return false; 
-  }
-
-  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n, const nnvm::Node &new_node) {
-    // use g->GetAttr shape/dtype/storage_type for node selection
-    return false;
-  }
-
-  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
-                            const nnvm::Node &new_node) {
-    // use g->GetAttr shape/dtype/storage_type for node selection
-    return false;
   }
 };
 
@@ -128,7 +106,8 @@ class ShapeTypesSelector : public SubgraphSelector {
  */
 class DefaultSubgraphProperty : public SubgraphProperty {
  public:
-  explicit DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names)
+  explicit DefaultSubgraphProperty(
+      const std::unordered_set<std::string> &op_names = std::unordered_set<std::string>{})
       : op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
@@ -144,25 +123,6 @@ class DefaultSubgraphProperty : public SubgraphProperty {
 
  private:
   std::shared_ptr<const std::unordered_set<std::string>> op_names_;
-};
-
-/*
- * This subgraph property finds a subgraph whose nodes satisfy shape/types requirement.
- * The operators in the subgraph will be executed by _default_subgraph_op.
- */
-class ShapeTypesSubgraphProperty : public SubgraphProperty {
- public:
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                           const int subgraph_id = 0) const {
-    nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_default_subgraph_op");
-    n->attrs.name = "_default_subgraph_op" + std::to_string(subgraph_id);
-    n->attrs.parsed = sym;
-    return n;
-  }
-  virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<ShapeTypesSelector>();
-  }
 };
 
 }  // namespace op
