@@ -343,6 +343,11 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+
+    export CC="gcc"
+    export CXX="g++"
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_cmake_debug() {
@@ -487,9 +492,6 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    make cython PYTHON=python2
-    make cython PYTHON=python3
 }
 
 build_ubuntu_amalgamation() {
