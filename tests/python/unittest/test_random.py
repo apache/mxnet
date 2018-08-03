@@ -447,6 +447,7 @@ def test_uniform_generator():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @with_seed()
+@unittest.skip('Flaky test, tracked in: https://github.com/apache/incubator-mxnet/issues/9856')
 def test_gamma_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
