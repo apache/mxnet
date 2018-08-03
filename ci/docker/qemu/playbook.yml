@@ -1,0 +1,53 @@
+---
+- name: provision
+  hosts: all
+  gather_facts: no
+  become: true
+  become_user: root
+  tasks:
+    - name: Wait until ssh is available
+      wait_for_connection:
+        delay: 90
+        sleep: 3
+        timeout: 400
+    - command: hostname
+      register: h
+    - debug: msg="{{ h.stdout }}"
+#    - name: sync mxnet/tests
+#      synchronize:
+#        src: /work/mxnet/tests
+#        dest: mxnet/tests
+#        delete: no
+#        owner: no
+#
+    - name: copy artifact
+      copy:
+        src: "{{ item }}"
+        dest: mxnet_dist/
+      with_fileglob: "/work/mxnet/build/*.whl"
+
+    - name: 'run tests'
+      command: /bin/sleep 15
+      async: 1000
+      poll: 0
+      register: tests
+
+    - name: 'wait for tests to finish'
+      async_status: jid={{ tests.ansible_job_id }}
+      register: job_result
+      until: job_result.finished
+      retries: 30
+
+#
+#    - name: copy runtime_functions.py
+#      copy:
+#        src: runtime_functions.py
+#        dest: mxnet/runtime_functions.py
+#        mode: 0775
+
+#    - name: Execute tests
+#      command: ./runtime_functions.py run_unittests_python
+#      chdir: mxnet/
+#      async: 86400
+#      poll: 30
+#
