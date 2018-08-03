@@ -196,7 +196,7 @@ def check_fft(shape):
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
-    #forward
+    # forward
     for exe in exe_list:
         exe.forward(is_train=True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
