@@ -8,7 +8,7 @@
 #' @param activation either a single string or a vector containing the names of the activation functions.
 #' @param out_activation a single string containing the name of the output activation function.
 #' @param ctx whether train on cpu (default) or gpu.
-#' @param eval_metric the evaluation metric/
+#' @param eval.metric the evaluation metric/
 #' @param ... other parameters passing to \code{mx.model.FeedForward.create}/
 #' 
 #' @examples

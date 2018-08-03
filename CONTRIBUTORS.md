@@ -172,5 +172,7 @@ List of Contributors
 * [Thomas Delteil](https://github.com/ThomasDelteil)
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
+* [Lin Yuan](https://github.com/apeforest)
 * [Kou Ding](https://github.com/chinakook)
 * [Istvan Fehervari](https://github.com/ifeherva)
+* [Aaron Markham](https://github.com/aaronmarkham)

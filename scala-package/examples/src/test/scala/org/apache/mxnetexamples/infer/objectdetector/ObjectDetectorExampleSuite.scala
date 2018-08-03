@@ -22,6 +22,7 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -39,27 +40,14 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
-
-    var tmpFile = new File(tempDirPath + "/resnetssd/resnet50_ssd_model-symbol.json")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(modelBase + "resnet50_ssd_model-symbol.json"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnetssd/resnet50_ssd_model-0000.params")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(modelBase + "resnet50_ssd_model-0000.params"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnetssd/synset.txt")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(modelBase + "synset.txt"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(imageBase + "dog-ssd.jpg"),
-        tmpFile)
-    }
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-symbol.json",
+      tempDirPath + "/resnetssd/resnet50_ssd_model-symbol.json")
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-0000.params",
+      tempDirPath + "/resnetssd/resnet50_ssd_model-0000.params")
+    Util.downloadUrl(modelBase + "synset.txt",
+      tempDirPath + "/resnetssd/synset.txt")
+    Util.downloadUrl(imageBase + "dog-ssd.jpg",
+      tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
 
     val modelDirPath = tempDirPath + File.separator + "resnetssd/"
     val inputImagePath = tempDirPath + File.separator +

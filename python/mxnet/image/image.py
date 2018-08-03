@@ -1057,6 +1057,8 @@ class ImageIter(io.DataIter):
         Data name for provided symbols.
     label_name : str
         Label name for provided symbols.
+    dtype : str
+        Label data type. Default: float32. Other options: int32, int64, float64
     kwargs : ...
         More arguments for creating augmenter. See mx.image.CreateAugmenter.
     """
@@ -1064,9 +1066,10 @@ class ImageIter(io.DataIter):
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
                  shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None,
-                 data_name='data', label_name='softmax_label', **kwargs):
+                 data_name='data', label_name='softmax_label', dtype='float32', **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
+        assert dtype in ['int32', 'float32', 'int64', 'float64'], dtype + ' label not supported'
         num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
         logging.info('Using %s threads for decoding...', str(num_threads))
         logging.info('Set enviroment variable MXNET_CPU_WORKER_NTHREADS to a'
@@ -1091,7 +1094,7 @@ class ImageIter(io.DataIter):
                 imgkeys = []
                 for line in iter(fin.readline, ''):
                     line = line.strip().split('\t')
-                    label = nd.array([float(i) for i in line[1:-1]])
+                    label = nd.array(line[1:-1], dtype=dtype)
                     key = int(line[0])
                     imglist[key] = (label, line[-1])
                     imgkeys.append(key)
@@ -1105,11 +1108,11 @@ class ImageIter(io.DataIter):
                 key = str(index)  # pylint: disable=redefined-variable-type
                 index += 1
                 if len(img) > 2:
-                    label = nd.array(img[:-1])
+                    label = nd.array(img[:-1], dtype=dtype)
                 elif isinstance(img[0], numeric_types):
-                    label = nd.array([img[0]])
+                    label = nd.array([img[0]], dtype=dtype)
                 else:
-                    label = nd.array(img[0])
+                    label = nd.array(img[0], dtype=dtype)
                 result[key] = (label, img[-1])
                 imgkeys.append(str(key))
             self.imglist = result

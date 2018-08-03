@@ -110,22 +110,9 @@ build_jetson() {
     popd
 }
 
-report_ccache_usage() {
-    set -ex
-    pushd .
-
-    # Show global ccache summary at the end of each run.
-    ccache -s
-    if [ -e $CCACHE_LOGFILE ]
-    then
-        # Display local ccache log, excluding some overly verbose output.
-        cat $CCACHE_LOGFILE | grep -v "Config:" | grep -v "stats.lock"
-    else
-        echo "No ccache log found."
-    fi
-
-    popd
-}
+#
+# ARM builds
+#
 
 build_armv6() {
     set -ex
@@ -155,7 +142,6 @@ build_armv6() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
@@ -187,30 +173,11 @@ build_armv7() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
 
-build_amzn_linux_cpu() {
-    cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
-        -G Ninja /work/mxnet
-    ninja -v
-    report_ccache_usage
-}
-
-build_arm64() {
+build_armv8() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -218,21 +185,23 @@ build_arm64() {
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
+        -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
     build_wheel
 }
+
+
+#
+# ANDROID builds
+#
 
 build_android_armv7() {
     set -ex
     cd /work/build
-#        -DCMAKE_SYSTEM_NAME=Android\
-#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
-#        -DCMAKE_SYSTEM_VERSION=21\
     cmake \
         -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -248,18 +217,11 @@ build_android_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
 }
 
-build_android_arm64() {
+build_android_armv8() {
     set -ex
     cd /work/build
-# There are other ways for CMake to cross compile android, like setting the following variables
-# below. But right not it doesn't work as expected, we need to find what's the best strategy to 
-# build with CMake in Android.
-#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
-#        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
-#        -DCMAKE_SYSTEM_VERSION=21\
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -287,9 +249,25 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-
-    report_ccache_usage
 }
+
+build_amzn_linux_cpu() {
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF\
+        -DUSE_OPENCV=ON\
+        -DUSE_OPENMP=ON\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF\
+        -DUSE_DIST_KVSTORE=ON\
+        -G Ninja /work/mxnet
+    ninja -v
+}
+
 
 build_centos7_mkldnn() {
     set -ex
@@ -304,8 +282,6 @@ build_centos7_mkldnn() {
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_centos7_gpu() {
@@ -339,26 +315,38 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+}
 
-    report_ccache_usage
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
 }
 
 build_ubuntu_cpu_clang39() {
     set -ex
-
-    export CXX=clang++-3.9
+     export CXX=clang++-3.9
     export CC=clang-3.9
-
-    build_ccache_wrappers
-
-    make \
+     build_ccache_wrappers
+     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50() {
@@ -375,8 +363,6 @@ build_ubuntu_cpu_clang50() {
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
@@ -393,8 +379,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
@@ -411,8 +395,6 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_mkldnn() {
@@ -426,8 +408,6 @@ build_ubuntu_cpu_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu() {
@@ -448,8 +428,6 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu_mkldnn_nocudnn() {
@@ -465,8 +443,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=0                   \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu_cuda91_cudnn7() {
@@ -513,7 +489,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
     cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
     mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
@@ -535,7 +510,6 @@ build_ubuntu_gpu_cmake() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
 }
 
 
@@ -812,7 +786,11 @@ build_docs() {
     set -ex
     pushd .
     cd /work/mxnet/docs/build_version_doc
-    ./build_all_version.sh $1
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1 is the list of branches to build; $2 is the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    ./build_all_version.sh $1 $2
+    # $3 is the default version tag for the website; $4 is the base URL
     ./update_all_version.sh $2 $3 $4
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
@@ -826,7 +804,7 @@ build_docs() {
 nightly_test_rat_check() {
     set -e
     pushd .
-    
+
     cd /work/deps/trunk/apache-rat/target
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
@@ -891,6 +869,58 @@ nightly_test_javascript() {
     ./emcc
     touch ~/.emscripten
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
+}
+
+#Tests Model backwards compatibility on MXNet
+nightly_model_backwards_compat_test() {
+    set -ex
+    export PYTHONPATH=/work/mxnet/python/
+    ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
+}
+
+#Backfills S3 bucket with models trained on earlier versions of mxnet
+nightly_model_backwards_compat_train() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
+}
+
+# Nightly 'MXNet: The Straight Dope' Single-GPU Tests
+nightly_straight_dope_python2_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+# Nightly 'MXNet: The Straight Dope' Multi-GPU Tests
+nightly_straight_dope_python2_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
 }
 
 # Deploy

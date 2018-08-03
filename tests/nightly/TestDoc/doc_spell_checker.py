@@ -32,8 +32,11 @@ from enchant.checker import SpellChecker
 import grammar_check
 import html2text
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
+try:
+    reload(sys)  # Python 2
+    sys.setdefaultencoding('utf-8')
+except NameError:
+    pass         # Python 3
 
 
 GRAMMAR_CHECK_IGNORE = ['WHITESPACE_RULE', 'DOUBLE_PUNCTUATION', 'EN_QUOTES[1]',

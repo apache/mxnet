@@ -80,6 +80,13 @@ def divide(attrs, inputs, proto_obj):
         return op_value, new_attr, inputs
     return 'broadcast_div', new_attr, inputs
 
+def mean(attrs, inputs, proto_obj):
+    """Mean of all the input tensors."""
+    concat_input = [symbol.expand_dims(op_input, axis=0) for op_input in inputs]
+    concat_sym = symbol.concat(*concat_input, dim=0)
+    mean_sym = symbol.mean(concat_sym, axis=0)
+    return mean_sym, attrs, inputs
+
 def logical_and(attrs, inputs, proto_obj):
     """Logical and of two input arrays."""
     return 'broadcast_logical_and', attrs, inputs
@@ -185,6 +192,10 @@ def softsign(attrs, inputs, proto_obj):
 def sigmoid(attrs, inputs, proto_obj):
     """Computes elementwise sigmoid of the input array"""
     return 'sigmoid', attrs, inputs
+
+def hardsigmoid(attrs, inputs, proto_obj):
+    """Computes elementwise hard sigmoid of the input array"""
+    return 'hard_sigmoid', attrs, inputs
 
 def relu(attrs, inputs, proto_obj):
     """Computes rectified linear function."""
@@ -348,6 +359,14 @@ def global_avgpooling(attrs, inputs, proto_obj):
                                                                 'pool_type': 'avg'})
     return 'Pooling', new_attrs, inputs
 
+def global_lppooling(attrs, inputs, proto_obj):
+    """Performs global lp pooling on the input."""
+    p_value = attrs.get('p', 2)
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'global_pool': True,
+                                                                'kernel': (1, 1),
+                                                                'pool_type': 'lp',
+                                                                'p_value': p_value})
+    return 'Pooling', new_attrs, inputs
 
 def linalg_gemm(attrs, inputs, proto_obj):
     """Performs general matrix multiplication and accumulation"""
@@ -409,8 +428,22 @@ def cast(attrs, inputs, proto_obj):
 
 def split(attrs, inputs, proto_obj):
     """Splits an array along a particular axis into multiple sub-arrays."""
+    split_list = attrs.get('split') if 'split' in attrs else []
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'split' : 'num_outputs'})
+    if 'axis' not in attrs:
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'axis': 0})
+
+    if not split_list:
+        num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
+    else:
+        raise NotImplementedError("Operator {} in MXNet does not support variable splits."
+                                  "Tracking the issue to support variable split here: "
+                                  "https://github.com/apache/incubator-mxnet/issues/11594"
+                                  .format('split'))
+
+    new_attrs['num_outputs'] = num_outputs
+
     return 'split', new_attrs, inputs
 
 def _slice(attrs, inputs, proto_obj):
@@ -451,7 +484,6 @@ def unsqueeze(attrs, inputs, cls):
 
     return mxnet_op, attrs, inputs
 
-
 def flatten(attrs, inputs, proto_obj):
     """Flattens the input array into a 2-D array by collapsing the higher dimensions."""
     #Mxnet does not have axis support. By default uses axis=1
@@ -469,6 +501,10 @@ def clip(attrs, inputs, proto_obj):
     if 'a_min' not in new_attrs:
         new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
     return 'clip', new_attrs, inputs
+
+def gather(attrs, inputs, proto_obj):
+    """Gather elements from an input array along the given axis."""
+    return 'take', attrs, inputs
 
 #Powers
 def reciprocal(attrs, inputs, proto_obj):
@@ -490,6 +526,30 @@ def power(attrs, inputs, proto_obj):
 def exponent(attrs, inputs, proto_obj):
     """Elementwise exponent of input array."""
     return 'exp', attrs, inputs
+
+def _cos(attrs, inputs, proto_obj):
+    """Elementwise cosine of input array."""
+    return 'cos', attrs, inputs
+
+def _sin(attrs, inputs, proto_obj):
+    """Elementwise sine of input array."""
+    return 'sin', attrs, inputs
+
+def _tan(attrs, inputs, proto_obj):
+    """Elementwise tan of input array."""
+    return 'tan', attrs, inputs
+
+def arccos(attrs, inputs, proto_obj):
+    """Elementwise inverse cos of input array."""
+    return 'arccos', attrs, inputs
+
+def arcsin(attrs, inputs, proto_obj):
+    """Elementwise inverse sin of input array."""
+    return 'arcsin', attrs, inputs
+
+def arctan(attrs, inputs, proto_obj):
+    """Elementwise inverse tan of input array."""
+    return 'arctan', attrs, inputs
 
 def _log(attrs, inputs, proto_obj):
     """Elementwise log of input array."""
@@ -545,6 +605,17 @@ def reduce_sum_square(attrs, inputs, proto_obj):
                         keepdims=attrs.get('keepdims'))
     return sum_op, attrs, inputs
 
+def reduce_l1(attrs, inputs, proto_obj):
+    """Reduce input tensor by l1 normalization."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
+    new_attrs = translation_utils._add_extra_attributes(new_attrs,
+                                                        {'ord' : 1})
+    return 'norm', new_attrs, inputs
+
+def shape(attrs, inputs, proto_obj):
+    """Returns shape of input array."""
+    return 'shape_array', attrs, inputs
+
 def reduce_l2(attrs, inputs, proto_obj):
     """Reduce input tensor by l2 normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
@@ -564,6 +635,20 @@ def avg_pooling(attrs, inputs, proto_obj):
 
     return new_op, new_attrs, inputs
 
+def lp_pooling(attrs, inputs, proto_obj):
+    """LP Pooling"""
+    p_value = attrs.get('p', 2)
+    new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                       {'kernel_shape': 'kernel',
+                                                        'strides': 'stride',
+                                                        'pads': 'pad',
+                                                        'p_value': p_value
+                                                       })
+    new_attrs = translation_utils._add_extra_attributes(new_attrs,
+                                                        {'pooling_convention': 'valid'
+                                                        })
+    new_op = translation_utils._fix_pooling('lp', inputs, new_attrs)
+    return new_op, new_attrs, inputs
 
 def max_pooling(attrs, inputs, proto_obj):
     """ Average pooling"""

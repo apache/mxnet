@@ -46,12 +46,15 @@ from test_sparse_operator import *
 from test_ndarray import *
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm
-del test_support_vector_machine_l2_svm
+del test_support_vector_machine_l1_svm  # noqa
+del test_support_vector_machine_l2_svm  # noqa
 
 
 def check_countsketch(in_dim,out_dim,n):
-    sym = mx.sym.contrib.count_sketch(name='countsketch',out_dim = out_dim)
+    data = mx.sym.Variable("data")
+    h = mx.sym.Variable("h")
+    s = mx.sym.Variable("s")
+    sym = mx.sym.contrib.count_sketch(data=data, h=h, s=s, name='countsketch',out_dim = out_dim)
     shape = [(n,in_dim), (1,in_dim),(1,in_dim)]     #shape of input x, hash h and hash s
 
     arr = [mx.nd.empty(shape[i]) for i in range(3)]
@@ -62,46 +65,33 @@ def check_countsketch(in_dim,out_dim,n):
     arr[1][:] = h                                 #hash h
     s = np.random.randint(0, 2, shape[2])*2-np.ones(shape[2])
     arr[2][:] = s                                 #hash s
-    # forward
-    exe_list = [sym.bind(mx.gpu(0), arr, arr_grad)]
-    for exe in exe_list:
-        exe.forward(is_train= True)
-    out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-
+    locations = {"data": x, "h": h, "s": s}
     a = np.zeros((n,out_dim))
     temp = np.multiply(x, s)
     for num_sample in np.arange(0,n):
         for idx in np.arange(0,in_dim):
             a[num_sample][h[0][idx]] += temp[num_sample][idx]
-    assert_almost_equal(a,out1[0],rtol=1e-3, atol=1e-12)
-
-    # backward
+    check_symbolic_forward(sym, locations, [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
     out_grad = mx.nd.empty((n,out_dim))
     out_grad[:] = np.random.normal(-3, 3, (n,out_dim))
-    for exe in exe_list:
-        exe.backward([out_grad])
-
-        a = np.zeros((n,in_dim))
-        for j in np.arange(0,n):
-            for i in np.arange(0,in_dim):
-                a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
-    assert_almost_equal(a,arr_grad[0].asnumpy(),rtol=1e-3, atol=1e-12)
+    a = np.zeros((n,in_dim))
+    for j in np.arange(0,n):
+        for i in np.arange(0,in_dim):
+            a[j,i] = out_grad.asnumpy()[j, h[0,i]] * s[0,i]
+    check_symbolic_backward(sym, locations, [out_grad], [a], rtol=1e-3, atol=1e-5, ctx=mx.gpu(0))
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10988")
-@with_seed(0)
+@with_seed()
 def test_countsketch():
-    nrepeat = 2
     minindim = 40
     maxindim = 100
     minoutdim = 5
     maxoutdim = 30
     maxn = 200
-    for repeat in range(nrepeat):
-        in_dim = np.random.randint(minindim, maxindim)
-        out_dim = np.random.randint(minoutdim, maxoutdim)
-        n = np.random.randint(1,maxn)
-        check_countsketch(in_dim, out_dim, n)
+    in_dim = np.random.randint(minindim, maxindim)
+    out_dim = np.random.randint(minoutdim, maxoutdim)
+    n = np.random.randint(1, maxn)
+    check_countsketch(in_dim, out_dim, n)
 
 
 def check_ifft(shape):
@@ -532,6 +522,65 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_convolution_large_c():
+    problematic_c = 64 * 1024
+    # The convolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
+
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_deconvolution_large_c():
+    problematic_c = 64 * 1024
+    # The deconvolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCW', num_filter=problematic_c, kernel=(2,), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
 
 @with_seed()
 def test_convolution_versions():
@@ -703,6 +752,7 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.  https://github.com/apache/incubator-mxnet/issues/11839")
 @with_seed()
 def test_spatial_transformer_with_type():
     data = mx.sym.Variable('data')

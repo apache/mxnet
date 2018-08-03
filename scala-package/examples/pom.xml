@@ -17,13 +17,13 @@
     <profile>
       <id>unittest</id>
       <properties>
-        <skiptest>true</skiptest>
+        <skipTests>true</skipTests>
       </properties>
     </profile>
     <profile>
       <id>integrationtest</id>
       <properties>
-        <skiptest>false</skiptest>
+        <skipTests>false</skipTests>
       </properties>
     </profile>
     <profile>
@@ -53,13 +53,6 @@
             <artifactId>maven-source-plugin</artifactId>
             <configuration>
               <skipSource>true</skipSource>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
             </configuration>
           </plugin>
           <plugin>
@@ -141,7 +134,7 @@
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
-          <skipTests>${skiptest}</skipTests>
+          <skipTests>${skipTests}</skipTests>
           <argLine>
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
