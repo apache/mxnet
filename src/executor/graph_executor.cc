@@ -1257,11 +1257,8 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   Infer(gp, num_forward_inputs, arg_shapes, arg_dtypes, arg_stypes);
 
   // partition pass with default subgraph property
-  const auto& shapes = gp.GetAttr<nnvm::ShapeVector>("shape");
-  const auto& dtypes = gp.GetAttr<nnvm::DTypeVector>("dtype");
-  const auto& stypes = gp.GetAttr<StorageTypeVector>("storage_type");
   mxnet::op::SubgraphPropertyPtr property =
-      std::make_shared<mxnet::op::ShapeTypesSubgraphProperty>(shapes, dtypes, stypes);
+      std::make_shared<mxnet::op::ShapeTypesSubgraphProperty>();
   gp.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
   gp = ApplyPass(std::move(gp), "PartitionGraph");
   auto sym = symbol.Copy();

@@ -163,7 +163,7 @@ bool LabelSubgraph(const Graph& g,
     // get qualified adjacent input nodes
     for (auto& e : cur_node->node->inputs) {
       const bool select_input = (!excluded_nodes || !excluded_nodes->count(e.node.get()))
-        && subgraph_selector->SelectInput(*cur_node->node, *e.node);
+        && subgraph_selector->SelectInput(&g, *cur_node->node, *e.node);
       if (select_input) {
         // e.node is a subgraph node
         const auto nid = indexed_graph.node_id(e.node.get());
@@ -181,7 +181,7 @@ bool LabelSubgraph(const Graph& g,
     // get qualified output nodes
     for (auto it = cur_node->outputs.begin(); it != cur_node->outputs.end(); ++it) {
       const bool select_output = (!excluded_nodes || !excluded_nodes->count(it->first))
-          && subgraph_selector->SelectOutput(*cur_node->node, *it->first);
+          && subgraph_selector->SelectOutput(&g, *cur_node->node, *it->first);
       if (select_output) {
         // it->first is a subgraph node
         const auto nid = indexed_graph.node_id(it->first);
@@ -401,7 +401,7 @@ void FindSubgraphs(Graph* g,
   for (size_t i = 0; i < simple_nodes.size(); ++i) {
     nnvm::Node* node = simple_nodes[i]->node;
     auto subgraph_selector = subg_prop.CreateSubgraphSelector();
-    if (subgraph_selector->Select(*node) && simple_nodes[i]->label == -1) {
+    if (subgraph_selector->Select(g, *node) && simple_nodes[i]->label == -1) {
       // pre-select nodes that can be grouped in a subgraph
       std::vector<nnvm::Node*> preselected_nodes;
       PreSelectSubgraphNodes(*g, subgraph_selector, subgraph_id, i, simple_nodes,

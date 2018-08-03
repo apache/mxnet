@@ -38,11 +38,13 @@ class SubgraphSelector {
  public:
   virtual ~SubgraphSelector() {}
   // Determine if the node should be selected for a subgraph.
-  virtual bool Select(const nnvm::Node &n) = 0;
+  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) = 0;
   // Determine if the input node should be selected for a subgraph.
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n,
+                           const nnvm::Node &new_node) = 0;
   // Determine if the output node should be selected for a subgraph.
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
+                            const nnvm::Node &new_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
   virtual std::vector<nnvm::Node *> Filter(nnvm::Graph *g,
@@ -84,15 +86,16 @@ class ContainOpSelector : public SubgraphSelector {
     this->op_names = op_names;
   }
 
-  virtual bool Select(const nnvm::Node &n) {
+  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) {
     return !n.is_variable() && op_names->count(n.op()->name);
   }
 
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
+  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n, const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
+  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
+                            const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 };
@@ -101,19 +104,22 @@ class ContainOpSelector : public SubgraphSelector {
  * This selector can use types/shape of given graph.
  */
 class ShapeTypesSelector : public SubgraphSelector {
-  const nnvm::ShapeVector &shapes;
-  const nnvm::DTypeVector &dtypes;
-  const StorageTypeVector &stypes;
-
  public:
-  explicit ShapeTypesSelector(const nnvm::ShapeVector &shapes, const nnvm::DTypeVector &dtypes,
-                              const StorageTypeVector &stypes)
-      : shapes(shapes), dtypes(dtypes), stypes(stypes){};
-  virtual bool Select(const nnvm::Node &n) { return false; }
+  virtual bool Select(const nnvm::Graph *g, const nnvm::Node &n) { 
+    // use g->GetAttr shape/dtype/storage_type for node selection
+    return false; 
+  }
 
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) { return false; }
+  virtual bool SelectInput(const nnvm::Graph *g, const nnvm::Node &n, const nnvm::Node &new_node) {
+    // use g->GetAttr shape/dtype/storage_type for node selection
+    return false;
+  }
 
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) { return false; }
+  virtual bool SelectOutput(const nnvm::Graph *g, const nnvm::Node &n,
+                            const nnvm::Node &new_node) {
+    // use g->GetAttr shape/dtype/storage_type for node selection
+    return false;
+  }
 };
 
 /*
@@ -146,10 +152,6 @@ class DefaultSubgraphProperty : public SubgraphProperty {
  */
 class ShapeTypesSubgraphProperty : public SubgraphProperty {
  public:
-  explicit ShapeTypesSubgraphProperty(const nnvm::ShapeVector &shapes,
-                                      const nnvm::DTypeVector &dtypes,
-                                      const StorageTypeVector &stypes)
-      : shapes(shapes), dtypes(dtypes), stypes(stypes){};
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
@@ -159,13 +161,8 @@ class ShapeTypesSubgraphProperty : public SubgraphProperty {
     return n;
   }
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<ShapeTypesSelector>(shapes, dtypes, stypes);
+    return std::make_shared<ShapeTypesSelector>();
   }
-
- private:
-  const nnvm::ShapeVector &shapes;
-  const nnvm::DTypeVector &dtypes;
-  const StorageTypeVector &stypes;
 };
 
 }  // namespace op
