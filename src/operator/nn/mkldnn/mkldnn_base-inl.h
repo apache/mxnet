@@ -356,6 +356,13 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
   }
 }
 
+static inline std::vector<NDArray> InvalidateInputs(const std::vector<NDArray> &arrs) {
+  std::vector<NDArray> buffer(arrs.size());
+  for (size_t i = 0; i < arrs.size(); ++i)
+    buffer[i] = arrs[i].Reorder2Default();
+  return buffer;
+}
+
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups);
