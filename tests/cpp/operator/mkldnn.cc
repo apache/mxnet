@@ -505,7 +505,6 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.op = Op::Get("Convolution");
   attrs.num_inputs = 3;
   attrs.num_outputs = 1;
-  // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
@@ -519,7 +518,6 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
   attrs.attrs.op = Op::Get("_backward_Convolution");
   attrs.num_inputs = 4;
   attrs.num_outputs = 3;
-  // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
@@ -533,7 +531,6 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.op = Op::Get("Deconvolution");
   attrs.num_inputs = 2;
   attrs.num_outputs = 1;
-  // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
@@ -547,7 +544,6 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   attrs.attrs.op = Op::Get("_backward_Deconvolution");
   attrs.num_inputs = 3;
   attrs.num_outputs = 2;
-  // add dilate
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
