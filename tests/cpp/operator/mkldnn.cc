@@ -1183,7 +1183,6 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   TShape stride = param.stride;
-  int num_filter = param.num_filter;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -1322,6 +1321,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TShape kernel = param.kernel;
   TShape padding = param.pad;
   TShape stride = param.stride;
+  int num_filter = param.num_filter;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
