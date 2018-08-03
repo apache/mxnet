@@ -83,8 +83,6 @@ def test_ce_loss():
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-# @lanking520: getting rid of the fixed seed
-#               and add atol and rtol
 # tracked at: https://github.com/apache/incubator-mxnet/issues/11691
 @with_seed()
 def test_bce_loss():
