@@ -20,8 +20,9 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 #define MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 
-#include <vector>
+#include <mxnet/graph_attr_types.h>
 #include <string>
+#include <vector>
 #include "./common.h"
 
 namespace mxnet {
@@ -35,8 +36,7 @@ namespace op {
  */
 class SubgraphSelector {
  public:
-  virtual ~SubgraphSelector() {
-  }
+  virtual ~SubgraphSelector() {}
   // Determine if the node should be selected for a subgraph.
   virtual bool Select(const nnvm::Node &n) = 0;
   // Determine if the input node should be selected for a subgraph.
@@ -45,8 +45,8 @@ class SubgraphSelector {
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
-  virtual std::vector<nnvm::Node*> Filter(nnvm::Graph* g,
-                                          const std::vector<nnvm::Node*>& candidates) {
+  virtual std::vector<nnvm::Node *> Filter(nnvm::Graph *g,
+                                           const std::vector<nnvm::Node *> &candidates) {
     return candidates;
   }
 };
@@ -76,7 +76,7 @@ void RegisterSubgraphProperty(SubgraphPropertyPtr property);
  * This selects nodes for a subgraph that only contains operators
  * in a given set and it visits nodes via both input and output links.
  */
-class ContainOpSelector: public SubgraphSelector {
+class ContainOpSelector : public SubgraphSelector {
   std::shared_ptr<const std::unordered_set<std::string>> op_names;
 
  public:
@@ -98,13 +98,32 @@ class ContainOpSelector: public SubgraphSelector {
 };
 
 /*
+ * This selector can use types/shape of given graph.
+ */
+class ShapeTypesSelector : public SubgraphSelector {
+  const nnvm::ShapeVector &shapes;
+  const nnvm::DTypeVector &dtypes;
+  const StorageTypeVector &stypes;
+
+ public:
+  explicit ShapeTypesSelector(const nnvm::ShapeVector &shapes, const nnvm::DTypeVector &dtypes,
+                              const StorageTypeVector &stypes)
+      : shapes(shapes), dtypes(dtypes), stypes(stypes){};
+  virtual bool Select(const nnvm::Node &n) { return false; }
+
+  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) { return false; }
+
+  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) { return false; }
+};
+
+/*
  * This subgraph property finds a subgraph whose nodes have only operators
  * within a set. The operators in the subgraph will be executed by _default_subgraph_op.
  */
-class DefaultSubgraphProperty: public SubgraphProperty {
+class DefaultSubgraphProperty : public SubgraphProperty {
  public:
-  explicit DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names) :
-    op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
+  explicit DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names)
+      : op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
@@ -119,6 +138,34 @@ class DefaultSubgraphProperty: public SubgraphProperty {
 
  private:
   std::shared_ptr<const std::unordered_set<std::string>> op_names_;
+};
+
+/*
+ * This subgraph property finds a subgraph whose nodes satisfy shape/types requirement.
+ * The operators in the subgraph will be executed by _default_subgraph_op.
+ */
+class ShapeTypesSubgraphProperty : public SubgraphProperty {
+ public:
+  explicit ShapeTypesSubgraphProperty(const nnvm::ShapeVector &shapes,
+                                      const nnvm::DTypeVector &dtypes,
+                                      const StorageTypeVector &stypes)
+      : shapes(shapes), dtypes(dtypes), stypes(stypes){};
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+                                           const int subgraph_id = 0) const {
+    nnvm::NodePtr n = nnvm::Node::Create();
+    n->attrs.op = Op::Get("_default_subgraph_op");
+    n->attrs.name = "_default_subgraph_op" + std::to_string(subgraph_id);
+    n->attrs.parsed = sym;
+    return n;
+  }
+  virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
+    return std::make_shared<ShapeTypesSelector>(shapes, dtypes, stypes);
+  }
+
+ private:
+  const nnvm::ShapeVector &shapes;
+  const nnvm::DTypeVector &dtypes;
+  const StorageTypeVector &stypes;
 };
 
 }  // namespace op
