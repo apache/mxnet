@@ -690,6 +690,10 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
+MXNET_DLL int MXNDArrayToDLTensor(NDArrayHandle handle,
+                      void **out_pdltensor);
+MXNET_DLL int MXNDArrayFromDLTensor(void *in_pdltensor,
+                        NDArrayHandle *out_handle);
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray

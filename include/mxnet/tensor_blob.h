@@ -104,6 +104,8 @@ class TBlob {
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
     SetDLTensor(dev_mask, dev_id);
   }
+  TBlob(const DLTensor &dltensor) : dptr_(dltensor.data), shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)), type_flag_(DLDataTypeTransform(dltensor.dtype)), dltensor_(dltensor) {
+  }
   /*!
    * \brief constructor from tensor
    * \param src source tensor
@@ -333,6 +335,21 @@ class TBlob {
       default: {
         LOG(FATAL) << "Unknown type_flag=" << type_flag;
         return DLDataType();
+      }
+    }
+  }
+  static int DLDataTypeTransform(DLDataType dldata_type_flag) {
+    switch (dldata_type_flag) {
+      case DLDataType{kDLFloat, 32, 1}: return mshadow::kFloat32;
+      case DLDataType{kDLFloat, 64, 1}: return mshadow::kFloat64;
+      case DLDataType{kDLFloat, 16, 1}: return mshadow::kFloat16;
+      case DLDataType{kDLUInt, 8, 1}: return mshadow::kUint8;
+      case DLDataType{kDLInt, 32, 1}: return mshadow::kInt32;
+      case DLDataType{kDLInt, 8, 1}: return mshadow::kInt8;
+      case DLDataType{kDLInt, 64, 1}: return mshadow::kInt64;
+      default: {
+        LOG(FATAL) << "Unknown dldata_type_flag=" << type_flag;
+        return mshadow::kFloat32;
       }
     }
   }

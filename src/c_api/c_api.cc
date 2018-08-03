@@ -492,6 +492,26 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_END();
 }
 
+int MXNDArrayToDLTensor(NDArrayHandle handle,
+                      void **out_pdltensor) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    *out_pdltensor = arr->data().dlpack();
+  } else {
+    *out_pdltensor = nullptr;
+  }
+  API_END();
+}
+
+int MXNDArrayFromDLTensor(void *in_pdltensor,
+                        NDArrayHandle *out_handle) {
+  API_BEGIN();
+  DLTensor *pdltensor = static_cast<DLTensor*>(in_pdltensor);
+  *out_handle = new NDArray(TBlob(*pdltensor), pdltensor->device_id);
+  API_END();
+}
+
 int MXNDArrayGetDType(NDArrayHandle handle,
                      int *out_dtype) {
   API_BEGIN();
