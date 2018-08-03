@@ -39,6 +39,7 @@ from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
 from typing import *
+from util import *
 
 CCACHE_MAXSIZE = '500G'
 
@@ -138,23 +139,8 @@ def _get_local_image_id(docker_binary, docker_tag):
     return image_id
 
 
-def get_mxnet_root() -> str:
-    curpath = os.path.abspath(os.path.dirname(__file__))
-
-    def is_mxnet_root(path: str) -> bool:
-        return os.path.exists(os.path.join(path, ".mxnet_root"))
-
-    while not is_mxnet_root(curpath):
-        parent = os.path.abspath(os.path.join(curpath, os.pardir))
-        if parent == curpath:
-            raise RuntimeError("Got to the root and couldn't find a parent folder with .mxnet_root")
-        curpath = parent
-    return curpath
-
-
 def buildir() -> str:
     return os.path.join(get_mxnet_root(), "build")
-
 
 def default_ccache_dir() -> str:
     # Share ccache across containers
