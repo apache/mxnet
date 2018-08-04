@@ -72,8 +72,6 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     assert_almost_equal(rhs_grad.asnumpy(), rhs_grad2, rtol=1e-5, atol=1e-5)
 
 
-# @roywei: Removing fixed seed as flakiness in this test is fixed
-# tracked at: https://github.com/apache/incubator-mxnet/issues/11685
 @with_seed()
 def test_bind():
     def check_bind(disable_bulk_exec):
