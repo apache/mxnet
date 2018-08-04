@@ -227,7 +227,7 @@ def test_ctc_loss_train():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
-@with_seed(1234)
+@with_seed()
 def test_sample_weight_loss():
     nclass = 10
     N = 20
