@@ -77,6 +77,7 @@ CUfunction CudaModule::Chunk::GetFunction(
   CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
   auto iter = mod_.find(ctx.dev_id);
+  mxnet::common::cuda::SetDevice set_device;
   CUmodule module;
   if (iter != mod_.end()) {
     module = iter->second;

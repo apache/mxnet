@@ -28,6 +28,7 @@
 #include "./engine_impl.h"
 #include "../profiler/profiler.h"
 #include "./openmp.h"
+#include "../common/cuda_utils.h"
 
 namespace mxnet {
 namespace engine {
@@ -149,7 +150,7 @@ class NaiveEngine final : public Engine {
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
-      MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
+      mxnet::common::cuda::SetDevice set_device(exec_ctx.dev_id);
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);
       }

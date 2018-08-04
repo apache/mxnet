@@ -43,7 +43,7 @@ namespace kvstore {
 class Comm {
  public:
   Comm() {
-    pinned_ctx_ = Context::CPUPinned(0);
+    pinned_ctx_ = Context::CPU(0);
   }
   virtual ~Comm() { }
   /**
@@ -720,6 +720,9 @@ class CommDevice : public Comm {
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
     std::vector<int> p2p(n*n);
+
+    // Restores active device to what it was before EnableP2P
+    mxnet::common::cuda::SetDevice set_device;
     for (int i = 0; i < n; ++i) {
       cudaSetDevice(gpus[i]);
       for (int j = 0; j < n; j++) {

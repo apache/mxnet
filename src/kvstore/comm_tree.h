@@ -339,6 +339,7 @@ class CommDeviceTree : public CommDevice {
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
     std::vector<int> p2p(n*n);
+    mxnet::common::cuda::SetDevice set_device;
     for (int i = 0; i < n; ++i) {
       cudaSetDevice(gpus[i]);
       for (int j = 0; j < n; j++) {

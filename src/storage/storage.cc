@@ -52,6 +52,9 @@ class StorageImpl : public Storage {
     switch (ctx.dev_type) {
       case Context::kCPU:
       case Context::kCPUPinned:
+        if (num_gpu_device > 0) {
+          CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
+        }
         break;
       case Context::kCPUShared: {
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -143,6 +146,10 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
         return ptr;
       });
 
+  // Restores device to before active device before ActivateDevice
+#if MXNET_USE_CUDA
+  mxnet::common::cuda::SetDevice set_device;
+#endif
   this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
   profiler_.OnAlloc(*handle);
@@ -156,6 +163,11 @@ void StorageImpl::Free(Storage::Handle handle) {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
+
+  // Restores device to before active device before ActivateDevice
+#if MXNET_USE_CUDA
+  mxnet::common::cuda::SetDevice set_device;
+#endif
   this->ActivateDevice(ctx);
   manager->Free(handle);
   profiler_.OnFree(handle);
@@ -169,6 +181,11 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
+
+  // Restores device to before active device before ActivateDevice
+#if MXNET_USE_CUDA
+  mxnet::common::cuda::SetDevice set_device;
+#endif
   this->ActivateDevice(ctx);
   manager->DirectFree(handle);
   profiler_.OnFree(handle);
