@@ -295,7 +295,7 @@ class SetDevice {
   }
 
   /*! \brief standard constuctor is cudaSetDevice + restore previous device */
-  SetDevice(int device) {
+  explicit SetDevice(int device) {
 #if MXNET_USE_CUDA
     CUDA_CALL(cudaGetDevice(&restore_device_));
     CUDA_CALL(cudaSetDevice(device));
