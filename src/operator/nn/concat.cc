@@ -74,6 +74,65 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   return dshape.Size() != 0;
 }
 
+// Concat for RNN param deals with the reverse shape inference from output
+// for the special case of concatenating RNN parameters.
+// The first (and sometimes the second) input may be unknown on the target axis.
+// If the two inputs are unknown, they always have the same shape.
+static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
+                                std::vector<TShape> *in_shape,
+                                std::vector<TShape> *out_shape) {
+  using namespace mshadow;
+  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+  TShape dshape;
+  index_t size = 0;
+  int num_zero = 0;
+  int axis = -1;
+  for (int i = 0; i < param_.num_args; ++i) {
+    TShape tmp = (*in_shape)[i];
+    if (tmp.ndim()) {
+      axis = CheckAxis(param_.dim, tmp.ndim());
+      num_zero += tmp[axis] == 0;
+      size += tmp[axis];
+      tmp[axis] = 0;
+      shape_assign(&dshape, tmp);
+    }
+  }
+
+  TShape tmp = (*out_shape)[0];
+  if (tmp.ndim()) {
+    axis = CheckAxis(param_.dim, tmp.ndim());
+    tmp[axis] = 0;
+    shape_assign(&dshape, tmp);
+  }
+
+  if (dshape.ndim() == 0) return false;
+
+  for (int i = 0; i < param_.num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+
+  if (!num_zero) dshape[axis] = size;
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+  if ((*out_shape)[0][axis] != 0 && num_zero) {
+    int residual = (*out_shape)[0][axis] - size;
+    CHECK_GE(residual, 0)
+        << "Input size already exceeds output size. Residual: " << residual;
+    CHECK(num_zero <= 2 && num_zero >= 0)
+        << "Expecting 1 or 2 inputs that need shape inference. Got: " << num_zero;
+    bool need_infer = !(*out_shape)[0].Size();
+    for (int i = 0; i < num_zero; i++) {
+      (*in_shape)[i*2][axis] = residual / num_zero;
+      need_infer = need_infer || !(*in_shape)[i].Size();
+    }
+    return !need_infer;
+  }
+
+  return dshape.Size() != 0;
+}
+
 static bool ConcatType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_type,
                        std::vector<int> *out_type) {
@@ -228,6 +287,34 @@ struct ConcatGrad {
 
 DMLC_REGISTER_PARAMETER(ConcatParam);
 
+#define CONCAT_FORWARD_ATTRS \
+.set_num_inputs([](const NodeAttrs& attrs) { \
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed); \
+  return params.num_args; \
+}) \
+.set_num_outputs(1) \
+.set_attr_parser(ParamParser<ConcatParam>) \
+.set_attr<nnvm::FListInputNames>("FListInputNames", \
+    [](const NodeAttrs& attrs) { \
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed); \
+  std::vector<std::string> ret; \
+  for (int i = 0; i < params.num_args; ++i) { \
+    ret.push_back(std::string("arg") + std::to_string(i)); \
+  } \
+  return ret; \
+}) \
+.set_attr<nnvm::FListOutputNames>("FListOutputNames", \
+    [](const NodeAttrs& attrs) { \
+    return std::vector<std::string>{"output"}; \
+}) \
+.set_attr<nnvm::FInferType>("FInferType", ConcatType) \
+.set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType) \
+.set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>) \
+.set_attr<FComputeEx>("FComputeEx<cpu>", ConcatComputeExCPU) \
+.set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"}) \
+.set_attr<std::string>("key_var_num_args", "num_args")
+
+
 NNVM_REGISTER_OP(Concat)
 MXNET_ADD_SPARSE_OP_ALIAS(concat)
 .add_alias("concat")
@@ -268,37 +355,13 @@ Example::
                          [ 5.,  5.,  8.,  8.]]
 
 )code" ADD_FILELINE)
-.set_num_inputs([](const NodeAttrs& attrs) {
-  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
-  return params.num_args;
-})
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<ConcatParam>)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-    [](const NodeAttrs& attrs) {
-  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
-  std::vector<std::string> ret;
-  for (int i = 0; i < params.num_args; ++i) {
-    ret.push_back(std::string("arg") + std::to_string(i));
-  }
-  return ret;
-})
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-    [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"output"};
-})
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
+CONCAT_FORWARD_ATTRS
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
-.set_attr<nnvm::FInferType>("FInferType", ConcatType)
-.set_attr<FInferStorageType>("FInferStorageType", ConcatForwardInferStorageType)
-.set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ConcatComputeExCPU)
-.set_attr<nnvm::FGradient>("FGradient", ConcatGrad{"_backward_Concat"})
-.set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 
@@ -319,6 +382,20 @@ NNVM_REGISTER_OP(_backward_Concat)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
+
+// _rnn_param_concat is a custom concat op with specialized infer_shape,
+// which handles the case where the first one or two inputs may have
+// unknown shape that can be inferred from output shape.
+NNVM_REGISTER_OP(_rnn_param_concat)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+#endif
+CONCAT_FORWARD_ATTRS
+.set_attr<nnvm::FInferShape>("FInferShape", RNNParamConcatShape)
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
+.add_arguments(ConcatParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
