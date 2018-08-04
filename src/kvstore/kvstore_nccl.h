@@ -64,7 +64,7 @@ class KVStoreNCCL : public KVStoreLocal {
   KVStoreNCCL() : KVStoreLocal() {
     // Due to aggregation, we do not use the Comm interface
     comm_ = nullptr;
-    pinned_ctx_ = Context::CPU(0);
+    pinned_ctx_ = Context::CPUPinned(0);
     inited_ = false;
   }
 
