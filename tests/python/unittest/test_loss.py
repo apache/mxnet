@@ -209,7 +209,7 @@ def test_ctc_loss():
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
 
-@with_seed(1234)
+@with_seed()
 def test_ctc_loss_train():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
