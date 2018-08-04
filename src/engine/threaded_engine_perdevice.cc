@@ -92,7 +92,9 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
  protected:
   void PushToExecute(OprBlock *opr_block, bool pusher_thread) override {
     const Context& ctx = opr_block->ctx;
+#if MXNET_USE_CUDA
     mxnet::common::cuda::SetDevice set_device;
+#endif
     if ((opr_block->opr->prop == FnProperty::kAsync ||
          opr_block->opr->prop == FnProperty::kDeleteVar) && pusher_thread) {
       if (ctx.dev_mask() == Context::kGPU) {
