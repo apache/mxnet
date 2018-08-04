@@ -547,7 +547,6 @@ def test_cell_fill_shape():
 @assert_raises_cudnn_disabled()
 def test_layer_fill_shape():
     layer = gluon.rnn.LSTM(10)
-    layer.hybridize()
     check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
     print(layer)
     assert layer.l0_i2h_weight.shape[1] == 7, layer.l0_i2h_weight.shape[1]
