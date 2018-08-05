@@ -41,6 +41,8 @@ data_folder = 'mxnet-model-backwards-compatibility-data'
 backslash = '/'
 s3 = boto3.resource('s3')
 ctx = mx.cpu(0)
+atol_default = 1e-5
+rtol_default = 1e-5
 
 
 def get_model_path(model_name):
