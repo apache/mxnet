@@ -1,0 +1,61 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# Configurations
+
+service: EmailBot
+
+package:
+  exclude:
+    - ./**
+  include:
+    - EmailBot.py
+    - lambda_function.py
+
+provider:
+  name: aws
+  # replace region with your aws region
+  region: us-east-1
+  runtime: python3.6
+  timeout: 300
+  iamRoleStatements:
+    -  Effect: "Allow"
+       Action:
+         - "ses:SendEmail"
+         - "ses:SendTemplatedEmail"
+         - "ses:SendRawEmail"
+       Resource: "*"
+
+functions:
+  label:
+    handler: lambda_function.lambda_handler
+
+    events:
+      # UTC 14:59, 18:59
+      - schedule: cron(59 14,18 * * ? *)
+    environment:
+    # replace github_user with your github id ie:"CathyZhang0822"
+      github_user : "github_id"
+    # replace github_oath_token with your READ ONLY access token
+      github_oauth_token : "read_only_access_token"
+    # replace repo with "apache/incubator-mxnet"
+      repo : "repo_name"
+    # replace sender with the sender's email
+      sender : "a@email.com"
+    # replace recipients with recipients emails, seperated by comma
+      recipients : "a@email.com, b@email.com"
+    # replace aws_region with your aws's region
+      aws_region : "us-east-1"

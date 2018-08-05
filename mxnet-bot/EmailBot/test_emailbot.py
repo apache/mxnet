@@ -29,7 +29,9 @@ class TestEmailBot(unittest.TestCase):
 
     def setUp(self):
         self.eb = EmailBot()
-        self.eb.REPO = "apache/incubator-mxnet"
+        self.eb.repo = "apache/incubator-mxnet"
+        self.eb.sender = "a@email.com"
+        self.eb.recipients = ["a@email.com", "b@email.com"]
 
     def tearDown(self):
         pass
@@ -61,7 +63,7 @@ class TestEmailBot(unittest.TestCase):
         with patch('EmailBot.requests.get') as mocked_get:
             mocked_get.return_value.status_code = 200
             mocked_get.return_value.json.return_value = [{"body": "issue's body",
-                                                          "created_at": "2018-07-28T18:27:17Z",
+                                                          "created_at": "2018-08-04T18:27:17Z",
                                                           "comments": 0,
                                                           "number": 11925,
                                                           "labels": [{'name': 'Doc'}],
@@ -70,7 +72,7 @@ class TestEmailBot(unittest.TestCase):
                                                           "html_url": "https://github.com/apache/incubator-mxnet/issues/11925",
                                                           },
                                                          {"body": "issue's body",
-                                                          "created_at": "2018-07-28T18:27:17Z",
+                                                          "created_at": "2018-08-04T18:27:17Z",
                                                           "comments": 1,
                                                           "comments_url": "https://api.github.com/repos/apache/incubator-mxnet/issues/11918/comments",
                                                           "number": 11918,
@@ -79,7 +81,7 @@ class TestEmailBot(unittest.TestCase):
                                                           "title":"issue's title",
                                                           "html_url":"https://github.com/apache/incubator-mxnet/issues/11918",
                                                           }]
-            self.assertRaises(NoCredentialsError, self.eb.sendemail())
+            self.assertRaises(ClientError, self.eb.sendemail())
 
 
 if __name__ == "__main__":
