@@ -22,14 +22,14 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_cython_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
-mx_cython_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
+mx_dist_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
+mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 // timeout in minutes
@@ -136,16 +136,16 @@ def python2_ut(docker_container_name) {
   }
 }
 
+def python2_ut_cython(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu_cython', false)
+  }
+}
+
 // Python 3
 def python3_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
-  }
-}
-
-def python3_cython_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    docker_run(docker_container_name, 'unittest_ubuntu_python3_cython_cpu', false)
   }
 }
 
@@ -164,16 +164,16 @@ def python2_gpu_ut(docker_container_name) {
   }
 }
 
-def python2_cython_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    docker_run(docker_container_name, 'unittest_ubuntu_python2_cython_gpu', true)
-  }
-}
-
 // Python 3
 def python3_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu', true)
+  }
+}
+
+def python3_gpu_ut_cython(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
   }
 }
 
@@ -244,7 +244,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            pack_lib('cpu', mx_cython_dist_lib)
+            pack_lib('cpu', mx_dist_lib_cython)
           }
         }
       }
@@ -341,7 +341,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-            pack_lib('gpu', mx_cython_dist_lib)
+            pack_lib('gpu', mx_dist_lib)
             stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
             stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
             stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
@@ -394,7 +394,7 @@ try {
           timeout(time: max_time, unit: 'MINUTES') {
             init_git()
             docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
-            pack_lib('cmake_gpu', mx_cmake_lib)
+            pack_lib('cmake_gpu', mx_cmake_lib_cython)
           }
         }
       }
@@ -405,28 +405,8 @@ try {
           ws('workspace/build-cpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
               init_git_win()
-              bat """mkdir build_vc14_cpu
-                call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-                cd build_vc14_cpu
-                cmake -G \"Visual Studio 14 2015 Win64\" -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DUSE_MKL_IF_AVAILABLE=0 ${env.WORKSPACE}"""
-              bat 'C:\\mxnet\\build_vc14_cpu.bat'
-
-              bat '''rmdir /s/q pkg_vc14_cpu
-                mkdir pkg_vc14_cpu\\lib
-                mkdir pkg_vc14_cpu\\python
-                mkdir pkg_vc14_cpu\\include
-                mkdir pkg_vc14_cpu\\build
-                copy build_vc14_cpu\\Release\\libmxnet.lib pkg_vc14_cpu\\lib
-                copy build_vc14_cpu\\Release\\libmxnet.dll pkg_vc14_cpu\\build
-                xcopy python pkg_vc14_cpu\\python /E /I /Y
-                xcopy include pkg_vc14_cpu\\include /E /I /Y
-                xcopy 3rdparty\\dmlc-core\\include pkg_vc14_cpu\\include /E /I /Y
-                xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_cpu\\include\\mshadow /E /I /Y
-                xcopy 3rdparty\\nnvm\\include pkg_vc14_cpu\\nnvm\\include /E /I /Y
-                del /Q *.7z
-                7z.exe a vc14_cpu.7z pkg_vc14_cpu\\
-                '''
-              stash includes: 'vc14_cpu.7z', name: 'vc14_cpu'
+              powershell 'python ci/build_windows.py -f WIN_CPU'
+              stash includes: 'windows_package.7z', name: 'windows_package_cpu'
             }
           }
         }
@@ -438,28 +418,9 @@ try {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-            init_git_win()
-            bat """mkdir build_vc14_gpu
-              call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-              cd build_vc14_gpu
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=Manual -DCUDA_ARCH_BIN=52 -DCUDA_ARCH_PTX=52 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release -DUSE_MKL_IF_AVAILABLE=0 ${env.WORKSPACE}"""
-            bat 'C:\\mxnet\\build_vc14_gpu.bat'
-            bat '''rmdir /s/q pkg_vc14_gpu
-              mkdir pkg_vc14_gpu\\lib
-              mkdir pkg_vc14_gpu\\python
-              mkdir pkg_vc14_gpu\\include
-              mkdir pkg_vc14_gpu\\build
-              copy build_vc14_gpu\\libmxnet.lib pkg_vc14_gpu\\lib
-              copy build_vc14_gpu\\libmxnet.dll pkg_vc14_gpu\\build
-              xcopy python pkg_vc14_gpu\\python /E /I /Y
-              xcopy include pkg_vc14_gpu\\include /E /I /Y
-              xcopy 3rdparty\\dmlc-core\\include pkg_vc14_gpu\\include /E /I /Y
-              xcopy 3rdparty\\mshadow\\mshadow pkg_vc14_gpu\\include\\mshadow /E /I /Y
-              xcopy 3rdparty\\nnvm\\include pkg_vc14_gpu\\nnvm\\include /E /I /Y
-              del /Q *.7z
-              7z.exe a vc14_gpu.7z pkg_vc14_gpu\\
-              '''
-            stash includes: 'vc14_gpu.7z', name: 'vc14_gpu'
+              init_git_win()
+              powershell 'python ci/build_windows.py -f WIN_GPU'
+              stash includes: 'windows_package.7z', name: 'windows_package_gpu'
             }
           }
         }
@@ -470,37 +431,9 @@ try {
         timeout(time: max_time, unit: 'MINUTES') {
           ws('workspace/build-gpu') {
             withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
-            init_git_win()
-            bat """mkdir build_%BUILD_NAME%
-              call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-              cd build_%BUILD_NAME%
-              copy ${env.WORKSPACE}\\3rdparty\\mkldnn\\config_template.vcxproj.user ${env.WORKSPACE}\\config_template.vcxproj.user /y
-              cmake -G \"NMake Makefiles JOM\" -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=Manual -DCUDA_ARCH_BIN=52 -DCUDA_ARCH_PTX=52 -DUSE_MKLDNN=1 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" -DCMAKE_BUILD_TYPE=Release ${env.WORKSPACE}"""
-            bat '''
-                call "C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\x86_amd64\\vcvarsx86_amd64.bat"
-                cd build_%BUILD_NAME%
-                set /a cores=%NUMBER_OF_PROCESSORS% * 2
-                jom -j %cores%
-                '''
-            bat '''rmdir /s/q pkg_%BUILD_NAME%
-              mkdir pkg_%BUILD_NAME%\\lib
-              mkdir pkg_%BUILD_NAME%\\python
-              mkdir pkg_%BUILD_NAME%\\include
-              mkdir pkg_%BUILD_NAME%\\build
-              copy build_%BUILD_NAME%\\libmxnet.lib pkg_%BUILD_NAME%\\lib
-              copy build_%BUILD_NAME%\\libmxnet.dll pkg_%BUILD_NAME%\\build
-              copy build_%BUILD_NAME%\\3rdparty\\mkldnn\\src\\mkldnn.dll pkg_%BUILD_NAME%\\build
-              copy build_%BUILD_NAME%\\libiomp5md.dll pkg_%BUILD_NAME%\\build
-              copy build_%BUILD_NAME%\\mklml.dll pkg_%BUILD_NAME%\\build
-              xcopy python pkg_%BUILD_NAME%\\python /E /I /Y
-              xcopy include pkg_%BUILD_NAME%\\include /E /I /Y
-              xcopy 3rdparty\\dmlc-core\\include pkg_%BUILD_NAME%\\include /E /I /Y
-              xcopy 3rdparty\\mshadow\\mshadow pkg_%BUILD_NAME%\\include\\mshadow /E /I /Y
-              xcopy 3rdparty\\nnvm\\include pkg_%BUILD_NAME%\\nnvm\\include /E /I /Y
-              del /Q *.7z
-              7z.exe a %BUILD_NAME%.7z pkg_%BUILD_NAME%\\
-              '''
-            stash includes: 'vc14_gpu_mkldnn.7z', name: 'vc14_gpu_mkldnn'
+              init_git_win()
+              powershell 'python ci/build_windows.py -f WIN_GPU_MKLDNN'
+              stash includes: 'windows_package.7z', name: 'windows_package_gpu_mkldnn'
             }
           }
         }
@@ -575,8 +508,8 @@ try {
         ws('workspace/ut-python2-cpu') {
           try {
             init_git()
-            unpack_lib('cpu')
-            python2_ut('ubuntu_cpu')
+            unpack_lib('cpu', mx_dist_lib_cython)
+            python2_ut_cython('ubuntu_cpu')
             publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
@@ -591,8 +524,8 @@ try {
         ws('workspace/ut-python3-cpu') {
           try {
             init_git()
-            unpack_lib('cpu', mx_cython_lib)
-            python3_cython_ut('ubuntu_cpu')
+            unpack_lib('cpu')
+            python3_ut('ubuntu_cpu')
             publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
@@ -620,8 +553,8 @@ try {
         ws('workspace/ut-python2-gpu') {
           try {
             init_git()
-            unpack_lib('gpu', mx_cython_lib)
-            python2_cython_gpu_ut('ubuntu_gpu')
+            unpack_lib('gpu', mx_lib)
+            python2_gpu_ut('ubuntu_gpu')
             publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
@@ -634,8 +567,8 @@ try {
         ws('workspace/ut-python3-gpu') {
           try {
             init_git()
-            unpack_lib('gpu', mx_lib)
-            python3_gpu_ut('ubuntu_gpu')
+            unpack_lib('cmake_gpu', mx_cmake_lib_cython)
+            python3_gpu_ut_cython('ubuntu_gpu')
             publish_test_coverage()
           } finally {
             collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
@@ -884,16 +817,8 @@ try {
           ws('workspace/ut-python-cpu') {
             try {
               init_git_win()
-              unstash 'vc14_cpu'
-              bat '''rmdir /s/q pkg_vc14_cpu
-                7z x -y vc14_cpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py2
-                pip install mock
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
-                C:\\mxnet\\test_cpu.bat"""
+              unstash 'windows_package_cpu'
+              powershell 'ci/windows/test_py2_cpu.ps1'
             } finally {
               collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python2_cpu.xml')
             }
@@ -907,15 +832,8 @@ try {
           ws('workspace/ut-python-cpu') {
             try {
               init_git_win()
-              unstash 'vc14_cpu'
-              bat '''rmdir /s/q pkg_vc14_cpu
-                7z x -y vc14_cpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_cpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_cpu\\python\\*.pyc
-                C:\\mxnet\\test_cpu.bat"""
+              unstash 'windows_package_cpu'
+              powershell 'ci/windows/test_py3_cpu.ps1'
             } finally {
               collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
             }
@@ -929,19 +847,11 @@ try {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
-              unstash 'vc14_gpu'
-              bat '''rmdir /s/q pkg_vc14_gpu
-                7z x -y vc14_gpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py2
-                pip install mock
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
+              unstash 'windows_package_gpu'
+              powershell 'ci/windows/test_py2_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
             }
           }
         }
@@ -953,18 +863,11 @@ try {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
-              unstash 'vc14_gpu'
-              bat '''rmdir /s/q pkg_vc14_gpu
-                7z x -y vc14_gpu.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
+              unstash 'windows_package_gpu'
+              powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
             }
           }
         }
@@ -976,18 +879,11 @@ try {
           ws('workspace/ut-python-gpu') {
             try {
               init_git_win()
-              unstash 'vc14_gpu_mkldnn'
-              bat '''rmdir /s/q pkg_vc14_gpu_mkldnn
-                7z x -y vc14_gpu_mkldnn.7z'''
-              bat """xcopy C:\\mxnet\\data data /E /I /Y
-                xcopy C:\\mxnet\\model model /E /I /Y
-                call activate py3
-                set PYTHONPATH=${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python
-                del /S /Q ${env.WORKSPACE}\\pkg_vc14_gpu_mkldnn\\python\\*.pyc
-                C:\\mxnet\\test_gpu.bat"""
+              unstash 'windows_package_gpu_mkldnn'
+              powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              collect_test_results_windows('nosetests_gpu_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              collect_test_results_windows('nosetests_gpu_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
+              collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
             }
           }
         }

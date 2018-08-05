@@ -343,7 +343,7 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
+    
     export CC="gcc"
     export CXX="g++"
     make cython PYTHON=python2
@@ -366,7 +366,6 @@ build_ubuntu_cpu_cmake_debug() {
         /work/mxnet
 
     ninja -v
-    build_cython
     popd
 }
 
@@ -544,6 +543,7 @@ build_ubuntu_gpu_cmake() {
         /work/mxnet
 
     ninja -v
+    build_cython
 }
 
 
@@ -565,6 +565,22 @@ unittest_ubuntu_python2_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+}
+
+unittest_ubuntu_python2_cpu_cython() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 2
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -577,21 +593,9 @@ unittest_ubuntu_python3_cpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
-}
-
-unittest_ubuntu_python3_cython_cpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENFORCE_CYTHON=1
-    check_cython 3
-    nosetests-3.4 --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    nosetests-3.4 --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
@@ -601,6 +605,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
@@ -612,19 +617,8 @@ unittest_ubuntu_python2_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
-}
-
-unittest_ubuntu_python2_cython_gpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENFORCE_CYTHON=1
-    check_cython 2
-    nosetests-2.7 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 tutorialtest_ubuntu_python3_gpu() {
@@ -633,6 +627,7 @@ tutorialtest_ubuntu_python3_gpu() {
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python3
     cd /work/mxnet/tests/tutorials
@@ -645,6 +640,7 @@ tutorialtest_ubuntu_python2_gpu() {
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python2
     cd /work/mxnet/tests/tutorials
@@ -658,6 +654,20 @@ unittest_ubuntu_python3_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_python3_gpu_cython() {
+    set -ex
+    export PYTHONPATH=./python/
+    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
+    # https://github.com/apache/incubator-mxnet/issues/10026
+    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -666,6 +676,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -678,6 +689,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -690,6 +702,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -790,6 +803,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
 }
 
 integrationtest_ubuntu_gpu_scala() {
