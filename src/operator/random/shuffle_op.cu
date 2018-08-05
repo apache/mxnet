@@ -60,7 +60,7 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
   const index_t stride = size / first_axis_len;
   Stream<gpu> *s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    using KeyType = index_t;
+    using KeyType = uint32_t;
     Tensor<gpu, 1, DType> in = inputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
     Tensor<gpu, 1, DType> out = outputs[0].get_with_shape<gpu, 1, DType>(Shape1(size), s);
     Random<gpu, KeyType> *prnd = ctx.requested[0].get_random<gpu, KeyType>(s);
