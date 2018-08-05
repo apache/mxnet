@@ -669,7 +669,7 @@ namespace op {
 template <>
 Operator *CreateOp<cpu>(PadParam param, int dtype) {
   Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new PadOp<cpu, DType>(param); })
+  MSHADOW_TYPE_SWITCH(dtype, DType, { op = new PadOp<cpu, DType>(param); })
   return op;
 }
 
