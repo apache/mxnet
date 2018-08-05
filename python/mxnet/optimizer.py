@@ -617,7 +617,7 @@ class FTML(Optimizer):
     available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
 
     Denote time step by t. The optimizer updates the weight by::
-    
+
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         v = beta2 * v + (1 - beta2) * square(rescaled_grad)
         d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
@@ -1089,7 +1089,7 @@ class AdaGrad(Optimizer):
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
     This optimizer updates each weight by::
-    
+
         grad = clip(grad * rescale_grad, clip_gradient)
         history += square(grad)
         div = grad / sqrt(history + float_stable_eps)
@@ -1223,7 +1223,7 @@ class AdaDelta(Optimizer):
     learning rate method*, available at https://arxiv.org/abs/1212.5701.
 
     This optimizer updates each weight by::
-    
+
         grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         acc_grad = rho * acc_grad + (1. - rho) * grad * grad
         delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
