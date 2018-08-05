@@ -21,9 +21,7 @@ import matplotlib
 matplotlib.use('agg', warn=False, force=True)
 from matplotlib import pyplot as plt
 import logging
-
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
 
 
 def make_autopct(values):
@@ -36,7 +34,10 @@ def make_autopct(values):
 
 
 def draw_pie(fracs, labels):
-    # plot the pie chart of labels, save the pie chart into '/img' folder 
+    """
+    This method is to plot the pie chart of labels, then save it into '/tmp/' folder
+    """
+    logging.info("Drawing the pie chart..")
     fig = plt.figure()
     plt.pie(fracs, labels=labels, autopct=make_autopct(fracs), shadow=True)
     plt.title("Top 10 labels for newly opened issues")

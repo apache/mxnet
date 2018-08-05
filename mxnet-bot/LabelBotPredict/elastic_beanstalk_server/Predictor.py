@@ -24,7 +24,7 @@ import re
 import logging
 
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
+
 
 class Predictor:
 	# keywords will be used to apply rule-based algorithms
@@ -33,10 +33,14 @@ class Predictor:
 				"gluon":["gluon"],
 				"coda":["cuda", "cudnn"],
 				"scala":["scala"],
-				"mkldnn":["mkldnn, mkl"]}
+				"mkldnn":["mkldnn, mkl"],
+				"onnx":["onnx"]}
 
 
 	def __init__(self):
+		"""
+		Predictor serves to apply rule-based and ML algorithms to predict labels
+		"""
 		self.tv = None
 		self.labels = None
 		self.clf = None
@@ -44,23 +48,35 @@ class Predictor:
 
 
 	def reload(self):
-		# load models
-		self.tv = pickle.load(open("Vectorizer.p", "rb"))
-		self.labels = pickle.load(open("Labels.p", "rb"))
-		self.clf = pickle.load(open("Classifier.p", "rb"))
+		"""
+		This method is to load models
+		"""
+		self.tv = pickle.load(open("/tmp/Vectorizer.p", "rb"))
+		self.labels = pickle.load(open("/tmp/Labels.p", "rb"))
+		self.clf = pickle.load(open("/tmp/Classifier.p", "rb"))
 
 
 	def tokenize(self, row):
-		# tokenize a sentence into a list of words
+		"""
+		This method is to tokenize a sentence into a list of words
+		Args:
+			row(string): a sentence
+		Return:
+			words(list): a list of words
+		"""
 		row = re.sub('[^a-zA-Z0-9]', ' ', row).lower()
 		words = set(row.split())
 		return words
 
 
 	def rule_based(self, issues):
-		# apply rule_based algorithms
-		# input: a list of issue numbers
-		# output: a list of labels which satisfy rules
+		"""
+		This method applies rule_based algorithms to predict labels
+		Args: 
+			issues(list): a list of issue numbers
+		Return:
+		 	rule_based_predictions(list of lists): labels which satisfy rules
+		"""
 		DF = DataFetcher()
 		df_test = DF.fetch_issues(issues)
 		rule_based_predictions = []
@@ -81,7 +97,14 @@ class Predictor:
 
 
 	def ml_predict(self, issues, threshold=0.3):
-		# apply machine learning algorithms
+		"""
+		This method applies machine learning algorithms to predict labels
+		Args: 
+			issues(list): a list of issue numbers
+			threshold(float): threshold of probability
+		Return:
+			ml_predictions(list of lists): predictions 
+		"""
 		# step1: fetch data
 		DF = DataFetcher()
 		df_test = DF.fetch_issues(issues)
@@ -102,7 +125,7 @@ class Predictor:
 		ml_predictions=[]
 		for i in range(len(best_n)):
 			# INFO:Predictor:issue:11919,Performance:0.47353076240017744,Question:0.2440056213336274
-			LOGGER.info("issue:{}, {}:{}, {}:{}".format(str(issues[i]), str(le.classes_[best_n[i][-1]]), str(probs[i][best_n[i][-1]]),
+			logging.info("issue:{}, {}:{}, {}:{}".format(str(issues[i]), str(le.classes_[best_n[i][-1]]), str(probs[i][best_n[i][-1]]),
 						str(le.classes_[best_n[i][-2]]), str(probs[i][best_n[i][-2]])))
 			single_issue_predictions = [le.classes_[best_n[i][j]]  for j in range(-1, -3, -1) if probs[i][best_n[i][j]] > threshold]
 			ml_predictions.append(single_issue_predictions)

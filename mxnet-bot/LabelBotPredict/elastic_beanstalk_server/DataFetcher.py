@@ -25,71 +25,84 @@ import pandas as pd
 import logging
 
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
 
 
 class DataFetcher:
-    GITHUB_USER = os.environ.get("GITHUB_USER")
-    GITHUB_OAUTH_TOKEN = os.environ.get("GITHUB_OAUTH_TOKEN")
-    REPO = os.environ.get("REPO")
-    assert GITHUB_USER and GITHUB_OAUTH_TOKEN and REPO, "Please set environment variables!"
-    REPO_URL = 'https://api.github.com/repos/%s/issues' % REPO
-    AUTH = (GITHUB_USER, GITHUB_OAUTH_TOKEN)
 
-    def __init__(self):
+    def __init__(self,
+                 github_user = os.environ.get("github_user"),
+                 github_oauth_token = os.environ.get("github_oauth_token"),
+                 repo = os.environ.get("repo")):
+        """
+        This DataFetcher serves to fetch issues data
+        Args:
+            github_user(str): the github id. ie: "CathyZhang0822"
+            github_oauth_token(str): the github oauth token, paired with github_user to realize authorization
+            repo(str): the repo name
+        """
+        self.github_user = github_user
+        self.github_oauth_token = github_oauth_token
+        self.repo = repo
+        self.auth = (self.github_user, self.github_oauth_token)
         self.json_data = None
 
-    def cleanstr(self, string, substring):
-        # convert all non-alphanumeric charaters into substring
-        cleanstr = re.sub("[^0-9a-zA-Z]", substring, string)
-        return cleanstr.lower()
+    def cleanstr(self, raw_string, sub_string):
+        """
+        This method is to convert all non-alphanumeric charaters from 
+        raw_string into substring
+        """
+        clean = re.sub("[^0-9a-zA-Z]", sub_string, raw_string)
+        return clean.lower()
 
     def count_pages(self, state):
-        # This method is to count how many pages of issues/labels in total
-        # state could be "open"/"closed"/"all", available to issues
-        response = requests.get(self.REPO_URL, {'state': state},
-                                auth=self.AUTH)
+        """
+        This method is to count how many pages of issues/labels in total
+        state can be "open"/"closed"/"all"
+        """
+        url = 'https://api.github.com/repos/%s/issues' % self.repo
+        response = requests.get(url, {'state': state},
+                                auth=self.auth)
         assert response.status_code == 200, "Authorization failed"
         if "link" not in response.headers:
-            # That means only 1 page exits
             return 1
-        # response.headers['link'] will looks like:
-        # <https://api.github.com/repositories/34864402/issues?state=all&page=387>; rel="last"
-        # In this case we need to extract '387' as the count of pages
-        # return the number of pages
         return int(self.cleanstr(response.headers['link'], " ").split()[-3])
     
-    def fetch_issues(self, numbers):
-        # number: a list of issue ids
-        # return issues' data in pandas dataframe format
-        assert numbers != [], "Empty Input!"
-        LOGGER.info("Reading issues:{}".format(", ".join([str(num) for num in numbers])))
+    def fetch_issues(self, issue_nums):
+        """
+        This method is to fetch issues data
+        issue_num: a list of issue ids
+        return issues' data in pandas dataframe format
+        """
+        assert issue_nums != [], "Empty Input!"
+        logging.info("Reading issues:{}".format(", ".join([str(num) for num in issue_nums])))
         data = []
-        for number in numbers:
-            url = 'https://api.github.com/repos/' + self.REPO + '/issues/' + str(number)
-            response = requests.get(url, auth=self.AUTH)
+        for number in issue_nums:
+            url = 'https://api.github.com/repos/' + self.repo + '/issues/' + str(number)
+            response = requests.get(url, auth=self.auth)
             item = response.json()
             assert 'title' in item, "{} issues doesn't exist!".format(str(number))
             data += [{'id': str(number),'title': item['title'], 'body': item['body']}]
         return pd.DataFrame(data)
 
     def data2json(self,state,labels=None, other_labels = False):
-        # store issues' data into a json file, return json file's name
-        # state can be either "open"/"closed"/"all"
-        # labels is a list of target labels we are interested int
-        # other_labels can be either "True"/"False"
+        """
+        This method is to store issues' data into a json file, return json file's name
+        state can be either "open"/"closed"/"all"
+        labels is a list of target labels we are interested in
+        other_labels can be either "True"/"False"
+        """
         assert state in set(['all', 'open', 'closed']), "Invalid State!"
-        LOGGER.info("Reading {} issues..".format(state))
+        logging.info("Reading {} issues..".format(state))
         pages = self.count_pages(state)
         data = []
         for x in range(1, pages+1):
-            url = 'https://api.github.com/repos/' + self.REPO + '/issues?page=' + str(x) \
-                  + '&per_page=30'.format(repo=self.REPO)
+            url = 'https://api.github.com/repos/' + self.repo + '/issues?page=' + str(x) \
+                  + '&per_page=30'.format(repo=self.repo)
             response = requests.get(url,
                                     {'state':state,
                                      'base':'master',
                                      'sort':'created'},
-                                     auth=self.AUTH)
+                                     auth=self.auth)
             for item in response.json():
                 if "pull_request" in item:
                     continue
@@ -117,8 +130,8 @@ class DataFetcher:
         self.json_data = data
         s_labels = "_".join(labels) if labels!=None else "all_labels"
         filename = "{}_data.json_{}".format(state,s_labels)
-        LOGGER.info("Writing json file..")
+        logging.info("Writing json file..")
         with open(filename,'w') as write_file:
             json.dump(data, write_file)
-        LOGGER.info("{} json file is ready!".format(filename))
+        logging.info("{} json file is ready!".format(filename))
         return filename

@@ -34,9 +34,6 @@ class TestTrainer(unittest.TestCase):
 	def setUp(self):
 		self.trainer = Trainer()
 
-	def tearDown(self):
-		pass
-
 	def test_train(self):
 		with patch('DataFetcher.requests.get') as mocked_get:
 			mocked_get.return_value.status_code = 200

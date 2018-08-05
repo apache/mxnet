@@ -34,9 +34,9 @@ class TestLabelBot(unittest.TestCase):
 
 	def setUp(self):
 		self.df = DataFetcher()
-		self.df.REPO = "apache/incubator-mxnet"
-		self.df.GITHUB_USER = "cathy"
-		self.df.GITHUB_OAUTH_TOKEN = "123"
+		self.df.repo = "apache/incubator-mxnet"
+		self.df.github_user = "cathy"
+		self.df.github_oauth_token = "123"
 
 	def tearDown(self):
 		pass

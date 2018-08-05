@@ -38,11 +38,8 @@ class TestSentenceParser(unittest.TestCase):
 									  'body': " bug ``` import pandas``` ## Environment info", 
 									  'labels': ['Doc']}])
 
-	def tearDown(self):
-		pass
-
 	def test_read_file(self):
-		self.sp.read_file('all_data.json_all_labels', 'json')
+		self.sp.read_file('all_data.json_Feature', 'json')
 		expected_data = [{'id': 11925, 'title': "issue's title", 'body': "issue's body", 'labels': ['Doc']}, 
 						 {'id': 11924, 'title': "issue's title", 'body': "issue's body", 'labels': []}]
 		assert_frame_equal(self.sp.data, pd.DataFrame(expected_data))

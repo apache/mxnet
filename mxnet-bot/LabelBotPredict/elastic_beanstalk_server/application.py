@@ -26,12 +26,15 @@ import plot_piechart
 import timeit
 import atexit
 import logging
+import os.path
 
 logging.basicConfig(level=logging.INFO)
-LOGGER = logging.getLogger(__name__)
 
 application = Flask(__name__)
 
+if not os.path.exists('/tmp/Classifier.p'):
+    trainer = Trainer()
+    trainer.train()
 predictor = Predictor()
 
 # GET '/'
@@ -84,7 +87,7 @@ def train_models():
     # reload models
     predictor.reload()
     time = int(stop - start)
-    LOGGER.info("Training completed! Time cost: {} min, {} seconds".format(str(int(time/60)), str(time%60)))
+    logging.info("Training completed! Time cost: {} min, {} seconds".format(str(int(time/60)), str(time%60)))
     return 
 
 
