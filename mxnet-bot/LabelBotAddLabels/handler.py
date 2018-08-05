@@ -16,16 +16,10 @@
 # under the License.
 
 # lambda handler
-import label_bot as lb
-import logging
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logging.getLogger('boto3').setLevel(logging.CRITICAL)
-logging.getLogger('botocore').setLevel(logging.CRITICAL)
-
+from LabelBot import LabelBot
 
 def label_bot_lambda(event, context):
+    lb = LabelBot(secret=True)
     data = lb.find_notifications()
     lb.label(data)
     return "Lambda is triggered successfully!"

@@ -21,15 +21,13 @@ import boto3
 from botocore.exceptions import ClientError
 import os
 import logging
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logging.getLogger('boto3').setLevel(logging.CRITICAL)
-logging.getLogger('botocore').setLevel(logging.CRITICAL)
-
+logging.basicConfig(level=logging.INFO)
 
 def get_secret():
-    # please configure secret_name and region_name as environment variables
+    '''
+    This method is to fetch secret values
+    Please configure secret_name and region_name as environment variables
+    '''
     secret_name = os.environ.get("secret_name")
     region_name = os.environ.get("region_name")
     endpoint_url = "https://secretsmanager.{}.amazonaws.com".format(region_name)
@@ -53,5 +51,5 @@ def get_secret():
             binary_secret_data = get_secret_value_response['SecretBinary']
             return binary_secret_data
     except ClientError as e:
-        logger.error(e.response['Error']['Code'])
+        logging.exception(e.response['Error']['Code'])
 

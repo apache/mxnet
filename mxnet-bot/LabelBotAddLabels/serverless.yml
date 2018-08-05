@@ -19,6 +19,14 @@
 
 service: LabelBot
 
+package:
+  exclude:
+    - ./**
+  include:
+    - LabelBot.py
+    - secret_manager.py
+    - handler.py
+
 provider:
   name: aws
   runtime: python3.6
@@ -29,8 +37,7 @@ provider:
          - "secretsmanager:GetSecretValue"
          - "secretsmanager:DescribeSecret"
        # replace resource with your secret's ARN
-       # Resource: "arn:aws:secretsmanager:{region_name}:{account_id}:secret:{secret_id}"
-       Resource: "arn:aws:secretsmanager:us-east-1:072971575220:secret:credentials/cathy_github-3UiA11"
+       Resource: "arn:aws:secretsmanager:{region_name}:{account_id}:secret:{secret_id}"
     -  Effect: "Allow"
        Action:
          - "secretsmanager:ListSecrets"
@@ -39,11 +46,13 @@ provider:
 functions:
   label:
     handler: handler.label_bot_lambda
+
     events:
       - schedule: rate(5 minutes)
     environment:
+    # replace region_name with your secret's region
       region_name : "us-east-1"
     # replace secret_name with your secret's name
-      secret_name : credentials/cathy_github
+      secret_name : "secret_name"
     # replace REPO with "apache/incubator-mxnet"
-      REPO : "CathyZhang0822/incubator-mxnet"
+      repo : "repo_name"
