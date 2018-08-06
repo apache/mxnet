@@ -526,8 +526,7 @@ void InferAttrs(nnvm::Graph *g, size_t num_forward_inputs, nnvm::ShapeVector *ar
   }
   if (arg_stypes->size() == 0) {
     *g = InferStorageType(std::move(*g), StorageTypeVector(), "");
-  }
-  else {
+  } else {
     *g = InferStorageType(std::move(*g), std::move(*arg_stypes), "__storage_type__");
   }
   if (g->GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
