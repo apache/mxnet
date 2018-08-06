@@ -115,8 +115,21 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
-def clip_global_norm(arrays, max_norm):
+def clip_global_norm(arrays, max_norm, check_isfinite=True, check_scale=True):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
+
+    Parameters
+    ----------
+    arrays : list of NDArray
+    max_norm : float
+    check_isfinite : bool, default True
+         If True, check that the total_norm is finite (not nan or inf). This
+         requires a blocking .asscalar() call.
+    check_scale : bool, default True
+         If True, skip array rescaling if max_norm / total_norm >= 1. This
+         requires a blocking call. If False, rescale arrays with min(1,
+         max_norm / total_norm).
+
     """
     def _norm(array):
         if array.stype == 'default':
@@ -126,14 +139,21 @@ def clip_global_norm(arrays, max_norm):
     assert len(arrays) > 0
     ctx = arrays[0].context
     total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
-    total_norm = ndarray.sqrt(total_norm).asscalar()
-    if not np.isfinite(total_norm):
-        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
-                      stacklevel=2)
+    total_norm = ndarray.sqrt(total_norm)
+    if check_isfinite:
+        if not np.isfinite(total_norm.asscalar()):
+            warnings.warn(
+                UserWarning('nan or inf is detected. '
+                            'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    if scale < 1.0:
+    if check_scale:
+        if scale < 1.0:
+            for arr in arrays:
+                arr *= scale.as_in_context(arr.context)
+    else:
+        scale = ndarray.min(ndarray.concat(scale, ndarray.ones(1, ctx=ctx), dim=0))
         for arr in arrays:
-            arr *= scale
+            arr *= scale.as_in_context(arr.context)
     return total_norm
 
 
