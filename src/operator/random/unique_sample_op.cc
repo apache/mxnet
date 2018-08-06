@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file sample_op.cc
- * \brief CPU Implementation of sample op
+ * \brief CPU Implementation of unique sample op
  */
 
 #include "./unique_sample_op.h"
@@ -36,20 +36,32 @@ DMLC_REGISTER_PARAMETER(SampleUniqueZifpianParam);
   .set_num_inputs(0)                                                       \
   .set_num_outputs(2)                                                      \
   .set_attr_parser(ParamParser<ParamType>)                                 \
-  .set_attr<FResourceRequest>("FResourceRequest", UniqueSampleResource) \
+  .set_attr<FResourceRequest>("FResourceRequest", UniqueSampleResource)    \
   .add_arguments(ParamType::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_log_uniform,
                                       SampleUniqueZifpianParam)
-.describe(R"code(Draw unique random samples from a uniform distribution.
+.describe(R"code(Draw random samples from an an approximately log-uniform
+or Zipfian distribution without replacement.
 
-Samples are uniformly distributed over the half-open interval *[low, high)*
-(includes *low*, but excludes *high*).
+This operation takes a 2-D shape `(batch_size, num_sampled)`,
+and randomly generates *num_sampled* samples from the range of integers [0, range_max)
+for each instance in the batch.
+
+The elements in each instance are drawn without replacement from the base distribution.
+The base distribution for this operator is an approximately log-uniform or Zipfian distribution:
+
+  P(class) = (log(class + 2) - log(class + 1)) / log(range_max + 1)
+
+Additionaly, it also returns the number of trials used to obtain `num_sampled` samples for
+each instance in the batch.
 
 Example::
 
-   uniform(low=0, high=1, shape=(2,2)) = [[ 0.60276335,  0.85794562],
-                                          [ 0.54488319,  0.84725171]]
+   samples, trials = _sample_unique_log_uniform(750000, shape=(4, 8192))
+   unique(samples[0]) = 8192
+   unique(samples[3]) = 8192
+   trials[0] = 16435
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FInferShape>("FInferShape", SampleUniqueShape<SampleUniqueZifpianParam>)
