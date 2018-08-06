@@ -28,6 +28,27 @@
 namespace mxnet {
 namespace op {
 
+/*
+ * \brief returns true if all indices are between [min, max]
+ * \param data_ptr the indices to check
+ * \param data_size the number of indices to examine
+ * \param min the expected min value for indices
+ * \param max the expected max value for indices
+ */
+template<typename DType>
+bool CheckIndexOutOfBound(const DType* data_ptr, size_t data_size,
+                          const DType min, const DType max) {
+  bool is_valid = true;
+  for (size_t i = 0; i < data_size; i++) {
+    if (data_ptr[i] > max || data_ptr[i] < min) {
+      is_valid = false;
+      break;
+    }
+  }
+  return is_valid;
+}
+
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -48,18 +69,16 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
     return;
   }
   // check out-of-bound indices
-  bool is_valid = true;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     // check with single thread is faster since data is small
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
-    for (size_t i = 0; i < data_size; i++) {
-      if (data_ptr[i] > max || data_ptr[i] < min) is_valid = false;
-    }
+    bool is_valid = CheckIndexOutOfBound(data_ptr, data_size,
+                                         min, max);
+    CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   })
-  CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
   if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
     EmbeddingOpForwardDnsImpl<cpu>(s, data, weight.data(), req, output);
@@ -101,6 +120,15 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+        // check out of bound indices
+        {
+          IType min = 0;
+          IType max = static_cast<IType>(output.shape()[0] - 1);
+          // check with single thread is faster since data is small
+          IType* data_ptr = data.dptr<IType>();
+          bool is_valid = CheckIndexOutOfBound(data_ptr, data.shape_.Size(), min, max);
+          CHECK(is_valid) << "Embedding input contains data out of bound";
+        }
         // mark row flags
         Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());

@@ -30,6 +30,21 @@ shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
 
+class EnvManager:
+    def __init__(self, key, val):
+        self._key = key
+        self._next_val = val
+        self._prev_val = None
+
+    def __enter__(self):
+        try:
+            self._prev_val = os.environ[self._key]
+        except KeyError:
+            self._prev_val = ''
+        os.environ[self._key] = self._next_val
+
+    def __exit__(self, ptype, value, trace):
+        os.environ[self._key] = self._prev_val
 
 def init_kv_with_str(stype='default', kv_type='local'):
     """init kv """
@@ -44,13 +59,13 @@ def init_kv_with_str(stype='default', kv_type='local'):
 # Not reproducible, so this test is back on random seeds.
 @with_seed()
 def test_rsp_push_pull():
-    def check_rsp_push_pull(kv_type, is_push_cpu=True):
+    def check_rsp_push_pull(kv_type, sparse_pull, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
         kv.init('e', mx.nd.ones(shape).tostype('row_sparse'))
         push_ctxs = [mx.cpu(i) if is_push_cpu else mx.gpu(i) for i in range(2)]
         kv.push('e', [mx.nd.ones(shape, ctx=context).tostype('row_sparse') for context in push_ctxs])
 
-        def check_rsp_pull(kv, count, ctxs, is_same_rowid=False, use_slice=False):
+        def check_rsp_pull(kv, count, ctxs, sparse_pull, is_same_rowid=False, use_slice=False):
             num_rows = shape[0]
             row_ids = []
             all_row_ids = np.arange(num_rows)
@@ -77,26 +92,34 @@ def test_rsp_push_pull():
                     expected_val += 0 if row in excluded_row_ids else 2
                     assert_almost_equal(retained[row], expected_val)
 
-            kv.pull('e', out=vals_to_pull, ignore_sparse=False)
-            for val in vals:
-                retained = val.asnumpy()
-                expected_val = np.zeros_like(retained)
-                expected_val[:] = 2
-                assert_almost_equal(retained, expected_val)
+            if sparse_pull is True:
+                kv.pull('e', out=vals_to_pull, ignore_sparse=False)
+                for val in vals:
+                    retained = val.asnumpy()
+                    expected_val = np.zeros_like(retained)
+                    expected_val[:] = 2
+                    assert_almost_equal(retained, expected_val)
 
-        check_rsp_pull(kv, 1, [mx.gpu(0)])
-        check_rsp_pull(kv, 1, [mx.cpu(0)])
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)])
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], is_same_rowid=True)
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)])
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], is_same_rowid=True)
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], use_slice=True)
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], use_slice=True)
+        check_rsp_pull(kv, 1, [mx.gpu(0)], sparse_pull)
+        check_rsp_pull(kv, 1, [mx.cpu(0)], sparse_pull)
+        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull)
+        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull, is_same_rowid=True)
+        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull)
+        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull, is_same_rowid=True)
+        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull, use_slice=True)
+        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull, use_slice=True)
 
-    check_rsp_push_pull('local')
-    check_rsp_push_pull('device')
-    check_rsp_push_pull('device', is_push_cpu=False)
-
+    envs = ["","1"]
+    key  = "MXNET_KVSTORE_USETREE"
+    for val in envs:
+        with EnvManager(key, val):
+            if val is "1":
+                sparse_pull = False
+            else:
+                sparse_pull = True
+            check_rsp_push_pull('local', sparse_pull)
+            check_rsp_push_pull('device', sparse_pull)
+            check_rsp_push_pull('device', sparse_pull, is_push_cpu=False)
 
 def test_row_sparse_pull_single_device():
     kvstore = mx.kv.create('device')

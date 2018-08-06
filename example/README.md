@@ -23,9 +23,11 @@ This page contains a curated list of awesome MXNet examples, tutorials and blogs
 
 If you want to contribute to this list and the examples, please open a new pull request.
 
+
 ### Examples
 
 Example applications or scripts should be submitted in this `example` folder.
+
 
 ### Tutorials
 
@@ -157,6 +159,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [Deformable ConvNets](https://arxiv.org/abs/1703.06211) ([github](https://github.com/msracver/Deformable-ConvNets)) by [MSRACVer](https://github.com/msracver)
 * [OCR with bi-LSTM and CTC Loss in Gluon](https://github.com/ThomasDelteil/Gluon_OCR_LSTM_CTC) by [ThomasDelteil](https://github.com/ThomasDelteil)
 * [Visual Search with Gluon and HNSWlib](https://github.com/ThomasDelteil/VisualSearch_MXNet), by [ThomasDelteil](https://github.com/ThomasDelteil), online demo [here](https://thomasdelteil.github.io/VisualSearch_MXNet/)
+* [MXNet-face](https://github.com/tornadomeet/mxnet-face) - Using MXNet for a face-related algorithm by [tornadomeet](https://github.com/tornadomeet) where the single model gets 97.13%+-0.88% accuracy on LFW, and with only 20MB size
 
 ### <a name="ipython-notebooks"></a>IPython Notebooks
 -----------------

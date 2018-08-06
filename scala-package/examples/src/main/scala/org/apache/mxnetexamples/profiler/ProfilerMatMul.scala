@@ -47,7 +47,7 @@ object ProfilerMatMul {
 
       val A = Symbol.Variable("A")
       val B = Symbol.Variable("B")
-      val C = Symbol.dot()(A, B)()
+      val C = Symbol.api.dot(Some(A), Some(B))
 
       val executor = C.simpleBind(ctx, "write",
           Map("A" -> Shape(4096, 4096), "B" -> Shape(4096, 4096)))

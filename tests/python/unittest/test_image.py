@@ -132,26 +132,33 @@ class TestImage(unittest.TestCase):
 
 
     def test_imageiter(self):
-        im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
-        test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
-            path_root='')
-        for _ in range(3):
+        def check_imageiter(dtype='float32'):
+            im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
+            test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
+                path_root='', dtype=dtype)
+            for _ in range(3):
+                for batch in test_iter:
+                    pass
+                test_iter.reset()
+
+            # test with list file
+            fname = './data/test_imageiter.lst'
+            file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x]) \
+                for k, x in enumerate(TestImage.IMAGES)]
+            with open(fname, 'w') as f:
+                for line in file_list:
+                    f.write(line + '\n')
+
+            test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, path_imglist=fname,
+                path_root='', dtype=dtype)
             for batch in test_iter:
                 pass
-            test_iter.reset()
 
-        # test with list file
-        fname = './data/test_imageiter.lst'
-        file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x]) \
-            for k, x in enumerate(TestImage.IMAGES)]
-        with open(fname, 'w') as f:
-            for line in file_list:
-                f.write(line + '\n')
+        for dtype in ['int32', 'float32', 'int64', 'float64']:
+            check_imageiter(dtype)
 
-        test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, path_imglist=fname,
-            path_root='')
-        for batch in test_iter:
-            pass
+        # test with default dtype
+        check_imageiter()
 
     @with_seed()
     def test_augmenters(self):

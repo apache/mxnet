@@ -3,10 +3,10 @@
 Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
 
   <div class="dropdown">
-    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.0
+    <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
     <span class="caret"></span></button>
     <ul class="dropdown-menu opt-group">
-      <li class="opt active versions"><a href="#">v1.2.0</a></li>
+      <li class="opt active versions"><a href="#">v1.2.1</a></li>
       <li class="opt versions"><a href="#">v1.1.0</a></li>
       <li class="opt versions"><a href="#">v1.0.0</a></li>
       <li class="opt versions"><a href="#">v0.12.1</a></li>
@@ -95,7 +95,7 @@ $ sudo apt-get install -y wget python gcc
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2** Install MXNet with OpenBLAS acceleration.
 
@@ -116,7 +116,7 @@ pip install graphviz
 $ pip install mxnet-mkl
 ```
 
-</div> <!-- End of v1-2-0 -->
+</div> <!-- End of v1-2-1 -->
 
 <div class="v1-1-0">
 
@@ -289,7 +289,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 $ pip install --upgrade pip
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Install *MXNet* with OpenBLAS acceleration.
 
@@ -297,7 +297,7 @@ Install *MXNet* with OpenBLAS acceleration.
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -511,7 +511,7 @@ $ sudo apt-get install -y wget python
 $ wget https://bootstrap.pypa.io/get-pip.py && sudo python get-pip.py
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.2
 
@@ -543,7 +543,7 @@ pip install graphviz
 $ pip install mxnet-cu90mkl
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 
 <div class="v1-1-0">
@@ -709,7 +709,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 ```
 
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
 Check your CUDA version with the following command:
@@ -728,7 +728,7 @@ Install *MXNet* with GPU support using CUDA 9.2:
 
 Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 
 <div class="v1-1-0">
@@ -1049,14 +1049,14 @@ $ pip install --upgrade pip
 $ pip install --upgrade setuptools
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Then use pip to install MXNet:
 
 ```bash
 $ pip install mxnet
 ```
-</div> <!-- End of v1-2-0 -->
+</div> <!-- End of v1-2-1 -->
 
 
 <div class="v1-1-0">
@@ -1178,7 +1178,7 @@ Installing *MXNet* with pip requires a latest version of `pip`. Install the late
 (mxnet)$ pip install --upgrade setuptools
 ```
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 Install *MXNet* with OpenBLAS acceleration.
 
@@ -1186,7 +1186,7 @@ Install *MXNet* with OpenBLAS acceleration.
 (mxnet)$ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -1491,7 +1491,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet*.
 
@@ -1499,7 +1499,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -1582,7 +1582,7 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
 
-<div class="v1-2-0">
+<div class="v1-2-1">
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
 
@@ -1601,7 +1601,7 @@ $ pip install mxnet-cu92
 
 Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
-</div> <!-- End of v1-2-0-->
+</div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
 
@@ -1784,7 +1784,7 @@ Next, we install the ```graphviz``` library that we use for visualizing network 
 <div class="cpu">
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
-You can [build MXNet-R from source](windows_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
+You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
 cran <- getOption("repos")
@@ -1797,14 +1797,15 @@ install.packages("mxnet")
 
 <div class="gpu">
 
-You can [build MXNet-R from source](windows_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
+You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
-cran <- getOption("repos")
-cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU"
-options(repos = cran)
-install.packages("mxnet")
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU/cu92"
+  options(repos = cran)
+  install.packages("mxnet")
 ```
+Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->
