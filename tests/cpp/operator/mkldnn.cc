@@ -1229,9 +1229,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, 0, 0, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
