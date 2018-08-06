@@ -520,6 +520,26 @@ class NDArray {
   }
 
   /*!
+   * \brief Create a reference view of NDArray that
+   *  represents as DLManagedTensor.
+   * \return A DLManagedTensor
+   */
+  DLManagedTensor* ToDLPack() const;
+
+  /*!
+   * \brief Create a NDArray backed by a dlpack tensor.
+   *
+   * This allows us to create a NDArray using the memory
+   * allocated by an external deep learning framework
+   * that is DLPack compatible.
+   *
+   * The memory is retained until the NDArray went out of scope.
+   *
+   * \return The created NDArray view.
+   */
+  static NDArray FromDLPack(DLManagedTensor* tensor);
+
+  /*!
    * \brief Update ndarray chunk storage handles using existing ndarray storage handles
    * Also update the aux_handle, aux_shapes and aux_types.
    * This is specifically used for custom op to update the inputs and outputs from

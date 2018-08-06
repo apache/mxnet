@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -46,7 +46,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram"]
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram", "to_dlpack", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -2205,6 +2205,8 @@ fixed-size items.
         """
         return op.cast_storage(self, stype=stype)
 
+    def asdlpack(self):
+        return to_dlpack(self)
 
 def _get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
@@ -3851,3 +3853,56 @@ def histogram(a, bins=10, range=None):
         return _internal._histogram(data=a, bin_cnt=bins, range=range)
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
+
+def pycapsule_dlpack_deleter(dlpack):
+    """The deleter of DLPack Tensor
+
+    Parameters
+    ----------
+    dlpack: void *
+    """
+    ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    try:
+        dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(ctypes.c_void_p(dlpack), b'dltensor'))
+    except:
+        dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(ctypes.c_void_p(dlpack), b'used_dltensor'))
+    check_call(_LIB.MXNDArrayCallDLPackDeleter(dlpack_handle))
+
+def to_dlpack(data):
+    """Returns a reference view of NDArray that represents as DLManagedTensor.
+
+    Parameters
+    ----------
+    data: NDArray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of NDArray that represents as DLManagedTensor.
+    """
+    dlpack = DLPackHandle()
+    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
+    func_def = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', func_def(pycapsule_dlpack_deleter))
+
+def from_dlpack(dlpack):
+    """Returns a NDArray backed by a dlpack tensor.
+
+    Parameters
+    ----------
+    dlpack: PyCapsule (the pointer of DLManagedTensor)
+        input data
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+    """
+    handle = NDArrayHandle()
+    ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, b'dltensor'))
+    assert dlpack_handle.value != 0, ValueError('Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
+    check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    ctypes.pythonapi.PyCapsule_SetName(dlpack, b'used_dltensor')
+    return NDArray(handle=handle)

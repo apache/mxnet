@@ -312,6 +312,46 @@ NDArray NDArray::data_ndarray() const {
   return ret;
 }
 
+struct NDArrayDLManager {
+    NDArray handle; // ref NDArray
+    DLManagedTensor tensor;
+    TShape strides; // store variable strides
+};
+
+DLManagedTensor* NDArray::ToDLPack() const {
+  NDArrayDLManager* dlmanager(new NDArrayDLManager);
+  dlmanager->handle = *this;
+  if (!is_none()) {
+    dlmanager->tensor.dl_tensor = data().dltensor();
+    // assign value for dl_tensor.strides
+    if (!dlmanager->tensor.dl_tensor.strides) {
+      TShape &strides_ = dlmanager->strides;
+      strides_ = TShape(shape_.ndim());
+      const uint32_t ndim = shape_.ndim();
+      if (ndim >= 1) {
+        strides_[ndim - 1] = 1;
+        for (uint32_t u = 1, i = ndim - 2; u < ndim; ++u, --i) {
+          strides_[i] = shape_[i + 1] * strides_[i + 1];
+        }
+      }
+      dlmanager->tensor.dl_tensor.strides = strides_.data();
+    } else {
+      dlmanager->strides = TShape(dlmanager->tensor.dl_tensor.strides,
+          dlmanager->tensor.dl_tensor.strides + dlmanager->tensor.dl_tensor.ndim);
+    }
+  }
+  dlmanager->tensor.manager_ctx = dlmanager;
+  dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
+    delete static_cast<NDArrayDLManager*>(dlmanager->manager_ctx);
+  };
+  return &(dlmanager->tensor);
+}
+
+NDArray NDArray::FromDLPack(DLManagedTensor* tensor) {
+  const DLTensor &dl_tensor = tensor->dl_tensor;
+  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id);
+}
+
 bool NDArray::fresh_out_grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return false;
   Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);

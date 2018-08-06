@@ -93,6 +93,8 @@ typedef void *CudaModuleHandle;
 typedef void *CudaKernelHandle;
 /*! \brief handle to a Profile object (domain, duration, counter, etc.) */
 typedef void *ProfileHandle;
+/*! \brief handle to DLManagedTensor*/
+typedef void *DLManagedTensorHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -690,10 +692,36 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
-MXNET_DLL int MXNDArrayToDLTensor(NDArrayHandle handle,
-                      void **out_pdltensor);
-MXNET_DLL int MXNDArrayFromDLTensor(void *in_pdltensor,
-                        NDArrayHandle *out_handle);
+/*!
+* \brief Create a reference view of NDArray that
+*  represents as DLManagedTensor.
+* \param handle the handle to the ndarray
+* \param out_dlpack pointer holder to get pointer of DLManagedTensor
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
+                                DLManagedTensorHandle *out_dlpack);
+/*!
+* \brief Create a NDArray backed by a dlpack tensor.
+*
+* This allows us to create a NDArray using the memory
+* allocated by an external deep learning framework
+* that is DLPack compatible.
+*
+* The memory is retained until the NDArray went out of scope.
+*
+* \param dlpack the pointer of the input DLManagedTensor
+* \param out_handle pointer holder to get pointer of NDArray
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                                  NDArrayHandle *out_handle);
+/*!
+ * \brief Delete a dlpack tensor
+ * \param dlpack the pointer of the input DLManagedTensor
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack);
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray

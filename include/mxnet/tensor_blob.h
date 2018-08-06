@@ -338,20 +338,42 @@ class TBlob {
       }
     }
   }
-  static int DLDataTypeTransform(DLDataType dldata_type_flag) {
-    switch (dldata_type_flag) {
-      case DLDataType{kDLFloat, 32, 1}: return mshadow::kFloat32;
-      case DLDataType{kDLFloat, 64, 1}: return mshadow::kFloat64;
-      case DLDataType{kDLFloat, 16, 1}: return mshadow::kFloat16;
-      case DLDataType{kDLUInt, 8, 1}: return mshadow::kUint8;
-      case DLDataType{kDLInt, 32, 1}: return mshadow::kInt32;
-      case DLDataType{kDLInt, 8, 1}: return mshadow::kInt8;
-      case DLDataType{kDLInt, 64, 1}: return mshadow::kInt64;
-      default: {
-        LOG(FATAL) << "Unknown dldata_type_flag=" << type_flag;
-        return mshadow::kFloat32;
-      }
+  static int DLDataTypeTransform(DLDataType dldata_type) {
+    if (dldata_type.lanes != 1) {
+        LOG(FATAL) << "Unsupported DLDataType whose lanes != 1";
     }
+    switch (dldata_type.code) {
+        case kDLFloat:
+            switch (dldata_type.bits) {
+                case 16:
+                    return mshadow::kFloat16;
+                case 32:
+                    return mshadow::kFloat32;
+                case 64:
+                    return mshadow::kFloat64;
+            }
+            break;
+        case kDLUInt:
+            switch (dldata_type.bits) {
+                case 8:
+                    return mshadow::kUint8;
+            }
+            break;
+        case kDLInt:
+            switch (dldata_type.bits) {
+                case 8:
+                    return mshadow::kInt8;
+                case 32:
+                    return mshadow::kInt32;
+                case 64:
+                    return mshadow::kInt64;
+            }
+            break;
+    }
+    LOG(FATAL) << "Unknown DLDataType{" << dldata_type.code
+               << ", " << dldata_type.bits
+               << ", " << dldata_type.lanes << "}";
+    return mshadow::kFloat32;
   }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {
@@ -360,7 +382,7 @@ class TBlob {
     dltensor_.ndim = shape_.ndim();
     dltensor_.dtype = DTypeTransform(type_flag_);
     dltensor_.shape = shape_.data();
-    dltensor_.strides = NULL;
+    dltensor_.strides = nullptr;
     dltensor_.byte_offset = 0;
   }
 

@@ -494,23 +494,29 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayToDLTensor(NDArrayHandle handle,
-                      void **out_pdltensor) {
+int MXNDArrayToDLPack(NDArrayHandle handle,
+                      DLManagedTensorHandle *out_dlpack) {
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  if (!arr->is_none()) {
-    *out_pdltensor = arr->data().dlpack();
-  } else {
-    *out_pdltensor = nullptr;
-  }
+  *out_dlpack = arr->ToDLPack();
   API_END();
 }
 
-int MXNDArrayFromDLTensor(void *in_pdltensor,
+int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                         NDArrayHandle *out_handle) {
   API_BEGIN();
-  DLTensor *pdltensor = static_cast<DLTensor*>(in_pdltensor);
-  *out_handle = new NDArray(TBlob(*pdltensor), pdltensor->device_id);
+  NDArray *pdata = new NDArray();
+  *pdata = NDArray::FromDLPack(
+          static_cast<DLManagedTensor*>(dlpack));
+  *out_handle = pdata;
+  API_END();
+}
+
+int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack) {
+  API_BEGIN();
+  DLManagedTensor *p_dlpack = static_cast<DLManagedTensor*>(dlpack);
+  if (p_dlpack)
+      p_dlpack->deleter(p_dlpack);
   API_END();
 }
 
