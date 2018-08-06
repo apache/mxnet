@@ -2207,6 +2207,20 @@ fixed-size items.
         return op.cast_storage(self, stype=stype)
 
     def asdlpack(self):
+        """Returns a reference view of NDArray that represents as DLManagedTensor.
+
+        Returns
+        -------
+        PyCapsule (the pointer of DLManagedTensor)
+            a reference view of NDArray that represents as DLManagedTensor.
+
+        Examples
+        --------
+        >>> x = mx.nd.ones((2,3))
+        >>> y = x.asdlpack()
+        >>> type(y)
+        <class 'PyCapsule'>
+        """
         return to_dlpack(self)
 
 def _get_indexing_dispatch_code(key):
@@ -3883,6 +3897,13 @@ def to_dlpack(data):
     -------
     PyCapsule (the pointer of DLManagedTensor)
         a reference view of NDArray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.to_dlpack(x)
+    >>> type(y)
+    <class 'PyCapsule'>
     """
     dlpack = DLPackHandle()
     check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
@@ -3901,6 +3922,20 @@ def from_dlpack(dlpack):
     -------
     NDArray
         a NDArray backed by a dlpack tensor
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.to_dlpack(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.nd.from_dlpack(y)
+    >>> type(z)
+    <class 'mxnet.ndarray.ndarray.NDArray'>
+    >>> z
+    [[ 1.  1.  1.]
+     [ 1.  1.  1.]]
+    <NDArray 2x3 @cpu(0)>
     """
     handle = NDArrayHandle()
     ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
