@@ -3864,9 +3864,9 @@ def pycapsule_dlpack_deleter(dlpack):
     ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     try:
         dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(ctypes.c_void_p(dlpack), b'dltensor'))
+        check_call(_LIB.MXNDArrayCallDLPackDeleter(dlpack_handle))
     except:
-        dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(ctypes.c_void_p(dlpack), b'used_dltensor'))
-    check_call(_LIB.MXNDArrayCallDLPackDeleter(dlpack_handle))
+        pass
 
 def to_dlpack(data):
     """Returns a reference view of NDArray that represents as DLManagedTensor.

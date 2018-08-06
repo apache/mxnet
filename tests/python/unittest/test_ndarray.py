@@ -1334,6 +1334,25 @@ def test_ndarray_cpu_shared_ctx():
     res = mx.nd.zeros((1, 2, 3), ctx=ctx)
     assert(res.context == ctx)
 
+@with_seed()
+def test_dlpack():
+    for dtype in [np.float32, np.int32]:
+        for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
+            a = mx.nd.random.uniform(shape = shape)
+            a_np = a.asnumpy()
+
+            pack = a.asdlpack()
+            b = mx.nd.from_dlpack(pack)
+
+            pack2 = mx.nd.to_dlpack(a)
+            c = mx.nd.from_dlpack(pack2)
+
+            del a, pack, pack2
+
+            b_np = b.asnumpy()
+            c_np = c.asnumpy()
+            mx.test_utils.assert_almost_equal(a_np, b_np)
+            mx.test_utils.assert_almost_equal(a_np, c_np)
 
 if __name__ == '__main__':
     import nose
