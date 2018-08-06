@@ -350,10 +350,11 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.");
 
-void ReshapeLikeRangeCanonicalize(int ndims, const char *side, int begin,
+void ReshapeLikeRangeCanonicalize(int ndims, const char *side,
+                                  const dmlc::optional<int> &begin,
                                   const dmlc::optional<int> &end, int *cbegin,
                                   int *cend) {
-  *cbegin = begin;
+  *cbegin = begin.has_value() ? begin.value() : 0;
   if (*cbegin < 0)
     *cbegin += ndims;
 
