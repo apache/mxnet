@@ -20,8 +20,9 @@
 #ifndef MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 #define MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_OP_H_
 
-#include <vector>
+#include <mxnet/graph_attr_types.h>
 #include <string>
+#include <vector>
 #include "./common.h"
 
 namespace mxnet {
@@ -35,18 +36,19 @@ namespace op {
  */
 class SubgraphSelector {
  public:
-  virtual ~SubgraphSelector() {
-  }
+  virtual ~SubgraphSelector() {}
   // Determine if the node should be selected for a subgraph.
-  virtual bool Select(const nnvm::Node &n) = 0;
+  virtual bool Select(const nnvm::Graph &g, const nnvm::Node &n) = 0;
   // Determine if the input node should be selected for a subgraph.
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  virtual bool SelectInput(const nnvm::Graph &g, const nnvm::Node &n,
+                           const nnvm::Node &new_node) = 0;
   // Determine if the output node should be selected for a subgraph.
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  virtual bool SelectOutput(const nnvm::Graph &g, const nnvm::Node &n,
+                            const nnvm::Node &new_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
-  virtual std::vector<nnvm::Node*> Filter(nnvm::Graph* g,
-                                          const std::vector<nnvm::Node*>& candidates) {
+  virtual std::vector<nnvm::Node *> Filter(const nnvm::Graph &g,
+                                           const std::vector<nnvm::Node *> &candidates) {
     return candidates;
   }
 };
@@ -76,7 +78,7 @@ void RegisterSubgraphProperty(SubgraphPropertyPtr property);
  * This selects nodes for a subgraph that only contains operators
  * in a given set and it visits nodes via both input and output links.
  */
-class ContainOpSelector: public SubgraphSelector {
+class ContainOpSelector : public SubgraphSelector {
   std::shared_ptr<const std::unordered_set<std::string>> op_names;
 
  public:
@@ -84,15 +86,16 @@ class ContainOpSelector: public SubgraphSelector {
     this->op_names = op_names;
   }
 
-  virtual bool Select(const nnvm::Node &n) {
+  virtual bool Select(const nnvm::Graph &g, const nnvm::Node &n) {
     return !n.is_variable() && op_names->count(n.op()->name);
   }
 
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
+  virtual bool SelectInput(const nnvm::Graph &g, const nnvm::Node &n, const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
+  virtual bool SelectOutput(const nnvm::Graph &g, const nnvm::Node &n,
+                            const nnvm::Node &new_node) {
     return !new_node.is_variable() && op_names->count(new_node.op()->name);
   }
 };
@@ -101,10 +104,11 @@ class ContainOpSelector: public SubgraphSelector {
  * This subgraph property finds a subgraph whose nodes have only operators
  * within a set. The operators in the subgraph will be executed by _default_subgraph_op.
  */
-class DefaultSubgraphProperty: public SubgraphProperty {
+class DefaultSubgraphProperty : public SubgraphProperty {
  public:
-  explicit DefaultSubgraphProperty(const std::unordered_set<std::string> &op_names) :
-    op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
+  explicit DefaultSubgraphProperty(
+      const std::unordered_set<std::string> &op_names = std::unordered_set<std::string>{})
+      : op_names_(std::make_shared<std::unordered_set<std::string>>(op_names)) {}
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
