@@ -47,7 +47,7 @@ using nnvm::NodeEntry;
 using nnvm::Graph;
 
 // TODO(junwu): Change this to 0
-#define SUBGRAPH_DEBUG 1
+#define SUBGRAPH_DEBUG 0
 
 namespace sg {  // sg stands for subgraph
 
