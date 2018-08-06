@@ -39,7 +39,7 @@ DMLC_REGISTER_PARAMETER(SampleUniqueZifpianParam);
   .set_attr<FResourceRequest>("FResourceRequest", UniqueSampleResource)    \
   .add_arguments(ParamType::__FIELDS__())
 
-MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_log_uniform,
+MXNET_OPERATOR_REGISTER_UNIQUE_SAMPLE(_sample_unique_zipfian,
                                       SampleUniqueZifpianParam)
 .describe(R"code(Draw random samples from an an approximately log-uniform
 or Zipfian distribution without replacement.
@@ -58,7 +58,7 @@ each instance in the batch.
 
 Example::
 
-   samples, trials = _sample_unique_log_uniform(750000, shape=(4, 8192))
+   samples, trials = _sample_unique_zipfian(750000, shape=(4, 8192))
    unique(samples[0]) = 8192
    unique(samples[3]) = 8192
    trials[0] = 16435

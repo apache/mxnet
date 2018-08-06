@@ -18,9 +18,9 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2018 by Contributors
  * \file sample_op.h
- * \brief Elementary sampling operators
+ * \brief Elementary unique sampling operators
  */
 #ifndef MXNET_OPERATOR_RANDOM_UNIQUE_SAMPLE_OP_H_
 #define MXNET_OPERATOR_RANDOM_UNIQUE_SAMPLE_OP_H_
@@ -112,8 +112,10 @@ struct UniqueSampleUniformKernel {
                                   std::vector<std::unordered_set<DType>> *results,
                                   const int step, const GType log_range_max,
                                   DType *samples, DType *num_tries) {
+    const int begin = tid * step;
+    const int end = (tid + 1) * step;
     typename RandGenerator<cpu, GType>::Impl generator(&gen, tid);
-    for (int i = tid; i < batch_size; i += step) {
+    for (int i = begin; i < end && i < batch_size; i++) {
       auto &result = results->at(i);
       const int base = i * num_sampled;
       DType tries = 0;
