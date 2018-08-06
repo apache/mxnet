@@ -102,8 +102,8 @@ enum class ExecType {
    */
   kCrossDeviceCopy,
   /*!
-   * A subgraph execution should happen in the main thread, instead of
-   * in the execution engine.
+   * \brief A subgraph execution should happen in the main thread, instead of
+   *  in the execution engine.
    */
   kSubgraphExec,
 };
