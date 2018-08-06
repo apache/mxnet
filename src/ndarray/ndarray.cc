@@ -313,9 +313,9 @@ NDArray NDArray::data_ndarray() const {
 }
 
 struct NDArrayDLManager {
-    NDArray handle; // ref NDArray
+    NDArray handle;  // ref NDArray
     DLManagedTensor tensor;
-    TShape strides; // store variable strides
+    TShape strides;  // store variable strides
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {

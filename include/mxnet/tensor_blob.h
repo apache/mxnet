@@ -104,7 +104,9 @@ class TBlob {
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
     SetDLTensor(dev_mask, dev_id);
   }
-  TBlob(const DLTensor &dltensor) : dptr_(dltensor.data), shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)), type_flag_(DLDataTypeTransform(dltensor.dtype)), dltensor_(dltensor) {
+  explicit TBlob(const DLTensor &dltensor) : dptr_(dltensor.data),
+    shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
+    type_flag_(DLDataTypeTransform(dltensor.dtype)), dltensor_(dltensor) {
   }
   /*!
    * \brief constructor from tensor
