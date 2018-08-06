@@ -162,8 +162,6 @@ def check_ifft(shape):
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
 
-# @roshrini - removing fixed seed for this test. raised tolerance level.
-# Issue to track: https://github.com/apache/incubator-mxnet/issues/11731
 @with_seed()
 def test_ifft():
     nrepeat = 2
@@ -252,8 +250,6 @@ def check_fft(shape):
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
         assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-5)
 
-# @roshrini - removing fixed seed for this test. raised tolerance level.
-# Issue to track: https://github.com/apache/incubator-mxnet/issues/11730
 @with_seed()
 def test_fft():
     nrepeat = 2
