@@ -731,21 +731,11 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
     write_all_str(module_internal_file, module_internal_all)
     module_internal_file.close()
 
-
-
-"""
-Assign ctypes types to specify the result type and the argument types
-of the foreign functions
-"""
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_New.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                            ctypes.c_void_p]
 
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-"""
-ctypes.pythonapi.PyCapsule_GetPointer.argtypes =
-    [ctypes.py_object|ctypes.c_void_p, ctypes.c_char_p]
-"""
 
 ctypes.pythonapi.PyCapsule_SetName.restype = ctypes.c_int
 ctypes.pythonapi.PyCapsule_SetName.argtypes = [ctypes.py_object, ctypes.c_char_p]
