@@ -1240,31 +1240,31 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                StorageTypeVector *arg_stypes,
                                const std::vector<OpReqType>& grad_req_types) {
   // parition given symbol graph using shape & types.
-  nnvm::Graph gp;
-  gp.outputs = symbol.outputs;
-  auto num_forward_outputs = symbol.outputs.size();
-  auto num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
-  gp = AssignContext(gp, default_ctx, ctx_map,
-                    in_arg_ctxes,
-                    arg_grad_ctxes,
-                    aux_state_ctxes,
-                    grad_req_types,
-                    num_forward_inputs,
-                    num_forward_outputs);
+  nnvm::Graph g;
+  if (ctx_map.size() == 0) {
+    g.outputs = symbol.outputs;
+    auto num_forward_outputs = symbol.outputs.size();
+    auto num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
+    g = AssignContext(g, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
+                      aux_state_ctxes, grad_req_types, num_forward_inputs,
+                      num_forward_outputs);
 
-  // infer & add types/shape attrs to graph before calling partition pass
-  InferAttrs(&gp, num_forward_inputs, arg_shapes, arg_dtypes, arg_stypes);
-
-  // partition pass with default subgraph property
-  mxnet::op::SubgraphPropertyPtr property =
-      std::make_shared<mxnet::op::DefaultSubgraphProperty>();
-  gp.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
-  gp = ApplyPass(std::move(gp), "PartitionGraph");
-  auto sym = symbol.Copy();
-  sym.outputs = gp.outputs;
-
-  // setup gradient
-  nnvm::Graph g = InitFullGraph(sym, grad_req_types);
+    // infer & add types/shape attrs to graph before calling partition pass
+    InferAttrs(&g, num_forward_inputs, arg_shapes, arg_dtypes, arg_stypes);
+    // partition pass with default subgraph property
+    mxnet::op::SubgraphPropertyPtr property =
+        std::make_shared<mxnet::op::DefaultSubgraphProperty>();
+    g.attrs["subgraph_property"] =
+        std::make_shared<nnvm::any>(std::move(property));
+    g = ApplyPass(std::move(g), "PartitionGraph");
+    auto sym = symbol.Copy();
+    sym.outputs = g.outputs;
+    // setup gradient
+    g = InitFullGraph(sym, grad_req_types);
+  } else {
+    // setup gradient
+    g = InitFullGraph(symbol, grad_req_types);
+  }
 
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,
