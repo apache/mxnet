@@ -57,7 +57,7 @@ def test_quantize_float32_to_int8():
     assert same(min_val.asscalar(), -real_range)
     assert same(max_val.asscalar(), real_range)
     qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
-    assert same(qdata.asnumpy(), qdata_np)
+    assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
 
 
 @with_seed()
@@ -77,7 +77,6 @@ def test_dequantize_int8_to_float32():
 
 
 @with_seed()
-@unittest.skip('Flaky test, tracked in: https://github.com/apache/incubator-mxnet/issues/11747')
 def test_requantize_int32_to_int8():
     def quantized_int32_to_float(qdata, min_range, max_range):
         assert qdata.dtype == 'int32'
@@ -121,7 +120,7 @@ def test_requantize_int32_to_int8():
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,
                                                                           max_calib_range=max_calib_range)
-        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
 
