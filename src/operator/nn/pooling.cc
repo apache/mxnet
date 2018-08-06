@@ -395,7 +395,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
-    .set_attr<bool>("TIsMKLDNN", true).set_attr<bool>("TIsMKLDNN", true)
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient",
