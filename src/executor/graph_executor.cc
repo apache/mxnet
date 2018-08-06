@@ -524,10 +524,12 @@ void InferAttrs(nnvm::Graph *g, size_t num_forward_inputs, nnvm::ShapeVector *ar
     HandleInferTypeError(num_forward_inputs, g->indexed_graph(),
                          g->GetAttr<nnvm::DTypeVector>("dtype"));
   }
-  if (arg_stypes->size() == 0)
+  if (arg_stypes->size() == 0) {
     *g = InferStorageType(std::move(*g), StorageTypeVector(), "");
-  else
+  }
+  else {
     *g = InferStorageType(std::move(*g), std::move(*arg_stypes), "__storage_type__");
+  }
   if (g->GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs, g->indexed_graph(),
                                 g->GetAttr<StorageTypeVector>("storage_type"));
@@ -649,6 +651,9 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   StorageTypeVector tmp_stypes;
   InferAttrs(&g, num_forward_inputs_, &arg_shapes, &arg_dtypes, &tmp_stypes);
 
+  // Initialize the rest attributes of the graph.
+  // This function can be called by regular bind
+  // operation flow as well.
   FinishInitGraph(symbol, g, shared_exec, feed_dict);
 }
 
