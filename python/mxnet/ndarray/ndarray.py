@@ -46,7 +46,8 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram", "to_dlpack", "from_dlpack"]
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
+           "to_dlpack", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -3863,9 +3864,11 @@ def pycapsule_dlpack_deleter(dlpack):
     """
     ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
     try:
-        dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(ctypes.c_void_p(dlpack), b'dltensor'))
+        dlpack_handle = ctypes.c_void_p(
+            ctypes.pythonapi.PyCapsule_GetPointer(
+                ctypes.c_void_p(dlpack), b'dltensor'))
         check_call(_LIB.MXNDArrayCallDLPackDeleter(dlpack_handle))
-    except:
+    except ValueError:
         pass
 
 def to_dlpack(data):
@@ -3902,7 +3905,8 @@ def from_dlpack(dlpack):
     handle = NDArrayHandle()
     ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
     dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, b'dltensor'))
-    assert dlpack_handle.value != 0, ValueError('Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
+    assert dlpack_handle.value != 0, ValueError(
+        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
     ctypes.pythonapi.PyCapsule_SetName(dlpack, b'used_dltensor')
-    return NDArray(handle=handle)
+    return NDArray(handle=handle, dlpack_handle=dlpack_handle)

@@ -738,7 +738,7 @@ ctypes.pythonapi.PyCapsule_New.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                            ctypes.c_void_p]
 
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+# ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p] or [ctypes.py_object, ctypes.c_char_p]
 
 ctypes.pythonapi.PyCapsule_SetName.restype = ctypes.c_int
 ctypes.pythonapi.PyCapsule_SetName.argtypes = [ctypes.py_object, ctypes.c_char_p]

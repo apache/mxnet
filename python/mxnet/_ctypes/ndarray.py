@@ -31,10 +31,10 @@ from ..base import check_call
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable"]
+    __slots__ = ["handle", "writable", "dlpack_handle"]
     # pylint: disable= no-member
 
-    def __init__(self, handle, writable=True):
+    def __init__(self, handle, writable=True, dlpack_handle=None):
         """initialize a new NDArray
 
         Parameters
@@ -46,9 +46,12 @@ class NDArrayBase(object):
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
+        self.dlpack_handle = dlpack_handle
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))
+        if self.dlpack_handle is not None:
+            check_call(_LIB.MXNDArrayCallDLPackDeleter(self.dlpack_handle))
 
     def __reduce__(self):
         return (_ndarray_cls, (None,), self.__getstate__())

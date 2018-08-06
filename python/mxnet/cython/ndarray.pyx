@@ -30,6 +30,7 @@ cdef class NDArrayBase:
     # handle for symbolic operator.
     cdef NDArrayHandle chandle
     cdef int cwritable
+    cdef DLPackHandle cdlpack_handle
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
@@ -52,12 +53,15 @@ cdef class NDArrayBase:
         def __get__(self):
             return bool(self.cwritable)
 
-    def __init__(self, handle, writable=True):
+    def __init__(self, handle, writable=True, dlpack_handle=None):
         self._set_handle(handle)
         self.cwritable = writable
+        self.cdlpack_handle = dlpack_handle
 
     def __dealloc__(self):
         CALL(MXNDArrayFree(self.chandle))
+        if self.cdlpack_handle:
+            CALL(MXNDArrayCallDLPackDeleter(self.cdlpack_handle))
 
     def __reduce__(self):
         return (_ndarray_cls, (None,), self.__getstate__())
