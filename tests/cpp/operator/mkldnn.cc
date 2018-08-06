@@ -561,8 +561,6 @@ OpAttrs GetLRNOp() {
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.requests.insert(OpReqType::kWriteInplace);
-  attrs.requests.insert(OpReqType::kAddTo);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
@@ -585,8 +583,6 @@ OpAttrs GetLRNBackwardsOp() {
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.requests.insert(OpReqType::kWriteInplace);
-  attrs.requests.insert(OpReqType::kAddTo);
   return attrs;
 }
 
