@@ -27,7 +27,7 @@ def init_git() {
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         sh 'git submodule update --init --recursive'
-        sh 'git clean -d -f'
+        sh 'git clean -xdff'
       }
     } catch (exc) {
       deleteDir()
@@ -46,7 +46,7 @@ def init_git_win() {
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
         bat 'git submodule update --init --recursive'
-        bat 'git clean -d -f'
+        bat 'git clean -xdff'
       }
     } catch (exc) {
       deleteDir()
@@ -149,3 +149,4 @@ def main_wrapper(args) {
   }
 }
 return this
+
