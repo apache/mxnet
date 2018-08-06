@@ -159,7 +159,7 @@ class StatefulComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
-    in_array = CreateInputsInputs(in_array);
+    in_array = CreateDefaultInputs(in_array);
     fcompute_(state_, op_ctx, in_array, req, out_array);
     return;
 #endif
@@ -231,7 +231,7 @@ class FComputeExExecutor : public OpExecutor {
     InvalidateOutputs(out_array, req);
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
     if (!is_mkldnn.get(attrs_.op, false)) {
-      in_array = CreateInputsInputs(in_array);
+      in_array = CreateDefaultInputs(in_array);
       fcompute_(attrs_, op_ctx, in_array, req, out_array);
       return;
     }

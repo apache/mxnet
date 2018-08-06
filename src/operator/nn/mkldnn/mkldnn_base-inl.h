@@ -356,7 +356,7 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
   }
 }
 
-static inline std::vector<NDArray> CreateInputsInputs(const std::vector<NDArray> &arrs) {
+static inline std::vector<NDArray> CreateDefaultInputs(const std::vector<NDArray> &arrs) {
   std::vector<NDArray> buffer(arrs.size());
   for (size_t i = 0; i < arrs.size(); ++i)
     buffer[i] = arrs[i].Reorder2Default();
