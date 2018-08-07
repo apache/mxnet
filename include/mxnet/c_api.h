@@ -755,7 +755,7 @@ MXNET_DLL int MXNDArrayToDLPackForRead(NDArrayHandle handle,
 /*!
 * \brief Create a reference view of NDArray that
 *  represents as DLManagedTensor until
-*  all the pending read/write with respect NDArray are finished.
+*  all the pending reads/writes with respect NDArray are finished.
 * \param handle the handle to the ndarray
 * \param out_dlpack pointer holder to get pointer of DLManagedTensor
 * \return 0 when success, -1 when failure happens

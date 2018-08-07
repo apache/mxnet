@@ -3899,7 +3899,8 @@ def histogram(a, bins=10, range=None):
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
 
-pycapsule_dlpack_deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(_LIB.MXNDArrayCallDLPackCapsuleDeleter)
+pycapsule_dlpack_deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(
+    _LIB.MXNDArrayCallDLPackCapsuleDeleter)
 
 def to_dlpack_for_read(data):
     """Returns a reference view of NDArray that represents as DLManagedTensor until
@@ -4005,6 +4006,7 @@ def from_dlpack(dlpack):
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
     # copy dlpack
-    dlpack_copy = ctypes.pythonapi.PyCapsule_New(dlpack_handle, b'dltensor', pycapsule_dlpack_deleter)
+    dlpack_copy = ctypes.pythonapi.PyCapsule_New(
+        dlpack_handle, b'dltensor', pycapsule_dlpack_deleter)
     ctypes.pythonapi.PyCapsule_SetName(dlpack, b'used_dltensor')
     return NDArray(handle=handle, dlpack=dlpack_copy)
