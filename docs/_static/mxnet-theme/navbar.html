@@ -50,7 +50,7 @@
           </ul>
         </span>
       </nav>
-      
+
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
@@ -71,7 +71,7 @@
               <li class="dropdown-submenu">
                 <a href="#" tabindex="-1" role="button" aria-haspopup="true" class="dropdown-toggle burger-link" data-toggle="dropdown">{{name}}</a>
                 <ul class="dropdown-menu">
-                  {% for lang in ['Python', 'Scala', 'R', 'Julia', 'C++', 'Perl'] %}
+                  {% for lang in ['C++', 'Clojure', 'Julia',  'Perl', 'Python', 'R', 'Scala'] %}
                     <li><a tabindex="-1" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">{{lang}}</a>
                     </li>
                   {% endfor %}
