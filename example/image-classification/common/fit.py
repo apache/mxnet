@@ -49,7 +49,8 @@ def _get_lr_scheduler(args, kv):
     steps = [epoch_size * (x - begin_epoch)
              for x in step_epochs if x - begin_epoch > 0]
     if steps:
-        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
+        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor,
+                                                         base_lr=args.lr))
     else:
         return (lr, None)
 
