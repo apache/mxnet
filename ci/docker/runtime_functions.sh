@@ -554,9 +554,6 @@ build_ubuntu_gpu_cmake() {
     # build_cython
 
     # TMP for debugging
-    build_ccache_wrappers
-    export CC="ccache gcc"
-    export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CUDA=1                    \
@@ -567,8 +564,6 @@ build_ubuntu_gpu_cmake() {
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
     
-    export CC="gcc"
-    export CXX="g++"
     make cython PYTHON=python2
     make cython PYTHON=python3
 }
