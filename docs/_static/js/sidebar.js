@@ -65,7 +65,7 @@ function render_lefttoc() {
     }
     else {
         var toc = $('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul').clone();
-        //render_left_helper(toc);
+        render_left_helper(toc);
         $('.sphinxsidebar').css("visibility", "visible");
     }
 }
@@ -218,7 +218,7 @@ $(document).ready(function () {
                 }
             }
             render_righttoc();
-            //if ($('.leftsidebar').length) render_lefttoc();
+            if ($('.leftsidebar').length) render_lefttoc();
         }
         if ($('div.sphinxsidebar').css('visibility') == 'hidden') $('.content').css('width', '100%');
         if (url.indexOf('/api/') != -1) return;

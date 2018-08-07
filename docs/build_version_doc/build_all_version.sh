@@ -113,7 +113,8 @@ function checkout () {
   cd $repo_folder
   # Overriding configs later will cause a conflict here, so stashing...
   git stash
-  git checkout "$repo_folder"
+  # Fails to checkout if not available locally, so try upstream
+  git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder"
   if [ $tag == 'master' ]; then
     git pull
   fi
