@@ -32,6 +32,7 @@ import nbformat
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
 TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
+RETRIES = 10
 
 def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='tmp_notebook'):
     """Run tutorial Jupyter notebook to catch any execution error.
@@ -72,15 +73,21 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
         os.makedirs(working_dir)
     try:
         notebook = nbformat.read(notebook_path + '.ipynb', as_version=IPYTHON_VERSION)
-        # Adding a small delay to allow time for sockets to be freed
-        # stop-gap measure to battle the 1000ms linger of socket hard coded
-        # in the kernel API code
-        time.sleep(1.1)
         if kernel is not None:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
-        nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+
+        # There is a low (< 1%) chance that starting a notebook executor will fail due to the kernel
+        # taking to long to start, or a port collision, etc.
+        for i in range(RETRIES):
+            try:
+                nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+            except RuntimeError as rte:
+                logging.info("Error starting preprocessor: {}. Attempt {}/{}".format(str(rte), i+1, RETRIES))
+                time.sleep(1)
+                continue
+            break
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
