@@ -379,10 +379,10 @@ build_ubuntu_cpu_cmake_debug() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
-     export CXX=clang++-3.9
+    export CXX=clang++-3.9
     export CC=clang-3.9
-     build_ccache_wrappers
-     make \
+    build_ccache_wrappers
+    make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -539,8 +539,6 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
@@ -673,10 +671,9 @@ unittest_ubuntu_python3_gpu_cython() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    # export MXNET_ENABLE_CYTHON=1
-    # export MXNET_ENFORCE_CYTHON=1
-    # check_cython 3
-    export MXNET_ENABLE_CYTHON=0
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
