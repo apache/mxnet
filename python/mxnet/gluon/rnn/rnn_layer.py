@@ -22,6 +22,7 @@
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
 import re
+
 __all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray, symbol
