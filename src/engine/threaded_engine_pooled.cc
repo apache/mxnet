@@ -133,7 +133,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
     assert(opr_block->wait.load() == 0);
     if (opr_block->ctx.dev_mask() == gpu::kDevMask) {
       #if MXNET_USE_CUDA
-      mxnet::common::cuda::SetDevice set_device(opr_block->ctx.dev_id);
+      CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
       #else   // MXNET_USE_CUDA
       LOG(FATAL) << "Please compile with CUDA enabled";
       #endif  // MXNET_USE_CUDA
