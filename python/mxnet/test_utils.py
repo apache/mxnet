@@ -1203,7 +1203,8 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None, equal_nan=False, use_uniform=False, default_type=np.float64):
+                      raise_on_err=True, ground_truth=None, equal_nan=False,
+                      use_uniform=False, default_type=np.float64):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1280,9 +1281,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for n, arr in exe_list[0].arg_dict.items():
         if n not in arg_params:
             if use_uniform:
-                arg_params[n] = np.random.uniform(low=-0.92, high=0.92, size=arr.shape).astype(default_type)
+                arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
+                                                  size=arr.shape).astype(default_type)
             else:
-                arg_params[n] = np.random.normal(size=arr.shape, scale=scale).astype(default_type)
+                arg_params[n] = np.random.normal(size=arr.shape,
+                                                 scale=scale).astype(default_type)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
