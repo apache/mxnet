@@ -511,7 +511,7 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
     if (req[i] == kNullOp)
       continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
-      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-3);
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
       if (!similar) {
         LOG(ERROR) << attrs.op->name << " fails";
       }
