@@ -1784,7 +1784,7 @@ Next, we install the ```graphviz``` library that we use for visualizing network 
 <div class="cpu">
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
-You can [build MXNet-R from source](windows_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
+You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
 cran <- getOption("repos")
@@ -1797,14 +1797,15 @@ install.packages("mxnet")
 
 <div class="gpu">
 
-You can [build MXNet-R from source](windows_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
+You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
-cran <- getOption("repos")
-cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU"
-options(repos = cran)
-install.packages("mxnet")
+  cran <- getOption("repos")
+  cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/GPU/cu92"
+  options(repos = cran)
+  install.packages("mxnet")
 ```
+Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->

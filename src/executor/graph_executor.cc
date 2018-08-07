@@ -1282,7 +1282,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   for (size_t i = 0; i < pool_info.size(); i++) {
     sorted_pool_index.push_back(i);
   }
-  auto pool_comparator = [&pool_info](int lhs, int rhs){
+  auto pool_comparator = [&pool_info](size_t lhs, size_t rhs){
     return pool_info[lhs].bytes > pool_info[rhs].bytes;
   };
   std::sort(sorted_pool_index.begin(), sorted_pool_index.end(), pool_comparator);

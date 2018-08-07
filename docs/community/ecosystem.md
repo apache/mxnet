@@ -57,7 +57,7 @@ Community contributions to MXNet have added many new valuable features and funct
 
 ## Model Serving
 
-* [MXNet Model Server (MMS)](https://github.com/apache/incubator-mxnet/tree/master/example/model-server/mms.md) - simple yet scalable solution for model inference.
+* [MXNet Model Server (MMS)](https://github.com/awslabs/mxnet-model-server) - simple yet scalable solution for model inference.
 
 
 ## Model Zoos

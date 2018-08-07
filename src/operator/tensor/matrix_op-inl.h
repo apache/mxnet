@@ -122,7 +122,7 @@ inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
       CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
       if (d1 == -1) d1 = d0 / d2;
       if (d2 == -1) d2 = d0 / d1;
-      CHECK_EQ(d1 * d2, static_cast<IType>(d0)) <<
+      CHECK(d1 * d2 == static_cast<IType>(d0) || static_cast<IType>(d0) == IType(0)) <<
         "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
       tmp.push_back(d1);
       tmp.push_back(d2);
@@ -151,13 +151,36 @@ inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
   return oshape;
 }
 
+inline bool ReverseReshapeInferShape(TShape *in, const TShape& out) {
+  if (in->Size() && out.Size()) {
+    return true;
+  } else if (!out.Size()) {
+    return false;
+  } else {
+    int zero_axis = -1;
+    int non_zero_prod = 1;
+    for (index_t i = 0; i < in->ndim(); i++) {
+      if ((*in)[i] == 0) {
+        if (zero_axis != -1)
+          return false;  // more than 1 zero found.
+        else
+          zero_axis = i;
+      } else {
+        non_zero_prod *= (*in)[i];
+      }
+    }
+    (*in)[zero_axis] = out.Size() / non_zero_prod;
+    return true;
+  }
+}
+
 inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                         std::vector<TShape> *in_attrs,
+                         std::vector<TShape> *out_attrs) {
   const ReshapeParam& param_ = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
-  const TShape &dshape = (*in_attrs)[0];
+  TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
   TShape oshape;
   if (param_.shape.ndim() != 0) {
@@ -182,14 +205,15 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       oshape[inf_idx] = dshape.Size() / oshape.Size();
     }
   } else {
-    return (*out_attrs)[0].ndim();
+    return (*out_attrs)[0].ndim() && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
+  ReverseReshapeInferShape(&dshape, oshape);
   CHECK_EQ(oshape.Size(), dshape.Size())
     << "Target shape size is different to source. "
     << "Target: " << oshape
     << "\nSource: " << dshape;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
 }
 
 inline bool FlattenShape(const nnvm::NodeAttrs& attrs,

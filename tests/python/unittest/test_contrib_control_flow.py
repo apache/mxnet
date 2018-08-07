@@ -1159,6 +1159,7 @@ def check_contrib_rnn(cell_type, num_states):
 
     configs = [
             {},
+            {'inline_limit': 0},
             {'static_alloc': True},
             {'static_alloc': True, 'static_shape': True} ]
     for config in configs:
