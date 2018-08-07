@@ -476,8 +476,8 @@ void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
     NDArray data = inputs_[i];
     inputs.emplace_back(data.shape(), ctx, false, data.dtype());
     if (data.IsMKLDNNData() && data.IsView())
-        data = in_data[fullc::kData].Reorder2Default();
-    auto mem = inputs_[i].GetMKLDNNData();
+        data = data.Reorder2Default();
+    auto mem = data.GetMKLDNNData();
     inputs[i].CopyFrom(*mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
