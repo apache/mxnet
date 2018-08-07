@@ -473,8 +473,10 @@ void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
   auto ctx = inputs_[0].ctx();
   CHECK(!MKLDNNStream::Get()->HasOps());
   for (size_t i = 0; i < inputs_.size(); i++) {
-    inputs.emplace_back(inputs_[i].shape(), ctx,
-                        false, inputs_[i].dtype());
+    NDArray data = inputs_[i];
+    inputs.emplace_back(data.shape(), ctx, false, data.dtype());
+    if (data.IsMKLDNNData() && data.IsView())
+        data = in_data[fullc::kData].Reorder2Default();
     auto mem = inputs_[i].GetMKLDNNData();
     inputs[i].CopyFrom(*mem);
   }
