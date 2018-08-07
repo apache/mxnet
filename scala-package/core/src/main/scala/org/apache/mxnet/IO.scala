@@ -142,15 +142,29 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 val pad: Int,
                 // the key for the bucket that should be used for this batch,
                 // for bucketing io only
-                val bucketKey: AnyRef = null,
+                val bucketKey: AnyRef,
                 // use ListMap to indicate the order of data/label loading
                 // (must match the order of input data/label)
-                private val providedData: ListMap[String, Shape] = null,
-                private val providedLabel: ListMap[String, Shape] = null,
-                val dataDType: DType = Base.MX_REAL_TYPE,
-                val labelDType: DType = DType.Int32,
-                val dataLayout: String = "NCHW",
-                val labelLayout: String = "N") {
+                private val providedData: ListMap[String, Shape],
+                private val providedLabel: ListMap[String, Shape],
+                val dataDType: DType,
+                val labelDType: DType,
+                val dataLayout: String,
+                val labelLayout: String) {
+  def this(data: IndexedSeq[NDArray],
+            label: IndexedSeq[NDArray],
+            index: IndexedSeq[Long],
+            pad: Int,
+            // the key for the bucket that should be used for this batch,
+            // for bucketing io only
+            bucketKey: AnyRef = null,
+            // use ListMap to indicate the order of data/label loading
+            // (must match the order of input data/label)
+            providedData: ListMap[String, Shape] = null,
+            providedLabel: ListMap[String, Shape] = null) {
+    this(data, label, index, pad, bucketKey, providedData, providedLabel,
+      MX_REAL_TYPE, DType.Int32, "NCHW", "N")
+  }
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
@@ -320,8 +334,9 @@ abstract class DataIter extends Iterator[DataBatch] {
   @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
     new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-      dataDType = getDType()._1, labelDType = getDType()._2,
-      dataLayout = getLayout()._1, labelLayout = getLayout()._2)
+      null, null, null,
+      getDType()._1, getDType()._2,
+      getLayout()._1, getLayout()._2)
   }
 
   /**

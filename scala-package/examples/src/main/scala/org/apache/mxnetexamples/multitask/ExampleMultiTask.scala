@@ -67,7 +67,8 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, dataDType = batch.dataDType, labelDType = batch.labelDType,
+          batch.pad, null, null, null,
+          dataDType = batch.dataDType, labelDType = batch.labelDType,
           dataLayout = batch.dataLayout, labelLayout = batch.labelLayout)
       } else {
         throw new NoSuchElementException

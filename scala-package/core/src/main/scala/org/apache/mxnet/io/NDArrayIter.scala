@@ -171,6 +171,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     if (hasNext) {
       cursor += dataBatchSize
       new DataBatch(getData(), getLabel(), getIndex(), getPad(),
+        null, null, null,
         dataDType = getDType()._1, labelDType = getDType()._2,
         dataLayout = getLayout()._1, labelLayout = getLayout()._2)
     } else {

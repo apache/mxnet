@@ -224,6 +224,7 @@ class PrefetchingIter(
         labels.toIndexedSeq.flatten,
         nextBatch(0).index,
         nextBatch(0).pad,
+        null, null, null,
         dataLayout = nextBatch(0).dataLayout,
         labelLayout = nextBatch(0).labelLayout,
         dataDType = nextBatch(0).dataDType,

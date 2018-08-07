@@ -33,6 +33,7 @@ class LongLivingDataBatch(
   override val labelLayout: String,
   override val dataDType: DType,
   override val labelDType: DType) extends DataBatch(data, label, index, pad,
+  null, null, null,
   dataLayout = dataLayout, labelLayout = labelLayout,
   dataDType = dataDType, labelDType = labelDType) {
   override def dispose(): Unit = {}

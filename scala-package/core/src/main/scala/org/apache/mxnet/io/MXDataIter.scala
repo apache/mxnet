@@ -127,6 +127,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
         index = getIndex(), pad = getPad(),
+        null, null, null,
         dataDType = getDType()._1, labelDType = getDType()._2,
         dataLayout = getLayout()._1, labelLayout = getLayout()._2)
     } else {
