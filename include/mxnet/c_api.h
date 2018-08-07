@@ -647,14 +647,14 @@ MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_che
  * \param handle the NDArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayWaitForRead(NDArrayHandle handle);
+MXNET_DLL int MXNDArrayWaitToRead(NDArrayHandle handle);
 /*!
  * \brief Wait until all the pending read/write with respect NDArray are finished.
  *  Always call this before write data into NDArray synchronizely.
  * \param handle the NDArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayWaitForWrite(NDArrayHandle handle);
+MXNET_DLL int MXNDArrayWaitToWrite(NDArrayHandle handle);
 /*!
  * \brief wait until all delayed operations in
  *   the system is completed
