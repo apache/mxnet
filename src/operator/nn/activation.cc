@@ -116,6 +116,10 @@ inline static bool ActivationStorageType(const nnvm::NodeAttrs& attrs,
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
+  if (!MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+    return ret;
+  }
 #endif
   return ret;
 }
@@ -157,6 +161,10 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNAct(param)) {
     *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+  if (!MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+    return ret;
   }
 #endif
   return ret;

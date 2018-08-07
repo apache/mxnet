@@ -63,7 +63,9 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
   // We only run MKLDNN op if it runs on CPU.
-  if (dev_mask == mshadow::cpu::kDevMask)
+  if (!MKLDNNEnvSet())
+    wanted_mode = DispatchMode::kFComputeFallback;
+  else if (dev_mask == mshadow::cpu::kDevMask)
     wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif

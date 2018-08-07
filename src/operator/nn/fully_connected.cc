@@ -193,6 +193,11 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+#endif
+
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
@@ -223,6 +228,10 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+#endif
   return dispatched;
 }
 
