@@ -462,11 +462,14 @@ $ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
 **Step 2** Build cython modules (optional).
 
 ```bash
-$ sudo apt-get install -y cython
+$ pip install Cython
 $ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
 ```
 
-Note that you can control the use of the cython modules at runtime via the environment variables `MXNET_ENABLE_CYTHON` and `MXNET_ENFORCE_CYTHON`. See [here](/faq/env_var.html) for details.
+*MXNet* tries to use the cython modules unless the environment variable `MXNET_ENABLE_CYTHON` is set to `0`.
+If loading the cython modules fails, the default behavior is falling back to ctypes without any warning.
+To raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to `1`.
+See [here](/faq/env_var.html) for more details.
 
 **Step 3** Install the MXNet Python binding.
 

@@ -150,6 +150,9 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - If set to 0, MXNet fallbacks to the ctypes if importing the cython modules fails.
   - If set to 1, MXNet raises an error if importing the cython modules fails.
 
+If cython modules are used, `mx.nd._internal.NDArrayBase` must be `mxnet._cy3.ndarray.NDArrayBase` for python 3 or `mxnet._cy2.ndarray.NDArrayBase` for python 2.
+If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
+
 ## Other Environment Variables
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
