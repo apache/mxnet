@@ -206,7 +206,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_copy)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-    .set_attr<bool>("TIsMKLDNN", true).set_attr<bool>("TIsMKLDNN", true)
+.set_attr<bool>("TIsMKLDNN", true)
 #endif
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){

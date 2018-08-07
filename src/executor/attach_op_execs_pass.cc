@@ -40,6 +40,11 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 
 namespace exec {
 
+class MKLDNNOpExecutor : public OpExecutor {
+ protected:
+  std::vector<NDArray> in_array_fallback;
+};
+
 // abstract OpExecutor which provides storage fallback procedure on
 // non-default inputs and outputs
 // FComputeExecutor and FStatefulComputeExecutor inherit from this class
@@ -153,14 +158,14 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
 
 
 // stateful compute_ex executor
-class StatefulComputeExExecutor : public OpExecutor {
+class StatefulComputeExExecutor : public MKLDNNOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
-    in_array = CreateDefaultInputs(in_array);
-    fcompute_(state_, op_ctx, in_array, req, out_array);
+    in_array_fallback = CreateDefaultInputs(in_array);
+    fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
     return;
 #endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
@@ -223,7 +228,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
 };
 
 // fcompute_ex executor
-class FComputeExExecutor : public OpExecutor {
+class FComputeExExecutor : public MKLDNNOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
@@ -231,8 +236,8 @@ class FComputeExExecutor : public OpExecutor {
     InvalidateOutputs(out_array, req);
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
     if (!is_mkldnn.get(attrs_.op, false)) {
-      in_array = CreateDefaultInputs(in_array);
-      fcompute_(attrs_, op_ctx, in_array, req, out_array);
+      in_array_fallback = CreateDefaultInputs(in_array);
+      fcompute_(attrs_, op_ctx, in_array_fallback, req, out_array);
       return;
     }
 #endif
