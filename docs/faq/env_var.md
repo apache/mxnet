@@ -8,6 +8,18 @@ For example, you can set these environment variables in Linux or macOS as follow
 export MXNET_GPU_WORKER_NTHREADS=3
 ```
 
+Or in powershell:
+```
+$env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+```
+
+## Variables controlling the execution environment
+
+* MXNET_LIBRARY_PATH
+    Absolute path indicating where the mxnet dynamic library is to be located, this would be the absolute
+    path to `libmxnet.so` or `libmxnet.dll` depending on the platform. The logic for loading the
+    library is in `python/mxnet/libinfo.py`
+
 ## Set the Number of Threads
 
 * MXNET_GPU_WORKER_NTHREADS
