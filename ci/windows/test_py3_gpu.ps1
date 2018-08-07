@@ -16,8 +16,8 @@
 # under the License.
 
 7z x -y windows_package.7z
-for /r %%i in (*.dll) do xcopy /Y /C "%%i" .\\python\\mxnet\\
-$env:PYTHONPATH=join-path $pwd.Path python
+$env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\python\mxnet\libmxnet.dll
+$env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 c:\Anaconda3\envs\py3\Scripts\pip install -r tests\requirements.txt
 c:\Anaconda3\envs\py3\python.exe -m nose -v --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest

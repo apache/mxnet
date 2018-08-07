@@ -131,7 +131,7 @@ def test_multi_worker():
         assert (batch.asnumpy() == i).all()
 
 class _Dummy(Dataset):
-    """Dummpy dataset for randomized shape arrays."""
+    """Dummy dataset for randomized shape arrays."""
     def __init__(self, random_shape):
         self.random_shape = random_shape
 
