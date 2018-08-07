@@ -537,35 +537,21 @@ build_ubuntu_gpu_cmake_mkldnn() {
 
 build_ubuntu_gpu_cmake() {
     set -ex
-    # cd /work/build
-    # cmake \
-    #     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    #     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    #     -DUSE_CUDA=1               \
-    #     -DUSE_CUDNN=1              \
-    #     -DUSE_MKLML_MKL=0          \
-    #     -DUSE_MKLDNN=0             \
-    #     -DUSE_DIST_KVSTORE=1       \
-    #     -DCMAKE_BUILD_TYPE=Release \
-    #     -G Ninja                   \
-    #     /work/mxnet
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=1               \
+        -DUSE_CUDNN=1              \
+        -DUSE_MKLML_MKL=0          \
+        -DUSE_MKLDNN=0             \
+        -DUSE_DIST_KVSTORE=1       \
+        -DCMAKE_BUILD_TYPE=Release \
+        -G Ninja                   \
+        /work/mxnet
 
-    # ninja -v
-    # build_cython
-
-    # TMP for debugging
-    make \
-        DEV=1                         \
-        USE_CUDA=1                    \
-        USE_CUDNN=1                   \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_MKLML_MKL=0               \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        -j$(nproc)
-    
-    make cython PYTHON=python2
-    make cython PYTHON=python3
+    ninja -v
+    build_cython
 }
 
 
@@ -687,9 +673,10 @@ unittest_ubuntu_python3_gpu_cython() {
     # https://github.com/apache/incubator-mxnet/issues/10026
     #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENABLE_CYTHON=1
-    export MXNET_ENFORCE_CYTHON=1
-    check_cython 3
+    # export MXNET_ENABLE_CYTHON=1
+    # export MXNET_ENFORCE_CYTHON=1
+    # check_cython 3
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
