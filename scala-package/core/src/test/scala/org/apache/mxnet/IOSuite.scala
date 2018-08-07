@@ -252,6 +252,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
     // test pad
     val dataIter0 = new NDArrayIter(data, label, 128, false, "pad",
+      dataName = "data", labelName = "label", dataDType = DType.Float32, labelDType = DType.Int32,
       dataLayout = "NTC", labelLayout = "NT")
     var batchCount = 0
     val nBatch0 = 8
@@ -287,8 +288,11 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch1)
 
     // test empty label (for prediction)
-    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, lastBatchHandle = "discard",
-      dataLayout = "NTC")
+    val dataIter2 = new NDArrayIter(data = data, label = IndexedSeq.empty,
+      dataBatchSize = 128, shuffle = false, lastBatchHandle = "discard",
+      dataName = "data", labelName = "label",
+      dataLayout = "NTC", labelLayout = "N",
+      dataDType = DType.Float32, labelDType = DType.Int32)
     batchCount = 0
     while(dataIter2.hasNext) {
       val tBatch = dataIter2.next()

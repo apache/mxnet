@@ -26,7 +26,6 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * A temporary helper implementation for predicting Vectors
- * @author Yizhi Liu
  */
 class PointIter private[mxnet](
   private val points: Iterator[Vector],

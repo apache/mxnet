@@ -48,29 +48,36 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
                   dataLayout: String, labelLayout: String) extends DataIter {
 
   // scalastyle:off
-  /**
-   * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
-   * @param label Same as data, but is not fed to the model during testing.
-   *              Label names will be label_0, label_1, ..., etc.
-   * @param dataBatchSize Batch Size
-   * @param shuffle Whether to shuffle the data
-   * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
-   *
-   * This iterator will pad, discard or roll over the last batch if
-   * the size of data does not match batch_size. Roll over is intended
-   * for training and can cause problems if used for prediction.
-   */
-  def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
-           dataBatchSize: Int = 1, shuffle: Boolean = false,
-           lastBatchHandle: String = "pad",
-           dataName: String = "data", labelName: String = "label",
-           dataDType: DType = MX_REAL_TYPE, labelDType: DType = DType.Int32,
-           dataLayout: String = "NCHW", labelLayout: String = "N") {
+  def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray],
+           dataBatchSize: Int, shuffle: Boolean,
+           lastBatchHandle: String,
+           dataName: String, labelName: String,
+           dataDType: DType, labelDType: DType,
+           dataLayout: String, labelLayout: String) {
     this(IO.initData(data, allowEmpty = false, dataName),
       IO.initData(label, allowEmpty = true, labelName),
       dataBatchSize, shuffle, lastBatchHandle, dataDType, labelDType, dataLayout, labelLayout)
   }
   // scalastyle:on
+  /**
+    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
+    * @param label Same as data, but is not fed to the model during testing.
+    *              Label names will be label_0, label_1, ..., etc.
+    * @param dataBatchSize Batch Size
+    * @param shuffle Whether to shuffle the data
+    * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
+    *
+    * This iterator will pad, discard or roll over the last batch if
+    * the size of data does not match batch_size. Roll over is intended
+    * for training and can cause problems if used for prediction.
+    */
+  def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
+           dataBatchSize: Int = 1, shuffle: Boolean = false,
+           lastBatchHandle: String = "pad",
+           dataName: String = "data", labelName: String = "label") {
+    this(data, label, dataBatchSize, shuffle, lastBatchHandle, dataName, labelName,
+      MX_REAL_TYPE, DType.Int32, "NCHW", "N")
+  }
 
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
 

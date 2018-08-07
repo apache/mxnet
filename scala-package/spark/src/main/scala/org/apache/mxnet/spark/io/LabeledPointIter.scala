@@ -26,7 +26,6 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * A helper converter for LabeledPoint
- * @author Yizhi Liu
  */
 class LabeledPointIter private[mxnet](
   private val points: Iterator[LabeledPoint],

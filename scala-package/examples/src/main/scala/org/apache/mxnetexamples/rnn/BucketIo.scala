@@ -96,12 +96,22 @@ object BucketIo {
   class BucketSentenceIter(
       path: String, vocab: Map[String, Int], var buckets: IndexedSeq[Int],
       _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
-      seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
-      readContent: ReadContent = defaultReadContent,
-      dataLayout: String = "NT",
-      labelLayout: String = "N",
-      dataDType : DType = DType.Float32,
-      labelDType: DType = DType.Int32) extends DataIter {
+      seperateChar: String, text2Id: Text2Id,
+      readContent: ReadContent,
+      dataLayout: String,
+      labelLayout: String,
+      dataDType : DType,
+      labelDType: DType) extends DataIter {
+
+    // scalastyle:off
+    def this(path: String, vocab: Map[String, Int], buckets: IndexedSeq[Int],
+    _batchSize: Int, initStates: IndexedSeq[(String, (Int, Int))],
+    seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
+    readContent: ReadContent = defaultReadContent) {
+      this(path, vocab, buckets, _batchSize, initStates, seperateChar, text2Id,
+        readContent, "NT", "N", DType.Float32, DType.Int32)
+    }
+    // scalastyle:on
 
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
 

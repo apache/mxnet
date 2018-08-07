@@ -31,16 +31,21 @@ import scala.collection.mutable.ListBuffer
  * @param handle the handle to the underlying C++ Data Iterator
  */
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
-                                dataName: String = "data",
-                                labelName: String = "label",
-                                dtype: DType = DType.Float32,
-                                dataLayout: String = "NCHW",
-                                labelLayout: String = "N",
-                                dataDType: DType = DType.Float32,
-                                labelDType: DType = DType.Int32)
+                                dataName: String,
+                                labelName: String,
+                                dataLayout: String,
+                                labelLayout: String,
+                                dataDType: DType,
+                                labelDType: DType)
   extends DataIter with WarnIfNotDisposed {
 
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
+
+  def this(handle: DataIterHandle,
+           dataName: String = "data",
+           labelName: String = "label") {
+    this(handle, dataName, labelName, "NCHW", "N", DType.Float32, DType.Int32)
+  }
 
   // use currentBatch to implement hasNext
   // (may be this is not the best way to do this work,
