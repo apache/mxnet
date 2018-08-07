@@ -115,18 +115,16 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
   private var cursor = -dataBatchSize
 
   private val (_provideData: ListMap[String, Shape],
-               _provideLabel: ListMap[String, Shape]) = {
+               _provideLabel: ListMap[String, Shape],
+               _provideDataDesc: IndexedSeq[DataDesc],
+               _provideLabelDesc: IndexedSeq[DataDesc]) = {
     val pData = ListMap.empty[String, Shape] ++ initData.map(getShape)
     val pLabel = ListMap.empty[String, Shape] ++ initLabel.map(getShape)
-    (pData, pLabel)
-  }
-
-  private val (_provideDataDesc: IndexedSeq[DataDesc],
-  _provideLabelDesc: IndexedSeq[DataDesc]) = {
-    val pData = initData.map(ele => new DataDesc(ele._1, getShape(ele)._2, dataDType, dataLayout))
-    val pLabel = initLabel.map(ele =>
-      new DataDesc(ele._1, getShape(ele)._2, labelDType, labelLayout))
-    (pData, pLabel)
+    val pDData = IndexedSeq.empty[DataDesc] ++ pData.map(ele =>
+      new DataDesc(ele._1, ele._2, dataDType, dataLayout))
+    val pDLabel = IndexedSeq.empty[DataDesc] ++ pLabel.map(ele =>
+      new DataDesc(ele._1, ele._2, labelDType, labelLayout))
+    (pData, pLabel, pDData, pDLabel)
   }
 
   /**

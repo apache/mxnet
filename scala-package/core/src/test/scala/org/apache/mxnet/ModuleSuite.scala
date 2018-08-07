@@ -185,7 +185,7 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 1, 1, 2))
     val trainData = new NDArrayIter(
       IndexedSeq(data), IndexedSeq(label), 1, false, "pad", "data", "softmax_label",
-      DType.Float32, DType.Int32, "NCHW", "NCHW")
+      DType.Float32, DType.Float32, "NCHW", "NCHW")
 
     // symbols
     var x = Symbol.Variable("data")
@@ -197,8 +197,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     // create module
     val mod = new Module(x, contexts = Array(Context.cpu()))
-    mod.bind(dataShapes = trainData.provideData,
-      Option(trainData.provideLabel))
+    mod.bind(dataShapes = trainData.provideDataDesc,
+      Option(trainData.provideLabelDesc))
     val argParamsCorrect = Map(
       "fc_0_weight" -> NDArray.array(Array(0.15f, 0.2f, 0.25f, 0.3f), Shape(2, 2)),
       "fc_0_bias" -> NDArray.array(Array(0.35f, 0.35f), Shape(2)),
@@ -236,7 +236,7 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     val label = NDArray.array(Array(0.01f, 0.99f), Shape(1, 1, 1, 2))
     val trainData = new NDArrayIter(
       IndexedSeq(data), IndexedSeq(label), 1, false, "pad", "data", "softmax_label",
-      DType.Float32, DType.Int32, "NCHW", "NCHW")
+      DType.Float32, DType.Float32, "NCHW", "NCHW")
 
     // symbols
     var x = Symbol.Variable("data")

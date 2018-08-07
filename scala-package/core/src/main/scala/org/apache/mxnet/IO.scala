@@ -108,7 +108,7 @@ object IO {
     val dataLayout = params.getOrElse("dataLayout", Layout.UNDEFINED)
     val labelLayout = params.getOrElse("labelLayout", Layout.UNDEFINED)
     val dataDType = params.getOrElse("dataDType", "Float32")
-    val labelDType = params.getOrElse("labelDType", "Int32")
+    val labelDType = params.getOrElse("labelDType", "Float32")
     new MXDataIter(out.value, dataName, labelName,
       dataLayout = dataLayout, labelLayout = labelLayout,
       dataDType = DType.getType(dataDType),
