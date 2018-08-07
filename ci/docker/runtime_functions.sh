@@ -537,21 +537,38 @@ build_ubuntu_gpu_cmake_mkldnn() {
 
 build_ubuntu_gpu_cmake() {
     set -ex
-    cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=0          \
-        -DUSE_MKLDNN=0             \
-        -DUSE_DIST_KVSTORE=1       \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
-        /work/mxnet
+    # cd /work/build
+    # cmake \
+    #     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    #     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+    #     -DUSE_CUDA=1               \
+    #     -DUSE_CUDNN=1              \
+    #     -DUSE_MKLML_MKL=0          \
+    #     -DUSE_MKLDNN=0             \
+    #     -DUSE_DIST_KVSTORE=1       \
+    #     -DCMAKE_BUILD_TYPE=Release \
+    #     -G Ninja                   \
+    #     /work/mxnet
 
-    ninja -v
-    build_cython
+    # ninja -v
+    # build_cython
+
+    # TMP for debugging
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make \
+        DEV=1                         \
+        USE_CUDA=1                    \
+        USE_CUDNN=1                   \
+        USE_MKLML_MKL=0               \
+        USE_MKLDNN=0                  \
+        USE_DIST_KVSTORE=1            \
+        -j$(nproc)
+    
+    export CC="gcc"
+    export CXX="g++"
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 
