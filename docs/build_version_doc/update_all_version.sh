@@ -35,7 +35,6 @@
 # ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
 #   http://mxnet.incubator.apache.org/
 
-
 set -e
 set -x
 
