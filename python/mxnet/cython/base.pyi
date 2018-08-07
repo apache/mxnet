@@ -8,7 +8,6 @@ ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
 ctypedef void* CachedOpHandle
-ctypedef void* DLPackHandle
 ctypedef unsigned nn_uint
 
 cdef py_str(const char* x):

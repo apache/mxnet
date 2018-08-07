@@ -517,7 +517,7 @@ int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
   API_BEGIN();
   NDArray *pdata = new NDArray();
   *pdata = NDArray::FromDLPack(
-          static_cast<DLManagedTensor*>(dlpack));
+           static_cast<DLManagedTensor*>(dlpack));
   *out_handle = pdata;
   API_END();
 }
