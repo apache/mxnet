@@ -105,8 +105,8 @@ object IO {
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
     val dataName = params.getOrElse("data_name", "data")
     val labelName = params.getOrElse("label_name", "label")
-    val dataLayout = params.getOrElse("dataLayout", "NCHW")
-    val labelLayout = params.getOrElse("labelLayout", "N")
+    val dataLayout = params.getOrElse("dataLayout", Layout.UNDEFINED)
+    val labelLayout = params.getOrElse("labelLayout", Layout.UNDEFINED)
     val dataDType = params.getOrElse("dataDType", "Float32")
     val labelDType = params.getOrElse("labelDType", "Int32")
     new MXDataIter(out.value, dataName, labelName,
@@ -163,7 +163,7 @@ class DataBatch(val data: IndexedSeq[NDArray],
             providedData: ListMap[String, Shape] = null,
             providedLabel: ListMap[String, Shape] = null) {
     this(data, label, index, pad, bucketKey, providedData, providedLabel,
-      MX_REAL_TYPE, DType.Int32, "NCHW", "N")
+      MX_REAL_TYPE, MX_REAL_TYPE, Layout.UNDEFINED, Layout.UNDEFINED)
   }
   /**
    * Dispose its data and labels
@@ -194,10 +194,10 @@ object DataBatch {
     private var label: IndexedSeq[NDArray] = null
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
-    private var dataLayout: String = "NCHW"
-    private var labelLayout: String = "N"
-    private var dataDType: DType = Base.MX_REAL_TYPE
-    private var labelDType: DType = DType.Int32
+    private var dataLayout: String = Layout.UNDEFINED
+    private var labelLayout: String = Layout.UNDEFINED
+    private var dataDType: DType = MX_REAL_TYPE
+    private var labelDType: DType = MX_REAL_TYPE
     private var bucketKey: AnyRef = null
     private var datatShapes: ListMap[String, Shape] = null
     private var labelShapes: ListMap[String, Shape] = null
@@ -408,8 +408,9 @@ abstract class DataPack() extends Iterable[DataBatch] {
 
 // Named data desc description contains name, shape, type and other extended attributes.
 case class DataDesc(name: String, shape: Shape,
-                    dtype: DType = Base.MX_REAL_TYPE, layout: String = "NCHW") {
-  require(shape.length == layout.length, ("number of dimensions in shape :%d with" +
+                    dtype: DType = Base.MX_REAL_TYPE, layout: String = Layout.UNDEFINED) {
+  require(layout == Layout.UNDEFINED || shape.length == layout.length,
+    ("number of dimensions in shape :%d with" +
     " shape: %s should match the length of the layout: %d with layout: %s").
     format(shape.length, shape.toString, layout.length, layout))
 
@@ -419,6 +420,8 @@ case class DataDesc(name: String, shape: Shape,
 }
 
 object DataDesc {
+
+  private val logger = LoggerFactory.getLogger(classOf[DataDesc])
   /**
    * Get the dimension that corresponds to the batch size.
    * @param layout layout string. For example, "NCHW".
@@ -428,7 +431,16 @@ object DataDesc {
    *         for each data-parallelism device.
    */
   def getBatchAxis(layout: Option[String]): Int = {
-    layout.map(_.indexOf('N')).getOrElse(0)
+    if (layout.isEmpty|| layout.get == Layout.UNDEFINED) {
+      logger.info("Found Undefined Layout, will use default index 0")
+      0
+    } else {
+      if (layout.get.contains('N')) {
+        layout.get.indexOf("N")
+      } else {
+       throw new IllegalArgumentException("No N found in Batch Axis!")
+      }
+    }
   }
 
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {

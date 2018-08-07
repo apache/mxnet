@@ -34,9 +34,9 @@ class LabeledPointIter private[mxnet](
   private val dataName: String = "data",
   private val labelName: String = "label",
   private val dataDType: DType = DType.Float32,
-  private val labelDType: DType = DType.Int32,
-  private val dataLayout: String = "NCHW",
-  private val labelLayout: String = "N") extends DataIter {
+  private val labelDType: DType = DType.Float32,
+  private val dataLayout: String = Layout.UNDEFINED,
+  private val labelLayout: String = Layout.UNDEFINED) extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1

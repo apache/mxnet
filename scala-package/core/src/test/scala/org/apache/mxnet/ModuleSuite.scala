@@ -24,7 +24,7 @@ import org.apache.mxnet.io._
 
 class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   test ("model dtype") {
-    val dType = DType.Float16
+    val dType = DType.Float32
     val dShape = Shape(3, 8, 7)
 
     var sym = Symbol.Variable("data")

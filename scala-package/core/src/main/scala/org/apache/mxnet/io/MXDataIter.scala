@@ -44,7 +44,8 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   def this(handle: DataIterHandle,
            dataName: String = "data",
            labelName: String = "label") {
-    this(handle, dataName, labelName, "NCHW", "N", DType.Float32, DType.Int32)
+    this(handle, dataName, labelName, Layout.UNDEFINED, Layout.UNDEFINED,
+      DType.Float32, DType.Float32)
   }
 
   // use currentBatch to implement hasNext

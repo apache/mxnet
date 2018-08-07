@@ -76,7 +76,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label") {
     this(data, label, dataBatchSize, shuffle, lastBatchHandle, dataName, labelName,
-      MX_REAL_TYPE, DType.Int32, "NCHW", "N")
+      MX_REAL_TYPE, MX_REAL_TYPE, Layout.UNDEFINED, Layout.UNDEFINED)
   }
 
   private val logger = LoggerFactory.getLogger(classOf[NDArrayIter])
@@ -289,10 +289,10 @@ object NDArrayIter {
     private var label: IndexedSeq[(String, NDArray)] = IndexedSeq.empty
     private var dataBatchSize: Int = 1
     private var lastBatchHandle: String = "pad"
-    private var dataLayout: String = "NCHW"
-    private var labelLayout: String = "N"
+    private var dataLayout: String = Layout.UNDEFINED
+    private var labelLayout: String = Layout.UNDEFINED
     private var dataDType: DType = Base.MX_REAL_TYPE
-    private var labelDType: DType = DType.Int32
+    private var labelDType: DType = Base.MX_REAL_TYPE
 
     /**
      * Add one data input with its name.
@@ -350,8 +350,8 @@ object NDArrayIter {
 
     /**
       * Set the layout.
-      * @param dataLayout The layout of the data, default is NCHW
-      * @param labelLayout The layout of the label, default is N
+      * @param dataLayout The layout of the data, default is UNDEFINED
+      * @param labelLayout The layout of the label, default is UNDEFINED
       * @return this
       */
     def setLayout(dataLayout: String, labelLayout: String): Builder = {

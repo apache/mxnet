@@ -109,7 +109,7 @@ object BucketIo {
     seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
     readContent: ReadContent = defaultReadContent) {
       this(path, vocab, buckets, _batchSize, initStates, seperateChar, text2Id,
-        readContent, "NT", "N", DType.Float32, DType.Int32)
+        readContent, Layout.UNDEFINED, Layout.UNDEFINED, DType.Float32, DType.Float32)
     }
     // scalastyle:on
 
