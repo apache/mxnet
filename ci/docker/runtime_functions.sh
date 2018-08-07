@@ -36,13 +36,21 @@ clean_repo() {
 check_cython() {
     set -ex
     local python_ver=$1
-    if [ "$(echo -e 'import mxnet as mx\nprint(mx.nd._internal.NDArrayBase.__module__)' | python${python_ver})" != "mxnet._cy${python_ver}.ndarray" ]; then
+    local is_cython_used=$(python${python_ver} <<EOF
+import sys
+import mxnet as mx
+cython_ndarraybase = 'mxnet._cy' + str(sys.version_info.major) + '.ndarray'
+print(mx.nd._internal.NDArrayBase.__module__ == cython_ndarraybase)
+EOF
+)
+
+    if [ "${is_cython_used}" != "True" ]; then
         echo "ERROR: cython is not used."
         return 1
     else
         echo "NOTE: cython is used."
         return 0
-    fi
+    fi  
 }
 
 build_ccache_wrappers() {
