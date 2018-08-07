@@ -138,7 +138,7 @@ static inline bool SupportMKLDNN(const NDArray &input) {
 }
 
 static inline bool MKLDNNEnvSet() {
-  return dmlc::GetEnv("USE_MKLDNN", "ON") == "ON";
+  return dmlc::GetEnv("USE_MKLDNN", true);
 }
 
 /*
