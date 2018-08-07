@@ -554,12 +554,14 @@ build_ubuntu_gpu_cmake() {
     # build_cython
 
     # TMP for debugging
+    build_ccache_wrappers
     export CC="ccache gcc"
     export CXX="ccache g++"
     make \
         DEV=1                         \
         USE_CUDA=1                    \
         USE_CUDNN=1                   \
+        USE_CUDA_PATH=/usr/local/cuda \
         USE_MKLML_MKL=0               \
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
