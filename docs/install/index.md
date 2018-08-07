@@ -52,7 +52,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="devices">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default iots opt active">Raspberry Pi</button>
-  <button type="button" class="btn btn-default iots opt">NVIDIA Jetson TX2</button>
+  <button type="button" class="btn btn-default iots opt">NVIDIA Jetson</button>
 </div>
 </div>
 
