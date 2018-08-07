@@ -1347,18 +1347,30 @@ def test_dlpack():
             a = mx.nd.random.uniform(shape = shape)
             a_np = a.asnumpy()
 
-            pack = a.asdlpack()
+            pack = a.to_dlpack_for_read()
             b = mx.nd.from_dlpack(pack)
 
-            pack2 = mx.nd.to_dlpack(a)
+            a_copy = a.copy()
+            pack2 = a_copy.to_dlpack_for_write()
             c = mx.nd.from_dlpack(pack2)
 
-            del a, pack, pack2
+            pack3 = mx.nd.to_dlpack_for_read(a)
+            d = mx.nd.from_dlpack(pack3)
+
+            a_copy = a.copy()
+            pack4 = mx.nd.to_dlpack_for_write(a_copy)
+            e = mx.nd.from_dlpack(pack4)
+
+            del a, pack, pack2, pack3, pack4
 
             b_np = b.asnumpy()
             c_np = c.asnumpy()
+            d_np = d.asnumpy()
+            e_np = e.asnumpy()
             mx.test_utils.assert_almost_equal(a_np, b_np)
             mx.test_utils.assert_almost_equal(a_np, c_np)
+            mx.test_utils.assert_almost_equal(a_np, d_np)
+            mx.test_utils.assert_almost_equal(a_np, e_np)
 
 if __name__ == '__main__':
     import nose

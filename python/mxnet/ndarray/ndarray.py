@@ -47,7 +47,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
            "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "to_dlpack", "from_dlpack"]
+           "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -179,7 +179,6 @@ fixed-size items.
     # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
-
     @property
     def _tvm_handle(self):
         return self.handle.value
@@ -361,7 +360,7 @@ fixed-size items.
 
     def __getstate__(self):
         handle = self.handle
-        this = {'handle' : None}
+        this = {'handle' : None, 'dlpack' : self.dlpack}
         if handle is not None:
             length = ctypes.c_size_t()
             cptr = ctypes.POINTER(ctypes.c_char)()
@@ -383,6 +382,7 @@ fixed-size items.
             self.handle = handle
         else:
             self.handle = None
+        self.dlpack = state['dlpack']
 
     # pylint: disable=line-too-long
     def __setitem__(self, key, value):
@@ -2206,8 +2206,9 @@ fixed-size items.
         """
         return op.cast_storage(self, stype=stype)
 
-    def asdlpack(self):
-        """Returns a reference view of NDArray that represents as DLManagedTensor.
+    def to_dlpack_for_read(self):
+        """Returns a reference view of NDArray that represents as DLManagedTensor until
+        all previous write operations on the current array are finished.
 
         Returns
         -------
@@ -2217,11 +2218,40 @@ fixed-size items.
         Examples
         --------
         >>> x = mx.nd.ones((2,3))
-        >>> y = x.asdlpack()
+        >>> y = mx.nd.to_dlpack_for_read(x)
         >>> type(y)
         <class 'PyCapsule'>
+        >>> z = mx.nd.from_dlpack(y)
+        >>> z
+        [[1. 1. 1.]
+         [1. 1. 1.]]
+        <NDArray 2x3 @cpu(0)>
         """
-        return to_dlpack(self)
+        return to_dlpack_for_read(self)
+
+    def to_dlpack_for_write(self):
+        """Returns a reference view of NDArray that represents as DLManagedTensor until
+        all previous read/write operations on the current array are finished.
+
+        Returns
+        -------
+        PyCapsule (the pointer of DLManagedTensor)
+            a reference view of NDArray that represents as DLManagedTensor.
+
+        Examples
+        --------
+        >>> x = mx.nd.ones((2,3))
+        >>> w = mx.nd.to_dlpack_for_write(x)
+        >>> type(w)
+        <class 'PyCapsule'>
+        >>> u = mx.nd.from_dlpack(w)
+        >>> u += 1
+        >>> x
+        [[2. 2. 2.]
+         [2. 2. 2.]]
+        <NDArray 2x3 @cpu(0)>
+        """
+        return to_dlpack_for_write(self)
 
 def _get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
@@ -3869,24 +3899,11 @@ def histogram(a, bins=10, range=None):
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
 
-def pycapsule_dlpack_deleter(dlpack):
-    """The deleter of DLPack Tensor
+pycapsule_dlpack_deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(_LIB.MXNDArrayCallDLPackCapsuleDeleter)
 
-    Parameters
-    ----------
-    dlpack: void *
-    """
-    ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-    try:
-        dlpack_handle = ctypes.c_void_p(
-            ctypes.pythonapi.PyCapsule_GetPointer(
-                ctypes.c_void_p(dlpack), b'dltensor'))
-        check_call(_LIB.MXNDArrayCallDLPackDeleter(dlpack_handle))
-    except ValueError:
-        pass
-
-def to_dlpack(data):
-    """Returns a reference view of NDArray that represents as DLManagedTensor.
+def to_dlpack_for_read(data):
+    """Returns a reference view of NDArray that represents as DLManagedTensor until
+       all previous write operations on the current array are finished.
 
     Parameters
     ----------
@@ -3901,14 +3918,49 @@ def to_dlpack(data):
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack(x)
+    >>> y = mx.nd.to_dlpack_for_read(x)
     >>> type(y)
     <class 'PyCapsule'>
+    >>> z = mx.nd.from_dlpack(y)
+    >>> z
+    [[1. 1. 1.]
+     [1. 1. 1.]]
+    <NDArray 2x3 @cpu(0)>
     """
     dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    func_def = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', func_def(pycapsule_dlpack_deleter))
+    check_call(_LIB.MXNDArrayToDLPackForRead(data.handle, ctypes.byref(dlpack)))
+    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
+
+def to_dlpack_for_write(data):
+    """Returns a reference view of NDArray that represents as DLManagedTensor until
+       all previous read/write operations on the current array are finished.
+
+    Parameters
+    ----------
+    data: NDArray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of NDArray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> w = mx.nd.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.nd.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    [[2. 2. 2.]
+     [2. 2. 2.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    dlpack = DLPackHandle()
+    check_call(_LIB.MXNDArrayToDLPackForWrite(data.handle, ctypes.byref(dlpack)))
+    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
 
 def from_dlpack(dlpack):
     """Returns a NDArray backed by a dlpack tensor.
@@ -3926,7 +3978,7 @@ def from_dlpack(dlpack):
     Examples
     --------
     >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack(x)
+    >>> y = mx.nd.to_dlpack_for_read(x)
     >>> type(y)
     <class 'PyCapsule'>
     >>> z = mx.nd.from_dlpack(y)
@@ -3936,12 +3988,23 @@ def from_dlpack(dlpack):
     [[ 1.  1.  1.]
      [ 1.  1.  1.]]
     <NDArray 2x3 @cpu(0)>
+
+    >>> w = mx.nd.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.nd.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    [[2. 2. 2.]
+     [2. 2. 2.]]
+    <NDArray 2x3 @cpu(0)>
     """
     handle = NDArrayHandle()
-    ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
     dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, b'dltensor'))
     assert dlpack_handle.value != 0, ValueError(
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    # copy dlpack
+    dlpack_copy = ctypes.pythonapi.PyCapsule_New(dlpack_handle, b'dltensor', pycapsule_dlpack_deleter)
     ctypes.pythonapi.PyCapsule_SetName(dlpack, b'used_dltensor')
-    return NDArray(handle=handle, dlpack_handle=dlpack_handle)
+    return NDArray(handle=handle, dlpack=dlpack_copy)

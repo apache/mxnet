@@ -736,6 +736,10 @@ ctypes.pythonapi.PyCapsule_New.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
                                            ctypes.c_void_p]
 
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+ctypes.pythonapi.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
 
 ctypes.pythonapi.PyCapsule_SetName.restype = ctypes.c_int
 ctypes.pythonapi.PyCapsule_SetName.argtypes = [ctypes.py_object, ctypes.c_char_p]
+
+_LIB.MXNDArrayCallDLPackCapsuleDeleter.restype = None
+_LIB.MXNDArrayCallDLPackCapsuleDeleter.argtypes = [ctypes.c_void_p]

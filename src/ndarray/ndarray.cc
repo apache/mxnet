@@ -315,7 +315,6 @@ NDArray NDArray::data_ndarray() const {
 struct NDArrayDLManager {
     NDArray handle;  // ref NDArray
     DLManagedTensor tensor;
-    TShape strides;  // store variable strides
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
@@ -323,22 +322,6 @@ DLManagedTensor* NDArray::ToDLPack() const {
   dlmanager->handle = *this;
   if (!is_none()) {
     dlmanager->tensor.dl_tensor = data().dltensor();
-    // assign value for dl_tensor.strides
-    if (!dlmanager->tensor.dl_tensor.strides) {
-      TShape &strides_ = dlmanager->strides;
-      strides_ = TShape(shape_.ndim());
-      const uint32_t ndim = shape_.ndim();
-      if (ndim >= 1) {
-        strides_[ndim - 1] = 1;
-        for (uint32_t u = 1, i = ndim - 2; u < ndim; ++u, --i) {
-          strides_[i] = shape_[i + 1] * strides_[i + 1];
-        }
-      }
-      dlmanager->tensor.dl_tensor.strides = strides_.data();
-    } else {
-      dlmanager->strides = TShape(dlmanager->tensor.dl_tensor.strides,
-          dlmanager->tensor.dl_tensor.strides + dlmanager->tensor.dl_tensor.ndim);
-    }
   }
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
@@ -349,6 +332,28 @@ DLManagedTensor* NDArray::ToDLPack() const {
 
 NDArray NDArray::FromDLPack(DLManagedTensor* tensor) {
   const DLTensor &dl_tensor = tensor->dl_tensor;
+  if (dl_tensor.strides != nullptr) {
+    // check strides
+    const int &ndim = dl_tensor.ndim;
+    const int64_t *shape = dl_tensor.shape;
+    const int64_t *strides = dl_tensor.strides;
+    if (ndim >= 1) {
+      bool err = false;
+      if (strides[ndim - 1] != 1) {
+          err = true;
+      } else {
+        for (int i = ndim - 2; i >= 0; --i) {
+          if (strides[i] != shape[i + 1] * strides[i + 1]) {
+            err = true;
+            break;
+          }
+        }
+      }
+      if (err) {
+        LOG(FATAL) << "Unsupported DLPack because MXNet only support compact tensor now";
+      }
+    }
+  }
   return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id);
 }
 

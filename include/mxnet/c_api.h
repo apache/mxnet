@@ -95,6 +95,8 @@ typedef void *CudaKernelHandle;
 typedef void *ProfileHandle;
 /*! \brief handle to DLManagedTensor*/
 typedef void *DLManagedTensorHandle;
+/*! \brief handle to PyObject*/
+typedef void *PyObjectHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -645,14 +647,14 @@ MXNET_DLL int MXNDArraySyncCheckFormat(NDArrayHandle handle, const bool full_che
  * \param handle the NDArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayWaitToRead(NDArrayHandle handle);
+MXNET_DLL int MXNDArrayWaitForRead(NDArrayHandle handle);
 /*!
  * \brief Wait until all the pending read/write with respect NDArray are finished.
  *  Always call this before write data into NDArray synchronizely.
  * \param handle the NDArray handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayWaitToWrite(NDArrayHandle handle);
+MXNET_DLL int MXNDArrayWaitForWrite(NDArrayHandle handle);
 /*!
  * \brief wait until all delayed operations in
  *   the system is completed
@@ -741,13 +743,26 @@ MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
 /*!
 * \brief Create a reference view of NDArray that
-*  represents as DLManagedTensor.
+*  represents as DLManagedTensor until
+*  all the pending writes with respect NDArray are finished.
 * \param handle the handle to the ndarray
 * \param out_dlpack pointer holder to get pointer of DLManagedTensor
 * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
-                                DLManagedTensorHandle *out_dlpack);
+MXNET_DLL int MXNDArrayToDLPackForRead(NDArrayHandle handle,
+                                       DLManagedTensorHandle *out_dlpack);
+
+/*!
+* \brief Create a reference view of NDArray that
+*  represents as DLManagedTensor until
+*  all the pending read/write with respect NDArray are finished.
+* \param handle the handle to the ndarray
+* \param out_dlpack pointer holder to get pointer of DLManagedTensor
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayToDLPackForWrite(NDArrayHandle handle,
+                                        DLManagedTensorHandle *out_dlpack);
+
 /*!
 * \brief Create a NDArray backed by a dlpack tensor.
 *
@@ -769,6 +784,14 @@ MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack);
+
+/*!
+ * \brief Delete a dlpack tensor
+ * \param dlpack_capsule the pointer of a PyCapsule storing DLManagedTensor
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL void MXNDArrayCallDLPackCapsuleDeleter(PyObjectHandle dlpack_capsule);
+
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
