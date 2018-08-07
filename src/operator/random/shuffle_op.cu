@@ -82,7 +82,8 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 1, index_t> indices(reinterpret_cast<index_t*>(tmp_space_ptr),
                                       Shape1(first_axis_len), s);
       tmp_space_ptr += sizeof(index_t) * first_axis_len;
-      Kernel<range_fwd, gpu>::Launch(s, first_axis_len, 1, 0U, 1U, kWriteTo, indices.dptr_);
+      Kernel<range_fwd, gpu>::Launch(s, static_cast<int>(first_axis_len),
+                                     1, index_t(0), index_t(1), kWriteTo, indices.dptr_);
       Tensor<gpu, 1, KeyType> keys(reinterpret_cast<KeyType*>(tmp_space_ptr),
                                    Shape1(first_axis_len), s);
       tmp_space_ptr += sizeof(KeyType) * first_axis_len;
