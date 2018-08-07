@@ -954,10 +954,29 @@ object Symbol extends SymbolBase {
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return Symbol The created Symbol.
    */
-  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
-    repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
-    val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "dtype" -> dType.toString())
+  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f, repeat: Int = 1, 
+    name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat, 
+      "infer_range" -> false, "dtype" -> dType.toString())
+    val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
+    createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
+  }
+
+  /**
+   * Behaves like arange operator, but infers the stop value from the output shape,
+   * which must be known from the rest of the net.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param ctx Device context. Default context is the current default context.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return NDArray of evenly spaced values in the specified range.
+   */
+  def arangeWithInference(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
+    repeat: Int = 1, dType: DType = Base.MX_REAL_TYPE): Symbol = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
+      "infer_range" -> true, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
   }
