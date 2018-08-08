@@ -62,7 +62,7 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>(
                attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
@@ -134,7 +134,7 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
                                                          in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     *dispatch_mode = DispatchMode::kFComputeFallback;
   } else if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;

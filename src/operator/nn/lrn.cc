@@ -88,7 +88,7 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 #if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                         dispatch_mode, DispatchMode::kFComputeFallback);
   } else if (dev_mask == mshadow::cpu::kDevMask) {
@@ -108,7 +108,7 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 #if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                         dispatch_mode, DispatchMode::kFComputeFallback);
   } else if (dev_mask == mshadow::cpu::kDevMask) {
