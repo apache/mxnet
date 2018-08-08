@@ -95,7 +95,7 @@ find_path(OpenBLAS_INCLUDE_DIR
 
 set(OpenBLAS_LIB_NAMES openblas libopenblas.dll.a libopenblas.dll)
 
-if(CMAKE_CROSSCOMPILING OR MSVC)
+if(CMAKE_CROSSCOMPILING)
   message(STATUS "Will try to link to OpenBLAS statically")
   set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
 endif()
