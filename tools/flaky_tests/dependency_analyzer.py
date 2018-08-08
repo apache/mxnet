@@ -37,7 +37,7 @@ import itertools
 import json
 
 DEFAULT_CONFIG_FILE = os.path.join(
-    os.path.dirname(__file__), "config.json")
+    os.path.dirname(__file__), "test_dependencies.config")
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def find_dependents(dependencies, top):
 
     try:
         file_deps = read_config(DEFAULT_CONFIG_FILE)
-    except FileNotFoundError:
+    except IOError:
         file_deps = {}
         logger.WARNING("No config file found, "
             "continuing with no file dependencies")
@@ -115,21 +115,22 @@ def find_dependents_file(dependencies, filename):
 
     try:
         dependents |= find_dependents_file(dependents - dependencies, filename)
-    except RecursionError as re:
-        logger.error("Encountered recursion error when seaching {}: {}",
+    except RuntimeError as re:
+        logger.error("Encountered recursion error when seaching %s: %s",
                      filename, re.args[0])
 
     return dependents
 
 
 def output_results(dependents):
+    logger.info("Dependencies:")
     for filename in dependents.keys():
-        print(filename)
+        logger.info(filename)
         if not dependents[filename]:
-            print("None")
+            logger.info("None")
             continue
         for func in dependents[filename]:
-            print("\t{}".format(func))
+            logger.info("\t%s", func)
 
 
 def parse_args():
@@ -152,7 +153,7 @@ def parse_args():
         help="list of dependent functions, "
         "in the format: <file>:<func_name>")
 
-    arg_parse.add_argument(
+    arg_parser.add_argument(
         "--logging-level", "-l", dest="level", default="INFO",
         help="logging level, defaults to INFO")
 

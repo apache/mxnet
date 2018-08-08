@@ -19,40 +19,27 @@
 
 err = null
 
-def init_git() {
-    deleteDir()
-    retry(5) {
-        try{
-            timeout(time: 15, unit: 'MINUTES') {
-                checkout scm
-                sh 'git submodule update --init --recursive'
-                sh 'git clean -d -f'
-            }
-        } catch (exc) {
-            deleteDir()
-            error "Failed to fetch source code with $(exc)"
-            sleep 2
-        }
-    }
+node('mxnetlinux-cpu') {
+  // Loading the utilities requires a node context unfortunately
+  checkout scm
+  utils = load('ci/Jenkinsfile_utils.groovy')
 }
+utils.assign_node)labels(linux_gpu: 'mxnetlinux-gpu')
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-    def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size  %%SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
-    command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker': '')
-    command = command.replaceAll('%PLATFORM%', platform)
-    command = command.replaceAll('%FUNCTION_NAME%', function_name)
-    command = command.replaceAll('%SHARED_MEM%', shared_mem)
 
-    sh command
-}
-
-try{
+utils.main_wrapper(
+core_logic: {
     stage('Flakiness Check'){
-        node('mxnetlinux-gpu') {
+        node(NODE_LINUX_GPU) {
             ws('workspace/flakiness_check'){
-                init_git()
-                docker_run('ubuntu_gpu', 'run_flakiness_checker', true)
+                utils.init_git()
+                utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+                utils.docker_run('ubuntu_gpu', 'run_flakiness_checker', false)
             }
         }
     }
 }
+,
+failure_handler: {
+}
+)

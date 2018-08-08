@@ -126,11 +126,12 @@ def parse_patch(patch):
         if line.startswith("+def "):
             func_name = line.split()[1].split("(")[0]
             changes[func_name] = []
+            logger.debug("\tFound new top-level function: %s", func_name)
 
     return file_name, changes
 
 
-def output_changes(changes, verbosity):
+def output_changes(changes, verbosity=2):
     """ Output changes in an easy to understand format
     
     Three verbosity levels: 
@@ -147,23 +148,21 @@ def output_changes(changes, verbosity):
             5:5
         func_c
     """
-    if not verbosity:
-        verbosity = 2
     logger.debug("verbosity: %d", verbosity)
 
     if not changes:
         logger.info("No changes found")
     else:
         for file_name, chunks in changes.items():    
-            print(file_name)
+            logger.info(file_name)
             if verbosity < 2:
                 continue
             for func_name, ranges in chunks.items():
-                print("\t{}".format(func_name))
+                logger.info("\t%s", func_name)
                 if verbosity < 3:
                     continue
                 for (start, end) in ranges:
-                    print("\t\t{}:{}".format(start, end))
+                    logger.info("\t\t%s:%s", start, end)
 
     
 
@@ -212,7 +211,7 @@ if __name__ == "__main__":
 
     changes = parser(diff_output)
     for file_name, chunks in changes.items():
-        if not re.fullmatch(args.expr, file_name):
+        if not re.match(args.expr, file_name):
             del changes[file_name]
 
     output_changes(changes, args.verbosity)

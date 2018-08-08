@@ -69,7 +69,7 @@ class NameAction(argparse.Action):
         test_path = os.path.split(test_file)
         top = os.path.join(os.getcwd(), test_path[0])
 
-        for (path, dirs, files) in os.walk(top):
+        for (path, _ , files) in os.walk(top):
             if test_path[1] in files:
                 return  os.path.join(path, test_path[1])
 
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     except AttributeError:
         logging.basicConfig(level=logging.INFO)
         logging.warning("Invalid logging level: %s", args.level)
-    logger.debug("args: $s", args)
+    logger.debug("args: %s", args)
 
     code = run_test_trials(args.test_path, args.test_name, args.num_trials,
                            args.seed, args.args)

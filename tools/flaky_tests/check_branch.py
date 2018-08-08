@@ -25,6 +25,7 @@ import time
 import os
 import subprocess
 import json
+import sys
 
 import flakiness_checker
 import diff_collator
@@ -88,7 +89,7 @@ def calculate_test_trials(tests):
     try:
         n = int(TIME_BUDGET / total_time)
     except ZeroDivisionError:
-        logger.Error("Total time for tests was 0")
+        logger.error("Total time for tests was 0")
         return []
     
     logger.debug("total_time: %f | num_trials: %d", total_time, n)
@@ -112,17 +113,17 @@ def check_tests(tests):
 
 
 def output_results(flaky, nonflaky):
-    print("Following tests failed flakiness checker:")
+    logger.info("Following tests failed flakiness checker:")
     if not flaky:
-        print("None")
+        logger.info("None")
     for test in flaky:
-        print("%s:%s".format(test[0], test[1]))
+        logger.info("%s:%s", test[0], test[1])
 
-    print("Following tests passed flakiness checker:")
+    logger.info("Following tests passed flakiness checker:")
     if not nonflaky:
-        print("None")
+        logger.info("None")
     for test in nonflaky:
-        print("{}:{}".format(test[0], test[1]))
+        logger.info("%s:%s", test[0], test[1])
 
     logger.info("[Results]\tTotal: %d\tFlaky: %d\tNon-flaky: %d",
                 len(flaky) + len(nonflaky), len(flaky), len(nonflaky))
@@ -138,6 +139,7 @@ if __name__ == "__main__":
 
     diff_output = diff_collator.get_diff_output(args)
     changes = diff_collator.parser(diff_output)
+    diff_collator.output_changes(changes)
 
     changes = {k:set(v.keys()) for k, v in  changes.items()}
     tests = select_tests(changes)
