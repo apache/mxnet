@@ -1445,6 +1445,9 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 const int **aux_type_data,
                                 int *complete);
 
+MXNET_DLL int MXTRTSymbolOptimize(SymbolHandle sym_handle,
+                                  SymbolHandle *ret_sym_handle);
+
 /*!
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
@@ -1673,6 +1676,41 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    NDArrayHandle** aux_states,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
+
+MXNET_DLL int MXExecutorTensorRTBind(SymbolHandle symbol_handle,
+                                     int dev_type,
+                                     int dev_id,
+                                     const mx_uint num_g2c_keys,
+                                     const char** g2c_keys,
+                                     const int* g2c_dev_types,
+                                     const int* g2c_dev_ids,
+                                     const mx_uint provided_grad_req_list_len,
+                                     const char** provided_grad_req_names,
+                                     const char** provided_grad_req_types,
+                                     const mx_uint num_provided_arg_shapes,
+                                     const char** provided_arg_shape_names,
+                                     const mx_uint* provided_arg_shape_data,
+                                     const mx_uint* provided_arg_shape_idx,
+                                     const mx_uint num_provided_arg_dtypes,
+                                     const char** provided_arg_dtype_names,
+                                     const int* provided_arg_dtypes,
+                                     const mx_uint num_provided_arg_stypes,
+                                     const char** provided_arg_stype_names,
+                                     const int* provided_arg_stypes,
+                                     const mx_uint num_shared_arg_names,
+                                     const char** shared_arg_name_list,
+                                     int* shared_buffer_len,
+                                     const char** shared_buffer_name_list,
+                                     NDArrayHandle* shared_buffer_handle_list,
+                                     const char*** updated_shared_buffer_name_list,
+                                     NDArrayHandle** updated_shared_buffer_handle_list,
+                                     mx_uint* num_in_args,
+                                     NDArrayHandle** in_args,
+                                     NDArrayHandle** arg_grads,
+                                     mx_uint* num_aux_states,
+                                     NDArrayHandle** aux_states,
+                                     ExecutorHandle shared_exec_handle,
+                                     ExecutorHandle* out);
 
 /*!
  * \brief Return a new executor with the same symbol and shared memory,

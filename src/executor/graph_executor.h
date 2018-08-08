@@ -87,25 +87,26 @@ class GraphExecutor : public Executor {
             Executor* shared_exec = nullptr,
             const nnvm::NodeEntryMap<NDArray>& feed_dict
               = nnvm::NodeEntryMap<NDArray>());
+
   // initialize executor for simple bind
   void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
             const std::map<std::string, Context>& ctx_map,
-            std::vector<Context>* in_arg_ctxes,
-            std::vector<Context>* arg_grad_ctxes,
-            std::vector<Context>* aux_state_ctxes,
-            std::unordered_map<std::string, TShape>* arg_shape_map,
-            std::unordered_map<std::string, int>* arg_dtype_map,
-            std::unordered_map<std::string, int>* arg_stype_map,
-            std::vector<OpReqType>* grad_req_types,
-            std::unordered_set<std::string>* shared_arg_names,
+            const std::vector<Context>& in_arg_ctxes,
+            const std::vector<Context>& arg_grad_ctxes,
+            const std::vector<Context>& aux_state_ctxes,
+            const std::unordered_map<std::string, TShape>& arg_shape_map,
+            const std::unordered_map<std::string, int>& arg_dtype_map,
+            const std::unordered_map<std::string, int>& arg_stype_map,
+            const std::vector<OpReqType>& grad_req_types,
+            const std::unordered_set<std::string>& shared_arg_names,
             std::vector<NDArray>* in_arg_vec,
             std::vector<NDArray>* arg_grad_vec,
             std::vector<NDArray>* aux_state_vec,
             std::unordered_map<std::string, NDArray>* shared_buffer = nullptr,
             Executor* shared_exec = nullptr,
             const nnvm::NodeEntryMap<NDArray>& feed_dict
-              = nnvm::NodeEntryMap<NDArray>());
+            = nnvm::NodeEntryMap<NDArray>());
 
   Executor* Reshape(const bool partial_shaping,
                     const bool allow_up_sizing,
@@ -116,8 +117,6 @@ class GraphExecutor : public Executor {
                     std::vector<NDArray>* in_args,
                     std::vector<NDArray>* arg_grads,
                     std::vector<NDArray>* aux_states) override;
-
-  nnvm::Symbol GetOptimizedSymbol();
 
  protected:
   friend class mxnet::Imperative;
@@ -163,22 +162,24 @@ class GraphExecutor : public Executor {
                      std::vector<NDArray>* in_arg_vec,
                      std::vector<NDArray>* arg_grad_vec,
                      std::vector<NDArray>* aux_state_vec);
+
   // Initialize in_args, arg_grads and aux_states with
   // shared_buffer and shared_exec
-  void InitArguments(const nnvm::IndexedGraph& idx,
-                     const nnvm::ShapeVector& inferred_shapes,
-                     const nnvm::DTypeVector& inferred_dtypes,
-                     const StorageTypeVector& inferred_stypes,
-                     const std::vector<Context>& in_arg_ctxes,
-                     const std::vector<Context>& arg_grad_ctxes,
-                     const std::vector<Context>& aux_state_ctxes,
-                     const std::vector<OpReqType>& grad_req_types,
-                     const std::unordered_set<std::string>& shared_arg_names,
-                     const Executor* shared_exec,
-                     std::unordered_map<std::string, NDArray>* shared_buffer,
-                     std::vector<NDArray>* in_arg_vec,
-                     std::vector<NDArray>* arg_grad_vec,
-                     std::vector<NDArray>* aux_state_vec);
+  virtual void InitArguments(const nnvm::IndexedGraph& idx,
+                            const nnvm::ShapeVector& inferred_shapes,
+                            const nnvm::DTypeVector& inferred_dtypes,
+                            const StorageTypeVector& inferred_stypes,
+                            const std::vector<Context>& in_arg_ctxes,
+                            const std::vector<Context>& arg_grad_ctxes,
+                            const std::vector<Context>& aux_state_ctxes,
+                            const std::vector<OpReqType>& grad_req_types,
+                            const std::unordered_set<std::string>& shared_arg_names,
+                            const Executor* shared_exec,
+                            std::unordered_map<std::string, NDArray>* shared_buffer,
+                            std::vector<NDArray>* in_arg_vec,
+                            std::vector<NDArray>* arg_grad_vec,
+                            std::vector<NDArray>* aux_state_vec);
+
   // internal initialization of the graph for simple bind
   Graph InitGraph(nnvm::Symbol symbol,
                   const Context& default_ctx,
@@ -214,20 +215,39 @@ class GraphExecutor : public Executor {
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
-
+  static void HandleInferShapeError(const size_t num_forward_inputs,
+                                    const nnvm::IndexedGraph& idx,
+                                    const nnvm::ShapeVector& inferred_shapes);
+  static void HandleInferTypeError(const size_t num_forward_inputs,
+                                   const nnvm::IndexedGraph& idx,
+                                   const nnvm::DTypeVector& inferred_dtypes);
+  static void HandleInferStorageTypeError(const size_t num_forward_inputs,
+                                          const nnvm::IndexedGraph& idx,
+                                          const StorageTypeVector& inferred_stypes);
+  static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                           const Context &ctx, const int dtype);
+  static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                               const Context &ctx, const int dtype,
+                               std::vector<NDArray> *vec);
+  static NDArray ReshapeOrCreate(const std::string& name,
+                                 const TShape& dest_arg_shape,
+                                 const int dest_arg_dtype,
+                                 const NDArrayStorageType dest_arg_stype,
+                                 const Context& ctx,
+                                 std::unordered_map<std::string, NDArray>* shared_buffer,
+                                 bool enable_row_sparse_sharing);
+  // Assign context to the graph.
+  static Graph AssignContext(Graph g,
+                             const Context& default_ctx,
+                             const std::map<std::string, Context>& ctx_map,
+                             const std::vector<Context>& in_arg_ctxes,
+                             const std::vector<Context>& arg_grad_ctxes,
+                             const std::vector<Context>& aux_state_ctxes,
+                             const std::vector<OpReqType>& grad_req_types,
+                             size_t num_forward_inputs,
+                             size_t num_forward_outputs);
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
-
-  Graph ReinitGraph(Graph&& g, const Context &default_ctx,
-                    const std::map<std::string, Context> &ctx_map,
-                    std::vector<Context>* in_arg_ctxes,
-                    std::vector<Context>* arg_grad_ctxes,
-                    std::vector<Context>* aux_state_ctxes,
-                    std::vector<OpReqType>* grad_req_types,
-                    std::unordered_map<std::string, TShape>* arg_shape_map,
-                    std::unordered_map<std::string, int>* arg_dtype_map,
-                    std::unordered_map<std::string, int>* arg_stype_map,
-                    std::unordered_map<std::string, NDArray> *params_map);
 
   // internal graph
   nnvm::Graph graph_;
@@ -270,8 +290,6 @@ class GraphExecutor : public Executor {
   std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
-  // use TensorRT optimization pass for inference
-  bool use_tensorrt_ = false;
 };
 
 }  // namespace exec
