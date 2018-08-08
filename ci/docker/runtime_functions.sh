@@ -542,7 +542,7 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=1               \
-        -DUSE_CUDNN=0              \
+        -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
         -DUSE_MKLDNN=0             \
         -DUSE_DIST_KVSTORE=1       \
