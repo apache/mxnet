@@ -45,6 +45,7 @@ core_logic: {
       }
     }
   }
+}
 ,
 failure_handler:
 {

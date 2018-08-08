@@ -20,7 +20,7 @@
 
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
-node('mxnetlinux-cpu) {
+node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
@@ -98,6 +98,7 @@ core_logic: {
       }
     }
   }
+}
 ,
 failure_handler: {
   if (currentBuild.result == "FAILURE") {
