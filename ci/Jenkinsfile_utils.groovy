@@ -57,7 +57,7 @@ def init_git_win() {
 }
 
 // pack libraries for later use
-def pack_lib(name, libs=mx_lib) {
+def pack_lib(name, libs) {
   sh """
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
@@ -66,7 +66,7 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 // unpack libraries saved before
-def unpack_lib(name, libs=mx_lib) {
+def unpack_lib(name, libs) {
   unstash name
   sh """
 echo "Unpacked ${libs} from ${name}"
@@ -118,15 +118,17 @@ def assign_node_labels(args) {
   NODE_WINDOWS_GPU = args.windows_gpu
 }
 
-// assign any caught errors here
-err = null
 def main_wrapper(args) {
-  // hander: Core logic
-  // failure_handler: Failure handler
-
+  // Main Jenkinsfile pipeline wrapper handler that allows to wrap core logic into a format
+  // that supports proper failure handling
+  // args:
+  // - core_logic: Jenkins pipeline containing core execution logic
+  // - failure_handler: Failure handler
+  
+  // assign any caught errors here
+  err = null
   try {
-    // Call actual handler
-    args['handler']()
+    args['core_logic']()
 
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
@@ -149,4 +151,3 @@ def main_wrapper(args) {
   }
 }
 return this
-

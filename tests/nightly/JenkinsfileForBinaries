@@ -28,7 +28,7 @@ node('mxnetlinux-cpu) {
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
-handler: {
+core_logic: {
   stage('Build') {
     parallel 'GPU: CUDA9.1+cuDNN7': {
       node(NODE_LINUX_CPU) {

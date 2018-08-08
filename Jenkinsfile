@@ -86,7 +86,7 @@ node('mxnetlinux-cpu') {
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
-handler: {
+core_logic: {
   stage('Sanity Check') {
     parallel 'Lint': {
       node(NODE_LINUX_CPU) {
@@ -113,7 +113,7 @@ handler: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu')
+            utils.pack_lib('centos7_cpu', mx_lib)
           }
         }
       }
@@ -124,7 +124,7 @@ handler: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn')
+            utils.pack_lib('centos7_mkldnn', mx_lib)
           }
         }
       }
@@ -135,7 +135,7 @@ handler: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            utils.pack_lib('centos7_gpu')
+            utils.pack_lib('centos7_gpu', mx_lib)
           }
         }
       }
@@ -410,7 +410,7 @@ handler: {
         ws('workspace/ut-python2-cpu') {
           try {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             python2_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -426,7 +426,7 @@ handler: {
         ws('workspace/ut-python3-cpu') {
           try {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -589,7 +589,7 @@ handler: {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.init_git()
-              utils.unpack_lib('centos7_cpu')
+              utils.unpack_lib('centos7_cpu', mx_lib)
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
@@ -606,7 +606,7 @@ handler: {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.init_git()
-              utils.unpack_lib('centos7_gpu')
+              utils.unpack_lib('centos7_gpu', mx_lib)
               utils.docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
@@ -645,7 +645,7 @@ handler: {
         ws('workspace/ut-perl-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
             utils.publish_test_coverage()
           }
@@ -657,7 +657,7 @@ handler: {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu')
+            utils.unpack_lib('gpu', mx_lib)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
             utils.publish_test_coverage()
           }
@@ -693,7 +693,7 @@ handler: {
         ws('workspace/ut-r-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
             utils.publish_test_coverage()
           }
@@ -705,7 +705,7 @@ handler: {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu')
+            utils.unpack_lib('gpu', mx_lib)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
@@ -796,7 +796,7 @@ handler: {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
             utils.publish_test_coverage()
           }
@@ -808,7 +808,7 @@ handler: {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu')
+            utils.unpack_lib('gpu', mx_lib)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_python', true)
             utils.publish_test_coverage()
           }
@@ -821,7 +821,7 @@ handler: {
     //     ws('workspace/it-caffe') {
     //       timeout(time: max_time, unit: 'MINUTES') {
     //         utils.init_git()
-    //         utils.unpack_lib('gpu')
+    //         utils.unpack_lib('gpu', mx_lib)
     //         utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_caffe', true)
     //         utils.publish_test_coverage()
     //       }
@@ -833,7 +833,7 @@ handler: {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu')
+            utils.unpack_lib('gpu', mx_lib)
             unstash 'cpp_lenet'
             unstash 'cpp_alexnet'
             unstash 'cpp_googlenet'
@@ -855,7 +855,7 @@ handler: {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('gpu')
+            utils.unpack_lib('gpu', mx_lib)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
             utils.publish_test_coverage()
           }
@@ -871,7 +871,7 @@ handler: {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.unpack_lib('cpu')
+            utils.unpack_lib('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
             utils.publish_test_coverage()
           }
