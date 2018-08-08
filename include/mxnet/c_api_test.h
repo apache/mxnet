@@ -19,26 +19,30 @@
 
 /*!
  *  Copyright (c) 2018 by Contributors
- * \file default_subgraph_op.cu
- * \brief GPU Implementation of subgraph operations
+ * \file c_api_test.h
+ * \brief C API of mxnet for ease of testing backend in Python
  */
+#ifndef MXNET_C_API_TEST_H_
+#define MXNET_C_API_TEST_H_
 
-#include <mxnet/ndarray.h>
-#include "./common.h"
-#include "../../imperative/imperative_utils.h"
-#include "../../imperative/cached_op.h"
+/*! \brief Inhibit C++ name-mangling for MXNet functions. */
+#ifdef __cplusplus
+extern "C" {
+#endif  // __cplusplus
 
-namespace mxnet {
-namespace op {
+#include <mxnet/c_api.h>
 
-void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs);
+MXNET_DLL int MXPartitionGraph(SymbolHandle sym_handle,
+                               const mx_uint num_ops,
+                               const char** op_names,
+                               SymbolHandle* ret_sym_handle);
 
-NNVM_REGISTER_OP(_default_subgraph_op)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", DefaultSubgraphOpForward);
+MXNET_DLL int MXSetSubgraphPropertyOpNames(const char* prop_name,
+                                           const mx_uint num_ops,
+                                           const char** op_names);
 
-}  // namespace op
-}  // namespace mxnet
+#ifdef __cplusplus
+}
+#endif  // __cplusplus
+
+#endif  // MXNET_C_API_TEST_H_

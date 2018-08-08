@@ -31,7 +31,6 @@
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
-#include "../operator/subgraph/default_subgraph_op.h"
 
 namespace mxnet {
 namespace op {
@@ -698,6 +697,7 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
+#if 0
 int MXPartitionGraph(SymbolHandle sym_handle,
                      const mx_uint num_ops,
                      const char** op_names,
@@ -713,7 +713,7 @@ int MXPartitionGraph(SymbolHandle sym_handle,
   nnvm::Graph g = Symbol2Graph(*s);
   if (!op_name_set.empty()) {
     mxnet::op::SubgraphPropertyPtr property
-        = std::make_shared<mxnet::op::DefaultSubgraphProperty>(op_name_set);
+        = std::make_shared<mxnet::op::DefaultSubgraphProperty>(g, op_name_set);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
   }
   g = ApplyPass(std::move(g), "PartitionGraph");
@@ -721,3 +721,4 @@ int MXPartitionGraph(SymbolHandle sym_handle,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+#endif
