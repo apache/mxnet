@@ -488,8 +488,6 @@ build_ubuntu_gpu_tensorrt() {
         ONNX_NAMESPACE=onnx                                 \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu_mkldnn() {
