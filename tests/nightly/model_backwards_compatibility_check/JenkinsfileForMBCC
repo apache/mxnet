@@ -32,9 +32,9 @@ core_logic: {
   stage('MBCC Train'){
     node(NODE_LINUX_CPU) {
       ws('workspace/modelBackwardsCompat') {
-        init_git()
+        utils.init_git()
         // Train models on older versions
-        docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
+        utils.docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_train', false)
         // upload files to S3 here outside of the docker environment
         sh "./tests/nightly/model_backwards_compatibility_check/upload_models_to_s3.sh"
       }
@@ -44,9 +44,9 @@ core_logic: {
   stage('MXNet Build'){
     node(NODE_LINUX_CPU) {
       ws('workspace/build-cpu') {
-        init_git()
-        docker_run('ubuntu_cpu','build_ubuntu_cpu', false)
-        pack_lib('cpu', mx_lib)
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu','build_ubuntu_cpu', false)
+        utils.pack_lib('cpu', mx_lib)
       }
     }
   }
@@ -54,10 +54,10 @@ core_logic: {
   stage('MBCC Inference'){
     node(NODE_LINUX_CPU) {
       ws('workspace/modelBackwardsCompat') {
-        init_git()
+        utils.init_git()
         unpack_lib('cpu', mx_lib)
         // Perform inference on the latest version of MXNet
-        docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
+        utils.docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
       }
     }
   }
