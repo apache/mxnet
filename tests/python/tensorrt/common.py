@@ -23,14 +23,6 @@ def check_tensorrt_installation():
     assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
 
 
-def get_use_tensorrt():
-    return int(os.environ.get("MXNET_USE_TENSORRT", 0))
-
-
-def set_use_tensorrt(status=False):
-    os.environ["MXNET_USE_TENSORRT"] = str(int(status))
-
-
 def merge_dicts(*dict_args):
     """Merge arg_params and aux_params to populate shared_buffer"""
     result = {}

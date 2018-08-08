@@ -19,26 +19,15 @@ import gc
 import gluoncv
 import mxnet as mx
 import numpy as np
-import os
 
 from mxnet import gluon
 from time import time
 
 from mxnet.gluon.data.vision import transforms
 
-
-def get_use_tensorrt():
-    return int(os.environ.get("MXNET_USE_TENSORRT", 0))
-
-
-def set_use_tensorrt(status=False):
-    os.environ["MXNET_USE_TENSORRT"] = str(int(status))
-
-
 def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0),
                       batch_size=128):
     h, w = 32, 32
-    set_use_tensorrt(use_tensorrt)
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
     data = mx.sym.var('data')
 
