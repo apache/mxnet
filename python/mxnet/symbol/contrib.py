@@ -133,25 +133,11 @@ def _construct_subgraph(sym_out, sym_states):
     all_outputs = []
     all_outputs.extend(sym_out)
     all_outputs.extend(sym_states)
-    g = symbol.Group(all_outputs)
-
     flat_out = []
-    all_input_names = g.list_inputs()
-    output_names = [o.name for o in sym_out]
     for o in sym_out:
-        if o.name in all_input_names:
-            flat_out.append(symbol.op.identity(o))
-        else:
-            flat_out.append(o)
-
+        flat_out.append(symbol.op.identity(o))
     for s in sym_states:
-        if s.name in all_input_names or s.name in output_names:
-            # There is a problem if the outputs are the same as the inputs
-            # or the first output. By calling identity, we can make sure that
-            # all symbols will refer to different NDArrays.
-            flat_out.append(symbol.op.identity(s))
-        else:
-            flat_out.append(s)
+        flat_out.append(symbol.op.identity(s))
     return symbol.Group(flat_out)
 
 def foreach(body, data, init_states, name="foreach"):
@@ -469,10 +455,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             num_outputs = len(outputs) + len(final_state)
             # nnvm cut-graph does not allow inputs and outputs overlap
             # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
-            all_input_names = symbol.Group(outputs + final_state).list_inputs()
-            make_identity = lambda x: symbol.op.identity(x) if x.name in all_input_names else x
             # group all outputs of graph_func
-            graph = symbol.Group(list(map(make_identity, outputs + final_state)))
+            graph = symbol.Group(list(map(symbol.op.identity, outputs + final_state)))
         return graph, num_out_data, num_outputs
 
     def _union_inputs(*graphs):
@@ -627,10 +611,8 @@ def cond(pred, then_func, else_func, name="cond"):
             num_outputs = len(outputs)
             # nnvm cut-graph does not allow inputs and outputs overlap
             # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
-            all_input_names = symbol.Group(outputs).list_inputs()
-            make_identity = lambda x: symbol.op.identity(x) if x.name in all_input_names else x
             # group all outputs of graph_func
-            graph = symbol.Group(list(map(make_identity, outputs)))
+            graph = symbol.Group(list(map(symbol.op.identity, outputs)))
         return graph, num_outputs
 
     def _union_inputs(*graphs):
