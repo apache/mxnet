@@ -36,12 +36,13 @@ core_logic: {
     node(NODE_LINUX_CPU) {
       ws('workspace/docker_cache') {
         timeout(time: total_timeout, unit: 'MINUTES') {
-          init_git()
+          utils.init_git()
           sh "ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY}"
         }
       }
     }
   }
+}
 ,
 failure_handler:
 {
