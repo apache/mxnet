@@ -457,7 +457,7 @@ resnet_block_versions = [{'basic_block': BasicBlockV1, 'bottle_neck': Bottleneck
 
 # Constructor
 def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
-               root=os.path.join(base.data_dir(), 'models'), **kwargs):
+               root=os.path.join(base.data_dir(), 'models'), use_se=False, **kwargs):
     r"""ResNet V1 model from `"Deep Residual Learning for Image Recognition"
     <http://arxiv.org/abs/1512.03385>`_ paper.
     ResNet V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -475,6 +475,8 @@ def get_resnet(version, num_layers, pretrained=False, ctx=cpu(),
         The context in which to load the pretrained weights.
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
+    use_se : bool, default False
+        Whether to use Squeeze-and-Excitation module
     """
     assert num_layers in resnet_spec, \
         "Invalid number of layers: %d. Options are %s"%(
