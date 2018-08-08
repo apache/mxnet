@@ -101,8 +101,11 @@ class BottleneckV1(HybridBlock):
         Whether to downsample the input.
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
+    last_gamma : bool, default False
+        Whether to initialize the gamma of the last BatchNorm layer in each bottleneck to zero.
     """
-    def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
+    def __init__(self, channels, stride, downsample=False, in_channels=0,
+                 last_gamma=False, **kwargs):
         super(BottleneckV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
         self.body.add(nn.Conv2D(channels//4, kernel_size=1, strides=stride))
@@ -112,7 +115,10 @@ class BottleneckV1(HybridBlock):
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(nn.Conv2D(channels, kernel_size=1, strides=1))
-        self.body.add(nn.BatchNorm())
+        if not last_gamma:
+            self.body.add(nn.BatchNorm())
+        else:
+            self.body.add(nn.BatchNorm(gamma_initializer='zeros'))
         if downsample:
             self.downsample = nn.HybridSequential(prefix='')
             self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
@@ -193,14 +199,20 @@ class BottleneckV2(HybridBlock):
         Whether to downsample the input.
     in_channels : int, default 0
         Number of input channels. Default is 0, to infer from the graph.
+    last_gamma : bool, default False
+        Whether to initialize the gamma of the last BatchNorm layer in each bottleneck to zero.
     """
-    def __init__(self, channels, stride, downsample=False, in_channels=0, **kwargs):
+    def __init__(self, channels, stride, downsample=False, in_channels=0,
+                 last_gamma=False, **kwargs):
         super(BottleneckV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
         self.conv1 = nn.Conv2D(channels//4, kernel_size=1, strides=1, use_bias=False)
         self.bn2 = nn.BatchNorm()
         self.conv2 = _conv3x3(channels//4, stride, channels//4)
-        self.bn3 = nn.BatchNorm()
+        if not last_gamma:
+            self.bn3 = nn.BatchNorm()
+        else:
+            self.bn3 = nn.BatchNorm(gamma_initializer='zeros')
         self.conv3 = nn.Conv2D(channels, kernel_size=1, strides=1, use_bias=False)
         if downsample:
             self.downsample = nn.Conv2D(channels, 1, stride, use_bias=False,
@@ -245,8 +257,11 @@ class ResNetV1(HybridBlock):
         Number of classification classes.
     thumbnail : bool, default False
         Enable thumbnail.
+    last_gamma : bool, default False
+        Whether to initialize the gamma of the last BatchNorm layer in each bottleneck to zero.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, classes=1000, thumbnail=False,
+                 last_gamma=False, **kwargs):
         super(ResNetV1, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
@@ -262,18 +277,21 @@ class ResNetV1(HybridBlock):
             for i, num_layer in enumerate(layers):
                 stride = 1 if i == 0 else 2
                 self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                   stride, i+1, in_channels=channels[i]))
+                                                   stride, i+1, in_channels=channels[i],
+                                                   last_gamma=last_gamma))
             self.features.add(nn.GlobalAvgPool2D())
 
             self.output = nn.Dense(classes, in_units=channels[-1])
 
-    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0,
+                    last_gamma=False):
         layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
         with layer.name_scope():
             layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
-                            prefix=''))
+                            last_gamma=last_gamma, prefix=''))
             for _ in range(layers-1):
-                layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
+                layer.add(block(channels, 1, False, in_channels=channels,
+                                last_gamma=last_gamma, prefix=''))
         return layer
 
     def hybrid_forward(self, F, x):
@@ -300,8 +318,11 @@ class ResNetV2(HybridBlock):
         Number of classification classes.
     thumbnail : bool, default False
         Enable thumbnail.
+    last_gamma : bool, default False
+        Whether to initialize the gamma of the last BatchNorm layer in each bottleneck to zero.
     """
-    def __init__(self, block, layers, channels, classes=1000, thumbnail=False, **kwargs):
+    def __init__(self, block, layers, channels, classes=1000, thumbnail=False,
+                 last_gamma=False, **kwargs):
         super(ResNetV2, self).__init__(**kwargs)
         assert len(layers) == len(channels) - 1
         with self.name_scope():
@@ -319,7 +340,8 @@ class ResNetV2(HybridBlock):
             for i, num_layer in enumerate(layers):
                 stride = 1 if i == 0 else 2
                 self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                   stride, i+1, in_channels=in_channels))
+                                                   stride, i+1, in_channels=in_channels,
+                                                   last_gamma=last_gamma))
                 in_channels = channels[i+1]
             self.features.add(nn.BatchNorm())
             self.features.add(nn.Activation('relu'))
@@ -328,13 +350,15 @@ class ResNetV2(HybridBlock):
 
             self.output = nn.Dense(classes, in_units=in_channels)
 
-    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0,
+                    last_gamma=False):
         layer = nn.HybridSequential(prefix='stage%d_'%stage_index)
         with layer.name_scope():
             layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels,
-                            prefix=''))
+                            last_gamma=last_gamma, prefix=''))
             for _ in range(layers-1):
-                layer.add(block(channels, 1, False, in_channels=channels, prefix=''))
+                layer.add(block(channels, 1, False, in_channels=channels,
+                                last_gamma=last_gamma, prefix=''))
         return layer
 
     def hybrid_forward(self, F, x):
