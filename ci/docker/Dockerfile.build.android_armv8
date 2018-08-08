@@ -70,9 +70,13 @@ RUN /work/android_ndk.sh
 ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
 ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 
+ENV TARGET=ARMV8
+ENV ARM_SOFTFP_ABI=1
+ENV NOFORTRAN=1
+
 # Build ARM dependencies.
-COPY install/android_arm64_openblas.sh /work/
-RUN /work/android_arm64_openblas.sh
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
 
