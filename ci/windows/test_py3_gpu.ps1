@@ -16,7 +16,7 @@
 # under the License.
 
 7z x -y windows_package.7z
-$env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\build\libmxnet.dll
+$env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\lib\libmxnet.dll
 $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 c:\Anaconda3\envs\py3\Scripts\pip install -r tests\requirements.txt
