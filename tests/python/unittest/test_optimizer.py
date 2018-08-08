@@ -702,7 +702,7 @@ class PySignum(mx.optimizer.Optimizer):
         else:
             weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
 
-@with_seed(0)
+@with_seed()
 def test_signum():
     opt1 = PySignum
     opt2 = mx.optimizer.Signum
