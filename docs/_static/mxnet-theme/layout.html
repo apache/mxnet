@@ -57,6 +57,24 @@
     </script>
 
     <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/search.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/clipboard.min.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/copycode.js', 1) }}"></script>
+    <script type="text/javascript" src="{{ pathto('_static/js/page.js', 1) }}"></script>
+    <script type="text/javascript">
+        $('body').ready(function () {
+            $('body').css('visibility', 'visible');
+        });
+    </script>
+    {% if pagename != 'index' %}
+    <script type="text/javascript">
+        $('body').css('background', 'white');
+    </script>
+    {%- endif %}
+
     {% for name in ['underscore.js', 'searchtools_custom.js', 'doctools.js', 'selectlang.js'] %}
     <script type="text/javascript" src="{{ pathto('_static/' + name, 1) }}"></script>
     {% endfor %}
@@ -118,7 +136,6 @@
     {%- endblock %}
     {{ css() }}
     {%- if not embedded %}
-    {{ script() }}
     {%- if use_opensearch %}
     <link rel="search" type="application/opensearchdescription+xml"
           title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
@@ -158,11 +175,8 @@
   <body role="document" background="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-background-compressed.jpeg">
     <div class='content-block'>
     {%- include "navbar.html" %}
-    
+    {%- include "social.html" %}
     {% if pagename != 'index' %}
-    <script type="text/javascript">
-        $('body').css('background', 'white');
-    </script>
     <div class="container">
       <div class="row">
         <div class="sphinxsidebar leftsidebar" role="navigation" aria-label="main navigation">
@@ -183,18 +197,6 @@
     {%- include "footer.html" %}
     {%- endif %} <!-- pagename != index -->
     </div>
-
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/sidebar.js', 1) }}"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/search.js', 1) }}"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/navbar.js', 1) }}"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/clipboard.min.js', 1) }}"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/copycode.js', 1) }}"></script>
-    <script type="text/javascript" src="{{ pathto('_static/js/page.js', 1) }}"></script>
-    <script type="text/javascript">
-        $('body').ready(function () {
-            $('body').css('visibility', 'visible');
-        });
-    </script>
+    {{ script() }}
   </body>
 </html>

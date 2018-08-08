@@ -209,7 +209,7 @@ img {
     font-family: AmazonEmber;
     display: inline-block;
     padding: 0 15px;
-    font-weight: 500; 
+    font-weight: 500;
 }
 
 .main-nav-link:hover {
@@ -218,10 +218,16 @@ img {
     text-decoration: none;
 }
 
-#dropdown-menu-position-anchor, 
+.social-link {
+    opacity: 1;
+    text-decoration: none;
+    padding: 0 0px;
+}
+
+#dropdown-menu-position-anchor,
 #dropdown-menu-position-anchor-docs,
 #dropdown-menu-position-anchor-community,
-#dropdown-menu-position-anchor-version, 
+#dropdown-menu-position-anchor-version,
 #dropdown-menu-position-anchor-version-mobile {
     position: relative;
 }
@@ -236,6 +242,36 @@ img {
     color: #0079b2;
     padding: 6px 16px;
 
+}
+
+#social-container {
+    display: block;
+    position: absolute;
+    top: 15px;
+    margin-right: 20px;
+    padding-bottom: 30px;
+    width: 100%;
+}
+
+img.social-logo {
+    min-width: 5vmin;
+    margin-bottom: 15px;
+}
+
+@media screen and (max-width:768px) {
+    div #social-container {
+        display: none !important;
+    }
+}
+
+#search-input-wrap {
+    display: block;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    width: 200px;
+    -webkit-transition: width 0.5s;
+    transition: width 0.5s;
 }
 
 #search-input-wrap {
@@ -300,7 +336,7 @@ img {
         width: 120px;
         margin-right: 10px;
     }
-    
+
     .searchBox {
         width: 120px;
     }
@@ -490,7 +526,7 @@ li.dropdown-submenu ul.dropdown-menu a {
         position: fixed;
         left: 45px;
     }
-    
+
     #burgerMenu {
         position: fixed;
         left: 0;
@@ -501,7 +537,7 @@ li.dropdown-submenu ul.dropdown-menu a {
         background-attachment: initial;
         background-size: cover;
     }
-    
+
     #burgerMenu a {
         display: block;
         font-size: 19px;
@@ -511,17 +547,17 @@ li.dropdown-submenu ul.dropdown-menu a {
         color: #fff;
         text-decoration: none;
     }
-    
+
     #burgerMenu a:hover {
         color: initial;
         background-color: inherit;
     }
-    
+
     #burgerMenu li {
         border-bottom: 1px solid lightgray;
         height: 50px;
     }
-    
+
     #logo-wrap {
         margin-left: 30px;
     }
@@ -605,7 +641,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     #install_blk, #install_blk{
         display: block;
     }
-    
+
     #install_blk {
         padding-left: 0;
         margin-top: 0;
@@ -699,7 +735,7 @@ li.dropdown-submenu ul.dropdown-menu a {
     .section-tout .row div {
         padding-left: 45px;
     }
-    
+
     .section-tout .row p {
         padding-bottom: 10px;
     }
@@ -725,7 +761,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .section-util .row div h2 {
     font-family: AmazonEmber;
-    color: #fff;   
+    color: #fff;
 }
 
 #model-zoo-blk {

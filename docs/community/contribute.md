@@ -1,4 +1,4 @@
-# Contributing MXNet
+# Contributing to MXNet
 
 Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on MXNet best practices and processes.
 
@@ -62,13 +62,37 @@ To join the MXNet slack channel send request to the contributor mailing list.
 
 ### Social Media
 
-Keep connected with the latest MXNet news and updates on [Twitter](https://twitter.com/apachemxnet) and [Reddit](https://reddit.com/r/mxnet). Also, subscribe to the [MXNet YouTube channel](https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A).
+Keep connected with the latest MXNet news and updates.
+
+
+#### Medium
+
+<a href="https://medium.com/apache-mxnet"><img src="https://cdn.mos.cms.futurecdn.net/xJGh6cXvC69an86AdrLD98-970-80.jpg" width="100px"/> Regular blogs about MXNet for your morning commute</a>
+
+
+#### YouTube
+
+<a href="https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A"><img src="https://techcrunch.com/wp-content/uploads/2017/08/youtube-new-logo.png" width="100px"/>MXNet YouTube channel</a>
 
 <div class="g-ytsubscribe" data-channelid="UCQua2ZAkbr_Shsgfk1LCy6A" data-layout="full" data-count="hidden"></div>
+
 <br/><br/>
+
+
+#### Twitter
+
+<a href="https://twitter.com/apachemxnet"><img src="https://static01.nyt.com/images/2014/08/10/magazine/10wmt/10wmt-superJumbo-v4.jpg" width="100px"/>Apache MXNet on Twitter</a>
+
 <a href="https://twitter.com/apachemxnet?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @apachemxnet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
 <br/><br/>
-<a href="https://reddit.com/r/mxnet"><img src="https://www.redditstatic.com/spreddit5.gif" alt="reddit" border="0"/> r/mxnet</a>
+
+
+#### Reddit
+
+<a href="https://reddit.com/r/mxnet"><img src="https://www.redditstatic.com/spreddit5.gif" alt="reddit" border="0"/> Discuss MXNet on r/mxnet</a>
+
+<br/><br/>
 
 
 ## JIRA

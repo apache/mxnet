@@ -7,7 +7,7 @@
       <nav id="main-nav" class='nav-bar'>
         <a class="main-nav-link" href="{{url_root}}install/index.html">Install</a>
 
-        <span id="dropdown-menu-position-anchor">
+        <span id="dropdown-menu-position-anchor-gluon">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Gluon <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
             <li><a class="main-nav-link" href="{{url_root}}gluon/index.html">About</a></li>
@@ -15,7 +15,7 @@
           </ul>
         </span>
 
-        <span id="dropdown-menu-position-anchor">
+        <span id="dropdown-menu-position-anchor-apis">
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">API <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
             <li><a class="main-nav-link" href="{{url_root}}api/python/index.html">Python</a></li>
@@ -50,23 +50,12 @@
           </ul>
         </span>
       </nav>
-      
+
       <script> function getRootPath(){ return "{{url_root}}" } </script>
       <div class="burgerIcon dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">☰</a>
           <ul id="burgerMenu" class="dropdown-menu">
               <li><a href="{{url_root}}install/index.html">Install</a></li>
-              <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a></li>
-              <li class="dropdown-submenu dropdown">
-                <a href="#" tabindex="-1" aria-haspopup="true" role="button" class="dropdown-toggle burger-link" data-toggle="dropdown">Community</a>
-                <ul class="dropdown-menu">
-                  <li><a tabindex="-1"  href="http://discuss.mxnet.io">Forum</a></li>
-                  <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet">Github</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}community/contribute.html">Contribute</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}community/ecosystem.html">Ecosystem</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}community/powered_by.html">Powered By</a></li>
-                </ul>
-              </li>
               {% for name in ['API'] %}
               <li class="dropdown-submenu">
                 <a href="#" tabindex="-1" role="button" aria-haspopup="true" class="dropdown-toggle burger-link" data-toggle="dropdown">{{name}}</a>
@@ -88,6 +77,26 @@
                   <li><a tabindex="-1"  href="{{url_root}}api/python/gluon/model_zoo.html">Gluon Model Zoo</a></li>
                 </ul>
               </li>
+              <li class="dropdown-submenu dropdown">
+                <a href="#" tabindex="-1" aria-haspopup="true" role="button" class="dropdown-toggle burger-link" data-toggle="dropdown">Community</a>
+                <ul class="dropdown-menu">
+                  <li><a tabindex="-1"  href="http://discuss.mxnet.io">Forum</a></li>
+                  <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet">Github</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}community/contribute.html">Contribute</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}community/ecosystem.html">Ecosystem</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}community/powered_by.html">Powered By</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu dropdown">
+                <a href="#" tabindex="-1" aria-haspopup="true" role="button" class="dropdown-toggle burger-link" data-toggle="dropdown">Social</a>
+                <ul class="dropdown-menu">
+                  <li><a tabindex="-1" href="http://discuss.mxnet.io">Forum</a></li>
+                  <li><a tabindex="-1" href="https://medium.com/apache-mxnet">Medium</a></li>
+                  <li><a tabindex="-1" href="https://reddit.com/r/mxnet">Reddit</a></li>
+                  <li><a tabindex="-1" href="https://twitter.com/apachemxnet">Twitter</a></li>
+                  <li><a tabindex="-1" href="https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A">YouTube</a></li>
+                </ul>
+              </li>
 	      <li><a class="main-nav-link" href="https://github.com/dmlc/mxnet">Github</a></li>
           </ul>
       </div>
@@ -95,6 +104,7 @@
         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
         <ul id="plusMenu" class="dropdown-menu dropdown-menu-right"></ul>
       </div>
+
       <div id="search-input-wrap">
           {{searchform('', False)}}
           <div id="search-preview"></div>
