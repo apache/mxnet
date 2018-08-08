@@ -25,6 +25,8 @@ __all__ = ['ResNetV1', 'ResNetV2',
            'BottleneckV1', 'BottleneckV2',
            'resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
            'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
+           'se_resnet18_v1', 'se_resnet34_v1', 'se_resnet50_v1', 'se_resnet101_v1', 'se_resnet152_v1',
+           'se_resnet18_v2', 'se_resnet34_v2', 'se_resnet50_v2', 'se_resnet101_v2', 'se_resnet152_v2',
            'get_resnet']
 
 import os
@@ -502,7 +504,7 @@ def resnet18_v1(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(1, 18, **kwargs)
+    return get_resnet(1, 18, use_se=False, **kwargs)
 
 def resnet34_v1(**kwargs):
     r"""ResNet-34 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -517,7 +519,7 @@ def resnet34_v1(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(1, 34, **kwargs)
+    return get_resnet(1, 34, use_se=False, **kwargs)
 
 def resnet50_v1(**kwargs):
     r"""ResNet-50 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -532,7 +534,7 @@ def resnet50_v1(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(1, 50, **kwargs)
+    return get_resnet(1, 50, use_se=False, **kwargs)
 
 def resnet101_v1(**kwargs):
     r"""ResNet-101 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -547,7 +549,7 @@ def resnet101_v1(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(1, 101, **kwargs)
+    return get_resnet(1, 101, use_se=False, **kwargs)
 
 def resnet152_v1(**kwargs):
     r"""ResNet-152 V1 model from `"Deep Residual Learning for Image Recognition"
@@ -562,7 +564,7 @@ def resnet152_v1(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(1, 152, **kwargs)
+    return get_resnet(1, 152, use_se=False, **kwargs)
 
 def resnet18_v2(**kwargs):
     r"""ResNet-18 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -577,7 +579,7 @@ def resnet18_v2(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(2, 18, **kwargs)
+    return get_resnet(2, 18, use_se=False, **kwargs)
 
 def resnet34_v2(**kwargs):
     r"""ResNet-34 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -592,7 +594,7 @@ def resnet34_v2(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(2, 34, **kwargs)
+    return get_resnet(2, 34, use_se=False, **kwargs)
 
 def resnet50_v2(**kwargs):
     r"""ResNet-50 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -607,7 +609,7 @@ def resnet50_v2(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(2, 50, **kwargs)
+    return get_resnet(2, 50, use_se=False, **kwargs)
 
 def resnet101_v2(**kwargs):
     r"""ResNet-101 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -622,7 +624,7 @@ def resnet101_v2(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(2, 101, **kwargs)
+    return get_resnet(2, 101, use_se=False, **kwargs)
 
 def resnet152_v2(**kwargs):
     r"""ResNet-152 V2 model from `"Identity Mappings in Deep Residual Networks"
@@ -637,7 +639,7 @@ def resnet152_v2(**kwargs):
     root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
-    return get_resnet(2, 152, **kwargs)
+    return get_resnet(2, 152, use_se=False, **kwargs)
 
 # SE-ResNet
 def se_resnet18_v1(**kwargs):
