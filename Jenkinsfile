@@ -128,7 +128,7 @@ try {
   }
 
   stage('Build') {
-    'GPU: Make': {
+    parallel 'GPU: Make': {
       node('mxnetlinux-cpu') {
         ws('workspace/build-gpu-make') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -153,7 +153,7 @@ try {
   } // End of stage('Build')
 
   stage('Tests') {
-    'Python3: GPU, Make': {
+    parallel 'Python3: GPU, Make': {
       node('mxnetlinux-gpu') {
         ws('workspace/ut-python3-gpu-make') {
           try {
