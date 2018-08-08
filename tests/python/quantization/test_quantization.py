@@ -477,6 +477,16 @@ def test_quantize_model():
 @with_seed()
 def test_quantize_residual_unit():
     def check_quantize_model(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_residual_unit for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing quantized_residual_unit for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
+            print('skipped testing quantized_residual_unit for gpu uint8 since it is not supported yet')
+            return
+
         def check_params(params, qparams, qsym=None):
             if qsym is None:
                 assert len(params) == len(qparams)
@@ -557,11 +567,8 @@ def test_quantize_residual_unit():
         check_qsym_qdtype(qsym, qdtype)
         check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, label_shape)
 
-    if mx.current_context() == mx.cpu():
-        qdtype = 'uint8'
-    else:
-        qdtype = 'int8'
-    check_quantize_model(qdtype)
+    for qdtype in ['int8', 'uint8']:
+        check_quantize_model(qdtype)
 
 @with_seed()
 def test_quantize_sym_with_calib():
