@@ -1445,7 +1445,7 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 
-@with_seed(1234)
+@with_seed()
 def test_psroipooling_with_type():
     arg_params = {
         'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
