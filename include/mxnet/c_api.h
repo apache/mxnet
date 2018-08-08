@@ -1754,11 +1754,16 @@ MXNET_DLL int MXExecutorReshape(int partial_shaping,
                                 ExecutorHandle shared_exec,
                                 ExecutorHandle *out);
 
+
+#if MXNET_USE_TENSORRT
+
 /*!
  * \brief get optimized graph from graph executor
  */
 MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
                                            SymbolHandle *out);
+
+#endif  // MXNET_USE_TENSORRT
 
 /*!
  * \brief set a call back to notify the completion of operation
