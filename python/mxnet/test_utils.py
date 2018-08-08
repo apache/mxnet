@@ -1222,8 +1222,9 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         random input data generated follows uniform distribution,
         not normal distribution
     rand_type: np.dtype
+        casts the randomly generated data to this type
         Optional, when input data is passed via arg_params,
-        defaults to np.float64 (python float default)
+        defaults to np.float64 (numpy float default)
 
     Examples
     --------
