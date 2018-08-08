@@ -1445,9 +1445,6 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 const int **aux_type_data,
                                 int *complete);
 
-MXNET_DLL int MXTRTSymbolOptimize(SymbolHandle sym_handle,
-                                  SymbolHandle *ret_sym_handle);
-
 /*!
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
@@ -1677,6 +1674,8 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
 
+#if MXNET_USE_TENSORRT
+
 MXNET_DLL int MXExecutorTensorRTBind(SymbolHandle symbol_handle,
                                      int dev_type,
                                      int dev_id,
@@ -1711,6 +1710,8 @@ MXNET_DLL int MXExecutorTensorRTBind(SymbolHandle symbol_handle,
                                      NDArrayHandle** aux_states,
                                      ExecutorHandle shared_exec_handle,
                                      ExecutorHandle* out);
+
+#endif  // MXNET_USE_TENSORRT
 
 /*!
  * \brief Return a new executor with the same symbol and shared memory,

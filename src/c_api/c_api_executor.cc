@@ -27,7 +27,9 @@
 #include <mxnet/executor.h>
 #include "./c_api_common.h"
 #include "../executor/graph_executor.h"
+#if MXNET_USE_TENSORRT
 #include "../executor/trt_graph_executor.h"
+#endif  // MXNET_USE_TENSORRT
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
