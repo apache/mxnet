@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <cpuinfo.h>
 #include <dmlc/omp.h>
 #include <dmlc/base.h>
 #include <dmlc/parameter.h>
@@ -48,7 +49,11 @@ OpenMP::OpenMP()
     if (!omp_num_threads_set_in_environment_) {
       omp_thread_max_ = omp_get_num_procs();
 #ifdef ARCH_IS_INTEL_X86
-      omp_thread_max_ >>= 1;
+      if (cpuinfo_initialize()) {
+        omp_thread_max_ = cpuinfo_get_cores_count();
+      } else {
+        omp_thread_max_ >>= 1;
+      }
 #endif
       omp_set_num_threads(omp_thread_max_);
     } else {
