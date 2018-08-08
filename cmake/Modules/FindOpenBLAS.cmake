@@ -103,6 +103,11 @@ if(CMAKE_CROSSCOMPILING OR MSVC)
   set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
 endif()
 
+# For some reason setting this is really important and nothing works without it on windows
+if(MSVC)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
+
 find_library(OpenBLAS_LIBRARY
              NAMES ${OpenBLAS_LIB_NAMES}
              PATHS ${OpenBLAS_LIB_SEARCH_PATHS}
