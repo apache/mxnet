@@ -155,6 +155,11 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_HOME
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
+  
+* MXNET_MKLDNN_ENABLED
+  - Values: 0, 1 ```(default=1)```
+  - Flag to enable or disable MKLDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
 
 Settings for Minimum Memory Usage
 ---------------------------------
