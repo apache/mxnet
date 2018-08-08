@@ -38,8 +38,9 @@ endif()
 
 if($ENV{MKLROOT})
   file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
-  message(STATUS "MKLROOT=${MKLROOT}")
 endif()
+
+message(STATUS "MKLROOT=${MKLROOT}")
 
 # ---[ Root folders
 set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")

@@ -23,10 +23,15 @@
 #  Accelerate_INCLUDE_DIR
 #  Accelerate_LIBRARIES
 
+if(Accelerate_FOUND)
+  return()
+endif()
+
 if($ENV{Accelerate_HOME})
   file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
-  message(STATUS "Accelerate_HOME=${Accelerate_HOME}")
 endif()
+
+message(STATUS "Accelerate_HOME=${Accelerate_HOME}")
 
 set(Accelerate_INCLUDE_SEARCH_PATHS
     /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current

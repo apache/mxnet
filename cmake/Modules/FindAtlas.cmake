@@ -29,10 +29,15 @@
 # Atlas_INCLUDE_DIRS
 # Atlas_LIBRARIES
 
+if(Atlas_FOUND)
+  return()
+endif()
+
 if($ENV{Atlas_ROOT_DIR})
   file(TO_CMAKE_PATH "$ENV{Atlas_ROOT_DIR}" Atlas_ROOT_DIR)
-  message(STATUS "Atlas_ROOT_DIR=${Atlas_ROOT_DIR}")
 endif()
+
+message(STATUS "Atlas_ROOT_DIR=${Atlas_ROOT_DIR}")
 
 if($ENV{CROSS_ROOT})
   file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)

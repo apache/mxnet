@@ -29,10 +29,15 @@
 # OpenBLAS_INCLUDE_DIRS
 # OpenBLAS_LIBRARIES
 
+if(OpenBLAS_FOUND)
+  return()
+endif()
+
 if($ENV{OpenBLAS_HOME})
   file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
-  message(STATUS "OpenBLAS_HOME=${OpenBLAS_HOME}")
 endif()
+
+message(STATUS "OpenBLAS_HOME=${OpenBLAS_HOME}")
 
 if($ENV{CROSS_ROOT})
   file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
@@ -42,7 +47,6 @@ endif()
 if(CMAKE_CROSSCOMPILING)
   set(OpenBLAS_INCLUDE_SEARCH_PATHS
       "${CROSS_ROOT}"
-      "${CROSS_ROOT}/include"
       )
 endif()
 
@@ -50,25 +54,23 @@ set(OpenBLAS_INCLUDE_SEARCH_PATHS
     ${OpenBLAS_INCLUDE_SEARCH_PATHS}
 
     "${OpenBLAS_HOME}"
-    "${OpenBLAS_HOME}/include"
 
-    /usr/include
+    /usr
     /usr/include/openblas
     /usr/include/openblas-base
-    /usr/local/include
+    /usr/local
     /usr/local/include/openblas
     /usr/local/include/openblas-base
-    /opt/OpenBLAS/include
-    /usr/local/opt/openblas/include
+    /opt/OpenBLAS
+    /usr/local/opt/openblas
 
-    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include"
-    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include"
+    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS"
+    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS"
     )
 
 if(CMAKE_CROSSCOMPILING)
   set(Open_BLAS_LIB_SEARCH_PATHS
       "${CROSS_ROOT}"
-      "${CROSS_ROOT}/include"
       )
 endif()
 
@@ -76,38 +78,35 @@ set(OpenBLAS_LIB_SEARCH_PATHS
     ${OpenBLAS_LIB_SEARCH_PATHS}
 
     "${OpenBLAS_HOME}"
-    "${OpenBLAS_HOME}/lib"
-    "${OpenBLAS_HOME}/lib64"
 
-    /lib/
+    /
     /lib/openblas-base
-    /lib64/
-    /usr/lib
+    /usr
     /usr/lib/openblas-base
-    /usr/lib64
-    /usr/local/lib
-    /usr/local/lib64
-    /opt/OpenBLAS/lib
-    /usr/local/opt/openblas/lib
+    /usr/local/
+    /opt/OpenBLAS
+    /usr/local/opt/openblas
 
-    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib"
-    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib"
+    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS"
+    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS"
     )
 
 find_path(OpenBLAS_INCLUDE_DIR
           NAMES cblas.h
-          PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
+          PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS}
+          PATH_SUFFIXES include)
 
 set(OpenBLAS_LIB_NAMES openblas libopenblas.dll.a libopenblas.dll)
 
-if(CMAKE_CROSSCOMPILING)
-  message(STATUS "Will try link to OpenBLAS statically for cross compilation")
+if(CMAKE_CROSSCOMPILING OR MSVC)
+  message(STATUS "Will try to link to OpenBLAS statically")
   set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
 endif()
 
 find_library(OpenBLAS_LIBRARY
              NAMES ${OpenBLAS_LIB_NAMES}
-             PATHS ${OpenBLAS_LIB_SEARCH_PATHS})
+             PATHS ${OpenBLAS_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES lib lib64)
 
 set(LOOKED_FOR
     OpenBLAS_INCLUDE_DIR
