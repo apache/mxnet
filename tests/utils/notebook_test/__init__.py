@@ -32,13 +32,9 @@ import nbformat
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
 TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
-RETRIES = 10
+RETRIES = 8
+KERNEL_ERROR_MSG = 'Kernel died before replying to kernel_info'
 
-try:
-    TimeoutError
-except NameError:
-    # py2
-    TimeoutError = RuntimeError
 
 def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='tmp_notebook'):
     """Run tutorial Jupyter notebook to catch any execution error.
@@ -89,7 +85,14 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
         for i in range(RETRIES):
             try:
                 nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
-            except (RuntimeError, TimeoutError) as rte:
+            except RuntimeError as rte:
+                # We check if the exception has to do with the Jupyter kernel failing to start. If
+                # not, we rethrow to prevent the notebook from erring RETRIES times. It is not ideal
+                # to inspect the exception message, but necessary for retry logic, as Jupyter client
+                # throws the generic RuntimeError that can be confused with other Runtime errors.
+                if str(rte) != KERNEL_ERROR_MSG:
+                    raise rte
+
                 logging.info("Error starting preprocessor: {}. Attempt {}/{}".format(str(rte), i+1, RETRIES))
                 time.sleep(1)
                 continue
