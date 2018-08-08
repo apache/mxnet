@@ -325,21 +325,6 @@ class Executor(object):
                 self._symbol.list_outputs(), self.outputs)
         return self._output_dict
 
-    @property
-    def optimized_symbol(self):
-        """Get optimized symbol.
-
-        Returns
-        -------
-        symbol : nnvm::Symbol
-            The nnvm symbol optimized.
-        """
-        if self._optimized_symbol is None:
-            handle = SymbolHandle()
-            check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(handle)))
-            self._optimized_symbol = mx.sym.Symbol(handle=handle)
-        return self._optimized_symbol
-
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
         """Copy parameters from arg_params, aux_params into executor's internal array.
 

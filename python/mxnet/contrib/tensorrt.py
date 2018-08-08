@@ -20,7 +20,7 @@
 
 import ctypes
 
-from ..base import _LIB, c_array, c_array_buf, c_str_array, c_handle_array
+from ..base import _LIB, c_array, c_array_buf, c_str_array, c_handle_array, SymbolHandle
 from ..base import mx_uint, py_str, string_types
 from ..base import NDArrayHandle, ExecutorHandle
 from ..base import check_call, MXNetError
@@ -29,6 +29,26 @@ from ..ndarray import _ndarray_cls
 from ..executor import Executor
 
 import numpy as _numpy
+
+
+def get_optimized_symbol(sym):
+    """Get optimized symbol.
+
+    Parameters
+    ----------
+    sym : nnvm::Symbol
+        The original symbol for which you wish to view the optimized form.
+
+    Returns
+    -------
+    symbol : nnvm::Symbol
+        The nnvm symbol optimized.
+    """
+    if sym._optimized_symbol is None:
+        handle = SymbolHandle()
+        check_call(_LIB.MXExecutorGetOptimizedSymbol(sym.handle, ctypes.byref(handle)))
+        sym._optimized_symbol = sym.Symbol(handle=sym.handle)
+    return sym._optimized_symbol
 
 
 def optimize_graph(sym, ctx, grad_req='write', type_dict=None, stype_dict=None,
