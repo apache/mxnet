@@ -21,18 +21,25 @@ import mxnet as mx
 from common import *
 from lenet5_common import get_iters
 
-def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size):
+def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size, use_tensorrt):
     """Run inference with either MXNet or TensorRT"""
 
     shared_buffer = merge_dicts(arg_params, aux_params)
-    if not get_use_tensorrt():
+    if not use_tensorrt:
         shared_buffer = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in shared_buffer.items()])
-    executor = sym.simple_bind(ctx=mx.gpu(0),
+        executor = sym.simple_bind(ctx=mx.gpu(0),
                                data=(batch_size,) +  mnist['test_data'].shape[1:],
                                softmax_label=(batch_size,),
                                shared_buffer=shared_buffer,
                                grad_req='null',
                                force_rebind=True)
+    else:
+        executor = mx.contrib.tensorrt.optimize_graph(sym, ctx=mx.gpu(0),
+                                   data=(batch_size,) +  mnist['test_data'].shape[1:],
+                                   softmax_label=(batch_size,),
+                                   shared_buffer=shared_buffer,
+                                   grad_req='null',
+                                   force_rebind=True)
 
     # Get this value from all_test_labels
     # Also get classes from the dataset
@@ -75,12 +82,10 @@ def test_tensorrt_inference():
 
     print("LeNet-5 test")
     print("Running inference in MXNet")
-    set_use_tensorrt(False)
     mx_pct = run_inference(sym, arg_params, aux_params, mnist,
                            all_test_labels, batch_size=batch_size)
 
     print("Running inference in MXNet-TensorRT")
-    set_use_tensorrt(True)
     trt_pct = run_inference(sym, arg_params, aux_params, mnist,
                             all_test_labels,  batch_size=batch_size)
 
