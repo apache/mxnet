@@ -44,6 +44,7 @@ core_logic: {
       }
     }
   }
+}
 ,
 failure_handler: {
   if (currentBuild.result == "FAILURE") {
