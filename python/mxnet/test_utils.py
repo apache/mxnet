@@ -1204,7 +1204,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
                       raise_on_err=True, ground_truth=None, equal_nan=False,
-                      use_uniform=False, default_type=np.float64):
+                      use_uniform=False, rand_type=np.float64):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1221,6 +1221,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
         not normal distribution
+    rand_type: np.dtype
+        Optional, when input data is passed via arg_params,
+        defaults to np.float64 (python float default)
+
     Examples
     --------
     >>> # create the symbol
@@ -1282,10 +1286,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         if n not in arg_params:
             if use_uniform:
                 arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
-                                                  size=arr.shape).astype(default_type)
+                                                  size=arr.shape).astype(rand_type)
             else:
                 arg_params[n] = np.random.normal(size=arr.shape,
-                                                 scale=scale).astype(default_type)
+                                                 scale=scale).astype(rand_type)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
