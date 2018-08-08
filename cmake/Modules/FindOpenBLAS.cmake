@@ -33,19 +33,11 @@ if(OpenBLAS_FOUND)
   return()
 endif()
 
-if($ENV{OpenBLAS_HOME})
-  file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
-endif()
-
-message(STATUS "OpenBLAS_HOME=${OpenBLAS_HOME}")
-
-if($ENV{CROSS_ROOT})
-  file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
-  message(STATUS "CROSS_ROOT=${CROSS_ROOT}")
-endif()
-
 if(CMAKE_CROSSCOMPILING)
   set(OpenBLAS_INCLUDE_SEARCH_PATHS
+      ${OpenBLAS_INCLUDE_SEARCH_PATHS}
+
+      "$ENV{CROSS_ROOT}"
       "${CROSS_ROOT}"
       )
 endif()
@@ -53,6 +45,7 @@ endif()
 set(OpenBLAS_INCLUDE_SEARCH_PATHS
     ${OpenBLAS_INCLUDE_SEARCH_PATHS}
 
+    "$ENV{OpenBLAS_HOME}"
     "${OpenBLAS_HOME}"
 
     /usr
@@ -70,6 +63,9 @@ set(OpenBLAS_INCLUDE_SEARCH_PATHS
 
 if(CMAKE_CROSSCOMPILING)
   set(Open_BLAS_LIB_SEARCH_PATHS
+      ${Open_BLAS_LIB_SEARCH_PATHS}
+
+      "$ENV{CROSS_ROOT}"
       "${CROSS_ROOT}"
       )
 endif()
@@ -77,6 +73,7 @@ endif()
 set(OpenBLAS_LIB_SEARCH_PATHS
     ${OpenBLAS_LIB_SEARCH_PATHS}
 
+    "$ENV{OpenBLAS_HOME}"
     "${OpenBLAS_HOME}"
 
     /
@@ -103,7 +100,7 @@ if(CMAKE_CROSSCOMPILING OR MSVC)
   set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
 endif()
 
-# For some reason setting this is really important and nothing works without it on windows
+# For some reason setting this is really important and on windows the library is not found even given exact file name
 if(MSVC)
   set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 endif()

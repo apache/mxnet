@@ -31,19 +31,13 @@ if(MKL_FOUND)
   return()
 endif()
 
-if($ENV{MKLROOT})
-  file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
-endif()
-
-message(STATUS "MKLROOT=${MKLROOT}")
-
 set(MKLML_INCLUDE_SEARCH_PATHS
     ${MKLML_INCLUDE_SEARCH_PATHS}
 
+    "$ENV{MKLROOT}"
     "${MKLROOT}"
-    "${MKLROOT}/include"
 
-    "${PROJECT_SOURCE_DIR}/3rdparty/MKLML/include"
+    "${PROJECT_SOURCE_DIR}/3rdparty/MKLML"
     )
 
 # ---[ Find libraries
@@ -56,14 +50,16 @@ endif()
 set(MKLML_LIB_SEARCH_PATHS
     ${MKLML_LIB_SEARCH_PATHS}
 
+    "$ENV{MKLROOT}"
     "${MKLROOT}"
 
-    "${PROJECT_SOURCE_DIR}/3rdparty/MKLML/lib"
+    "${PROJECT_SOURCE_DIR}/3rdparty/MKLML"
     )
 
 find_path(MKLML_INCLUDE_DIR
           NAMES mkl_blas.h
-          PATHS ${MKLML_INCLUDE_SEARCH_PATHS})
+          PATHS ${MKLML_INCLUDE_SEARCH_PATHS}
+          PATH_SUFFIXES include)
 
 set(LOOKED_FOR
     MKLML_INCLUDE_DIR

@@ -33,30 +33,20 @@ if(Atlas_FOUND)
   return()
 endif()
 
-if($ENV{Atlas_ROOT_DIR})
-  file(TO_CMAKE_PATH "$ENV{Atlas_ROOT_DIR}" Atlas_ROOT_DIR)
-endif()
-
-message(STATUS "Atlas_ROOT_DIR=${Atlas_ROOT_DIR}")
-
-if($ENV{CROSS_ROOT})
-  file(TO_CMAKE_PATH "$ENV{CROSS_ROOT}" CROSS_ROOT)
-  message(STATUS "CROSS_ROOT=${CROSS_ROOT}")
-endif()
-
 if(CMAKE_CROSSCOMPILING)
   set(Atlas_INCLUDE_SEARCH_PATHS
+      ${Atlas_INCLUDE_SEARCH_PATHS}
+
+      "$ENV{CROSS_ROOT}"
       "${CROSS_ROOT}"
-      "${CROSS_ROOT}/include"
       )
 endif()
 
 set(Atlas_INCLUDE_SEARCH_PATHS
     ${Atlas_INCLUDE_SEARCH_PATHS}
 
+    "$ENV{Atlas_ROOT_DIR}"
     "${Atlas_ROOT_DIR}"
-    "${Atlas_ROOT_DIR}/include"
-    "${Atlas_ROOT_DIR}/include/atlas"
 
     /usr/include/atlas
     /usr/include/atlas-base
@@ -64,17 +54,18 @@ set(Atlas_INCLUDE_SEARCH_PATHS
 
 if(${CMAKE_CROSSCOMPILING})
   set(Atlas_LIB_SEARCH_PATHS
+      ${Atlas_LIB_SEARCH_PATHS}
+
+      "$ENV{CROSS_ROOT}"
       "${CROSS_ROOT}"
-      "${CROSS_ROOT}/lib"
-      "${CROSS_ROOT}/lib64"
       )
 endif()
 
 set(Atlas_LIB_SEARCH_PATHS
     ${Atlas_LIB_SEARCH_PATHS}
 
+    "$ENV{Atlas_ROOT_DIR}"
     "${Atlas_ROOT_DIR}"
-    "${Atlas_ROOT_DIR}/lib"
 
     /usr/lib/atlas
     /usr/lib/atlas-base
@@ -82,14 +73,17 @@ set(Atlas_LIB_SEARCH_PATHS
 
 find_path(Atlas_CBLAS_INCLUDE_DIR
           NAMES cblas.h
-          PATHS ${Atlas_INCLUDE_SEARCH_PATHS})
+          PATHS ${Atlas_INCLUDE_SEARCH_PATHS}
+          PATH_SUFFIXES include)
 
 find_library(Atlas_CBLAS_LIBRARY
              NAMES ptcblas_r ptcblas cblas_r cblas
-             PATHS ${Atlas_LIB_SEARCH_PATHS})
+             PATHS ${Atlas_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES lib)
 find_library(Atlas_BLAS_LIBRARY
              NAMES atlas_r atlas
-             PATHS ${Atlas_LIB_SEARCH_PATHS})
+             PATHS ${Atlas_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES lib)
 
 set(LOOKED_FOR
     Atlas_CBLAS_INCLUDE_DIR

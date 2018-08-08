@@ -36,15 +36,6 @@ if(MKL_FOUND)
   return()
 endif()
 
-if($ENV{MKLROOT})
-  file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
-endif()
-
-message(STATUS "MKLROOT=${MKLROOT}")
-
-# ---[ Root folders
-set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
-
 # ---[ Options
 mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
 mxnet_option(MKL_USE_STATIC_LIBS "Use static libraries" OFF IF NOT ${MKL_USE_SINGLE_DYNAMIC_LIBRARY})
@@ -52,11 +43,18 @@ mxnet_option(MKL_MULTI_THREADED "Use multi-threading" ON IF NOT ${MKL_USE_SINGLE
 mxnet_option(MKL_USE_ILP64 "Use ilp64 data model" OFF)
 mxnet_option(MKL_USE_CLUSTER "Use cluster functions" OFF IF ${CMAKE_SIZEOF_VOID_P} EQUAL 4)
 
+# ---[ Root folders
+set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
+
+if(NOT MKLROOT)
+  get_filename_component(MKLROOT "${MKL_INCLUDE_DIR}" DIRECTORY)
+endif()
+
 set(MKL_INCLUDE_SEARCH_PATHS
     ${MKL_INCLUDE_SEARCH_PATHS}
 
+    "$ENV{MKLROOT}"
     "${MKLROOT}"
-    "${MKLROOT}/include"
 
     "${INTEL_ROOT}/mkl"
     )
@@ -66,9 +64,17 @@ find_path(MKL_INCLUDE_DIR mkl.h
           PATHS ${MKL_INCLUDE_SEARCH_PATHS}
           PATH_SUFFIXES include)
 
-if(NOT MKLROOT)
-  get_filename_component(MKLROOT "${MKL_INCLUDE_DIR}" DIRECTORY)
-endif()
+set(MKL_LIB_SEARCH_PATHS
+    ${MKL_LIB_SEARCH_PATHS}
+
+    "$ENV{MKLROOT}"
+    "${MKLROOT}"
+
+    "${INTEL_RTL_ROOT}"
+    "${INTEL_ROOT}/compiler"
+    "${MKLROOT}/.."
+    "${MKLROOT}/../compiler"
+    )
 
 set(__looked_for MKL_INCLUDE_DIR)
 
@@ -127,7 +133,7 @@ foreach(__lib ${__mkl_libs})
 
   find_library(${__mkl_lib_upper}_LIBRARY
                NAMES ${__mkl_lib}
-               PATHS "${MKLROOT}"
+               PATHS ${MKL_LIB_SEARCH_PATHS}
                PATH_SUFFIXES ${__path_suffixes}
                DOC "The path to Intel(R) MKL ${__mkl_lib} library")
   mark_as_advanced(${__mkl_lib_upper}_LIBRARY)
@@ -152,7 +158,7 @@ if(NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
   endif()
 
   find_library(MKL_RTL_LIBRARY ${__iomp5_libs}
-               PATHS "${INTEL_RTL_ROOT}" "${INTEL_ROOT}/compiler" "${MKLROOT}" "${MKLROOT}/.." "${MKLROOT}/../compiler"
+               PATHS ${MKL_LIB_SEARCH_PATHS}
                PATH_SUFFIXES ${__path_suffixes}
                DOC "Path to OpenMP runtime library")
 
