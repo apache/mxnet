@@ -356,9 +356,6 @@ extends 'AI::MXNet::NDArray::Sparse';
     csr_matrix: Several ways to construct a CSRNDArray
 =cut
 
-#    def __reduce__(self):
-#        return CSRNDArray, (None,), super(CSRNDArray, self).__getstate__()
-
 use overload '+=' => sub { ($_[0] + $_[1])->copyto($_[0]) },
              '-=' => sub { ($_[0] - $_[1])->copyto($_[0]) },
              '*=' => sub { ($_[0] * $_[1])->copyto($_[0]) },
