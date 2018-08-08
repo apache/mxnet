@@ -391,6 +391,15 @@ MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
 MXNET_DLL int MXGetGPUCount(int* out);
 
 /*!
+ * \brief get the free and total available memory on a GPU
+ * \param dev the GPU number to query
+ * \param free_mem pointer to the integer holding free GPU memory
+ * \param total_mem pointer to the integer holding total GPU memory
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetGPUMemoryInformation(int dev, int* free_mem, int* total_mem);
+
+/*!
  * \brief get the MXNet library version as an integer
  * \param pointer to the integer holding the version number
  * \return 0 when success, -1 when failure happens
