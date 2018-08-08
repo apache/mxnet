@@ -123,10 +123,10 @@ function(try_mklml)
 
   include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
   find_package(MKLML REQUIRED)
-  include_directories(SYSTEM ${MKLML_INCLUDE_DIRS})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKLML_LIBRARIES} PARENT_SCOPE)
+  include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
+  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
 
-  set(MKL_FOUND ${MKLML_FOUND} PARENT_SCOPE)
+  set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
   set(BLAS MKL PARENT_SCOPE)

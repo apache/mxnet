@@ -23,9 +23,13 @@
 #
 # The following are set after configuration is done:
 #
-# MKLML_FOUND
-# MKLML_INCLUDE_DIRS
-# MKLML_LIBRARIES
+# MKL_FOUND
+# MKL_INCLUDE_DIRS
+# MKL_LIBRARIES
+
+if(MKL_FOUND)
+  return()
+endif()
 
 if($ENV{MKLROOT})
   file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
@@ -96,7 +100,8 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MKLML DEFAULT_MSG ${LOOKED_FOR})
 
 if(MKLML_FOUND)
-  set(MKLML_INCLUDE_DIRS "${MKLML_INCLUDE_DIR}")
+  set(MKL_FOUND ${MKLML_FOUND})
+  set(MKL_INCLUDE_DIRS "${MKLML_INCLUDE_DIR}")
 
   mark_as_advanced(${LOOKED_FOR})
 

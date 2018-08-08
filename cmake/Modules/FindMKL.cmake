@@ -32,6 +32,10 @@
 #   MKL_LIBRARIES        : the libraries to link against.
 #
 
+if(MKL_FOUND)
+  return()
+endif()
+
 if($ENV{MKLROOT})
   file(TO_CMAKE_PATH "$ENV{MKLROOT}" MKLROOT)
   message(STATUS "MKLROOT=${MKLROOT}")
