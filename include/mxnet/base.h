@@ -334,10 +334,10 @@ inline int32_t Context::GetGPUCount() {
 #endif
 }
 
+inline void Context::GetGPUMemoryInformation(int dev, int *free_mem,
+                                             int *total_mem) {
+#if MXNET_USE_CUDA
 
-inline void Context::GetGPUMemoryInformation(int dev, int *free_mem, int *total_mem) {
-  #if MXNET_USE_CUDA
-  
   size_t memF, memT;
   cudaError_t e;
 
