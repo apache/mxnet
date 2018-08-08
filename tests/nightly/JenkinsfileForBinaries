@@ -33,10 +33,10 @@ core_logic: {
     parallel 'GPU: CUDA9.1+cuDNN7': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
-          init_git()
+          utils.init_git()
           //sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
-          docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-          pack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+          utils.pack_lib('gpu', mx_lib)
         }
       }
     }
@@ -46,54 +46,54 @@ core_logic: {
     parallel 'ImageClassification: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-ImageClassificationTest') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
         }
       }
     },
     'KVStore_SingleNode: GPU': {
       node('mxnetlinux-gpu-p3-8xlarge') {
         ws('workspace/nt-KVStoreTest') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
         }
       }
     },
     'StraightDope: Python2 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_single_gpu_tests', true)
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_single_gpu_tests', true)
         }
       }
     },
     'StraightDope: Python2 Multi-GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/straight_dope-multi_gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_multi_gpu_tests', true)
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_multi_gpu_tests', true)
         }
       }
     },
     'StraightDope: Python3 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_single_gpu_tests', true)
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_single_gpu_tests', true)
         }
       }
     },
     'StraightDope: Python3 Multi-GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/straight_dope-multi_gpu') {
-          init_git()
-          unpack_lib('gpu', mx_lib)
-          docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
+          utils.init_git()
+          utils.unpack_lib('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
         }
       }
     }

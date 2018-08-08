@@ -33,19 +33,19 @@ core_logic: {
     parallel 'CompilationWarnings: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-compilationTest') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_compilation_warning', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_compilation_warning', false)
         }
       }
     },
     'InstallationGuide: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-Installation-cpu') {
-          init_git()
+          utils.init_git()
           //Some install guide tests are currently diabled and tracked here:
           //1. https://github.com/apache/incubator-mxnet/issues/11369
           //2. https://github.com/apache/incubator-mxnet/issues/11288
-          docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
+          utils.docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_virtualenv', false)
           //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_pip', false)
           //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_docker', false)
           //docker_run('ubuntu_base_cpu', 'nightly_test_installation ubuntu_python_cpu_source', false)
@@ -55,69 +55,69 @@ core_logic: {
     'InstallationGuide: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-Installation-gpu') {
-          init_git()
+          utils.init_git()
           //Some install guide tests are currently diabled and tracked here:
           //1. https://github.com/apache/incubator-mxnet/issues/11369
           //2. https://github.com/apache/incubator-mxnet/issues/11288
-          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
+          utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_virtualenv', true)
           //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_pip', true)
           //docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_docker', true)
-          docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
+          utils.docker_run('ubuntu_base_gpu', 'nightly_test_installation ubuntu_python_gpu_source', true)
         }
       }
     },
     'PipTest: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-pipTest') {
-          init_git()
+          utils.init_git()
         }
       }
     },
     'Amalgamation-atlas: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-amalgamation1') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas', false)
         }
       }
     },
     'Amalgamation-atlas-min: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-amalgamation2') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MIN=1', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MIN=1', false)
         }
       }
     },
     'Amalgamation-atlas-mkl: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-amalgamation3') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1', false)
         }
       }
     },
     'Amalgamation-atlas-cuda: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-amalgamation4') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1', false)
         }
       }
     },
     'Amalgamation-atlas-openmp: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-amalgamation5') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0', false)
         }
       }
     },
     'MXNetJS: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-mxnetjs') {
-          init_git()
-          docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
         }
       }
     }
