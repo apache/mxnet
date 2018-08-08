@@ -87,7 +87,6 @@ class GraphExecutor : public Executor {
             Executor* shared_exec = nullptr,
             const nnvm::NodeEntryMap<NDArray>& feed_dict
               = nnvm::NodeEntryMap<NDArray>());
-
   // initialize executor for simple bind
   void Init(nnvm::Symbol symbol,
             const Context& default_ctx,
@@ -106,7 +105,7 @@ class GraphExecutor : public Executor {
             std::unordered_map<std::string, NDArray>* shared_buffer = nullptr,
             Executor* shared_exec = nullptr,
             const nnvm::NodeEntryMap<NDArray>& feed_dict
-            = nnvm::NodeEntryMap<NDArray>());
+              = nnvm::NodeEntryMap<NDArray>());
 
   Executor* Reshape(const bool partial_shaping,
                     const bool allow_up_sizing,
@@ -162,7 +161,6 @@ class GraphExecutor : public Executor {
                      std::vector<NDArray>* in_arg_vec,
                      std::vector<NDArray>* arg_grad_vec,
                      std::vector<NDArray>* aux_state_vec);
-
   // Initialize in_args, arg_grads and aux_states with
   // shared_buffer and shared_exec
   virtual void InitArguments(const nnvm::IndexedGraph& idx,
@@ -215,6 +213,7 @@ class GraphExecutor : public Executor {
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
+
   static void HandleInferShapeError(const size_t num_forward_inputs,
                                     const nnvm::IndexedGraph& idx,
                                     const nnvm::ShapeVector& inferred_shapes);
