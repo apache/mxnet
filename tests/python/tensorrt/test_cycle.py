@@ -54,8 +54,8 @@ def test_simple_cycle():
                 'B_weight': mx.nd.zeros([10,10]),
                 'B_bias': mx.nd.zeros([10]),
                }
-  set_use_tensorrt(True)
-  executor = C.simple_bind(ctx=mx.gpu(0), data=(1,10), softmax_label=(1,),
+
+  executor = mx.contrib.tensorrt.optimize_graph(C, ctx=mx.gpu(0), data=(1,10), softmax_label=(1,),
                            shared_buffer=arg_params, grad_req='null', force_rebind=True)
   assert has_no_cycle(executor.optimized_symbol), "The graph optimized by TRT contains a cycle"
 
