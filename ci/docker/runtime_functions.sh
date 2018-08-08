@@ -379,10 +379,10 @@ build_ubuntu_cpu_cmake_debug() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
-    export CXX=clang++-3.9
+     export CXX=clang++-3.9
     export CC=clang-3.9
-    build_ccache_wrappers
-    make \
+     build_ccache_wrappers
+     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -537,19 +537,35 @@ build_ubuntu_gpu_cmake_mkldnn() {
 
 build_ubuntu_gpu_cmake() {
     set -ex
-    cd /work/build
-    cmake \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=0          \
-        -DUSE_MKLDNN=0             \
-        -DUSE_DIST_KVSTORE=1       \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
-        /work/mxnet
+    # cd /work/build
+    # cmake \
+    #     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    #     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+    #     -DUSE_CUDA=1               \
+    #     -DUSE_CUDNN=1              \
+    #     -DUSE_MKLML_MKL=0          \
+    #     -DUSE_MKLDNN=0             \
+    #     -DUSE_DIST_KVSTORE=1       \
+    #     -DCMAKE_BUILD_TYPE=Release \
+    #     -G Ninja                   \
+    #     /work/mxnet
 
-    ninja -v
-    build_cython
+    # ninja -v
+    # build_cython
+
+    # TMP for debugging
+    make \
+        DEV=1                         \
+        USE_CUDA=1                    \
+        USE_CUDNN=1                   \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_MKLML_MKL=0               \
+        USE_MKLDNN=0                  \
+        USE_DIST_KVSTORE=1            \
+        -j$(nproc)
+    
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 
