@@ -125,7 +125,8 @@ if(OpenBLAS_NEED_LAPACK)
   # we need another variable (starting with __) because cmake will not overwrite it if already set
   find_path(__OpenBLAS_LAPACK_INCLUDE_DIR
             NAMES lapacke.h
-            PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS})
+            PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS}
+            PATH_SUFFIXES include)
 
   # OpenBLAS does not have a separate LAPACK library: https://github.com/xianyi/OpenBLAS/issues/296
   # LAPACK if present in OpenBLAS build is included into libopenblas

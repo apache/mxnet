@@ -102,10 +102,13 @@ if(Atlas_NEED_LAPACK)
   # we need another variables (starting with __) because cmake will not overwrite it if already set
   find_path(__Atlas_CLAPACK_INCLUDE_DIR
             NAMES clapack.h
-            PATHS ${Atlas_INCLUDE_SEARCH_PATHS})
+            PATHS ${Atlas_INCLUDE_SEARCH_PATHS}
+            PATH_SUFFIXES include)
+
   find_library(__Atlas_LAPACK_LIBRARY
                NAMES lapack_r lapack lapack_atlas
-               PATHS ${Atlas_LIB_SEARCH_PATHS})
+               PATHS ${Atlas_LIB_SEARCH_PATHS}
+               PATH_SUFFIXES lib)
 
   set(CMAKE_REQUIRED_LIBRARIES ${Atlas_LAPACK_LIBRARY})
   include(CheckFunctionExists)
