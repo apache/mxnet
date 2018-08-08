@@ -167,6 +167,8 @@ class Executor {
                               shared_data_arrays = nullptr,
                               Executor* shared_exec = nullptr);
 
+#if MXNET_USE_TENSORRT
+
   static Executor* TensorRTBind(nnvm::Symbol symbol,
                                 const Context& default_ctx,
                                 const std::map<std::string, Context>& group2ctx,
@@ -184,6 +186,8 @@ class Executor {
                                 std::unordered_map<std::string, NDArray>*
                                   shared_data_arrays = nullptr,
                                 Executor* shared_exec = nullptr);
+
+#endif  // MXNET_USE_TENSORRT
 
   /*!
    * \brief the prototype of user-defined monitor callback
