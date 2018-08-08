@@ -527,9 +527,7 @@ sanity_check() {
 unittest_ubuntu_python2_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -539,9 +537,7 @@ unittest_ubuntu_python2_cpu() {
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -550,9 +546,7 @@ unittest_ubuntu_python3_cpu() {
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
@@ -561,9 +555,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -595,9 +587,7 @@ tutorialtest_ubuntu_python2_gpu() {
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -615,9 +605,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
 unittest_ubuntu_python2_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
@@ -627,9 +615,7 @@ unittest_ubuntu_python2_quantization_gpu() {
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
