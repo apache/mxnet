@@ -196,39 +196,24 @@ if(USE_TENSORRT)
   include_directories(3rdparty/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
-  list(APPEND mxnet_LINKER_LIBS libnvinfer.so)
 
   find_package(Protobuf REQUIRED)
-  list(APPEND mxnet_LINKER_LIBS ${PROTOBUF_LIBRARY})
 
-  message(STATUS "target path ${ONNX_PATH}")
   find_library(ONNX_LIBRARY NAMES libonnx.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx library.")
-  message(STATUS "linking onnx ${ONNX_LIBRARY}")
-  list(APPEND mxnet_LINKER_LIBS ${ONNX_LIBRARY})
-
-  message(STATUS "target path ${ONNX_PATH}")
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  message(STATUS "linking proto onnx ${ONNX_PROTO_LIBRARY}")
-  list(APPEND mxnet_LINKER_LIBS ${ONNX_PROTO_LIBRARY})
-
-  message(STATUS "target path ${ONNX_TRT_PATH}")
   find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
           DOC "Path to onnx_proto library.")
-  message(STATUS "linking proto onnx ${ONNX_TRT_RUNTIME_LIBRARY}")
-  list(APPEND mxnet_LINKER_LIBS ${ONNX_TRT_RUNTIME_LIBRARY})
-
-  message(STATUS "target path ${ONNX_TRT_PATH}")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
           DOC "Path to onnx_proto library.")
-  message(STATUS "linking proto onnx ${ONNX_TRT_PARSER_LIBRARY}")
-  list(APPEND mxnet_LINKER_LIBS ${ONNX_TRT_PARSER_LIBRARY})
 
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+          ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
 if(USE_MKLDNN)
