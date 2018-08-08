@@ -122,6 +122,7 @@ core_logic: {
       }
     }
   }
+}
 ,
 failure_handler: {
   // Only send email if nightly test failed

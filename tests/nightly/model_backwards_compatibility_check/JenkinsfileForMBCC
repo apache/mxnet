@@ -61,6 +61,7 @@ core_logic: {
       }
     }
   }
+}
 ,
 failure_handler: {
 // Only send email if model backwards compat test failed
