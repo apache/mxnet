@@ -97,7 +97,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
     # When instantiated, Sequential stores a chain of neural network layers.
     # Once presented with data, Sequential executes each layer in turn, using
     # the output of one layer as the input for the next
-    $net->name_scope(sub P
+    $net->name_scope(sub {
         $net->add(gluon->nn->Dense(256, activation=>"relu")); # 1st layer (256 nodes)
         $net->add(gluon->nn->Dense(256, activation=>"relu")); # 2nd hidden layer
         $net->add(gluon->nn->Dense($num_outputs));

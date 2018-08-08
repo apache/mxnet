@@ -132,7 +132,7 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
     ## Convolutional NN for recognizing hand-written digits in MNIST dataset
     ## It's considered "Hello, World" for Neural Networks
-    ## For more info about the MNIST problem please refer to http://neuralnetworksanddeeplearning.com/chap1.html
+    ## For more info about the MNIST problem please refer to L<http://neuralnetworksanddeeplearning.com/chap1.html>
 
     use strict;
     use warnings;
@@ -274,16 +274,16 @@ AI::MXNet - Perl interface to MXNet machine learning library
     so most, if not all of Python’s documentation and examples should just work in Perl after making few changes 
     in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ; 
     and in 99% of cases that’s all that is needed there.
-    In addition please refer to very detailed MXNet Python API Documentation.
+    In addition please refer to very detailed L<MXNet Python API Documentation|http://mxnet.io/api/python/index.html>.
 
     AI::MXNet supports new imperative PyTorch like Gluon MXNet interface.
-    Please get acquainted with this new interface at Deep Learning - The Straight Dope.
+    Please get acquainted with this new interface at L<Deep Learning - The Straight Dope|https://gluon.mxnet.io/>.
 
     For specific Perl Gluon usage please refer to Perl examples and tests directories on github,
     but be assured that the Python and Perl usage are extremely close in order to make the use 
     of the Python Gluon docs and examples as easy as possible.
 
-    AI::MXNet is seamlessly glued with PDL, the C++ level state can be easily initialized from PDL
+    AI::MXNet is seamlessly glued with L<PDL|https://metacpan.org/pod/PDL>, the C++ level state can be easily initialized from PDL
     and the results can be transferred to PDL objects in order to allow you to use all the glory and power of the PDL!
 
 =head1 BUGS AND INCOMPATIBILITIES
@@ -293,9 +293,9 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 SEE ALSO
 
-    http://mxnet.io/
-    https://github.com/dmlc/mxnet/tree/master/perl-package
-    Function::Parameters, Mouse
+    L<http://mxnet.io/>
+    L<https://github.com/dmlc/mxnet/tree/master/perl-package>
+    L<Function::Parameters|https://metacpan.org/pod/Function::Parameters>, L<Mouse|https://metacpan.org/pod/Mouse>
 
 =head1 AUTHOR
 
@@ -303,6 +303,6 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 COPYRIGHT & LICENSE
 
-    This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
+    This library is licensed under Apache 2.0 license L<https://www.apache.org/licenses/LICENSE-2.0>
 
 =cut
