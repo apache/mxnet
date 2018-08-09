@@ -89,9 +89,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_probability(self):
         assert _test_notebook('chapter01_crashcourse/probability')
 
-    # TODO(vishaalk): Notebook contains the word 'Warning'. Needs to be updated to a synonym.
-    #def test_autograd(self):
-    #    assert _test_notebook('chapter01_crashcourse/autograd')
+    def test_autograd(self):
+        assert _test_notebook('chapter01_crashcourse/autograd')
 
     # Chapter 2
 
@@ -113,9 +112,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_regularization_scratch(self):
         assert _test_notebook('chapter02_supervised-learning/regularization-scratch')
 
-    # TODO(vishaalk): Notebook does not appear to be JSON: '{\n "cells": [\n  {\n   "cell_type": "m....
-    #def test_regularization_gluon(self):
-    #    assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
+    def test_regularization_gluon(self):
+        assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
 
     def test_perceptron(self):
         assert _test_notebook('chapter02_supervised-learning/perceptron')
@@ -258,9 +256,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_lds_scratch(self):
         assert _test_notebook('chapter12_time-series/lds-scratch')
 
-    # TODO(vishaalk): File doesn't appear to be valid JSON.
-    #def test_issm_scratch(self):
-    #    assert _test_notebook('chapter12_time-series/issm-scratch')
+    def test_issm_scratch(self):
+        assert _test_notebook('chapter12_time-series/issm-scratch')
 
     # Chapter 14
 
@@ -273,7 +270,7 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_generative_adversarial_networks(self):
         assert _test_notebook('chapter14_generative-adversarial-networks/conditional')
 
-    # TODO(vishaalk): Notebook does not appear to be valid JSON.
+    # TODO(vishaalk): Investigate.
     #def test_pixel2pixel(self):
     #    assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')
 

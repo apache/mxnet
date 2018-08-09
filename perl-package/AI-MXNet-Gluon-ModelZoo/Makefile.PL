@@ -40,7 +40,7 @@ my %WriteMakefileArgs = (
     "AI::MXNet::Gluon::Contrib" => "1.3"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.3",
+  "VERSION" => "1.32",
   "test" => {
     "TESTS" => "t/*.t"
   }
