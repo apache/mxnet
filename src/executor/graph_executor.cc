@@ -943,9 +943,6 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
   this->InitOpSegs();
 }
 
-// convert nnvm symbol to a nnvm graph.
-nnvm::Graph Symbol2Graph(const nnvm::Symbol &s);
-
 // Infer shapes, dtypes, stypes, contexts for the forward graph
 static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
                                      nnvm::ShapeVector arg_shapes,
