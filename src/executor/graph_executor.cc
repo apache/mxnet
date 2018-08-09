@@ -1035,7 +1035,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     }
   }
   return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
-                        default_ctx, ctx_map, in_arg_ctxes,aux_state_ctxes);
+                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes);
 }
 
 
