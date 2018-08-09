@@ -55,7 +55,8 @@ object BoostTrain {
   }
 
   def runTraining(dataPath : String, vggModelPath: String, ctx : Context,
-                  styleImage : String, saveModelPath : String) : Unit = {
+                  styleImage : String, saveModelPath : String,
+                  startEpoch : Int = 0, endEpoch : Int = 3) : Unit = {
     // params
     val vggParams = NDArray.load2Map(vggModelPath)
     val styleWeight = 1.2f
@@ -105,9 +106,6 @@ object BoostTrain {
     logger.info(s"Dataset size: $numImage")
 
     val tvWeight = 1e-2f
-
-    val startEpoch = 0
-    val endEpoch = 3
 
     for (k <- 0 until gens.length) {
       val path = new File(s"${saveModelPath}/$k")

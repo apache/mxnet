@@ -21,9 +21,15 @@ import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
+import org.slf4j.LoggerFactory
 
 object Util {
-
+  /**
+    * a Download wrapper with retry scheme on Scala
+    * @param url the URL for the file
+    * @param filePath the path to store the file
+    * @param maxRetry maximum retries will take
+    */
   def downloadUrl(url: String, filePath: String, maxRetry: Option[Int] = None) : Unit = {
     val tmpFile = new File(filePath)
     var retry = maxRetry.getOrElse(3)
@@ -41,5 +47,31 @@ object Util {
       success = true
     }
    if (!success) throw new Exception(s"$url Download failed!")
+  }
+
+  /**
+    * This Util is designed to manage the tests in CI
+    * @param name the name of the test
+    * @return runTest and number of epoch
+    */
+  def testManager(name: String) : (Boolean, Int) = {
+    val GPUTest = Map[String, Int]("CNN" -> 10, "GAN" -> 5, "MultiTask" -> 3,
+      "NSBoost" -> 10, "NSNeural" -> 80)
+    val CPUTest = Set("CustomOp", "MNIST", "Infer", "Profiler")
+    val GPU_Enable = System.getenv().containsKey("SCALA_TEST_INTEGRATION")
+    if (GPUTest.contains(name)) {
+      if (GPU_Enable) {
+        val epoch = if (System.getenv("SCALA_TEST_INTEGRATION").toInt == 1) {
+          1
+        } else GPUTest.get(name).get
+        (true, epoch)
+      } else {
+        (false, 0)
+      }
+    } else if (CPUTest.contains(name)) {
+      (true, 0)
+    } else {
+      throw new IllegalArgumentException("Test not found, please registered in Util!")
+    }
   }
 }

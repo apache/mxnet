@@ -70,7 +70,7 @@ class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
       BoostTrain.runTraining(tempDirPath + "/NS/images", tempDirPath + "/NS/vgg19.params", ctx,
-        tempDirPath + "/NS/starry_night.jpg", tempDirPath + "/NS")
+        tempDirPath + "/NS/starry_night.jpg", tempDirPath + "/NS", 0, 3)
     } else {
       logger.info("GPU test only, skip CPU...")
     }
