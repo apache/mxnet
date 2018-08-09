@@ -496,11 +496,8 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
                   const std::vector<mxnet::NDArray> &inputs_,
                   const std::vector<mxnet::OpReqType> &req,
                   const std::vector<mxnet::NDArray> &outputs_) {
-
   static auto& is_excluded = Op::GetAttr<bool>("TExcludeMKLDNNDebug");
-
   if (is_excluded.get(attrs.op, false)) return;
-
   std::vector<mxnet::TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
   std::vector<mxnet::TBlob> out_blobs(outputs.size());
