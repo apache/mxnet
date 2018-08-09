@@ -148,12 +148,12 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
 };
 
 struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
-  TShape lhs_axes;
-  TShape rhs_axes;
+  dmlc::optional<TShape> lhs_axes;
+  dmlc::optional<TShape> rhs_axes;
   DMLC_DECLARE_PARAMETER(BroadcastLikeParam) {
-    DMLC_DECLARE_FIELD(lhs_axes).set_default(TShape())
+    DMLC_DECLARE_FIELD(lhs_axes)
       .describe("Axes to perform broadcast on in the first input array");
-    DMLC_DECLARE_FIELD(rhs_axes).set_default(TShape())
+    DMLC_DECLARE_FIELD(rhs_axes)
       .describe("Axes to copy from the second input array");
   }
 };
@@ -368,10 +368,9 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
 
   const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
   TShape oshape;
-  CHECK(param.rhs_axes.ndim() == param.lhs_axes.ndim())
-  << "Input_axis and other_axis size does not match";
 
-  if (param.lhs_axes.ndim() == 0) {
+  // lhs or rhs or both params were not specified
+  if (!param.lhs_axes.has_value() || !param.rhs_axes.has_value()) {
     CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
     << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
 
@@ -385,23 +384,32 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
       }
     }
   } else {
+    auto lhs_axes = param.lhs_axes.value();
+    auto rhs_axes = param.rhs_axes.value();
+
+    CHECK(rhs_axes.ndim() == lhs_axes.ndim())
+    << "Input_axis and other_axis size does not match";
+
+    CHECK(lhs_axes.ndim() > 0)
+    << "Empty axes tuple is not allowed";
+
     oshape = TShape(lhs_shape);
-    for (index_t i = 0; i < param.lhs_axes.ndim(); ++i) {
-      auto copyfrom = param.lhs_axes[i];
+    for (index_t i = 0; i < lhs_axes.ndim(); ++i) {
+      auto copyfrom = lhs_axes[i];
       if (copyfrom < 0) {
         copyfrom =  lhs_shape.ndim() + copyfrom;
       }
       CHECK(copyfrom >= 0 && copyfrom < oshape.ndim())
-      << "Invalid dimension specified in lhs_axes: " << param.lhs_axes[i];
+      << "Invalid dimension specified in lhs_axes: " << lhs_axes[i];
 
-      auto copyto = param.rhs_axes[i];
+      auto copyto = rhs_axes[i];
       if (copyto < 0) {
         copyto =  rhs_shape.ndim() + copyto;
       }
       CHECK(copyto >= 0 && copyto < rhs_shape.ndim())
-      << "Invalid dimension specified in rhs_axes: " << param.rhs_axes[i];
+      << "Invalid dimension specified in rhs_axes: " << rhs_axes[i];
 
-      CHECK(lhs_shape[copyfrom] == 1) << "Input axis " << param.lhs_axes[i]
+      CHECK(lhs_shape[copyfrom] == 1) << "Input axis " << lhs_axes[i]
       << " cannot be broadcasted to " << rhs_shape[copyto];
       oshape[copyfrom] = rhs_shape[copyto];
     }
