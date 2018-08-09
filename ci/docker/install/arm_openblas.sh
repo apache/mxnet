@@ -19,7 +19,7 @@
 
 set -ex
 
-git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git
+git clone --recursive -b v0.3.2 https://github.com/xianyi/OpenBLAS.git
 
 cd OpenBLAS
 make -j$(nproc)
