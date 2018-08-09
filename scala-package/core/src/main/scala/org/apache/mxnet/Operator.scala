@@ -82,6 +82,7 @@ abstract class CustomOp {
       this.forward(isTrain = isTrain, req = reqsArr,
         inData = tensors(0).toArray, outData = tensors(1).toArray,
         aux = tensors(4).toArray)
+      tensors.foreach(arr => arr.foreach(_.dispose()))
     } catch {
       case ex: Throwable => {
         success = false
@@ -112,6 +113,7 @@ abstract class CustomOp {
         inData = tensors(0).toArray, outData = tensors(1).toArray,
         inGrad = tensors(2).toArray, outGrad = tensors(3).toArray,
         aux = tensors(4).toArray)
+      tensors.foreach(arr => arr.foreach(_.dispose()))
     } catch {
       case ex: Throwable => {
         success = false

@@ -101,6 +101,9 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   private def iterNext(): Boolean = {
     val next = new RefInt
     checkCall(_LIB.mxDataIterNext(handle, next))
+    if (currentBatch != null) {
+      currentBatch.dispose()
+    }
     currentBatch = null
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
