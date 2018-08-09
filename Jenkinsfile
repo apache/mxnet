@@ -374,12 +374,12 @@ try {
       }
     },
     'TensorRT': {
-      node('mxnetlinux-cpu') {
+      node(NODE_LINUX_CPU) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
-            init_git()
-            docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
-            pack_lib('tensorrt', mx_tensorrt_lib)
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.pack_lib('tensorrt', mx_tensorrt_lib)
           }
         }
       }
@@ -753,16 +753,16 @@ try {
       }
     },
     'Python3: TensorRT GPU': {
-      node('mxnetlinux-gpu-p3') {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              init_git()
-              unpack_lib('tensorrt', mx_tensorrt_lib)
-              docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
-              publish_test_coverage()
+              utils.init_git()
+              utils.unpack_lib('tensorrt', mx_tensorrt_lib)
+              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+              utils.publish_test_coverage()
             } finally {
-              collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
             }
           }
         }

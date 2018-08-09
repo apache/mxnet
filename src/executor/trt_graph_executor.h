@@ -51,8 +51,9 @@ class TrtGraphExecutor : public GraphExecutor {
                     std::unordered_map<std::string, NDArray>* shared_buffer = nullptr,
                     Executor* shared_exec = nullptr,
                     const nnvm::NodeEntryMap<NDArray>& feed_dict
-                    = nnvm::NodeEntryMap<NDArray>());
+                      = nnvm::NodeEntryMap<NDArray>());
 
+  // Returns symbol representing the TRT optimized graph for comparison purposes.
   nnvm::Symbol GetOptimizedSymbol();
 
  protected:

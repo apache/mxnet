@@ -25,8 +25,9 @@ from time import time
 
 from mxnet.gluon.data.vision import transforms
 
-def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.gpu(0),
-                      batch_size=128):
+
+def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
+    mx.contrib.tensorrt.set_use_tensorrt(use_tensorrt)
     h, w = 32, 32
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
     data = mx.sym.var('data')
@@ -35,9 +36,9 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
-        executor = mx.contrib.tensorrt.optimize_graph(softmax, ctx=ctx, data=(batch_size, 3, h, w),
-                                                      softmax_label=(batch_size,), grad_req='null',
-                                                      shared_buffer=all_params, force_rebind=True)
+        executor = softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
+                                       softmax_label=( batch_size,), grad_req='null',
+                                       shared_buffer=all_params, force_rebind=True)
     else:
         # Convert gluon model to Symbolic
         net.hybridize()
@@ -45,13 +46,12 @@ def get_classif_model(model_name='cifar_resnet56_v1', use_tensorrt=True, ctx=mx.
         net.export(model_name)
         symbol, arg_params, aux_params = mx.model.load_checkpoint(model_name, 0)
         executor = symbol.simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
-                                       softmax_label=(batch_size,))
+                                      softmax_label=(batch_size,))
         executor.copy_params_from(arg_params, aux_params)
     return executor
 
 
-def cifar10_infer(data_dir='./data', model_name='cifar_resnet56_v1', use_tensorrt=True,
-                  ctx=mx.gpu(0), fp16_for_fp32_graph=False, batch_size=128, num_workers=1):
+def cifar10_infer(model_name, use_tensorrt, num_workers, ctx=mx.gpu(0), batch_size=128):
     executor = get_classif_model(model_name, use_tensorrt, ctx, batch_size)
 
     num_ex = 10000
@@ -125,47 +125,51 @@ def run_experiment_for(model_name, batch_size, num_workers):
 
 
 def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
-    models = [
-        'cifar_resnet20_v1',
-        'cifar_resnet56_v1',
-        'cifar_resnet110_v1',
-        'cifar_resnet20_v2',
-        'cifar_resnet56_v2',
-        'cifar_resnet110_v2',
-        'cifar_wideresnet16_10',
-        'cifar_wideresnet28_10',
-        'cifar_wideresnet40_8',
-        'cifar_resnext29_16x64d'
-    ]
+    original_try_value = mx.contrib.tensorrt.get_use_tensorrt()
+    try:
+        models = [
+            'cifar_resnet20_v1',
+            'cifar_resnet56_v1',
+            'cifar_resnet110_v1',
+            'cifar_resnet20_v2',
+            'cifar_resnet56_v2',
+            'cifar_resnet110_v2',
+            'cifar_wideresnet16_10',
+            'cifar_wideresnet28_10',
+            'cifar_wideresnet40_8',
+            'cifar_resnext29_16x64d'
+        ]
 
-    num_models = len(models)
+        num_models = len(models)
 
-    speedups = np.zeros(num_models, dtype=np.float32)
-    acc_diffs = np.zeros(num_models, dtype=np.float32)
+        speedups = np.zeros(num_models, dtype=np.float32)
+        acc_diffs = np.zeros(num_models, dtype=np.float32)
 
-    test_start = time()
+        test_start = time()
 
-    for idx, model in enumerate(models):
-        speedup, acc_diff = run_experiment_for(model, batch_size, num_workers)
-        speedups[idx] = speedup
-        acc_diffs[idx] = acc_diff
-        assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (
-            tolerance, model)
+        for idx, model in enumerate(models):
+            speedup, acc_diff = run_experiment_for(model, batch_size, num_workers)
+            speedups[idx] = speedup
+            acc_diffs[idx] = acc_diff
+            assert acc_diff < tolerance, "Accuracy difference between MXNet and TensorRT > %.2f%% for model %s" % (
+                tolerance, model)
 
-    print("Perf and correctness checks run on the following models:")
-    print(models)
-    mean_speedup = np.mean(speedups)
-    std_speedup = np.std(speedups)
-    print("\nSpeedups:")
-    print(speedups)
-    print("Speedup range: [%.2f, %.2f]" % (np.min(speedups), np.max(speedups)))
-    print("Mean speedup: %.2f" % mean_speedup)
-    print("St. dev. of speedups: %.2f" % std_speedup)
-    print("\nAcc. differences: %s" % str(acc_diffs))
+        print("Perf and correctness checks run on the following models:")
+        print(models)
+        mean_speedup = np.mean(speedups)
+        std_speedup = np.std(speedups)
+        print("\nSpeedups:")
+        print(speedups)
+        print("Speedup range: [%.2f, %.2f]" % (np.min(speedups), np.max(speedups)))
+        print("Mean speedup: %.2f" % mean_speedup)
+        print("St. dev. of speedups: %.2f" % std_speedup)
+        print("\nAcc. differences: %s" % str(acc_diffs))
 
-    test_duration = time() - test_start
+        test_duration = time() - test_start
 
-    print("Test duration: %.2f seconds" % test_duration)
+        print("Test duration: %.2f seconds" % test_duration)
+    finally:
+        mx.contrib.tensorrt.set_use_tensorrt(original_try_value)
 
 
 if __name__ == '__main__':

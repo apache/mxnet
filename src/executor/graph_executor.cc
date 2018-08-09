@@ -57,7 +57,7 @@ GraphExecutor::~GraphExecutor() {
 }
 
 inline NDArray GraphExecutor::InitZeros(const NDArrayStorageType stype, const TShape &shape,
-                                const Context &ctx, const int dtype) {
+                                        const Context &ctx, const int dtype) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     NDArray ret(shape, ctx, false, dtype);
@@ -69,8 +69,8 @@ inline NDArray GraphExecutor::InitZeros(const NDArrayStorageType stype, const TS
 }
 
 inline void GraphExecutor::EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
-                             const Context &ctx, const int dtype,
-                             std::vector<NDArray> *vec) {
+                                            const Context &ctx, const int dtype,
+                                            std::vector<NDArray> *vec) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     vec->emplace_back(shape, ctx, false, dtype);
@@ -438,8 +438,8 @@ Graph GraphExecutor::AssignContext(Graph g,
 }
 
 void GraphExecutor::HandleInferShapeError(const size_t num_forward_inputs,
-                           const nnvm::IndexedGraph& idx,
-                           const nnvm::ShapeVector& inferred_shapes) {
+                                          const nnvm::IndexedGraph& idx,
+                                          const nnvm::ShapeVector& inferred_shapes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -461,8 +461,8 @@ void GraphExecutor::HandleInferShapeError(const size_t num_forward_inputs,
 }
 
 void GraphExecutor::HandleInferTypeError(const size_t num_forward_inputs,
-                          const nnvm::IndexedGraph& idx,
-                          const nnvm::DTypeVector& inferred_dtypes) {
+                                         const nnvm::IndexedGraph& idx,
+                                         const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -484,8 +484,8 @@ void GraphExecutor::HandleInferTypeError(const size_t num_forward_inputs,
 }
 
 void GraphExecutor::HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const StorageTypeVector& inferred_stypes) {
+                                                const nnvm::IndexedGraph& idx,
+                                                const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {

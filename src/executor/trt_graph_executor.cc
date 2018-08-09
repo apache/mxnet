@@ -30,7 +30,7 @@ namespace mxnet {
 namespace exec {
 
   /*!
- * \brief GraphExecutor initializer for simple bind flow in
+ * \brief TrtGraphExecutor initializer for simple bind flow in
  * which only certain input shapes and dtypes are provided by users.
  * The initializer uses these shapes and dtypes to perform
  * shape and dtype inferences, and then create NDArrays
@@ -40,8 +40,14 @@ namespace exec {
  * In front end, if the simple_bind flow is trigger by
  * _bind_ith_exec, the shared data arrays of DataParallelExecutorGroup
  * and shared executor will be taken into account in creating
- * NDArrays for in_args, arg_grads, and aux_states for resuing
+ * NDArrays for in_args, arg_grads, and aux_states for reusing
  * already allocated memory.
+ *
+ * This version of an executor exports the computation graph to TensorRT make use of fused
+ * kernels and other runtime enhancements.  TRT will compile the sub-graphs to executable fused
+ * operators without intervention from the user.  Operators in the original graph that are not
+ * supported by TRT will continue to be executed normally by MXNet.
+ *
  */
 void TrtGraphExecutor::Init(nnvm::Symbol symbol,
                             const Context& default_ctx,
@@ -256,30 +262,13 @@ void TrtGraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         }
       } else {  // !shared_arg_names.count(arg_name)
         // model parameter, row_sparse ndarray sharing enabled
-        bool enable_row_sparse_sharing = true;
-
-        if (use_tensorrt_ && !need_grad_) {
-#if MXNET_USE_TENSORRT
-          auto it = shared_buffer->find(arg_name);
-          if (it != shared_buffer->end()) {
-            in_arg_vec->push_back(std::move(it->second.Copy(in_arg_ctxes[arg_top])));
-          } else {
-            in_arg_vec->push_back(std::move(InitZeros(inferred_stype, inferred_shape,
-                                                      in_arg_ctxes[arg_top], inferred_dtype)));
-          }
-#else
-          LOG(FATAL) << "Env. var. MXNET_USE_TENSORRT = 1 set, but MXNet wasn't "
-                << "built with TensorRT. Add USE_TENSORRT = 1 in config.mk";
-#endif
+        auto it = shared_buffer->find(arg_name);
+        if (it != shared_buffer->end()) {
+          in_arg_vec->push_back(std::move(it->second.Copy(in_arg_ctxes[arg_top])));
         } else {
-          if (use_tensorrt_) {
-            LOG(WARNING) << "USE_TENSORRT=1 but grads required. Running without TensorRT";
-          }
-          in_arg_vec->emplace_back(ReshapeOrCreate(
-              arg_name, inferred_shape, inferred_dtype, inferred_stype,
-              in_arg_ctxes[arg_top], shared_buffer, enable_row_sparse_sharing));
+          in_arg_vec->push_back(std::move(InitZeros(inferred_stype, inferred_shape,
+                                                    in_arg_ctxes[arg_top], inferred_dtype)));
         }
-
         // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();

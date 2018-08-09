@@ -1674,45 +1674,6 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
 
-#if MXNET_USE_TENSORRT
-
-MXNET_DLL int MXExecutorTensorRTBind(SymbolHandle symbol_handle,
-                                     int dev_type,
-                                     int dev_id,
-                                     mx_uint num_g2c_keys,
-                                     const char** g2c_keys,
-                                     const int* g2c_dev_types,
-                                     const int* g2c_dev_ids,
-                                     mx_uint provided_grad_req_list_len,
-                                     const char** provided_grad_req_names,
-                                     const char** provided_grad_req_types,
-                                     mx_uint num_provided_arg_shapes,
-                                     const char** provided_arg_shape_names,
-                                     const mx_uint* provided_arg_shape_data,
-                                     const mx_uint* provided_arg_shape_idx,
-                                     mx_uint num_provided_arg_dtypes,
-                                     const char** provided_arg_dtype_names,
-                                     const int* provided_arg_dtypes,
-                                     mx_uint num_provided_arg_stypes,
-                                     const char** provided_arg_stype_names,
-                                     const int* provided_arg_stypes,
-                                     mx_uint num_shared_arg_names,
-                                     const char** shared_arg_name_list,
-                                     int* shared_buffer_len,
-                                     const char** shared_buffer_name_list,
-                                     NDArrayHandle* shared_buffer_handle_list,
-                                     const char*** updated_shared_buffer_name_list,
-                                     NDArrayHandle** updated_shared_buffer_handle_list,
-                                     mx_uint* num_in_args,
-                                     NDArrayHandle** in_args,
-                                     NDArrayHandle** arg_grads,
-                                     mx_uint* num_aux_states,
-                                     NDArrayHandle** aux_states,
-                                     ExecutorHandle shared_exec_handle,
-                                     ExecutorHandle* out);
-
-#endif  // MXNET_USE_TENSORRT
-
 /*!
  * \brief Return a new executor with the same symbol and shared memory,
  * but different input/output shapes.

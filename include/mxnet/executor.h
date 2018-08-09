@@ -164,7 +164,7 @@ class Executor {
                               std::vector<NDArray>* arg_grads,
                               std::vector<NDArray>* aux_states,
                               std::unordered_map<std::string, NDArray>*
-                              shared_data_arrays = nullptr,
+                                shared_data_arrays = nullptr,
                               Executor* shared_exec = nullptr);
 
 #if MXNET_USE_TENSORRT

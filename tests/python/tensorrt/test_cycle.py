@@ -58,9 +58,10 @@ def test_simple_cycle():
                 'B_bias': mx.nd.zeros([10]),
                }
 
-    executor = mx.contrib.tensorrt.optimize_graph(C, ctx=mx.gpu(0), data=(1,10), softmax_label=(1,),
+    executor = C.simple_bind(ctx=mx.gpu(0), data=(1,10), softmax_label=(1,),
                            shared_buffer=arg_params, grad_req='null', force_rebind=True)
-    assert has_no_cycle(executor.optimized_symbol), "The graph optimized by TRT contains a cycle"
+    optimized_graph = mx.contrib.tensorrt.get_optimized_symbol(executor)
+    assert has_no_cycle(optimized_graph), "The graph optimized by TRT contains a cycle"
 
 
 if __name__ == '__main__':
