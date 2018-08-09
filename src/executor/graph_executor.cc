@@ -56,8 +56,8 @@ GraphExecutor::~GraphExecutor() {
   }
 }
 
-inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
-                                const Context &ctx, const int dtype) {
+inline NDArray GraphExecutor::InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                                        const Context &ctx, const int dtype) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     NDArray ret(shape, ctx, false, dtype);
@@ -68,9 +68,9 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
   return NDArray(stype, shape, ctx, true, dtype);
 }
 
-inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
-                             const Context &ctx, const int dtype,
-                             std::vector<NDArray> *vec) {
+inline void GraphExecutor::EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                                            const Context &ctx, const int dtype,
+                                            std::vector<NDArray> *vec) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
     vec->emplace_back(shape, ctx, false, dtype);
@@ -312,15 +312,15 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
-static Graph AssignContext(Graph g,
-                    const Context& default_ctx,
-                    const std::map<std::string, Context>& ctx_map,
-                    const std::vector<Context>& in_arg_ctxes,
-                    const std::vector<Context>& arg_grad_ctxes,
-                    const std::vector<Context>& aux_state_ctxes,
-                    const std::vector<OpReqType>& grad_req_types,
-                    size_t num_forward_inputs,
-                    size_t num_forward_outputs) {
+Graph GraphExecutor::AssignContext(Graph g,
+                                   const Context& default_ctx,
+                                   const std::map<std::string, Context>& ctx_map,
+                                   const std::vector<Context>& in_arg_ctxes,
+                                   const std::vector<Context>& arg_grad_ctxes,
+                                   const std::vector<Context>& aux_state_ctxes,
+                                   const std::vector<OpReqType>& grad_req_types,
+                                   size_t num_forward_inputs,
+                                   size_t num_forward_outputs) {
   const auto& idx = g.indexed_graph();
   const auto& mutable_nodes = idx.mutable_input_nodes();
   // default use default context.
@@ -437,9 +437,9 @@ static Graph AssignContext(Graph g,
   return g;
 }
 
-static void HandleInferShapeError(const size_t num_forward_inputs,
-                           const nnvm::IndexedGraph& idx,
-                           const nnvm::ShapeVector& inferred_shapes) {
+void GraphExecutor::HandleInferShapeError(const size_t num_forward_inputs,
+                                          const nnvm::IndexedGraph& idx,
+                                          const nnvm::ShapeVector& inferred_shapes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -460,9 +460,9 @@ static void HandleInferShapeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-static void HandleInferTypeError(const size_t num_forward_inputs,
-                          const nnvm::IndexedGraph& idx,
-                          const nnvm::DTypeVector& inferred_dtypes) {
+void GraphExecutor::HandleInferTypeError(const size_t num_forward_inputs,
+                                         const nnvm::IndexedGraph& idx,
+                                         const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -483,9 +483,9 @@ static void HandleInferTypeError(const size_t num_forward_inputs,
              << oss.str();
 }
 
-static void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const StorageTypeVector& inferred_stypes) {
+void GraphExecutor::HandleInferStorageTypeError(const size_t num_forward_inputs,
+                                                const nnvm::IndexedGraph& idx,
+                                                const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -688,13 +688,13 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
  * Shareable storages include both default storage and row_sparse storage
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
-static NDArray ReshapeOrCreate(const std::string& name,
-                        const TShape& dest_arg_shape,
-                        const int dest_arg_dtype,
-                        const NDArrayStorageType dest_arg_stype,
-                        const Context& ctx,
-                        std::unordered_map<std::string, NDArray>* shared_buffer,
-                        bool enable_row_sparse_sharing) {
+NDArray GraphExecutor::ReshapeOrCreate(const std::string& name,
+                                       const TShape& dest_arg_shape,
+                                       const int dest_arg_dtype,
+                                       const NDArrayStorageType dest_arg_stype,
+                                       const Context& ctx,
+                                       std::unordered_map<std::string, NDArray>* shared_buffer,
+                                       bool enable_row_sparse_sharing) {
   bool stype_shareable = dest_arg_stype == kDefaultStorage;
   if (enable_row_sparse_sharing) {
     stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
