@@ -106,7 +106,7 @@ template<typename T>
 inline size_t SerializedSize(const nnvm::Tuple <T> &obj) {
   if (is_container<T>::value) {
     size_t sum_val = 4;
-    for (auto& el : obj) {
+    for (const auto& el : obj) {
       sum_val += SerializedSize(el);
     }
     return sum_val;
