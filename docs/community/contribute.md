@@ -65,34 +65,17 @@ To join the MXNet slack channel send request to the contributor mailing list.
 Keep connected with the latest MXNet news and updates.
 
 
-#### Medium
+<a id="medium">
+<a href="https://medium.com/apache-mxnet"><img src="../_static/images/medium.svg" height="120px"/> Contributor and guest blogs about MXNet</a>
 
-<a href="https://medium.com/apache-mxnet"><img src="https://cdn.mos.cms.futurecdn.net/xJGh6cXvC69an86AdrLD98-970-80.jpg" width="100px"/> Regular blogs about MXNet for your morning commute</a>
+<a id="reddit">
+<a href="https://reddit.com/r/mxnet"><img src="../_static/images/reddit.svg" height="120px" alt="reddit"/> Discuss MXNet on r/mxnet</a>
 
+<a id="twitter">
+<a href="https://twitter.com/apachemxnet"><img src="../_static/images/twitter.svg" height="120px"/> Apache MXNet on Twitter</a>
 
-#### YouTube
-
-<a href="https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A"><img src="https://techcrunch.com/wp-content/uploads/2017/08/youtube-new-logo.png" width="100px"/>MXNet YouTube channel</a>
-
-<div class="g-ytsubscribe" data-channelid="UCQua2ZAkbr_Shsgfk1LCy6A" data-layout="full" data-count="hidden"></div>
-
-<br/><br/>
-
-
-#### Twitter
-
-<a href="https://twitter.com/apachemxnet"><img src="https://static01.nyt.com/images/2014/08/10/magazine/10wmt/10wmt-superJumbo-v4.jpg" width="100px"/>Apache MXNet on Twitter</a>
-
-<a href="https://twitter.com/apachemxnet?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @apachemxnet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-
-<br/><br/>
-
-
-#### Reddit
-
-<a href="https://reddit.com/r/mxnet"><img src="https://www.redditstatic.com/spreddit5.gif" alt="reddit" border="0"/> Discuss MXNet on r/mxnet</a>
-
-<br/><br/>
+<a id="youtube">
+<a href="https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A"><img src="../_static/images/youtube.svg" height="120px"/> MXNet YouTube channel</a>
 
 
 ## JIRA
