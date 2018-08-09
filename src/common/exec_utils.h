@@ -24,11 +24,14 @@
 #ifndef MXNET_COMMON_EXEC_UTILS_H_
 #define MXNET_COMMON_EXEC_UTILS_H_
 
+#include <nnvm/graph.h>
+#include <nnvm/pass_functions.h>
 #include <map>
 #include <vector>
 #include <string>
 #include <utility>
 #include "../common/utils.h"
+#include "../executor/exec_pass.h"
 
 namespace mxnet {
 namespace common {
@@ -367,6 +370,37 @@ inline void LogInferStorage(const nnvm::Graph& g) {
   }
 }
 
+/*!
+ * \brief Return an NDArray of all zeros.
+ */
+static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                         const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+/*!
+ * \brief Helper to add a NDArray of zeros to a std::vector.
+ */
+static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
+}
+
 // prints a helpful message after shape inference errors in executor.
 static void HandleInferShapeError(const size_t num_forward_inputs,
                                   const nnvm::IndexedGraph& idx,
@@ -494,21 +528,21 @@ static NDArray ReshapeOrCreate(const std::string& name,
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
-static Graph AssignContext(Graph g,
-                           const Context& default_ctx,
-                           const std::map<std::string, Context>& ctx_map,
-                           const std::vector<Context>& in_arg_ctxes,
-                           const std::vector<Context>& arg_grad_ctxes,
-                           const std::vector<Context>& aux_state_ctxes,
-                           const std::vector<OpReqType>& grad_req_types,
-                           size_t num_forward_inputs,
-                           size_t num_forward_outputs) {
+static nnvm::Graph AssignContext(nnvm::Graph g,
+                                 const Context& default_ctx,
+                                 const std::map<std::string, Context>& ctx_map,
+                                 const std::vector<Context>& in_arg_ctxes,
+                                 const std::vector<Context>& arg_grad_ctxes,
+                                 const std::vector<Context>& aux_state_ctxes,
+                                 const std::vector<OpReqType>& grad_req_types,
+                                 size_t num_forward_inputs,
+                                 size_t num_forward_outputs) {
   const auto& idx = g.indexed_graph();
   const auto& mutable_nodes = idx.mutable_input_nodes();
   // default use default context.
   if (ctx_map.size() == 0) {
     g.attrs["context"] = std::make_shared<nnvm::any>(
-        ContextVector(idx.num_nodes(), default_ctx));
+        exec::ContextVector(idx.num_nodes(), default_ctx));
     for (const auto& x : in_arg_ctxes) {
       CHECK(x == default_ctx)
           << "Input array is in " << x << " while binding with ctx=" << default_ctx
@@ -590,7 +624,7 @@ static Graph AssignContext(Graph g,
   g = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
   const auto& assigned_device = g.GetAttr<nnvm::DeviceVector>("device");
 
-  ContextVector vcontext;
+  exec::ContextVector vcontext;
   for (size_t i = 0; i < assigned_device.size(); ++i) {
     if (assigned_device[i] == -1) {
       vcontext.push_back(default_ctx);

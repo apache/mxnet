@@ -37,6 +37,8 @@
 namespace mxnet {
 namespace exec {
 
+using namespace mxnet::common;
+
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;

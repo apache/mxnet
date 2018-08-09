@@ -29,6 +29,8 @@
 namespace mxnet {
 namespace exec {
 
+using namespace mxnet::common;
+
   /*!
  * \brief TrtGraphExecutor initializer for simple bind flow in
  * which only certain input shapes and dtypes are provided by users.
