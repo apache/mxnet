@@ -5951,8 +5951,7 @@ def finite_diff_binary_op(
 # - Forward: Comparison to NumPy (several dtype)
 # - Backward: Comparison to NumPy (several dtype)
 # - Finite difference tests (only dtype = float64)
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(192837465)
+@with_seed()
 def test_binary_math_operators():
     shape=(9, 10)
     dtype_l = [np.float64, np.float32, np.float16]
