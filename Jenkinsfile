@@ -46,7 +46,7 @@ def python2_ut(docker_container_name) {
 
 def python2_ut_cython(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu_cython', false)
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu_cython', false)
   }
 }
 
@@ -81,7 +81,7 @@ def python3_gpu_ut(docker_container_name) {
 
 def python3_gpu_ut_cython(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
   }
 }
 
