@@ -370,39 +370,8 @@ inline void LogInferStorage(const nnvm::Graph& g) {
   }
 }
 
-/*!
- * \brief Return an NDArray of all zeros.
- */
-static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
-                         const Context &ctx, const int dtype) {
-  // NDArray with default storage
-  if (stype == kDefaultStorage) {
-    NDArray ret(shape, ctx, false, dtype);
-    ret = 0;
-    return ret;
-  }
-  // NDArray with non-default storage. Storage allocation is always delayed.
-  return NDArray(stype, shape, ctx, true, dtype);
-}
-
-/*!
- * \brief Helper to add a NDArray of zeros to a std::vector.
- */
-static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
-                             const Context &ctx, const int dtype,
-                             std::vector<NDArray> *vec) {
-  // NDArray with default storage
-  if (stype == kDefaultStorage) {
-    vec->emplace_back(shape, ctx, false, dtype);
-    vec->back() = 0;
-  } else {
-    // NDArray with non-default storage. Storage allocation is always delayed.
-    vec->emplace_back(stype, shape, ctx, true, dtype);
-  }
-}
-
 // prints a helpful message after shape inference errors in executor.
-static void HandleInferShapeError(const size_t num_forward_inputs,
+inline void HandleInferShapeError(const size_t num_forward_inputs,
                                   const nnvm::IndexedGraph& idx,
                                   const nnvm::ShapeVector& inferred_shapes) {
   int cnt = 10;
@@ -426,7 +395,7 @@ static void HandleInferShapeError(const size_t num_forward_inputs,
 }
 
 // prints a helpful message after type inference errors in executor.
-static void HandleInferTypeError(const size_t num_forward_inputs,
+inline void HandleInferTypeError(const size_t num_forward_inputs,
                                  const nnvm::IndexedGraph& idx,
                                  const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
@@ -450,7 +419,7 @@ static void HandleInferTypeError(const size_t num_forward_inputs,
 }
 
 // prints a helpful message after storage type checking errors in executor.
-static void HandleInferStorageTypeError(const size_t num_forward_inputs,
+inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
                                         const nnvm::IndexedGraph& idx,
                                         const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
@@ -481,7 +450,7 @@ static void HandleInferStorageTypeError(const size_t num_forward_inputs,
  * Shareable storages include both default storage and row_sparse storage
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
-static NDArray ReshapeOrCreate(const std::string& name,
+inline NDArray ReshapeOrCreate(const std::string& name,
                                const TShape& dest_arg_shape,
                                const int dest_arg_dtype,
                                const NDArrayStorageType dest_arg_stype,
@@ -528,7 +497,7 @@ static NDArray ReshapeOrCreate(const std::string& name,
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
-static nnvm::Graph AssignContext(nnvm::Graph g,
+inline nnvm::Graph AssignContext(nnvm::Graph g,
                                  const Context& default_ctx,
                                  const std::map<std::string, Context>& ctx_map,
                                  const std::vector<Context>& in_arg_ctxes,
