@@ -69,6 +69,20 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   symbol = symbol.Copy();
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, *in_arg_ctxes, *arg_grad_ctxes,
                             *aux_state_ctxes, *grad_req_types);
+
+  if (need_grad_) {
+    LOG(FATAL) << "You may be attempting to use TensorRT for training.  TensorRT is an inference "
+                  "only library.  To re-enable legacy MXNet graph execution, which will support "
+                  "training, set the MXNET_USE_TENSORRT environment variable to 0, or call "
+                  "mx.contrib.tensorrt.set_use_tensorrt(False)";
+  }
+
+  if (shared_buffer == nullptr || shared_buffer->empty()) {
+    LOG(FATAL) << "MXNET_USE_TENSORRT = 1 but shared_buffer is empty. "
+               << "Please provide weights and other parameters, such as "
+               << "BatchNorm moments, via the shared_buffer, during simple bind call.";
+  }
+
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
   // should do this differently.
@@ -113,11 +127,6 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
                                 g.GetAttr<StorageTypeVector>("storage_type"));
   }
 
-  if (shared_buffer->empty()) {
-    LOG(FATAL) << "MXNET_USE_TENSORRT = 1 but shared_buffer is empty."
-               << "Please provide weights and other parameters, such as "
-               << "BatchNorm moments, via the shared_buffer, during simple bind call.";
-  }
   auto trt_groups = GetTrtCompatibleSubsets(g, shared_buffer);
   for (auto trt_group : trt_groups) {
     if (trt_group.size() > 1) {
@@ -144,13 +153,6 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   // This function can be called by regular bind
   // operation flow as well.
   FinishInitGraph(symbol, g, shared_exec, feed_dict);
-
-  if (need_grad_) {
-    LOG(FATAL) << "You may be attempting to use TensorRT for training.  TensorRT is an inference "
-                  "only library.  To re-enable legacy MXNet graph execution, which will support "
-                  "training, set the MXNET_USE_TENSORRT environment variable to 0, or call "
-                  "mx.contrib.tensorrt.set_use_tensorrt(False)";
-  }
 }
 /*!
  * \brief Initialize in_args, arg_grads, and aux_states
@@ -172,7 +174,6 @@ void TrtGraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   std::vector<NDArray>* in_arg_vec,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
-  bool use_tensorrt_ = true;
   // initialize in_args, arg_grads, and aux_states and populate grad_store_
   data_entry_.resize(idx.num_node_entries());
   size_t arg_top = 0, aux_top = 0;
