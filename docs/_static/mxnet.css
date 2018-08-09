@@ -256,6 +256,7 @@ img {
 img.social-logo {
     min-width: 5vmin;
     margin-bottom: 15px;
+    max-height: 8vh;
 }
 
 @media screen and (max-width:768px) {
