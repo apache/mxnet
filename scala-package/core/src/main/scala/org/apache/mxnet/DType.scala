@@ -42,6 +42,8 @@ object DType extends Enumeration {
       case "Float16" => DType.Float16
       case "Float32" => DType.Float32
       case "Float64" => DType.Float64
+      case _ => throw new IllegalArgumentException(
+        s"DType: $dtypeStr not found! please set it in DType.scala")
     }
   }
 }

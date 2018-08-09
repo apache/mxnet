@@ -32,9 +32,7 @@ object Data {
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
       "shuffle" -> "True",
-      "flat" -> flat,
-      "dataLayout" -> "NT",
-      "labelLayout" -> "N"
+      "flat" -> flat
     )
     val trainDataIter = IO.MNISTIter(trainParams)
     val testParams = Map(
@@ -42,9 +40,7 @@ object Data {
       "label" -> s"$dataPath/t10k-labels-idx1-ubyte",
       "input_shape" -> inputShape.toString(),
       "batch_size" -> s"$batchSize",
-      "flat" -> flat,
-      "dataLayout" -> "NT",
-      "labelLayout" -> "N"
+      "flat" -> flat
     )
     val testDataIter = IO.MNISTIter(testParams)
     (trainDataIter, testDataIter)

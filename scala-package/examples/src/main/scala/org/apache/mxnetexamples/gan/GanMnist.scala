@@ -130,9 +130,7 @@ object GanMnist {
       "label" -> s"$dataPath/train-labels-idx1-ubyte",
       "input_shape" -> s"(1, 28, 28)",
       "batch_size" -> s"$batchSize",
-      "shuffle" -> "True",
-      "dataLayout" -> "NCHW",
-      "labelLayout" -> "N"
+      "shuffle" -> "True"
     )
 
     val mnistIter = IO.MNISTIter(params)

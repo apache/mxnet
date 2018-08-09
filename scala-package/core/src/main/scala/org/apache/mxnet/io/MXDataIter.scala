@@ -55,8 +55,8 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
 
   private val (_provideDataDesc: IndexedSeq[DataDesc],
                _provideLabelDesc: IndexedSeq[DataDesc],
-                _provideData: ListMap[String, Shape],
-                _provideLabel: ListMap[String, Shape],
+               _provideData: ListMap[String, Shape],
+               _provideLabel: ListMap[String, Shape],
                _batchSize: Int) = {
     if (hasNext) {
       iterNext()

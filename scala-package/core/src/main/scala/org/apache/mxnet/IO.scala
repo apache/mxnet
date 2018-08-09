@@ -199,7 +199,7 @@ object DataBatch {
     private var dataDType: DType = MX_REAL_TYPE
     private var labelDType: DType = MX_REAL_TYPE
     private var bucketKey: AnyRef = null
-    private var datatShapes: ListMap[String, Shape] = null
+    private var dataShapes: ListMap[String, Shape] = null
     private var labelShapes: ListMap[String, Shape] = null
 
     /**
@@ -285,10 +285,10 @@ object DataBatch {
      * @return this.
      */
     def provideDataShape(name: String, shape: Shape): Builder = {
-      if (datatShapes == null) {
-        datatShapes = ListMap((name, shape))
+      if (dataShapes == null) {
+        dataShapes = ListMap((name, shape))
       } else {
-        datatShapes = datatShapes.updated(name, shape)
+        dataShapes = dataShapes.updated(name, shape)
       }
       this
     }
@@ -310,7 +310,7 @@ object DataBatch {
 
     def build(): DataBatch = {
       require(data != null, "data is required.")
-      new DataBatch(data, label, index, pad, bucketKey, datatShapes, labelShapes,
+      new DataBatch(data, label, index, pad, bucketKey, dataShapes, labelShapes,
         dataDType, labelDType, dataLayout, labelLayout)
     }
   }
@@ -438,7 +438,7 @@ object DataDesc {
       if (layout.get.contains('N')) {
         layout.get.indexOf("N")
       } else {
-       throw new IllegalArgumentException("No N found in Batch Axis!")
+        throw new IllegalArgumentException("No N found in Batch Axis!")
       }
     }
   }

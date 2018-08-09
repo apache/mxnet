@@ -101,9 +101,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "data_shape" -> "(3,28,28)",
       "batch_size" -> "100",
       "preprocess_threads" -> "4",
-      "prefetch_buffer" -> "1",
-      "dataLayout" -> "NCHW",
-      "labelLayout" -> "N"
+      "prefetch_buffer" -> "1"
     )
     val imgRecIter = IO.ImageRecordIter(params)
     val nBatch = 500
@@ -149,9 +147,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "shuffle" -> "1",
       "flat" -> "1",
       "silent" -> "0",
-      "seed" -> "10",
-      "dataLayout" -> "NT",
-      "labelLayout" -> "N"
+      "seed" -> "10"
     )
 
     val mnistIter = IO.MNISTIter(params)
@@ -188,9 +184,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "shuffle" -> "1",
       "flat" -> "1",
       "silent" -> "0",
-      "seed" -> "10",
-      "dataLayout" -> "NT",
-      "labelLayout" -> "N"
+      "seed" -> "10"
     )
 
     val mnistPack1 = IO.MNISTPack(params)
@@ -252,8 +246,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
     // test pad
     val dataIter0 = new NDArrayIter(data, label, 128, false, "pad",
-      dataName = "data", labelName = "label", dataDType = DType.Float32, labelDType = DType.Int32,
-      dataLayout = "NTC", labelLayout = "NT")
+      dataName = "data", labelName = "label")
     var batchCount = 0
     val nBatch0 = 8
     while(dataIter0.hasNext) {
@@ -272,7 +265,6 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       .addData("data0", data(0)).addData("data1", data(1))
       .addLabel("label", label(0))
       .setBatchSize(128)
-      .setLayout("NTC", "NT")
       .setLastBatchHandle("discard").build()
     val nBatch1 = 7
     batchCount = 0
@@ -288,11 +280,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch1)
 
     // test empty label (for prediction)
-    val dataIter2 = new NDArrayIter(data = data, label = IndexedSeq.empty,
-      dataBatchSize = 128, shuffle = false, lastBatchHandle = "discard",
-      dataName = "data", labelName = "label",
-      dataLayout = "NTC", labelLayout = "N",
-      dataDType = DType.Float32, labelDType = DType.Int32)
+    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, shuffle = false, lastBatchHandle = "discard")
     batchCount = 0
     while(dataIter2.hasNext) {
       val tBatch = dataIter2.next()
