@@ -57,7 +57,7 @@ def init_git_win() {
 }
 
 // pack libraries for later use
-def pack_lib(name, libs=mx_lib) {
+def pack_lib(name, libs) {
   sh """
 echo "Packing ${libs} into ${name}"
 for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
@@ -66,7 +66,7 @@ for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 }
 
 // unpack libraries saved before
-def unpack_lib(name, libs=mx_lib) {
+def unpack_lib(name, libs) {
   unstash name
   sh """
 echo "Unpacked ${libs} from ${name}"
