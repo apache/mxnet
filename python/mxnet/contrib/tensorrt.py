@@ -48,12 +48,13 @@ def get_use_tensorrt():
 
 
 def get_optimized_symbol(executor):
-    """Get optimized symbol.
+    """
+    Take an executor's underlying symbol graph and return its generated optimized version.
 
     Parameters
     ----------
     executor :
-        An executor for which you want to see an optimized symbol.  Getting an optimized symbol
+        An executor for which you want to see an optimized symbol. Getting an optimized symbol
         is useful to compare and verify the work TensorRT has done against a legacy behaviour.
 
     Returns
@@ -67,6 +68,6 @@ def get_optimized_symbol(executor):
         result = Symbol(handle=handle)
         return result
     except MXNetError:
-        logging.error('Error while trying to fetch TRT optimized symbol for graph.  Please ensure'
+        logging.error('Error while trying to fetch TRT optimized symbol for graph. Please ensure '
                       'build was compiled with MXNET_USE_TENSORRT enabled.')
         raise
