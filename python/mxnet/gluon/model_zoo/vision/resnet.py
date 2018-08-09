@@ -62,14 +62,17 @@ class BasicBlockV1(HybridBlock):
         Whether to use Squeeze-and-Excitation module
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0,
-                 use_se=False, **kwargs):
+                 last_gamma=False, use_se=False, **kwargs):
         super(BasicBlockV1, self).__init__(**kwargs)
         self.body = nn.HybridSequential(prefix='')
         self.body.add(_conv3x3(channels, stride, in_channels))
         self.body.add(nn.BatchNorm())
         self.body.add(nn.Activation('relu'))
         self.body.add(_conv3x3(channels, 1, channels))
-        self.body.add(nn.BatchNorm())
+        if not last_gamma:
+            self.body.add(nn.BatchNorm())
+        else:
+            self.body.add(nn.BatchNorm(gamma_initializer='zeros'))
 
         if use_se:
             self.se = nn.HybridSequential(prefix='')
@@ -151,6 +154,7 @@ class BottleneckV1(HybridBlock):
             self.body.add(nn.BatchNorm())
         else:
             self.body.add(nn.BatchNorm(gamma_initializer='zeros'))
+
         if downsample:
             self.downsample = nn.HybridSequential(prefix='')
             self.downsample.add(nn.Conv2D(channels, kernel_size=1, strides=stride,
@@ -200,7 +204,10 @@ class BasicBlockV2(HybridBlock):
         super(BasicBlockV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
         self.conv1 = _conv3x3(channels, stride, in_channels)
-        self.bn2 = nn.BatchNorm()
+        if not last_gamma:
+            self.bn2 = nn.BatchNorm()
+        else:
+            self.bn2 = nn.BatchNorm(gamma_initializer='zeros')
         self.conv2 = _conv3x3(channels, 1, channels)
 
         if use_se:
