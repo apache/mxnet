@@ -36,8 +36,8 @@ def test_subgraph_exe():
         assert partitioned_sym.list_inputs() == sym.list_inputs()
         assert partitioned_sym.list_arguments() == sym.list_arguments()
         assert partitioned_sym.list_auxiliary_states() == sym.list_auxiliary_states()
-        exe = sym.simple_bind(ctx=mx.cpu(), grad_req='null')
-        partitioned_exe = partitioned_sym.simple_bind(ctx=mx.cpu(), grad_req='null')
+        exe = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        partitioned_exe = partitioned_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         input_names = sym.list_inputs()
         for name in input_names:
             if name in exe.arg_dict:
@@ -62,7 +62,7 @@ def test_subgraph_exe():
                 os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
                 check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                              c_str_array(op_names)))
-            exe = sym.simple_bind(ctx=mx.cpu(), grad_req='null')
+            exe = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
             input_names = sym.list_inputs()
             for name in input_names:
                 if name in exe.arg_dict:
@@ -103,8 +103,9 @@ def test_subgraph_exe():
         arg_shapes, _, aux_shapes = sym.infer_shape()
         arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
         aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-        exe = sym.bind(ctx=mx.cpu(), args=arg_array, aux_states=aux_array, grad_req='null')
-        partitioned_exe = partitioned_sym.bind(ctx=mx.cpu(), args=arg_array, aux_states=aux_array, grad_req='null')
+        exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+        partitioned_exe = partitioned_sym.bind(ctx=mx.current_context(), args=arg_array,
+                                               aux_states=aux_array, grad_req='null')
         exe.forward()
         partitioned_exe.forward()
         assert len(exe.outputs) == len(partitioned_exe.outputs)
@@ -127,7 +128,7 @@ def test_subgraph_exe():
             else:
                 arg_array = None
                 aux_array = None
-            exe = sym.bind(ctx=mx.cpu(),
+            exe = sym.bind(ctx=mx.current_context(),
                            args=arg_array if subgraph_backend is None else original_exec.arg_arrays,
                            aux_states=aux_array if subgraph_backend is None else original_exec.aux_arrays,
                            grad_req='null')
