@@ -816,7 +816,7 @@ li.dropdown-submenu ul.dropdown-menu a {
 
 .section-inst .row div {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 50px;
     height: 80px;
 }
 
@@ -848,10 +848,25 @@ li.dropdown-submenu ul.dropdown-menu a {
     }
 }
 
+.section-inst .divit {
+    height: 150px;
+    line-height: 150px;
+}
+
+@media only screen and (max-width: 1200px) {
+    div.nomobile {
+        display: none;
+    }
+}
+
 .section-inst img {
-    -webkit-filter: grayscale(90%); /* Chrome, Safari, Opera */
-    filter: grayscale(90%);
-    margin-bottom:2em
+    -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */
+    filter: grayscale(0%);
+    vertical-align: middle;
+    margin-bottom:4em;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 75%;
 }
 .section-inst img:hover {
     -webkit-filter: grayscale(0%); /* Chrome, Safari, Opera */

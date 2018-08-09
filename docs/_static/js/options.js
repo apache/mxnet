@@ -2,11 +2,21 @@ var versionSelect   = defaultVersion = 'v1.2.1';
 var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';
+var iotSelect = 'raspberry-pi';
 var environSelect   = 'Pip';
 
 $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
+    }
+
+    function unlabel(lbl) {
+        if (lbl === "raspberry-pi") {
+            return "Raspberry Pi";
+        } else if (lbl === "nvidia-jetson-tx2") {
+            return "NVIDIA Jetson TX2";
+        }
+        return lbl;
     }
    
     function urlSearchParams(searchString) {
@@ -38,16 +48,25 @@ $(document).ready(function () {
             processorSelect = urlParams.get('processor');
         $('button:contains(' + processorSelect + ')').siblings().removeClass('active');
         $('button:contains(' + processorSelect + ')').addClass('active');
+        if (urlParams.get('iot')) {
+            iotSelect = urlParams.get('iot');
+            $('button:contains(' + unlabel(iotSelect) + ')').siblings().removeClass('active');
+            $('button:contains(' + unlabel(iotSelect) + ')').addClass('active');
+        }
         if (urlParams.get('environ'))
             environSelect = urlParams.get('environ');
         $('button:contains(' + environSelect + ')').siblings().removeClass('active');
         $('button:contains(' + environSelect + ')').addClass('active');
         showContent();
         if (window.location.href.indexOf("/install/index.html") >= 0) {
+            let iotString = "";
+            if (urlParams.get('iot')) {
+                iotString = '&iot=' + iotSelect ;
+            }
             if (versionSelect.indexOf(defaultVersion) >= 0) {
-                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect + iotString);
             } else {
-                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect + iotString);
             }
         } 
     }
@@ -90,8 +109,14 @@ $(document).ready(function () {
         else if ($(this).hasClass("processors")) {
             history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
         }
+        else if ($(this).hasClass("iots")) {
+            if (window.location.search.indexOf("iot=") < 0) {
+                history.pushState(null, null, '/install/index.html' + window.location.search.concat( '&iot=' + label($(this).text()) ));
+            } else {
+                history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('iot'), label($(this).text() )));
+            }
+        }
         showContent();
-        //window.location.search = window.location.search.replace( urlParams.get('version'), $(this).text() );
     }
     $('.opt-group').on('click', '.opt', setContent);
 });
