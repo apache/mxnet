@@ -202,7 +202,7 @@ class BasicBlockV2(HybridBlock):
         Whether to use Squeeze-and-Excitation module
     """
     def __init__(self, channels, stride, downsample=False, in_channels=0,
-                 use_se=False, **kwargs):
+                 use_se=False, last_gamma=False, **kwargs):
         super(BasicBlockV2, self).__init__(**kwargs)
         self.bn1 = nn.BatchNorm()
         self.conv1 = _conv3x3(channels, stride, in_channels)
