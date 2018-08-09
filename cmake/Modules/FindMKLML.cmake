@@ -98,9 +98,10 @@ find_package_handle_standard_args(MKLML DEFAULT_MSG ${LOOKED_FOR})
 
 if(MKLML_FOUND)
   set(MKL_FOUND ${MKLML_FOUND})
+  set(MKL_LIBRARIES ${MKLML_LIBRARIES})
   set(MKL_INCLUDE_DIRS "${MKLML_INCLUDE_DIR}")
 
   mark_as_advanced(${LOOKED_FOR})
 
-  message(STATUS "Found MKLML (include: ${MKLML_INCLUDE_DIRS}, libraries: ${MKLML_LIBRARIES})")
+  message(STATUS "Found MKLML (include: ${MKL_INCLUDE_DIRS}, libraries: ${MKL_LIBRARIES})")
 endif()

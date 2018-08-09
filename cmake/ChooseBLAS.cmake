@@ -85,6 +85,7 @@ function(try_mkl)
     set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
 
     set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+    set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
     set(BLAS MKL PARENT_SCOPE)
@@ -127,6 +128,7 @@ function(try_mklml)
   set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
 
   set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+  set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
   set(BLAS MKL PARENT_SCOPE)
@@ -221,9 +223,10 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   add_definitions(-DMSHADOW_USE_MKL=1)
 
   if(USE_LAPACK)
+
     include(CheckFunctionExists)
     set(CMAKE_REQUIRED_LIBRARIES ${MKL_LIBRARIES})
-    check_function_exists("cgees_" LAPACK_FOUND)
+    check_function_exists("cheev_" LAPACK_FOUND)
 
     if(LAPACK_FOUND)
       switch_lapack(True)
