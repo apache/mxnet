@@ -28,6 +28,7 @@
 #include "../operator/subgraph/default_subgraph_property.h"
 
 int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+                              const char* prop_name,
                               const mx_uint num_ops,
                               const char** op_names,
                               SymbolHandle* ret_sym_handle) {
@@ -43,7 +44,7 @@ int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
   g.outputs = s->outputs;
   if (!op_name_set.empty()) {
     mxnet::op::SubgraphPropertyPtr property
-        = mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty("default");
+        = mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
     property->SetAttr("op_names", op_name_set);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
   }

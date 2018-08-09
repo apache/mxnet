@@ -39,6 +39,7 @@ extern "C" {
  * used only for the testing purpose.
  */
 MXNET_DLL int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+                                        const char* prop_name,
                                         const mx_uint num_ops,
                                         const char** op_names,
                                         SymbolHandle* ret_sym_handle);

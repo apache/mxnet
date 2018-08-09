@@ -29,7 +29,7 @@ def test_subgraph_exe():
         """Use the partitioned sym to simple_bind an executor and compare the outputs
         with those of the original executor"""
         out = SymbolHandle()
-        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, mx_uint(len(op_names)),
+        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, c_str('default'), mx_uint(len(op_names)),
                                                   c_str_array(op_names), ctypes.byref(out)))
 
         partitioned_sym = Symbol(out)
@@ -90,7 +90,7 @@ def test_subgraph_exe():
         """Use the partitioned sym to bind an executor and compare the outputs
         with those of the original executor"""
         out = SymbolHandle()
-        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, mx_uint(len(op_names)),
+        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, c_str('default'), mx_uint(len(op_names)),
                                                   c_str_array(op_names), ctypes.byref(out)))
 
         partitioned_sym = Symbol(out)
