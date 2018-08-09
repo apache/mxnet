@@ -675,6 +675,33 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
   return k;
 }
 
+// helper to initialize an NDArray to all zeros.
+static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                         const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+// helper to add a NDArray of zeros to a std::vector.
+static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
