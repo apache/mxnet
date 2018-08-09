@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -21,10 +21,17 @@
 
 set -ex
 
-#Install for Compilation warning Nightly Test
-add-apt-repository ppa:ubuntu-toolchain-r/test
+# Install for Compilation warning Nightly Test
+# Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
+for i in 1 2 3 4 5; do add-apt-repository -y ppa:ubuntu-toolchain-r/test && break || sleep 300; done
+
 apt-get update
 apt-get -y install time
 
 # Install for RAT License Check Nightly Test
 apt-get install -y subversion maven -y #>/dev/null
+
+# Packages needed for the Straight Dope Nightly tests.
+pip2 install pandas
+pip3 install pandas
+

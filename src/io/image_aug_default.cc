@@ -178,7 +178,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(rotate).set_default(-1.0f)
         .describe("Rotate by an angle. If set, it overwrites the ``max_rotate_angle`` option.");
     DMLC_DECLARE_FIELD(fill_value).set_default(255)
-        .describe("Set the padding pixes value into ``fill_value``.");
+        .describe("Set the padding pixels value to ``fill_value``.");
     DMLC_DECLARE_FIELD(data_shape)
         .set_expect_ndim(3).enforce_nonzero()
         .describe("The shape of a output image.");
@@ -293,7 +293,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
     if (param_.max_rotate_angle > 0 || param_.max_shear_ratio > 0.0f
         || param_.rotate > 0 || rotate_list_.size() > 0
         || param_.max_random_scale != 1.0f || param_.min_random_scale != 1.0
-        || min_aspect_ratio != 1.0f || max_aspect_ratio != 1.0f
+        || (!param_.random_resized_crop && (min_aspect_ratio != 1.0f || max_aspect_ratio != 1.0f))
         || param_.max_img_size != 1e10f || param_.min_img_size != 0.0f) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
       // shear

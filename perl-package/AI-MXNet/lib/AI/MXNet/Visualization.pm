@@ -258,7 +258,6 @@ method print_summary(
         dot object of symbol
 =cut
 
-
 method plot_network(
     AI::MXNet::Symbol       $symbol,
     Str                    :$title='plot',
@@ -290,7 +289,7 @@ method plot_network(
     );
     my $dot = AI::MXNet::Visualization::PythonGraphviz->new(
         graph  => GraphViz->new(name => $title),
-        format => $save_format
+        format => $save_format,
     );
     # color map
     my @cm = (
@@ -308,7 +307,7 @@ method plot_network(
         my $label = $name;
         if($op eq 'null')
         {
-            if($name =~ /(?:_weight|_bias|_beta|_gamma|_moving_var|_moving_mean)$/)
+            if($name =~ /(?:_weight|_bias|_beta|_gamma|_moving_var|_moving_mean|running_var|running_mean)$/)
             {
                 if($hide_weights)
                 {
@@ -321,6 +320,7 @@ method plot_network(
             }
             $attr{shape} = 'ellipse'; # inputs get their own shape
             $label = $name;
+            $label = 'plus' if $label =~ /plus\d+$/;
             $attr{fillcolor} = $cm[0];
         }
         elsif($op eq 'Convolution')
@@ -339,6 +339,26 @@ method plot_network(
         elsif($op eq 'BatchNorm')
         {
             $attr{fillcolor} = $cm[3];
+            $label = $op;
+        }
+        elsif($op eq 'Flatten')
+        {
+            $label = $op;
+            $attr{fillcolor} = $cm[5];
+        }
+        elsif($op eq 'elemwise_add' or $op eq 'clip' or $op eq 'Concat')
+        {
+            $label = $op;
+            $attr{fillcolor} = $cm[5];
+        }
+        elsif($op eq 'Dropout')
+        {
+            $label = "$op ($node->{attrs}{p})";
+        }
+        elsif($op eq 'Reshape')
+        {
+            $label = "$op $node->{attrs}{shape}";
+            $attr{fillcolor} = $cm[5];
         }
         elsif($op eq 'Activation' or $op eq 'LeakyReLU')
         {
@@ -352,10 +372,6 @@ method plot_network(
             $stride[0] //= 1;
             $label = "Pooling\n$node->{attrs}{pool_type}, ".join('x',@k).'/'.join('x',@stride);
             $attr{fillcolor} = $cm[4];
-        }
-        elsif($op eq 'Concat' or $op eq 'Flatten' or $op eq 'Reshape')
-        {
-            $attr{fillcolor} = $cm[5];
         }
         elsif($op eq 'Softmax')
         {

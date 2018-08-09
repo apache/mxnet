@@ -276,8 +276,19 @@ class ElemwiseBinaryOp : public OpBase {
                        const NDArray &output);
 
   /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
-  template<typename xpu, typename OP>
-  static void DnsCsrDnsOp(mshadow::Stream<xpu> *s,
+  template<typename OP>
+  static void DnsCsrDnsOp(mshadow::Stream<cpu> *s,
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
+
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename OP>
+  static void DnsCsrDnsOp(mshadow::Stream<gpu> *s,
                           const nnvm::NodeAttrs &attrs,
                           const OpContext &ctx,
                           const NDArray &lhs,
@@ -537,7 +548,7 @@ class ElemwiseBinaryOp : public OpBase {
       const NDArray& csr = (lhs_stype == kCSRStorage)? inputs[0] : inputs[1];
       const bool reverse = (lhs_stype == kCSRStorage);
 
-      DnsCsrDnsOp<xpu, OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], reverse);
+      DnsCsrDnsOp<OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], reverse);
     } else if (((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
                 (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) &&
                 out_stype == kDefaultStorage) {

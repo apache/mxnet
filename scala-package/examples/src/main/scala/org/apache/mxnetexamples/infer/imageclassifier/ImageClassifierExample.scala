@@ -31,9 +31,9 @@ import scala.collection.mutable.ListBuffer
 /**
   * <p>
   * Example inference showing usage of the Infer package on a resnet-152 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet/tree/m\
-  * aster/scala-package/examples/src/main/scala/org/apache/mxnetexamples/in\
-  * fer/imageclassifier" target="_blank">Instructions to run this example</a>
+  * @see <pre><a href="https://github.com/apache/incubator-mxnet/tree/master/s
+    cala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/im
+    ageclassifier" target="_blank">Instructions to run this example</a></pre>
   */
 object ImageClassifierExample {
 
@@ -119,13 +119,13 @@ object ImageClassifierExample {
       parser.parseArgument(args.toList.asJava)
 
 
-      val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_DATA_DIR")
+      val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_HOME")
       else inst.modelPathPrefix
 
-      val inputImagePath = if (inst.inputImagePath == null) System.getenv("MXNET_DATA_DIR")
+      val inputImagePath = if (inst.inputImagePath == null) System.getenv("MXNET_HOME")
       else inst.inputImagePath
 
-      val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_DATA_DIR")
+      val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_HOME")
       else inst.inputImageDir
 
       val singleOutput = runInferenceOnSingleImage(modelPathPrefix, inputImagePath, context)

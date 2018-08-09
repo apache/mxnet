@@ -175,7 +175,7 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download an given URL
 
     Parameters
@@ -192,6 +192,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         but doesn't match.
     retries : integer, default 5
         The number of times to attempt the download in case of failure or non 200 return codes
+    verify_ssl : bool, default True
+        Verify SSL certificates.
 
     Returns
     -------
@@ -200,6 +202,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
     """
     if path is None:
         fname = url.split('/')[-1]
+        # Empty filenames are invalid
+        assert fname, 'Can\'t construct file-name from this URL. ' \
+            'Please set the `path` option manually.'
     else:
         path = os.path.expanduser(path)
         if os.path.isdir(path):
@@ -207,6 +212,11 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         else:
             fname = path
     assert retries >= 0, "Number of retries should be at least 0"
+
+    if not verify_ssl:
+        warnings.warn(
+            'Unverified HTTPS request is being made (verify_ssl=False). '
+            'Adding certificate verification is strongly advised.')
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
@@ -217,7 +227,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
             # pylint: disable=W0703
             try:
                 print('Downloading %s from %s...'%(fname, url))
-                r = requests.get(url, stream=True)
+                r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError("Failed downloading url %s"%url)
                 with open(fname, 'wb') as f:

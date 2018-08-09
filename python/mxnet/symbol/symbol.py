@@ -1982,6 +1982,22 @@ class Symbol(SymbolBase):
         """
         return op.flatten(self, *args, **kwargs)
 
+    def shape_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`shape_array`.
+
+        The arguments are the same as for :py:func:`shape_op`, with
+        this array as data.
+        """
+        return op.shape_array(self, *args, **kwargs)
+
+    def size_array(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`size_array`.
+
+        The arguments are the same as for :py:func:`size_array`, with
+        this array as data.
+        """
+        return op.size_array(self, *args, **kwargs)
+
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
 
@@ -1997,6 +2013,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.broadcast_to(self, *args, **kwargs)
+
+    def broadcast_like(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`broadcast_like`.
+
+        The arguments are the same as for :py:func:`broadcast_like`, with
+        this array as data.
+        """
+        return op.broadcast_like(self, *args, **kwargs)
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -2021,6 +2045,30 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.flip(self, *args, **kwargs)
+
+    def depth_to_space(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`depth_to_space`.
+
+        The arguments are the same as for :py:func:`depth_to_space`, with
+        this array as data.
+        """
+        return op.depth_to_space(self, *args, **kwargs)
+
+    def space_to_depth(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`space_to_depth`.
+
+        The arguments are the same as for :py:func:`space_to_depth`, with
+        this array as data.
+        """
+        return op.space_to_depth(self, *args, **kwargs)
+
+    def diag(self, k=0, **kwargs):
+        """Convenience fluent method for :py:func:`diag`.
+
+        The arguments are the same as for :py:func:`diag`, with
+        this array as data.
+        """
+        return op.diag(self, k, **kwargs)
 
     def sum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sum`.

@@ -22,6 +22,8 @@
 #include <atomic>
 #include "./mkldnn_base-inl.h"
 #include "./mkldnn_ops-inl.h"
+#include "../../../common/exec_utils.h"
+#include "../../operator_common.h"
 
 namespace mxnet {
 
@@ -392,18 +394,28 @@ void FallBackCompute(FCompute fn, const nnvm::NodeAttrs &attrs,
   MKLDNNStream::Get()->Submit();
 
   std::vector<TBlob> out_blobs(outputs.size());
+  std::vector<NDArray> temp_src, temp_dst;
   for (size_t i = 0; i < out_blobs.size(); i++) {
     NDArray output = outputs[i];
     // ensure output does not use mkldnn mem.
     // for inplace, we already converted & copied input above.
-    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace))
+    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
       const_cast<NDArray &>(output).InvalidateMKLDNNData();
-    else if (req[i] == kAddTo)
-      output = outputs[i].Reorder2Default();
+    } else if (req[i] == kAddTo && output.IsMKLDNNData()) {
+      NDArray temp = outputs[i].Reorder2Default();
+      temp_src.emplace_back(temp);
+      temp_dst.emplace_back(outputs[i]);
+      output = temp;
+    }
     CHECK(output.IsDefaultData());
     out_blobs[i] = output.data();
   }
+
   fn(attrs, ctx, in_blobs, req, out_blobs);
+  for (size_t i = 0; i < out_blobs.size(); i++) {
+    if (req[i] == kAddTo && outputs[i].IsMKLDNNData())
+      mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
+  }
 }
 
 template<typename DType>
@@ -504,6 +516,34 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
       CHECK(similar);
     });
   }
+}
+
+bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
+                       const int dev_mask,
+                       bool support_mkldnn,
+                       DispatchMode *dispatch_mode,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs) {
+  for (int& v : *in_attrs)
+    if (v == - 1) v = kDefaultStorage;
+
+  DispatchMode wanted_mode;
+#if MXNET_USE_MKLDNN == 1
+  if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)
+    wanted_mode = DispatchMode::kFComputeEx;
+  else
+#endif
+    wanted_mode = DispatchMode::kFCompute;
+
+  bool dispatched = false;
+  if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+    dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                                         dispatch_mode, wanted_mode);
+  }
+  if (!dispatched) {
+    dispatched = op::dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
 }
 
 }  // namespace mxnet

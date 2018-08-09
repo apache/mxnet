@@ -123,27 +123,32 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         // Fix bx to avoid bank conflicts. Assumes warpSize number of banks
         const int fbx = (do_transpose && ((bx & (warpSize - 1)) == 0)) ? (bx + 1) : bx;
         const int it0 = tidx + tidy*fbx;
-        shTile[it0] = val;
+        shTile[it0 * 2] = val;
+        shTile[it0 * 2 + 1] = residual;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp, residual;
-          Reducer::SetInitValue(tmp, residual);
-          if (tidy + t < by) tmp = shTile[it0 + t*fbx];
+          DType tmp, tmp_residual;
+          Reducer::SetInitValue(tmp, tmp_residual);
+          if (tidy + t < by) {
+            tmp = shTile[(it0 + t*fbx) * 2];
+            tmp_residual = shTile[(it0 + t*fbx) * 2 + 1];
+          }
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp, residual);
+          Reducer::Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
-          assign(&small[idx + m0*N], addto, shTile[tidx]);
+          Reducer::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
+          assign(&small[idx + m0*N], addto, shTile[tidx * 2]);
         }
       } else {
         if (idx < N) {
+          Reducer::Finalize(val, residual);
           assign(&small[idx + m0*N], addto, val);
         }
       }
     }
   }
-
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2, int unroll>
@@ -207,27 +212,32 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         // Fix bx to avoid bank conflicts. Assumes warpSize number of banks
         const int fbx = (do_transpose && ((bx & (warpSize - 1)) == 0)) ? (bx + 1) : bx;
         const int it0 = tidx + tidy*fbx;
-        shTile[it0] = val;
+        shTile[it0 * 2] = val;
+        shTile[it0 * 2 + 1] = residual;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp, residual;
-          Reducer::SetInitValue(tmp, residual);
-          if (tidy + t < by) tmp = shTile[it0 + t*fbx];
+          DType tmp, tmp_residual;
+          Reducer::SetInitValue(tmp, tmp_residual);
+          if (tidy + t < by) {
+            tmp = shTile[(it0 + t*fbx) * 2];
+            tmp_residual = shTile[(it0 + t*fbx) * 2 + 1];
+          }
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp, residual);
+          Reducer::Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
-          assign(&small[idx + m0*N], addto, shTile[tidx]);
+          Reducer::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
+          assign(&small[idx + m0*N], addto, shTile[tidx * 2]);
         }
       } else {
         if (idx < N) {
+          Reducer::Finalize(val, residual);
           assign(&small[idx + m0*N], addto, val);
         }
       }
     }
   }
-
 }
 
 // Simple reduction of lines when M is small
@@ -244,6 +254,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
     }
 
     if (idx < N) {
+      Reducer::Finalize(val, residual);
       assign(&small_out[idx], addto, val);
     }
 
@@ -257,7 +268,11 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     Shape<ndim> coord = unravel(idx, sshape);
     int j = ravel(coord, bshape);
-    assign(&small[idx], addto, OP::Map(big[j]));
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
+    Reducer::Reduce(val, OP::Map(big[j]), residual);
+    Reducer::Finalize(val, residual);
+    assign(&small[idx], addto, val);
   }
 }
 
@@ -276,7 +291,10 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
     int idx_big = ravel(coord, big_shape);
     int idx_lhs = ravel(coord, lhs_shape);
     int idx_rhs = ravel(coord, rhs_shape);
-    DType val = OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs]));
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
+    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
+    Reducer::Finalize(val, residual);
     assign(&small[idx], addto, val);
   }
 }
@@ -453,7 +471,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TShape& small, const TShape& bi
         by++;
       }
       config.kernel_1.shMemSize = (config.kernel_1.blockDim.x > 1) ?
-        config.kernel_1.blockDim.x*by*sizeof(DType) : 0;
+        config.kernel_1.blockDim.x*by*sizeof(DType) * 2 : 0;
       // Maximum number of times we want TB to loop in M
       // Max size of M-block each TB can handle
       int maxMblock = config.kernel_1.blockDim.x*config.maxLoopPerTB;
@@ -464,7 +482,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TShape& small, const TShape& bi
         ceil_idiv<unsigned int>(config.N, config.kernel_1.blockDim.x));
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
       config.kernel_1.shMemSize = (config.kernel_1.blockDim.y > 1) ?
-        config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType) : 0;
+        config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType) * 2 : 0;
       // Maximum number of times we want TB to loop in M
       // Max size of M-block each TB can handle
       int maxMblock = config.kernel_1.blockDim.y*config.maxLoopPerTB;
@@ -601,6 +619,10 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
     ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
   ReduceImpl<Reducer, ndim, DType, OP>(stream, small, req, big, workspace, config);
 }
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceWithExtraMem(Stream<gpu>* s, const TBlob& small, const OpReqType req,
+                        const Tensor<gpu, 1, char>& workspace, const TBlob& big) {};
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,

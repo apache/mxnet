@@ -1,0 +1,21 @@
+---
+abstract: 'Perl interface to MXNet Gluon Contrib'
+author:
+  - 'Sergey Kolychev <sergeykolychev.github@gmail.com>'
+build_requires: {}
+configure_requires:
+  ExtUtils::MakeMaker: '6.30'
+dynamic_config: 0
+generated_by: 'ExtUtils::MakeMaker version 7.24, CPAN::Meta::Converter version 2.143240'
+license: apache
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: '1.4'
+name: AI-MXNet-Gluon-Contrib
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  AI::MXNet: '1.31'
+version: '1.32'

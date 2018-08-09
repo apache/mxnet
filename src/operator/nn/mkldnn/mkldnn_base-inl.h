@@ -146,9 +146,11 @@ namespace op {
 struct ActivationParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
+struct SoftmaxParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
 }
 
 static int GetTypeSize(int dtype) {
@@ -491,6 +493,13 @@ class OpCheck {
            const std::vector<mxnet::OpReqType> &req,
            const std::vector<mxnet::NDArray> &outputs_);
 };
+
+bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
+                       const int dev_mask,
+                       bool support_mkldnn,
+                       DispatchMode *dispatch_mode,
+                       std::vector<int> *in_attrs,
+                       std::vector<int> *out_attrs);
 
 #define MKLDNN_OPCHECK_INIT(backward, num_checks, inputs, outputs)  \
     static bool debug = dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false);  \

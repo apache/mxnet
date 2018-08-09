@@ -117,15 +117,20 @@ class BucketSentenceIter(DataIter):
 
         ndiscard = 0
         self.data = [[] for _ in buckets]
+        valid_buckets = {}
+        for item in range(len(buckets)):
+            valid_buckets[item] = 0
+
         for i, sent in enumerate(sentences):
             buck = bisect.bisect_left(buckets, len(sent))
+            valid_buckets[buck] = 1
             if buck == len(buckets):
                 ndiscard += 1
                 continue
             buff = np.full((buckets[buck],), invalid_label, dtype=dtype)
             buff[:len(sent)] = sent
             self.data[buck].append(buff)
-
+        buckets = [j for i, j in enumerate(buckets) if valid_buckets[i] == 1]
         self.data = [np.asarray(i, dtype=dtype) for i in self.data if i]
 
         print("WARNING: discarded %d sentences longer than the largest bucket."%ndiscard)

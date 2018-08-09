@@ -21,8 +21,8 @@ use warnings;
 use PDL;
 use PDL::Types ();
 use PDL::CCS::Nd;
-use AI::MXNetCAPI 1.2;
-use AI::NNVMCAPI 1.2;
+use AI::MXNetCAPI 1.32;
+use AI::NNVMCAPI 1.3;
 use AI::MXNet::Types;
 use Time::HiRes;
 use Scalar::Util qw(blessed);
@@ -30,6 +30,7 @@ use Carp;
 use Exporter;
 use base qw(Exporter);
 use List::Util qw(shuffle);
+use Data::Dumper;
 
 @AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
                               pdl cat dog svd bisect_left pdl_shuffle as_array ascsr rand_sparse
@@ -169,9 +170,16 @@ sub zip
 
 sub enumerate
 {
-    my ($sub, @arrays) = @_;
-    my $len = @{ $arrays[0] };
-    zip($sub, [0..$len-1], @arrays);
+    if('CODE' eq ref $_[0])
+    {
+        # continue supporting the callback style
+        my $code = shift;
+        my $len = @{ $_[0] };
+        $code->(@$_) for AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
+        return;
+    }
+    my $len = @{ $_[0] };
+    return AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
 }
 
 =head2 product
@@ -348,7 +356,7 @@ sub process_arguments
             %{ $attributes_per_class{$class} } = map { $_->name => 1 } $class->meta->get_all_attributes;
         }
         my %kwargs;
-        while(@_ >= 2 and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
+        while(@_ >= 2 and defined $_[-2] and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
         {
             my $v = pop(@_);
             my $k = pop(@_);
@@ -356,7 +364,10 @@ sub process_arguments
         }
         if(@_)
         {
-            @kwargs{ @{ $class->python_constructor_arguments }[0..@_-1] } = @_;
+            my @named_params = @{ $class->python_constructor_arguments };
+            Carp::confess("Paramers mismatch expected ".Dumper(\@named_params).", but got ".Dumper(\@_))
+                if @_ > @named_params;
+            @kwargs{ @named_params[0..@_-1] } = @_;
         }
         return $class->$orig(%kwargs);
     }

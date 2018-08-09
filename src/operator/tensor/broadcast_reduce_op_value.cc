@@ -88,9 +88,9 @@ MXNET_ADD_SPARSE_OP_ALIAS(sum)
 
 Example::
 
-  data = [[[1,2],[2,3],[1,3]],
-          [[1,4],[4,3],[5,2]],
-          [[7,1],[7,2],[7,3]]]
+  data = [[[1, 2], [2, 3], [1, 3]],
+          [[1, 4], [4, 3], [5, 2]],
+          [[7, 1], [7, 2], [7, 3]]]
 
   sum(data, axis=1)
   [[  4.   8.]
@@ -100,9 +100,9 @@ Example::
   sum(data, axis=[1,2])
   [ 12.  19.  27.]
 
-  data = [[1,2,0],
-          [3,0,1],
-          [4,1,0]]
+  data = [[1, 2, 0],
+          [3, 0, 1],
+          [4, 1, 0]]
 
   csr = cast_storage(data, 'csr')
 
@@ -274,20 +274,65 @@ NNVM_REGISTER_OP(_broadcast_backward)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   });
 
+NNVM_REGISTER_OP(broadcast_like)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+      return std::vector<std::string>{"lhs", "rhs"};
+    })
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds) {
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+                                 {{"keepdims", "true"}});
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.")
+.describe(R"code(Broadcasts lhs to have the same shape as rhs.
+
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
+
+For example::
+
+   broadcast_like([[1,2,3]], [[5,6,7],[7,8,9]]) = [[ 1.,  2.,  3.],
+                                                   [ 1.,  2.,  3.]])
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)
 .describe(R"code(Computes the norm on an NDArray.
 
 This operator computes the norm on an NDArray with the specified axis, depending
 on the value of the ord parameter. By default, it computes the L2 norm on the entire
-array.
+array. Currently only ord=2 supports sparse ndarrays.
 
 Examples::
 
-  x = [[1, 2],
-       [3, 4]]
+  x = [[[1, 2],
+        [3, 4]],
+       [[2, 2],
+        [5, 6]]]
 
-  norm(x) = [5.47722578]
+  norm(x, ord=2, axis=1) = [[3.1622777 4.472136 ]
+                            [5.3851647 6.3245554]]
+
+  norm(x, ord=1, axis=1) = [[4., 6.],
+                            [7., 8.]]
 
   rsp = x.cast_storage('row_sparse')
 
@@ -303,13 +348,13 @@ Examples::
 .set_attr_parser(ParamParser<NormParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", NormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", L2NormStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", L2NormCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(NormParam::__FIELDS__());
@@ -322,7 +367,7 @@ NNVM_REGISTER_OP(_backward_norm)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", L2NormGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
 
 
 }  // namespace op

@@ -20,12 +20,12 @@ import mxnet as mx, math
 import argparse, math
 import logging
 from data import Corpus, CorpusIter
-from model import *
+from model import rnn, softmax_ce_loss
 from module import *
 from mxnet.model import BatchEndParam
 
-parser = argparse.ArgumentParser(description='PennTreeBank LSTM Language Model')
-parser.add_argument('--data', type=str, default='./data/ptb.',
+parser = argparse.ArgumentParser(description='Sherlock Holmes LSTM Language Model')
+parser.add_argument('--data', type=str, default='./data/sherlockholmes.',
                     help='location of the data corpus')
 parser.add_argument('--emsize', type=int, default=650,
                     help='size of word embeddings')

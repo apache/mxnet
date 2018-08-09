@@ -22,6 +22,41 @@ package AI::MXNet::NDArray;
     AI::MXNet::NDArray - Multidimensional tensor object of MXNet.
 =cut
 
+=head1 DESCRIPTION
+
+    AI::MXNet::NDArray - Imperative tensor operations on CPU/GPU
+    In AI::MXNet, NDArray is the core data structure for all mathematical computations.
+    An NDArray represents a multidimensional, fixed-size homogenous array.
+    If you’re familiar with the PDL, you might notice some similarities.
+    However, NDArray is row-major, unlike the PDL that is column-major.
+    Like the PDL, MXNet’s NDArray enables imperative computation.
+
+    Some NDArray advandages compared to PDL:
+    MXNet’s NDArray supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines.
+    MXNet also scales to distributed systems in the cloud.
+    MXNet’s NDArray executes code lazily, allowing it to automatically parallelize multiple operations across the available hardware.
+
+    An NDArray is a multidimensional array of numbers with the same type.
+    We could represent the coordinates of a point in 3D space, e.g. [2, 1, 6] as a 1D array with shape (3).
+    Similarly, we could represent a 2D array.
+    Below, we present an array with length 2 along the first axis and length 3 along the second axis.
+
+    [[0, 1, 2]
+     [3, 4, 5]]
+    Note that here the use of “dimension” is overloaded. When we say a 2D array, we mean an array with 2 axes, not an array with two components.
+
+    Each NDArray supports some important attributes that you’ll often want to query:
+
+    $ndarray->shape: The dimensions of the array.
+    It is an array ref of integers indicating the length of the array along each axis.
+    For a matrix with $n rows and $m columns, its shape will be [$n, $m].
+    $ndarray->dtype: A string describing the type of its elements.
+    Dtype (defined in AI::MXNet::Types) is one of (float32 float64 float16 uint8 int8 int32 int64)
+    $ndarray->size: The total number of components in the array - equal to the product of the components of its shape.
+    $ndarray->context: The device on which this array is stored, represented by an object of AI::MXNet::Context class, e.g. cpu() or gpu(1).
+
+=cut
+
 use strict;
 use warnings;
 use AI::MXNet::Base;
@@ -80,7 +115,7 @@ method STORABLE_thaw($cloning, $buf, $writable)
 
 method split_array(@args)
 {
-     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => 1, axis => 0) : [$self];
+     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => @{ $self->shape } > 1 ? 1 : 0, axis => 0) : [$self];
 }
 
 method at(Index @indices)
@@ -368,37 +403,26 @@ method _at(Index $idx)
 
 =head2 reshape
 
-    Returns a reshaped NDArray that shares the memory with current one.
+    Returns a **view** of this array with a new shape without altering any data.
     One shape dimension can be -1. In this case, the value is inferred
     from the length of the array and remaining dimensions.
 
     Parameters
     ----------
-    new_shape : Shape
+    $new_shape : Shape
         new shape of NDArray
+    :$reverse : bool, default 0
+        If true then the special values are inferred from right to left.
 =cut
 
-method reshape(ArrayRef[Int] $new_shape)
+method reshape(ArrayRef[Int] $new_shape, Bool :$reverse=0)
 {
-    my $i = -1;
-    my @inferred = map { $i++; $_ == -1 ? ($i) : () } @$new_shape;
-    assert((@inferred <= 1), 'Only one dimension can be inferred.');
-    $i = -1;
-    my @keep = map { $i++; $_ == 0 ? ($i) : () } @$new_shape;
-    my $shape = $self->shape;
-    if(@keep)
-    {
-        @{$new_shape}[@keep] = @{$shape}[@keep];
-    }
-    if(@inferred)
-    {
-        $new_shape->[$inferred[0]] = product(@{ $shape })/product(map { abs($_) } @{ $new_shape });
-    }
     my $handle = check_call(
-                    AI::MXNetCAPI::NDArrayReshape(
+                    AI::MXNetCAPI::NDArrayReshape64(
                         $self->handle,
                         scalar(@$new_shape),
-                        $new_shape
+                        $new_shape,
+                        $reverse
                     )
     );
     return __PACKAGE__->_ndarray_cls($handle, $self->writable);
@@ -703,35 +727,6 @@ method onehot_encode(AI::MXNet::NDArray $indices, AI::MXNet::NDArray $out)
 {
     return __PACKAGE__->_onehot_encode($indices, $out, { out => $out });
 }
-
-=head2 _ufunc_helper(lhs, rhs, fn_array, lfn_scalar, rfn_scalar):
-
-    Helper function for element-wise operation
-    The function will perform numpy-like broadcasting if needed and call different functions
-
-    Parameters
-    ----------
-    lhs : NDArray or numeric value
-        left hand side operand
-
-    rhs : NDArray or numeric value
-        right hand side operand
-
-    fn_array : function
-        function to be called if both lhs and rhs are of NDArray type
-
-    lfn_scalar : function
-        function to be called if lhs is NDArray while rhs is numeric value
-
-    rfn_scalar : function
-        function to be called if lhs is numeric value while rhs is NDArray;
-        if none is provided, then the function is commutative, so rfn_scalar is equal to lfn_scalar
-
-    Returns
-    -------
-    out: NDArray
-        result array
-=cut
 
 sub  _ufunc_helper
 {
@@ -1297,6 +1292,42 @@ method load(Str $filename)
     }
 }
 
+=head2 load_frombuffer
+
+    Loads an array dictionary or list from a buffer
+
+    See more details in 'save'.
+
+    Parameters
+    ----------
+    buf : str
+        Binary string containing contents of a file.
+
+    Returns
+    -------
+    array ref of AI::MXNet::NDArray, AI::MXNet::NDArrayRowSparseNDArray or AI::MXNet::NDArray::CSR, or
+    hash ref of AI::MXNet::NDArray, AI::MXNet::NDArrayRowSparseNDArray or AI::MXNet::NDArray::CSR
+        Loaded data.
+=cut
+
+method load_frombuffer(Str $buf)
+{
+    my ($handles, $names) = check_call(AI::MXNetCAPI::NDArrayLoadFromBuffer($buf, length($buf)));
+    if (not @$names)
+    {
+        return [map { __PACKAGE__->_ndarray_cls($_) } @$handles];
+    }
+    else
+    {
+        my $n = @$names;
+        my $h = @$handles;
+        confess("Handles [$h] and names [$n] count mismatch") unless $h == $n;
+        my %ret;
+        @ret{ @$names } = map { __PACKAGE__->_ndarray_cls($_) } @$handles;
+        return \%ret;
+    }
+}
+
 =head2 save
 
     Save array ref of NDArray or hash of str->NDArray to a binary file.
@@ -1585,6 +1616,8 @@ method backward(Maybe[AI::MXNet::NDArray] :$out_grad=, Bool :$retain_graph=0, Bo
 }
 
 method CachedOp(@args) { AI::MXNet::CachedOp->new(@args) }
+
+method histogram(@args) { __PACKAGE__->_histogram(@args%2 ? ('data', @args) : @args) }
 
 my $lvalue_methods = join "\n", map {"use attributes 'AI::MXNet::NDArray', \\&AI::MXNet::NDArray::$_, 'lvalue';"}
 qw/at slice aspdl asmpdl reshape copy sever T astype as_in_context copyto empty zero ones full

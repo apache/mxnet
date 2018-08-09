@@ -210,7 +210,7 @@ if(USE_CUDA)
   find_package(CUDA REQUIRED)
   add_definitions(-DMSHADOW_USE_CUDA=1)
   if(FIRST_CUDA AND (NOT USE_OLDCMAKECUDA))
-    if(CUDA_TOOLSET STREQUAL "")
+    if(NOT CUDA_TOOLSET)
       set(CUDA_TOOLSET "${CUDA_VERSION_STRING}")
     endif()
     set(CMAKE_GENERATOR_TOOLSET "cuda=${CUDA_TOOLSET},host=x64")
@@ -372,13 +372,13 @@ endif()
 
 # ---[ LAPack
 if(USE_LAPACK)
+  message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
   if (NOT MSVC)
     list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
 
-message("USE LAPACK ${USE_LAPACK}")
 
 # ---[ jemalloc
 if(USE_JEMALLOC)

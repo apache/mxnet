@@ -333,14 +333,19 @@ class Block(object):
         ndarray.save(filename, arg_dict)
 
     def save_params(self, filename):
-        """[Deprecated] Please use save_parameters.
+        """[Deprecated] Please use save_parameters. Note that if you want load
+        from SymbolBlock later, please use export instead.
 
         Save parameters to file.
 
         filename : str
             Path to file.
         """
-        warnings.warn("save_params is deprecated. Please use save_parameters.")
+        warnings.warn("save_params is deprecated. Please use save_parameters. "
+                      "Note that if you want load from SymbolBlock later, please "
+                      "use export instead. For details, see "
+                      "https://mxnet.incubator.apache.org/tutorials/gluon/save_lo"
+                      "ad_params.html")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)
         except ValueError as e:
@@ -563,6 +568,7 @@ class Block(object):
             :class:`mxnet.ndarray.NDArray` is supported.
         """
         summary = OrderedDict()
+        seen = set()
         hooks = []
 
         def _get_shape_str(args):
@@ -611,9 +617,14 @@ class Block(object):
 
                 params = 0
                 summary[m_key]['trainable'] = 0
-                for p in block._reg_params.values():
+                summary[m_key]['shared'] = 0
+                for p in block.params.values():
                     params += p.data().size
                     summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
+                    if p in seen:
+                        summary[m_key]['shared'] += p.data().size
+                    else:
+                        seen.add(p)
                 summary[m_key]['n_params'] = params
 
             from .nn.basic_layers import Sequential, HybridSequential
@@ -624,6 +635,7 @@ class Block(object):
         summary['Input']['output_shape'] = _get_shape_str(inputs)
         summary['Input']['n_params'] = 0
         summary['Input']['trainable'] = 0
+        summary['Input']['shared'] = 0
 
         try:
             self.apply(_register_summary_hook)
@@ -635,16 +647,19 @@ class Block(object):
             print('='*80)
             total_params = 0
             trainable_params = 0
+            shared_params = 0
             for layer in summary:
                 print(line_format.format(layer,
                                          str(summary[layer]['output_shape']),
                                          summary[layer]['n_params']))
                 total_params += summary[layer]['n_params']
                 trainable_params += summary[layer]['trainable']
+                shared_params += summary[layer]['shared']
             print('='*80)
             print('Total params: ' + str(total_params))
             print('Trainable params: ' + str(trainable_params))
             print('Non-trainable params: ' + str(total_params - trainable_params))
+            print('Shared params: ' + str(shared_params))
             print('-'*80)
         finally:
             for h in hooks:

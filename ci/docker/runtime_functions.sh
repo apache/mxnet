@@ -110,22 +110,9 @@ build_jetson() {
     popd
 }
 
-report_ccache_usage() {
-    set -ex
-    pushd .
-
-    # Show global ccache summary at the end of each run.
-    ccache -s
-    if [ -e $CCACHE_LOGFILE ]
-    then
-        # Display local ccache log, excluding some overly verbose output.
-        cat $CCACHE_LOGFILE | grep -v "Config:" | grep -v "stats.lock"
-    else
-        echo "No ccache log found."
-    fi
-
-    popd
-}
+#
+# ARM builds
+#
 
 build_armv6() {
     set -ex
@@ -155,7 +142,6 @@ build_armv6() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
@@ -187,31 +173,11 @@ build_armv7() {
         -G Ninja /work/mxnet
 
     ninja -v
-    report_ccache_usage
     build_wheel
     popd
 }
 
-build_amzn_linux_cpu() {
-    cd /work/build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
-        -G Ninja /work/mxnet
-    ninja -v
-    report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-}
-
-build_arm64() {
+build_armv8() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -219,22 +185,25 @@ build_arm64() {
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
+        -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
+    build_wheel
 }
+
+
+#
+# ANDROID builds
+#
 
 build_android_armv7() {
     set -ex
     cd /work/build
     cmake \
+        -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
@@ -248,23 +217,11 @@ build_android_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
-    report_ccache_usage
-    export MXNET_LIBRARY_PATH=`pwd`/libmxnet.so
-    cd /work/mxnet/python
-    python setup.py bdist_wheel --universal
-    cp dist/*.whl /work/build
 }
 
-build_android_arm64() {
+build_android_armv8() {
     set -ex
     cd /work/build
-# There are other ways for CMake to cross compile android, like setting the following variables
-# below. But right not it doesn't work as expected, we need to find what's the best strategy to 
-# build with CMake in Android.
-#        -DCMAKE_ANDROID_NDK=${CROSS_ROOT} \
-#        -DCMAKE_SYSTEM_VERSION=${ANDROID_NDK_REVISION} \
-#        -DCMAKE_SYSTEM_NAME=Android \
-#
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -292,9 +249,25 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-
-    report_ccache_usage
 }
+
+build_amzn_linux_cpu() {
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF\
+        -DUSE_OPENCV=ON\
+        -DUSE_OPENMP=ON\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF\
+        -DUSE_DIST_KVSTORE=ON\
+        -G Ninja /work/mxnet
+    ninja -v
+}
+
 
 build_centos7_mkldnn() {
     set -ex
@@ -309,8 +282,6 @@ build_centos7_mkldnn() {
         USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_centos7_gpu() {
@@ -344,26 +315,38 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+}
 
-    report_ccache_usage
+build_ubuntu_cpu_cmake_debug() {
+    set -ex
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        /work/mxnet
+
+    ninja -v
+    popd
 }
 
 build_ubuntu_cpu_clang39() {
     set -ex
-
-    export CXX=clang++-3.9
+     export CXX=clang++-3.9
     export CC=clang-3.9
-
-    build_ccache_wrappers
-
-    make \
+     build_ccache_wrappers
+     make \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50() {
@@ -380,8 +363,6 @@ build_ubuntu_cpu_clang50() {
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
@@ -398,8 +379,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_clang50_mkldnn() {
@@ -416,8 +395,6 @@ build_ubuntu_cpu_clang50_mkldnn() {
         USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_cpu_mkldnn() {
@@ -431,8 +408,6 @@ build_ubuntu_cpu_mkldnn() {
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         -j$(nproc)
-
-    report_ccache_usage
 }
 
 build_ubuntu_gpu() {
@@ -453,8 +428,21 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda \
         USE_CUDNN=1                   \
         -j$(nproc)
+}
 
-    report_ccache_usage
+build_ubuntu_gpu_mkldnn_nocudnn() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        USE_CUDA=1                    \
+        USE_CUDA_PATH=/usr/local/cuda \
+        USE_CUDNN=0                   \
+        -j$(nproc)
 }
 
 build_ubuntu_gpu_cuda91_cudnn7() {
@@ -501,7 +489,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
     cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
     mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
@@ -523,7 +510,6 @@ build_ubuntu_gpu_cmake() {
         /work/mxnet
 
     ninja -v
-    report_ccache_usage
 }
 
 
@@ -616,6 +602,14 @@ unittest_ubuntu_python3_gpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
+unittest_ubuntu_python3_gpu_nocudnn() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_OFF_TEST_ONLY=true
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python2_gpu()
 unittest_ubuntu_python2_quantization_gpu() {
@@ -643,13 +637,14 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_ubuntu_cpu_scala() {
     set -ex
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalatest USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1
 }
 
-unittest_ubuntu_gpu_scala() {
+unittest_ubuntu_cpu_clojure() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1
-    make scalatest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    ./contrib/clojure-package/ci-test.sh
 }
 
 unittest_ubuntu_cpugpu_perl() {
@@ -722,15 +717,36 @@ integrationtest_ubuntu_gpu_cpp_package() {
     cpp-package/tests/ci_test.sh
 }
 
+integrationtest_ubuntu_cpu_dist_kvstore() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_USE_OPERATOR_TUNING=0
+    cd tests/nightly/
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
+}
+
+integrationtest_ubuntu_gpu_scala() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+}
+
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon
+    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
 }
 
 test_ubuntu_cpu_python2() {
@@ -771,7 +787,11 @@ build_docs() {
     set -ex
     pushd .
     cd /work/mxnet/docs/build_version_doc
-    ./build_all_version.sh $1
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1 is the list of branches to build; $2 is the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    ./build_all_version.sh $1 $2
+    # $3 is the default version tag for the website; $4 is the base URL
     ./update_all_version.sh $2 $3 $4
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
@@ -783,8 +803,26 @@ build_docs() {
 
 #Runs Apache RAT Check on MXNet Source for License Headers
 nightly_test_rat_check() {
-    set -ex
-    ./tests/nightly/apache_rat_license_check/license_check.sh
+    set -e
+    pushd .
+
+    cd /work/deps/trunk/apache-rat/target
+
+    # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
+    exec 5>&1
+    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"
+
+
+    echo "-------Process The Output-------"
+
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!";
+        exit 1
+    else
+        echo "SUCCESS: There are no files with an Unknown License.";
+    fi
+    popd
 }
 
 #Checks MXNet for Compilation Warnings
@@ -832,6 +870,58 @@ nightly_test_javascript() {
     ./emcc
     touch ~/.emscripten
     make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
+}
+
+#Tests Model backwards compatibility on MXNet
+nightly_model_backwards_compat_test() {
+    set -ex
+    export PYTHONPATH=/work/mxnet/python/
+    ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
+}
+
+#Backfills S3 bucket with models trained on earlier versions of mxnet
+nightly_model_backwards_compat_train() {
+    set -ex
+    export PYTHONPATH=./python/
+    ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
+}
+
+# Nightly 'MXNet: The Straight Dope' Single-GPU Tests
+nightly_straight_dope_python2_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_single_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
+      test_notebooks_single_gpu.py --nologcapture
+}
+
+# Nightly 'MXNet: The Straight Dope' Multi-GPU Tests
+nightly_straight_dope_python2_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python2
+    nosetests-2.7 --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
+}
+
+nightly_straight_dope_python3_multi_gpu_tests() {
+    set -ex
+    cd /work/mxnet/tests/nightly/straight_dope
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TEST_KERNEL=python3
+    nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
+      test_notebooks_multi_gpu.py --nologcapture
 }
 
 # Deploy

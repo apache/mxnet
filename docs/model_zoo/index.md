@@ -56,6 +56,7 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 MXNet supports many types of recurrent neural networks (RNNs), including Long Short-Term Memory ([LSTM](http://www.bioinf.jku.at/publications/older/2604.pdf))
 and Gated Recurrent Units (GRU) networks. Some available datasets include:
 
+* [Sherlock Holmes](http://www.gutenberg.org/cache/epub/1661/pg1661.txt): Text corpus with ~1 million words.The task is predicting downstream words/characters.
 * [Penn Treebank (PTB)](https://catalog.ldc.upenn.edu/LDC95T7): Text corpus with ~1 million words. Vocabulary is limited to 10,000 words. The task is predicting downstream words/characters.
 * [Shakespeare](http://cs.stanford.edu/people/karpathy/char-rnn/): Complete text from Shakespeare's works.
 * [IMDB reviews](https://getsatisfaction.com/imdb/topics/imdb-data-now-available-in-amazon-s3): 25,000 movie reviews, labeled as positive or negative

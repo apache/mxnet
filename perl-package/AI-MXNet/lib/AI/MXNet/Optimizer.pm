@@ -63,14 +63,14 @@ method register()
 
         Parameters
         ----------
-        name: str
+        $name: Str
             Name of required optimizer. Should be the name
             of a subclass of Optimizer. Case insensitive.
 
-        rescale_grad : float
+        :$rescale_grad : Num
             Rescaling factor on gradient. Normally should be 1/batch_size.
 
-        kwargs: dict
+        %kwargs: Hash
             Parameters for optimizer
 
         Returns
@@ -290,25 +290,25 @@ method _get_wd(Index $index)
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    momentum : float, optional
+    momentum : Num, optional
        momentum value
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    param_idx2name : hash of string/int to float, optional
+    param_idx2name : hash ref of Str/Int to Num, optional
         special treat weight decay in parameter ends with bias, gamma, and beta
 
-    multi_precision: bool, optional
+    multi_precision: Bool, optional
         Flag to control the internal precision of the optimizer.
         False results in using the same precision as the weights (default),
         True makes internal 32-bit copy of the weights and applies gradients
@@ -438,18 +438,15 @@ __PACKAGE__->register;
 
     See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
 
-    For details of the update algorithm see
-    :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
-
     This optimizer accepts the following parameters in addition to those accepted
-    by :class:`.Optimizer`.
+    by AI::MXNet::Optimizer
 
     Parameters
     ----------
-    momentum : float, optional
+    momentum : Num, optional
        The momentum value.
-    wd_lh : float, optional
-       The amount of decoupled weight decay regularization, see details in the original paper at:\
+    wd_lh : Num, optional
+       The amount of decoupled weight decay regularization, see details in the original paper at:
        https://arxiv.org/abs/1711.05101
 =cut
 
@@ -536,11 +533,11 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    beta1 : float, optional
+    beta1 : Num, optional
         0 < beta1 < 1. Generally close to 0.5.
-    beta2 : float, optional
+    beta2 : Num, optional
         0 < beta2 < 1. Generally close to 1.
-    epsilon : float, optional
+    epsilon : Num, optional
         Small value to avoid division by 0.
 =cut
 
@@ -604,12 +601,12 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    momentum : float, optional
+    momentum : Num, optional
        The momentum value.
-    multi_precision: bool, optional
+    multi_precision: Bool, optional
        Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients
+       0 results in using the same precision as the weights (default),
+       1 makes internal 32-bit copy of the weights and applies gradients
                 in 32-bit precision even if actual weights used in the model have lower precision.`<
                 Turning this on can improve convergence and accuracy when training with float16.
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
@@ -896,26 +893,26 @@ extends 'AI::MXNet::Optimizer';
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    momentum : float, optional
+    momentum : Num, optional
        momentum value
 
-    lamda : float, optional
+    lamda : NUm, optional
        scale DC value
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    param_idx2name : hash ref of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
+    param_idx2name : hash ref of Str/Int to Num, optional
+        special threating of weight decay for parameters that end with bias, gamma, and beta
 =cut
 has 'momentum'        => (is => 'ro', isa => 'Num', default => 0);
 has 'lamda'           => (is => 'ro', isa => 'Num', default => 0.04);
@@ -1091,16 +1088,16 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 
@@ -1158,29 +1155,26 @@ __PACKAGE__->register;
        *Adam: A Method for Stochastic Optimization*,
        http://arxiv.org/abs/1412.6980
 
-    the code in this class was adapted from
-    https://github.com/mila-udem/blocks/blob/master/blocks/algorithms/__init__.py#L765
-
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.001.
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.9.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
         Default value is set to 0.999.
-    epsilon : float, optional
+    epsilon : Num, optional
         Default value is set to 1e-8.
 
-    wd : float, optional
+    wd : NUm, optional
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::Adam;
@@ -1271,21 +1265,21 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.05.
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    eps: float, optional
+    eps: Num, optional
         A small float number to make the updating processing stable
         Default value is set to 1e-7.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::AdaGrad;
@@ -1314,7 +1308,7 @@ method update(
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    my $is_sparse = ($weight->stype eq 'row_sparse' and $grad->stype eq 'row_sparse') ? 1 : 0;
+    my $is_sparse = $grad->stype eq 'row_sparse' ? 1 : 0;
     my $history = $state;
     if($is_sparse)
     {
@@ -1361,27 +1355,27 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.001.
-    gamma1: float, optional
+    gamma1: Num, optional
         decay factor of moving average for gradient^2.
         Default value is set to 0.9.
-    gamma2: float, optional
+    gamma2: Num, optional
         "momentum" factor.
         Default value if set to 0.9.
         Only used if centered=True
-    epsilon : float, optional
+    epsilon : Num, optional
         Default value is set to 1e-8.
-    centered : bool, optional
+    centered : Bool, optional
         Use Graves or Tielemans & Hintons version of RMSProp
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient.
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
-    clip_weights : float, optional
+    clip_weights : Num, optional
         clip weights in range [-clip_weights, clip_weights]
 =cut
 
@@ -1508,15 +1502,15 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    rho: float
+    rho: Num
         Decay rate for both squared gradients and delta x
-    epsilon : float
+    epsilon : Num
         The constant as described in the thesis
-    wd : float
+    wd : Num
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::AdaDelta;
@@ -1614,18 +1608,14 @@ package AI::MXNet::Ftrl;
     Referenced from *Ad Click Prediction: a View from the Trenches*, available at
     http://dl.acm.org/citation.cfm?id=2488200.
 
-    eta :
-        .. math::
-           \\eta_{t,i} = \\frac{learningrate}{\\beta+\\sqrt{\\sum_{s=1}^tg_{s,i}^2}}
-
-    The optimizer updates the weight by::
+    The optimizer updates the weight by:
 
         rescaled_grad = clip(grad * rescale_grad, clip_gradient)
         z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
         n += rescaled_grad**2
         w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
 
-    If the storage types of weight, state and grad are all ``row_sparse``, \
+    If the storage types of weight, state and grad are all row_sparse,
     **sparse updates** are applied by::
 
         for row in grad.indices:
@@ -1641,18 +1631,16 @@ package AI::MXNet::Ftrl;
     provides slightly different semantics than the original update, and
     may lead to different empirical results.
 
-    For details of the update algorithm, see :class:`~mxnet.ndarray.ftrl_update`.
-
     This optimizer accepts the following parameters in addition to those accepted
-    by :class:`.Optimizer`.
+    by AI::MXNet::Optimizer
 
     Parameters
     ----------
-    lamda1 : float, optional
+    lamda1 : Num, optional
         L1 regularization coefficient.
-    learning_rate : float, optional
+    learning_rate : Num, optional
         The initial learning rate.
-    beta : float, optional
+    beta : Num, optional
         Per-coordinate learning rate correlation parameter.
 =cut
 
@@ -1720,9 +1708,9 @@ package AI::MXNet::Adamax;
 
     Parameters
     ----------
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
 =cut
 
@@ -1798,17 +1786,17 @@ package AI::MXNet::Nadam;
     at http://cs229.stanford.edu/proj2015/054_report.pdf.
 
     This optimizer accepts the following parameters in addition to those accepted
-    AI::MXNet::Optimizer.
+    by AI::MXNet::Optimizer.
 
     Parameters
     ----------
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
-    epsilon : float, optional
+    epsilon : Num, optional
         Small value to avoid division by 0.
-    schedule_decay : float, optional
+    schedule_decay : Num, optional
         Exponential decay rate for the momentum schedule
 =cut
 
@@ -1879,7 +1867,11 @@ method update(
 
 __PACKAGE__->register;
 
-# updater for kvstore
+=head1 NAME
+
+    AI::MXNet::Updater - Updater for kvstore
+=cut
+
 package AI::MXNet::Updater;
 use Mouse;
 use Storable qw(thaw freeze);
@@ -1950,7 +1942,15 @@ method set_states($states)
 
 method get_states(Bool $dump_optimizer=0)
 {
-    return freeze($dump_optimizer ? [$self->states, $self->optimizer] : $self->states);
+    if($dump_optimizer)
+    {
+        my $param_dict = $self->optimizer->param_dict;
+        $self->optimizer->param_dict({});
+        my $freezed = freeze([$self->states, $self->optimizer]);
+        $self->optimizer->param_dict($param_dict);
+        return $freezed;
+    }
+    return freeze($self->states);
 }
 
 package AI::MXNet::Optimizer;

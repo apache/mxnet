@@ -68,9 +68,7 @@ endif
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
 	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
-ifneq ($(USE_BLAS), mkl)
 	export USE_MKLML = 1
-endif
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -158,12 +156,20 @@ endif
 # silently switching lapack off instead of letting the build fail because of backward compatibility
 ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
-ifeq (,$(wildcard /lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib/liblapack.a))
-ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard /lib/liblapack.a))
+ifeq (,$(wildcard /lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.a))
+ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib64/liblapack.a))
+ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
+endif
+endif
 endif
 endif
 endif
@@ -583,25 +589,52 @@ scalaclean:
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dcurrent_libdir="$(ROOTDIR)/lib" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
-scalatest:
+scalaunittest:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn verify -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
+
+scalaintegrationtest:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests=true -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
+scalarelease-dryrun:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
+scalarelease-prepare:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:clean release:prepare -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
+scalarelease-perform:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn release:perform -DautoVersionSubmodules=true \
+		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
+		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+
 scaladeploy:
 	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Prelease,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests -Dcxx="$(CXX)" \
+		mvn deploy -Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
