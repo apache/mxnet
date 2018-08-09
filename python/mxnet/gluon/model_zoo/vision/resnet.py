@@ -25,8 +25,10 @@ __all__ = ['ResNetV1', 'ResNetV2',
            'BottleneckV1', 'BottleneckV2',
            'resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
            'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
-           'se_resnet18_v1', 'se_resnet34_v1', 'se_resnet50_v1', 'se_resnet101_v1', 'se_resnet152_v1',
-           'se_resnet18_v2', 'se_resnet34_v2', 'se_resnet50_v2', 'se_resnet101_v2', 'se_resnet152_v2',
+           'se_resnet18_v1', 'se_resnet34_v1', 'se_resnet50_v1',
+           'se_resnet101_v1', 'se_resnet152_v1',
+           'se_resnet18_v2', 'se_resnet34_v2', 'se_resnet50_v2',
+           'se_resnet101_v2', 'se_resnet152_v2',
            'get_resnet']
 
 import os
