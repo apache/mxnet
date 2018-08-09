@@ -934,7 +934,6 @@ use overload
         my $content = join("\n", map { AI::MXNet::Base::_indent("   $_", 2) } $self->values);
         return "$name(\n$content\n)";
     },
-    '%{}'  => sub { my %tmp = shift->_params->as_list; \%tmp },
     '@{}'  => sub { my @tmp = shift->_params->as_list; \@tmp },
     fallback => 1;
 
@@ -1316,7 +1315,7 @@ method load(
             );
             next;
         }
-        $self->{ $name }->_load_init($arg_dict{$name}, $ctx);
+        $self->_params->get($name)->_load_init($arg_dict{$name}, $ctx);
     }
 }
 
