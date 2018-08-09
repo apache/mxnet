@@ -34,6 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <random>
 #include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
@@ -149,7 +150,6 @@ void LstmForwardTraining(DType* ws,
   const int r_size = D * T * N * H * 6;
   const int y_offset = T * N * H * 5;
   const int cell_size = N * H;
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   int idx = 0;  // state & cell state's idx;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < L; ++i) {
@@ -174,17 +174,21 @@ void LstmForwardTraining(DType* ws,
       w_ptr += w_size;
       b_ptr += b_size;
       if (dropout > 0.0f) {
-        #pragma omp parallel for num_threads(omp_threads)
-        for (int j = 0; j < T * N * H * D; j++) {
-          int rand_data = rand_r(&seed_);
-          if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
-            dropout_random[i * T * N * H * D + j] = 0;
-            y.dptr_[j] = 0;
-          } else {
-            dropout_random[i * T * N * H * D + j] = 1.0f - dropout;
-            y.dptr_[j] =  y.dptr_[j] / (1.0f - dropout);
+          #pragma omp parallel for num_threads(omp_threads)
+          for (int j = 0; j < T * N * H * D; j++) {
+              static thread_local std::random_device device;
+              static thread_local std::default_random_engine generator(device());
+              static thread_local std::uniform_int_distribution<int> distribution;
+              static thread_local auto dice = std::bind(distribution, generator);
+              int rand_data = dice();
+              if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
+                  dropout_random[i * T * N * H * D + j] = 0;
+                  y.dptr_[j] = 0;
+              } else {
+                  dropout_random[i * T * N * H * D + j] = 1.0f - dropout;
+                  y.dptr_[j] = y.dptr_[j] / (1.0f - dropout);
+              }
           }
-        }
       }
       x_ptr = y.dptr_;
       rs2 += r_size;
@@ -994,7 +998,6 @@ void GruForwardTraining(DType* ws,
   DType* bx_l = bx;
   DType* bh_l = bh;
   DType* y_tmp = x_ptr;
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   for (int l = 0; l < L; l++) {
     if (l != 0) {
       y_tmp = y_l;
@@ -1004,7 +1007,11 @@ void GruForwardTraining(DType* ws,
       const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < T * N * I; i++) {
-        int rand_data = rand_r(&seed_);
+        static thread_local std::random_device device;
+        static thread_local std::default_random_engine generator(device());
+        static thread_local std::uniform_int_distribution<int> distribution;
+        static thread_local auto dice = std::bind(distribution, generator);
+        int rand_data = dice();
         if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
           dropout_random[(l - 1) * T * N * I + i] = 0;
           y_tmp[i] = 0;
@@ -1881,7 +1888,6 @@ void VanillaRNNForwardTraining(DType* ws,
   DType* bh_l = bh;
   DType* y_tmp = x_ptr;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   for (int l = 0; l < L; l++) {
     if (l != 0) {
       y_tmp = y_l;
@@ -1890,7 +1896,11 @@ void VanillaRNNForwardTraining(DType* ws,
     if (dropout > 0.0f && l > 0) {
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < T * N * I; i++) {
-        int rand_data = rand_r(&seed_);
+        static thread_local std::random_device device;
+        static thread_local std::default_random_engine generator(device());
+        static thread_local std::uniform_int_distribution<int> distribution;
+        static thread_local auto dice = std::bind(distribution, generator);
+        int rand_data = dice();
         if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
           dropout_random[(l - 1) * T * N * I + i] = 0;
           y_tmp[i] = 0;

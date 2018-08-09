@@ -33,6 +33,7 @@
 #include <thread>
 #include <chrono>
 #include <vector>
+#include <random>
 
 #include "../src/engine/engine_impl.h"
 #include "../include/test_util.h"
@@ -58,17 +59,21 @@ void GenerateWorkload(int num_workloads, int num_var,
                       int min_read, int max_read,
                       int min_time, int max_time,
                       std::vector<Workload>* workloads) {
+  static thread_local std::default_random_engine generator(seed_);
+  static thread_local std::uniform_int_distribution<int> distribution;
+  static thread_local auto dice = std::bind(distribution, generator);
+
   workloads->clear();
   workloads->resize(num_workloads);
   for (int i = 0; i < num_workloads; ++i) {
     auto& wl = workloads->at(i);
-    wl.write = rand_r(&seed_) % num_var;
-    int r = rand_r(&seed_);
+    wl.write = dice() % num_var;
+    int r = dice();
     int num_read = min_read + (r % (max_read - min_read));
     for (int j = 0; j < num_read; ++j) {
-      wl.reads.push_back(rand_r(&seed_) % num_var);
+      wl.reads.push_back(dice() % num_var);
     }
-    wl.time = min_time + rand_r(&seed_) % (max_time - min_time);
+    wl.time = min_time + dice() % (max_time - min_time);
   }
 }
 
