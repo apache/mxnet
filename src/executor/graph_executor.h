@@ -213,46 +213,8 @@ class GraphExecutor : public Executor {
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
-  // prints a helpful message after shape inference errors in executor.
-  static void HandleInferShapeError(const size_t num_forward_inputs,
-                                    const nnvm::IndexedGraph& idx,
-                                    const nnvm::ShapeVector& inferred_shapes);
-  // prints a helpful message after type inference errors in executor.
-  static void HandleInferTypeError(const size_t num_forward_inputs,
-                                   const nnvm::IndexedGraph& idx,
-                                   const nnvm::DTypeVector& inferred_dtypes);
-  // prints a helpful message after storage type checking errors in executor.
-  static void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                          const nnvm::IndexedGraph& idx,
-                                          const StorageTypeVector& inferred_stypes);
-  // helper to initialize an NDArray to all zeros.
-  static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
-                           const Context &ctx, const int dtype);
-  // helper to add a NDArray of zeros to a std::vector.
-  static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
-                               const Context &ctx, const int dtype,
-                               std::vector<NDArray> *vec);
-  // helper to reshape an NDArray of certain shape if it doesn't already exist.
-  static NDArray ReshapeOrCreate(const std::string& name,
-                                 const TShape& dest_arg_shape,
-                                 const int dest_arg_dtype,
-                                 const NDArrayStorageType dest_arg_stype,
-                                 const Context& ctx,
-                                 std::unordered_map<std::string, NDArray>* shared_buffer,
-                                 bool enable_row_sparse_sharing);
-  // Assign context to the graph.
-  static Graph AssignContext(Graph g,
-                             const Context& default_ctx,
-                             const std::map<std::string, Context>& ctx_map,
-                             const std::vector<Context>& in_arg_ctxes,
-                             const std::vector<Context>& arg_grad_ctxes,
-                             const std::vector<Context>& aux_state_ctxes,
-                             const std::vector<OpReqType>& grad_req_types,
-                             size_t num_forward_inputs,
-                             size_t num_forward_outputs);
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
-
   // internal graph
   nnvm::Graph graph_;
   // operator node

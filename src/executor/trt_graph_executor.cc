@@ -25,9 +25,14 @@
 #include <NvInfer.h>
 #include "./onnx_to_tensorrt.h"
 #include "../operator/contrib/tensorrt-inl.h"
+#include "../common/utils.h"
+#include "../common/exec_utils.h"
+
 
 namespace mxnet {
 namespace exec {
+
+using namespace mxnet::common;
 
   /*!
  * \brief TrtGraphExecutor initializer for simple bind flow in
