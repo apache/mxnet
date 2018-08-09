@@ -124,6 +124,14 @@ def _cut_subgraph(subg):
         syms.append(s)
     return syms
 
+def _get_unique_subgraph_name(subgraph_name):
+    attrs = AttrScope._current.value._attr
+    if attrs.get("__subgraph_name__", "") != "":
+        subgraph_name = "".join([attrs["__subgraph_name__"], "$", subgraph_name])
+    subgraph_name = subgraph_name + str(AttrScope._subgraph_names.get(subgraph_name, 0))
+    AttrScope._subgraph_names[subgraph_name] += 1
+    return subgraph_name
+
 # This construct a subgraph for given output nodes.
 # If an output node is one of the input nodes, we call identity to make sure
 # that outputs nodes are different from input nodes.
@@ -232,6 +240,7 @@ def foreach(body, data, init_states, name="foreach"):
     # the python function, we need to prune the computation graph constructed from
     # the function. One way of doing it is to mark the nodes in the computation graph
     # with AttrScope and prune the nodes without the special attribute.
+    name = _get_unique_subgraph_name(name)
     with AttrScope(__subgraph_name__=name):
         if isinstance(data, list):
             in_eles = [symbol.var(sym.name) for sym in data]
@@ -456,6 +465,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         return list(step_output), list(new_loop_vars)
 
     def _create_subgraph(graph_vars, graph_func, subgraph_name):
+        subgraph_name = _get_unique_subgraph_name(subgraph_name)
         with AttrScope(__subgraph_name__=subgraph_name):
             # create new variables with the same name,
             # them feed them to the given func
@@ -619,6 +629,7 @@ def cond(pred, then_func, else_func, name="cond"):
         return inputs
 
     def _create_subgraph(graph_vars, graph_func, subgraph_name):
+        subgraph_name = _get_unique_subgraph_name(subgraph_name)
         with AttrScope(__subgraph_name__=subgraph_name):
             # create new variables with the same name,
             # them feed them to the given func
