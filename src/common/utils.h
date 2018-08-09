@@ -675,7 +675,9 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
   return k;
 }
 
-// helper to initialize an NDArray to all zeros.
+/*!
+ * \brief Return an NDArray of all zeros.
+ */
 static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
                          const Context &ctx, const int dtype) {
   // NDArray with default storage
@@ -688,7 +690,9 @@ static NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
   return NDArray(stype, shape, ctx, true, dtype);
 }
 
-// helper to add a NDArray of zeros to a std::vector.
+/*!
+ * \brief Helper to add a NDArray of zeros to a std::vector.
+ */
 static void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
                              const Context &ctx, const int dtype,
                              std::vector<NDArray> *vec) {
