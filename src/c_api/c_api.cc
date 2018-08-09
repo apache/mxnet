@@ -494,19 +494,9 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayToDLPackForRead(NDArrayHandle handle,
+int MXNDArrayToDLPack(NDArrayHandle handle,
                       DLManagedTensorHandle *out_dlpack) {
   API_BEGIN();
-  MXNDArrayWaitToRead(handle);
-  NDArray *arr = static_cast<NDArray*>(handle);
-  *out_dlpack = arr->ToDLPack();
-  API_END();
-}
-
-int MXNDArrayToDLPackForWrite(NDArrayHandle handle,
-                      DLManagedTensorHandle *out_dlpack) {
-  API_BEGIN();
-  MXNDArrayWaitToWrite(handle);
   NDArray *arr = static_cast<NDArray*>(handle);
   *out_dlpack = arr->ToDLPack();
   API_END();

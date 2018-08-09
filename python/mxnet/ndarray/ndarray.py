@@ -3928,8 +3928,9 @@ def to_dlpack_for_read(data):
      [1. 1. 1.]]
     <NDArray 2x3 @cpu(0)>
     """
+    data.wait_to_read()
     dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPackForRead(data.handle, ctypes.byref(dlpack)))
+    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
     return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
 
 def to_dlpack_for_write(data):
@@ -3959,8 +3960,9 @@ def to_dlpack_for_write(data):
      [2. 2. 2.]]
     <NDArray 2x3 @cpu(0)>
     """
+    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
     dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPackForWrite(data.handle, ctypes.byref(dlpack)))
+    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
     return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
 
 def from_dlpack(dlpack):

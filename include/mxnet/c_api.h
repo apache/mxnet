@@ -743,25 +743,15 @@ MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
 /*!
 * \brief Create a reference view of NDArray that
-*  represents as DLManagedTensor until
-*  all the pending writes with respect NDArray are finished.
+*  represents as DLManagedTensor
+*  Notice: MXNet uses asynchronous execution. Please call MXNDArrayWaitToRead or
+*          MXNDArrayWaitToWrite before calling MXNDArrayToDLPack.
 * \param handle the handle to the ndarray
 * \param out_dlpack pointer holder to get pointer of DLManagedTensor
 * \return 0 when success, -1 when failure happens
 */
-MXNET_DLL int MXNDArrayToDLPackForRead(NDArrayHandle handle,
+MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
                                        DLManagedTensorHandle *out_dlpack);
-
-/*!
-* \brief Create a reference view of NDArray that
-*  represents as DLManagedTensor until
-*  all the pending reads/writes with respect NDArray are finished.
-* \param handle the handle to the ndarray
-* \param out_dlpack pointer holder to get pointer of DLManagedTensor
-* \return 0 when success, -1 when failure happens
-*/
-MXNET_DLL int MXNDArrayToDLPackForWrite(NDArrayHandle handle,
-                                        DLManagedTensorHandle *out_dlpack);
 
 /*!
 * \brief Create a NDArray backed by a dlpack tensor.

@@ -111,6 +111,29 @@ class TBlob {
   explicit TBlob(const DLTensor &dltensor) : dptr_(dltensor.data),
     shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
     type_flag_(DLDataTypeTransform(dltensor.dtype)), dltensor_(dltensor) {
+    // compactness check for DLTensor
+    if (dltensor.strides != nullptr) {
+      // check strides
+      const int &ndim = dltensor.ndim;
+      const int64_t *shape = dltensor.shape;
+      const int64_t *strides = dltensor.strides;
+      if (ndim >= 1) {
+        bool err = false;
+        if (strides[ndim - 1] != 1) {
+          err = true;
+        } else {
+          for (int i = ndim - 2; i >= 0; --i) {
+            if (strides[i] != shape[i + 1] * strides[i + 1]) {
+              err = true;
+              break;
+            }
+          }
+        }
+        if (err) {
+          LOG(FATAL) << "Unsupported DLPack because MXNet only support compact tensor now";
+        }
+      }
+    }
   }
   /*!
    * \brief constructor from tensor

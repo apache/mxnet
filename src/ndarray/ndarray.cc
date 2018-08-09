@@ -332,28 +332,6 @@ DLManagedTensor* NDArray::ToDLPack() const {
 
 NDArray NDArray::FromDLPack(DLManagedTensor* tensor) {
   const DLTensor &dl_tensor = tensor->dl_tensor;
-  if (dl_tensor.strides != nullptr) {
-    // check strides
-    const int &ndim = dl_tensor.ndim;
-    const int64_t *shape = dl_tensor.shape;
-    const int64_t *strides = dl_tensor.strides;
-    if (ndim >= 1) {
-      bool err = false;
-      if (strides[ndim - 1] != 1) {
-          err = true;
-      } else {
-        for (int i = ndim - 2; i >= 0; --i) {
-          if (strides[i] != shape[i + 1] * strides[i + 1]) {
-            err = true;
-            break;
-          }
-        }
-      }
-      if (err) {
-        LOG(FATAL) << "Unsupported DLPack because MXNet only support compact tensor now";
-      }
-    }
-  }
   return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id);
 }
 
