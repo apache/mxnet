@@ -149,12 +149,16 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
       });
 
   // Restores device to before active device before ActivateDevice
-#if MXNET_USE_CUDA
-  mxnet::common::cuda::SetDevice set_device;
-#endif
-  this->ActivateDevice(handle->ctx);
-  manager->Alloc(handle);
-  profiler_.OnAlloc(*handle);
+  if (handle->ctx.dev_type == Context::kCPUPinned || handle->ctx.dev_type == Context::kGPU) {
+    mxnet::common::cuda::SetDevice set_device;
+    this->ActivateDevice(handle->ctx);
+    manager->Alloc(handle);
+    profiler_.OnAlloc(*handle);
+  } else {
+    this->ActivateDevice(handle->ctx);
+    manager->Alloc(handle);
+    profiler_.OnAlloc(*handle);
+  }
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
@@ -167,12 +171,16 @@ void StorageImpl::Free(Storage::Handle handle) {
       });
 
   // Restores device to before active device before ActivateDevice
-#if MXNET_USE_CUDA
-  mxnet::common::cuda::SetDevice set_device;
-#endif
-  this->ActivateDevice(ctx);
-  manager->Free(handle);
-  profiler_.OnFree(handle);
+  if (ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU) {
+    mxnet::common::cuda::SetDevice set_device;
+    this->ActivateDevice(ctx);
+    manager->Free(handle);
+    profiler_.OnFree(handle);
+  } else {
+    this->ActivateDevice(ctx);
+    manager->Free(handle);
+    profiler_.OnFree(handle);
+  }
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
@@ -185,12 +193,16 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
       });
 
   // Restores device to before active device before ActivateDevice
-#if MXNET_USE_CUDA
-  mxnet::common::cuda::SetDevice set_device;
-#endif
-  this->ActivateDevice(ctx);
-  manager->DirectFree(handle);
-  profiler_.OnFree(handle);
+  if (ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU) {
+    mxnet::common::cuda::SetDevice set_device;
+    this->ActivateDevice(ctx);
+    manager->DirectFree(handle);
+    profiler_.OnFree(handle);
+  } else {
+    this->ActivateDevice(ctx);
+    manager->DirectFree(handle);
+    profiler_.OnFree(handle);
+  }
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
