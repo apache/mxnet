@@ -15,19 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import ctypes
 import mxnet as mx
-from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array
+from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_str
 from mxnet.symbol import Symbol
 import numpy as np
 from mxnet.test_utils import assert_almost_equal
 
 
 def test_subgraph_exe():
-    def check_subgraph_exe(sym, op_names):
+    def _check_subgraph_exe1(sym, op_names):
+        """Use the partitioned sym to bind an executor and compare the outputs
+        with those of the original executor"""
         out = SymbolHandle()
-        check_call(_LIB.MXPartitionGraph(sym.handle, mx_uint(len(op_names)),
-                                         c_str_array(op_names), ctypes.byref(out)))
+        check_call(_LIB.MXPartitionGraphByOpNames(sym.handle, mx_uint(len(op_names)),
+                                                  c_str_array(op_names), ctypes.byref(out)))
 
         partitioned_sym = Symbol(out)
         assert partitioned_sym.list_inputs() == sym.list_inputs()
@@ -51,6 +54,42 @@ def test_subgraph_exe():
         for i in range(len(exe.outputs)):
             assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
                                 np.zeros(shape=(1,)))
+
+    def _check_subgraph_exe2(sym, op_names):
+        """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning and compare
+        results of the partitioned sym and the original sym."""
+        def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
+            if subgraph_backend is not None:
+                os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
+                check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                             c_str_array(op_names)))
+            exe = sym.simple_bind(ctx=mx.cpu(), grad_req='null')
+            input_names = sym.list_inputs()
+            for name in input_names:
+                if name in exe.arg_dict:
+                    exe.arg_dict[name][:] = mx.nd.random.uniform(shape=exe.arg_dict[name].shape)\
+                        if original_exec is None else original_exec.arg_dict[name]
+                else:
+                    assert name in exe.aux_dict
+                    exe.aux_dict[name][:] = mx.nd.random.uniform(shape=exe.aux_dict[name].shape)\
+                        if original_exec is None else original_exec.aux_dict[name]
+            exe.forward()
+            if subgraph_backend is not None:
+                check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
+                del os.environ['MXNET_SUBGRAPH_BACKEND']
+            return exe
+
+        original_exec = get_executor(sym)
+        partitioned_exec = get_executor(sym, 'default', op_names, original_exec)
+        outputs1 = original_exec.outputs
+        outputs2 = partitioned_exec.outputs
+        assert len(outputs1) == len(outputs2)
+        for i in range(len(outputs1)):
+            assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+
+    def check_subgraph_exe(sym, op_names):
+        _check_subgraph_exe1(sym, op_names)
+        _check_subgraph_exe2(sym, op_names)
 
     def test_network_structure_1():
         data1 = mx.sym.var('data1', shape=(2, 3, 10, 10))
@@ -85,6 +124,7 @@ def test_subgraph_exe():
         check_subgraph_exe(ret, ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm'])
         check_subgraph_exe(ret, ['exp', 'BatchNorm'])
         check_subgraph_exe(ret, ['BatchNorm'])
+
 
     def test_network_structure_4():
         # the last op has multiple duplicate outputs

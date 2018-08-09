@@ -27,10 +27,10 @@
 #include "./c_api_common.h"
 #include "../operator/subgraph/default_subgraph_property.h"
 
-int MXPartitionGraph(SymbolHandle sym_handle,
-                     const mx_uint num_ops,
-                     const char** op_names,
-                     SymbolHandle* ret_sym_handle) {
+int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+                              const mx_uint num_ops,
+                              const char** op_names,
+                              SymbolHandle* ret_sym_handle) {
   nnvm::Symbol* s = new nnvm::Symbol();
   API_BEGIN();
   std::unordered_set<std::string> op_name_set;
@@ -62,5 +62,11 @@ int MXSetSubgraphPropertyOpNames(const char* prop_name,
     op_name_set.emplace(op_names[i]);
   }
   (*mxnet::op::SubgraphPropertyOpNameSet::Get())[prop_name] = op_name_set;
+  API_END();
+}
+
+int MXRemoveSubgraphPropertyOpNames(const char* prop_name) {
+  API_BEGIN();
+  mxnet::op::SubgraphPropertyOpNameSet::Get()->erase(prop_name);
   API_END();
 }

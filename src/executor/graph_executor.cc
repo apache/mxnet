@@ -957,26 +957,23 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
                                      const std::vector<Context>& aux_state_ctxes) {
   const auto& indexed_graph = g.indexed_graph();
   const auto num_forward_inputs = indexed_graph.input_nodes().size();
+  g = AssignContext(g, default_ctx, ctx_map, in_arg_ctxes, {},
+                   aux_state_ctxes, {}, num_forward_inputs, g.outputs.size());
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs, indexed_graph,
                           g.GetAttr<nnvm::ShapeVector>("shape"));
   }
-
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
     HandleInferTypeError(num_forward_inputs, indexed_graph,
                          g.GetAttr<nnvm::DTypeVector>("dtype"));
   }
-
-  g.attrs["storage_type"] = std::make_shared<dmlc::any>(std::move(arg_stypes));
   g = InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
   if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
     HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
                                 g.GetAttr<StorageTypeVector>("storage_type"));
   }
-  g = AssignContext(g, default_ctx, ctx_map, in_arg_ctxes, {},
-                   aux_state_ctxes, {}, num_forward_inputs, g.outputs.size());
   return g;
 }
 
@@ -997,9 +994,11 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                         ctx_map, in_arg_ctxes, aux_state_ctxes);
   subgraph_prop->SetAttr("graph", g);
   auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
-  if (it != op::SubgraphPropertyOpNameSet::Get()->end() && !it->second.empty()) {
-    LOG(WARNING) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
-                 << " is not empty. Please make sure it is initialized only for the testing purpose.";
+  // assign a op name set to the subgraph property if it has been provided by users
+  if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
+    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
+              << " has been assigned a value. Please make sure it is initialized"
+                 " only for the testing purpose.";
     subgraph_prop->SetAttr("op_names", it->second);
   }
   g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));

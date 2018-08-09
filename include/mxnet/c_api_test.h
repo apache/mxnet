@@ -32,14 +32,31 @@ extern "C" {
 
 #include <mxnet/c_api.h>
 
-MXNET_DLL int MXPartitionGraph(SymbolHandle sym_handle,
-                               const mx_uint num_ops,
-                               const char** op_names,
-                               SymbolHandle* ret_sym_handle);
+/*!
+ * \brief This API partitions a graph only by the operator names
+ * provided by users. This will attach a DefaultSubgraphProperty
+ * to the input graph for partitioning. This function should be
+ * used only for the testing purpose.
+ */
+MXNET_DLL int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+                                        const mx_uint num_ops,
+                                        const char** op_names,
+                                        SymbolHandle* ret_sym_handle);
 
+/*!
+ * \brief Given a subgraph property name, use the provided op names
+ * as the op_names attribute for that subgraph property, instead of
+ * the predefined one. This is only for the purpose of testing.
+ */
 MXNET_DLL int MXSetSubgraphPropertyOpNames(const char* prop_name,
                                            const mx_uint num_ops,
                                            const char** op_names);
+
+/*!
+ * \brief Given a subgraph property name, delete the op name set
+ * in the SubgraphPropertyOpNameSet.
+ */
+MXNET_DLL int MXRemoveSubgraphPropertyOpNames(const char* prop_name);
 
 #ifdef __cplusplus
 }
