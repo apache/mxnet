@@ -201,19 +201,19 @@ build_android_armv7() {
     set -ex
     cd /work/build
     cmake \
-        -DANDROID=ON\
+        -DANDROID=ON \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CROSSCOMPILING=ON \
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja -v
 }
@@ -221,17 +221,19 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    cmake\
+    cmake \
         -DANDROID=ON \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CROSSCOMPILING=ON \
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja -v
 }

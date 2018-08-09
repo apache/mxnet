@@ -22,18 +22,20 @@ FROM mxnetci/dockcross-android-arm64:08212018
 
 WORKDIR /work/deps
 
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-
 ENV ARCH aarch64
 ENV TARGET ARMV8
 ENV ARM_SOFTFP_ABI 1
+ENV OSNAME Android
+ENV ONLY_CBLAS 1
+ENV HOSTCC gcc
 
 COPY install/arm_openblas.sh /work/
 RUN /work/arm_openblas.sh
 
 ENV OpenBLAS_HOME=${CROSS_ROOT}
 
-WORKDIR /work/build
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
 
 COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet
