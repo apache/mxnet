@@ -616,19 +616,27 @@ int MXExecutorReshape(int partial_shaping,
   API_END_HANDLE_ERROR(delete out);
 }
 
-#if MXNET_USE_TENSORRT
+
 
 int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
                                  SymbolHandle *out) {
+
   auto s = new nnvm::Symbol();
   API_BEGIN();
+
+#if MXNET_USE_TENSORRT
   auto exec = static_cast<exec::TrtGraphExecutor*>(handle);
   *s = exec->GetOptimizedSymbol();
   *out = s;
+#else
+  LOG(FATAL) << "GetOptimizedSymbol may only be used when MXNet is compiled with "
+                "MXNET_USE_TENSORRT enabled.  Please re-compile MXNet with TensorRT support.";
+#endif  // MXNET_USE_TENSORRT
+
   API_END_HANDLE_ERROR(delete s);
 }
 
-#endif  // MXNET_USE_TENSORRT
+
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
