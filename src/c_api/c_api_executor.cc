@@ -455,6 +455,14 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                   use_shared_buffer ? &shared_buffer_map : nullptr,
                                   reinterpret_cast<Executor*>(shared_exec_handle));
   } else {
+    // Checks to see if this env var has been set to true or false by the user.
+    // If the user is using a TensorRT build, but has not enabled TRT at inference time, warn
+    // them and describe further steps.
+    const int unset_indicator =  std::numeric_limits<int>::quiet_NaN();
+    if (dmlc::GetEnv("MXNET_USE_TENSORRT", unset_indicator) == unset_indicator) {
+      LOG(INFO) << "TensorRT not enabled by default.  Please set MXNET_USE_TENSORRT environment "
+                   "variable to 1 or call mx.contrib.tensorrt.set_use_tensorrt(True) to enable.";
+    }
 #endif  // MXNET_USE_TENSORRT
     *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
                                 aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
