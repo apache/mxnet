@@ -447,7 +447,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   // If we've built with TensorRT support we by default return an TRTExecutor.
   // Users can override this behaviour via env var, which is useful for example for A/B
   // performance testing.
-  if (dmlc::GetEnv("MXNET_USE_TENSORRT", true)) {
+  if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
     *out = Executor::TensorRTBind(*sym, ctx, ctx_map, &in_arg_ctx_vec, &arg_grad_ctx_vec,
                                   &aux_state_ctx_vec, &arg_shape_map, &arg_dtype_map,
                                   &arg_stype_map, &grad_req_type_vec, shared_arg_name_set,

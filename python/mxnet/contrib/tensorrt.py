@@ -44,7 +44,7 @@ def get_use_tensorrt():
     :return: Boolean, true if TensorRT optimization should be applied, False for legacy
     behaviour.
     """
-    return bool(int(os.environ.get("MXNET_USE_TENSORRT", 1)) == 1)
+    return bool(int(os.environ.get("MXNET_USE_TENSORRT", 0)) == 1)
 
 
 def get_optimized_symbol(executor):
