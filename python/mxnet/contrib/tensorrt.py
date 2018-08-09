@@ -27,7 +27,7 @@ from ..base import _LIB, SymbolHandle, MXNetError
 from ..base import check_call
 
 
-def set_use_tensorrt(status=False):
+def set_use_tensorrt(status):
     """
     Set an environment variable which will enable or disable the use of TensorRT in the backend.
     Note: this is useful for A/B testing purposes.
