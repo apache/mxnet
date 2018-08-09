@@ -34,6 +34,25 @@ namespace exec {
 
 class TrtGraphExecutor : public GraphExecutor {
  public:
+
+  static Executor* TensorRTBind(nnvm::Symbol symbol,
+                                const Context& default_ctx,
+                                const std::map<std::string, Context>& group2ctx,
+                                std::vector<Context> *in_arg_ctxes,
+                                std::vector<Context>* arg_grad_ctxes,
+                                std::vector<Context>* aux_state_ctxes,
+                                std::unordered_map<std::string, TShape>* arg_shape_map,
+                                std::unordered_map<std::string, int>* arg_dtype_map,
+                                std::unordered_map<std::string, int>* arg_stype_map,
+                                std::vector<OpReqType>* grad_req_types,
+                                const std::unordered_set<std::string>& param_names,
+                                std::vector<NDArray>* in_args,
+                                std::vector<NDArray>* arg_grads,
+                                std::vector<NDArray>* aux_states,
+                                std::unordered_map<std::string, NDArray>*
+                                shared_data_arrays = nullptr,
+                                Executor* shared_exec = nullptr);
+
   virtual void Init(nnvm::Symbol symbol,
                     const Context& default_ctx,
                     const std::map<std::string, Context>& ctx_map,
@@ -85,6 +104,7 @@ class TrtGraphExecutor : public GraphExecutor {
 };
 
 }  // namespace exec
+
 }  // namespace mxnet
 
 #endif  // MXNET_USE_TENSORRT

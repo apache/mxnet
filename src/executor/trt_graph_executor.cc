@@ -144,6 +144,13 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   // This function can be called by regular bind
   // operation flow as well.
   FinishInitGraph(symbol, g, shared_exec, feed_dict);
+
+  if (need_grad_) {
+    LOG(FATAL) << "You may be attempting to use TensorRT for training.  TensorRT is an inference "
+                  "only library.  To re-enable legacy MXNet graph execution, which will support "
+                  "training, set the MXNET_USE_TENSORRT environment variable to 0, or call "
+                  "mx.contrib.tensorrt.set_use_tensorrt(False)";
+  }
 }
 /*!
  * \brief Initialize in_args, arg_grads, and aux_states
@@ -404,24 +411,22 @@ nnvm::Symbol TrtGraphExecutor::GetOptimizedSymbol() {
   return ret;
 }
 
-}  // namespace exec
-
-Executor *Executor::TensorRTBind(nnvm::Symbol symbol,
-                                 const Context& default_ctx,
-                                 const std::map<std::string, Context>& group2ctx,
-                                 std::vector<Context> *in_arg_ctxes,
-                                 std::vector<Context>* arg_grad_ctxes,
-                                 std::vector<Context>* aux_state_ctxes,
-                                 std::unordered_map<std::string, TShape>* arg_shape_map,
-                                 std::unordered_map<std::string, int>* arg_dtype_map,
-                                 std::unordered_map<std::string, int>* arg_stype_map,
-                                 std::vector<OpReqType>* grad_req_types,
-                                 const std::unordered_set<std::string>& param_names,
-                                 std::vector<NDArray>* in_args,
-                                 std::vector<NDArray>* arg_grads,
-                                 std::vector<NDArray>* aux_states,
-                                 std::unordered_map<std::string, NDArray>* shared_buffer,
-                                 Executor* shared_exec) {
+Executor *TrtGraphExecutor::TensorRTBind(nnvm::Symbol symbol,
+                                         const Context &default_ctx,
+                                         const std::map<std::string, Context> &group2ctx,
+                                         std::vector<Context> *in_arg_ctxes,
+                                         std::vector<Context> *arg_grad_ctxes,
+                                         std::vector<Context> *aux_state_ctxes,
+                                         std::unordered_map<std::string, TShape> *arg_shape_map,
+                                         std::unordered_map<std::string, int> *arg_dtype_map,
+                                         std::unordered_map<std::string, int> *arg_stype_map,
+                                         std::vector<OpReqType> *grad_req_types,
+                                         const std::unordered_set<std::string> &param_names,
+                                         std::vector<NDArray> *in_args,
+                                         std::vector<NDArray> *arg_grads,
+                                         std::vector<NDArray> *aux_states,
+                                         std::unordered_map<std::string, NDArray> *shared_buffer,
+                                         Executor *shared_exec) {
   auto exec = new exec::TrtGraphExecutor();
   exec->Init(symbol, default_ctx, group2ctx,
              in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
@@ -431,6 +436,8 @@ Executor *Executor::TensorRTBind(nnvm::Symbol symbol,
              shared_buffer, shared_exec);
   return exec;
 }
+
+}  // namespace exec
 
 }  // namespace mxnet
 
