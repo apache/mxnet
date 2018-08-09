@@ -623,6 +623,7 @@ class CuDNNDeconvolutionOp {
       const int kMaxAlgos = 10;
       int nalgo = kMaxAlgos;
       int i = 0;
+      size_t min_memory_needs = 0;
       // Forward Algorithm Find/Get, v6 and earlier
       if (CUDNN_MAJOR == 6 && param_.layout.value() == mshadow::kNHWC) {
         // In cuDNNv6, for kNHWC, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is
@@ -653,11 +654,19 @@ class CuDNNDeconvolutionOp {
         while (i < nalgo
                && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == deconv::kLimited
-                       && fwd_algo[i].memory > workspace_byte)))
+                       && fwd_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs = (i == 0) ?
+                             fwd_algo[i].memory :
+                             std::min(min_memory_needs, fwd_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a 'forward' convolution algorithm " <<
-                     "(for use in deconvolution operator backprop-to-data).";
+          LOG(FATAL) << nalgo << " forward algorithms"
+                     << " (for use in deconvolution operator backprop-to-data)"
+                     << " with minimum memory requirement " << min_memory_needs
+                     << " bytes have been tried. Workspace size is set to " << workspace_byte
+                     << " bytes, please consider reducing the batch/model size,"
+                     << " or increasing workspace size.";
         } else {
           forward_algo_.Set(fwd_algo[i].algo, false);
         }
@@ -688,11 +697,19 @@ class CuDNNDeconvolutionOp {
         while (i < nalgo
                && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == deconv::kLimited
-                       && bwd_filter_algo[i].memory > workspace_byte)))
+                       && bwd_filter_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs = (i == 0) ?
+                             bwd_filter_algo[i].memory :
+                             std::min(min_memory_needs, bwd_filter_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a backward filter convolution algorithm " <<
-                     "(for use in deconvolution operator backprop-to-filter).";
+          LOG(FATAL) << nalgo << " backward filter algorithms"
+                     << " (for use in deconvolution operator backprop-to-filter)"
+                     << " with minimum memory requirement " << min_memory_needs
+                     << " bytes have been tried. Workspace size is set to " << workspace_byte
+                     << " bytes, please consider reducing the batch/model size,"
+                     << " or increasing workspace size.";
         } else {
           back_algo_w_.Set(bwd_filter_algo[i].algo, false);
         }
@@ -723,11 +740,19 @@ class CuDNNDeconvolutionOp {
         while (i < nalgo
                && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == deconv::kLimited
-                       && bwd_data_algo[i].memory > workspace_byte)))
+                       && bwd_data_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs = (i == 0) ?
+                             bwd_data_algo[i].memory :
+                             std::min(min_memory_needs, bwd_data_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a backward data convolution algorithm." <<
-                     "(for use in deconvolution operator forward inference).";
+          LOG(FATAL) << nalgo << " backward data algorithms"
+                     << " (for use in deconvolution operator forward inference) with"
+                     << " minimum memory requirement " << min_memory_needs
+                     << " bytes have been tried. Workspace size is set to " << workspace_byte
+                     << " bytes, please consider reducing the batch/model size,"
+                     << " or increasing workspace size.";
         } else {
           back_algo_.Set(bwd_data_algo[i].algo, false);
         }
@@ -788,7 +813,9 @@ class CuDNNDeconvolutionOp {
       }
     }
     auto mode = param_.cudnn_tune.value() == conv::kOff ? " get " : " find ";
-    LOG(FATAL) << "Failed to" << mode << "any " << kernel_name << " deconvolution algorithm.";
+    LOG(FATAL) << "Failed to" << mode << "any " << kernel_name << " deconvolution algorithm"
+               << " with workspace size of " << workspace_byte << " bytes,"
+               << " please consider reducing batch/model size or increasing the workspace size";
   }
 
   void GetTempSize(const OpContext& ctx) {
