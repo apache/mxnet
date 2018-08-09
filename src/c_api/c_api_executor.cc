@@ -626,11 +626,8 @@ int MXExecutorReshape(int partial_shaping,
   API_END_HANDLE_ERROR(delete out);
 }
 
-
-
 int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
                                  SymbolHandle *out) {
-
   auto s = new nnvm::Symbol();
   API_BEGIN();
 

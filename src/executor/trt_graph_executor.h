@@ -34,7 +34,6 @@ namespace exec {
 
 class TrtGraphExecutor : public GraphExecutor {
  public:
-
   static Executor* TensorRTBind(nnvm::Symbol symbol,
                                 const Context& default_ctx,
                                 const std::map<std::string, Context>& group2ctx,
