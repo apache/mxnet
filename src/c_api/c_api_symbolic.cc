@@ -696,29 +696,3 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   *ret_qsym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
-
-#if 0
-int MXPartitionGraph(SymbolHandle sym_handle,
-                     const mx_uint num_ops,
-                     const char** op_names,
-                     SymbolHandle* ret_sym_handle) {
-  nnvm::Symbol* s = new nnvm::Symbol();
-  API_BEGIN();
-  std::unordered_set<std::string> op_name_set;
-  for (size_t i = 0; i < num_ops; ++i) {
-    op_name_set.emplace(op_names[i]);
-  }
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
-  *s = sym->Copy();
-  nnvm::Graph g = Symbol2Graph(*s);
-  if (!op_name_set.empty()) {
-    mxnet::op::SubgraphPropertyPtr property
-        = std::make_shared<mxnet::op::DefaultSubgraphProperty>(g, op_name_set);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
-  }
-  g = ApplyPass(std::move(g), "PartitionGraph");
-  s->outputs = g.outputs;
-  *ret_sym_handle = s;
-  API_END_HANDLE_ERROR(delete s);
-}
-#endif
