@@ -442,7 +442,7 @@ class PyNAG(PySGD):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
-@with_seed(0)
+@with_seed()
 def test_nag():
     opt1 = PyNAG
     opt2 = mx.optimizer.NAG
