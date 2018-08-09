@@ -395,7 +395,7 @@ Graph TrtGraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
 
 
 /*!
- * \brief Return the "optimized" symbol contained in _graph.
+ * \brief Return the "optimized" symbol contained in the graph.
  * For optimization pass such as TensorRT pass
  */
 nnvm::Symbol TrtGraphExecutor::GetOptimizedSymbol() {
