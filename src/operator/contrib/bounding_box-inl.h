@@ -150,9 +150,9 @@ inline uint32_t BoxNMSNumVisibleOutputs(const NodeAttrs& attrs) {
 
 template<typename DType>
 int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
-                 mshadow::Tensor<cpu, 1, DType> out_sorted_index,
+                 mshadow::Tensor<cpu, 1, double> out_sorted_index,
                  mshadow::Tensor<cpu, 1, DType> scores,
-                 mshadow::Tensor<cpu, 1, DType> sorted_index,
+                 mshadow::Tensor<cpu, 1, double> sorted_index,
                  float valid_thresh) {
   index_t j = 0;
   for (index_t i = 0; i < scores.size(0); i++) {
@@ -230,7 +230,7 @@ MSHADOW_XINLINE DType BoxArea(const DType *box, int encode) {
 
 /*!
  * \brief compute areas specialized for nms to reduce computation
- * 
+ *
  * \param i the launched thread index (total thread num_batch * topk)
  * \param out 1d array for areas (size num_batch * num_elem)
  * \param in 1st coordinate of 1st box (buffer + coord_start)
@@ -243,7 +243,7 @@ MSHADOW_XINLINE DType BoxArea(const DType *box, int encode) {
 struct compute_area {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const DType *indices, const DType *batch_start,
+                                  const double *indices, const double *batch_start,
                                   int topk, int num_elem, int stride, int encode) {
     int b = i / topk;
     int k = i % topk;
@@ -302,7 +302,7 @@ MSHADOW_XINLINE DType Intersect(const DType *a, const DType *b, int encode) {
    */
 struct nms_impl {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *index, const DType *batch_start,
+  MSHADOW_XINLINE static void Map(int i, double *index, const double *batch_start,
                                   const DType *input, const DType *areas,
                                   int k, int ref, int num,
                                   int stride, int offset_box, int offset_id,
@@ -326,8 +326,7 @@ struct nms_impl {
     intersect *= Intersect(input + ref_offset + 1, input + pos_offset + 1, encode);
     int ref_area_offset = static_cast<int>(index[ref]);
     int pos_area_offset = static_cast<int>(index[pos]);
-    DType iou = intersect / (areas[ref_area_offset] + areas[pos_area_offset] -
-      intersect);
+    DType iou = intersect / (areas[ref_area_offset] + areas[pos_area_offset] - intersect);
     if (iou > thresh) {
       index[pos] = -1;
     }
@@ -336,7 +335,7 @@ struct nms_impl {
 
 /*!
    * \brief Assign output of nms by indexing input
-   * 
+   *
    * \param i the launched thread index (total num_batch)
    * \param out output array [cls, conf, b0, b1, b2, b3]
    * \param record book keeping the selected index for backward
@@ -349,7 +348,7 @@ struct nms_impl {
 struct nms_assign {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *out, DType *record, const DType *input,
-                                  const DType *index, const DType *batch_start,
+                                  const double *index, const double *batch_start,
                                   int k, int num, int stride) {
     int count = 0;
     for (int j = 0; j < k; ++j) {
@@ -404,7 +403,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> data = inputs[box_nms_enum::kData]
      .get_with_shape<xpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
     Tensor<xpu, 3, DType> out = outputs[box_nms_enum::kOut]
@@ -415,25 +414,30 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // prepare workspace
     Shape<1> sort_index_shape = Shape1(num_batch * num_elem);
     Shape<3> buffer_shape = Shape3(num_batch, num_elem, width_elem);
-    index_t workspace_size = 4 * sort_index_shape.Size();
+    index_t workspace_size = sort_index_shape.Size() * sizeof(double) / sizeof(DType);  // index
+    workspace_size += workspace_size * 2;  // all_sorted_index, batch_id
+    workspace_size += 2 * sort_index_shape.Size();  // scores, batch_id, areas
     Shape<1> batch_start_shape = Shape1(num_batch + 1);
-    workspace_size += batch_start_shape.Size();
+    workspace_size += batch_start_shape.Size() * sizeof(double) / sizeof(DType);  // batch_start
     if (req[0] == kWriteInplace) {
       workspace_size += buffer_shape.Size();
     }
     Tensor<xpu, 1, DType> workspace = ctx.requested[box_nms_enum::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
-    Tensor<xpu, 1, DType> sorted_index(workspace.dptr_, sort_index_shape, s);
-    Tensor<xpu, 1, DType> scores(sorted_index.dptr_ + sorted_index.MSize(),
+    Tensor<xpu, 1, double> sorted_index(
+      reinterpret_cast<double*>(workspace.dptr_), sort_index_shape, s);
+    Tensor<xpu, 1, double> all_sorted_index(sorted_index.dptr_ + sorted_index.MSize(),
       sort_index_shape, s);
-    Tensor<xpu, 1, DType> batch_id(scores.dptr_ + scores.MSize(), sort_index_shape,
-      s);
-    Tensor<xpu, 1, DType> areas(batch_id.dptr_ + batch_id.MSize(), sort_index_shape, s);
-    Tensor<xpu, 1, DType> batch_start(areas.dptr_ + areas.MSize(), batch_start_shape, s);
+    Tensor<xpu, 1, double> batch_id(
+      all_sorted_index.dptr_ + all_sorted_index.MSize(), sort_index_shape, s);
+    Tensor<xpu, 1, double> batch_start(batch_id.dptr_ + batch_id.MSize(), batch_start_shape, s);
+    Tensor<xpu, 1, DType> scores(reinterpret_cast<DType*>(batch_start.dptr_ + batch_start.MSize()),
+      sort_index_shape, s);
+    Tensor<xpu, 1, DType> areas(scores.dptr_ + scores.MSize(), sort_index_shape, s);
     Tensor<xpu, 3, DType> buffer = data;
     if (req[0] == kWriteInplace) {
       // make copy
-      buffer = Tensor<xpu, 3, DType>(batch_start.dptr_ + batch_start.MSize(), buffer_shape, s);
+      buffer = Tensor<xpu, 3, DType>(areas.dptr_ + areas.MSize(), buffer_shape, s);
       buffer = F<mshadow_op::identity>(data);
     }
 
@@ -451,10 +455,10 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     }
 
     // use batch_id and areas as temporary storage
-    Tensor<xpu, 1, DType> all_scores = batch_id;
-    Tensor<xpu, 1, DType> all_sorted_index = areas;
+    Tensor<xpu, 1, DType> all_scores = areas;
+    // Tensor<xpu, 1, DType> all_sorted_index = areas;
     all_scores = reshape(slice<2>(buffer, score_index, score_index + 1), all_scores.shape_);
-    all_sorted_index = range<DType>(0, num_batch * num_elem);
+    all_sorted_index = range<double>(0, num_batch * num_elem);
 
     // filter scores but keep original sorted_index value
     // move valid score and index to the front, return valid size
@@ -474,19 +478,19 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // only sort the valid scores and batch_id
     Shape<1> valid_score_shape = Shape1(num_valid);
     Tensor<xpu, 1, DType> valid_scores(scores.dptr_, valid_score_shape, s);
-    Tensor<xpu, 1, DType> valid_sorted_index(sorted_index.dptr_, valid_score_shape, s);
-    Tensor<xpu, 1, DType> valid_batch_id(batch_id.dptr_, valid_score_shape, s);
+    Tensor<xpu, 1, double> valid_sorted_index(sorted_index.dptr_, valid_score_shape, s);
+    Tensor<xpu, 1, double> valid_batch_id(batch_id.dptr_, valid_score_shape, s);
 
     // sort index by batch_id then score (stable sort)
     mxnet::op::SortByKey(valid_scores, valid_sorted_index, false);
-    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
+    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<double>(num_elem));
     mxnet::op::SortByKey(valid_batch_id, valid_sorted_index, true);
 
     // calculate batch_start: accumulated sum to denote 1st sorted_index for a given batch_index
-    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<DType>(num_elem));
+    valid_batch_id = F<mshadow_op::floor>(valid_sorted_index / ScalarExp<double>(num_elem));
     for (int b = 0; b < num_batch + 1; b++) {
       slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
-        F<mshadow_op::less_than>(valid_batch_id, ScalarExp<DType>(b)), 0);
+        F<mshadow_op::less_than>(valid_batch_id, ScalarExp<double>(b)), 0);
     }
 
     // pre-compute areas of candidates
@@ -721,11 +725,11 @@ inline bool MatchingShape(const nnvm::NodeAttrs& attrs,
 struct bipartite_matching {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType *row_marker, DType *col_marker,
-                                  const DType *scores, const DType *sorted_index,
+                                  const DType *scores, const double *sorted_index,
                                   int num_batch, int num_row, int num_col,
                                   float threshold, bool is_ascend, int topk) {
     int stride = num_row * num_col;
-    const DType *index = sorted_index + i * stride;
+    const double *index = sorted_index + i * stride;
     const DType *score = scores + i * stride;
     DType *rmarker = row_marker + i * num_row;
     DType *cmarker = col_marker + i * num_col;
@@ -769,7 +773,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 1, DType> scores = inputs[0]
      .get_with_shape<xpu, 1, DType>(Shape1(dshape.Size()), s);
     Tensor<xpu, 2, DType> row_marker = outputs[0]
@@ -777,23 +781,24 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> col_marker = outputs[1]
      .get_with_shape<xpu, 2, DType>(Shape2(batch_size, col), s);
     Shape<1> sort_index_shape = Shape1(dshape.Size());
-    index_t workspace_size = sort_index_shape.Size() * 3;
+    index_t workspace_size = sort_index_shape.Size();
+    workspace_size += sort_index_shape.Size() * sizeof(double) / sizeof(DType) * 2;
     Tensor<xpu, 1, DType> workspace = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
-    Tensor<xpu, 1, DType> sorted_index(workspace.dptr_,
+    Tensor<xpu, 1, DType> scores_copy(workspace.dptr_,
       sort_index_shape, s);
-    Tensor<xpu, 1, DType> batch_id(sorted_index.dptr_ + sorted_index.MSize(),
-      sort_index_shape, s);
-    Tensor<xpu, 1, DType> scores_copy(batch_id.dptr_ + batch_id.MSize(),
+    Tensor<xpu, 1, double> sorted_index(reinterpret_cast<double*>(
+      scores_copy.dptr_ + scores_copy.MSize()), sort_index_shape, s);
+    Tensor<xpu, 1, double> batch_id(sorted_index.dptr_ + sorted_index.MSize(),
       sort_index_shape, s);
 
     // sort according to score
     scores_copy = F<mshadow_op::identity>(scores);
-    sorted_index = range<DType>(0, dshape.Size());
+    sorted_index = range<double>(0, dshape.Size());
     mxnet::op::SortByKey(scores_copy, sorted_index, param.is_ascend);
-    batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<DType>(row * col));
+    batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<double>(row * col));
     mxnet::op::SortByKey(batch_id, scores_copy, true);
-    batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<DType>(row * col));
+    batch_id = F<mshadow_op::floor>(sorted_index / ScalarExp<double>(row * col));
     mxnet::op::SortByKey(batch_id, sorted_index, true);
 
     // bipartite matching, parallelization is limited to batch_size
