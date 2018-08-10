@@ -16,9 +16,9 @@
 # under the License.
 
 import os
-import numpy as np
 import mxnet as mx
 from lenet5_common import get_iters
+
 
 def lenet5():
     """LeNet-5 Symbol"""
@@ -44,6 +44,7 @@ def lenet5():
     #pylint: enable=no-member
     return lenet
 
+
 def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     """train LeNet-5 model on MNIST data"""
     ctx = mx.gpu(0)
@@ -65,44 +66,7 @@ def train_lenet5(num_epochs, batch_size, train_iter, val_iter, test_iter):
     return lenet_model
 
 
-def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_size):
-    """Run inference with either MXNet or TensorRT"""
-
-    shared_buffer = merge_dicts(arg_params, aux_params)
-    if not get_use_tensorrt():
-        shared_buffer = dict([(k, v.as_in_context(mx.gpu(0))) for k, v in shared_buffer.items()])
-    executor = sym.simple_bind(ctx=mx.gpu(0),
-                               data=(batch_size,) +  mnist['test_data'].shape[1:],
-                               softmax_label=(batch_size,),
-                               shared_buffer=shared_buffer,
-                               grad_req='null',
-                               force_rebind=True)
-
-    # Get this value from all_test_labels
-    # Also get classes from the dataset
-    num_ex = 10000
-    all_preds = np.zeros([num_ex, 10])
-    test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
-
-    example_ct = 0
-
-    for idx, dbatch in enumerate(test_iter):
-        executor.arg_dict["data"][:] = dbatch.data[0]
-        executor.forward(is_train=False)
-        offset = idx*batch_size
-        extent = batch_size if num_ex - offset > batch_size else num_ex - offset
-        all_preds[offset:offset+extent, :] = executor.outputs[0].asnumpy()[:extent]
-        example_ct += extent
-
-    all_preds = np.argmax(all_preds, axis=1)
-    matches = (all_preds[:example_ct] == all_test_labels[:example_ct]).sum()
-
-    percentage = 100.0 * matches / example_ct
-
-    return percentage
-
 if __name__ == '__main__':
-
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'

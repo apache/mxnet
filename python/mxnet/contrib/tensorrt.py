@@ -71,3 +71,38 @@ def get_optimized_symbol(executor):
         logging.error('Error while trying to fetch TRT optimized symbol for graph. Please ensure '
                       'build was compiled with MXNET_USE_TENSORRT enabled.')
         raise
+
+
+def trt_bind(symbol, all_params, ctx, **kwargs):
+    """Bind current symbol to get an optimized trt executor.
+
+    Parameters
+    ----------
+    symbol : Symbol
+        The symbol you wish to bind, and optimize with TensorRT.
+
+    all_params : Dict of str->ndarray
+        A dictionary of mappings from parameter names to parameter NDArrays.
+
+    ctx : Context
+        The device context the generated executor to run on.
+
+    type_dict  : Dict of str->numpy.dtype
+        Input type dictionary, name->dtype
+
+    stype_dict  : Dict of str->str
+        Input storage type dictionary, name->storage_type
+
+    group2ctx : Dict of string to mx.Context
+        The dict mapping the `ctx_group` attribute to the context assignment.
+
+    kwargs : Dict of str->shape
+        Input shape dictionary, name->shape
+
+    Returns
+    -------
+    executor : mxnet.Executor
+        An optimized TensorRT executor.
+    """
+    kwargs['shared_buffer'] = all_params
+    return symbol.simple_bind(ctx, **kwargs)
