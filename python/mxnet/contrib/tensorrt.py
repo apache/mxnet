@@ -21,7 +21,7 @@ import ctypes
 import logging
 import os
 
-from mxnet.symbol import Symbol
+from .. import symbol as sym
 
 from ..base import _LIB, SymbolHandle, MXNetError
 from ..base import check_call
@@ -65,7 +65,7 @@ def get_optimized_symbol(executor):
     handle = SymbolHandle()
     try:
         check_call(_LIB.MXExecutorGetOptimizedSymbol(executor.handle, ctypes.byref(handle)))
-        result = Symbol(handle=handle)
+        result = sym.Symbol(handle=handle)
         return result
     except MXNetError:
         logging.error('Error while trying to fetch TRT optimized symbol for graph. Please ensure '
