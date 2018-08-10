@@ -28,8 +28,8 @@
 # This module defines the following variables:
 #
 #   MKL_FOUND            : True mkl is found
-#   MKL_INCLUDE_DIR      : unclude directory
-#   MKL_LIBRARIES        : the libraries to link against.
+#   MKL_INCLUDE_DIR      : include directory
+#   MKL_LIBRARIES        : the libraries to link against
 #
 
 if(MKL_FOUND)
