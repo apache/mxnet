@@ -1665,6 +1665,41 @@ def test_foreach_rnn():
 
 
 @with_seed()
+def test_cut_subgraph_foreach():
+    class TestLayer(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestLayer, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def step1(data, states):
+                return data + 1, states
+            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            out2, states2 = F.contrib.foreach(step1, out1, states)
+            def step2(data, states):
+                return data + states[0], states1
+            out, states = F.contrib.foreach(step2, out2, states)
+            return out
+
+    data = mx.nd.normal(loc=0, scale=1, shape=(5, 10))
+    states = mx.nd.normal(loc=0, scale=1, shape=(10))
+    layer = TestLayer()
+    layer.initialize(ctx=default_context())
+    res1 = layer(data, [states])
+
+    with mx.autograd.record():
+        res1 = layer(data, [states])
+
+    layer = TestLayer()
+    layer.initialize(ctx=default_context())
+    layer.hybridize()
+    res2 = layer(data, [states])
+
+    with mx.autograd.record():
+        res2 = layer(data, [states])
+    assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+
+
+@with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):
