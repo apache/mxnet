@@ -64,7 +64,6 @@ class DefaultSubgraphProperty: public SubgraphProperty {
     nnvm::NodePtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_default_subgraph_op");
     n->attrs.name = "_default_subgraph_op" + std::to_string(subgraph_id);
-    //n->attrs.parsed = sym;
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
     return n;
   }
