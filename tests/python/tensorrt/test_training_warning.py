@@ -55,9 +55,9 @@ def run_resnet(is_train, use_tensorrt):
             grad_req = 'null'
         if use_tensorrt:
             all_params = dict([(k, v.data()) for k, v in resnet.collect_params().items()])
-            mx.contrib.tensorrt.trt_bind(softmax, all_params, ctx=ctx,
-                                         data=(batch_size, 3, h, w), softmax_label=(batch_size,),
-                                         force_rebind=True, grad_req=grad_req)
+            mx.contrib.tensorrt.tensorrt_bind(softmax, ctx=ctx, all_params=all_params,
+                                              data=(batch_size, 3, h, w), softmax_label=(batch_size,),
+                                              force_rebind=True, grad_req=grad_req)
         else:
             softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,),
                                 force_rebind=True, grad_req=grad_req)

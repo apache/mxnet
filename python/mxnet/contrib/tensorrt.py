@@ -73,7 +73,8 @@ def get_optimized_symbol(executor):
         raise
 
 
-def trt_bind(symbol, all_params, ctx, **kwargs):
+def tensorrt_bind(symbol, ctx, all_params, type_dict=None, stype_dict=None, group2ctx=None,
+                  **kwargs):
     """Bind current symbol to get an optimized trt executor.
 
     Parameters
@@ -81,11 +82,11 @@ def trt_bind(symbol, all_params, ctx, **kwargs):
     symbol : Symbol
         The symbol you wish to bind, and optimize with TensorRT.
 
-    all_params : Dict of str->ndarray
-        A dictionary of mappings from parameter names to parameter NDArrays.
-
     ctx : Context
         The device context the generated executor to run on.
+
+    all_params : Dict of str->ndarray
+        A dictionary of mappings from parameter names to parameter NDArrays.
 
     type_dict  : Dict of str->numpy.dtype
         Input type dictionary, name->dtype
@@ -105,4 +106,5 @@ def trt_bind(symbol, all_params, ctx, **kwargs):
         An optimized TensorRT executor.
     """
     kwargs['shared_buffer'] = all_params
-    return symbol.simple_bind(ctx, **kwargs)
+    return symbol.simple_bind(ctx, type_dict=type_dict, stype_dict=stype_dict,
+                              group2ctx=group2ctx, **kwargs)
