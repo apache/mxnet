@@ -21,6 +21,7 @@
     warning or exception.
 """
 import glob
+import logging
 import re
 import os
 import unittest
@@ -51,8 +52,8 @@ NOTEBOOKS_WHITELIST = [
 class StraightDopeSingleGpuTests(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        logging.basicConfig(level=logging.INFO)
         assert _download_straight_dope_notebooks()
-
 
     def test_completeness(self):
         """
