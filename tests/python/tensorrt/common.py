@@ -15,21 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-"""Experimental contributions"""
+import os
+from ctypes.util import find_library
 
-from . import symbol
-from . import ndarray
 
-from . import symbol as sym
-from . import ndarray as nd
+def check_tensorrt_installation():
+    assert find_library('nvinfer') is not None, "Can't find the TensorRT shared library"
 
-from . import autograd
-from . import tensorboard
 
-from . import text
-from . import onnx
-from . import io
-from . import quantization
-from . import quantization as quant
-from . import tensorrt
+def merge_dicts(*dict_args):
+    """Merge arg_params and aux_params to populate shared_buffer"""
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
+
+
+def get_fp16_infer_for_fp16_graph():
+    return int(os.environ.get("MXNET_TENSORRT_USE_FP16_FOR_FP32", 0))
+
+
+def set_fp16_infer_for_fp16_graph(status=False):
+    os.environ["MXNET_TENSORRT_USE_FP16_FOR_FP32"] = str(int(status))
