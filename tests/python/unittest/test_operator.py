@@ -191,9 +191,9 @@ def test_rnnrelu_sym():
     stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l1_'))
     stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l2_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write', rtol=1e-2, atol=1e-2)
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add', rtol=1e-2, atol=1e-2)
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null', rtol=1e-2, atol=1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_disabled()
