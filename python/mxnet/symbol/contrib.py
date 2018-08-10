@@ -128,8 +128,8 @@ def _get_unique_subgraph_name(subgraph_name):
     attrs = AttrScope._current.value._attr
     if attrs.get("__subgraph_name__", "") != "":
         subgraph_name = "".join([attrs["__subgraph_name__"], "$", subgraph_name])
-    subgraph_name = subgraph_name + str(AttrScope._subgraph_names.get(subgraph_name, 0))
     AttrScope._subgraph_names[subgraph_name] += 1
+    subgraph_name = subgraph_name + str(AttrScope._subgraph_names[subgraph_name] - 1)
     return subgraph_name
 
 # This construct a subgraph for given output nodes.
