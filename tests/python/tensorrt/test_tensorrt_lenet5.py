@@ -29,11 +29,11 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     data_size = (batch_size,) + mnist['test_data'].shape[1:]
     if use_tensorrt:
         all_params = merge_dicts(arg_params, aux_params)
-        executor = mx.contrib.tensorrt.simple_bind(sym, all_params, ctx=mx.gpu(0),
-                                                   data=data_size,
-                                                   softmax_label=(batch_size,),
-                                                   grad_req='null',
-                                                   force_rebind=True)
+        executor = mx.contrib.tensorrt.trt_bind(sym, all_params, ctx=mx.gpu(0),
+                                                data=data_size,
+                                                softmax_label=(batch_size,),
+                                                grad_req='null',
+                                                force_rebind=True)
     else:
         executor = sym.simple_bind(ctx=mx.gpu(0),
                                    data=data_size,

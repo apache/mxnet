@@ -73,7 +73,7 @@ def get_optimized_symbol(executor):
         raise
 
 
-def simple_bind(symbol, all_params, ctx, **kwargs):
+def trt_bind(symbol, all_params, ctx, **kwargs):
     """Bind current symbol to get an optimized trt executor.
 
     Parameters

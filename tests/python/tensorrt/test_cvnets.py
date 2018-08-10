@@ -36,10 +36,10 @@ def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
         out = net(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
         all_params = dict([(k, v.data()) for k, v in net.collect_params().items()])
-        executor = mx.contrib.tensorrt.simple_bind(softmax, all_params, ctx=ctx,
-                                                   data=(batch_size,3, h, w),
-                                                   softmax_label=(batch_size,), grad_req='null',
-                                                   force_rebind=True)
+        executor = mx.contrib.tensorrt.trt_bind(softmax, all_params, ctx=ctx,
+                                                data=(batch_size,3, h, w),
+                                                softmax_label=(batch_size,), grad_req='null',
+                                                force_rebind=True)
     else:
         # Convert gluon model to Symbolic
         net.hybridize()
