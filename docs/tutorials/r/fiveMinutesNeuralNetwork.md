@@ -1,27 +1,31 @@
 Develop a Neural Network with MXNet in Five Minutes
 =============================================
 
-This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package.
+This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](http://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=R&processor=CPU). 
 
 ## Classification
-
-
-
- ```r
-    require(mlbench)
- ```
 
  ```
     ## Loading required package: mlbench
  ```
-
  ```r
-    require(mxnet)
+    if (!require(mlbench)) {
+      install.packages('mlbench')
+    }
  ```
 
  ```
     ## Loading required package: mxnet
-    ## Loading required package: methods
+ ```
+
+ ```r
+    if (!require(mxnet)) {
+      install.packages('mlbench')
+    }
+ ```
+
+ ```
+    ## Loading required datasets
  ```
 
  ```r
