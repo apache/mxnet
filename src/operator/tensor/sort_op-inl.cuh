@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #include <type_traits>
+#include <iterator>
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #if defined(_MSC_VER) && __CUDACC_VER_MAJOR__ == 8 && __CUDACC_VER_BUILD__ != 44
@@ -113,15 +114,14 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     // No workspace, sort using thrust
     thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
     thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
-    auto key_iter_end = key_iter + keys.size(0);
     if (is_ascend) {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter_end, value_iter, thrust::less<KDType>());
+        key_iter, std::advance(key_iter, keys.size(0)), value_iter, thrust::less<KDType>());
     } else {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter_end, value_iter, thrust::greater<KDType>());
+        key_iter, std::advance(key_iter, keys.size(0)), value_iter, thrust::greater<KDType>());
     }
 #ifndef SORT_WITH_THRUST
   }
@@ -147,15 +147,14 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
   // No workspace, sort using thrust
   thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
   thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
-  auto key_iter_end = key_iter + keys.size(0);
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter_end, value_iter, thrust::less<KDType>());
+      key_iter, std::advance(key_iter, keys.size(0)), value_iter, thrust::less<KDType>());
   } else {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter_end, value_iter, thrust::greater<KDType>());
+      key_iter, std::advance(key_iter, keys.size(0)), value_iter, thrust::greater<KDType>());
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else
