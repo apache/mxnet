@@ -65,14 +65,12 @@ set(LOOKED_FOR
     MKLML_INCLUDE_DIR
     )
 
-set(MKLML_LIBS iomp5)
+set(MKLML_LIBS)
 
-if(WIN32)
-  list(APPEND MKLML_LIBS mklml)
-elseif(APPLE)
+if(REMOVE_INTEL_OPENMP)
   list(APPEND MKLML_LIBS mklml)
 else()
-  list(APPEND MKLML_LIBS mklml_intel)
+  list(APPEND MKLML_LIBS iomp5 mklml)
 endif()
 
 foreach(__lib ${MKLML_LIBS})
