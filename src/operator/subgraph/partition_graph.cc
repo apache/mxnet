@@ -398,9 +398,9 @@ void FindSubgraphs(Graph* g,
     return indexed_graph.node_id(node1) < indexed_graph.node_id(node2);
   };
   size_t subgraph_id = 0;
-  auto subgraph_selector = subg_prop.CreateSubgraphSelector();
   for (size_t i = 0; i < simple_nodes.size(); ++i) {
     nnvm::Node* node = simple_nodes[i]->node;
+    auto subgraph_selector = subg_prop.CreateSubgraphSelector();
     if (subgraph_selector->Select(*node) && simple_nodes[i]->label == -1) {
       // pre-select nodes that can be grouped in a subgraph
       std::vector<nnvm::Node*> preselected_nodes;
