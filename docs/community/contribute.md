@@ -48,7 +48,7 @@ Please join either or both of the MXNet mailing lists:
 - [MXNet Apache USER mailing list](https://lists.apache.org/list.html?user@mxnet.apache.org) (user@mxnet.apache.org): To subscribe, send an email to <a href="mailto:user-subscribe@mxnet.apache.org">user-subscribe@mxnet.apache.org</a> <i class="far fa-envelope"></i>
 
 **For Contributors to MXNet, join the DEV mailing list**:
-- [MXNet Apache DEV mailing list](https://lists.apache.org/list.html?dev@mxnet.apache.org) (dev@mxnet.apache.org): To subscribe, send an email to <a href="mailto:dev-subscribe@mxnet.apache.org">dev-subscribe@mxnet.apache.org</a> <i class="far fa-envelope"></i>
+- [MXNet Apache DEV mailing list](https://lists.apache.org/list.html?dev@mxnet.apache.org) (dev@mxnet.apache.org): To subscribe, send an email to <a href="mailto:dev-subscribe@mxnet.apache.org">dev-subscribe@mxnet.apache.org</a> <i class="far fa-envelope"></i> 
 
 
 * [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org) <i class="fas fa-external-link-alt"></i>
