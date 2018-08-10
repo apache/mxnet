@@ -49,13 +49,18 @@ def run_resnet(is_train, use_tensorrt):
         data = mx.sym.var('data')
         out = resnet(data)
         softmax = mx.sym.SoftmaxOutput(out, name='softmax')
-        all_params = dict([(k, v.data()) for k, v in resnet.collect_params().items()])
         if is_train:
             grad_req = 'write'
         else:
             grad_req = 'null'
-        softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,),
-                            shared_buffer=all_params,  force_rebind=True, grad_req=grad_req)
+        if use_tensorrt:
+            all_params = dict([(k, v.data()) for k, v in resnet.collect_params().items()])
+            mx.contrib.tensorrt.simple_bind(softmax, all_params, ctx=ctx,
+                                            data=(batch_size, 3, h, w), softmax_label=(batch_size,),
+                                            force_rebind=True, grad_req=grad_req)
+        else:
+            softmax.simple_bind(ctx=ctx, data=(batch_size, 3, h, w), softmax_label=(batch_size,),
+                                force_rebind=True, grad_req=grad_req)
     finally:
         mx.contrib.tensorrt.set_use_tensorrt(original_trt_value)
 
