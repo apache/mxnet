@@ -676,7 +676,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     check_cython 3
-    nosetests-3.4 --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_nocudnn() {
