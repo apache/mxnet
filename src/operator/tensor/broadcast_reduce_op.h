@@ -151,9 +151,9 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
   dmlc::optional<TShape> lhs_axes;
   dmlc::optional<TShape> rhs_axes;
   DMLC_DECLARE_PARAMETER(BroadcastLikeParam) {
-    DMLC_DECLARE_FIELD(lhs_axes)
+    DMLC_DECLARE_FIELD(lhs_axes).set_default(dmlc::optional<TShape>())
       .describe("Axes to perform broadcast on in the first input array");
-    DMLC_DECLARE_FIELD(rhs_axes)
+    DMLC_DECLARE_FIELD(rhs_axes).set_default(dmlc::optional<TShape>())
       .describe("Axes to copy from the second input array");
   }
 };
