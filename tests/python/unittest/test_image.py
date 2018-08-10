@@ -130,29 +130,59 @@ class TestImage(unittest.TestCase):
                 mx.nd.array(mean), mx.nd.array(std))
             assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
-
     def test_imageiter(self):
         def check_imageiter(dtype='float32'):
             im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
-            test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
-                path_root='', dtype=dtype)
-            for _ in range(3):
-                for batch in test_iter:
-                    pass
-                test_iter.reset()
-
-            # test with list file
             fname = './data/test_imageiter.lst'
-            file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x]) \
-                for k, x in enumerate(TestImage.IMAGES)]
+            file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
+                         for k, x in enumerate(TestImage.IMAGES)]
             with open(fname, 'w') as f:
                 for line in file_list:
                     f.write(line + '\n')
+            
+            test_list = ['imglist', 'path_imglist']
 
-            test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, path_imglist=fname,
-                path_root='', dtype=dtype)
-            for batch in test_iter:
-                pass
+            for test in test_list:
+                imglist = im_list if test == 'imglist' else None
+                path_imglist = fname if test == 'path_imglist' else None
+                
+                test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist, 
+                    path_imglist=path_imglist, path_root='', dtype=dtype)
+                for _ in range(3):
+                    for batch in test_iter:
+                        pass
+                    test_iter.reset()
+                # test last batch handle(discard)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard')
+                i = 0
+                for batch in test_iter:
+                    i += 1
+                assert i == 5 
+
+                # test last_batch_handle(pad)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                i = 0
+                for batch in test_iter:
+                    if i == 0:
+                        first_three_data = batch.data[0][:2]
+                    if i == 5:
+                        last_three_data = batch.data[0][1:]
+                    i += 1
+                assert i == 6
+                assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
+                # test last_batch_handle(roll_over)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over')
+                i = 0
+                for batch in test_iter:
+                    if i == 0:
+                        second_image = batch.data[0][2]
+                    i += 1
+                test_iter.reset()
+                assert np.array_equal(
+                    test_iter.next().data[0][0].asnumpy(), second_image.asnumpy())
 
         for dtype in ['int32', 'float32', 'int64', 'float64']:
             check_imageiter(dtype)
@@ -183,7 +213,6 @@ class TestImage(unittest.TestCase):
         for batch in test_iter:
             pass
 
-
     def test_image_detiter(self):
         im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
         det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
@@ -196,7 +225,7 @@ class TestImage(unittest.TestCase):
         det_iter = val_iter.sync_label_shape(det_iter)
 
         # test file list
-        fname = './data/test_imagedetiter.lst'
+        fname = './data/test_imageiter.lst'
         im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(TestImage.IMAGES)]
         with open(fname, 'w') as f:
             for line in im_list:
