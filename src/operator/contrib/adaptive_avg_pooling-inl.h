@@ -144,41 +144,6 @@ static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-static bool AdaptiveAvgPoolOpInferType(const nnvm::NodeAttrs& attrs,
-                                       std::vector<int> *in_type,
-                                       std::vector<int> *out_type) {
-  using namespace mshadow;
-  CHECK_EQ(in_type->size(), 1U);
-  int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
-  // For float16 input type beta, gamma, mean, and average are stored in float32.
-  // For other input types, these parameters have the same type as input
-  // NOTE: This requirement is from cuDNN (v. 4 and 5)
-  int dtype_param = 0;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
-      dtype_param = mshadow::DataType<AccRealX>::kFlag; });
-  out_type->clear();
-  out_type->push_back(dtype_param);
-  return true;
-}
-
-static inline bool AdaptiveAvgPoolOpStorageType(const nnvm::NodeAttrs &attrs,
-                                                const int dev_mask,
-                                                DispatchMode *dispatch_mode,
-                                                std::vector<int> *in_attrs,
-                                                std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
-  *dispatch_mode = DispatchMode::kFCompute;
-  for (int& v : *in_attrs) {
-    if (v == - 1) v = kDefaultStorage;
-  }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    (*out_attrs)[i] = kDefaultStorage;
-  }
-  return true;
-}
-
 using namespace mshadow;
 template<typename xpu, int Dim, typename DType>
 MSHADOW_XINLINE int get_stride(Tensor<xpu, Dim, DType> tensor, int idx) {
