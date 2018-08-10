@@ -362,7 +362,13 @@ if(USE_CUDA AND FIRST_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 else()
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
+    # workaroud to refrain mshadow from processing BLAS libraries
+    # BLAS libraries for MXNet are setup in cmake/ChooseBLAS.cmake
+    set(__BLAS ${BLAS})
+    set(BLAS "Override")
     include(3rdparty/mshadow/cmake/mshadow.cmake)
+    set(BLAS ${__BLAS})
+
     include(3rdparty/mshadow/cmake/Utils.cmake)
     include(3rdparty/mshadow/cmake/Cuda.cmake)
   else()
