@@ -85,10 +85,8 @@ function(try_mkl)
   if(MKL_FOUND)
     message(STATUS "MKL framework found")
 
-    include_directories(SYSTEM ${MKL_INCLUDE_DIR})
-    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
-
     set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+    set(MKL_INCLUDE_DIR ${MKL_INCLUDE_DIR} PARENT_SCOPE)
     set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
@@ -128,10 +126,9 @@ function(try_mklml)
 
   include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
   find_package(MKLML REQUIRED)
-  include_directories(SYSTEM ${MKL_INCLUDE_DIRS})
-  set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${MKL_LIBRARIES} PARENT_SCOPE)
 
   set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
+  set(MKL_INCLUDE_DIR ${MKL_INCLUDE_DIR} PARENT_SCOPE)
   set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
@@ -222,6 +219,9 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   if(NOT MKL_FOUND)
     message(FATAL_ERROR "Blas set to MKL but it could not be found")
   endif()
+
+  include_directories(SYSTEM ${MKL_INCLUDE_DIR})
+  set(mxnet_LINKER_LIBS ${MKL_LIBRARIES} ${mxnet_LINKER_LIBS})
 
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
