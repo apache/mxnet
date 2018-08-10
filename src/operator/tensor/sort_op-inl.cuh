@@ -24,6 +24,7 @@
  */
 #ifndef MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
+#include <type_traits>
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #if defined(_MSC_VER) && __CUDACC_VER_MAJOR__ == 8 && __CUDACC_VER_BUILD__ != 44
@@ -57,9 +58,11 @@ SortByKeyWorkspaceSize(const size_t num_keys) {
 }
 
 template<typename KDType, typename VDType>
-inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
-                      bool is_ascend, mshadow::Tensor<gpu, 1, char>* workspace,
-                      const int begin_bit, const int end_bit) {
+inline typename std::enable_if<!std::is_same<KDType,mshadow::half::half_t>::value, void>::type
+SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+              mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
+              mshadow::Tensor<gpu, 1, char>* workspace,
+              const int begin_bit, const int end_bit) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
 #if CUDA_VERSION >= 7000
@@ -128,10 +131,13 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
 #endif
 }
 
-template<typename DType>
-inline void SortByKey(mshadow::Tensor<gpu, 1, mshadow::half::half_t> keys,
-                      mshadow::Tensor<gpu, 1, DType> values, bool is_ascend,
-                      mshadow::Tensor<gpu, 1, char>* workspace, const int begin_bit, const int end_bit) {
+// half_t is not supported by cub, use thrust instead
+template<typename KDType, typename VDType>
+inline typename std::enable_if<std::is_same<KDType,mshadow::half::half_t>::value, void>::type
+SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+              mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
+              mshadow::Tensor<gpu, 1, char>* workspace,
+              const int begin_bit, const int end_bit) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
 #if CUDA_VERSION >= 7000
@@ -155,12 +161,12 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, mshadow::half::half_t> keys,
 #endif
 }
 
-// template<typename DType>
-// inline void SortByKey(mshadow::Tensor<gpu, 1, DType> keys,
-//   mshadow::Tensor<gpu, 1, mshadow::half::half_t> values, bool is_ascend,
-//   mshadow::Tensor<gpu, 1, char>* workspace, const int begin_bit, const int end_bit) {
-//   LOG(FATAL) << "SortByKey for half_t is not implemented!";
-// }
+template<typename KDType, typename VDType>
+inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
+                      bool is_ascend, mshadow::Tensor<gpu, 1, char>* workspace,
+                      const int begin_bit, const int end_bit) {
+  SortByKeyImpl(keys, values, is_ascend, workspace, begin_bit, end_bit);
+}
 
 }  // namespace op
 }  // namespace mxnet
