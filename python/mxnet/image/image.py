@@ -1047,7 +1047,7 @@ class ImageIter(io.DataIter):
     path_imgidx : str
         Path to image index file. Needed for partition and shuffling when using .rec source.
     shuffle : bool
-        Whether to shuffle all images at the start of each iteration or not.
+        Whether to shuffle all images or not.
         Can be slow for HDD.
     part_index : int
         Partition index.
@@ -1059,6 +1059,9 @@ class ImageIter(io.DataIter):
         Label name for provided symbols.
     dtype : str
         Label data type. Default: float32. Other options: int32, int64, float64
+    last_batch_hanle :  str, optional
+        How to handle the last batch. This parameter can be ‘pad’, ‘discard’ or ‘roll_over’.
+        'discard' is not support when reading from record file(.rec) withouting shuffle(=False)
     kwargs : ...
         More arguments for creating augmenter. See mx.image.CreateAugmenter.
     """
@@ -1066,9 +1069,11 @@ class ImageIter(io.DataIter):
     def __init__(self, batch_size, data_shape, label_width=1,
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
                  shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None,
-                 data_name='data', label_name='softmax_label', dtype='float32', **kwargs):
+                 data_name='data', label_name='softmax_label', dtype='float32', last_batch_handle='pad', **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
+        # Reading from record file without shuffle didn't support 'discard' for last_batch_handle
+        assert not path_imgrec or shuffle or last_batch_handle != 'discard'
         assert dtype in ['int32', 'float32', 'int64', 'float64'], dtype + ' label not supported'
         num_threads = os.environ.get('MXNET_CPU_WORKER_NTHREADS', 1)
         logging.info('Using %s threads for decoding...', str(num_threads))
@@ -1084,6 +1089,7 @@ class ImageIter(io.DataIter):
             else:
                 self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')  # pylint: disable=redefined-variable-type
                 self.imgidx = None
+            self.path_imgrec = path_imgrec
         else:
             self.imgrec = None
 
@@ -1130,9 +1136,11 @@ class ImageIter(io.DataIter):
         self.data_shape = data_shape
         self.label_width = label_width
 
-        self.shuffle = shuffle
         if self.imgrec is None:
             self.seq = imgkeys
+            # shuffle 
+            if shuffle:
+                random.shuffle(self.seq)
         elif shuffle or num_parts > 1:
             assert self.imgidx is not None
             self.seq = self.imgidx
@@ -1149,22 +1157,53 @@ class ImageIter(io.DataIter):
         else:
             self.auglist = aug_list
         self.cur = 0
+        self.is_iterated_over = False
+        self._imgrec = None
+        # handle the last batch
+        if self.seq and last_batch_handle == 'discard':
+            new_seq_n = len(self.seq) - len(self.seq) % batch_size
+            self.seq = self.seq[:new_seq_n]
+
+        self.last_batch_handle = last_batch_handle
+        self.num_image = len(self.seq) if self.seq is not None else None
         self.reset()
 
     def reset(self):
         """Resets the iterator to the beginning of the data."""
-        if self.shuffle:
-            random.shuffle(self.seq)
+        if self.last_batch_handle == 'roll_over' and \
+            self.seq and \
+            self.cur > self.num_image:
+            assert self.num_image is not None, 'imgrec without shuffle is not supported'
+            self.cur = (self.cur % self.num_image) % self.batch_size
+        elif self.last_batch_handle == 'roll_over' and \
+                self.is_iterated_over:
+                
+            if self._imgrec is not None:
+                self.imgrec = self._imgrec
+            self.is_iterated_over = False
+        else:
+            self.cur = 0
+            self.is_iterated_over = False
+            if self.imgrec is not None:
+                self.imgrec.reset()
+
+    def hard_reset(self):
+        """Resets the iterator and ignore roll over data"""
         if self.imgrec is not None:
             self.imgrec.reset()
         self.cur = 0
+        self.is_iterated_over = False
 
-    def next_sample(self):
+    def next_sample(self, imgrec=None):
         """Helper function for reading in next sample."""
         if self.seq is not None:
-            if self.cur >= len(self.seq):
+            if self.cur < self.num_image:
+                idx = self.seq[self.cur]
+            elif self.num_image % self.batch_size != 0 and \
+                self.cur < self.batch_size * ((self.num_image // self.batch_size) + 1):
+                idx = self.seq[self.cur % self.num_image]
+            else:
                 raise StopIteration
-            idx = self.seq[self.cur]
             self.cur += 1
             if self.imgrec is not None:
                 s = self.imgrec.read_idx(idx)
@@ -1177,22 +1216,20 @@ class ImageIter(io.DataIter):
                 label, fname = self.imglist[idx]
                 return label, self.read_image(fname)
         else:
-            s = self.imgrec.read()
+            imgrec = imgrec if imgrec is not None else self.imgrec
+            s = imgrec.read()
             if s is None:
-                raise StopIteration
+                self.is_iterated_over = True
+                raise StopIteration   
             header, img = recordio.unpack(s)
             return header.label, img
 
-    def next(self):
-        """Returns the next batch of data."""
+    def iterate(self, batch_data, batch_label, start=0, imgrec=None):
+        i = start
         batch_size = self.batch_size
-        c, h, w = self.data_shape
-        batch_data = nd.empty((batch_size, c, h, w))
-        batch_label = nd.empty(self.provide_label[0][1])
-        i = 0
         try:
             while i < batch_size:
-                label, s = self.next_sample()
+                label, s = self.next_sample(imgrec)
                 data = self.imdecode(s)
                 try:
                     self.check_valid_image(data)
@@ -1207,8 +1244,31 @@ class ImageIter(io.DataIter):
         except StopIteration:
             if not i:
                 raise StopIteration
+        return i
 
-        return io.DataBatch([batch_data], [batch_label], batch_size - i)
+    def next(self):
+        """Returns the next batch of data."""
+        batch_size = self.batch_size
+        c, h, w = self.data_shape
+        batch_data = nd.empty((batch_size, c, h, w))
+        batch_label = nd.empty(self.provide_label[0][1])
+        index = 0
+        i = self.iterate(batch_data, batch_label)
+
+        # handle padding for sequential read
+        if self.seq is None:
+            pad = batch_size - i
+            #  pad the last batch by creating a new MXRecordIO
+            self._imgrec = recordio.MXRecordIO(self.path_imgrec, 'r')
+            if pad != 0:
+                _ = self.iterate(batch_data, batch_label, i, self._imgrec)
+            
+            if self.last_batch_handle != 'roll_over':
+                self._imgrec.close()
+        else:
+            pad = self.getpad()
+
+        return io.DataBatch([batch_data], [batch_label], pad=pad)
 
     def check_data_shape(self, data_shape):
         """Checks if the input data shape is valid"""
@@ -1228,9 +1288,9 @@ class ImageIter(io.DataIter):
         def locate():
             """Locate the image file/index if decode fails."""
             if self.seq is not None:
-                idx = self.seq[self.cur - 1]
+                idx = self.seq[(self.cur % self.num_image) - 1]
             else:
-                idx = self.cur - 1
+                idx = (self.cur % self.num_image) - 1
             if self.imglist is not None:
                 _, fname = self.imglist[idx]
                 msg = "filename: {}".format(fname)
@@ -1263,3 +1323,11 @@ class ImageIter(io.DataIter):
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
         return nd.transpose(datum, axes=(2, 0, 1))
+
+    def getpad(self):
+        if self.last_batch_handle == 'pad' and \
+           hasattr(self, 'num_image') and \
+           self.cur >= self.num_image:
+            return self.cur - self.num_image
+        else:
+            return 0
