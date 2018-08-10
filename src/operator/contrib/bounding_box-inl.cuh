@@ -45,9 +45,9 @@ struct valid_score {
 
 template<typename DType>
 int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores,
-                 mshadow::Tensor<gpu, 1, double> out_sorted_index,
+                 mshadow::Tensor<gpu, 1, int32_t> out_sorted_index,
                  mshadow::Tensor<gpu, 1, DType> scores,
-                 mshadow::Tensor<gpu, 1, double> sorted_index,
+                 mshadow::Tensor<gpu, 1, int32_t> sorted_index,
                  float valid_thresh) {
   valid_score<DType> pred(static_cast<DType>(valid_thresh));
   DType * end_scores = thrust::copy_if(thrust::device, scores.dptr_, scores.dptr_ + scores.MSize(),
