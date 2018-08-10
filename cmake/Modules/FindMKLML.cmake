@@ -72,7 +72,7 @@ if(WIN32)
 elseif(APPLE)
   list(APPEND MKLML_LIBS mklml)
 else()
-  list(APPEND MKLML_LIBS mklml_gnu)
+  list(APPEND MKLML_LIBS mklml_intel)
 endif()
 
 foreach(__lib ${MKLML_LIBS})
