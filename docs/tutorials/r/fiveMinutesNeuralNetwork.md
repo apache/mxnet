@@ -19,9 +19,7 @@ This tutorial is designed for new users of the `mxnet` package for R. It shows h
  ```
 
  ```r
-    if (!require(mxnet)) {
-      install.packages('mlbench')
-    }
+    require(mxnet)
  ```
 
  ```
