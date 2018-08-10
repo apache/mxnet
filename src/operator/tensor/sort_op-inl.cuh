@@ -25,7 +25,6 @@
 #ifndef MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_SORT_OP_INL_CUH_
 #include <type_traits>
-#include <iterator>
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #if defined(_MSC_VER) && __CUDACC_VER_MAJOR__ == 8 && __CUDACC_VER_BUILD__ != 44
@@ -114,16 +113,14 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     // No workspace, sort using thrust
     thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
     thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
-    auto key_iter_end = key_iter;
-    std::advance(key_iter_end, keys.size(0));
     if (is_ascend) {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter_end, value_iter, thrust::less<KDType>());
+        key_iter, key_iter + keys.size(0), value_iter, thrust::less<KDType>());
     } else {
       thrust::stable_sort_by_key(
         thrust::cuda::par.on(stream),
-        key_iter, key_iter_end, value_iter, thrust::greater<KDType>());
+        key_iter, key_iter + keys.size(0), value_iter, thrust::greater<KDType>());
     }
 #ifndef SORT_WITH_THRUST
   }
@@ -135,30 +132,27 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
 }
 
 // half_t is not supported by cub, use thrust instead
-template<typename KDType, typename VDType>
-inline typename std::enable_if<std::is_same<KDType,mshadow::half::half_t>::value, void>::type
-SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
-              mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
-              mshadow::Tensor<gpu, 1, char>* workspace,
-              const int begin_bit, const int end_bit) {
+template<typename VDType>
+inline void SortByKeyImpl(mshadow::Tensor<gpu, 1, mshadow::half::half_t> keys,
+                          mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
+                          mshadow::Tensor<gpu, 1, char>* workspace,
+                          const int begin_bit, const int end_bit) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
 #if CUDA_VERSION >= 7000
   // use thrust for half_t type keys
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
   // No workspace, sort using thrust
-  thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
+  thrust::device_ptr<mshadow::half::half_t> key_iter = thrust::device_pointer_cast(keys.dptr_);
   thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
-  auto key_iter_end = key_iter;
-  std::advance(key_iter_end, keys.size(0));
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter_end, value_iter, thrust::less<KDType>());
+      key_iter, key_iter + keys.size(0), value_iter, thrust::less<mshadow::half::half_t>());
   } else {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
-      key_iter, key_iter_end, value_iter, thrust::greater<KDType>());
+      key_iter, key_iter + keys.size(0), value_iter, thrust::greater<mshadow::half::half_t>());
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else
