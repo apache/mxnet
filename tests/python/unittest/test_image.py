@@ -225,7 +225,7 @@ class TestImage(unittest.TestCase):
         det_iter = val_iter.sync_label_shape(det_iter)
 
         # test file list
-        fname = './data/test_imageiter.lst'
+        fname = './data/test_imagedetiter.lst'
         im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(TestImage.IMAGES)]
         with open(fname, 'w') as f:
             for line in im_list:
