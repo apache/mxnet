@@ -374,28 +374,21 @@ class TBlob {
     switch (dldata_type.code) {
       case kDLFloat:
         switch (dldata_type.bits) {
-          case 16:
-            return mshadow::kFloat16;
-          case 32:
-            return mshadow::kFloat32;
-          case 64:
-            return mshadow::kFloat64;
+          case 16: return mshadow::kFloat16;
+          case 32: return mshadow::kFloat32;
+          case 64: return mshadow::kFloat64;
         }
         break;
       case kDLUInt:
         switch (dldata_type.bits) {
-          case 8:
-            return mshadow::kUint8;
+          case 8: return mshadow::kUint8;
         }
         break;
       case kDLInt:
         switch (dldata_type.bits) {
-          case 8:
-            return mshadow::kInt8;
-          case 32:
-            return mshadow::kInt32;
-          case 64:
-            return mshadow::kInt64;
+          case 8: return mshadow::kInt8;
+          case 32: return mshadow::kInt32;
+          case 64: return mshadow::kInt64;
         }
         break;
     }

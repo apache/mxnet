@@ -95,8 +95,6 @@ typedef void *CudaKernelHandle;
 typedef void *ProfileHandle;
 /*! \brief handle to DLManagedTensor*/
 typedef void *DLManagedTensorHandle;
-/*! \brief handle to PyObject*/
-typedef void *PyObjectHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
