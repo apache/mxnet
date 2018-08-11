@@ -199,7 +199,7 @@ inline bool ThreadedVar::ready_to_read() {
   return this->is_ready_to_read();
 }
 
-inline uint32_t ThreadedVar::version() {
+inline size_t ThreadedVar::version() {
   std::lock_guard<std::mutex> lock{mutex_};
   return this->version_;
 }

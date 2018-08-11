@@ -43,7 +43,7 @@ class Engine;
 namespace engine {
 /*! \brief base class of engine variables.*/
 struct Var {
-  virtual uint32_t version() {
+  virtual size_t version() {
     return version_;
   }
   virtual ~Var() = default;
@@ -58,7 +58,7 @@ struct Var {
    * \brief version number of the var. Every time the object it is associated with
    * is modified, the version number is incremented by 1.
    */
-  uint32_t version_{0};
+  size_t version_{0};
 };  // struct Var
 
 /*! \brief Internal representation of operator.  */

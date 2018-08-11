@@ -86,10 +86,6 @@ class NaiveEngine final : public Engine {
   // new variables
   VarHandle NewVariable() override {
     return NaiveVar::New();
-#if 0
-    size_t v = ++counter_;
-    return reinterpret_cast<VarHandle>(v);
-#endif
   }
 
   OprHandle NewOperator(AsyncFn fn,
