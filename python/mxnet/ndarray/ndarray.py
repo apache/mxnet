@@ -3906,7 +3906,7 @@ def _dlpack_deleter(pycapsule):
     pycapsule = ctypes.c_void_p(pycapsule)
     if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
         ptr = ctypes.c_void_p(
-                ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
+            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
         check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
 
 _c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
