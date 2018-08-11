@@ -62,7 +62,7 @@ def test_predictor():
     predictor.reshape({'data':input2.shape})
     predictor.forward(data=input2)
     predictor_out2 = predictor.get_output(0)
-    assert_almost_equal(out2.asnumpy(), predictor_out2)
+    assert_almost_equal(out2.asnumpy(), predictor_out2, rtol=1e-5, atol=1e-6)
 
     # destroy the predictor
     del predictor
@@ -79,7 +79,7 @@ def test_load_ndarray():
     nd_load = load_ndarray_file(open(nd_file, "rb").read())
     assert(set(nd_data.keys()) == set(nd_load.keys()))
     for k in nd_data.keys():
-        assert_almost_equal(nd_data[k].asnumpy(), nd_load[k])
+        assert_almost_equal(nd_data[k].asnumpy(), nd_load[k], rtol=1e-5, atol=1e-6)
 
 
 if __name__ == '__main__':
