@@ -166,6 +166,25 @@ MXNET_DLL int MXPredSetInput(PredictorHandle handle,
                              const char* key,
                              const mx_float* data,
                              mx_uint size);
+
+/*!
+ * \brief MXPredSetInputGPU
+ * \param handle The predictor handle.
+ * \param key The name of input node to set. For feedforward net, this is "data".
+ * \param gpu_data pointer to GPU data, must in IEEE float format.
+ * \param size The size of data array, with float as element, used for safety check.
+ * \param dev_id the device id @em gpu_data sits at.
+ * \return 0 when success, -1 when failure.
+ * This function will save the data on @em gpu_data as a copy.
+ * It's better to alloc the @em gpu_data on the same device as specified in @em MXPredCreate.
+ */
+MXNET_DLL int MXPredSetInputGPU(PredictorHandle handle,
+                                const char* key,
+                                const mx_float *gpu_data,
+                                mx_uint size,
+                                int dev_id);
+
+
 /*!
  * \brief Run a forward pass to get the output.
  * \param handle The handle of the predictor.
