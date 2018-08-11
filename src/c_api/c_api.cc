@@ -527,30 +527,6 @@ int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack) {
   API_END();
 }
 
-
-typedef struct {
-    char py_object[16];
-    void *pointer;
-    const char *name;
-    void *context;
-    void (*destructor)(void *);
-} FakePyCapsule;
-
-void* PyCapsule_GetPointer(PyObjectHandle o, const char *name) {
-  FakePyCapsule *p_capsule = static_cast<FakePyCapsule*>(o);
-  if (p_capsule == nullptr || p_capsule->pointer == nullptr) {
-    LOG(FATAL) << "PyCapsule_GetPointer called with invalid PyCapsule";
-  }
-  if (strncmp(p_capsule->name, name, strlen(name)) != 0) {
-    return nullptr;
-  }
-  return p_capsule->pointer;
-}
-
-void MXNDArrayCallDLPackCapsuleDeleter(PyObjectHandle dlpack_capsule) {
-  MXNDArrayCallDLPackDeleter(PyCapsule_GetPointer(dlpack_capsule, "dltensor"));
-}
-
 int MXNDArrayGetDType(NDArrayHandle handle,
                      int *out_dtype) {
   API_BEGIN();

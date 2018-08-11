@@ -785,13 +785,6 @@ MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
 MXNET_DLL int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack);
 
 /*!
- * \brief Delete a dlpack tensor
- * \param dlpack_capsule the pointer of a PyCapsule storing DLManagedTensor
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL void MXNDArrayCallDLPackCapsuleDeleter(PyObjectHandle dlpack_capsule);
-
-/*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
  * \param out_dtype pointer holder to get type of data

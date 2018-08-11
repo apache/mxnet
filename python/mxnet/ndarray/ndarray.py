@@ -34,7 +34,7 @@ import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
+from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
 from ..base import ctypes2buffer
 from ..context import Context, current_context
@@ -3899,8 +3899,16 @@ def histogram(a, bins=10, range=None):
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
 
-pycapsule_dlpack_deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(
-    _LIB.MXNDArrayCallDLPackCapsuleDeleter)
+PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+_c_str_dltensor = c_str('dltensor')
+
+def _dlpack_deleter(pycapsule):
+    pycapsule = ctypes.c_void_p(pycapsule)
+    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
+        ptr = ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor)
+        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
+
+_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
 
 def to_dlpack_for_read(data):
     """Returns a reference view of NDArray that represents as DLManagedTensor until
@@ -3931,7 +3939,7 @@ def to_dlpack_for_read(data):
     data.wait_to_read()
     dlpack = DLPackHandle()
     check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
+    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
 
 def to_dlpack_for_write(data):
     """Returns a reference view of NDArray that represents as DLManagedTensor until
@@ -3963,7 +3971,7 @@ def to_dlpack_for_write(data):
     check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
     dlpack = DLPackHandle()
     check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, b'dltensor', pycapsule_dlpack_deleter)
+    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
 
 def from_dlpack(dlpack):
     """Returns a NDArray backed by a dlpack tensor.
@@ -4003,12 +4011,14 @@ def from_dlpack(dlpack):
     <NDArray 2x3 @cpu(0)>
     """
     handle = NDArrayHandle()
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, b'dltensor'))
+    dlpack = ctypes.py_object(dlpack)
+    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
     assert dlpack_handle.value != 0, ValueError(
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    # delete the deleter of the old dlpack
+    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
     # copy dlpack
     dlpack_copy = ctypes.pythonapi.PyCapsule_New(
-        dlpack_handle, b'dltensor', pycapsule_dlpack_deleter)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, b'used_dltensor')
+        dlpack_handle, _c_str_dltensor, _c_dlpack_deleter)
     return NDArray(handle=handle, dlpack=dlpack_copy)
