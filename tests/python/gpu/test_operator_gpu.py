@@ -127,7 +127,7 @@ def check_ifft(shape):
             init_complex.real[:,i] = init[0][:,2*i]
             init_complex.imag[:,i] = init[0][:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
@@ -135,7 +135,7 @@ def check_ifft(shape):
             init_complex.real[:,:,:,i] = init[0][:,:,:,2*i]
             init_complex.imag[:,:,:,i] = init[0][:,:,:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[3],rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, out1[0]/shape_old[3],rtol=1e-3, atol=1e-5)
     # backward
     if len(shape) == 2:
         out_grad = mx.nd.empty(shape_old)
@@ -148,7 +148,7 @@ def check_ifft(shape):
                 temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
 
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
     if len(shape) == 4:
         out_grad = mx.nd.empty(shape_old)
         out_grad[:] = np.random.normal(-3, 3, shape_old)
@@ -160,9 +160,9 @@ def check_ifft(shape):
                 temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
 
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
 
-@with_seed(0)
+@with_seed()
 def test_ifft():
     nrepeat = 2
     maxdim = 10
@@ -194,7 +194,7 @@ def check_fft(shape):
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
-    #forward
+    # forward
     for exe in exe_list:
         exe.forward(is_train=True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
@@ -221,7 +221,7 @@ def check_fft(shape):
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
 
-    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
+    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-5)
 
     # backward
     if len(shape) == 2:
@@ -235,7 +235,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
@@ -248,9 +248,9 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-5)
 
-@with_seed(0)
+@with_seed()
 def test_fft():
     nrepeat = 2
     maxdim = 10
@@ -1445,7 +1445,7 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 
-@with_seed(1234)
+@with_seed()
 def test_psroipooling_with_type():
     arg_params = {
         'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}

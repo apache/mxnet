@@ -28,7 +28,7 @@ import logging
 import sys
 from base import Base
 from atari_game import AtariGame
-from utils import *
+from utils import get_numpy_rng
 from operators import *
 
 root = logging.getLogger()
