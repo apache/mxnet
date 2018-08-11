@@ -411,12 +411,7 @@ GpuCTC<ProbT>::compute_log_probs(const ProbT* const activations) {
         denoms_, out_dim_, num_elements);
 
     // compute denominators for softmax
-    denoms_handle = reduce_with_axis<red::sum, false>(
-        F<mxnet::op::mshadow_op::exp>(
-            log_probs_handle -
-            broadcast<0>(reduce_with_axis<red::maximum, false>(log_probs_handle, 1),
-                         log_probs_handle.shape_)),
-        1);
+    denoms_handle = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::exp>(log_probs_handle), 1);
 
     // Kernel launch to calculate probabilities
     compute_log_probs_kernel<ProbT, VT><<<grid_size, NT, 0, stream_>>>

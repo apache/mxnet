@@ -30,8 +30,7 @@ from . import _constants as C
 from ...data import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
 from ....contrib import text
-from .... import nd
-
+from .... import nd, base
 
 class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
     def __init__(self, root, namespace, vocabulary):
@@ -116,7 +115,7 @@ class WikiText2(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/wikitext-2'
+    root : str, default $MXNET_HOME/datasets/wikitext-2
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -127,7 +126,7 @@ class WikiText2(_WikiText):
         The sequence length of each sample, regardless of the sentence boundary.
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-2'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'wikitext-2'),
                  segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-2-v1.zip', '3c914d17d80b1459be871a5039ac23e752a53cbe')
         self._data_file = {'train': ('wiki.train.tokens',
@@ -154,7 +153,7 @@ class WikiText103(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/wikitext-103'
+    root : str, default $MXNET_HOME/datasets/wikitext-103
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -164,7 +163,7 @@ class WikiText103(_WikiText):
     seq_len : int, default 35
         The sequence length of each sample, regardless of the sentence boundary.
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-103'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'wikitext-103'),
                  segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-103-v1.zip', '0aec09a7537b58d4bb65362fee27650eeaba625a')
         self._data_file = {'train': ('wiki.train.tokens',

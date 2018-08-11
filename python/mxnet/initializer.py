@@ -697,7 +697,7 @@ class FusedRNN(Initializer):
     def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
         if isinstance(init, string_types):
             klass, kwargs = json.loads(init)
-            init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
+            init = registry._REGISTRY[klass.lower()](**kwargs)
         super(FusedRNN, self).__init__(init=init.dumps() if init is not None else None,
                                        num_hidden=num_hidden, num_layers=num_layers, mode=mode,
                                        bidirectional=bidirectional, forget_bias=forget_bias)

@@ -515,12 +515,11 @@ def test_reduce():
 def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
-        for i in range(sample_num):
+        for _ in range(sample_num):
             ndim = np.random.randint(1, 6)
             target_shape = np.random.randint(1, 11, size=ndim)
             shape = target_shape.copy()
             axis_flags = np.random.randint(0, 2, size=ndim)
-            axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
                     shape[axis] = 1
@@ -532,7 +531,28 @@ def test_broadcast():
             assert (ndarray_ret.shape == target_shape).all()
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
+
+    def test_broadcast_like():
+        for _ in range(sample_num):
+            ndim = np.random.randint(1, 6)
+            target_shape = np.random.randint(1, 11, size=ndim)
+            target = mx.nd.ones(shape=tuple(target_shape))
+            shape = target_shape.copy()
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    shape[axis] = 1
+            dat = np.random.rand(*shape) - 0.5
+            numpy_ret = dat
+            ndarray_ret = mx.nd.array(dat).broadcast_like(target)
+            if type(ndarray_ret) is mx.ndarray.NDArray:
+                ndarray_ret = ndarray_ret.asnumpy()
+            assert (ndarray_ret.shape == target_shape).all()
+            err = np.square(ndarray_ret - numpy_ret).mean()
+            assert err < 1E-8
+
     test_broadcast_to()
+    test_broadcast_like()
 
 
 @with_seed()
@@ -842,7 +862,7 @@ def test_iter():
     for i in range(x.size):
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/8049")
+@with_seed()
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
@@ -1288,25 +1308,31 @@ def test_norm(ctx=default_context()):
 
     def l1norm(input_data, axis=0, keepdims=False):
         return np.sum(abs(input_data), axis=axis, keepdims=keepdims)
-    def l2norm(input_data, axis=0, keepdims=False): 
+    def l2norm(input_data, axis=0, keepdims=False):
         return sp_norm(input_data, axis=axis, keepdims=keepdims)
 
     in_data_dim = random_sample([4,5,6], 1)[0]
-    in_data_shape = rand_shape_nd(in_data_dim)
-    np_arr = np.random.uniform(-1, 1, in_data_shape).astype(np.float32)
-    mx_arr = mx.nd.array(np_arr, ctx=ctx)
-    for ord in [1,2]:
-        for keep_dims in [True, False]:
-            for i in range(4):
-                npy_out = l1norm(np_arr, i, keep_dims) if ord==1 else l2norm(np_arr, i, keep_dims)
-                mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
-                assert npy_out.shape == mx_out.shape
-                mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
-                if (i < 3):
-                    npy_out = l1norm(np_arr, (i, i+1), keep_dims) if ord==1 else l2norm(np_arr, (i, i+1), keep_dims)
-                    mx_out = mx.nd.norm(mx_arr, ord=ord, axis=(i, i+1), keepdims=keep_dims)
+    for force_reduce_dim1 in [True, False]:
+        in_data_shape = rand_shape_nd(in_data_dim)
+        if force_reduce_dim1:
+            in_data_shape = in_data_shape[:3] + (1, ) + in_data_shape[4:]
+        np_arr = np.random.uniform(-1, 1, in_data_shape).astype(np.float32)
+        mx_arr = mx.nd.array(np_arr, ctx=ctx)
+        for ord in [1, 2]:
+            for keep_dims in [True, False]:
+                for i in range(4):
+                    npy_out = l1norm(np_arr, i, keep_dims) if ord == 1 else l2norm(
+                        np_arr, i, keep_dims)
+                    mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
                     assert npy_out.shape == mx_out.shape
                     mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+                    if (i < 3):
+                        npy_out = l1norm(np_arr, (i, i + 1), keep_dims) if ord == 1 else l2norm(
+                            np_arr, (i, i + 1), keep_dims)
+                        mx_out = mx.nd.norm(mx_arr, ord=ord, axis=(i, i + 1), keepdims=keep_dims)
+                        assert npy_out.shape == mx_out.shape
+                        mx.test_utils.assert_almost_equal(npy_out, mx_out.asnumpy())
+
 
 @with_seed()
 def test_ndarray_cpu_shared_ctx():

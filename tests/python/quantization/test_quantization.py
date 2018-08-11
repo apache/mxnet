@@ -21,7 +21,7 @@ Ref: http://images.nvidia.com/content/pdf/tesla/184457-Tesla-P4-Datasheet-NV-Fin
 import os
 import mxnet as mx
 import numpy as np
-from mxnet.test_utils import assert_almost_equal, rand_ndarray, rand_shape_nd, same, DummyIter
+from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
 from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
@@ -57,7 +57,7 @@ def test_quantize_float32_to_int8():
     assert same(min_val.asscalar(), -real_range)
     assert same(max_val.asscalar(), real_range)
     qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
-    assert same(qdata.asnumpy(), qdata_np)
+    assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
 
 
 @with_seed()
@@ -120,7 +120,7 @@ def test_requantize_int32_to_int8():
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,
                                                                           max_calib_range=max_calib_range)
-        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
 
@@ -463,6 +463,7 @@ def test_quantize_model():
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
 
+
 @with_seed()
 def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
@@ -486,7 +487,28 @@ def test_quantize_sym_with_calib():
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11456")
+def test_smooth_distribution():
+    assert_exception(lambda: mx.contrib.quant._smooth_distribution(np.zeros((2,)), eps=1e-3), ValueError)
+    dirac_delta = np.zeros((5,))
+    dirac_delta[2] = 1
+    smooth_dirac_delta = dirac_delta.copy()
+    smooth_dirac_delta += 1e-3
+    smooth_dirac_delta[2] -= 5e-3
+    assert_almost_equal(mx.contrib.quant._smooth_distribution(dirac_delta, eps=1e-3), smooth_dirac_delta)
+
+
+@with_seed()
+def test_optimal_threshold_adversarial_case():
+    # The worst case for the optimal_threshold function is when the values are concentrated
+    # at one edge: [0, 0, ..., 1000]. (histogram)
+    # We want to make sure that the optimal threshold in this case is the max.
+    arr = np.array([2]*1000)
+    res = mx.contrib.quant._get_optimal_threshold(arr, num_quantized_bins=5)
+    # The threshold should be 2.
+    assert res[3] - 2 < 1e-5
+
+
+@with_seed()
 def test_get_optimal_thresholds():
     # Given an ndarray with elements following a uniform distribution, the optimal threshold
     # for quantizing the ndarray should be either abs(min(nd)) or abs(max(nd)).
@@ -495,11 +517,11 @@ def test_get_optimal_thresholds():
         max_nd = mx.nd.max(nd)
         return mx.nd.maximum(mx.nd.abs(min_nd), mx.nd.abs(max_nd)).asnumpy()
 
-    nd_dict = {'layer1': mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23))}
+    nd_dict = {'layer1': mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23), dtype=np.float64)}
     expected_threshold = get_threshold(nd_dict['layer1'])
     th_dict = mx.contrib.quant._get_optimal_thresholds(nd_dict)
     assert 'layer1' in th_dict
-    assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=0.001, atol=0.001)
+    assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
 
 if __name__ == "__main__":

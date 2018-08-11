@@ -110,20 +110,21 @@ __global__ void BilinearSamplingBackwardKernel(const int i_c, const int i_h,
       DType bottom_right_v = 0;
       // calc input grad
       if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
+        atomicAdd((g_input + data_index), *(grad + grad_index) * top_left_y_w * top_left_x_w);
         top_left_v = *(data + data_index);
       }
       if (between(top_left_x+1, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w * (1.0 - top_left_x_w);
+        atomicAdd((g_input + data_index + 1),
+                  *(grad + grad_index) * top_left_y_w * (1.0 - top_left_x_w));
         top_right_v = *(data + data_index + 1);
       }
       if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w) * top_left_x_w;
-        bottom_left_v = *(data + data_index + i_w);
+        atomicAdd((g_input + data_index + i_w),
+                  *(grad + grad_index) * (1.0 - top_left_y_w) * top_left_x_w);
       }
       if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w) *
-                                            (1.0 - top_left_x_w);
+        atomicAdd((g_input + data_index + i_w + 1),
+                  *(grad + grad_index) * (1.0 - top_left_y_w) * (1.0 - top_left_x_w));
         bottom_right_v = *(data + data_index + i_w + 1);
       }
       // calc weight grad of top_left_w, then multiple -1 is the grad of grid_src
@@ -157,6 +158,7 @@ inline void BilinearSamplingForward(const Tensor<gpu, 4, DType> &output,
     cudaStream_t stream = Stream<gpu>::GetStream(output.stream_);
     BilinearSamplingForwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
       i_c, i_h, i_w, data, grid, o_n, o_c, o_h, o_w, out);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(BilinearSamplingForwardKernel);
 }
 
 template<typename DType>
@@ -180,6 +182,7 @@ inline void BilinearSamplingBackward(const Tensor<gpu, 4, DType> &input_grad,
   cudaStream_t stream = Stream<gpu>::GetStream(input_grad.stream_);
   BilinearSamplingBackwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
     i_c, i_h, i_w, grad, data, o_n, o_c, o_h, o_w, g_input, grid_src);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(BilinearSamplingBackwardKernel);
 }
 
 }  // namespace mshadow

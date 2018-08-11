@@ -1,4 +1,4 @@
-var versionSelect   = defaultVersion = 'v1.2.0';
+var versionSelect   = defaultVersion = 'v1.2.1';
 var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';

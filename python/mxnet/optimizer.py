@@ -24,7 +24,7 @@ import pickle
 import warnings
 import numpy
 from .base import py_str
-from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs)
+from .ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from .ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                       mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
                       signsgd_update, signum_update)
@@ -449,7 +449,7 @@ class SGD(Optimizer):
     **lazy updates** are applied by::
 
         for row in grad.indices:
-            rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
+            rescaled_grad[row] = lr * (rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row])
             state[row] = momentum[row] * state[row] + rescaled_grad[row]
             weight[row] = weight[row] - state[row]
 
@@ -462,7 +462,7 @@ class SGD(Optimizer):
 
     Otherwise, **standard updates** are applied by::
 
-        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        rescaled_grad = lr * (rescale_grad * clip(grad, clip_gradient) + wd * weight)
         state = momentum * state + rescaled_grad
         weight = weight - state
 
@@ -615,6 +615,14 @@ class FTML(Optimizer):
     This class implements the optimizer described in
     *FTML - Follow the Moving Leader in Deep Learning*,
     available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
+
+    Denote time step by t. The optimizer updates the weight by::
+
+        rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        v = beta2 * v + (1 - beta2) * square(rescaled_grad)
+        d_t = (1 - power(beta1, t)) / lr * square_root(v / (1 - power(beta2, t))) + epsilon)
+        z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
+        weight = - z / d_t
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -1080,6 +1088,13 @@ class AdaGrad(Optimizer):
     Methods for Online Learning and Stochastic Optimization*, and available at
     http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
+    This optimizer updates each weight by::
+
+        grad = clip(grad * rescale_grad, clip_gradient)
+        history += square(grad)
+        div = grad / sqrt(history + float_stable_eps)
+        weight += (div + weight * wd) * -lr
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
@@ -1207,6 +1222,14 @@ class AdaDelta(Optimizer):
     This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
     learning rate method*, available at https://arxiv.org/abs/1212.5701.
 
+    This optimizer updates each weight by::
+
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        acc_grad = rho * acc_grad + (1. - rho) * grad * grad
+        delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+        acc_delta = rho * acc_delta + (1. - rho) * delta * delta
+        weight -= (delta + wd * weight)
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
@@ -1332,6 +1355,13 @@ class Adamax(Optimizer):
 
     It is a variant of Adam based on the infinity norm
     available at http://arxiv.org/abs/1412.6980 Section 7.
+
+    The optimizer updates the weight by::
+
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        m = beta1 * m_t + (1 - beta1) * grad
+        u = maximum(beta2 * u, abs(grad))
+        weight -= lr / (1 - beta1**t) * m / u
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.

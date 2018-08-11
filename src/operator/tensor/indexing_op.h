@@ -44,6 +44,10 @@
 #include "./sort_op.h"
 #include "./init_op.h"
 #include "../../engine/openmp.h"
+#include "../../common/utils.h"
+#ifdef __CUDACC__
+#include "./indexing_op-inl.cuh"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -135,22 +139,6 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
     dst[sorted[y]] += src[index[y]];
   }
 }
-/*!
- * \brief CPU/GPU: Gradient accumulate of embedding matrix.
-                   dst[sorted[i]] += src[index[i]]
-                   Called when the batchsize of src is larger than the featuredim
- * \param dst destination
- * \param sorted the sorted indices
- * \param index original index of the sorted indices
- * \param src source output
- * \param workspace (optional) temporary storage
- */
-template<typename IndexType, typename DType>
-inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
-                                  const mshadow::Tensor<gpu, 1, IndexType>& sorted,
-                                  const mshadow::Tensor<gpu, 1, IndexType>& index,
-                                  const mshadow::Tensor<gpu, 2, DType> &src,
-                                  mshadow::Tensor<gpu, 1, char>* workspace = NULL);
 template<typename ParamType>
 inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
@@ -311,6 +299,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
 /*! \brief name the struct Take instead of take
  * to avoid conflict with the take function in mshadow
  */
+template<bool clip = true>
 struct Take {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
@@ -321,9 +310,52 @@ struct Take {
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
                                   const IType* idx, const int M, const int K) {
     int j = static_cast<int>(idx[i/M]);
-    if (j <= 0) j = 0;
-    else if (j >= K) j = K - 1;
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j = j % K;
+      j += (j < 0) ? K : 0;
+    }
     out_data[i] = in_data[j * M + i % M];
+  }
+
+  /*!
+   * \brief Map function for take operator
+   * \param i           global thread id
+   * \param out_data    ptr to output buffer
+   * \param in_data     ptr to input buffer
+   * \param idx         ptr to indices buffer
+   * \param in_ndims    # of dims of input tensor
+   * \param out_ndims   # of dims of output tensor
+   * \param idx_ndims   # of dims of indices tensor
+   * \param axis_dim    dim size of the axis dimension
+   * \param axis        axis id
+   */
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const IType* idx,
+                                  const mshadow::Shape<10> in_stride,
+                                  const mshadow::Shape<10> out_stride,
+                                  const int in_ndims, const int out_ndims, const int idx_ndims,
+                                  const int axis_dim, const int axis) {
+    // i is the global flattened index in the output
+    const int out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
+    const int out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
+    const int out_mid_index = out_rest_index / in_stride[axis];
+    const int out_tail_index = (axis == in_ndims - 1) ?
+                               0 : (out_rest_index % in_stride[axis]);
+    int idx_index = static_cast<int>(idx[out_mid_index]);
+    if (clip) {
+      idx_index = (idx_index < 0) ? 0 : idx_index;
+      idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
+    }
+    idx_index %= axis_dim;
+    idx_index += (idx_index < 0) ? axis_dim : 0;
+    const int in_tail_index = out_tail_index;
+    const int in_head_index = out_head_index;
+    int in_src_index = in_tail_index + idx_index * in_stride[axis];
+    in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
+    out_data[i] = in_data[in_src_index];
   }
 };
 
@@ -345,7 +377,7 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
       Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<Take, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+      Kernel<Take<true>, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
                                 idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
     });
   });
@@ -497,13 +529,6 @@ void SparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   }
 }
 
-// Returns integer log2(a) rounded up
-inline int ilog2(unsigned int a) {
-  int k = 1;
-  while (a >>= 1) k++;
-  return k;
-}
-
 /*! \brief cast to type and clip to range [0, K - 1]
  */
 struct tcast_clip {
@@ -516,46 +541,6 @@ struct tcast_clip {
     out_data[i] = j;
   }
 };
-
-template<typename xpu, typename IndexType, typename DType>
-void AddTakeGradLargeBatchCaller(const OpContext& ctx, mshadow::Tensor<xpu, 2, DType> dst,
-                                 const mshadow::Tensor<xpu, 1, IndexType>& index,
-                                 const mshadow::Tensor<xpu, 2, DType> &src) {
-  using namespace mxnet_op;
-  using namespace mshadow::expr;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  // Calculate amount of temporary storage
-  size_t sort_workspace_size = mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>
-    (index.shape_.Size());
-  size_t addtake_workspace_size = mxnet::op::AddTakeGradLargeBatchWorkspaceSize<int, xpu>
-    (index.shape_.Size());
-  size_t temp_storage_size = std::max(sort_workspace_size, addtake_workspace_size);
-  size_t workspace_size = 2*(index.shape_.Size()*sizeof(int)) + temp_storage_size;
-
-  // Request temporary storage
-  Tensor<xpu, 1, char> workspace =
-    ctx.requested[embedding::kTempSpace].get_space_typed<xpu, 1, char>(
-      Shape1(workspace_size), s);
-
-  // Create tensors
-  size_t pos = 0;
-  Tensor<xpu, 1, int> sorted_data(reinterpret_cast<int*>(&workspace[pos]),
-    Shape1(index.shape_.Size()), s);
-  pos += index.shape_.Size()*sizeof(int);
-  Tensor<xpu, 1, int> original_index(reinterpret_cast<int*>(&workspace[pos]),
-    Shape1(index.shape_.Size()), s);
-  pos += index.shape_.Size()*sizeof(int);
-  Tensor<xpu, 1, char> temp_storage(&workspace[pos], Shape1(temp_storage_size), s);
-  Kernel<tcast_clip, xpu>::Launch(s, index.shape_.Size(), sorted_data.dptr_, index.dptr_,
-    static_cast<int>(dst.shape_[0]));
-  Kernel<range_fwd, xpu>::Launch(s, index.shape_.Size(),
-    1, 0, 1, kWriteTo, original_index.dptr_);
-  int num_bits = ilog2((dst.shape_[0] - 1));
-  mxnet::op::SortByKey(sorted_data, original_index, true, &temp_storage, 0, num_bits);
-  mxnet::op::AddTakeGradLargeBatch(dst, sorted_data, original_index, src, &temp_storage);
-}
 
 template<typename xpu>
 void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
@@ -588,25 +573,7 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
         if (req[embedding::kWeight] == kWriteTo) {
           grad_in = scalar<DType>(0.0f);
         }
-        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
-        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
-        // When the number of elements processed is low, use AddTakeGrad.
-        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-        uint64_t shape_in_prod =
-          static_cast<uint64_t>(grad_in.shape_[0])*
-          static_cast<uint64_t>(grad_in.shape_[1]);
-        uint64_t shape_out_prod =
-          static_cast<uint64_t>(grad_out.shape_[0])*
-          static_cast<uint64_t>(grad_out.shape_[1]);
-
-        static bool force_addtakegrad =
-            dmlc::GetEnv("MXNET_FORCE_ADDTAKEGRAD", false);
-        if (force_addtakegrad || (shape_out_prod < (uint64_t)16384 &&
-                                  shape_in_prod < (uint64_t)16384)) {
-          AddTakeGrad(grad_in, data, grad_out);
-        } else {
-          AddTakeGradLargeBatchCaller(ctx, grad_in, data, grad_out);
-        }
+        AddTakeGrad(grad_in, data, grad_out);
       } else {
         LOG(FATAL) << "wrong req";
       }
@@ -728,53 +695,52 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
   int mode;
   DMLC_DECLARE_PARAMETER(TakeParam) {
     DMLC_DECLARE_FIELD(axis)
-    .set_lower_bound(0)
     .set_default(0)
-    .describe("The axis of input array to be taken.");
+    .describe("The axis of input array to be taken."
+              "For input tensor of rank r, it could be in the range of [-r, r-1]");
     DMLC_DECLARE_FIELD(mode)
     .add_enum("raise", take_::kRaise)
     .add_enum("wrap", take_::kWrap)
     .add_enum("clip", take_::kClip)
     .set_default(take_::kClip)
-    .describe("Specify how out-of-bound indices bahave."
+    .describe("Specify how out-of-bound indices bahave. Default is \"clip\"."
               " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
               " they are replaced by the index that addresses the last element along an axis. "
               " \"wrap\" means to wrap around. "
-              " \"raise\" means to raise an error. ");
+              " \"raise\" means to raise an error, not supported yet.");
   }
 };
-
-template<typename PType>
-inline void TakeParamParser(nnvm::NodeAttrs *attrs) {
-    PType param;
-    param.Init(attrs->dict);
-    if (param.axis != 0) {
-        LOG(FATAL) << "Axis other than 0 currently not supported.";
-    }
-    if (param.mode != take_::kClip) {
-        LOG(FATAL) << "Mode other than clip currently not supported.";
-    }
-}
 
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
                         std::vector<TShape> *in_attrs,
                         std::vector<TShape> *out_attrs) {
-    using namespace mshadow;
-    const TShape &arrshape = (*in_attrs)[take_::kArr];
-    const TShape &idxshape = (*in_attrs)[take_::kIdx];
-    if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  using namespace mshadow;
+  const TShape &arrshape = (*in_attrs)[take_::kArr];
+  const TShape &idxshape = (*in_attrs)[take_::kIdx];
+  if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  if (param.mode == take_::kRaise) {
+    LOG(FATAL) << "Raise is not supported for the time being...";
+  }
+  CHECK(param.axis >= -1 * (int)arrshape.ndim() && param.axis < (int)arrshape.ndim())
+    << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
-    out_attrs->clear();
+  out_attrs->clear();
 
-    TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
-    for (size_t i = 0; i < idxshape.ndim(); ++i) {
-        oshape[i] = idxshape[i];
+  const index_t actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+  TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
+  for (index_t i = 0; i < idxshape.ndim(); ++i) {
+    oshape[i + actual_axis] = idxshape[i];
+  }
+  for (index_t i = 0; i < arrshape.ndim(); i++) {
+    if (i < actual_axis) {
+      oshape[i] = arrshape[i];
+    } else if (i > actual_axis) {
+      oshape[i + idxshape.ndim() - 1] = arrshape[i];
     }
-    for (size_t i = 0; i < arrshape.ndim() - 1; i++) {
-        oshape[i + idxshape.ndim()] = arrshape[i + 1];
-    }
-    out_attrs->push_back(oshape);
-    return true;
+  }
+  out_attrs->push_back(oshape);
+  return true;
 }
 
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
@@ -797,6 +763,7 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (req[take_::kOut] == kNullOp) return;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
@@ -805,16 +772,257 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
   const TShape& oshape = outputs[take_::kOut].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      Kernel<Take, xpu>::Launch(s, oshape.Size(),
-                                outputs[take_::kOut].dptr<DType>(),
-                                inputs[take_::kArr].dptr<DType>(),
-                                inputs[take_::kIdx].dptr<IType>(),
-                                oshape.Size()/idxshape.Size(), arrshape[0]);
+      if (actual_axis == 0) {
+        if (param.mode == take_::kClip) {
+          Kernel<Take<true>, xpu>::Launch(s, oshape.Size(),
+                                          outputs[take_::kOut].dptr<DType>(),
+                                          inputs[take_::kArr].dptr<DType>(),
+                                          inputs[take_::kIdx].dptr<IType>(),
+                                          oshape.Size()/idxshape.Size(), arrshape[0]);
+        } else {
+          Kernel<Take<false>, xpu>::Launch(s, oshape.Size(),
+                                           outputs[take_::kOut].dptr<DType>(),
+                                           inputs[take_::kArr].dptr<DType>(),
+                                           inputs[take_::kIdx].dptr<IType>(),
+                                           oshape.Size()/idxshape.Size(), arrshape[0]);
+        }
+      } else {
+        mshadow::Shape<10> in_strides;
+        int stride = 1;
+        for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
+          in_strides[i] = stride;
+        }
+        mshadow::Shape<10> out_strides;
+        stride = 1;
+        for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
+          out_strides[i] = stride;
+        }
+        if (param.mode == take_::kClip) {
+          Kernel<Take<true>, xpu>::Launch(s, oshape.Size(),
+                                          outputs[take_::kOut].dptr<DType>(),
+                                          inputs[take_::kArr].dptr<DType>(),
+                                          inputs[take_::kIdx].dptr<IType>(),
+                                          in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                          idxshape.ndim(), arrshape[actual_axis], actual_axis);
+        } else if (param.mode == take_::kWrap) {
+          Kernel<Take<false>, xpu>::Launch(s, oshape.Size(),
+                                           outputs[take_::kOut].dptr<DType>(),
+                                           inputs[take_::kArr].dptr<DType>(),
+                                           inputs[take_::kIdx].dptr<IType>(),
+                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
+        }
+      }
     });
   });
 }
+
+struct TakeGradGeneralKernel {
+  /*!
+   * \brief Map function for general case of take grad
+   * \param tid           global thread id
+   * \param arr_grad      ptr to in_grad
+   * \param ograd         ptr to out_grad
+   * \param src_indptr    ptr to indptr to src indices
+   * \param original_idx  ptr to original indices of the inputs
+   * \param in_strides    strides of inputs
+   * \param out_strides   strides of outputs
+   * \param in_ndims      # of dims of input tensor
+   * \param out_ndims     # of dims of output tensor
+   * \param idx_ndims     # of dims of indices tensor
+   * \param axis_dim      dim size of the axis dimension
+   * \param axis          axis id
+   */
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int tid, DType* arr_grad, const DType* ograd,
+                                  const IType* src_indptr, const IType* original_idx,
+                                  mshadow::Shape<10> in_strides, mshadow::Shape<10> out_strides,
+                                  const int in_ndims, const int out_ndims, const int idx_ndims,
+                                  const int axis) {
+    const int in_head_index = (axis == 0) ? 0 : tid / in_strides[axis - 1];
+    const int in_rest_index = (axis == 0) ? tid : tid % in_strides[axis - 1];
+    const int in_mid_index = in_rest_index / in_strides[axis];
+    const int in_tail_index = (axis == in_ndims - 1) ?
+                              0 : (in_rest_index % in_strides[axis]);
+    for (IType i = src_indptr[in_mid_index]; i < src_indptr[in_mid_index + 1]; ++i) {
+      const int out_mid_index = original_idx[i];
+      int target = in_tail_index + out_mid_index * in_strides[axis];
+      target += (axis == 0) ? 0 : in_head_index * out_strides[axis - 1];
+      arr_grad[tid] += ograd[target];
+    }
+  }
+};
+
+template<bool clip = true>
+void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
+                        const OpContext& ctx,
+                        const TBlob& arr,
+                        const TBlob& idx,
+                        const TBlob& ograd,
+                        const int axis) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK(axis != 0) << "axis == 0 case should be dispatched to the legacy implementation";
+  const TShape& arrshape = arr.shape_;
+  const TShape& idxshape = idx.shape_;
+  const TShape& oshape = ograd.shape_;
+  MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
+    // get size of temporary storage for sort
+    int* src_indptr_ptr = nullptr;
+    size_t temp_storage_bytes = SortByKeyWorkspaceSize<int, int, cpu>(idxshape.Size());
+    size_t original_idx_bytes = idxshape.Size() * sizeof(int);
+    size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
+    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes + temp_storage_bytes;
+    Tensor<cpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_bytes), s);
+    int* sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_);
+    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes);
+    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes);
+    Tensor<cpu, 1, char> temp_storage(
+      workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes, Shape1(temp_storage_bytes), s);
+    // Reset indptr to zero
+    Kernel<set_zero, cpu>::Launch(s, arrshape[axis] + 1, src_indptr_ptr);
+    // Fill original_idx
+    Kernel<range_fwd, cpu>::Launch(s, idxshape.Size(), 1, 0, 1, kWriteTo, original_idx_ptr);
+    // Fill sorted_idx_ptr with unsorted copy of idx
+    Kernel<mshadow_op::identity_with_cast, cpu>::Launch(
+      s, idxshape.Size(), sorted_idx_ptr, idx.dptr<IType>());
+    if (clip) {
+      Kernel<op_with_req<mshadow_op::clip, kWriteTo>, cpu>::Launch(
+        s, idxshape.Size(), sorted_idx_ptr, sorted_idx_ptr,
+        0, static_cast<int>(arrshape[axis] - 1));
+    } else {
+      Kernel<op_with_req<mshadow_op::mod, kWriteTo>, cpu>::Launch(
+        s, idxshape.Size(), sorted_idx_ptr, sorted_idx_ptr, static_cast<int>(arrshape[axis]));
+    }
+    Tensor<cpu, 1, int> original_idx(original_idx_ptr, Shape1(idxshape.Size()), s);
+    int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
+    Tensor<cpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
+    SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
+    for (size_t i = 0; i < idxshape.Size(); ++i) {
+      src_indptr_ptr[sorted_idx_ptr[i] + 1] += 1;
+    }
+    for (int i = 0; i < arrshape[axis]; ++i) {
+      src_indptr_ptr[i + 1] += src_indptr_ptr[i];
+    }
+    Shape<10> in_strides;
+    int stride = 1;
+    for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
+      in_strides[i] = stride;
+    }
+    Shape<10> out_strides;
+    stride = 1;
+    for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
+      out_strides[i] = stride;
+    }
+    MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
+      Kernel<TakeGradGeneralKernel, cpu>::Launch(
+        s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(), src_indptr_ptr,
+        original_idx_ptr, in_strides, out_strides,
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+    });
+  });
+}
+
+#ifdef __CUDACC__
+template<bool clip = true>
+void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
+                        const OpContext& ctx,
+                        const TBlob& arr,
+                        const TBlob& idx,
+                        const TBlob& ograd,
+                        const int axis) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK(axis != 0) << "axis == 0 case should be dispatched to the legacy implementation";
+  const TShape& arrshape = arr.shape_;
+  const TShape& idxshape = idx.shape_;
+  const TShape& oshape = ograd.shape_;
+  MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
+    // get size of temporary storage for sort
+    char* temp_storage_ptr = nullptr;
+    size_t scan_temp_storage_bytes = 0;
+    int* src_indptr_ptr = nullptr;
+    cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
+                                  scan_temp_storage_bytes,
+                                  src_indptr_ptr,
+                                  src_indptr_ptr,
+                                  arrshape[axis] + 1,
+                                  mshadow::Stream<gpu>::GetStream(s));
+    size_t sort_temp_storage_bytes = SortByKeyWorkspaceSize<int, int, gpu>(idxshape.Size());
+    size_t histo_temp_storage_bytes = 0;
+    int* sorted_idx_ptr = nullptr;
+    cub::DeviceHistogram::HistogramEven(temp_storage_ptr,
+                                        histo_temp_storage_bytes,
+                                        sorted_idx_ptr,
+                                        src_indptr_ptr,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        0,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        static_cast<int>(idxshape.Size()),
+                                        mshadow::Stream<gpu>::GetStream(s));
+    size_t temp_storage_bytes = max(scan_temp_storage_bytes, sort_temp_storage_bytes);
+    temp_storage_bytes = max(temp_storage_bytes, histo_temp_storage_bytes);
+    size_t original_idx_bytes = idxshape.Size() * sizeof(int);
+    size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
+    size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes + temp_storage_bytes;
+    Tensor<gpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_bytes), s);
+    sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_);
+    int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes);
+    src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes);
+    temp_storage_ptr = workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes;
+    // Reset indptr to zero
+    Kernel<set_zero, gpu>::Launch(s, arrshape[axis] + 1, src_indptr_ptr);
+    // Fill original_idx
+    Kernel<range_fwd, gpu>::Launch(
+      s, idxshape.Size(), 1, static_cast<int>(0), static_cast<int>(1),
+      kWriteTo, original_idx_ptr);
+    // Fill sorted_idx_ptr with unsorted copy of idx
+    Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
+      s, idxshape.Size(), sorted_idx_ptr, idx.dptr<IType>());
+    if (clip) {
+      Kernel<op_with_req<mshadow_op::clip, kWriteTo>, gpu>::Launch(
+        s, idxshape.Size(), sorted_idx_ptr, sorted_idx_ptr, 0, static_cast<int>(arrshape[axis]));
+    } else {
+      Kernel<op_with_req<mshadow_op::mod, kWriteTo>, gpu>::Launch(
+        s, idxshape.Size(), sorted_idx_ptr, sorted_idx_ptr, static_cast<int>(arrshape[axis]));
+    }
+    Tensor<gpu, 1, int> original_idx(original_idx_ptr, Shape1(idxshape.Size()), s);
+    Tensor<gpu, 1, char> temp_storage(temp_storage_ptr, Shape1(temp_storage_bytes), s);
+    int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
+    Tensor<gpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
+    SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
+    cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
+                                  temp_storage_bytes,
+                                  src_indptr_ptr,
+                                  src_indptr_ptr,
+                                  arrshape[axis] + 1,
+                                  mshadow::Stream<gpu>::GetStream(s));
+
+    Shape<10> in_strides;
+    int stride = 1;
+    for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
+      in_strides[i] = stride;
+    }
+    Shape<10> out_strides;
+    stride = 1;
+    for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
+      out_strides[i] = stride;
+    }
+    MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
+      Kernel<TakeGradGeneralKernel, gpu>::Launch(
+        s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
+        src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+    });
+  });
+}
+#endif
 
 template<typename xpu>
 void TakeOpBackward(const nnvm::NodeAttrs& attrs,
@@ -829,20 +1037,24 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req[take_::kIdx], kNullOp)
     << "take layer doesn't support gradient into index";
 
-  // inputs are specified in the .cc file, which are the gradients from
-  // the upper layer and the input index
-  // outputs are the gradients of inputs in the feed-forward pass
-  const TShape& idxshape = inputs[1].shape_;
-  const TShape& arrshape = outputs[0].shape_;
-  const TShape& oshape = inputs[0].shape_;
-
-  int idxndim = idxshape.ndim();
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
 
   // grad_out is the gradient of the outputs in the feed-forward
   // grad_in is the gradient of the inputs in the feed-forward
   Stream<xpu> *s = ctx.get_stream<xpu>();
+
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+      // inputs are specified in the .cc file, which are the gradients from
+      // the upper layer and the input index
+      // outputs are the gradients of inputs in the feed-forward pass
+      const TShape& idxshape = inputs[1].shape_;
+      const TShape& arrshape = outputs[0].shape_;
+      const TShape& oshape = inputs[0].shape_;
+
+      const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+
+      int idxndim = idxshape.ndim();
       Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
           Shape1(idxshape.ProdShape(0, idxndim)), s);
       Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
@@ -850,27 +1062,27 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
           Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
 
-      if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
-        if (req[take_::kArr] == kWriteTo) {
-          grad_in = scalar<DType>(0.0f);
-        }
-        // shape_out_prod ~= the number of elements loaded in AddTakeGrad
-        // shape_in_prod  ~= the number of elements stored in AddTakeGrad
-        // When the number of elements processed is low, use AddTakeGrad.
-        // The approximate cut-off value 16384 was found experimentally on Titan X Pascal
-        uint64_t shape_in_prod =
-          static_cast<uint64_t>(grad_in.shape_[0])*
-          static_cast<uint64_t>(grad_in.shape_[1]);
-        uint64_t shape_out_prod =
-          static_cast<uint64_t>(grad_out.shape_[0])*
-          static_cast<uint64_t>(grad_out.shape_[1]);
-        if (shape_out_prod < (uint64_t)16384 && shape_in_prod < (uint64_t)16384) {
+      // re-using the previous code for axis = 0 case
+      if (actual_axis == 0) {
+        if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
+          if (req[take_::kArr] == kWriteTo) {
+            grad_in = scalar<DType>(0.0f);
+          }
           AddTakeGrad(grad_in, idx, grad_out);
         } else {
-          AddTakeGradLargeBatchCaller(ctx, grad_in, idx, grad_out);
+          LOG(FATAL) << "wrong req";
         }
+      // for all other cases
       } else {
-        LOG(FATAL) << "wrong req";
+        const TBlob& idx = inputs[1];
+        const TBlob& arr = outputs[0];
+        const TBlob& ograd = inputs[0];
+
+        if (param.mode == take_::kClip) {
+          TakeOpBackwardImpl<true>(s, ctx, arr, idx, ograd, actual_axis);
+        } else {
+          TakeOpBackwardImpl<false>(s, ctx, arr, idx, ograd, actual_axis);
+        }
       }
     });
   });
@@ -1328,7 +1540,5 @@ void ScatterSetNDForward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#ifdef __CUDACC__
-#include "./indexing_op-inl.cuh"
-#endif
+
 #endif  // MXNET_OPERATOR_TENSOR_INDEXING_OP_H_

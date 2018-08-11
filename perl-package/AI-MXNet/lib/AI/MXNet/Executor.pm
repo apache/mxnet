@@ -32,7 +32,6 @@ has '_symbol'           => (is => 'rw', init_arg => 'symbol',    isa => 'AI::MXN
 has '_ctx'              => (is => 'rw', init_arg => 'ctx',       isa => 'AI::MXNet::Context' );
 has '_grad_req'         => (is => 'rw', init_arg => 'grad_req',  isa => 'Maybe[Str|ArrayRef[Str]|HashRef[Str]]');
 has '_group2ctx'        => (is => 'rw', init_arg => 'group2ctx', isa => 'Maybe[HashRef[AI::MXNet::Context]]');
-has '_monitor_callback' => (is => 'rw', isa => 'CodeRef');
 has [qw/_arg_dict
         _grad_dict
         _aux_dict
@@ -42,6 +41,18 @@ has [qw/_arg_dict
 =head1 NAME
 
     AI::MXNet::Executor - The actual executing object of MXNet.
+=cut
+
+=head1 SYNOPSIS
+
+    my $executor = $sym->bind(
+        ctx       => mx->Context('cpu'),
+        args      => [$lhs_arr, $rhs_arr],
+        args_grad => [$lhs_grad, $rhs_grad]
+    );
+    $executor->forward(1);
+    print $executor->outputs->[0]->aspdl;
+=cut
 
 =head2 new
 
@@ -138,7 +149,7 @@ method _get_outputs()
 
     Parameters
     ----------
-    $is_train=0: bool, optional
+    $is_train=0: Bool, optional
         whether this forward is for evaluation purpose. If True,
         a backward call is expected to follow. Otherwise following
         backward is invalid.
@@ -200,12 +211,12 @@ method forward(Int $is_train=0, %kwargs)
 
     Parameters
     ----------
-    out_grads : NDArray or an array ref of NDArrays or hash ref of NDArrays, optional.
+    $out_grads : NDArray or an array ref of NDArrays or hash ref of NDArrays, optional.
         The gradient on the outputs to be propagated back.
         This parameter is only needed when bind is called
         on outputs that are not a loss function.
 
-    is_train : bool, default 1
+    $is_train : Bool, default 1
         Whether this backward is for training or inference. Note that in rare
         cases you want to call backward with is_train=0 to get gradient
         during inference.
@@ -241,17 +252,16 @@ method backward(
 
     Parameters
     ----------
-    callback : subref
+    $callback : CodeRef
         Takes a string and an NDArrayHandle.
 =cut
 
 method set_monitor_callback(CodeRef $callback)
 {
-    $self->_monitor_callback($callback);
     check_call(
         AI::MXNetCAPI::ExecutorSetMonitorCallback(
             $self->handle,
-            $self->_monitor_callback
+            $callback
         )
     );
 }
@@ -262,7 +272,7 @@ method set_monitor_callback(CodeRef $callback)
 
     Returns
     -------
-    arg_dict : HashRef[AI::MXNet::NDArray]
+    $arg_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the arguments to the NDArrays.
 =cut
 
@@ -285,7 +295,7 @@ method arg_dict()
 
     Returns
     -------
-    grad_dict : HashRef[AI::MXNet::NDArray]
+    $grad_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the arguments to the gradient NDArrays.
 =cut
 
@@ -308,7 +318,7 @@ method grad_dict()
 
     Returns
     -------
-    aux_dict : HashRef[AI::MXNet::NDArray]
+    $aux_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the auxiliary states to the NDArrays.
 =cut
 
@@ -331,7 +341,7 @@ method aux_dict()
 
     Returns
     -------
-    output_dict : HashRef[AI::MXNet::NDArray]
+    $output_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the outputs to the NDArrays.
 =cut
 
@@ -354,13 +364,13 @@ method output_dict()
 
     Parameters
     ----------
-    arg_params : HashRef[AI::MXNet::NDArray]
+    $arg_params : HashRef[AI::MXNet::NDArray]
         Parameters, hash ref of name to NDArray of arguments
 
-    aux_params : Maybe[HashRef[AI::MXNet::NDArray]], optional
+    $aux_params= : Maybe[HashRef[AI::MXNet::NDArray]], optional
         Parameters, hash ref of name to NDArray of auxiliary states.
 
-    allow_extra_params : boolean, optional
+    $allow_extra_params= : Bool, optional
         Whether to allow extra parameters that are not needed by symbol
         If this is True, no error will be thrown when arg_params or aux_params
         contain extra parameters that is not needed by the executor.
@@ -415,9 +425,9 @@ method copy_params_from(
     ----------
     $kwargs : HashRef[Shape]
         new shape for arguments.
-    :$partial_shaping : bool
+    :$partial_shaping : Bool
         Whether to allow changing the shape of unspecified arguments.
-    :$allow_up_sizing : bool
+    :$allow_up_sizing : Bool
         Whether to allow allocating new ndarrays that's larger than the original.
 
     Returns
@@ -501,7 +511,7 @@ method reshape(HashRef[Shape] $kwargs, Int :$partial_shaping=0, Int :$allow_up_s
 
     Returns
     -------
-    debug_str : string
+    $debug_str : Str
         Debug string of the executor.
 =cut
 

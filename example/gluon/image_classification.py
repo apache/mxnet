@@ -30,7 +30,8 @@ from mxnet.test_utils import get_mnist_iterator
 from mxnet.metric import Accuracy, TopKAccuracy, CompositeEvalMetric
 import numpy as np
 
-from data import *
+from data import (get_cifar10_iterator, get_imagenet_iterator,
+                  get_caltech101_iterator, dummy_iterator)
 
 # logging
 logging.basicConfig(level=logging.INFO)

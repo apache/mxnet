@@ -122,6 +122,12 @@ int MXGetGPUCount(int* out) {
   API_END();
 }
 
+int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem) {
+  API_BEGIN();
+  Context::GetGPUMemoryInformation(dev, free_mem, total_mem);
+  API_END();
+}
+
 int MXGetVersion(int *out) {
   API_BEGIN();
   *out = static_cast<int>(MXNET_VERSION);
@@ -443,6 +449,8 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   nnvm::Tuple<dim_t> shape(dims, dims+ndim);
+  CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
+    << arr->shape();
   TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;

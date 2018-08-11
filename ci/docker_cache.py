@@ -31,7 +31,6 @@ import sys
 import subprocess
 import json
 import build as build_util
-from joblib import Parallel, delayed
 
 
 
@@ -43,6 +42,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     :param load_cache: Load cache before building
     :return: 1 if error occurred, 0 otherwise
     """
+    from joblib import Parallel, delayed
     if len(platforms) == 0:
         return 0
 
@@ -76,7 +76,8 @@ def _build_save_container(platform, registry, load_cache) -> str:
     # Start building
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry)
+        # Increase the number of retries for building the cache.
+        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry

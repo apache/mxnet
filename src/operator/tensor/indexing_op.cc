@@ -28,6 +28,27 @@
 namespace mxnet {
 namespace op {
 
+/*
+ * \brief returns true if all indices are between [min, max]
+ * \param data_ptr the indices to check
+ * \param data_size the number of indices to examine
+ * \param min the expected min value for indices
+ * \param max the expected max value for indices
+ */
+template<typename DType>
+bool CheckIndexOutOfBound(const DType* data_ptr, size_t data_size,
+                          const DType min, const DType max) {
+  bool is_valid = true;
+  for (size_t i = 0; i < data_size; i++) {
+    if (data_ptr[i] > max || data_ptr[i] < min) {
+      is_valid = false;
+      break;
+    }
+  }
+  return is_valid;
+}
+
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -48,18 +69,16 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
     return;
   }
   // check out-of-bound indices
-  bool is_valid = true;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     // check with single thread is faster since data is small
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
-    for (size_t i = 0; i < data_size; i++) {
-      if (data_ptr[i] > max || data_ptr[i] < min) is_valid = false;
-    }
+    bool is_valid = CheckIndexOutOfBound(data_ptr, data_size,
+                                         min, max);
+    CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   })
-  CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
   if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
     EmbeddingOpForwardDnsImpl<cpu>(s, data, weight.data(), req, output);
@@ -101,6 +120,15 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+        // check out of bound indices
+        {
+          IType min = 0;
+          IType max = static_cast<IType>(output.shape()[0] - 1);
+          // check with single thread is faster since data is small
+          IType* data_ptr = data.dptr<IType>();
+          bool is_valid = CheckIndexOutOfBound(data_ptr, data.shape_.Size(), min, max);
+          CHECK(is_valid) << "Embedding input contains data out of bound";
+        }
         // mark row flags
         Fill<false>(s, TBlob(row_flg, Shape1(num_rows), cpu::kDevMask), kWriteTo, 0);
         Kernel<MarkRowFlgKernel, cpu>::Launch(s, data_size, row_flg, data.dptr<IType>());
@@ -367,36 +395,46 @@ NNVM_REGISTER_OP(take)
 
 This function slices the input array along a particular axis with the provided indices.
 
-Given an input array with shape ``(d0, d1, d2)`` and indices with shape ``(i0, i1)``, the output
-will have shape ``(i0, i1, d1, d2)``, computed by::
-
-  output[i,j,:,:] = input[indices[i,j],:,:]
-
-.. note::
-   - `axis`- Only slicing along axis 0 is supported for now.
-   - `mode`- Only `clip` mode is supported for now.
+Given data tensor of rank r >= 1, and indices tensor of rank q, gather entries of the axis
+dimension of data (by default outer-most one as axis=0) indexed by indices, and concatenates them
+in an output tensor of rank q + (r - 1).
 
 Examples::
   x = [4.  5.  6.]
 
   // Trivial case, take the second element along the first axis.
+
   take(x, [1]) = [ 5. ]
+
+  // The other trivial case, axis=-1, take the third element along the first axis
+
+  take(x, [3], axis=-1, mode='clip') = [ 6. ]
 
   x = [[ 1.,  2.],
        [ 3.,  4.],
        [ 5.,  6.]]
 
   // In this case we will get rows 0 and 1, then 1 and 2. Along axis 0
+
   take(x, [[0,1],[1,2]]) = [[[ 1.,  2.],
                              [ 3.,  4.]],
 
                             [[ 3.,  4.],
                              [ 5.,  6.]]]
 
+  // In this case we will get rows 0 and 1, then 1 and 2 (calculated by wrapping around).
+  // Along axis 1
+
+  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.,  2.],
+                                                       [ 3.,  4.]],
+
+                                                      [[ 3.,  4.],
+                                                       [ 5.,  6.]]]
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr_parser(TakeParamParser<TakeParam>)
+.set_attr_parser(ParamParser<TakeParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "indices"};
@@ -420,6 +458,7 @@ Examples::
 NNVM_REGISTER_OP(_backward_take)
 .set_num_inputs(2)
 .set_num_outputs(2)
+.set_attr_parser(ParamParser<TakeParam>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

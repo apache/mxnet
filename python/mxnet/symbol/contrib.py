@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import, unused-wildcard-import
+# pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib Symbol API of MXNet."""
 import math
 import ctypes
@@ -34,7 +34,7 @@ from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian", "foreach"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
@@ -127,7 +127,7 @@ def _cut_subgraph(subg):
 # This construct a subgraph for given output nodes.
 # If an output node is one of the input nodes, we call identity to make sure
 # that outputs nodes are different from input nodes.
-def _construct_subgraph(sym_out, sym_states):
+def _construct_subgraph(sym_out, sym_states, name):
     sym_out = _as_list(sym_out)
     sym_states = _as_list(sym_states)
     all_outputs = []
@@ -137,18 +137,16 @@ def _construct_subgraph(sym_out, sym_states):
 
     flat_out = []
     all_input_names = g.list_inputs()
-    output_names = [o.name for o in sym_out]
+    output_names = {o.name for o in sym_out}
     for o in sym_out:
-        if o.name in all_input_names:
+        if o.name in all_input_names or o.list_attr().get("__subgraph_name__", "") != name:
             flat_out.append(symbol.op.identity(o))
         else:
             flat_out.append(o)
 
     for s in sym_states:
-        if s.name in all_input_names or s.name in output_names:
-            # There is a problem if the outputs are the same as the inputs
-            # or the first output. By calling identity, we can make sure that
-            # all symbols will refer to different NDArrays.
+        if s.name in all_input_names or s.name in output_names or \
+           s.list_attr().get("__subgraph_name__", "") != name:
             flat_out.append(symbol.op.identity(s))
         else:
             flat_out.append(s)
@@ -256,7 +254,7 @@ def foreach(body, data, init_states, name="foreach"):
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
-        g = _construct_subgraph(sym_out, sym_states)
+        g = _construct_subgraph(sym_out, sym_states, name)
 
     input_syms = _get_graph_inputs(g)
     cut_syms = _cut_subgraph(g)
@@ -336,3 +334,370 @@ def foreach(body, data, init_states, name="foreach"):
         states = states[0]
 
     return (outs, states)
+
+def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
+    """Run a while loop with user-defined computation and loop condition.
+
+    This operator simulates a while loop which iterately does customized computation
+    as long as the condition is satisfied.
+
+    `loop_vars` is a list of Symbols on which the computation uses.
+
+    `cond` is a user-defined function, used as the loop condition.
+    It consumes `loop_vars`, and produces a scalar MXNet symbol,
+    indicating the termination of the loop.
+    The loop ends when `cond` returns false (zero).
+    The `cond` is variadic, and its signature should be
+    `cond(*loop_vars) => Symbol`.
+
+    `func` is a user-defined function, used as the loop body.
+    It also consumes `loop_vars`, and produces `step_output` and `new_loop_vars` at each step.
+    In each step, `step_output` should contain the same number elements.
+    Through all steps, the i-th element of `step_output` should have the same shape and dtype.
+    Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
+    and the corresponding element should have the same shape and dtype.
+    The `func` is variadic, and its signature should be
+    `func(*loop_vars) => (List[Symbol] step_output, List[Symbol] new_loop_vars)`.
+
+    `max_iterations` is a scalar that defines the maximum number of iterations allowed.
+
+    This function returns two lists.
+    The first list has the length of `|step_output|`,
+    in which the i-th element are all i-th elements of
+    `step_output` from all steps, stacked along axis 0.
+    The second list has the length of `|loop_vars|`,
+    which represents final states of loop variables.
+
+    .. warning::
+
+       For now, the axis 0 of all Symbols in the first list are `max_iterations`,
+       due to lack of dynamic shape inference.
+
+    .. warning::
+
+       Even if `cond` is never satisfied,
+       while_loop returns a list of outputs with inferred dtype and shape.
+       This is different from the Symbol version,
+       where in this case `step_outputs` are assumed as an empty list.
+
+    Parameters
+    ----------
+    cond: a Python function.
+        The loop condition.
+    func: a Python function.
+        The loop body.
+    loop_vars: list of Symbol.
+        The initial values of the loop variables.
+    max_iterations: a python int.
+        Maximum number of iterations.
+
+    Returns
+    ------
+    outputs: list of Symbols
+        stacked output from each step
+    states: list of Symbols
+        final state
+
+    Examples
+    --------
+    >>> cond = lambda i, s: i <= 5
+    >>> func = lambda i, s: ([i + s], [i + 1, s + i])
+    >>> loop_vars = (mx.sym.var('i'), mx.sym.var('s'))
+    >>> outputs, states = mx.sym.contrib.while_loop(cond, func, loop_vars, max_iterations=10)
+    """
+    def _to_python_scalar(inputs, type_, name):
+        """Converts "inputs", possibly typed mxnet NDArray, a numpy ndarray, other python types,
+        to the given type
+        """
+        if hasattr(inputs, "asscalar"):
+            inputs = inputs.asscalar()
+        try:
+            inputs = type_(inputs)
+        except:
+            raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
+        return inputs
+
+    def _to_symbol_tuple(inputs, name):
+        """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
+        a tuple of mxnet Symbol, into a tuple of Symbol
+        """
+        if isinstance(inputs, list):
+            inputs = tuple(inputs)
+        if isinstance(inputs, Symbol):
+            inputs = (inputs, )
+        if not isinstance(inputs, tuple):
+            raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
+        for item in inputs:
+            if not isinstance(item, Symbol):
+                raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
+        return inputs
+
+    def _cond_wrapper(loop_vars):
+        result = cond(*loop_vars)
+        if not isinstance(result, Symbol):
+            raise ValueError("Return of cond must be a Symbol")
+        return [], [result]
+
+    def _func_wrapper(loop_vars):
+        """This wrapper unifies
+             "func: loop_vars -> new_loop_vars"
+         and "func: loop_vars -> (step_output, new_loop_vars)"
+        into "func: loop_vars -> (list of step_outputs, tuple of new_loop_vars)
+        """
+        step_output, new_loop_vars = func(*loop_vars)
+        if step_output is None:
+            step_output = []
+        if new_loop_vars is None:
+            new_loop_vars = []
+        step_output = _to_symbol_tuple(step_output, "step_output")
+        new_loop_vars = _to_symbol_tuple(new_loop_vars, "new_loop_vars")
+        if len(loop_vars) != len(new_loop_vars):
+            raise ValueError("The number of loop_vars should be consistent during the loop")
+        return list(step_output), list(new_loop_vars)
+
+    def _create_subgraph(graph_vars, graph_func, subgraph_name):
+        with AttrScope(__subgraph_name__=subgraph_name):
+            # create new variables with the same name,
+            # them feed them to the given func
+            new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
+            outputs, final_state = graph_func(new_graph_vars)
+            # first `num_out_data` elements belong to `outputs`
+            # other elements belong to `final_state`
+            num_out_data = len(outputs)
+            num_outputs = len(outputs) + len(final_state)
+            # nnvm cut-graph does not allow inputs and outputs overlap
+            # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
+            # group all outputs of graph_func
+            all_input_names = symbol.Group(outputs + final_state).list_inputs()
+            in_input = lambda x: x.name in all_input_names
+            in_graph = lambda x: x.list_attr().get("__subgraph_name__", "") == subgraph_name
+            make_identity = lambda x: symbol.op.identity(x) if in_input(x) or not in_graph(x) \
+                                      else x
+            graph = symbol.Group(list(map(make_identity, outputs + final_state)))
+        return graph, num_out_data, num_outputs
+
+    def _union_inputs(*graphs):
+        # Given a list of graphs, each whose inputs are either from loop_vars or other variables.
+        # 1) calculate a list `inputs`, the union of their inputs.
+        # 2) for each graph, determine in which indices their inputs reside in `inputs`
+        # 3) for each variable in the input of `graph`, find which index it is
+        inputs = []             # List[Symbol], result of 1)
+        locs = []               # List[Tuple(List[Int], List[Int])], a list of tuples,
+                                # where tuples are results of 2) and 3)
+        input_id_to_loc = {}    # Dict[int, int], given id(sym), input_id_to_loc maps it
+                                # to a `loc`, where inputs[loc] = sym
+        for graph in graphs:
+            # some loop_vars are inputs to `graph`, some are not
+            name_to_loop_vars = {sym.name: sym for sym in loop_vars}
+            # other inputs to `graph` created by cut_graph
+            name_to_cut_g_syms = {sym.list_outputs()[0]: sym for sym in _cut_subgraph(graph)}
+            # input_syms: all inputs to the `graph`
+            name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
+            # also we collect the mapping from var's name to var's loc in loop_vars
+            name_to_var_locs = {sym.name: i for i, sym in enumerate(loop_vars)}
+            # collect arguments for each subgraph
+            input_locs = []                         # results from the second step
+            var_locs = [-1] * len(loop_vars)        # results from the third step
+            for name in graph.list_inputs():
+                assert name in name_to_input_syms   # it should obviously hold
+                # name -> sym
+                if name in name_to_loop_vars:
+                    sym = name_to_loop_vars[name]
+                elif name in name_to_cut_g_syms:
+                    sym = name_to_cut_g_syms[name]
+                else:
+                    sym = copy.deepcopy(name_to_input_syms[name])
+                # do 2), and 1) is implicitly done
+                if id(sym) in input_id_to_loc:
+                    loc = input_id_to_loc[id(sym)]
+                else:
+                    loc = len(input_id_to_loc)
+                    inputs.append(sym)
+                    input_id_to_loc[id(sym)] = loc
+                input_locs.append(loc)
+                # do 3)
+                if name in name_to_var_locs:
+                    var_locs[name_to_var_locs[name]] = len(input_locs) - 1
+            locs.append((input_locs, var_locs))
+        return inputs, locs
+    if max_iterations is None:
+        raise ValueError("max_iterations should be specified")
+    max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
+    loop_vars = _to_symbol_tuple(loop_vars, "loop_vars")
+    # It should be work as fine if loop_vars are empty I guess,
+    # but it is semantically unnecessary to include this case.
+    if len(loop_vars) == 0:
+        raise ValueError("loop_vars should contain at least one element")
+    # create graph for `cond'
+    cond_g, num_out_data, num_outputs = \
+        _create_subgraph(loop_vars, _cond_wrapper, name + "_cond")
+    assert num_out_data == 0
+    assert num_outputs == 1
+    # create graph for `func`
+    func_g, num_out_data, num_outputs = \
+        _create_subgraph(loop_vars, _func_wrapper, name + "_func")
+    # find symbols used in either cond_g or func_g
+    input_syms, ((cond_input_locs, _), (func_input_locs, func_var_locs)) = \
+        _union_inputs(cond_g, func_g)
+    for i_th, loc in enumerate(func_var_locs, 1):
+        if loc == -1:
+            raise ValueError("The %d-th loop_var doesn't involve into the computation" % i_th)
+    result = symbol._internal._while_loop(
+        # [cond, func_g, *input_syms]
+        cond_g,
+        func_g,
+        *input_syms,
+        max_iterations=max_iterations,
+        cond_input_locs=cond_input_locs,
+        func_input_locs=func_input_locs,
+        func_var_locs=func_var_locs,
+        num_out_data=num_out_data,
+        num_outputs=num_outputs
+    )
+    outputs = [result[i] for i in range(num_out_data)]
+    final_loop_vars = [result[i] for i in range(num_out_data, num_outputs)]
+    return outputs, final_loop_vars
+
+def cond(pred, then_func, else_func, name="cond"):
+    """Run an if-then-else using user-defined condition and computation
+
+    This operator simulates a if-like branch which chooses to do one of
+    the two customized computations according to the specified condition.
+
+    `pred` is a scalar MXNet Symbol,
+    indicating which branch of computation should be used.
+
+    `then_func` is a user-defined function, used as computation of the then branch.
+    It produces `outputs`, which is a list of Symbols.
+    The signature of `then_func` should be
+    `then_func() => List[Symbol]`.
+
+    `else_func` is a user-defined function, used as computation of the else branch.
+    It produces `outputs`, which is a list of Symbols.
+    The signature of `else_func` should be
+    `else_func() => List[Symbol]`.
+
+    The `outputs` produces by `then_func` and `else_func` should have the same number
+    of elements, all of which should be in the same shape, of the same dtype and stype.
+
+    This function returns a list of symbols, representing the computation result.
+
+    Parameters
+    ----------
+    pred: a MXNet Symbol representing a scalar.
+        The branch condition.
+    then_func: a Python function.
+        The computation to be executed if `pred` is true.
+    else_func: a Python function.
+        The computation to be executed if `pred` is false.
+
+    Returns
+    -------
+    outputs: a list of Symbols, representing the result of computation.
+
+    Examples
+    --------
+    >>> a, b = mx.sym.var('a'), mx.sym.var('b')
+    >>> pred = a * b < 5
+    >>> then_func = lambda: (a + 5) * (b + 5)
+    >>> else_func = lambda: (a - 5) * (b - 5)
+    >>> outputs = mx.sym.contrib.cond(pred, then_func, else_func)
+    """
+    def _to_symbol_tuple(inputs, name):
+        """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
+        a tuple of mxnet Symbol, into a tuple of Symbol
+        """
+        if isinstance(inputs, list):
+            inputs = tuple(inputs)
+        if isinstance(inputs, Symbol):
+            inputs = (inputs, )
+        if not isinstance(inputs, tuple):
+            raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
+        for item in inputs:
+            if not isinstance(item, Symbol):
+                raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
+        return inputs
+
+    def _create_subgraph(graph_vars, graph_func, subgraph_name):
+        with AttrScope(__subgraph_name__=subgraph_name):
+            # create new variables with the same name,
+            # them feed them to the given func
+            new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
+            outputs = graph_func(*new_graph_vars)
+            outputs = _to_symbol_tuple(outputs, "outputs")
+            num_outputs = len(outputs)
+            # nnvm cut-graph does not allow inputs and outputs overlap
+            # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
+            # group all outputs of graph_func
+            all_input_names = symbol.Group(outputs).list_inputs()
+            in_input = lambda x: x.name in all_input_names
+            in_graph = lambda x: x.list_attr().get("__subgraph_name__", "") == subgraph_name
+            make_identity = lambda x: symbol.op.identity(x) if in_input(x) or not in_graph(x) \
+                                      else x
+            graph = symbol.Group(list(map(make_identity, outputs)))
+        return graph, num_outputs
+
+    def _union_inputs(*graphs):
+        # Given a list of graphs, each whose inputs are either from input_vars or other variables.
+        # 1) calculate a list `inputs`, the union of their inputs.
+        # 2) for each graph, determine in which indices their inputs reside in `inputs`
+        # 3) for each variable in the input of `graph`, find which index it is
+        inputs = []             # List[Symbol], result of 1)
+        locs = []               # List[Tuple(List[Int], List[Int])], a list of tuples,
+                                # where tuples are results of 2) and 3)
+        input_id_to_loc = {}    # Dict[int, int], given id(sym), input_id_to_loc maps it
+                                # to a `loc`, where inputs[loc] = sym
+        for graph in graphs:
+            # some input_vars are inputs to `graph`, some are not
+            name_to_input_vars = {sym.name: sym for sym in inputs}
+            # other inputs to `graph` created by cut_graph
+            name_to_cut_g_syms = {sym.list_outputs()[0]: sym for sym in _cut_subgraph(graph)}
+            # input_syms: all inputs to the `graph`
+            name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
+            # collect arguments for each subgraph
+            input_locs = []                         # results from the second step
+            for name in graph.list_inputs():
+                assert name in name_to_input_syms   # it should obviously hold
+                # name -> sym
+                if name in name_to_input_vars:
+                    sym = name_to_input_vars[name]
+                elif name in name_to_cut_g_syms:
+                    sym = name_to_cut_g_syms[name]
+                else:
+                    sym = copy.deepcopy(name_to_input_syms[name])
+                # do 2), and 1) is implicitly done
+                if id(sym) in input_id_to_loc:
+                    loc = input_id_to_loc[id(sym)]
+                else:
+                    loc = len(input_id_to_loc)
+                    inputs.append(sym)
+                    input_id_to_loc[id(sym)] = loc
+                input_locs.append(loc)
+            locs.append(input_locs)
+        return inputs, locs
+    inputs = []
+    # create graph for `cond_func'
+    cond_g, cond_num_outputs = _create_subgraph(inputs, lambda: pred, name + "_pred")
+    if cond_num_outputs != 1:
+        raise ValueError("pred should always be a single output")
+    # create graph for `then`
+    then_g, then_num_outputs = _create_subgraph(inputs, then_func, name + "_then")
+    # create graph for `else`
+    else_g, else_num_outputs = _create_subgraph(inputs, else_func, name + "_else")
+    if then_num_outputs != else_num_outputs:
+        raise ValueError("Number of outputs differs between then-branch and else-branch")
+    # find symbols used in either cond_g or func_g
+    input_syms, (cond_input_locs, then_input_locs, else_input_locs) = \
+        _union_inputs(cond_g, then_g, else_g)
+    result = symbol._internal._cond(
+        # [cond, then_g, else_g, *input_syms]
+        cond_g,
+        then_g,
+        else_g,
+        *input_syms,
+        cond_input_locs=cond_input_locs,
+        then_input_locs=then_input_locs,
+        else_input_locs=else_input_locs,
+        num_outputs=then_num_outputs
+    )
+    return [result[i] for i in range(then_num_outputs)]

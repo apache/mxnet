@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,30 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build MXNet for ARM64/ARMv8
 
-# Temporary fix due to https://github.com/apache/incubator-mxnet/issues/10837
-#FROM dockcross/linux-arm64
-FROM mxnetci/dockcross-linux-arm64:05082018
-
-ENV ARCH aarch64
-ENV HOSTCC gcc
-ENV TARGET ARMV8
-
-WORKDIR /work/deps
-
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
-
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/build
+7z x -y windows_package.7z
+$env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\lib\libmxnet.dll
+$env:PYTHONPATH=join-path $pwd.Path windows_package\python
+$env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+c:\Anaconda3\envs\py3\Scripts\pip install -r tests\requirements.txt
+c:\Anaconda3\envs\py3\python.exe -m nose -v --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
+if (! $?) { Throw ("Error running unittest") }
+c:\Anaconda3\envs\py3\python.exe -m nose -v --with-xunit --xunit-file nosetests_train.xml tests\python\train
+if (! $?) { Throw ("Error running train tests") }
