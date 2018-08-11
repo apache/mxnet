@@ -749,4 +749,3 @@ def checked_call(f, *args):
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
-_LIB.MXNDArrayCallDLPackDeleter.argtypes = [ctypes.c_void_p]

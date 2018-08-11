@@ -511,16 +511,14 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                         NDArrayHandle *out_handle) {
   API_BEGIN();
-  NDArray *pdata = new NDArray();
-  *pdata = NDArray::FromDLPack(
-           static_cast<DLManagedTensor*>(dlpack));
-  *out_handle = pdata;
+  *out_handle = new NDArray(NDArray::FromDLPack(
+              static_cast<DLManagedTensor*>(dlpack)));
   API_END();
 }
 
 int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack) {
   API_BEGIN();
-  if (dlpack) {
+  if (dlpack != nullptr) {
     DLManagedTensor *p_dlpack = static_cast<DLManagedTensor*>(dlpack);
     p_dlpack->deleter(p_dlpack);
   }
