@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <algorithm>
 #include <cmath>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -166,4 +167,4 @@ inline void SampleUniqueZifpian(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_RANDOM_SAMPLE_OP_H_
+#endif  // MXNET_OPERATOR_RANDOM_UNIQUE_SAMPLE_OP_H_
