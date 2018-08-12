@@ -3901,6 +3901,7 @@ def histogram(a, bins=10, range=None):
 
 PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
 _c_str_dltensor = c_str('dltensor')
+_c_str_used_dltensor = c_str('used_dltensor')
 
 def _dlpack_deleter(pycapsule):
     pycapsule = ctypes.c_void_p(pycapsule)
@@ -4013,13 +4014,15 @@ def from_dlpack(dlpack):
     """
     handle = NDArrayHandle()
     dlpack = ctypes.py_object(dlpack)
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    assert dlpack_handle.value != 0, ValueError(
+    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
+    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    # Rename PyCapsule (DLPack)
+    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
     # delete the deleter of the old dlpack
     ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
     # copy dlpack
     dlpack_copy = ctypes.pythonapi.PyCapsule_New(
-        dlpack_handle, _c_str_dltensor, _c_dlpack_deleter)
+        dlpack_handle, _c_str_used_dltensor, _c_dlpack_deleter)
     return NDArray(handle=handle, dlpack=dlpack_copy)
