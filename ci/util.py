@@ -37,7 +37,9 @@ def remember_cwd():
     Restore current directory when exiting context
     '''
     curdir = os.getcwd()
-    try: yield
-    finally: os.chdir(curdir)
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
 
 

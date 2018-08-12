@@ -305,6 +305,14 @@ build_ubuntu_cpu() {
     build_ubuntu_cpu_openblas
 }
 
+build_ubuntu_base_cpu() {
+    echo "skip"
+}
+
+build_ubuntu_base_gpu() {
+    echo "skip"
+}
+
 build_ubuntu_cpu_openblas() {
     set -ex
     export CC="ccache gcc"

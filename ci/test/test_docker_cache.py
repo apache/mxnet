@@ -30,11 +30,14 @@ import subprocess
 import sys
 from unittest.mock import MagicMock
 
-sys.path.append(os.path.dirname(__file__))
+print('omg')
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+print(parentdir)
+sys.path.append(parentdir)
 import docker_cache
 import build as build_util
 
-DOCKERFILE_DIR = 'docker'
+DOCKERFILE_DIR = 'dockerfiles'
 DOCKER_REGISTRY_NAME = 'test_registry'
 DOCKER_REGISTRY_PORT = 5000
 DOCKER_REGISTRY_PATH = 'localhost:{}'.format(DOCKER_REGISTRY_PORT)
@@ -250,6 +253,3 @@ def _assert_docker_build(lambda_func, expected_cache_hit_count: int, expected_ca
                 format(expected_cache_hit_count, output.count('Using cache'), output)
 
 
-if __name__ == '__main__':
-    import nose
-    nose.main()
