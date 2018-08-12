@@ -1470,8 +1470,12 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_psroipooling_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3,
+           np.dtype(np.float16): 1e-2}
+
     arg_params = {
         'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
@@ -1499,13 +1503,17 @@ def test_deformable_psroipooling_with_type():
                                'deformable_psroipool_trans': np.float16}},
                 ]
 
-    check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
-                                               'deformable_psroipool_rois': 'null',
-                                               'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_psroipool_data': 'write',
+                                'deformable_psroipool_rois': 'null',
+                                'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_convolution_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3}
+
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1521,18 +1529,14 @@ def test_deformable_convolution_with_type():
                 #  'deformable_conv_offset': (2, 18, 8, 8),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
                 ]
-    # wider tolerance needed for true-fp16 NCHW test above
-    tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
+
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
-                                               'deformable_conv_offset': 'write',
-                                               'deformable_conv_weight': 'write',
-                                               'deformable_conv_bias': 'null'}, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_conv_data': 'write',
+                                'deformable_conv_offset': 'write',
+                                'deformable_conv_weight': 'write',
+                                'deformable_conv_bias': 'null'})
 
 
 @with_seed()
