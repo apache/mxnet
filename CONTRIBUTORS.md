@@ -176,3 +176,4 @@ List of Contributors
 * [Kou Ding](https://github.com/chinakook)
 * [Istvan Fehervari](https://github.com/ifeherva)
 * [Aaron Markham](https://github.com/aaronmarkham)
+* [Sam Skalicky](https://github.com/samskalicky)

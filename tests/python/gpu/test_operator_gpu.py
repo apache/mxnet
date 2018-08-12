@@ -614,13 +614,13 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
 
 @with_seed()
@@ -765,11 +765,8 @@ def test_spatial_transformer_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
-# Checking max pooling consistency over the data sets of different float types is problematic
-# as one max value in a float32 data set may not be the max value in a float16 data set.
-# This function will not be called.
-@with_seed(1234)
-def test_pooling_with_type():
+@with_seed()
+def test_pooling_with_type2():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -777,18 +774,16 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
     check_consistency(sym, ctx_list)
 
-    # this is unstable
-    # sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    # check_consistency(sym, ctx_list)
+    sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
     check_consistency(sym, ctx_list)
-
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()
