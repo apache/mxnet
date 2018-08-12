@@ -42,8 +42,12 @@ namespace mshadow_op {
 
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
+__constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
+__constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 #else
 const float PI = 3.14159265358979323846;
+const float SELU_ALPHA = 1.6732632423543772848170429916717;
+const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 using std::isnan;
 #endif
 using std::enable_if;
@@ -125,6 +129,12 @@ MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
 MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
+
+MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
+                         (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
+
+MXNET_UNARY_MATH_OP_NC(selu_grad,
+                       DType(SELU_LAMBDA) * (a > DType(0) ? DType(1) : DType(SELU_ALPHA + a)));
 
 MXNET_BINARY_MATH_OP_NC(prelu_grad, a > DType(0) ? DType(0) : a);
 
