@@ -113,7 +113,7 @@ class StackDoc(NDArrayDoc):
     >>> x = mx.nd.array([1, 2])
     >>> y = mx.nd.array([3, 4])
     >>> stack(x, y)
-    [[1, 2], 
+    [[1, 2],
      [3, 4]]
     >>> stack(x, y, axis=1)
     [[1, 3],
