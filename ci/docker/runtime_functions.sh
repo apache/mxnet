@@ -869,7 +869,7 @@ nightly_test_rat_check() {
     set -e
     pushd .
 
-    cd /work/deps/trunk/apache-rat/target
+    cd /work/deps/0.12-release/apache-rat/target
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
