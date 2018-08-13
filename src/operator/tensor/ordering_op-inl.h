@@ -174,6 +174,7 @@ MSHADOW_FORCE_INLINE void TopKSort<cpu>(const Tensor<cpu, 1, real_t>& dat,
   const int omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
   #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < M; ++i) {
+    // Tensor `work` stores the flattened source data, while `dat` stores the sorted result.
     real_t *vals = reinterpret_cast<real_t*>(work.dptr_);
     real_t *sorted_vals = dat.dptr_+i*N;
     int *indices = ind.dptr_+i*N;
@@ -403,6 +404,7 @@ void TopKImpl(RunContext ctx,
     } else {
       flattened_data = src.FlatTo1D<xpu, real_t>(s);
     }
+    // `temp_workspace` stores the flattened data
     temp_workspace = Tensor<xpu, 1, char>(reinterpret_cast<char*>(flattened_data.dptr_),
                                           Shape1(sizeof(real_t)*src.Size()), s);
     CHECK_EQ(temp_workspace.CheckContiguous(), true);
@@ -424,9 +426,13 @@ void TopKImpl(RunContext ctx,
   // 2. Perform inplace batch sort.
   // After sorting, each batch in `sorted_dat` will be sorted in the corresponding order
   // up to the k-th element and the `indices` will contain the corresponding index in `sorted_dat`
+  // `temp_workspace` is used to store the flattend source data for CPU device, and it's used as
+  // a temporal buffer for GPU device.
   TopKSort(sorted_dat, indices, temp_workspace, k, element_num, is_ascend, s);
 
   // 3. Assign results to the ret blob
+  // When returning indices, only update(modulo) required elements instead of full elements
+  // to avoid redundant calculation.
   if (param.ret_typ == topk_enum::kReturnMask) {
     Tensor<xpu, 2, real_t> ret_mask =
       ret[0].get_with_shape<xpu, 2, real_t>(Shape2(ret[0].Size(), 1), s);
