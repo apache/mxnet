@@ -51,13 +51,35 @@ mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
 
+if(NOT mxnet_LINKER_LIBS)
+  set(mxnet_LINKER_LIBS "")
+endif(NOT mxnet_LINKER_LIBS)
+
+if(MSVC)
+  set(SYSTEM_ARCHITECTURE x86_64)
+else()
+  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
+endif()
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+
+SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
+
+if("$ENV{VERBOSE}" STREQUAL "1")
+  message(STATUS " Verbose Makefile ACTIVATED")
+  set(CMAKE_VERBOSE_MAKEFILE ON)
+endif()
+
+# ---[ BLAS
+
 # Choose BLAS (Basic Linear Algebra Subprograms) computation libraries
 
 # MXNet supports multiple mathematical backends for computations on the CPU:
 #
 # * Atlas
 # * OpenBLAS
-# * MKL (MKL, MKLML, MKLDNN)
+# * MKL (MKL, MKLML)
+# * MKLDNN
 # * Apple Accelerate
 #
 # The default order of choice for the libraries if found follows the path from the most
@@ -65,15 +87,18 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 #
 # For desktop platforms (x86_64):
 #
-# 1. MKLDNN (requires and checks for MKL or MKLML) | USE_MKLDNN
+# 1. MKLDNN (submodule) | USE_MKLDNN
 # 2. MKL | USE_MKL_IF_AVAILABLE
 # 3. MKLML (downloaded) | USE_MKLML
 # 4. Apple Accelerate | USE_APPLE_ACCELERATE_IF_AVAILABLE | Mac only
-# 5. OpenBLAS | BLAS (Atlas;Open;MKL;Apple)
+# 5. OpenBLAS | BLAS | Options: Atlas, Open, MKL, Apple
+#
+# Note: If USE_MKL_IF_AVAILABLE is set to False then MKLML and MKLDNN will be disabled as well for configuration
+# backwards compatibility.
 #
 # For embedded platforms (all other and if cross compiled):
 #
-# 1. OpenBLAS | BLAS (Atlas;Open)
+# 1. OpenBLAS | BLAS | Options: Atlas, Open
 #
 # You can set the BLAS library explicitly by setting the BLAS variable to:
 #
@@ -98,10 +123,11 @@ mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric 
 #   is the most effective option since it can be downloaded and installed automatically
 #   by the cmake script (see cmake/DownloadMKLML.cmake).
 #
-# * MKLDNN is a separate open-source library, but it requires MKL or MKLML. It is
+# * MKLDNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
 #   shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn).
+#   See: https://github.com/intel/mkl-dnn
 #
-# Since the full MKL library is almost always faster than any other it's turned on by default,
+# Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
 # however it needs to be downloaded and installed manually before doing cmake configuration.
 # Register and download here https://software.seek.intel.com/performance-libraries
 #
@@ -120,12 +146,12 @@ mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 # If the full MKL library could not be found the thinner subset MKLML will be downloaded
 # unless switched off explicitly.
 # Note: The same limitation on hardware as for MKL applies for MKLML as well.
-mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of mkl, will be downloaded" ON)
+mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of full MKL, will be downloaded" ON)
 
 # If either MKL of MKLML is present MKLDNN can be utilised from the 3rdparty/mkldnn subrepo.
 # See more information here: https://github.com/intel/mkl-dnn
 # Note: The same limitation on hardware as for MKL and MKLDNN applies for MKLDNN as well.
-mxnet_option(USE_MKLDNN "Use MKLDNN (requires MKLML or MKL)" ON)
+mxnet_option(USE_MKLDNN "Use MKLDNN (separate addition to MKL, MKL/MKLML not required)" ON)
 
 # Apple's mathematical framework, probably the best choice on a Mac if MKL/MKLML/MKLDNN
 # are not available.
@@ -140,26 +166,6 @@ mxnet_option(USE_APPLE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework i
 # functionality off if not found.
 mxnet_option(USE_LAPACK "Build with lapack support" ON)
 
-if(NOT mxnet_LINKER_LIBS)
-  set(mxnet_LINKER_LIBS "")
-endif(NOT mxnet_LINKER_LIBS)
-
-if(MSVC)
-  set(SYSTEM_ARCHITECTURE x86_64)
-else()
-  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
-endif()
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
-
-SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
-
-if("$ENV{VERBOSE}" STREQUAL "1")
-  message(STATUS " Verbose Makefile ACTIVATED")
-  set(CMAKE_VERBOSE_MAKEFILE ON)
-endif()
-
-# ---[ BLAS
 include(cmake/ChooseBLAS.cmake)
 
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)

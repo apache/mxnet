@@ -37,16 +37,16 @@ function(try_mkldnn)
     return()
   endif()
 
-  if(NOT MKL_FOUND)
-    message(WARNING "MKLDNN requires either MKL or MKLML, MKLDNN will not be available")
-    return()
-  endif()
-
-  message(STATUS "Adding MKLDNN to the build due to USE_MKLDNN=${USE_MKLDNN} and MKL_FOUND=${MKL_FOUND}")
+  message(STATUS "Adding MKLDNN to the build due to \
+                  USE_MKLDNN=${USE_MKLDNN} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS ${ARCH_OPT_FLAGS} "-mtune=generic" PARENT_SCOPE)
+  endif()
+
+  if(MSVC)
+    file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
   endif()
 
   set(WITH_TEST OFF)
@@ -56,16 +56,13 @@ function(try_mkldnn)
   include_directories(3rdparty/mkldnn/include)
   set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} mkldnn PARENT_SCOPE)
 
-  add_definitions(-DUSE_MKL=1)
-  add_definitions(-DCUB_MKL=1)
   add_definitions(-DMXNET_USE_MKLDNN=1)
 
 endfunction()
 
 function(try_mkl)
-  if(USE_MKLML)
-    return()
-  endif()
+
+  message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   if(CMAKE_CROSSCOMPILING)
     message(WARNING "MKL with cross compilation is not supported, MKL will not be available")
@@ -77,8 +74,6 @@ function(try_mkl)
                      MKL will not be available")
     return()
   endif()
-
-  message(STATUS "Trying to enable MKL framework due to USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   find_package(MKL)
 
@@ -102,27 +97,23 @@ function(try_mklml)
     return()
   endif()
 
-  if(CMAKE_CROSSCOMPILING)
-    message(STATUS "MKLML is supported only for desktop platforms, skipping...")
-    return()
-  endif()
-
   if(MKL_FOUND)
     return()
   endif()
 
+  message(STATUS "Trying to enable MKLML framework due to \
+                  USE_MKLML=${USE_MKLML} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
+
   if(CMAKE_CROSSCOMPILING)
-    message(WARNING "MKLML with cross compilation is not supported, MKLML will not be available")
+    message(WARNING "MKLML with cross compilation is not supported, MKL will not be available")
     return()
   endif()
 
   if(NOT SYSTEM_ARCHITECTURE STREQUAL "x86_64")
-    message(WARNING "MKLML is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
-                     MKLML will not be available")
+    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
+                     MKL will not be available")
     return()
   endif()
-
-  message(STATUS "Trying to enable MKLML framework due to USE_MKLML=${USE_MKLML}")
 
   include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
   find_package(MKLML REQUIRED)
@@ -223,6 +214,8 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
   set(mxnet_LINKER_LIBS ${MKL_LIBRARIES} ${mxnet_LINKER_LIBS})
 
+  add_definitions(-DUSE_MKL=1)
+  add_definitions(-DCUB_MKL=1)
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
 
