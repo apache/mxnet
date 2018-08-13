@@ -53,7 +53,6 @@ Please join either or both of the MXNet mailing lists:
 
 * [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org) <i class="fas fa-external-link-alt"></i>
 
-
 ### Slack
 
 To join the MXNet slack channel send request to the contributor mailing list.
