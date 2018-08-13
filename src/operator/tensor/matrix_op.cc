@@ -830,8 +830,8 @@ will be the last dimension.
 
 Examples::
 
-  x = mx.nd.array([1, 2])
-  y = mx.nd.array([3, 4])
+  x = [1, 2]
+  y = [3, 4]
 
   stack(x, y) = [[1, 2],
                  [3, 4]]
