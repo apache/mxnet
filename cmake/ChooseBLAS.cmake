@@ -83,7 +83,7 @@ function(try_mkl)
     set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
-    set(BLAS MKL PARENT_SCOPE)
+    set(BLAS mkl PARENT_SCOPE)
   else()
     message(STATUS "MKL framework not found")
   endif()
@@ -124,7 +124,7 @@ function(try_mklml)
   set(MKL_USE_INTEL_OMP ${MKL_USE_INTEL_OMP} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
-  set(BLAS MKL PARENT_SCOPE)
+  set(BLAS mkl PARENT_SCOPE)
 
   message(STATUS "MKLML framework found")
 
