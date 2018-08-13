@@ -30,7 +30,7 @@ from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled, assertRaises
 import unittest
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
+def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -53,18 +53,18 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req):
     # check inference
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
 
     # check training
     mod1.forward(batch, is_train=True)
     mod2.forward(batch, is_train=True)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
 
     dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
     mod1.backward(out_grads=[dy])
     mod2.backward(out_grads=[dy])
     if grad_req != 'null':
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
     else:
         assert(mod1.get_input_grads()[0] == None)
         assert(mod2.get_input_grads()[0] == None)
@@ -195,9 +195,8 @@ def test_rnnrelu_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'add')
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
-
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11410")
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_rnnrelu_bidirectional():
     T, N, I, H = 5, 20, 200, 200
 
@@ -214,9 +213,9 @@ def test_rnnrelu_bidirectional():
                 mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
                 output_prefix='bi_rnnrelu_1_'))
 
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
+    check_rnn_consistency(fused, stack, T, N, I, H, 'write', rtol=1e-2, atol=1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'add', rtol=1e-2, atol=1e-2)
+    check_rnn_consistency(fused, stack, T, N, I, H, 'null', rtol=1e-2, atol=1e-2)
 
 @with_seed()
 def test_lstm_dropout():
@@ -818,6 +817,37 @@ def test_prelu():
             check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
             check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
                                     [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
+
+@with_seed()
+def test_selu():
+    alpha = 1.6732632423543772848170429916717
+    lamb = 1.0507009873554804934193349852946
+    def fselu(x):
+        neg_indices = x < 0
+        out = x.copy()
+        out[neg_indices] = alpha * np.expm1(out[neg_indices])
+        return out * lamb
+    def fselu_grad(grad, x, y):
+        neg_indices = x < 0
+        out = np.ones(x.shape).astype(x.dtype)
+        out[neg_indices] = y[neg_indices] + alpha
+        return out * lamb
+
+    shape = (3, 4)
+    x = mx.sym.Variable("x")
+    y = mx.sym.LeakyReLU(data=x, act_type="selu")
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        if dtype is np.float16:
+            xa /= 10.0
+        xa[abs(xa) < eps] = 0.01
+        ya = fselu(xa)
+        ga = fselu_grad(np.ones(shape).astype(dtype), xa, ya)
+        check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
 
 @with_seed()
 def test_sigmoid():
