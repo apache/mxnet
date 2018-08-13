@@ -732,13 +732,13 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 def cint(init_val=0):
     """create a C int with an optional initial value"""
-    return C.c_int(init_val)
+    return ctypes.c_int(init_val)
 
 def int_addr(x):
     """given a c_int, return it's address as an int ptr"""
-    x_addr = C.addressof(x)
-    int_p = C.POINTER(C.c_int)
-    x_int_addr = C.cast(x_addr, int_p)
+    x_addr = ctypes.addressof(x)
+    int_p = ctypes.POINTER(ctypes.c_int)
+    x_int_addr = ctypes.cast(x_addr, int_p)
     return x_int_addr
 
 def checked_call(f, *args):
