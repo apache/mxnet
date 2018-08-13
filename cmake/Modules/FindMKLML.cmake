@@ -72,6 +72,8 @@ set(LOOKED_FOR
     MKLML_INCLUDE_DIR
     )
 
+set(MKLML_LIBRARIES)
+
 # Find Intel OpenMP
 set(MKL_USE_INTEL_OMP)
 
@@ -120,5 +122,5 @@ if(MKLML_FOUND)
 
   mark_as_advanced(${LOOKED_FOR})
 
-  message(STATUS "Found MKLML (include: ${MKL_INCLUDE_DIRS}, libraries: ${MKL_LIBRARIES})")
+  message(STATUS "Found MKLML (include: ${MKL_INCLUDE_DIR}, libraries: ${MKL_LIBRARIES})")
 endif()

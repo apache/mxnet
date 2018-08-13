@@ -368,7 +368,8 @@ if(USE_CUDA AND FIRST_CUDA)
   include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 else()
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
-    # Workaroud to prevent mshadow from processing BLAS libraries
+    # Workaroud to prevent mshadow from processing BLAS libraries. The main problem is with MKL - if MKLML is used it
+    # would still try to find MKL instead and will fail.
     # BLAS libraries for MXNet are setup in cmake/ChooseBLAS.cmake
     set(__BLAS ${BLAS})
     set(BLAS "Override")
@@ -477,33 +478,37 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
-  find_package(OpenMP REQUIRED)
-  # This should build on Windows, but there's some problem and I don't have a Windows box, so
-  # could a Windows user please fix?
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
-     AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT MSVC
-     AND NOT CMAKE_CROSSCOMPILING)
+  # This should also identify whether compiler supports it (AppleClang for example doesn't)
+  find_package(OpenMP)
+  if(OpenMP_FOUND)
+    # This should build on Windows, but there's some problem and I don't have a Windows box, so
+    # could a Windows user please fix?
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
+       AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+       AND NOT MSVC
+       AND NOT CMAKE_CROSSCOMPILING)
 
-    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
-    set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED TRUE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
-    list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
-    list(APPEND mxnet_LINKER_LIBS omp)
-    if(UNIX)
-      list(APPEND mxnet_LINKER_LIBS pthread)
+      # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
+      set(OPENMP_STANDALONE_BUILD TRUE)
+      set(LIBOMP_ENABLE_SHARED TRUE)
+      add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+      list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
+      list(APPEND mxnet_LINKER_LIBS omp)
+      if(UNIX)
+        list(APPEND mxnet_LINKER_LIBS pthread)
+      endif()
     endif()
+
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+
   else()
-    if(OPENMP_FOUND)
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-    endif()
+    message(WARNING "OpenMP support could not be found, OpenMP will be disabled")
+    set(USE_OPENMP False)
   endif()
+
 elseif(UNIX AND NOT ANDROID)
   list(APPEND mxnet_LINKER_LIBS pthread)
 endif()

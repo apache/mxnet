@@ -135,7 +135,11 @@ function(try_accelerate)
     return()
   endif()
 
-  if(BLAS MATCHES "[Mm][Kk][Ll]")
+  set(__BLAS)
+  string(TOLOWER "${BLAS}" __BLAS)
+  mark_as_advanced(__BLAS)
+
+  if(__BLAS MATCHES "mkl")
     return()
   endif()
 
@@ -151,6 +155,10 @@ function(try_accelerate)
   endif()
 endfunction()
 
+set(__BLAS)
+string(TOLOWER "${BLAS}" __BLAS)
+mark_as_advanced(__BLAS)
+
 if(USE_MKL_IF_AVAILABLE)
   set(MKL_FOUND)
 
@@ -161,8 +169,7 @@ endif()
 
 try_accelerate()
 
-# cmake regexp does not support case insensitive match (?i) or //i
-if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
+if(__BLAS MATCHES "atlas")
   message(STATUS "Using Atlas for BLAS")
 
   set(Atlas_NEED_LAPACK ${USE_LAPACK})
@@ -183,7 +190,7 @@ if(BLAS MATCHES "[Aa][Tt][Ll][Aa][Ss]")
   return()
 endif()
 
-if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
+if(__BLAS MATCHES "open")
   message(STATUS "Using OpenBLAS for BLAS")
 
   set(OpenBLAS_NEED_LAPACK ${USE_LAPACK})
@@ -205,7 +212,7 @@ if(BLAS MATCHES "[Oo][Pp][Ee][Nn]")
   return()
 endif()
 
-if(BLAS MATCHES "[Mm][Kk][Ll]")
+if(__BLAS MATCHES "mkl")
   message(STATUS "Using MKL for BLAS")
 
   if(NOT MKL_FOUND)
@@ -234,7 +241,7 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   endif()
 endif()
 
-if(BLAS MATCHES "([Aa][Pp][Pp][Ll][Ee]|[Aa][Cc][Cc][Ee][Ll][Ee][Rr][Aa][Tt][Ee])")
+if(BLAS MATCHES "(apple|accelerate)")
   if(NOT APPLE)
     message(FATAL_ERROR "Apple Accelerate framework's BLAS feature is available only on macOS")
     return()
