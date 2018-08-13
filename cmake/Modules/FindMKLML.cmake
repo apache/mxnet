@@ -24,7 +24,7 @@
 # The following are set after configuration is done:
 #
 # MKL_FOUND
-# MKL_INCLUDE_DIRS
+# MKL_INCLUDE_DIR
 # MKL_LIBRARIES
 
 if(MKL_FOUND)
@@ -97,7 +97,7 @@ find_package_handle_standard_args(MKLML DEFAULT_MSG ${LOOKED_FOR})
 if(MKLML_FOUND)
   set(MKL_FOUND ${MKLML_FOUND})
   set(MKL_LIBRARIES ${MKLML_LIBRARIES})
-  set(MKL_INCLUDE_DIRS "${MKLML_INCLUDE_DIR}")
+  set(MKL_INCLUDE_DIR "${MKLML_INCLUDE_DIR}")
 
   mark_as_advanced(${LOOKED_FOR})
 
