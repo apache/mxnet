@@ -556,7 +556,11 @@ class Signum(Optimizer):
         state = momentum * state + (1-momentum)*rescaled_grad
         weight = (1 - lr * wd_lh) * weight - lr * sign(state)
 
-    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
+    Reference: 
+    Jeremy Bernstein, Yu-Xiang Wang, Kamyar Azizzadenesheli & Anima Anandkumar. (2018). 
+    signSGD: Compressed Optimisation for Non-Convex Problems. In ICML’18.
+
+    See: https://arxiv.org/abs/1802.04434
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
