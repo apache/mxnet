@@ -26,6 +26,7 @@
 # MKL_FOUND
 # MKL_INCLUDE_DIR
 # MKL_LIBRARIES
+# MKL_USE_INTEL_OMP
 
 if(MKL_FOUND)
   return()
@@ -38,6 +39,9 @@ set(MKLML_INCLUDE_SEARCH_PATHS
     "${MKLROOT}"
 
     "${PROJECT_SOURCE_DIR}/3rdparty/MKLML"
+
+    /usr
+    /usr/local
     )
 
 # ---[ Find libraries
@@ -54,6 +58,9 @@ set(MKLML_LIB_SEARCH_PATHS
     "${MKLROOT}"
 
     "${PROJECT_SOURCE_DIR}/3rdparty/MKLML"
+
+    /usr
+    /usr/local
     )
 
 find_path(MKLML_INCLUDE_DIR
@@ -65,31 +72,43 @@ set(LOOKED_FOR
     MKLML_INCLUDE_DIR
     )
 
-set(MKLML_LIBS)
+# Find Intel OpenMP
+set(MKL_USE_INTEL_OMP)
 
-if(REMOVE_INTEL_OPENMP)
-  list(APPEND MKLML_LIBS mklml)
-else()
-  list(APPEND MKLML_LIBS iomp5 mklml)
+find_library(IOMP5_LIBRARY
+             NAMES iomp5 libiomp5.lib libiomp5md.lib
+             PATHS ${MKLML_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES ${PATH_SUFFIXES}
+             )
+mark_as_advanced(IOMP5_LIBRARY)
+
+if(IOMP5_LIBRARY)
+  list(APPEND LOOKED_FOR IOMP5_LIBRARY)
+  list(APPEND MKLML_LIBRARIES ${IOMP5_LIBRARY})
+
+  set(MKL_USE_INTEL_OMP True)
 endif()
 
-foreach(__lib ${MKLML_LIBS})
-  set(__mkl_lib "${__lib}")
-  string(TOUPPER ${__mkl_lib} __mkl_lib_upper)
+# add static windows libs first
+set(__MKL_LIB_NAMES libmklml.lib libmklmlmd.lib)
 
-  # add static windows libs first
-  set(__mkl_lib_names lib${__mkl_lib}.lib lib${__mkl_lib}md.lib)
+if(MKL_USE_INTEL_OMP)
+  list(APPEND __MKL_LIB_NAMES mklml_intel)
+else()
+  list(APPEND __MKL_LIB_NAMES mklml_gnu)
+endif()
 
-  find_library(${__mkl_lib_upper}_LIBRARY
-               NAMES ${__mkl_lib_names} ${__mkl_lib}
-               PATHS ${MKLML_LIB_SEARCH_PATHS}
-               PATH_SUFFIXES ${PATH_SUFFIXES}
-               )
-  mark_as_advanced(${__mkl_lib_upper}_LIBRARY)
+mark_as_advanced(__MKL_LIB_NAMES)
 
-  list(APPEND LOOKED_FOR ${__mkl_lib_upper}_LIBRARY)
-  list(APPEND MKLML_LIBRARIES ${${__mkl_lib_upper}_LIBRARY})
-endforeach()
+find_library(MKLML_LIBRARY
+             NAMES ${__MKL_LIB_NAMES} mklml
+             PATHS ${MKLML_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES ${PATH_SUFFIXES}
+             )
+mark_as_advanced(MKLML_LIBRARY)
+
+list(APPEND LOOKED_FOR MKLML_LIBRARY)
+list(APPEND MKLML_LIBRARIES ${MKLML_LIBRARY})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MKLML DEFAULT_MSG ${LOOKED_FOR})

@@ -115,12 +115,17 @@ function(try_mklml)
     return()
   endif()
 
-  include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
-  find_package(MKLML REQUIRED)
+  find_package(MKLML)
+
+  if(NOT MKL_FOUND)
+    include(${CMAKE_CURRENT_LIST_DIR}/DownloadMKLML.cmake)
+    find_package(MKLML REQUIRED)
+  endif()
 
   set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
   set(MKL_INCLUDE_DIR ${MKL_INCLUDE_DIR} PARENT_SCOPE)
   set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
+  set(MKL_USE_INTEL_OMP ${MKL_USE_INTEL_OMP} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
   set(BLAS MKL PARENT_SCOPE)
@@ -214,8 +219,6 @@ if(BLAS MATCHES "[Mm][Kk][Ll]")
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
   set(mxnet_LINKER_LIBS ${MKL_LIBRARIES} ${mxnet_LINKER_LIBS})
 
-  add_definitions(-DUSE_MKL=1)
-  add_definitions(-DCUB_MKL=1)
   add_definitions(-DMSHADOW_USE_CBLAS=0)
   add_definitions(-DMSHADOW_USE_MKL=1)
 
