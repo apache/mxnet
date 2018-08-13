@@ -57,6 +57,9 @@ set(MKL_INCLUDE_SEARCH_PATHS
     "${MKLROOT}"
 
     "${INTEL_ROOT}/mkl"
+
+    /usr
+    /usr/local
     )
 
 # ---[ Find include dir
@@ -74,6 +77,9 @@ set(MKL_LIB_SEARCH_PATHS
     "${INTEL_ROOT}/compiler"
     "${MKLROOT}/.."
     "${MKLROOT}/../compiler"
+
+    /usr
+    /usr/local
     )
 
 set(__looked_for MKL_INCLUDE_DIR)
@@ -82,7 +88,7 @@ set(__looked_for MKL_INCLUDE_DIR)
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   set(__path_suffixes lib lib/ia32)
 else()
-  set(__path_suffixes lib lib/intel64)
+  set(__path_suffixes lib lib64 lib/intel64)
 endif()
 
 set(__mkl_libs "")
