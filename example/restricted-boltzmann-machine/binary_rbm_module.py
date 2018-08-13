@@ -136,7 +136,7 @@ showcase_gibbs_sampling_steps = 3000
 showcase_num_samples_w = 15
 showcase_num_samples_h = 15
 showcase_num_samples = showcase_num_samples_w * showcase_num_samples_h
-showcase_img_shape = (showcase_num_samples_h * img_height, showcase_num_samples_w * img_width)
+showcase_img_shape = (showcase_num_samples_h * img_height, 2 * showcase_num_samples_w * img_width)
 showcase_img_column_shape = (showcase_num_samples_h * img_height, img_width)
 
 params = model.get_params()[0] # We don't need aux states here
@@ -158,11 +158,14 @@ showcase_model = mx.mod.Module(symbol=showcase_rbm, context=ctx, data_names=['da
 showcase_model.bind(data_shapes=showcase_iter.provide_data, for_training=False)
 showcase_model.set_params(params, aux_params=None)
 showcase_img = np.zeros(showcase_img_shape)
-for sample_batch, i, _ in showcase_model.iter_predict(eval_data=showcase_iter, num_batch=showcase_num_samples_w):
+for sample_batch, i, data_batch in showcase_model.iter_predict(eval_data=showcase_iter, num_batch=showcase_num_samples_w):
     # Each pixel is the probability that the unit is 1.
-    showcase_img[:, i * img_width : (i + 1) * img_width] = sample_batch[0].reshape(showcase_img_column_shape).asnumpy()
+    showcase_img[:, i * img_width : (i + 1) * img_width] = data_batch.data[0].reshape(showcase_img_column_shape).asnumpy()
+    showcase_img[:, (showcase_num_samples_w + i) * img_width : (showcase_num_samples_w + i + 1) * img_width
+                ] = sample_batch[0].reshape(showcase_img_column_shape).asnumpy()
 s = plt.imshow(showcase_img, cmap='gray')
 plt.axis('off')
+plt.axvline(showcase_num_samples_w * img_width, color='y')
 plt.show(s)
 
 print("Done")

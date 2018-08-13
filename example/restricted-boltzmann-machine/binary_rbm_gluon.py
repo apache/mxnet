@@ -117,7 +117,7 @@ showcase_gibbs_sampling_steps = 3000
 showcase_num_samples_w = 15
 showcase_num_samples_h = 15
 showcase_num_samples = showcase_num_samples_w * showcase_num_samples_h
-showcase_img_shape = (showcase_num_samples_h * img_height, showcase_num_samples_w * img_width)
+showcase_img_shape = (showcase_num_samples_h * img_height, 2 * showcase_num_samples_w * img_width)
 showcase_img_column_shape = (showcase_num_samples_h * img_height, img_width)
 
 showcase_rbm = BinaryRBMBlock(
@@ -131,9 +131,12 @@ for i in range(showcase_num_samples_w):
     data_batch = next(showcase_iter)[0].as_in_context(ctx).flatten()
     sample_batch = showcase_rbm(data_batch)
     # Each pixel is the probability that the unit is 1.
-    showcase_img[:, i * img_width : (i + 1) * img_width] = sample_batch[0].reshape(showcase_img_column_shape).asnumpy()
+    showcase_img[:, i * img_width : (i + 1) * img_width] = data_batch.reshape(showcase_img_column_shape).asnumpy()
+    showcase_img[:, (showcase_num_samples_w + i) * img_width : (showcase_num_samples_w + i + 1) * img_width
+                ] = sample_batch[0].reshape(showcase_img_column_shape).asnumpy()
 s = plt.imshow(showcase_img, cmap='gray')
 plt.axis('off')
+plt.axvline(showcase_num_samples_w * img_width, color='y')
 plt.show(s)
 
 print("Done")
