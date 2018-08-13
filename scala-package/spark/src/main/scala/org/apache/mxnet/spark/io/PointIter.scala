@@ -75,8 +75,7 @@ class PointIter private[mxnet](
       }
       val pad = batchSize - instNum
       val dataBatch = new LongLivingDataBatch(
-        IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad,
-        dataLayout, labelLayout, dataDType, labelDType)
+        IndexedSeq(dataBuilder), IndexedSeq(labelBuilder), null, pad)
       cache += dataBatch
       dataBatch
     }
@@ -142,10 +141,6 @@ class PointIter private[mxnet](
    * @return number of padding examples in current batch
    */
   override def getPad(): Int = 0
-
-  override def getDType(): (DType, DType) = (dataDType, labelDType)
-
-  override def getLayout(): (String, String) = (dataLayout, labelLayout)
 
   override def batchSize: Int = _batchSize
 

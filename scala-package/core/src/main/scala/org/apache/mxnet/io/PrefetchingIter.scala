@@ -177,22 +177,6 @@ class PrefetchingIter(
     */
   override def getPad(): Int = this.currentBatch.pad
 
-  /**
-    * Get the DType
-    * @return DType
-    */
-  def getDType(): (DType, DType) = {
-    (currentBatch.dataDType, currentBatch.labelDType)
-  }
-
-  /**
-    * Get the layout
-    * @return layout
-    */
-  def getLayout(): (String, String) = {
-    (currentBatch.dataLayout, currentBatch.labelLayout)
-  }
-
   // The name and shape of label provided by this iterator
   override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
@@ -224,11 +208,7 @@ class PrefetchingIter(
         labels.toIndexedSeq.flatten,
         nextBatch(0).index,
         nextBatch(0).pad,
-        null, null, null,
-        dataLayout = nextBatch(0).dataLayout,
-        labelLayout = nextBatch(0).labelLayout,
-        dataDType = nextBatch(0).dataDType,
-        labelDType = nextBatch(0).labelDType)
+        null, null, null)
       for (e <- dataTaken) e.release()
       true
     }

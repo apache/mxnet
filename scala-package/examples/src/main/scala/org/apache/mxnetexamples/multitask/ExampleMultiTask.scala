@@ -67,9 +67,7 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, null, null, null,
-          dataDType = batch.dataDType, labelDType = batch.labelDType,
-          dataLayout = batch.dataLayout, labelLayout = batch.labelLayout)
+          batch.pad, null, null, null)
       } else {
         throw new NoSuchElementException
       }
@@ -127,10 +125,6 @@ object ExampleMultiTask {
      * @return number of padding examples in current batch
      */
     override def getPad(): Int = this.dataIter.getPad()
-
-    override def getDType(): (DType, DType) = this.dataIter.getDType()
-
-    override def getLayout(): (String, String) = this.dataIter.getLayout()
 
     // The name and shape of data provided by this iterator
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData

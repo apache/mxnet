@@ -169,9 +169,7 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     if (hasNext) {
       cursor += dataBatchSize
       new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-        null, null, null,
-        dataDType = getDType()._1, labelDType = getDType()._2,
-        dataLayout = getLayout()._1, labelLayout = getLayout()._2)
+        null, null, null)
     } else {
       throw new NoSuchElementException
     }
@@ -246,21 +244,6 @@ class NDArrayIter(data: IndexedSeq[(String, NDArray)],
     }
   }
 
-  /**
-    * Get the DType
-    * @return DType
-    */
-  def getDType(): (DType, DType) = {
-    (dataDType, labelDType)
-  }
-
-  /**
-    * Get the layout
-    * @return layout
-    */
-  def getLayout(): (String, String) = {
-    (dataLayout, labelLayout)
-  }
 
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData

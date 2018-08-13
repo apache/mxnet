@@ -280,7 +280,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch1)
 
     // test empty label (for prediction)
-    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, shuffle = false, lastBatchHandle = "discard")
+    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, shuffle = false,
+      lastBatchHandle = "discard")
     batchCount = 0
     while(dataIter2.hasNext) {
       val tBatch = dataIter2.next()

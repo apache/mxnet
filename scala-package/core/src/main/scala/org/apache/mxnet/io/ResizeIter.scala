@@ -129,22 +129,6 @@ class ResizeIter(
     currentBatch.pad
   }
 
-  /**
-    * Get the DType
-    * @return DType
-    */
-  def getDType(): (DType, DType) = {
-    (currentBatch.dataDType, currentBatch.labelDType)
-  }
-
-  /**
-    * Get the layout
-    * @return layout
-    */
-  def getLayout(): (String, String) = {
-    (currentBatch.dataLayout, currentBatch.labelLayout)
-  }
-
   override def batchSize: Int = {
     dataIter.batchSize
   }

@@ -143,14 +143,10 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // the key for the bucket that should be used for this batch,
                 // for bucketing io only
                 val bucketKey: AnyRef,
-                // use ListMap to indicate the order of data/label loading
+                // use DataDesc to indicate the order of data/label loading
                 // (must match the order of input data/label)
-                private val providedData: ListMap[String, Shape],
-                private val providedLabel: ListMap[String, Shape],
-                val dataDType: DType,
-                val labelDType: DType,
-                val dataLayout: String,
-                val labelLayout: String) {
+                private val providedDataDesc: IndexedSeq[DataDesc],
+                private val providedLabelDesc: IndexedSeq[DataDesc]) {
   def this(data: IndexedSeq[NDArray],
             label: IndexedSeq[NDArray],
             index: IndexedSeq[Long],
@@ -162,8 +158,8 @@ class DataBatch(val data: IndexedSeq[NDArray],
             // (must match the order of input data/label)
             providedData: ListMap[String, Shape] = null,
             providedLabel: ListMap[String, Shape] = null) {
-    this(data, label, index, pad, bucketKey, providedData, providedLabel,
-      MX_REAL_TYPE, MX_REAL_TYPE, Layout.UNDEFINED, Layout.UNDEFINED)
+    this(data, label, index, pad, bucketKey,
+      DataDesc.ListMap2Descs(providedData), DataDesc.ListMap2Descs(providedLabel))
   }
   /**
    * Dispose its data and labels
@@ -179,10 +175,29 @@ class DataBatch(val data: IndexedSeq[NDArray],
   }
 
   // The name and shape of data
-  def provideData: ListMap[String, Shape] = providedData
+  def provideData: ListMap[String, Shape] = {
+    var temp = ListMap[String, Shape]()
+    if (providedDataDesc == null) null
+    else {
+      providedDataDesc.foreach(ele => temp = temp + (ele.name -> ele.shape))
+      temp
+    }
+  }
 
   // The name and shape of label
-  def provideLabel: ListMap[String, Shape] = providedLabel
+  def provideLabel: ListMap[String, Shape] = {
+    var temp = ListMap[String, Shape]()
+    if (providedLabelDesc == null) null
+    else {
+      providedLabelDesc.foreach(ele => temp = temp + (ele.name -> ele.shape))
+      temp
+    }
+  }
+
+  def provideDataDesc: IndexedSeq[DataDesc] = providedDataDesc
+
+  def provideLabelDesc: IndexedSeq[DataDesc] = providedLabelDesc
+
 }
 
 object DataBatch {
@@ -194,13 +209,9 @@ object DataBatch {
     private var label: IndexedSeq[NDArray] = null
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
-    private var dataLayout: String = Layout.UNDEFINED
-    private var labelLayout: String = Layout.UNDEFINED
-    private var dataDType: DType = MX_REAL_TYPE
-    private var labelDType: DType = MX_REAL_TYPE
     private var bucketKey: AnyRef = null
-    private var dataShapes: ListMap[String, Shape] = null
-    private var labelShapes: ListMap[String, Shape] = null
+    private var dataShapes: IndexedSeq[DataDesc] = null
+    private var labelShapes: IndexedSeq[DataDesc] = null
 
     /**
      * Set the input data.
@@ -245,30 +256,6 @@ object DataBatch {
     }
 
     /**
-      * Set the dtype.
-      * @param dataDType The dtype of the data, default is Float32
-      * @param labelDType The dtype of the label, default is Int32
-      * @return this
-      */
-    def setDType(dataDType: DType, labelDType: DType): Builder = {
-      this.dataDType = dataDType
-      this.labelDType = labelDType
-      this
-    }
-
-    /**
-      * Set the layout.
-      * @param dataLayout The layout of the data, default is NCHW
-      * @param labelLayout The layout of the label, default is N
-      * @return this
-      */
-    def setLayout(dataLayout: String, labelLayout: String): Builder = {
-      this.dataLayout = dataLayout
-      this.labelLayout = labelLayout
-      this
-    }
-
-    /**
      * Set the bucket key, used for bucketing module.
      * @param bucketKey the bucket key related to this batch.
      * @return this.
@@ -280,15 +267,14 @@ object DataBatch {
 
     /**
      * Provide the shape of a data.
-     * @param name data name.
-     * @param shape data shape.
+     * @param dataDesc DataDescriptor
      * @return this.
      */
-    def provideDataShape(name: String, shape: Shape): Builder = {
+    def provideDataShape(dataDesc: DataDesc): Builder = {
       if (dataShapes == null) {
-        dataShapes = ListMap((name, shape))
+        dataShapes = IndexedSeq(dataDesc)
       } else {
-        dataShapes = dataShapes.updated(name, shape)
+        dataShapes = dataShapes ++ IndexedSeq(dataDesc)
       }
       this
     }
@@ -299,19 +285,18 @@ object DataBatch {
      * @param shape label shape.
      * @return this.
      */
-    def provideLabelShape(name: String, shape: Shape): Builder = {
+    def provideLabelShape(dataDesc: DataDesc): Builder = {
       if (labelShapes == null) {
-        labelShapes = ListMap((name, shape))
+        labelShapes = IndexedSeq(dataDesc)
       } else {
-        labelShapes = labelShapes.updated(name, shape)
+        labelShapes = labelShapes ++ IndexedSeq(dataDesc)
       }
       this
     }
 
     def build(): DataBatch = {
       require(data != null, "data is required.")
-      new DataBatch(data, label, index, pad, bucketKey, dataShapes, labelShapes,
-        dataDType, labelDType, dataLayout, labelLayout)
+      new DataBatch(data, label, index, pad, bucketKey, dataShapes, labelShapes)
     }
   }
 }
@@ -334,9 +319,7 @@ abstract class DataIter extends Iterator[DataBatch] {
   @throws(classOf[NoSuchElementException])
   def next(): DataBatch = {
     new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-      null, null, null,
-      getDType()._1, getDType()._2,
-      getLayout()._1, getLayout()._2)
+      null, null, null)
   }
 
   /**
@@ -357,18 +340,6 @@ abstract class DataIter extends Iterator[DataBatch] {
    * @return number of padding examples in current batch
    */
   def getPad(): Int
-
-  /**
-    * Get the DType
-    * @return data and label DType of the DataIter
-    */
-  def getDType(): (DType, DType)
-
-  /**
-    * Get the layout
-    * @return data and label layout of the DataIter
-    */
-  def getLayout(): (String, String)
 
   /**
    * Get the index of current batch

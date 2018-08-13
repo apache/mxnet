@@ -62,12 +62,9 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
       iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
-      val dataType = currentBatch.dataDType
-      val labelDType = currentBatch.labelDType
-      val dataLayout = currentBatch.dataLayout
-      val labelLayout = currentBatch.labelLayout
       // properties
-      val res = (IndexedSeq(new DataDesc(dataName, data.shape, dataDType, dataLayout)),
+      val res = (
+        IndexedSeq(new DataDesc(dataName, data.shape, dataDType, dataLayout)),
         IndexedSeq(new DataDesc(labelName, label.shape, labelDType, labelLayout)),
         ListMap(dataName -> data.shape),
         ListMap(labelName -> label.shape),
@@ -128,9 +125,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
         index = getIndex(), pad = getPad(),
-        null, null, null,
-        dataDType = getDType()._1, labelDType = getDType()._2,
-        dataLayout = getLayout()._1, labelLayout = getLayout()._2)
+        null, null, null)
     } else {
       currentBatch = null
     }
@@ -178,18 +173,6 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     checkCall(_LIB.mxDataIterGetPadNum(handle, out))
     out.value
   }
-
-  /**
-    * Get the DType
-    * @return DType
-    */
-  def getDType(): (DType, DType) = (dataDType, labelDType)
-
-  /**
-    * Get the layout
-    * @return layout
-    */
-  def getLayout(): (String, String) = (dataLayout, labelLayout)
 
   // The name and shape of data provided by this iterator
   override def provideData: ListMap[String, Shape] = _provideData

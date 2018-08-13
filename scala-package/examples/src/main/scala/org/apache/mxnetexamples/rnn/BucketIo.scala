@@ -223,9 +223,7 @@ object BucketIo {
                     getIndex(),
                     getPad(),
                     this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel,
-                    getDType()._1, getDType()._2,
-                    getLayout()._1, getLayout()._2)
+                    batchProvideData, batchProvideLabel)
     }
 
     /**
@@ -262,10 +260,6 @@ object BucketIo {
       * @return number of padding examples in current batch
       */
     override def getPad(): Int = 0
-
-    override def getDType(): (DType, DType) = (dataDType, labelDType)
-
-    override def getLayout(): (String, String) = (dataLayout, labelLayout)
 
     // The name and shape of label provided by this iterator
     override def provideLabel: ListMap[String, Shape] = this._provideLabel
