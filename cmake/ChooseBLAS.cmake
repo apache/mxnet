@@ -37,8 +37,7 @@ function(try_mkldnn)
     return()
   endif()
 
-  message(STATUS "Adding MKLDNN to the build due to \
-                  USE_MKLDNN=${USE_MKLDNN} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
+  message(STATUS "Adding MKLDNN to the build due to USE_MKLDNN=${USE_MKLDNN} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
@@ -70,8 +69,7 @@ function(try_mkl)
   endif()
 
   if(NOT SYSTEM_ARCHITECTURE STREQUAL "x86_64")
-    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
-                     MKL will not be available")
+    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), MKL will not be available")
     return()
   endif()
 
@@ -101,8 +99,7 @@ function(try_mklml)
     return()
   endif()
 
-  message(STATUS "Trying to enable MKLML framework due to \
-                  USE_MKLML=${USE_MKLML} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
+  message(STATUS "Trying to enable MKLML framework due to USE_MKLML=${USE_MKLML} and USE_MKL_IF_AVAILABLE=${USE_MKL_IF_AVAILABLE}")
 
   if(CMAKE_CROSSCOMPILING)
     message(WARNING "MKLML with cross compilation is not supported, MKL will not be available")
@@ -110,8 +107,7 @@ function(try_mklml)
   endif()
 
   if(NOT SYSTEM_ARCHITECTURE STREQUAL "x86_64")
-    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), \
-                     MKL will not be available")
+    message(WARNING "MKL is supported only for desktop platforms (SYSTEM_ARCHITECTURE=${SYSTEM_ARCHITECTURE}), MKL will not be available")
     return()
   endif()
 
