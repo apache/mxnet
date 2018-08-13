@@ -678,8 +678,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
     def write_all_str(module_file, module_all_list):
         """Write the proper __all__ based on available operators."""
-        module_file.write(os.linesep)
-        module_file.write(os.linesep)
+        module_file.write(os.linesep * 2)
         all_str = '__all__ = [' + ', '.join(["'%s'"%s for s in module_all_list]) + ']'
         module_file.write(all_str)
 
