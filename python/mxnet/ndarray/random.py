@@ -151,6 +151,57 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 
 
+def randn(loc=0, scale=1, dtype=_Null, ctx=None, out=None, *args, **kwargs):
+    """Draw random samples from a normal (Gaussian) distribution.
+
+    Samples are distributed according to a normal distribution parametrized
+    by *loc* (mean) and *scale* (standard deviation).
+
+
+    Parameters
+    ----------
+    loc : float or NDArray
+        Mean (centre) of the distribution.
+    scale : float or NDArray
+        Standard deviation (spread or width) of the distribution.
+    shape : int or tuple of ints
+        The number of samples to draw. If shape is, e.g., `(m, n)` and `loc` and
+        `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
+        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+        `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
+    dtype : {'float16','float32', 'float64'}
+        Data type of output samples. Default is 'float32'
+    ctx : Context
+        Device context of output. Default is current context. Overridden by
+        `loc.context` when `loc` is an NDArray.
+    out : NDArray
+        Store output to an existing NDArray.
+
+
+    Examples
+    --------
+    >>> mx.nd.random.randn()
+    2.21220636
+    <NDArray 1 @cpu(0)>
+    >>> mx.nd.random.randn(2, 2)
+    [ 0.29253659]
+    <NDArray 1 @gpu(0)>
+    >>> mx.nd.random.randn(-1, 1, shape=(2,))
+    [-0.2259962  -0.51619542]
+    <NDArray 2 @cpu(0)>
+    >>> loc = mx.nd.array([1,2,3])
+    >>> scale = mx.nd.array([2,3,4])
+    >>> mx.nd.random.normal(loc, scale, shape=2)
+    [[ 0.55912292  3.19566321]
+     [ 1.91728961  2.47706747]
+     [ 2.79666662  5.44254589]]
+    <NDArray 3x2 @cpu(0)>
+    """
+    shape = args
+    return _random_helper(_internal._random_normal, _internal._sample_normal,
+                          [loc, scale], shape, dtype, ctx, out, kwargs)
+
+
 def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     """Draw random samples from a Poisson distribution.
 
