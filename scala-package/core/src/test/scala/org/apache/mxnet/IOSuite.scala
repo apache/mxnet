@@ -38,11 +38,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       "shuffle" -> "1",
       "flat" -> "1",
       "silent" -> "0",
-      "seed" -> "10",
-      "dataLayout" -> "NT",
-      "labelLayout" -> "N",
-      "dataDType" -> "Float32",
-      "labelDType" -> "Int32"
+      "seed" -> "10"
     )
 
     val mnistPack = IO.MNISTPack(params)
@@ -61,12 +57,6 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val provideLabel = mnistIter.provideLabel
     assert(provideData("data") === Shape(100, 784))
     assert(provideLabel("label") === Shape(100))
-    val provideDataDesc = mnistIter.provideDataDesc
-    val provideLabelDesc = mnistIter.provideLabelDesc
-    assert(provideDataDesc(0).dtype == DType.Float32)
-    assert(provideDataDesc(0).layout == Layout.NT)
-    assert(provideLabelDesc(0).dtype == DType.Int32)
-    assert(provideLabelDesc(0).layout == Layout.N)
     // test_loop
     mnistIter.reset()
     batchCount = 0
@@ -303,9 +293,10 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(dataIter2.initLabel == IndexedSeq.empty)
 
     // test implementation with DataDesc
-    val dataIter3 = new NDArrayIter(data, label, 128, false,
-    "pad", "data", "label", DType.Float32,
-      DType.Int32, Layout.NTC, Layout.NT)
+    val dataIter3 = new NDArrayIter(
+      IO.initDataDesc(data, false, "data", DType.Float32, Layout.NTC),
+      IO.initDataDesc(label, false, "label", DType.Int32, Layout.NT),
+      128, false, "pad")
     val dataDesc = dataIter3.provideDataDesc
     val labelDesc = dataIter3.provideLabelDesc
     assert(dataDesc(0).dtype == DType.Float32)

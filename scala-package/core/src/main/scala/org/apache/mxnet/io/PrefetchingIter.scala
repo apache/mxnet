@@ -89,15 +89,15 @@ class PrefetchingIter(
   }
 
   private val _provideLabelDesc: IndexedSeq[DataDesc] = {
-    if (dataNames == null) {
+    if (labelNames == null) {
       iters.map(_.provideLabelDesc).foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
         acc ++ elem
       }
     } else {
-      iters.zipWithIndex.map(tu => (tu._1.provideDataDesc, tu._2))
+      iters.zipWithIndex.map(tu => (tu._1.provideLabelDesc, tu._2))
         .map(m =>
           m._1.map(t =>
-            new DataDesc(dataNames(m._2)(t.name), t.shape, t.dtype, t.layout)
+            new DataDesc(labelNames(m._2)(t.name), t.shape, t.dtype, t.layout)
           )
         )
         .foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
@@ -178,9 +178,11 @@ class PrefetchingIter(
   override def getPad(): Int = this.currentBatch.pad
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = this._provideData
 
   // Provide type:DataDesc of the data

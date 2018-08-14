@@ -28,9 +28,6 @@ import scala.io.Source
 import scala.util.Random
 import scala.collection.mutable
 
-/**
- * @author Depeng Liang
- */
 object BucketIo {
 
   type Text2Id = (String, Map[String, Int]) => Array[Int]
@@ -94,25 +91,14 @@ object BucketIo {
   }
 
   class BucketSentenceIter(
-      path: String, vocab: Map[String, Int], var buckets: IndexedSeq[Int],
-      _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
-      seperateChar: String, text2Id: Text2Id,
-      readContent: ReadContent,
-      dataLayout: String,
-      labelLayout: String,
-      dataDType : DType,
-      labelDType: DType) extends DataIter {
-
-    // scalastyle:off
-    def this(path: String, vocab: Map[String, Int], buckets: IndexedSeq[Int],
-    _batchSize: Int, initStates: IndexedSeq[(String, (Int, Int))],
-    seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
-    readContent: ReadContent = defaultReadContent) {
-      this(path, vocab, buckets, _batchSize, initStates, seperateChar, text2Id,
-        readContent, Layout.UNDEFINED, Layout.UNDEFINED, DType.Float32, DType.Float32)
-    }
-    // scalastyle:on
-
+      path: String,
+      vocab: Map[String, Int],
+      var buckets: IndexedSeq[Int],
+      _batchSize: Int,
+      private val initStates: IndexedSeq[(String, (Int, Int))],
+      seperateChar: String = " <eos> ",
+      text2Id: Text2Id = defaultText2Id,
+      readContent: ReadContent = defaultReadContent) extends DataIter {
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
 
     private val content = readContent(path)
@@ -185,13 +171,17 @@ object BucketIo {
     private val _provideLabel = ListMap("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
 
     private val _provideDataDesc = {
+      // TODO: need to allow user to specify DType and Layout
       val tmp = IndexedSeq(new DataDesc("data",
-        Shape(_batchSize, _defaultBucketKey), dataDType, dataLayout))
-      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2), dataDType, dataLayout))
+        Shape(_batchSize, _defaultBucketKey), DType.Float32, Layout.UNDEFINED))
+      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2),
+        DType.Float32, Layout.UNDEFINED))
     }
 
-    private val _provideLabelDesc = IndexedSeq(new DataDesc("softmax_label",
-      Shape(_batchSize, _defaultBucketKey), labelDType, labelLayout))
+    private val _provideLabelDesc = IndexedSeq(
+      // TODO: need to allow user to specify DType and Layout
+      new DataDesc("softmax_label",
+      Shape(_batchSize, _defaultBucketKey), DType.Float32, Layout.UNDEFINED))
 
     private var iBucket = 0
 
@@ -262,9 +252,11 @@ object BucketIo {
     override def getPad(): Int = 0
 
     // The name and shape of label provided by this iterator
+    @deprecated
     override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
     // The name and shape of data provided by this iterator
+    @deprecated
     override def provideData: ListMap[String, Shape] = this._provideData
 
     // Provide type:DataDesc of the data

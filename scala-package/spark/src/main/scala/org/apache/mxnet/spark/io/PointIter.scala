@@ -32,11 +32,7 @@ class PointIter private[mxnet](
   private val dimension: Shape,
   private val _batchSize: Int,
   private val dataName: String = "data",
-  private val labelName: String = "label",
-  private val dataDType: DType = DType.Float32,
-  private val labelDType: DType = DType.Float32,
-  private val dataLayout: String = Layout.UNDEFINED,
-  private val labelLayout: String = Layout.UNDEFINED) extends DataIter {
+  private val labelName: String = "label") extends DataIter {
 
   private val cache: ArrayBuffer[DataBatch] = ArrayBuffer.empty[DataBatch]
   private var index: Int = -1
@@ -118,21 +114,25 @@ class PointIter private[mxnet](
   }
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = {
     ListMap(labelName -> Shape(_batchSize))
   }
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = {
     ListMap(dataName -> dataShape)
   }
 
   override def provideDataDesc: IndexedSeq[DataDesc] = {
-    IndexedSeq(new DataDesc(dataName, dataShape, dataDType, dataLayout))
+    // TODO: Make DType, Layout configurable
+    IndexedSeq(new DataDesc(dataName, dataShape, DType.Float32, Layout.UNDEFINED))
   }
 
   override def provideLabelDesc: IndexedSeq[DataDesc] = {
-    IndexedSeq(new DataDesc(labelName, Shape(_batchSize), labelDType, labelLayout))
+    IndexedSeq(new DataDesc(labelName, Shape(_batchSize),
+      DType.Float32, Layout.UNDEFINED))
   }
 
   /**

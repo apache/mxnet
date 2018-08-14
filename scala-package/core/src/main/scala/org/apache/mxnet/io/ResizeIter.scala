@@ -134,11 +134,13 @@ class ResizeIter(
   }
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = {
     dataIter.provideData
   }
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = {
     dataIter.provideLabel
   }

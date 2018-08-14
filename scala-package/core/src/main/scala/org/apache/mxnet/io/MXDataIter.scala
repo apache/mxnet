@@ -31,22 +31,11 @@ import scala.collection.mutable.ListBuffer
  * @param handle the handle to the underlying C++ Data Iterator
  */
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
-                                dataName: String,
-                                labelName: String,
-                                dataLayout: String,
-                                labelLayout: String,
-                                dataDType: DType,
-                                labelDType: DType)
+                                dataName: String = "data",
+                                labelName: String = "label")
   extends DataIter with WarnIfNotDisposed {
 
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
-
-  def this(handle: DataIterHandle,
-           dataName: String = "data",
-           labelName: String = "label") {
-    this(handle, dataName, labelName, Layout.UNDEFINED, Layout.UNDEFINED,
-      DType.Float32, DType.Float32)
-  }
 
   // use currentBatch to implement hasNext
   // (may be this is not the best way to do this work,
@@ -64,8 +53,9 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
       val label = currentBatch.label(0)
       // properties
       val res = (
-        IndexedSeq(new DataDesc(dataName, data.shape, dataDType, dataLayout)),
-        IndexedSeq(new DataDesc(labelName, label.shape, labelDType, labelLayout)),
+        // TODO: need to allow user to specify DType and Layout
+        IndexedSeq(new DataDesc(dataName, data.shape, DType.Float32, Layout.UNDEFINED)),
+        IndexedSeq(new DataDesc(labelName, label.shape, DType.Float32, Layout.UNDEFINED)),
         ListMap(dataName -> data.shape),
         ListMap(labelName -> label.shape),
         data.shape(0))
@@ -175,9 +165,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   // Provide type:DataDesc of the data

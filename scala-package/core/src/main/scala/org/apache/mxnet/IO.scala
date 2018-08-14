@@ -105,29 +105,26 @@ object IO {
     checkCall(_LIB.mxDataIterCreateIter(handle, keys, vals, out))
     val dataName = params.getOrElse("data_name", "data")
     val labelName = params.getOrElse("label_name", "label")
-    val dataLayout = params.getOrElse("dataLayout", Layout.UNDEFINED)
-    val labelLayout = params.getOrElse("labelLayout", Layout.UNDEFINED)
-    val dataDType = params.getOrElse("dataDType", "Float32")
-    val labelDType = params.getOrElse("labelDType", "Float32")
-    new MXDataIter(out.value, dataName, labelName,
-      dataLayout = dataLayout, labelLayout = labelLayout,
-      dataDType = DType.getType(dataDType),
-      labelDType = DType.getType(labelDType))
+    new MXDataIter(out.value, dataName, labelName)
   }
 
   // Convert data into canonical form.
-  private[mxnet] def initData(data: IndexedSeq[NDArray],
-                              allowEmpty: Boolean,
-                              defaultName: String): IndexedSeq[(String, NDArray)] = {
+  private[mxnet] def initDataDesc(data: IndexedSeq[NDArray],
+                                  allowEmpty: Boolean,
+                                  defaultName: String,
+                                  defaultDType: DType,
+                                  defaultLayout: String): IndexedSeq[(DataDesc, NDArray)] = {
     require(data != null)
     require(data != IndexedSeq.empty || allowEmpty)
     if (data == IndexedSeq.empty) {
       IndexedSeq()
     } else if (data.length == 1) {
-      IndexedSeq((defaultName, data(0)))
+      IndexedSeq((new DataDesc(defaultName, data(0).shape,
+        defaultDType, defaultLayout), data(0)))
     } else {
       data.zipWithIndex.map(item => {
-        (defaultName + "_" + item._2, item._1)
+        (new DataDesc(defaultName + "_" + item._2, item._1.shape,
+          defaultDType, defaultLayout), item._1)
       }).toIndexedSeq
     }
   }
@@ -379,7 +376,7 @@ abstract class DataPack() extends Iterable[DataBatch] {
 
 // Named data desc description contains name, shape, type and other extended attributes.
 case class DataDesc(name: String, shape: Shape,
-                    dtype: DType = Base.MX_REAL_TYPE, layout: String = Layout.UNDEFINED) {
+                    dtype: DType = DType.Float32, layout: String = Layout.UNDEFINED) {
   require(layout == Layout.UNDEFINED || shape.length == layout.length,
     ("number of dimensions in shape :%d with" +
     " shape: %s should match the length of the layout: %d with layout: %s").
@@ -403,7 +400,7 @@ object DataDesc {
    */
   def getBatchAxis(layout: Option[String]): Int = {
     if (layout.isEmpty|| layout.get == Layout.UNDEFINED) {
-      logger.info("Found Undefined Layout, will use default index 0")
+      logger.warn("Found Undefined Layout, will use default index 0")
       0
     } else {
       if (layout.get.contains('N')) {
@@ -414,6 +411,7 @@ object DataDesc {
     }
   }
 
+  @deprecated
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
     if (shapes != null) {
       shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
