@@ -1061,7 +1061,7 @@ class ImageIter(io.DataIter):
         Label data type. Default: float32. Other options: int32, int64, float64
     last_batch : str, optional
         How to handle the last batch.
-        This parameter can be ‘pad’(default), ‘discard’ or ‘roll_over’.
+        This parameter can be 'pad'(default), 'discard' or 'roll_over'.
         If 'pad', the last batch will be padded with data starting from the begining
         If 'discard', the last batch will be discarded
         If 'roll_over', the remaining elements will be rolled over to the next iteration
