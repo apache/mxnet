@@ -139,6 +139,28 @@ def test_while_loop_simple_forward():
         assert result_s.asscalar() == 0
 
 
+def test_while_loop2():
+    class TestBlock(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestBlock, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, data):
+            def cond_func(state1, state2):
+                return state1 > 0
+            def body_func(state1, state2):
+                return (state2, [state2 + 1, state2 + 2])
+            return F.contrib.while_loop(
+                    cond=cond_func,
+                    func=body_func,
+                    loop_vars=[data, data + 1],
+                    max_iterations=10)
+
+    block = TestBlock()
+    block.initialize(ctx=default_context())
+    block.hybridize()
+    block(mx.nd.ones((1)))
+
+
 def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, max_iterations, is_for, n_steps):
 
     def _create_vars(num, prefix):
