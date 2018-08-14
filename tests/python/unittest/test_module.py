@@ -795,11 +795,9 @@ def test_forward_types():
     mod.bind(data_shapes=[('data', (1, 10))])
     mod.init_params()
     data1 = mx.nd.ones((1, 10))
-    result = mod.forward(data1)
-    assert result.shape == (1, 10)
+    assert mod.predict(data1).shape == (1, 10)
     data2 = np.ones((1, 10))
-    result = mod.forward(data2)
-    assert result.shape == (1, 10)
+    assert mod.predict(data1).shape == (1, 10)
 
 
 
