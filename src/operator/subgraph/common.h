@@ -28,33 +28,6 @@
 
 namespace mxnet {
 namespace op {
-namespace sg {
-
-struct SimpleNode;
-using SimpleNodePtr = std::shared_ptr<SimpleNode>;
-
-/*!
- * \brief Node of the undirected graph which replicates the network structures
- * of the computational graph. It is used to ease the graph traversal for finding
- * subgraphs.
- */
-struct SimpleNode {
-  static SimpleNodePtr Create() {
-    return std::make_shared<SimpleNode>();
-  }
-  SimpleNode() : label(-1), node(nullptr) {}
-  /*! subgraph label */
-  int label;
-  /*! the original node in the computational graph it references*/
-  nnvm::Node* node;
-  /*!
-   * \brief output nodes of the current node
-   * key is node ptr and value is an array of indices standing for the entry indices
-   * in key->inputs whose source is the current node.
-   */
-  std::unordered_map<nnvm::Node*, std::vector<size_t>> outputs;
-};  // struct SimpleNode
-}  // namespace sg
 
 inline uint32_t DefaultSubgraphOpNumInputs(const nnvm::NodeAttrs& attrs) {
   const nnvm::Symbol& sym = *attrs.subgraphs[0];

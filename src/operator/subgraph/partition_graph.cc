@@ -30,7 +30,6 @@
 #include <queue>
 
 #include "./subgraph_property.h"
-#include "./common.h"
 
 namespace nnvm {
 NodePtr CreateVariableNode(const std::string& name);
@@ -49,6 +48,31 @@ using nnvm::Graph;
 #define DEBUG_SUBGRAPH 0
 
 namespace sg {  // sg stands for subgraph
+
+struct SimpleNode;
+using SimpleNodePtr = std::shared_ptr<SimpleNode>;
+
+/*!
+ * \brief Node of the undirected graph which replicates the network structures
+ * of the computational graph. It is used to ease the graph traversal for finding
+ * subgraphs.
+ */
+struct SimpleNode {
+  static SimpleNodePtr Create() {
+    return std::make_shared<SimpleNode>();
+  }
+  SimpleNode() : label(-1), node(nullptr) {}
+  /*! subgraph label */
+  int label;
+  /*! the original node in the computational graph it references*/
+  nnvm::Node* node;
+  /*!
+   * \brief output nodes of the current node
+   * key is node ptr and value is an array of indices standing for the entry indices
+   * in key->inputs whose source is the current node.
+   */
+  std::unordered_map<nnvm::Node*, std::vector<size_t>> outputs;
+};  // struct SimpleNode
 
 #if DEBUG_SUBGRAPH
 void PrintSubgraph(const std::vector<SimpleNode*>& simple_nodes) {
