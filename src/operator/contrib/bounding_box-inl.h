@@ -414,17 +414,24 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // prepare workspace
     Shape<1> sort_index_shape = Shape1(num_batch * num_elem);
     Shape<3> buffer_shape = Shape3(num_batch, num_elem, width_elem);
-    // ceil up when sizeof(DType) is larger than sizeof(DType)
-    // index
-    index_t workspace_size = ((sort_index_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) + 1;
-    workspace_size += workspace_size * 2;  // all_sorted_index, batch_id
-    workspace_size += 2 * sort_index_shape.Size();  // scores, batch_id, areas
     Shape<1> batch_start_shape = Shape1(num_batch + 1);
-    // batch_start
-    workspace_size += ((batch_start_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) + 1;
+
+    // index
+    index_t int32_size = sort_index_shape.Size() * 3 + batch_start_shape.Size();
+    index_t dtype_size = sort_index_shape.Size() * 2;
     if (req[0] == kWriteInplace) {
-      workspace_size += buffer_shape.Size();
+      dtype_size += buffer_shape.Size();
     }
+    // ceil up when sizeof(DType) is larger than sizeof(DType)
+    index_t workspace_size = (int32_size * sizeof(int32_t) - 1) / sizeof(DType) + 1 + dtype_size;
+    // workspace_size += workspace_size * 2;  // all_sorted_index, batch_id
+    // workspace_size += 2 * sort_index_shape.Size();  // scores, batch_id, areas
+    //
+    // // batch_start
+    // workspace_size += ((batch_start_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) + 1;
+    // if (req[0] == kWriteInplace) {
+    //   workspace_size += buffer_shape.Size();
+    // }
     Tensor<xpu, 1, DType> workspace = ctx.requested[box_nms_enum::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
     Tensor<xpu, 1, int32_t> sorted_index(
