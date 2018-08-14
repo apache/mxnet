@@ -371,8 +371,7 @@ class BaseModule(object):
             return self.get_outputs()[0]
 
         if not isinstance(eval_data, DataIter):
-            raise ValueError('eval_data must be of type ndarray, np.array or DataIter')
-
+            raise ValueError('eval_data must be of type NDArray or DataIter')
 
         if reset:
             eval_data.reset()
