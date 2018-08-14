@@ -4442,6 +4442,18 @@ def test_where():
             condition_np, x_np, y_np = get_forward_inputs_condition_vector(shape)
         check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
 
+    def test_invalid_shape():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        where_sym = mx.sym.where(condition, x, y)
+	
+        assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
+                                                y=mx.nd.array([[8,9],[10,11],[12,13]]),
+                                                condition=mx.nd.array([1,0])),
+                         MXNetError)
+
+	
     test_where_helper((5, 9), True)
     test_where_helper((5, 9), False)
     test_where_helper((5, 7, 9), True)
@@ -4452,7 +4464,7 @@ def test_where():
     test_where_numeric_gradient((5, 9), False)
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
-
+    test_invalid_shape()
 
 @with_seed()
 def test_new_softmax():
