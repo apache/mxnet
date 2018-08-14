@@ -258,12 +258,6 @@ inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm:
   return std::vector<ResourceRequest>(resource_types.begin(), resource_types.end());
 }
 
-#if 0
-// TODO(junwu): add this attribute for visible outputs
-inline uint32_t DefaultSubgraphOpNumVisibleOutputs(const nnvm::NodeAttrs& attrs) {
-}
-#endif
-
 }  // namespace op
 }  // namespace mxnet
 
