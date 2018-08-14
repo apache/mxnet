@@ -22,6 +22,7 @@
 import time
 import logging
 import warnings
+import numpy as np
 
 from .. import metric
 from .. import ndarray
@@ -29,7 +30,7 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
-from ..io import DataDesc
+from ..io import DataDesc, DataIter, DataBatch
 from ..base import _as_list
 
 
@@ -362,6 +363,13 @@ class BaseModule(object):
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
+
+        if isinstance(eval_data, (ndarray.NDArray,np.ndarray)):
+            return self.forward(DataBatch([eval_data]))
+
+        if not isinstance(eval_data, DataIter):
+            raise ValueError('eval_data must be of type ndarray, np.array or DataIter')
+
 
         if reset:
             eval_data.reset()
