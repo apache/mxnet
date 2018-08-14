@@ -151,7 +151,7 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 
 
-def randn(loc=0, scale=1, dtype=_Null, ctx=None, out=None, *args, **kwargs):
+def randn(*args, loc=0, scale=1, dtype=_Null, ctx=None, out=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
