@@ -564,11 +564,9 @@ OpAttrs GetLRNOp() {
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
-      ArrayTypes::NormalReshaped |
       ArrayTypes::MKLDNNReshaped;
   attrs.output_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped |
       ArrayTypes::NormalReshaped |
       ArrayTypes::MKLDNNReshaped;
   return attrs;
@@ -629,9 +627,19 @@ std::vector<NDArrayAttrs> GetTestInputArrays(
     // Type 1.
     NDArray arr(shape, Context());
     if (types & ArrayTypes::Normal) {
+      InitDefaultArray(&arr, rand);
       in_arrs.emplace_back(arr, "Normal NDArray");
-      InitDefaultArray(&in_arrs.back().arr, rand);
     }
+
+    // Type 4
+    arr = NDArray(shape, Context());
+    if (types & ArrayTypes::NormalReshaped) {
+        InitDefaultArray(&in_arrs.back().arr, rand);
+        in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount),
+                "Reshaped Normal NDArray");
+    }
+
+
     for (auto pd : pds) {
       if (num_inputs > 1) {
         // preserve if matching layout else just expand on 0 dim
@@ -661,7 +669,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(
         in_arrs.emplace_back(arr, desc);
       }
 
-      // Type 4, 5, 6.
+      // Type 5, 6.
       arr = NDArray(shape, Context());
       desc = "Reshaped MKLDNN NDArray";
       if (shape.ndim() != pd.desc().data.ndims) {
@@ -1220,10 +1228,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       if (in_arr.arr.shape().ndim() != 4)
         continue;
 
-      //  cannot pool / lrn / conv if dims are not default
-      if (in_arr.arr.IsMKLDNNData())
-        continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
@@ -1267,7 +1271,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         backwards_ex_outputs[0] = &tmp_output2.arr;
 
         for (int i = 0; i < backwards_attrs.num_outputs; i++)
-          back_req[0] = kWriteTo;
+          back_req[i] = kWriteTo;
 
         std::cout << "Backwards: ";
         PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
