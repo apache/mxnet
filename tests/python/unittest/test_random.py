@@ -46,7 +46,7 @@ def check_with_device(device, dtype):
             ]
         },
         {
-            'name': 'normal',
+            'name': 'randn',
             'symbol': mx.sym.random.randn,
             'ndop': mx.nd.random.randn,
             'params': { 'loc': 10.0, 'scale': 0.5 },
