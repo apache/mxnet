@@ -188,14 +188,13 @@ def randn(*shape, loc=0, scale=1, dtype=_Null, ctx=None, out=None, **kwargs):
     [[-1.856082   -1.9768796 ]
     [-0.20801921  0.2444218 ]]
     <NDArray 2x2 @cpu(0)>
-    >>> loc = mx.nd.array([1,2,3])
-    >>> scale = mx.nd.array([2,3,4])
-    >>> mx.nd.random.normal(loc, scale, shape=2)
-    [[ 0.55912292  3.19566321]
-     [ 1.91728961  2.47706747]
-     [ 2.79666662  5.44254589]]
-    <NDArray 3x2 @cpu(0)>
+    >>> mx.nd.random.randn(2, 3, loc=5, scale=1)
+    [[4.19962   4.8311777 5.936328 ]
+    [5.357444  5.7793283 3.9896927]]
+    <NDArray 2x3 @cpu(0)>
     """
+    assert isinstance(loc, (int, float))
+    assert isinstance(scale, (int, float))
     return _random_helper(_internal._random_normal, _internal._sample_normal,
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 
