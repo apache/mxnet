@@ -527,7 +527,6 @@ void FindOutputEntries(Graph* g,
         const auto nid = indexed_graph.node_id(it->first);
         // this is a node not belonging to the current subgraph
         if (simple_nodes[nid]->label != label) {
-          // TODO(zhengda) I need to test this.
           for (auto idx : it->second) {
             auto& e = simple_nodes[nid]->node->inputs[idx];
             output_entries->push_back(&e);
@@ -612,7 +611,6 @@ void CreateSubgraphNode(Graph* g,
   std::vector<nnvm::NodeEntry*> input_entries;
   FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
   std::vector<nnvm::NodeEntry> orig_input_entries;
-  // TODO(junwu): Confirm what value to pass to skip_var
   CutGraphInputs(input_entries, &orig_input_entries, false);
 #if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
