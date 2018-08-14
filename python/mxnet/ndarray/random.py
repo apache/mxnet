@@ -23,8 +23,9 @@ from . import _internal
 from .ndarray import NDArray
 
 
-__all__ = ['uniform', 'normal', 'poisson', 'exponential', 'gamma', 'multinomial',
-           'negative_binomial', 'generalized_negative_binomial', 'shuffle']
+__all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma',
+           'multinomial', 'negative_binomial', 'generalized_negative_binomial',
+           'shuffle']
 
 
 def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
@@ -184,11 +185,9 @@ def randn(*args, loc=0, scale=1, dtype=_Null, ctx=None, out=None, **kwargs):
     2.21220636
     <NDArray 1 @cpu(0)>
     >>> mx.nd.random.randn(2, 2)
-    [ 0.29253659]
-    <NDArray 1 @gpu(0)>
-    >>> mx.nd.random.randn(-1, 1, shape=(2,))
-    [-0.2259962  -0.51619542]
-    <NDArray 2 @cpu(0)>
+    [[-1.856082   -1.9768796 ]
+    [-0.20801921  0.2444218 ]]
+    <NDArray 2x2 @cpu(0)>
     >>> loc = mx.nd.array([1,2,3])
     >>> scale = mx.nd.array([2,3,4])
     >>> mx.nd.random.normal(loc, scale, shape=2)
