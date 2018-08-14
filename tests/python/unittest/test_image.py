@@ -80,7 +80,6 @@ class TestImage(unittest.TestCase):
                 image_read = mx.img.image.imread(img)
                 same(image.asnumpy(), image_read.asnumpy())
 
-
     def test_imdecode(self):
         try:
             import cv2
@@ -128,7 +127,16 @@ class TestImage(unittest.TestCase):
             src = np.random.rand(height, width, 3) * 255.
             mx_result = mx.image.color_normalize(mx.nd.array(src),
                 mx.nd.array(mean), mx.nd.array(std))
-            assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
+            assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)    
+
+    def test_test(self):
+        data_iter = mx.image.ImageIter(batch_size=4, data_shape=(
+            3, 227, 227), path_imgrec='/Users/leecheng/data/caltech.rec', shuffle=True, path_imgidx='/Users/leecheng/data/caltech.idx', last_batch='discard')
+        for batch in data_iter:
+            pass
+        data_iter.reset()
+        for batch in data_iter:
+            pass
 
     def test_imageiter(self):
         def check_imageiter(dtype='float32'):
@@ -182,7 +190,7 @@ class TestImage(unittest.TestCase):
                     i += 1
                 test_iter.reset()
                 assert np.array_equal(
-                    test_iter.next().data[0][0].asnumpy(), second_image.asnumpy())
+                    test_iter.next().data[0][0].asnumpy(), second_image.asnumpy()), 'failed in {}'.format(test)
 
         for dtype in ['int32', 'float32', 'int64', 'float64']:
             check_imageiter(dtype)
