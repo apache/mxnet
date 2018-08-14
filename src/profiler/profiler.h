@@ -35,6 +35,7 @@
 #include <array>
 #include "./vtune.h"
 #include "./aggregate_stats.h"
+#include "./nvtx.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -777,6 +778,10 @@ struct ProfileTask : public ProfileDuration {
     categories_.set(domain_->name());
     categories_.append(",task");
     VTUNE_ONLY_CODE(vtune_task_.reset(new vtune::VTuneTask(name, domain->dom())));
+
+#if MXNET_USE_NVTX
+    nvtx_duration_.reset(new nvtx::NVTXDuration(name));
+#endif  // MXNET_USE_NVTX
   }
 
   /*!
@@ -785,6 +790,11 @@ struct ProfileTask : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_task_->start());
+
+#if MXNET_USE_NVTX
+    /*! \brief NVTX duration object */
+    nvtx_duration_->start();
+#endif  // MXNET_USE_NVTX
   }
 
   /*!
@@ -793,6 +803,10 @@ struct ProfileTask : public ProfileDuration {
   void stop() override {
     VTUNE_ONLY_CODE(vtune_task_->stop());
     SendStat();
+
+#if MXNET_USE_NVTX
+    nvtx_duration_->stop();
+#endif  // MXNET_USE_NVTX
   }
 
   ProfileObjectType type() const override { return kTask; }
@@ -831,6 +845,10 @@ struct ProfileTask : public ProfileDuration {
   ProfileDomain *domain_;
   /*! \brief VTune task object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
+#if MXNET_USE_NVTX
+  /*! \brief NVTX duration object */
+  std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_;
+#endif  // MXNET_USE_NVTX
 
  protected:
   /*! \brief Task's start tick */
@@ -849,6 +867,9 @@ struct ProfileEvent  : public ProfileDuration {
     : name_(name)
       , categories_("event") {
     VTUNE_ONLY_CODE(vtune_event_ = vtune::VTuneEvent::registry_.get(name));
+#if MXNET_USE_NVTX
+    nvtx_duration_.reset(new nvtx::NVTXDuration(name));
+#endif  // MXNET_USE_NVTX
   }
 
   /*!
@@ -857,6 +878,10 @@ struct ProfileEvent  : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_event_->start());
+#if MXNET_USE_NVTX
+    /*! \brief NVTX duration object */
+    nvtx_duration_->start();
+#endif  // MXNET_USE_NVTX
   }
 
   /*!
@@ -905,6 +930,10 @@ struct ProfileEvent  : public ProfileDuration {
   profile_stat_string categories_;
   /*! \brief VTune event object */
   VTUNE_ONLY_CODE(vtune::VTuneEvent *vtune_event_);
+#if MXNET_USE_NVTX
+      /*! \brief NVTX duration object */
+      std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_;
+#endif  // MXNET_USE_NVTX
 
  protected:
   /*! \brief Start time of the event */
@@ -926,6 +955,11 @@ struct ProfileFrame : public ProfileDuration {
     CHECK_NOTNULL(domain);
     categories_.set(domain_->name());
     categories_.append(",frame");
+
+#if MXNET_USE_NVTX
+    nvtx_duration_.reset(new nvtx::NVTXDuration(name));
+#endif  // MXNET_USE_NVTX
+
     VTUNE_ONLY_CODE(vtune_frame_.reset(new vtune::VTuneFrame(domain->dom())));
   }
 
@@ -935,6 +969,10 @@ struct ProfileFrame : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_frame_->start());
+#if MXNET_USE_NVTX
+    /*! \brief NVTX duration object */
+    nvtx_duration_->start();
+#endif  // MXNET_USE_NVTX
   }
 
   /*!
@@ -977,6 +1015,10 @@ struct ProfileFrame : public ProfileDuration {
   ProfileDomain *domain_;
   /*! \brief VTune Frame object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneFrame> vtune_frame_);
+#if MXNET_USE_NVTX
+      /*! \brief NVTX duration object */
+      std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_;
+#endif  // MXNET_USE_NVTX
 
  protected:
   /*! \brief Frame start time */
