@@ -154,15 +154,15 @@ class TestImage(unittest.TestCase):
                     test_iter.reset()
                 # test last batch handle(discard)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='discard')
                 i = 0
                 for batch in test_iter:
                     i += 1
-                assert i == 5 
+                assert i == 5
 
-                # test last_batch_handle(pad)
+                # test last_batch(pad)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='pad')
                 i = 0
                 for batch in test_iter:
                     if i == 0:
@@ -172,9 +172,9 @@ class TestImage(unittest.TestCase):
                     i += 1
                 assert i == 6
                 assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
-                # test last_batch_handle(roll_over)
+                # test last_batch(roll_over)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='roll_over')
                 i = 0
                 for batch in test_iter:
                     if i == 0:
