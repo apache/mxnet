@@ -846,7 +846,7 @@ inline NDArray AllocateMemory(
     }
   }
 
-  CHECK_EQ(offset, total_size);
+  if (use_pool) CHECK_EQ(offset, total_size);
 
   return pool;
 }
