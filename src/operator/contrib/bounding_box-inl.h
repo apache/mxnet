@@ -414,11 +414,14 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     // prepare workspace
     Shape<1> sort_index_shape = Shape1(num_batch * num_elem);
     Shape<3> buffer_shape = Shape3(num_batch, num_elem, width_elem);
-    index_t workspace_size = sort_index_shape.Size() * sizeof(int32_t) / sizeof(DType);  // index
+    // ceil up when sizeof(DType) is larger than sizeof(DType)
+    // index
+    index_t workspace_size = ((sort_index_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) + 1;
     workspace_size += workspace_size * 2;  // all_sorted_index, batch_id
     workspace_size += 2 * sort_index_shape.Size();  // scores, batch_id, areas
     Shape<1> batch_start_shape = Shape1(num_batch + 1);
-    workspace_size += batch_start_shape.Size() * sizeof(int32_t) / sizeof(DType);  // batch_start
+    // batch_start
+    workspace_size += ((batch_start_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) + 1;
     if (req[0] == kWriteInplace) {
       workspace_size += buffer_shape.Size();
     }
@@ -782,7 +785,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
      .get_with_shape<xpu, 2, DType>(Shape2(batch_size, col), s);
     Shape<1> sort_index_shape = Shape1(dshape.Size());
     index_t workspace_size = sort_index_shape.Size();
-    workspace_size += sort_index_shape.Size() * sizeof(int32_t) / sizeof(DType) * 2;
+    workspace_size += ((sort_index_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) * 2;
     Tensor<xpu, 1, DType> workspace = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
     Tensor<xpu, 1, DType> scores_copy(workspace.dptr_,
