@@ -46,6 +46,17 @@ def check_with_device(device, dtype):
             ]
         },
         {
+            'name': 'normal',
+            'symbol': mx.sym.random.randn,
+            'ndop': mx.nd.random.randn,
+            'params': { 'loc': 10.0, 'scale': 0.5 },
+            'inputs': [ ('loc',[ [ 0.0, 2.5 ], [ -9.75, -7.0 ] ]) , ('scale',[ [ 1.0, 3.7 ], [ 4.2, 1.5 ] ]) ],
+            'checks': [
+                ('mean', lambda x, params: np.mean(x.astype(np.float64) - params['loc']),  tol),
+                ('std',  lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
+            ]
+        },
+        {
             'name': 'uniform',
             'symbol': mx.sym.random.uniform,
             'ndop': mx.nd.random.uniform,
