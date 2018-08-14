@@ -548,7 +548,7 @@ class SGD(Optimizer):
 
 @register
 class Signum(Optimizer):
-    """The Signum optimizer that takes the sign of gradient or momentum.
+    r"""The Signum optimizer that takes the sign of gradient or momentum.
 
     The optimizer updates the weight by::
 
