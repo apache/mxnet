@@ -81,6 +81,40 @@ def test_load_ndarray():
     for k in nd_data.keys():
         assert_almost_equal(nd_data[k].asnumpy(), nd_load[k], rtol=1e-5, atol=1e-6)
 
+def test_reshape_softmax_label():
+  prefix = 'test_predictor_reshape_softmax'
+  symbol_file = "%s-symbol.json" % prefix
+  param_file = "%s-0000.params" % prefix
+
+  # define and save simple net using softmax 
+  net = mx.sym.Variable('data')
+  net = mx.sym.FullyConnected(net, name='fc1', num_hidden=5)
+  net = mx.sym.SoftmaxOutput(net, name='softmax')
+  net.save(symbol_file);
+
+  # init and save params 
+  mod = mx.mod.Module(symbol=net, context=mx.cpu())
+  data_shape = [('data', (1, 3))]
+  mod.bind(data_shapes      = data_shape,
+           for_training     = False,
+           inputs_need_grad = False
+           )
+  mod.init_params()
+  mod.save_params(param_file)
+
+  # inputs with diffferent batch sizes
+  input1 = np.random.uniform(size=(3,3)) 
+  input2 = np.random.uniform(size=(1,3)) 
+
+  predictor = Predictor(open(symbol_file, "r").read(),
+                        open(param_file, "rb").read(),
+                        {'data':input1.shape})
+  predictor.forward(data=input1)
+  predictor_out1 = predictor.get_output(0)
+
+  predictor.reshape({'data':input2.shape})
+  predictor.forward(data=input2)
+  predictor_out2 = predictor.get_output(0)
 
 if __name__ == '__main__':
     import nose

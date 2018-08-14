@@ -304,7 +304,8 @@ int MXPredReshape(mx_uint num_input_nodes,
   for (size_t i=0; i < arg_names.size(); ++i) {
     TShape newShape = arg_shapes[i];
     NDArray &arr = p->arg_arrays[i];
-    if (new_shape.count(arg_names[i]) != 0) {
+    if (new_shape.count(arg_names[i]) != 0 ||
+        strcmp("softmax_label", arg_names[i].c_str()) == 0) {
       ret->arg_arrays[i].ReshapeAndAlloc(newShape);
     } else {
        CHECK_EQ(newShape.Size(), arr.shape().Size())
