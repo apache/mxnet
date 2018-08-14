@@ -73,7 +73,7 @@ class DefaultSubgraphProperty: public SubgraphProperty {
   }
 };
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(default, DefaultSubgraphProperty)
+MXNET_REGISTER_SUBGRAPH_PROPERTY(default, DefaultSubgraphProperty);
 
 }  // namespace op
 }  // namespace mxnet

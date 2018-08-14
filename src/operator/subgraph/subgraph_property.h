@@ -125,7 +125,7 @@ typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_se
 
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
   static DMLC_ATTRIBUTE_UNUSED auto __make_ ## SubgraphPropertyType ## _ ## Name ## __ = \
-    SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create);
+    SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
 }  // namespace mxnet

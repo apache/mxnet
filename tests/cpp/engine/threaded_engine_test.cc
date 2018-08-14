@@ -333,7 +333,6 @@ TEST(Engine, VarVersion) {
   }
 }
 
-
 #ifdef _OPENMP
 
 struct TestSaveAndRestoreOMPState {
