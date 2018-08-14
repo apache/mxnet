@@ -33,19 +33,16 @@ class StraightDopeMultiGpuTests(unittest.TestCase):
 
     # Chapter 7
 
-    # TODO(vishaalk): module 'mxnet.gluon' has no attribute 'autograd'
-    #def test_multiple_gpus_scratch(self):
-    #    assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
+    def test_multiple_gpus_scratch(self):
+        assert _test_notebook('chapter07_distributed-learning/multiple-gpus-scratch')
 
     def test_multiple_gpus_gluon(self):
         assert _test_notebook('chapter07_distributed-learning/multiple-gpus-gluon')
 
-    # TODO(vishaalk): Do a dry run, and then enable.
-    #def test_training_with_multiple_machines(self):
-    #    assert _test_notebook('chapter07_distributed-learning/training-with-multiple-machines')
+    def test_training_with_multiple_machines(self):
+       assert _test_notebook('chapter07_distributed-learning/training-with-multiple-machines')
 
     # Chapter 8
 
-    # TODO(vishaalk): Module skimage needs to be added to docker image.
-    # def test_fine_tuning(self):
-    #    assert _test_notebook('chapter08_computer-vision/fine-tuning')
+    def test_fine_tuning(self):
+       assert _test_notebook('chapter08_computer-vision/fine-tuning')
