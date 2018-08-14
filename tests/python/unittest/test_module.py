@@ -772,6 +772,8 @@ def test_forward_reshape():
              for_training=False, force_rebind=True)
     assert mod.predict(pred_dataiter).shape == tuple([10, num_class])
 
+@with_seed()
+def test_forward_types():
     #Test forward with other data batch API
     Batch = namedtuple('Batch', ['data'])
     data = mx.sym.Variable('data')
