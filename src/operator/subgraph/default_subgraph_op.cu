@@ -19,11 +19,14 @@
 
 /*!
  *  Copyright (c) 2018 by Contributors
- * \file subgraph_op.cu
+ * \file default_subgraph_op.cu
  * \brief GPU Implementation of subgraph operations
  */
 
-#include "./default_subgraph_op.h"
+#include <mxnet/ndarray.h>
+#include "./common.h"
+#include "../../imperative/imperative_utils.h"
+#include "../../imperative/cached_op.h"
 
 namespace mxnet {
 namespace op {

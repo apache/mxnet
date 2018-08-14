@@ -29,7 +29,7 @@
 #include <stack>
 #include <queue>
 
-#include "./default_subgraph_op.h"
+#include "./subgraph_property.h"
 #include "./common.h"
 
 namespace nnvm {
@@ -408,7 +408,7 @@ void FindSubgraphs(Graph* g,
                              &preselected_nodes);
 
       // filter out unqualified pre-selected nodes
-      std::vector<nnvm::Node*> filtered_nodes = subgraph_selector->Filter(g, preselected_nodes);
+      std::vector<nnvm::Node*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
 
       // make sure filtered_nodes is a subset of preselected_nodes
       for (const auto n : filtered_nodes) {

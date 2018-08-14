@@ -87,7 +87,8 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Score a model on a dataset')
-    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
+    parser.add_argument('--model', type=str, required=True,
+                        choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
                         help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
@@ -107,6 +108,8 @@ if __name__ == '__main__':
                         help='shuffling seed, see'
                              ' https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=imager#mxnet.io.ImageRecordIter'
                              ' for more details')
+    parser.add_argument('--subgraph-backend', type=str, default='default', help='subgraph backend name.')
+    parser.add_argument('--ctx', type=str, default='cpu')
 
     args = parser.parse_args()
 
@@ -133,6 +136,15 @@ if __name__ == '__main__':
     download_dataset('http://data.mxnet.io/data/val_256_q90.rec', dataset)
     logger.info('Dataset for inference: %s' % dataset)
 
+    subgraph_backend = args.subgraph_backend
+
+    if args.ctx == 'cpu':
+        ctx = mx.cpu()
+    elif args.ctx == 'gpu':
+        ctx = mx.gpu(0)
+    else:
+        raise ValueError('unknown ctx option, only cpu and gpu are supported')
+
     # creating data iterator
     data = mx.io.ImageRecordIter(path_imgrec=dataset,
                                  label_width=1,
@@ -151,16 +163,21 @@ if __name__ == '__main__':
     prefix, epoch = download_model(model_name=args.model, logger=logger)
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
     op_names = ['BatchNorm', 'Convolution', 'Pooling', 'Activation']
-    out = SymbolHandle()
-    check_call(_LIB.MXPartitionGraph(sym.handle, mx_uint(len(op_names)), c_str_array(op_names),
-                                     ctypes.byref(out)))
-    psym = Symbol(out)
-
+    if subgraph_backend is not None:
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
+        if subgraph_backend == 'default':
+            check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                         c_str_array(op_names)))
     # make sure that fp32 inference works on the same images as calibrated quantized model
     logger.info('Skipping the first %d batches' % args.num_skipped_batches)
     data = advance_data_iter(data, args.num_skipped_batches)
 
     num_inference_images = args.num_inference_batches * batch_size
     logger.info('Running model %s for inference' % args.model)
-    score(psym, arg_params, aux_params, data, [mx.gpu(0)], label_name,
+    score(sym, arg_params, aux_params, data, [ctx], label_name,
           max_num_examples=num_inference_images, logger=logger)
+
+    if subgraph_backend is not None:
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
+        if subgraph_backend == 'default':
+            check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))

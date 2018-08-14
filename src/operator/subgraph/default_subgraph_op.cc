@@ -18,7 +18,7 @@
 */
 
 #include <mxnet/ndarray.h>
-#include "./default_subgraph_op.h"
+#include "./common.h"
 #include "../../imperative/imperative_utils.h"
 #include "../../imperative/cached_op.h"
 
@@ -30,7 +30,8 @@ namespace op {
 class DefaultSubgraphOperator {
  public:
   explicit DefaultSubgraphOperator(const Symbol& sym) : subgraph_sym_(sym) {
-    subgraph_exec_.reset(new CachedOp(sym, {{"static_alloc", "true"}}));
+    subgraph_exec_.reset(new CachedOp(sym, {{"static_alloc", "true"},
+                                            {"static_shape", "true"}}));
   }
 
   void Forward(const OpContext& ctx,
@@ -79,8 +80,7 @@ OpStatePtr CreateDefaultSubgraphOpState(const NodeAttrs& attrs,
                                         Context ctx,
                                         const std::vector<TShape>& in_shapes,
                                         const std::vector<int>& in_types) {
-  const Symbol& subgraph_sym = nnvm::get<Symbol>(attrs.parsed);
-  return OpStatePtr::Create<DefaultSubgraphOperator>(subgraph_sym);
+  return OpStatePtr::Create<DefaultSubgraphOperator>(*attrs.subgraphs[0]);
 }
 
 void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
