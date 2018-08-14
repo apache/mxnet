@@ -1171,16 +1171,11 @@ class ImageIter(io.DataIter):
 
     def reset(self):
         """Resets the iterator to the beginning of the data."""
-        if self.seq is not None:
-            if self.last_batch == 'roll_over' and \
-            self.cur > self.num_image:
-                self.cur = (self.cur % self.num_image) % self.batch_size
-            else:
+        if self.last_batch != 'roll_over' or \
+            self._is_allowed_reading is True:
+                if self.imgrec is not None:
+                    self.imgrec.reset()
                 self.cur = 0
-        else:
-            if self.last_batch != 'roll_over' or \
-                self._is_allowed_reading is True:
-                self.imgrec.reset()
         self._is_allowed_reading = True
 
     def hard_reset(self):
@@ -1192,13 +1187,14 @@ class ImageIter(io.DataIter):
 
     def next_sample(self):
         """Helper function for reading in next sample."""
+        if self._is_allowed_reading is False:
+            raise StopIteration
         if self.seq is not None:
             if self.cur < self.num_image:
                 idx = self.seq[self.cur]
-            elif self.num_image % self.batch_size != 0 and \
-                self.cur < self.batch_size * ((self.num_image // self.batch_size) + 1):
-                idx = self.seq[self.cur % self.num_image]
             else:
+                if self.last_batch != 'discard':
+                    self.cur = 0
                 raise StopIteration
             self.cur += 1
             if self.imgrec is not None:
@@ -1212,8 +1208,6 @@ class ImageIter(io.DataIter):
                 label, fname = self.imglist[idx]
                 return label, self.read_image(fname)
         else:
-            if self._is_allowed_reading is False:
-                raise StopIteration
             s = self.imgrec.read()
             if s is None:
                 if self.last_batch != 'discard':
@@ -1253,17 +1247,17 @@ class ImageIter(io.DataIter):
         batch_label = nd.empty(self.provide_label[0][1])
         i = self.iterate(batch_data, batch_label)
         # calculate the padding
-        if self.seq is None:
-            pad = batch_size - i
-        else:
-            pad = self._getpad()
+        pad = batch_size - i
         # handle padding for sequential read
-        if self.seq is None and pad != 0:
-            if self.last_batch == 'discard':
-                raise StopIteration
-            else:
+        if pad != 0:
+            if self.seq is not None:
                 _ = self.iterate(batch_data, batch_label, i)
-                self._is_allowed_reading = False
+            else:
+                if self.last_batch == 'discard':
+                    raise StopIteration
+                else:
+                    _ = self.iterate(batch_data, batch_label, i)
+            self._is_allowed_reading = False
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
     def check_data_shape(self, data_shape):
@@ -1318,12 +1312,4 @@ class ImageIter(io.DataIter):
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
         return nd.transpose(datum, axes=(2, 0, 1))
-
-    def _getpad(self):
-        """Helpe function for getting padding number"""
-        if self.last_batch in ['pad', 'roll_over'] and \
-            self.num_image is not None and \
-            self.cur >= self.num_image:
-            return self.cur - self.num_image
-        else:
-            return 0
+        
