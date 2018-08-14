@@ -46,12 +46,11 @@ using nnvm::NodePtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
 
-// TODO(junwu): Change this to 0
-#define SUBGRAPH_DEBUG 1
+#define DEBUG_SUBGRAPH 0
 
 namespace sg {  // sg stands for subgraph
 
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
 void PrintSubgraph(const std::vector<SimpleNode*>& simple_nodes) {
   std::string op_names = "";
   for (size_t i = 0; i < simple_nodes.size(); ++i) {
@@ -607,7 +606,7 @@ void CreateSubgraphNode(Graph* g,
                         const std::vector<SimpleNode*>& subgraph_nodes,
                         const size_t subgraph_id,
                         std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
   LOG(INFO) << "Searching for input entries...";
 #endif
   std::vector<nnvm::NodeEntry*> input_entries;
@@ -615,7 +614,7 @@ void CreateSubgraphNode(Graph* g,
   std::vector<nnvm::NodeEntry> orig_input_entries;
   // TODO(junwu): Confirm what value to pass to skip_var
   CutGraphInputs(input_entries, &orig_input_entries, false);
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
   LOG(INFO) << "Searching for output entries...";
 #endif
@@ -655,7 +654,7 @@ void CreateSubgraphNode(Graph* g,
       sn->outputs[n.get()].push_back(i);
     }
   }
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
   PrintNodeEntries(output_entries);
 #endif
 }
@@ -734,7 +733,7 @@ Graph PartitionGraph(Graph&& g) {
   std::vector<std::vector<SimpleNode*>> subgraph_nodes;
   FindSubgraphs(&g, *subg_prop, simple_nodes, &subgraph_nodes);
   for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
     std::set<SimpleNode*> simple_node_set(subgraph_nodes[i].begin(), subgraph_nodes[i].end());
     CHECK_EQ(simple_node_set.size(), subgraph_nodes[i].size());
     PrintSubgraph(subgraph_nodes[i]);

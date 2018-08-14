@@ -25,7 +25,7 @@
 namespace mxnet {
 namespace op {
 
-#define SUBGRAPH_DEBUG 1
+#define DEBUG_SUBGRAPH 0
 
 class DefaultSubgraphOperator {
  public:
@@ -65,7 +65,7 @@ void DefaultSubgraphOperator::Forward(const OpContext& ctx,
   for (auto& nd : tmp_outputs) {
     output_ptrs.push_back(&nd);
   }
-#if SUBGRAPH_DEBUG
+#if DEBUG_SUBGRAPH
   for (size_t i = 0; i < inputs.size(); ++i) {
     LOG(INFO) << "inputs[" << i << "].version = " << inputs[i].version();
   }

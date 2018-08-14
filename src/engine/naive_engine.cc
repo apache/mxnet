@@ -194,10 +194,6 @@ class NaiveEngine final : public Engine {
         NaiveVar::Delete(naive_var);
         on_complete();
       }, exec_ctx, {}, {var}, FnProperty::kDeleteVar, 0, "DeleteVariable");
-#if 0
-    this->PushSync(delete_fn, exec_ctx, {}, {var},
-                   FnProperty::kNormal, 0, "DeleteVariable");
-#endif
   }
 
   void WaitForVar(VarHandle var) override {
