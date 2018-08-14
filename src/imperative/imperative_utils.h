@@ -797,6 +797,7 @@ inline NDArray AllocateMemory(
     const MemoryPlanVector& mem_plan,
     const std::vector<NDArray*>& arrays,
     std::vector<OpReqType> *array_reqs,
+    const bool use_pool = false,
     NDArray pool = NDArray()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
@@ -811,7 +812,7 @@ inline NDArray AllocateMemory(
     total_size += mem_plan[i].size;
   }
 
-  if (pool.is_none() || total_size > pool.shape().Size()) {
+  if (use_pool && (pool.is_none() || total_size > pool.shape().Size())) {
     pool = NDArray(TShape({static_cast<nnvm::dim_t>(total_size)}),
                    default_ctx, true, mshadow::kUint8);
   }
@@ -828,8 +829,14 @@ inline NDArray AllocateMemory(
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
       CHECK_GT(mem_plan[i].size, 0);
-      *arrays[i] = pool.AsArray(shapes[i], dtypes[i], offset);
-      offset += mem_plan[i].size;
+      if (!use_pool) {
+        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
+                     default_ctx, true, mshadow::kUint8);
+        *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
+      } else {
+        *arrays[i] = pool.AsArray(shapes[i], dtypes[i], offset);
+        offset += mem_plan[i].size;
+      }
     } else {
       CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
       *arrays[i] = arrays[mem_plan[i].root]->AsArray(shapes[i], dtypes[i]);

@@ -526,7 +526,7 @@ void CachedOp::StaticAllocMemory(
     auto& reuse_pool = keep_fwd ? state.bwd_reuse_pool : state.fwd_reuse_pool;
     reuse_pool = imperative::AllocateMemory(
         g, idx, default_ctx, start_eid, end_eid, mem_plan,
-        state.arrays, &state.array_reqs, std::move(reuse_pool));
+        state.arrays, &state.array_reqs, true, std::move(reuse_pool));
   }
 
   state.recording = recording;
