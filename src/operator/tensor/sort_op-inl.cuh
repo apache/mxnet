@@ -41,6 +41,29 @@
 
 namespace mxnet {
 namespace op {
+namespace cuda {
+template<typename T>
+struct less_half
+{
+  typedef T first_argument_type;
+  typedef T second_argument_type;
+  typedef bool result_type;
+  __host__ __device__ bool operator()(const T &lhs, const T &rhs) const {
+    return static_cast<mshadow::half::half_t>(lhs) < static_cast<mshadow::half::half_t>(rhs);
+  }
+};
+
+template<typename T>
+struct greater_half
+{
+  typedef T first_argument_type;
+  typedef T second_argument_type;
+  typedef bool result_type;
+  __host__ __device__ bool operator()(const T &lhs, const T &rhs) const {
+    return static_cast<mshadow::half::half_t>(lhs) < static_cast<mshadow::half::half_t>(rhs);
+  }
+};
+}
 
 template <typename KDType, typename VDType, typename xpu>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
@@ -132,9 +155,8 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
 #endif
 }
 
-// use thrust sorting when keys or values are half_t
 template<typename KDType, typename VDType>
-inline typename std::enable_if<(std::is_same<KDType,mshadow::half::half_t>::value ||
+inline typename std::enable_if<((!std::is_same<KDType,mshadow::half::half_t>::value) &&
                                 std::is_same<VDType,mshadow::half::half_t>::value), void>::type
 SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
               mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
@@ -142,10 +164,11 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
               const int begin_bit, const int end_bit) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
-#if CUDA_VERSION >= 7000
+#if CUDA_VERSION >= 9000
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
   thrust::device_ptr<KDType> key_iter = thrust::device_pointer_cast(keys.dptr_);
-  thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
+  thrust::device_ptr<half> value_iter = thrust::device_pointer_cast(
+    reinterpret_cast<half*>(values.dptr_));
   if (is_ascend) {
     thrust::stable_sort_by_key(
       thrust::cuda::par.on(stream),
@@ -157,7 +180,67 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 #else
-  LOG(FATAL) << "SortByKey with fp16 keys or values is only supported for CUDA version >= 7.0";
+  LOG(FATAL) << "SortByKey with fp16 values is only supported for CUDA version >= 9.0";
+#endif
+}
+
+template<typename KDType, typename VDType>
+inline typename std::enable_if<(std::is_same<KDType,mshadow::half::half_t>::value &&
+                                (!std::is_same<VDType,mshadow::half::half_t>::value)), void>::type
+SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+              mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
+              mshadow::Tensor<gpu, 1, char>* workspace,
+              const int begin_bit, const int end_bit) {
+  CHECK_EQ(keys.CheckContiguous(), true);
+  CHECK_EQ(values.CheckContiguous(), true);
+#if CUDA_VERSION >= 9000
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
+  thrust::device_ptr<half> key_iter = thrust::device_pointer_cast(
+    reinterpret_cast<half*>(keys.dptr_));
+  thrust::device_ptr<VDType> value_iter = thrust::device_pointer_cast(values.dptr_);
+  if (is_ascend) {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + (keys.size(0)), value_iter, cuda::less_half<half>());
+  } else {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + (keys.size(0)), value_iter, cuda::greater_half<half>());
+  }
+  MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
+#else
+  LOG(FATAL) << "SortByKey with fp16 keys is only supported for CUDA version >= 9.0";
+#endif
+}
+
+// use thrust sorting when keys or values are half_t
+template<typename KDType, typename VDType>
+inline typename std::enable_if<(std::is_same<KDType,mshadow::half::half_t>::value &&
+                                std::is_same<VDType,mshadow::half::half_t>::value), void>::type
+SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+              mshadow::Tensor<gpu, 1, VDType> values, bool is_ascend,
+              mshadow::Tensor<gpu, 1, char>* workspace,
+              const int begin_bit, const int end_bit) {
+  CHECK_EQ(keys.CheckContiguous(), true);
+  CHECK_EQ(values.CheckContiguous(), true);
+#if CUDA_VERSION >= 9000
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
+  thrust::device_ptr<half> key_iter = thrust::device_pointer_cast(
+    reinterpret_cast<half*>(keys.dptr_));
+  thrust::device_ptr<half> value_iter = thrust::device_pointer_cast(
+    reinterpret_cast<half*>(values.dptr_));
+  if (is_ascend) {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + (keys.size(0)), value_iter, cuda::less_half<half>());
+  } else {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + (keys.size(0)), value_iter, cuda::greater_half<half>());
+  }
+  MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
+#else
+  LOG(FATAL) << "SortByKey with fp16 keys and values is only supported for CUDA version >= 9.0";
 #endif
 }
 
