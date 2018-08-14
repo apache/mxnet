@@ -678,8 +678,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
     def write_all_str(module_file, module_all_list):
         """Write the proper __all__ based on available operators."""
-        module_file.write(os.linesep)
-        module_file.write(os.linesep)
+        module_file.write(os.linesep * 2)
         all_str = '__all__ = [' + ', '.join(["'%s'"%s for s in module_all_list]) + ']'
         module_file.write(all_str)
 
@@ -688,19 +687,16 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
     check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
                                      ctypes.byref(plist)))
-    op_names = []
-    for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+    op_names = [py_str(plist[i]) for i in range(size.value)]
 
     module_op_file = get_module_file("%s.%s.op" % (root_namespace, module_name))
     module_op_all = []
     module_internal_file = get_module_file("%s.%s._internal"%(root_namespace, module_name))
     module_internal_all = []
-    submodule_dict = {}
-    for op_name_prefix in _OP_NAME_PREFIX_LIST:
-        submodule_dict[op_name_prefix] =\
-            (get_module_file("%s.%s.%s" % (root_namespace, module_name,
-                                           op_name_prefix[1:-1])), [])
+    submodule_dict = {op_name_prefix:
+                      (get_module_file("%s.%s.%s" % (root_namespace, module_name,
+                                                     op_name_prefix[1:-1])), [])}
+                      for op_name_prefix in _OP_NAME_PREFIX_LIST}
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
