@@ -152,7 +152,7 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 
 
-def randn(*shape, **kwargs):
+def randn(*shape, loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -197,9 +197,7 @@ def randn(*shape, **kwargs):
     <NDArray 3x2 @cpu(0)>
     """
     return _random_helper(_internal._random_normal, _internal._sample_normal,
-                          [kwargs.get('loc', 0), kwargs.get('scale', 1)], shape,
-                          kwargs.get('dtype', _Null), kwargs.get('ctx', None),
-                          kwargs.get('out', None), kwargs)
+                          [loc, scale], shape, dtype, ctx, out, kwargs)
 
 
 def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
