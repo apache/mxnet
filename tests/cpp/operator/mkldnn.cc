@@ -1268,6 +1268,8 @@ TEST(IMPERATIVE, PoolingOp) {
   }
 }
 
+// Disabling Flaky Test. Tracked at https://github.com/apache/incubator-mxnet/issues/11998
+/*
 TEST(MKLDNN_BASE, MKLDNNSum) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(true);
@@ -1316,6 +1318,7 @@ TEST(MKLDNN_BASE, MKLDNNSum) {
     VerifySumResult({&orig_arr.arr, &in_arr2.arr}, {&in_arr.arr});
   }
 }
+*/
 
 TEST(MKLDNN_BASE, CreateMKLDNNMem) {
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();

@@ -592,8 +592,8 @@ class DataParallelExecutorGroup(object):
                     # pylint: disable=no-member
                     og_my_slice = nd.slice_axis(grad, axis=axis, begin=islice.start,
                                                 end=islice.stop)
-                    # pylint: enable=no-member
                     out_grads_slice.append(og_my_slice.as_in_context(self.contexts[i]))
+                    # pylint: enable=no-member
                 else:
                     out_grads_slice.append(grad.copyto(self.contexts[i]))
             exec_.backward(out_grads=out_grads_slice)

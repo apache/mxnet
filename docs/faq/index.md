@@ -45,7 +45,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
-* [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
+* [How do I run Keras 2 with MXNet backend?](https://github.com/awslabs/keras-apache-mxnet/blob/master/docs/mxnet_backend/installation.md)
 
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
 

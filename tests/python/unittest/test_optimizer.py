@@ -442,7 +442,7 @@ class PyNAG(PySGD):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
-@with_seed(0)
+@with_seed()
 def test_nag():
     opt1 = PyNAG
     opt2 = mx.optimizer.NAG
@@ -512,7 +512,7 @@ class PyFTML(mx.optimizer.Optimizer):
         prev_v[:] = v_t
         prev_z[:] = z_t
 
-@with_seed(0)
+@with_seed()
 def test_ftml():
     opt1 = PyFTML
     opt2 = mx.optimizer.FTML
@@ -534,7 +534,7 @@ def test_ftml():
                             kwarg.update(cg_option)
                             kwarg.update(rg_option)
                             kwarg.update(wd_option)
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
 
 # ADAM
@@ -702,7 +702,7 @@ class PySignum(mx.optimizer.Optimizer):
         else:
             weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
 
-@with_seed(0)
+@with_seed()
 def test_signum():
     opt1 = PySignum
     opt2 = mx.optimizer.Signum

@@ -622,18 +622,18 @@ method CastAug()
 =cut
 
 method CreateAugmenter(
-Shape          :$data_shape,
-Bool           :$resize=0,
-Bool           :$rand_crop=0,
-Bool           :$rand_resize=0,
-Bool           :$rand_mirror=0,
-Maybe[Num|PDL] :$mean=,
-Maybe[Num|PDL] :$std=,
-Num            :$brightness=0,
-Num            :$contrast=0,
-Num            :$saturation=0,
-Num            :$pca_noise=0,
-Int            :$inter_method=2
+    Shape          :$data_shape,
+    Bool           :$resize=0,
+    Bool           :$rand_crop=0,
+    Bool           :$rand_resize=0,
+    Bool           :$rand_mirror=0,
+    Maybe[Num|PDL] :$mean=,
+    Maybe[Num|PDL] :$std=,
+    Num            :$brightness=0,
+    Num            :$contrast=0,
+    Num            :$saturation=0,
+    Num            :$pca_noise=0,
+    Int            :$inter_method=2
 )
 {
     my @auglist;
