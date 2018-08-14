@@ -584,7 +584,7 @@ class Module(BaseModule):
 
         Parameters
         ----------
-        data_batch : DataBatch
+        data_batch : DataBatch or NDArray or ndarray
             Could be anything with similar API implemented.
         is_train : bool
             Default is ``None``, which means ``is_train`` takes the value of ``self.for_training``.
