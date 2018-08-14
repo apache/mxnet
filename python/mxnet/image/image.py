@@ -1173,9 +1173,9 @@ class ImageIter(io.DataIter):
         """Resets the iterator to the beginning of the data."""
         if self.last_batch != 'roll_over' or \
             self._is_allowed_reading is True:
-                if self.imgrec is not None:
-                    self.imgrec.reset()
-                self.cur = 0
+            if self.imgrec is not None:
+                self.imgrec.reset()
+            self.cur = 0
         self._is_allowed_reading = True
 
     def hard_reset(self):
@@ -1312,4 +1312,3 @@ class ImageIter(io.DataIter):
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
         return nd.transpose(datum, axes=(2, 0, 1))
-        
