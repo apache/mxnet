@@ -341,7 +341,7 @@ class NDArray {
     return byte_offset_;
   }
   /*! \brief return var version of the NDArray*/
-  inline uint32_t version() const {
+  inline size_t version() const {
     return var()->version();
   }
   /*!
