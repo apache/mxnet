@@ -144,6 +144,8 @@ def test_while_loop2():
         def __init__(self, prefix=None, params=None):
             super(TestBlock, self).__init__(prefix=prefix, params=params)
 
+        # In this test, body_func only accesses one of the states,
+        # so not all loop variables are used.
         def hybrid_forward(self, F, data):
             def cond_func(state1, state2):
                 return state1 > 0
