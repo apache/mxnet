@@ -591,8 +591,11 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized
 
-        if isinstance(data_batch, (nd.NDArray, np.ndarray)):
+        if isinstance(data_batch, nd.NDArray):
             data_batch = DataBatch([data_batch])
+
+        if isinstance(data_batch, np.ndarray):
+            data_batch = DataBatch([nd.array(data_batch)])
 
         curr_data_shapes = tuple(i.shape for i in self._data_shapes)
         if isinstance(data_batch, list):

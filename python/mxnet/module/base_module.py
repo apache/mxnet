@@ -364,8 +364,11 @@ class BaseModule(object):
         """
         assert self.binded and self.params_initialized
 
-        if isinstance(eval_data, (ndarray.NDArray,np.ndarray)):
+        if isinstance(eval_data, ndarray.NDArray):
             return self.forward(DataBatch([eval_data]))
+
+        if isinstance(eval_data, np.ndarray):
+            return self.forward(DataBatch([ndarray.array(eval_data)]))
 
         if not isinstance(eval_data, DataIter):
             raise ValueError('eval_data must be of type ndarray, np.array or DataIter')
