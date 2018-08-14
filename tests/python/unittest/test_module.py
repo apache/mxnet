@@ -786,6 +786,20 @@ def test_forward_reshape():
     mod.forward(Batch(data2))
     assert mod.get_outputs()[0].shape == (3, 5)
 
+    #Test forward with other NDArray and np.ndarray inputs
+    data = mx.sym.Variable('data')
+    out = data * 2
+    mod = mx.mod.Module(symbol=out, label_names=None)
+    mod.bind(data_shapes=[('data', (1, 10))])
+    mod.init_params()
+    data1 = mx.nd.ones((1, 10))
+    result = mod.forward(data1)
+    assert result.shape == (1, 10)
+    data2 = np.ones((1, 10))
+    result = mod.forward(data2)
+    assert result.shape == (1, 10)
+
+
 
 if __name__ == '__main__':
     import nose
