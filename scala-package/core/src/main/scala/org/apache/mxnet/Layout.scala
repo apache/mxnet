@@ -17,6 +17,15 @@
 
 package org.apache.mxnet
 
+/**
+  * Layout definition of DataDesc
+  * N Batch size
+  * C channels
+  * H Height
+  * W Weight
+  * T sequence length
+  * __undefined__ default value of Layout
+  */
 object Layout {
   val UNDEFINED = "__undefined__"
   val NCHW = "NCHW"

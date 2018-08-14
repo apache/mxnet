@@ -409,7 +409,7 @@ object DataDesc {
       if (layout.get.contains('N')) {
         layout.get.indexOf("N")
       } else {
-        throw new IllegalArgumentException("No N found in Batch Axis!")
+        throw new IllegalArgumentException("no Batch Axis('N') found in Layout!")
       }
     }
   }
