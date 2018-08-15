@@ -62,7 +62,16 @@ inline void* GPUDeviceStorage::Alloc(size_t size) {
 #endif  // MXNET_USE_NCCL
   cudaError_t e = cudaMalloc(&ret, size);
   if (e != cudaSuccess && e != cudaErrorCudartUnloading)
-    LOG(FATAL) << "CUDA: " << cudaGetErrorString(e);
+    LOG(FATAL)
+      << "Failed to allocate GPU memory: " << cudaGetErrorString(e)
+      << ". The most likely cause is out-of-memory. "
+      << "Things you can try to resolve this include:\n"
+      << "    1. Reduce batch size.\n"
+      << "    2. If you are using Gluon, you need to synchronize at each "
+      << "iteration. Otherwise you will keep allocating memory without "
+      << "waiting for compute to finish. You can use .asnumpy() to synchronize. "
+      << "Normally, it's loss.asnumpy(). You can also add mx.nd.waitall() after "
+      << "each iteration, but this may hurt performance.";
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

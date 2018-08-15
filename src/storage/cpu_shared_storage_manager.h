@@ -175,8 +175,16 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
 
   if (fid == -1) {
     if (is_new) {
-      LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
-                 << strerror(errno);
+      if (errno == EMFILE) {
+        LOG(FATAL)
+          << "Failed to create shared memory because limit on the number of "
+          << "open file descriptors has been reached. You can increase the "
+          << "limit by typing 'ulimit -n' followed by a big number in terminal.";
+      } else {
+        LOG(FATAL)
+          << "Failed to create shared memory. shm_open failed with error "
+          << strerror(errno);
+      }
     } else {
       LOG(FATAL) << "Invalid file descriptor from shared array.";
     }
