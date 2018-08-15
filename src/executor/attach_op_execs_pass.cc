@@ -262,6 +262,12 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+#endif
+
+
   // get the graph
   const auto& idx = g.indexed_graph();
   OpExecVector& ret = *p_ret;
