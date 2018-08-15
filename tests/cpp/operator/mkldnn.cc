@@ -695,7 +695,8 @@ std::vector<NDArrayAttrs> GetTestInputArrays(
         desc = "Reshaped MKLDNN NDArray with different shape";
         InitMKLDNNArray(&arr, pd, rand);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
-      } else if (shape.ndim() != pd.desc().data.ndims && types & ArrayTypes::MKLDNNReshapedDiffDim) {
+      } else if (shape.ndim() != pd.desc().data.ndims
+          && types & ArrayTypes::MKLDNNReshapedDiffDim) {
         std::stringstream ss;
         ss << "MKLDNN NDArray with different dim " <<
            shape.ndim() << "/" << pd.desc().data.ndims;
@@ -1244,8 +1245,13 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
 
-      // TODO: Remove when MKLDNN supports other dims
+      // TODO (alex): Remove when MKLDNN supports other dims
       if (in_arr.arr.shape().ndim() != 4)
+        continue;
+
+      //  cannot pool / lrn / conv if dims are not default
+      // since we are comparing operations against fcompute on default format
+      if (in_arr.arr.IsMKLDNNData())
         continue;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
