@@ -138,7 +138,8 @@ static inline bool SupportMKLDNN(const NDArray &input) {
 }
 
 static inline bool MKLDNNEnvSet() {
-  return dmlc::GetEnv("MXNET_MKLDNN_ENABLED", true);
+  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_ENABLED", true);
+  return is_mkldnn_enabled;
 }
 
 /*
