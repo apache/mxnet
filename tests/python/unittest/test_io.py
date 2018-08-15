@@ -309,7 +309,6 @@ def test_DataBatch():
         'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch)))
 
 
-@unittest.skip("Broken test: https://github.com/apache/incubator-mxnet/issues/12139")
 def test_CSVIter():
     def check_CSVIter_synthetic(dtype='float32'):
         cwd = os.getcwd()
