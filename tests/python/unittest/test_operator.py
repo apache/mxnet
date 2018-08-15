@@ -5071,7 +5071,7 @@ def test_deformable_psroipooling():
                     # By now we only have gpu implementation
                     if default_context().device_type == 'gpu':
                         check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
-                                               grad_nodes=grad_nodes, ctx=mx.gpu(1))
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
 # Helper functions for test_laop
