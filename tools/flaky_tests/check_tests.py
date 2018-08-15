@@ -14,26 +14,23 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-""" This script is used to automate flaky test detection on CI
+""" Checks selected tests for flakiness
 
-This module calls each of the components to automate the detection of
-flaky tests. Currently, each test is given an equal number of runs
+This script is used for automated flaky test detection. It reads the
+tests listed in tests.tmp and runs them a large number of times.
+Currently, each test is given an equal number of runs
 such that all tests being checked can be run within the time budget.
 """
 import logging
 import time
 import os
-import subprocess
-import json
 import sys
 
 import flakiness_checker
-import diff_collator
-import dependency_analyzer
 
 LOGGING_FILE = os.path.join(os.path.dirname(__file__), "results.log")
 TESTS_DIRECTORY = "tests/python"
-TEST_PREFIX = "test_"
+TESTS_FILE = "tests.tmp"
 PROFILING_TRIALS = 10
 TIME_BUDGET = 5400 
 
@@ -43,22 +40,6 @@ fh = logging.FileHandler(LOGGING_FILE)
 fh.setLevel(logging.INFO)
 fh.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 logger.addHandler(fh)
- 
-def select_tests(changes):
-    """returns tests that are dependent on given changes
-
-    All python unit tests are top-level function with the prefix 
-    "test_" in the function name. To get all tests, we simply 
-    filter our changes by this prefix, stored in TEST_PREFIX.
-    """
-    top = subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-    top = top.decode("utf-8").splitlines()[0]
-    deps = dependency_analyzer.find_dependents(changes, top)
-
-    return [(filename, test) 
-            for filename in deps.keys() 
-            for test in deps[filename] 
-            if test.startswith(TEST_PREFIX)]
 
 
 def calculate_test_trials(tests):
@@ -130,23 +111,16 @@ def output_results(flaky, nonflaky):
 
 
 if __name__ == "__main__":
-    args = diff_collator.parse_args()
-    try:
-        logging.basicConfig(level=getattr(logging, args.level))
-    except AttributeError:
-        logging.basicConfig(level=logging.INFO)
-        logger.warning("Invalid logging level: %s", args.level)
+    logging.basicConfig(level=logging.INFO)
 
-    diff_output = diff_collator.get_diff_output(args)
-    changes = diff_collator.parser(diff_output)
-    diff_collator.output_changes(changes)
-
-    changes = {k:set(v.keys()) for k, v in  changes.items()}
-    tests = select_tests(changes)
-    logger.debug("tests:")
-    for t in tests:
-        logger.debug("%s:%s", t[0], t[1])
-
+    tests = []
+    with open(TESTS_FILE) as f:
+        for line in f.readlines():
+            test = line.split(":")
+            tests.append((test[0], test[1]))
+    
+    os.remove(TESTS_FILE)
+    
     flaky, nonflaky = check_tests(tests)
     output_results(flaky, nonflaky)
 

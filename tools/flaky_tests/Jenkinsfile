@@ -33,8 +33,12 @@ core_logic: {
         node(NODE_LINUX_GPU) {
             ws('workspace/flakiness_check'){
                 utils.init_git()
-                utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-                utils.docker_run('ubuntu_gpu', 'run_flakiness_checker', false)
+                utils.docker_run('ubuntu_cpu', 'select_tests', false)
+                // only continue if some tests were selected
+                if(fileExists('tests.tmp')){
+                    utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+                    utils.docker_run('ubuntu_gpu', 'run_flakiness_checker', false)
+                }
             }
         }
     }

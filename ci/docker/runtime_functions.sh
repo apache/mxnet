@@ -925,9 +925,13 @@ nightly_straight_dope_python3_multi_gpu_tests() {
 }
 
 # check commit for flaky tests
+select_tests(){
+    set -ex
+    python tool/flaky_test_bot/test_selector.py -b HEAD~1 HEAD
+}
 run_flakiness_checker(){
     set -ex
-    python tools/flaky_test_bot/check_branch.py -b HEAD~1 HEAD
+    python tools/flaky_test_bot/check_tests.py
 }
 
 # Deploy
