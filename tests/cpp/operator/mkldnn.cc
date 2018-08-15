@@ -634,7 +634,7 @@ std::vector<NDArrayAttrs> GetTestInputArrays(
     // Type 4
     arr = NDArray(shape, Context());
     if (types & ArrayTypes::NormalReshaped) {
-        InitDefaultArray(&in_arrs.back().arr, rand);
+        InitDefaultArray(&arr, rand);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount),
                 "Reshaped Normal NDArray");
     }
