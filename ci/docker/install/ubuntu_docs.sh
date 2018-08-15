@@ -27,7 +27,7 @@ apt-get install -y \
     doxygen \
     pandoc
 
-pip3 install -r ../docs_requirements
-pip2 install -r ../docs_requirements
+pip3 install -r docs_requirements
+pip2 install -r docs_requirements
 
 echo 'Dependency installation complete.'

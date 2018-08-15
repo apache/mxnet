@@ -61,6 +61,7 @@ COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
 COPY install/ubuntu_docs.sh /work/
+COPY docs_requirements /work/
 RUN /work/ubuntu_docs.sh
 
 ARG USER_ID=0
