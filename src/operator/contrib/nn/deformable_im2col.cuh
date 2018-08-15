@@ -510,7 +510,7 @@ inline void deformable_col2im_coord(mshadow::Stream<gpu>* s,
         num_kernels, data_col, data_im, data_offset, im_shape[1], im_shape[2], im_shape[3],
         kernel_shape[0], kernel_shape[1], pad[0], pad[1], stride[0], stride[1],
         dilation[0], dilation[1], channel_per_deformable_group, col_shape[1], col_shape[2], grad_offset, req);
-    MSHADOW_CUDA_POST_KERNEL_CHECK(deformable_col2im_gpu_kernel);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(deformable_col2im_coord_gpu_kernel);
     break;
   default:
     LOG(FATAL) << "col2im_nd_gpu does not support computation with "
