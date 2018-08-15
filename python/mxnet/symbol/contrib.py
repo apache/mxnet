@@ -486,7 +486,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             # create new variables with the same name,
             # them feed them to the given func
             graph_vars, var_fmt = _flatten(graph_vars, "while loop_vars")
-            new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
+            new_graph_vars = [symbol.var(_get_sym_uniq_name(sym)) for sym in graph_vars]
             new_graph_vars, _ = _regroup(new_graph_vars, var_fmt)
             outputs, final_state, out_fmt, var_fmt = graph_func(new_graph_vars)
             # first `num_out_data` elements belong to `outputs`
@@ -520,13 +520,13 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
                                 # to a `loc`, where inputs[loc] = sym
         for graph in graphs:
             # some loop_vars are inputs to `graph`, some are not
-            name_to_loop_vars = {sym.name: sym for sym in flatten_loop_vars}
+            name_to_loop_vars = {_get_sym_uniq_name(sym): sym for sym in flatten_loop_vars}
             # other inputs to `graph` created by cut_graph
             name_to_cut_g_syms = {sym.list_outputs()[0]: sym for sym in _cut_subgraph(graph)}
             # input_syms: all inputs to the `graph`
             name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
             # also we collect the mapping from var's name to var's loc in loop_vars
-            name_to_var_locs = {sym.name: i for i, sym in enumerate(flatten_loop_vars)}
+            name_to_var_locs = {_get_sym_uniq_name(sym): i for i, sym in enumerate(flatten_loop_vars)}
             # collect arguments for each subgraph
             input_locs = []                         # results from the second step
             var_locs = [-1] * len(flatten_loop_vars)        # results from the third step
