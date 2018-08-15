@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
 # pylint: disable=too-many-lines
 """Weight updating functions."""
 import logging
