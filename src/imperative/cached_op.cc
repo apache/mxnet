@@ -823,9 +823,10 @@ OpStatePtr CachedOp::DynamicForward(
 
   // If we are already recording, we don't need RunGraph to record all
   // computation again.
+  if (recording && !inlining_) recording = false;
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes,
-           !recording || inlining_);
+           recording);
 
   return op_state;
 }
