@@ -1249,11 +1249,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       if (in_arr.arr.shape().ndim() != 4)
         continue;
 
-      //  cannot pool / lrn / conv if dims are not default
-      // since we are comparing operations against fcompute on default format
-      if (in_arr.arr.IsMKLDNNData())
-        continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
