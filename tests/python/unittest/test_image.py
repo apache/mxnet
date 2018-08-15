@@ -149,7 +149,7 @@ class TestImage(unittest.TestCase):
                     path_imglist=path_imglist, path_root='', dtype=dtype)
                 for _ in range(3):
                     for batch in test_iter:
-                        pass
+                        assert batch.data[0].shape == (2, 3, 224, 224)
                     test_iter.reset()
                 # test last batch handle(discard)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
