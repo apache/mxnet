@@ -135,6 +135,9 @@ def _regroup(args, fmt):
     return ret, args
 
 
+# We want to generate a unique name for input symbols to a control flow
+# operator. The names are generated on purpose differently from the symbols
+# cut from the graph.
 def _get_sym_uniq_name(sym):
     return sym.name + "-" + sym.attr("_value_index")
 
@@ -319,6 +322,8 @@ def foreach(body, data, init_states, name="foreach"):
     cut_var_names = cut_var_map.keys()
 
     subg_input_names = g.list_inputs()
+    assert len(set(subg_input_names)) == len(subg_input_names), \
+            "The inputs of the subgraph don't have unique names: " + str(subg_input_names)
     # ordered_ins contains input symbols in the following order:
     # data_syms, state_syms, followed by cut_vars and vars in the closure.
     ordered_ins = [x for x in flatten_data]
@@ -530,7 +535,10 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             # collect arguments for each subgraph
             input_locs = []                         # results from the second step
             var_locs = [-1] * len(flatten_loop_vars)        # results from the third step
-            for name in graph.list_inputs():
+            subg_input_names = graph.list_inputs()
+            assert len(set(subg_input_names)) == len(subg_input_names), \
+                    "The inputs of the subgraph don't have unique names: " + str(subg_input_names)
+            for name in subg_input_names:
                 assert name in name_to_input_syms   # it should obviously hold
                 # name -> sym
                 if name in name_to_loop_vars:
