@@ -32,7 +32,7 @@ from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
-
+from . import _memmonger
 
 class _BlockScope(object):
     """Scope for collecting child `Block` s."""
@@ -720,6 +720,7 @@ class HybridBlock(Block):
         self._out_format = None
         self._in_format = None
         self._active = False
+        self._use_memmonger = False
         self._flags = []
 
     def __setattr__(self, name, value):
@@ -748,7 +749,7 @@ class HybridBlock(Block):
 
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
-        data_names = {data.name : i for i, data in enumerate(data)}
+        data_names = {j.name : i for i, j in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
 
@@ -770,6 +771,10 @@ class HybridBlock(Block):
             unused = ', '.join(list(param_names - set(used_param_names)))
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
+
+        if self._use_memmonger:
+            inputs = {i.name: j for i, j in zip(data, _flatten(args, "input")[0])}
+            out = _memmonger.search_plan(out, inputs, params)
 
         data_indices = []
         param_indices = []
@@ -832,6 +837,7 @@ class HybridBlock(Block):
 
     def hybridize(self, active=True, **kwargs):
         self._active = active
+        self._use_memmonger = kwargs.pop('use_memmonger', False)
         self._flags = list(kwargs.items())
         self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:

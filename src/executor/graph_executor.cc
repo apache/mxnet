@@ -254,13 +254,23 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     }
   }
 
-  int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
-  auto need_mirror = [do_mirror](const nnvm::Node& node) -> int {
-    if (node.is_variable()) return 0;
-    const std::string& type = node.attrs.op->name;
-    if (type == "Dropout") return false;
+  int use_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
+  auto mirror_fn = [use_mirror](const nnvm::Node& node) -> int {
+    static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+    static auto& fresource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+    static auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+
+    if (node.is_variable()) return false;
+    if (fresource_ex.count(node.op())) return false;
+    if (fresource.count(node.op())) {
+      auto reqs = fresource[node.op()](node.attrs);
+      for (const auto& req : reqs) {
+        if (req.type != ResourceRequest::kTempSpace) return false;
+      }
+    }
     if (get_node_attr(node, "__force_mirroring__", false)) return true;
-    if (do_mirror == 0) return false;
+    if (!use_mirror) return false;
+    const std::string& type = node.attrs.op->name;
     if (type == "Convolution") return false;
     if (type == "FullyConnected") return false;
     if (type == "Concat") return false;
@@ -277,7 +287,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   // take gradient
   nnvm::Graph g_grad = nnvm::pass::Gradient(
       g, symbol.outputs, xs, head_grad_entry_,
-      AggregateGradient, need_mirror, nullptr,
+      AggregateGradient, mirror_fn, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {

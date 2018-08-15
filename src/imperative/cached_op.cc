@@ -91,6 +91,22 @@ struct CachedOp::CachedOpState {
   std::multimap<size_t, NDArray> bwd_reuse_pool;
 };
 
+template<typename ValueType>
+inline ValueType get_node_attr(
+    const nnvm::Node& node,
+    const std::string& key, ValueType default_value) {
+  auto it = node.attrs.dict.find(key);
+  if (it == node.attrs.dict.end()) {
+    return default_value;
+  } else {
+    ValueType ret;
+    dmlc::parameter::FieldEntry<ValueType> e;
+    e.Init(key, &ret, ret);
+    e.Set(&ret, it->second);
+    return ret;
+  }
+}
+
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags) {
@@ -174,9 +190,26 @@ CachedOp::CachedOp(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
 
+    auto mirror_fn = [](const nnvm::Node& node) -> int {
+      static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+      static auto& fresource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+      static auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+
+      if (node.is_variable()) return false;
+      if (fresource_ex.count(node.op())) return false;
+      if (fresource.count(node.op())) {
+        auto reqs = fresource[node.op()](node.attrs);
+        for (const auto& req : reqs) {
+          if (req.type != ResourceRequest::kTempSpace) return false;
+        }
+      }
+      if (get_node_attr(node, "__force_mirroring__", false)) return true;
+      return false;
+    };
+
     grad_graph_ = pass::Gradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
-        exec::AggregateGradient, nullptr, nullptr,
+        exec::AggregateGradient, mirror_fn, nullptr,
         zero_ops, "_copy");
   }
 

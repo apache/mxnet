@@ -1201,7 +1201,7 @@ def check_hybrid_static_memory(**kwargs):
 
 @with_seed()
 def test_hybrid_static_memory():
-    check_hybrid_static_memory()
+    check_hybrid_static_memory(use_memmonger=True)
     check_hybrid_static_memory(static_alloc=True)
     check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
