@@ -155,6 +155,13 @@ static void VerifyMem(const mkldnn::memory &mem) {
   }
 }
 
+static bool IsSameShape(mkldnn::memory::primitive_desc pd, TShape shape) {
+  if (pd.desc().data.ndims != shape.ndim()) return false;
+  for (size_t i = 0; i < shape.ndim(); i++)
+    if (pd.desc().data.dims[i] != shape[i]) return false;
+  return true;
+}
+
 static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
                                                mkldnn::memory::format format) {
   mkldnn::memory::dims dims(s.ndim());
@@ -377,16 +384,18 @@ struct OpAttrs {
 enum ArrayTypes {
   Normal = 1,
   MKLDNN = 2,
-  MKLDNNDiffDim = 4,
-  NormalReshaped = 8,
-  MKLDNNReshaped = 16,
-  MKLDNNReshapedDiffDim = 32,
-  NormalReused = 64,
-  MKLDNNReused = 128,
-  MKLDNNReusedDiffDim = 256,
-  NormalReshapedReused = 512,
-  NormalReusedDiffDtype = 1024,
-  All = 2047,
+  MKLDNNDiffShape = 4,
+  MKLDNNDiffDim = 8,
+  NormalReshaped = 16,
+  MKLDNNReshaped = 32,
+  MKLDNNReshapedDiffShape = 64,
+  MKLDNNReshapedDiffDim = 128,
+  NormalReused = 256,
+  MKLDNNReused = 512,
+  MKLDNNReusedDiffDim = 1024,
+  NormalReshapedReused = 2048,
+  NormalReusedDiffDtype = 4096,
+  All = 8191,
 };
 
 OpAttrs GetCopyOp() {
@@ -654,33 +663,43 @@ std::vector<NDArrayAttrs> GetTestInputArrays(
 
       // Type 2, 3.
       arr = NDArray(shape, Context());
-      desc = "MKLDNN NDArray";
-
-      if (shape.ndim() != pd.desc().data.ndims) {
+      if (shape.ndim() == pd.desc().data.ndims && IsSameShape(pd, shape)
+          && types & ArrayTypes::MKLDNN) {
+        desc = "MKLDNN NDArray";
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr, desc);
+      } else if (shape.ndim() == pd.desc().data.ndims && !IsSameShape(pd, shape)
+          && types & ArrayTypes::MKLDNNDiffShape) {
+        desc = "MKLDNN NDArray with different shape";
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr, desc);
+      } else if (shape.ndim() != pd.desc().data.ndims && types & ArrayTypes::MKLDNNDiffDim) {
         std::stringstream ss;
-        ss << "MKLDNN NDArray with different memory layout " <<
+        ss << "MKLDNN NDArray with different dim " <<
            shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
-      }
-
-      if ((types & ArrayTypes::MKLDNN && shape.ndim() == pd.desc().data.ndims) ||
-          (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != pd.desc().data.ndims)) {
         InitMKLDNNArray(&arr, pd, rand);
         in_arrs.emplace_back(arr, desc);
       }
 
+
       // Type 5, 6.
       arr = NDArray(shape, Context());
-      desc = "Reshaped MKLDNN NDArray";
-      if (shape.ndim() != pd.desc().data.ndims) {
+      if (shape.ndim() == pd.desc().data.ndims && IsSameShape(pd, shape)
+          && types & ArrayTypes::MKLDNNReshaped) {
+        desc = "Reshaped MKLDNN NDArray";
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
+      } else if (shape.ndim() == pd.desc().data.ndims && !IsSameShape(pd, shape)
+          && types & ArrayTypes::MKLDNNReshapedDiffShape) {
+        desc = "Reshaped MKLDNN NDArray with different shape";
+        InitMKLDNNArray(&arr, pd, rand);
+        in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
+      } else if (shape.ndim() != pd.desc().data.ndims && types & ArrayTypes::MKLDNNReshapedDiffDim) {
         std::stringstream ss;
-        ss << "Reshaped MKLDNN NDArray with different memory layout "
-           << shape.ndim() << "/" << pd.desc().data.ndims;
+        ss << "MKLDNN NDArray with different dim " <<
+           shape.ndim() << "/" << pd.desc().data.ndims;
         desc = ss.str();
-      }
-
-      if ((types & ArrayTypes::MKLDNNReshaped && shape.ndim() == pd.desc().data.ndims) ||
-          (types & ArrayTypes::MKLDNNReshapedDiffDim && shape.ndim() != pd.desc().data.ndims)) {
         InitMKLDNNArray(&arr, pd, rand);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc);
       }
