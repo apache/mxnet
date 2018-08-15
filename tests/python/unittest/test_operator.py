@@ -4450,10 +4450,12 @@ def test_where():
 	
         assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
                                                 y=mx.nd.array([[8,9],[10,11],[12,13]]),
-                                                condition=mx.nd.array([1,0])),
-                         MXNetError)
+                                                condition=mx.nd.array([1,0])), MXNetError)
 
-	
+        assert_exception(lambda: mx.nd.where(x=mx.nd.array([[2,3],[4,5],[6,7]]),
+                                             y=mx.nd.array([[8,9],[10,11],[12,13]]),
+                                             condition=mx.nd.array([1,0])), MXNetError)
+
     test_where_helper((5, 9), True)
     test_where_helper((5, 9), False)
     test_where_helper((5, 7, 9), True)
