@@ -334,7 +334,7 @@ class BaseModule(object):
 
         Parameters
         ----------
-        eval_data : DataIter or NDArray or ndarray
+        eval_data : DataIter or NDArray or numpy array
             Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
