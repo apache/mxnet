@@ -1708,6 +1708,58 @@ def test_cut_subgraph_foreach():
 
 
 @with_seed()
+def test_foreach_uniq_name():
+    class TestLayer1(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestLayer, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def step1(data, states):
+                return data + 1, states
+            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            # The input variables have the same symbol name.
+            out, states = F.contrib.foreach(step1, out2, states2)
+            return out
+
+    class TestLayer2(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestLayer2, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def step1(data, states):
+                return data + 1, states
+            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            def step2(data, states):
+                return data, states[0] + states1[0] + F.squeeze(out1.slice_axis(axis=0, begin=0, end=1))
+            # The input variables have the same symbol names.
+            # The free variables have the same symbol names as the input variables.
+            out, states = F.contrib.foreach(step2, out1, states1)
+            return out
+
+    TestLayers = [TestLayer1, TestLayer2]
+
+    data = mx.nd.normal(loc=0, scale=1, shape=(2, 5))
+    states = mx.nd.normal(loc=0, scale=1, shape=(5))
+    for TestLayer in TestLayers:
+        print(TestLayer)
+        layer = TestLayer2()
+        layer.initialize(ctx=default_context())
+        res1 = layer(data, [states])
+
+        with mx.autograd.record():
+            res1 = layer(data, [states])
+
+        layer = TestLayer2()
+        layer.initialize(ctx=default_context())
+        layer.hybridize()
+        res2 = layer(data, [states])
+
+        with mx.autograd.record():
+            res2 = layer(data, [states])
+        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+
+
+@with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):
