@@ -23,12 +23,12 @@
 // timeout in minutes
 max_time = 60
 
-node('restricted-mxnetlinux-cpu') {
+node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node_labels(linux_cpu: 'restricted-mxnetlinux-cpu', linux_gpu: 'restricted-mxnetlinux-gpu', linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3', windows_cpu: 'restricted-mxnetwindows-cpu', windows_gpu: 'restricted-mxnetwindows-gpu')
+utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
@@ -39,7 +39,7 @@ core_logic: {
         timeout(time: max_time, unit: 'MINUTES') {
             sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.fork} ${params.tag_default} ${params.domain}"
             archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
-            build 'restricted-website-publish'
+            build 'test-website-publish'
         }
       }
     }
