@@ -5356,8 +5356,7 @@ def _syevd_combined_symbol(a):
                                    transpose_b=False, name='Ut_L_U')
     return mx.sym.Group([u_ut, ut_lam_u])
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1896893923)
+@with_seed()
 def test_laop_2():
     dtype = np.float64
     rtol_fw = 1e-7
