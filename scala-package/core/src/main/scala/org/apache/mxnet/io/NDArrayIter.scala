@@ -46,17 +46,17 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
                   lastBatchHandle: String) extends DataIter {
 
   /**
-    * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
-    * @param label Same as data, but is not fed to the model during testing.
-    *              Label names will be label_0, label_1, ..., etc.
-    * @param dataBatchSize Batch Size
-    * @param shuffle Whether to shuffle the data
-    * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
-    *
-    * This iterator will pad, discard or roll over the last batch if
-    * the size of data does not match batch_size. Roll over is intended
-    * for training and can cause problems if used for prediction.
-    */
+  * @param data Specify the data. Data names will be data_0, data_1, ..., etc.
+  * @param label Same as data, but is not fed to the model during testing.
+  *              Label names will be label_0, label_1, ..., etc.
+  * @param dataBatchSize Batch Size
+  * @param shuffle Whether to shuffle the data
+  * @param lastBatchHandle "pad", "discard" or "roll_over". How to handle the last batch
+  *
+  * This iterator will pad, discard or roll over the last batch if
+  * the size of data does not match batch_size. Roll over is intended
+  * for training and can cause problems if used for prediction.
+  */
   def this(data: IndexedSeq[NDArray], label: IndexedSeq[NDArray] = IndexedSeq.empty,
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
@@ -291,7 +291,7 @@ object NDArrayIter {
     /**
       * Add one data input with its DataDesc
      */
-    def addDataDesc(dataDesc: DataDesc, data: NDArray): Builder = {
+    def addDataWithDesc(dataDesc: DataDesc, data: NDArray): Builder = {
       this.data = this.data ++ IndexedSeq((dataDesc, data))
       this
     }
@@ -299,7 +299,7 @@ object NDArrayIter {
     /**
       * Add one label input with its DataDesc
       */
-    def addLabelDesc(labelDesc: DataDesc, label: NDArray): Builder = {
+    def addLabelWithDesc(labelDesc: DataDesc, label: NDArray): Builder = {
       this.data = this.data ++ IndexedSeq((labelDesc, label))
       this
     }

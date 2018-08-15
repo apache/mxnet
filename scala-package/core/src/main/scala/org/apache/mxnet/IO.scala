@@ -207,8 +207,8 @@ object DataBatch {
     private var index: IndexedSeq[Long] = null
     private var pad: Int = 0
     private var bucketKey: AnyRef = null
-    private var dataShapes: IndexedSeq[DataDesc] = null
-    private var labelShapes: IndexedSeq[DataDesc] = null
+    private var dataDesc: IndexedSeq[DataDesc] = null
+    private var labelDesc: IndexedSeq[DataDesc] = null
 
     /**
      * Set the input data.
@@ -262,16 +262,26 @@ object DataBatch {
       this
     }
 
+    @deprecated
+    def provideDataShape(name: String, shape: Shape): Builder = {
+      provideDataDesc(new DataDesc(name, shape))
+    }
+
+    @deprecated
+    def provideLabelShape(name: String, shape: Shape): Builder = {
+      provideLabelDesc(new DataDesc(name, shape))
+    }
+
     /**
      * Provide the shape of a data.
      * @param dataDesc DataDescriptor
      * @return this.
      */
-    def provideDataShape(dataDesc: DataDesc): Builder = {
-      if (dataShapes == null) {
-        dataShapes = IndexedSeq(dataDesc)
+    def provideDataDesc(dataDesc: DataDesc): Builder = {
+      if (this.dataDesc == null) {
+        this.dataDesc = IndexedSeq(dataDesc)
       } else {
-        dataShapes = dataShapes ++ IndexedSeq(dataDesc)
+        this.dataDesc = IndexedSeq(dataDesc)
       }
       this
     }
@@ -282,18 +292,18 @@ object DataBatch {
      * @param shape label shape.
      * @return this.
      */
-    def provideLabelShape(dataDesc: DataDesc): Builder = {
-      if (labelShapes == null) {
-        labelShapes = IndexedSeq(dataDesc)
+    def provideLabelDesc(dataDesc: DataDesc): Builder = {
+      if (this.labelDesc == null) {
+        this.labelDesc = IndexedSeq(dataDesc)
       } else {
-        labelShapes = labelShapes ++ IndexedSeq(dataDesc)
+        this.labelDesc = this.labelDesc ++ IndexedSeq(dataDesc)
       }
       this
     }
 
     def build(): DataBatch = {
       require(data != null, "data is required.")
-      new DataBatch(data, label, index, pad, bucketKey, dataShapes, labelShapes)
+      new DataBatch(data, label, index, pad, bucketKey, dataDesc, labelDesc)
     }
   }
 }
@@ -400,7 +410,7 @@ object DataDesc {
    */
   def getBatchAxis(layout: Option[String]): Int = {
     if (layout.isEmpty|| layout.get == Layout.UNDEFINED) {
-      logger.warn("Found Undefined Layout, will use default index 0")
+      logger.warn("Found Undefined Layout, will use default index 0 for batch axis")
       0
     } else {
       if (layout.get.contains('N')) {
