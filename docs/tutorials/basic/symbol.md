@@ -94,7 +94,7 @@ mx.viz.plot_network(symbol=g)
 
 The computations declared in the above examples can be bound to the input data
 for evaluation by using `bind` method. We discuss this further in the
-[symbol manipulation](#Symbol Manipulation) section.
+[Symbol Manipulation](#symbol-manipulation) section.
 
 ### Basic Neural Networks
 
