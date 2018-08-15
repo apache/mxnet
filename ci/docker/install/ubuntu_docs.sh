@@ -27,15 +27,7 @@ apt-get install -y \
     doxygen \
     pandoc
 
-echo 'Installing python packages...'
-pip install --upgrade pip && pip install \
-    beautifulsoup4 \
-    breathe \
-    CommonMark==0.5.4 \
-    h5py \
-    mock==1.0.1 \
-    pypandoc \
-    recommonmark==0.4.0 \
-    sphinx==1.5.6
+pip3 install -r ../../docs_requirements
+pip2 install -r ../../docs_requirements
 
 echo 'Dependency installation complete.'

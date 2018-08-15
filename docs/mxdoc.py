@@ -23,16 +23,16 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-# import StringIO from io for python3 compatibility
-from io import StringIO
 import contextlib
-from ConfigParser import SafeConfigParser
+# Use six for Python 2 / 3 compatibility
+from six import StringIO
+from six.moves import configparser
 
 _BUILD_VER = os.getenv('BUILD_VER', 'default')
 print("Building version {}".format(_BUILD_VER))
 _DOC_SET = 'document_sets_' + _BUILD_VER
 
-parser = SafeConfigParser()
+parser = configparser.SafeConfigParser()
 parser.read('settings.ini')
 
 if _DOC_SET not in parser.sections():
