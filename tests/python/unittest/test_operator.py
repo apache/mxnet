@@ -3812,6 +3812,31 @@ def test_take():
         exe.backward([mx.nd.array(grad_out)])
         assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
 
+    def check_autograd_req():
+        row_len = 2
+        col_len = 8
+        shape = (row_len, col_len)
+        sc = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype="float32")
+        sc.attach_grad()
+        i = mx.nd.array([0], dtype="int64")
+        j = mx.nd.array([0], dtype="int64")
+        with mx.autograd.record(train_mode=True):
+            xs = []
+            for _ in range(row_len):
+                x_i = []
+                for _ in range(col_len):
+                    x_ij = sc.take(i).squeeze(axis=0).take(j).squeeze(axis=0)
+                    x_i.append(x_ij)
+                    j = j + 1
+                i = i + 1
+                j = j - col_len  # reset j
+                xs.append(mx.nd.stack(*x_i))
+            x = mx.nd.stack(*xs)
+            x = x.sum()
+
+        x.backward()
+        assert_almost_equal(np.ones(sc.grad.shape), sc.grad.asnumpy())
+
     for mode in ['clip', 'wrap']:
         for data_ndim in range(1, 5):
             for idx_ndim in range(1, 4):
@@ -3823,6 +3848,8 @@ def test_take():
                     for _ in range(idx_ndim):
                         idx_shape += (np.random.randint(low=1, high=5), )
                     check_output_n_grad(data_shape, idx_shape, axis, mode)
+
+    check_autograd_req()
 
 
 @with_seed()
