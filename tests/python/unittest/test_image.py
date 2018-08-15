@@ -178,19 +178,17 @@ class TestImage(unittest.TestCase):
                 for batch in test_iter:
                     if i == 0:
                         first_image = batch.data[0][0]
-                        logging.info(first_image)
                         third_image = batch.data[0][2]
                     i += 1
                 test_iter.reset()
                 assert np.array_equal(
-                    test_iter.next().data[0][0].asnumpy(), third_image.asnumpy()), 'failed in {}'.format(test)
+                    test_iter.next().data[0][0].asnumpy(), third_image.asnumpy())
                 # test iteratopr work properly after calling reset when last_batch is roll_over
                 i = 0
                 for batch in test_iter:
                     # the last one batch
                     if i == 3:
                         assert batch.pad == 1
-                        logging.info(first_image)
                         assert np.array_equal(
                             batch.data[0][2].asnumpy(), first_image.asnumpy())
                     else:
