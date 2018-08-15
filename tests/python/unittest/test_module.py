@@ -50,10 +50,10 @@ def test_module_bind():
 
     mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
     assertRaises(TypeError, mod.bind, data_shapes=[('data', mx.nd.array([10,10]))])
-    mod.binded = False
+    assert mod.binded == False
 
     mod.bind(data_shapes=[('data', (10,10))])
-    mod.binded = True
+    assert mod.binded == True
 
 
 @with_seed()
