@@ -30,7 +30,7 @@ except ImportError:
     pass
 
 from . import symbol
-from ..base import _LIB, check_call
+from ..base import _LIB, check_call, py_str
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
@@ -135,6 +135,9 @@ def _regroup(args, fmt):
     return ret, args
 
 
+def _get_sym_uniq_name(sym):
+    return sym.name + "-" + sym.attr("_value_index")
+
 def _get_graph_inputs(subg):
     num_handles = ctypes.c_int(0)
     handles = ctypes.POINTER(SymbolHandle)()
@@ -189,7 +192,7 @@ def _construct_subgraph(sym_out, sym_states, name):
 
     for s in sym_states:
         if s.name in all_input_names or s.name in output_names or \
-           s.list_attr().get("__subgraph_name__", "") != name:
+                s.list_attr().get("__subgraph_name__", "") != name:
             flat_out.append(symbol.op.identity(s))
         else:
             flat_out.append(s)
@@ -280,9 +283,9 @@ def foreach(body, data, init_states, name="foreach"):
     # with AttrScope and prune the nodes without the special attribute.
     name = _get_unique_subgraph_name(name)
     with AttrScope(__subgraph_name__=name):
-        in_eles = [symbol.var(sym.name) for sym in flatten_data]
+        in_eles = [symbol.var(_get_sym_uniq_name(sym)) for sym in flatten_data]
         in_eles, _ = _regroup(in_eles, data_fmt)
-        states = [symbol.var(s.name) for s in init_flatten_states]
+        states = [symbol.var(_get_sym_uniq_name(s)) for s in init_flatten_states]
         states, _ = _regroup(states, copy.deepcopy(init_state_fmt))
         sym_out, sym_states = body(in_eles, states)
 
@@ -310,8 +313,8 @@ def foreach(body, data, init_states, name="foreach"):
     gin_names = input_syms.keys()
     # This array contains the symbols for the inputs of foreach.
     # They are ordered according to the inputs of the subgraph.
-    state_names = [sym.name for sym in init_flatten_states]
-    data_names = [sym.name for sym in flatten_data]
+    state_names = [_get_sym_uniq_name(sym) for sym in init_flatten_states]
+    data_names = [_get_sym_uniq_name(sym) for sym in flatten_data]
     cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
     cut_var_names = cut_var_map.keys()
 
