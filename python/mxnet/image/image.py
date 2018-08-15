@@ -1047,7 +1047,7 @@ class ImageIter(io.DataIter):
     path_imgidx : str
         Path to image index file. Needed for partition and shuffling when using .rec source.
     shuffle : bool
-        Whether to shuffle all images or not.
+        Whether to shuffle all images at the start of each iteration or not.
         Can be slow for HDD.
     part_index : int
         Partition index.
@@ -1136,12 +1136,9 @@ class ImageIter(io.DataIter):
         self.batch_size = batch_size
         self.data_shape = data_shape
         self.label_width = label_width
-
+        self.shuffle = shuffle
         if self.imgrec is None:
             self.seq = imgkeys
-            # shuffle
-            if shuffle:
-                random.shuffle(self.seq)
         elif shuffle or num_parts > 1:
             assert self.imgidx is not None
             self.seq = self.imgidx
@@ -1159,18 +1156,14 @@ class ImageIter(io.DataIter):
             self.auglist = aug_list
         self.cur = 0
         self._is_allowed_reading = True
-        self._cached_data = None
-        # handle the last batch
-        if self.seq and last_batch == 'discard':
-            new_seq_n = len(self.seq) - len(self.seq) % batch_size
-            self.seq = self.seq[:new_seq_n]
-
         self.last_batch = last_batch
         self.num_image = len(self.seq) if self.seq is not None else None
         self.reset()
 
     def reset(self):
         """Resets the iterator to the beginning of the data."""
+        if self.seq is not None and self.shuffle:
+            random.shuffle(self.seq)
         if self.last_batch != 'roll_over' or \
             self._is_allowed_reading is True:
             if self.imgrec is not None:
@@ -1216,8 +1209,8 @@ class ImageIter(io.DataIter):
             header, img = recordio.unpack(s)
             return header.label, img
 
-    def iterate(self, batch_data, batch_label, start=0):
-        """Helper function for iterate a batch of data"""
+    def _batchify(self, batch_data, batch_label, start=0):
+        """Helper function for batchifying data"""
         i = start
         batch_size = self.batch_size
         try:
@@ -1245,18 +1238,15 @@ class ImageIter(io.DataIter):
         c, h, w = self.data_shape
         batch_data = nd.empty((batch_size, c, h, w))
         batch_label = nd.empty(self.provide_label[0][1])
-        i = self.iterate(batch_data, batch_label)
+        i = self._batchify(batch_data, batch_label)
         # calculate the padding
         pad = batch_size - i
-        # handle padding for sequential read
+        # handle padding for 'pad' and 'roll_over' for the last batch
         if pad != 0:
-            if self.seq is not None:
-                _ = self.iterate(batch_data, batch_label, i)
-            else:
-                if self.last_batch == 'discard':
-                    raise StopIteration
-                else:
-                    _ = self.iterate(batch_data, batch_label, i)
+            if self.last_batch == 'discard':
+                raise StopIteration
+            # pad the rest of the data
+            _ = self._batchify(batch_data, batch_label, i)
             self._is_allowed_reading = False
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
