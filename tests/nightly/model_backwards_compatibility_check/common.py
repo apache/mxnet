@@ -29,6 +29,12 @@ from mxnet.gluon import nn
 import re
 from mxnet.test_utils import assert_almost_equal
 
+try:
+    cmp             # Python 2
+except NameError:
+    def cmp(x, y):  # Python 3
+        return (x > y) - (x < y)
+
 # Set fixed random seeds.
 mx.random.seed(7)
 np.random.seed(7)
