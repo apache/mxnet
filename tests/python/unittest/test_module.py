@@ -772,6 +772,8 @@ def test_forward_reshape():
              for_training=False, force_rebind=True)
     assert mod.predict(pred_dataiter).shape == tuple([10, num_class])
 
+@with_seed()
+def test_forward_types():
     #Test forward with other data batch API
     Batch = namedtuple('Batch', ['data'])
     data = mx.sym.Variable('data')
@@ -785,6 +787,18 @@ def test_forward_reshape():
     data2 = [mx.nd.ones((3, 5))]
     mod.forward(Batch(data2))
     assert mod.get_outputs()[0].shape == (3, 5)
+
+    #Test forward with other NDArray and np.ndarray inputs
+    data = mx.sym.Variable('data')
+    out = data * 2
+    mod = mx.mod.Module(symbol=out, label_names=None)
+    mod.bind(data_shapes=[('data', (1, 10))])
+    mod.init_params()
+    data1 = mx.nd.ones((1, 10))
+    assert mod.predict(data1).shape == (1, 10)
+    data2 = np.ones((1, 10))
+    assert mod.predict(data1).shape == (1, 10)
+
 
 
 if __name__ == '__main__':
