@@ -41,8 +41,7 @@ if _DOC_SET not in parser.sections():
 for section in [ _DOC_SET ]:
     print("Document sets to generate:")
     for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
-        print '%-12s  : %s' % (candidate, parser.get(section, candidate))
-    print
+        print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
 _SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
