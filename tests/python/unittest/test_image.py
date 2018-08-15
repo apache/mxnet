@@ -147,6 +147,7 @@ class TestImage(unittest.TestCase):
                 
                 test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist, 
                     path_imglist=path_imglist, path_root='', dtype=dtype)
+                # test batch data shape
                 for _ in range(3):
                     for batch in test_iter:
                         assert batch.data[0].shape == (2, 3, 224, 224)
@@ -158,7 +159,6 @@ class TestImage(unittest.TestCase):
                 for batch in test_iter:
                     i += 1
                 assert i == 5
-
                 # test last_batch(pad)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
                     path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='pad')
@@ -177,11 +177,26 @@ class TestImage(unittest.TestCase):
                 i = 0
                 for batch in test_iter:
                     if i == 0:
-                        second_image = batch.data[0][2]
+                        first_image = batch.data[0][0]
+                        logging.info(first_image)
+                        third_image = batch.data[0][2]
                     i += 1
                 test_iter.reset()
                 assert np.array_equal(
-                    test_iter.next().data[0][0].asnumpy(), second_image.asnumpy()), 'failed in {}'.format(test)
+                    test_iter.next().data[0][0].asnumpy(), third_image.asnumpy()), 'failed in {}'.format(test)
+                # test iteratopr work properly after calling reset when last_batch is roll_over
+                i = 0
+                for batch in test_iter:
+                    # the last one batch
+                    if i == 3:
+                        assert batch.pad == 1
+                        logging.info(first_image)
+                        assert np.array_equal(
+                            batch.data[0][2].asnumpy(), first_image.asnumpy())
+                    else:
+                        assert batch.pad == 0
+                    i += 1
+                assert i == 4
 
         for dtype in ['int32', 'float32', 'int64', 'float64']:
             check_imageiter(dtype)
