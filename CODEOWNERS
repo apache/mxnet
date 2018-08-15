@@ -21,14 +21,14 @@
 /src/kvstore/     @rahul003 @anirudh2290
 /include/         @anirudh2290
 /src/c_api/       @anirudh2290
-/src/common/      @anirudh2290
-/src/engine/      @anirudh2290
-/src/executor/    @anirudh2290
-/src/imperative/  @anirudh2290
-/src/io/          @anirudh2290
-/src/ndarray/     @anirudh2290
-/src/nnvm/        @anirudh2290
-/src/operator/    @anirudh2290
+/src/common/      @anirudh2290 @apeforest
+/src/engine/      @anirudh2290 @apeforest
+/src/executor/    @anirudh2290 @apeforest
+/src/imperative/  @anirudh2290 @apeforest
+/src/io/          @anirudh2290 @apeforest
+/src/ndarray/     @anirudh2290 @apeforest
+/src/nnvm/        @anirudh2290 @apeforest
+/src/operator/    @anirudh2290 @apeforest
 /src/profiler/    @anirudh2290
 /src/storage/     @anirudh2290
 /tests/cpp/       @anirudh2290
