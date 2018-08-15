@@ -193,11 +193,11 @@ def randn(*shape, **kwargs):
     [5.357444  5.7793283 3.9896927]]
     <NDArray 2x3 @cpu(0)>
     """
-    loc=kwargs.pop('loc', 0)
-    scale=kwargs.pop('scale', 1)
-    dtype=kwargs.pop('dtype', _Null)
-    ctx=kwargs.pop('ctx', None)
-    out=kwargs.pop('out', None)
+    loc = kwargs.pop('loc', 0)
+    scale = kwargs.pop('scale', 1)
+    dtype = kwargs.pop('dtype', _Null)
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
     assert isinstance(loc, (int, float))
     assert isinstance(scale, (int, float))
     return _random_helper(_internal._random_normal, _internal._sample_normal,
