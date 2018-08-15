@@ -4985,23 +4985,80 @@ def test_deformable_convolution():
                                                    grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-# Seed set because the test is not robust enough to operate on random data.  Repro issue with:
-# MXNET_TEST_SEED=1234 nosetests --verbose tests/python/gpu/test_operator_gpu.py:test_deformable_psroipooling
-@with_seed(0)
+def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):
+    num_rois = input_rois.shape[0]
+    output_offset = input_offset.copy()
+    # simulate deformable psroipooling forward function
+    for roi_idx in range(num_rois):
+        sub_rois = input_rois[roi_idx, :].astype(np.float32)
+        img_idx, x0, y0, x1, y1 = int(sub_rois[0]), sub_rois[1], sub_rois[2], sub_rois[3], sub_rois[4]
+        roi_start_w = round(x0) * spatial_scale - 0.5
+        roi_start_h = round(y0) * spatial_scale - 0.5
+        roi_end_w = round(x1 + 1) * spatial_scale - 0.5
+        roi_end_h = round(y1 + 1) * spatial_scale - 0.5
+        roi_w, roi_h = roi_end_w - roi_start_w, roi_end_h - roi_start_h
+        bin_size_w, bin_size_h = roi_w / pooled_w, roi_h / pooled_h
+        sub_bin_size_w, sub_bin_size_h = bin_size_w / sample_per_part, bin_size_h / sample_per_part
+        for c_top in range(output_dim):
+            channel_each_cls = output_dim / num_classes
+            class_id = int(c_top / channel_each_cls)
+            for ph in range(pooled_h):
+                for pw in range(pooled_w):
+                    part_h = int(math.floor(float(ph) / pooled_h * part_size))
+                    part_w = int(math.floor(float(pw) / pooled_w * part_size))
+                    trans_x = input_offset[roi_idx, class_id * 2, part_h, part_w] * trans_std
+                    trans_y = input_offset[roi_idx, class_id * 2 + 1, part_h, part_w] * trans_std
+                    bin_h_start, bin_w_start = ph * bin_size_h + roi_start_h, pw * bin_size_w + roi_start_w
+                    
+                    need_check = True
+                    while need_check:
+                        pass_check = True
+                        for ih in range(sample_per_part):
+                            for iw in range(sample_per_part):
+                                h = bin_h_start + trans_y * roi_h + ih * sub_bin_size_h
+                                w = bin_w_start + trans_x * roi_w + iw * sub_bin_size_w
+
+                                if w < -0.5 or w > feat_w - 0.5 or h < -0.5 or h > feat_h - 0.5:
+                                    continue
+
+                                w = min(max(w, 0.1), feat_w - 1.1)
+                                h = min(max(h, 0.1), feat_h - 1.1)
+                                # if the following condiiton holds, the sampling location is not differentiable
+                                # therefore we need to re-do the sampling process
+                                if h - math.floor(h) < 1e-3 or math.ceil(h) - h < 1e-3 or w - math.floor(w) < 1e-3 or math.ceil(w) - w < 1e-3:
+                                    trans_x, trans_y = random.random() * trans_std, random.random() * trans_std
+                                    pass_check = False
+                                    break
+                            if not pass_check:
+                                break
+                        if pass_check:
+                            output_offset[roi_idx, class_id * 2 + 1, part_h, part_w] = trans_y / trans_std
+                            output_offset[roi_idx, class_id * 2, part_h, part_w] = trans_x / trans_std
+                            need_check = False
+
+    return output_offset
+
+@with_seed()
 def test_deformable_psroipooling():
+    sample_per_part = 4
+    trans_std = 0.1
     for num_rois in [1, 2]:
         for num_classes, num_group in itertools.product([2, 3], [2, 3]):
-            for image_height, image_width in itertools.product([168, 224], [168, 224]):
+            for image_height, image_width in itertools.product([160, 224], [160, 224]):
                 for grad_nodes in [['im_data'], ['offset_data']]:
                     spatial_scale = 0.0625
+                    stride = int(1 / spatial_scale)
                     feat_height = np.int(image_height * spatial_scale)
                     feat_width = np.int(image_width * spatial_scale)
                     im_data = np.random.rand(1, num_classes*num_group*num_group, feat_height, feat_width)
                     rois_data = np.zeros([num_rois, 5])
-                    rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1))
-                    rois_data[:, [2,4]] = np.sort(np.random.rand(num_rois, 2)*(image_height-1))
-                    offset_data = np.random.rand(num_rois, 2*num_classes, num_group, num_group) * 0.1
-
+                    rois_data[:, [1,3]] = np.sort(np.random.rand(num_rois, 2)*(image_width-1 - 2 * stride)) + stride
+                    rois_data[:, [2,4]] = np.sort(np.random.rand(num_rois, 2)*(image_height-1 - 2 * stride)) + stride
+                    offset_data = np.random.rand(num_rois, 2*num_classes, num_group, num_group)
+                    # at certain points, the bilinear interpolation function may be non-differentiable
+                    # to avoid this, we check whether the input locates on the valid points
+                    offset_data = _validate_sample_location(rois_data, offset_data, spatial_scale, num_group, num_group,
+                                                            sample_per_part, num_group, num_classes, num_classes, trans_std, feat_height, feat_width)
                     im_data_var = mx.symbol.Variable(name="im_data")
                     rois_data_var = mx.symbol.Variable(name="rois_data")
                     offset_data_var = mx.symbol.Variable(name="offset_data")
@@ -5010,15 +5067,11 @@ def test_deformable_psroipooling():
                                                                sample_per_part=4, group_size=num_group,
                                                                pooled_size=num_group, output_dim=num_classes,
                                                                trans_std=0.1, no_trans=False, name='test_op')
-                    if grad_nodes[0] == 'offset_data':
-                        # wider tolerance needed for coordinate differential
-                        rtol, atol = 1.0, 1e-2
-                    else:
-                        rtol, atol = 1e-2, 1e-3
+                    rtol, atol = 1e-2, 1e-3
                     # By now we only have gpu implementation
                     if default_context().device_type == 'gpu':
                         check_numeric_gradient(op, [im_data, rois_data, offset_data], rtol=rtol, atol=atol,
-                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                                               grad_nodes=grad_nodes, ctx=mx.gpu(1))
 
 
 # Helper functions for test_laop
