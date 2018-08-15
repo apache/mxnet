@@ -46,6 +46,9 @@
 #include <limits>
 
 #include "../operator/mxnet_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#endif
 
 namespace mxnet {
 namespace common {
@@ -468,6 +471,10 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+#endif
 }
 
 // heuristic to dermine number of threads per GPU
