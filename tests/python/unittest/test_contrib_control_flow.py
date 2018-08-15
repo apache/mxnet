@@ -1742,7 +1742,8 @@ def test_uniq_name():
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
-                return F.squeeze(state1.slice_axis(axis=0, begin=0, end=1)) != 0
+                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                return s == s
             def step(state1, state2):
                 return state1 + 1, [state1, state2]
             states = [states[0], states[0] + 1]
@@ -1757,7 +1758,8 @@ def test_uniq_name():
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
-                return F.squeeze(state1.slice_axis(axis=0, begin=0, end=1)) != 0
+                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                return s == s
             def step1(state1, state2):
                 return state1 + 1, [state1, state2]
             states = [states[0], states[0] + 1]
