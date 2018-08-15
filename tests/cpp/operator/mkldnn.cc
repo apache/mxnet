@@ -1225,6 +1225,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
 
+      // TODO: Remove when MKLDNN supports other dims
       if (in_arr.arr.shape().ndim() != 4)
         continue;
 
