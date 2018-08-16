@@ -534,7 +534,9 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
+	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --version
 	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	this-will-halt-the-Jenkins-build
 
 doc: docs
 
