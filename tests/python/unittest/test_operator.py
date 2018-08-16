@@ -1619,6 +1619,7 @@ def test_convolution_grouping():
             np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
