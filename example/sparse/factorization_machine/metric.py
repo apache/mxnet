@@ -107,7 +107,9 @@ class AUCMetric(mx.metric.EvalMetric):
         label_sum = label_weight.sum()
         if label_sum == 0 or label_sum == label_weight.size:
             raise Exception("AUC with one class is undefined")
-            
+
+        label_one_num = np.count_nonzero(label_weight)
+        label_zero_num = len(label_weight) - label_one_num
         total_area = label_zero_num * label_one_num
         height = 0
         width = 0

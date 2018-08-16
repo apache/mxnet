@@ -614,13 +614,13 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
 
 @with_seed()
@@ -765,11 +765,8 @@ def test_spatial_transformer_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
-# Checking max pooling consistency over the data sets of different float types is problematic
-# as one max value in a float32 data set may not be the max value in a float16 data set.
-# This function will not be called.
-@with_seed(1234)
-def test_pooling_with_type():
+@with_seed()
+def test_pooling_with_type2():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -777,18 +774,16 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
     check_consistency(sym, ctx_list)
 
-    # this is unstable
-    # sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    # check_consistency(sym, ctx_list)
+    sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
     check_consistency(sym, ctx_list)
-
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()
@@ -1470,8 +1465,12 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_psroipooling_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3,
+           np.dtype(np.float16): 1e-2}
+
     arg_params = {
         'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
@@ -1499,13 +1498,17 @@ def test_deformable_psroipooling_with_type():
                                'deformable_psroipool_trans': np.float16}},
                 ]
 
-    check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
-                                               'deformable_psroipool_rois': 'null',
-                                               'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_psroipool_data': 'write',
+                                'deformable_psroipool_rois': 'null',
+                                'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_convolution_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3}
+
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1521,18 +1524,14 @@ def test_deformable_convolution_with_type():
                 #  'deformable_conv_offset': (2, 18, 8, 8),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
                 ]
-    # wider tolerance needed for true-fp16 NCHW test above
-    tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
+
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
-                                               'deformable_conv_offset': 'write',
-                                               'deformable_conv_weight': 'write',
-                                               'deformable_conv_bias': 'null'}, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_conv_data': 'write',
+                                'deformable_conv_offset': 'write',
+                                'deformable_conv_weight': 'write',
+                                'deformable_conv_bias': 'null'})
 
 
 @with_seed()

@@ -372,13 +372,13 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
   // a subgraph.
   API_BEGIN();
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(sym);
-  std::string subg_attr = "__subgraph_name__";
+  const std::string subg_attr = "__subgraph_name__";
   auto out_node = s->outputs[0].node;
   auto it = out_node->attrs.dict.find(subg_attr);
   if (it != out_node->attrs.dict.end()) {
-    std::string subg_name = it->second;
+    const std::string &subg_name = it->second;
     std::vector<nnvm::NodeEntry *> input_entries;
-    DFSVisit(s->outputs, [subg_attr, subg_name, &input_entries]
+    DFSVisit(s->outputs, [&subg_attr, &subg_name, &input_entries]
              (nnvm::NodePtr n) {
       // If the node itself isn't in the subgraph, we ignore it.
       auto it = n->attrs.dict.find(subg_attr);

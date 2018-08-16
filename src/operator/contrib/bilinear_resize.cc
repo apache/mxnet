@@ -177,8 +177,6 @@ for more details.
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", BilinearSampleOpInferShape)
-.set_attr<nnvm::FInferType>("FInferType", BilinearSampleOpInferType)
-.set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})
@@ -190,7 +188,6 @@ NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", BilinearSampleOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpBackward<cpu>);
 
 

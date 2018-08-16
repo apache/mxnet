@@ -1225,6 +1225,9 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
     CHECK(sync_in_in(input_locs, out_attrs, &subg_out_attrs, is_udf));
     return ret;
   };
+  for (const dim_t &cond_in : params.cond_input_locs) {
+    (*out_attrs)[cond_in] = kDefaultStorage;
+  }
   bool succ_0 = sub_pass(attrs.subgraphs[1], params.then_input_locs);
   bool succ_1 = sub_pass(attrs.subgraphs[2], params.else_input_locs);
   return succ_0 && succ_1;

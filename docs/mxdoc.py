@@ -23,16 +23,18 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-# import StringIO from io for python3 compatibility
-from io import StringIO
 import contextlib
-from ConfigParser import SafeConfigParser
+
+# Use six for Python 2 / 3 compatibility
+from six import StringIO
+from six.moves import configparser
 
 _BUILD_VER = os.getenv('BUILD_VER', 'default')
 print("Building version {}".format(_BUILD_VER))
 _DOC_SET = 'document_sets_' + _BUILD_VER
 
-parser = SafeConfigParser()
+parser = configparser.SafeConfigParser()
+
 parser.read('settings.ini')
 
 if _DOC_SET not in parser.sections():
@@ -41,8 +43,8 @@ if _DOC_SET not in parser.sections():
 for section in [ _DOC_SET ]:
     print("Document sets to generate:")
     for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
-        print '%-12s  : %s' % (candidate, parser.get(section, candidate))
-    print
+
+        print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
 _SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
