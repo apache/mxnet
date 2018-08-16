@@ -452,20 +452,21 @@ void TopKImpl(RunContext ctx,
   } else if (param.ret_typ == topk_enum::kReturnIndices) {
     if (do_transpose) {
       Tensor<xpu, 3, real_t> ret_indices = ret[0].FlatTo3D<xpu, real_t>(axis, axis, s);
-      ret_indices = tcast<real_t>(transpose(
-                      slice<2>(inplace_reshape(indices,
-                                               Shape3(ret_indices.shape_[0],
-                                                      ret_indices.shape_[2],
-                                                      element_num)),
-                               0, k),
-                      Shape3(0, 2, 1)));
-      ret_indices = F<mshadow_op::mod>(ret_indices, element_num);
+      ret_indices = tcast<real_t>(F<mshadow_op::mod>(
+                      transpose(slice<2>(inplace_reshape(indices,
+                                                         Shape3(ret_indices.shape_[0],
+                                                                ret_indices.shape_[2],
+                                                                element_num)),
+                                         0, k),
+                                Shape3(0, 2, 1)),
+                      element_num));
     } else {
       Tensor<xpu, 2, real_t> ret_indices =
         ret[0].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
-      ret_indices = tcast<real_t>(slice<1>(
-                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
-      ret_indices = F<mshadow_op::mod>(ret_indices, element_num);
+      ret_indices = tcast<real_t>(F<mshadow_op::mod>(
+                      slice<1>(inplace_reshape(indices, Shape2(batch_size, element_num)),
+                               0, k),
+                      element_num));
     }
   } else {
     if (do_transpose) {
@@ -476,23 +477,24 @@ void TopKImpl(RunContext ctx,
                                     Shape3(ret_value.shape_[0], ret_value.shape_[2], element_num)),
                             0, k),
                    Shape3(0, 2, 1));
-      ret_indices = tcast<real_t>(transpose(
-                      slice<2>(inplace_reshape(indices,
-                                               Shape3(ret_indices.shape_[0],
-                                                      ret_indices.shape_[2],
-                                                      element_num)),
-                               0, k),
-                      Shape3(0, 2, 1)));
-      ret_indices = F<mshadow_op::mod>(ret_indices, element_num);
+      ret_indices = tcast<real_t>(F<mshadow_op::mod>(
+                      transpose(slice<2>(inplace_reshape(indices,
+                                                         Shape3(ret_indices.shape_[0],
+                                                         ret_indices.shape_[2],
+                                                         element_num)),
+                                         0, k),
+                                Shape3(0, 2, 1)),
+                      element_num));
     } else {
       Tensor<xpu, 2, real_t> ret_value =
         ret[0].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
       Tensor<xpu, 2, real_t> ret_indices =
         ret[1].get_with_shape<xpu, 2, real_t>(Shape2(batch_size, k), s);
       ret_value = slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k);
-      ret_indices = tcast<real_t>(slice<1>(
-                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k));
-      ret_indices = F<mshadow_op::mod>(ret_indices, element_num);
+      ret_indices = tcast<real_t>(F<mshadow_op::mod>(
+                      slice<1>(inplace_reshape(indices, Shape2(batch_size, element_num)),
+                               0, k),
+                      element_num));
     }
   }
 }
