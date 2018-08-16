@@ -1059,7 +1059,7 @@ class ImageIter(io.DataIter):
         Label name for provided symbols.
     dtype : str
         Label data type. Default: float32. Other options: int32, int64, float64
-    last_batch : str, optional
+    last_batch_handle : str, optional
         How to handle the last batch.
         This parameter can be 'pad'(default), 'discard' or 'roll_over'.
         If 'pad', the last batch will be padded with data starting from the begining
@@ -1073,7 +1073,7 @@ class ImageIter(io.DataIter):
                  path_imgrec=None, path_imglist=None, path_root=None, path_imgidx=None,
                  shuffle=False, part_index=0, num_parts=1, aug_list=None, imglist=None,
                  data_name='data', label_name='softmax_label', dtype='float32',
-                 last_batch='pad', **kwargs):
+                 last_batch_handle='pad', **kwargs):
         super(ImageIter, self).__init__()
         assert path_imgrec or path_imglist or (isinstance(imglist, list))
         assert dtype in ['int32', 'float32', 'int64', 'float64'], dtype + ' label not supported'
@@ -1156,20 +1156,24 @@ class ImageIter(io.DataIter):
             self.auglist = aug_list
         self.cur = 0
         self._is_allowed_reading = True
-        self.last_batch = last_batch
+        self.last_batch_handle = last_batch_handle
         self.num_image = len(self.seq) if self.seq is not None else None
+        self._cache_data = None
+        self._cache_label = None
+        self._cache_idx = None
         self.reset()
 
     def reset(self):
         """Resets the iterator to the beginning of the data."""
         if self.seq is not None and self.shuffle:
             random.shuffle(self.seq)
-        if self.last_batch != 'roll_over' or \
-            self._is_allowed_reading is True:
+        if self.last_batch_handle != 'roll_over' or \
+            self._cache_data is None:
             if self.imgrec is not None:
                 self.imgrec.reset()
             self.cur = 0
-        self._is_allowed_reading = True
+            if self._is_allowed_reading is False:
+                self._is_allowed_reading = True
 
     def hard_reset(self):
         """Resets the iterator and ignore roll over data"""
@@ -1186,7 +1190,7 @@ class ImageIter(io.DataIter):
             if self.cur < self.num_image:
                 idx = self.seq[self.cur]
             else:
-                if self.last_batch != 'discard':
+                if self.last_batch_handle != 'discard':
                     self.cur = 0
                 raise StopIteration
             self.cur += 1
@@ -1203,7 +1207,7 @@ class ImageIter(io.DataIter):
         else:
             s = self.imgrec.read()
             if s is None:
-                if self.last_batch != 'discard':
+                if self.last_batch_handle != 'discard':
                     self.imgrec.reset()
                 raise StopIteration
             header, img = recordio.unpack(s)
@@ -1236,18 +1240,40 @@ class ImageIter(io.DataIter):
         """Returns the next batch of data."""
         batch_size = self.batch_size
         c, h, w = self.data_shape
-        batch_data = nd.empty((batch_size, c, h, w))
-        batch_label = nd.empty(self.provide_label[0][1])
-        i = self._batchify(batch_data, batch_label)
+        # if last batch data is rolled over
+        if self._cache_data is not None:
+            # check both the data and label have values
+            assert self._cache_label is not None, "_cache_label didn't have values"
+            assert self._cache_idx is not None, "_cache_idx didn't have values"
+            batch_data = self._cache_data
+            batch_label = self._cache_label
+            i = self._cache_idx
+            # clear the cache data
+        else:
+            batch_data = nd.empty((batch_size, c, h, w))
+            batch_label = nd.empty(self.provide_label[0][1])
+            i = self._batchify(batch_data, batch_label)
         # calculate the padding
         pad = batch_size - i
-        # handle padding of 'pad' and 'roll_over' for the last batch
+        # handle padding for the last batch
         if pad != 0:
-            if self.last_batch == 'discard':
+            if self.last_batch_handle == 'discard':
                 raise StopIteration
-            # pad the rest of the data
-            _ = self._batchify(batch_data, batch_label, i)
-            self._is_allowed_reading = False
+            # if the option is 'roll_over', throw StopIteration and cache the data
+            elif self.last_batch_handle == 'roll_over' and \
+                self._cache_data is None:
+                self._cache_data = batch_data
+                self._cache_label = batch_label
+                self._cache_idx = i
+                raise StopIteration
+            else:
+                _ = self._batchify(batch_data, batch_label, i)
+                if self.last_batch_handle == 'pad':
+                    self._is_allowed_reading = False
+                else:
+                    self._cache_data = None
+                    self._cache_label = None
+                    self._cache_idx = None
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
     def check_data_shape(self, data_shape):
