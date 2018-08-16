@@ -154,14 +154,14 @@ class TestImage(unittest.TestCase):
                     test_iter.reset()
                 # test last batch handle(discard)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='discard')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard')
                 i = 0
                 for batch in test_iter:
                     i += 1
                 assert i == 5
-                # test last_batch(pad)
+                # test last_batch_handle(pad)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='pad')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
                 i = 0
                 for batch in test_iter:
                     if i == 0:
@@ -171,30 +171,28 @@ class TestImage(unittest.TestCase):
                     i += 1
                 assert i == 6
                 assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
-                # test last_batch(roll_over)
+                # test last_batch_handle(roll_over)
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch='roll_over')
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over')
                 i = 0
                 for batch in test_iter:
                     if i == 0:
                         first_image = batch.data[0][0]
-                        third_image = batch.data[0][2]
                     i += 1
+                assert i == 5
                 test_iter.reset()
+                first_batch_roll_over = test_iter.next()
                 assert np.array_equal(
-                    test_iter.next().data[0][0].asnumpy(), third_image.asnumpy())
-                # test iteratopr work properly after calling reset when last_batch is roll_over
-                i = 0
-                for batch in test_iter:
-                    # the last one batch
-                    if i == 3:
-                        assert batch.pad == 1
-                        assert np.array_equal(
-                            batch.data[0][2].asnumpy(), first_image.asnumpy())
-                    else:
-                        assert batch.pad == 0
-                    i += 1
-                assert i == 4
+                    first_batch_roll_over.data[0][1].asnumpy(), first_image.asnumpy())
+                assert first_batch_roll_over.pad == 2
+                # test iteratopr work properly after calling reset several times when last_batch_handle is roll_over
+                for _ in test_iter:
+                    pass
+                test_iter.reset()
+                first_batch_roll_over_twice = test_iter.next()
+                assert np.array_equal(
+                    first_batch_roll_over_twice.data[0][2].asnumpy(), first_image.asnumpy())
+                assert first_batch_roll_over_twice.pad == 1
 
         for dtype in ['int32', 'float32', 'int64', 'float64']:
             check_imageiter(dtype)
