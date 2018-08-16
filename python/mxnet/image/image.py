@@ -1241,7 +1241,7 @@ class ImageIter(io.DataIter):
         i = self._batchify(batch_data, batch_label)
         # calculate the padding
         pad = batch_size - i
-        # handle padding for 'pad' and 'roll_over' for the last batch
+        # handle padding of 'pad' and 'roll_over' for the last batch
         if pad != 0:
             if self.last_batch == 'discard':
                 raise StopIteration
