@@ -1177,10 +1177,15 @@ class ImageIter(io.DataIter):
 
     def hard_reset(self):
         """Resets the iterator and ignore roll over data"""
+        if self.seq is not None and self.shuffle:
+            random.shuffle(self.seq)
         if self.imgrec is not None:
             self.imgrec.reset()
         self.cur = 0
         self._is_allowed_reading = True
+        self._cache_data = None
+        self._cache_label = None
+        self._cache_idx = None
 
     def next_sample(self):
         """Helper function for reading in next sample."""
