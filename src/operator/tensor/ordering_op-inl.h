@@ -433,6 +433,8 @@ void TopKImpl(RunContext ctx,
   // 3. Assign results to the ret blob
   // When returning indices, only update(modulo) required elements instead of full elements
   // to avoid redundant calculation.
+  // Cast `ret_indices` from int to real_t could introduce conversion error when the element_num
+  // is large enough.
   if (param.ret_typ == topk_enum::kReturnMask) {
     Tensor<xpu, 2, real_t> ret_mask =
       ret[0].get_with_shape<xpu, 2, real_t>(Shape2(ret[0].Size(), 1), s);
