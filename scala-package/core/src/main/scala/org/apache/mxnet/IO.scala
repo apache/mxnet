@@ -262,42 +262,23 @@ object DataBatch {
       this
     }
 
-    @deprecated
-    def provideDataShape(name: String, shape: Shape): Builder = {
-      provideDataDesc(new DataDesc(name, shape))
-    }
-
-    @deprecated
-    def provideLabelShape(name: String, shape: Shape): Builder = {
-      provideLabelDesc(new DataDesc(name, shape))
-    }
-
     /**
      * Provide the shape of a data.
      * @param dataDesc DataDescriptor
      * @return this.
      */
-    def provideDataDesc(dataDesc: DataDesc): Builder = {
-      if (this.dataDesc == null) {
-        this.dataDesc = IndexedSeq(dataDesc)
-      } else {
-        this.dataDesc = IndexedSeq(dataDesc)
-      }
+    def provideDataDesc(dataDesc: IndexedSeq[DataDesc]): Builder = {
+      this.dataDesc = dataDesc
       this
     }
 
     /**
      * Provide the shape of a label.
-     * @param name label name.
-     * @param shape label shape.
+     * @param labelDesc LabelDescriptor
      * @return this.
      */
-    def provideLabelDesc(dataDesc: DataDesc): Builder = {
-      if (this.labelDesc == null) {
-        this.labelDesc = IndexedSeq(dataDesc)
-      } else {
-        this.labelDesc = this.labelDesc ++ IndexedSeq(dataDesc)
-      }
+    def provideLabelDesc(labelDesc: IndexedSeq[DataDesc]): Builder = {
+      this.labelDesc = labelDesc
       this
     }
 
