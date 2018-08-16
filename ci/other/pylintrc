@@ -109,7 +109,17 @@ disable=
     useless-super-delegation,
     len-as-condition,
     invalid-unary-operand-type,
-    useless-object-inheritance
+    chained-comparison,
+    consider-using-dict-comprehension,
+    consider-using-in,
+    consider-using-set-comprehension,
+    invalid-envvar-default,
+    line-too-long,
+    singleton-comparison,
+    try-except-raise,
+    useless-object-inheritance,
+    useless-return
+
 # disable=unicode-builtin,delslice-method,using-cmp-argument,setslice-method,dict-view-method,parameter-unpacking,range-builtin-not-iterating,print-statement,file-builtin,old-raise-syntax,basestring-builtin,execfile-builtin,indexing-exception,import-star-module-level,coerce-method,long-builtin,old-ne-operator,old-division,no-absolute-import,raw_input-builtin,old-octal-literal,oct-method,xrange-builtin,hex-method,unpacking-in-except,nonzero-method,raising-string,intern-builtin,reload-builtin,metaclass-assignment,cmp-method,filter-builtin-not-iterating,apply-builtin,map-builtin-not-iterating,next-method-called,unichr-builtin,buffer-builtin,dict-iter-method,input-builtin,coerce-builtin,getslice-method,useless-suppression,standarderror-builtin,zip-builtin-not-iterating,suppressed-message,cmp-builtin,backtick,long-suffix,reduce-builtin,round-builtin
 
 
