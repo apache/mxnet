@@ -142,7 +142,7 @@ def foreach(body, data, init_states):
 
     Returns
     -------
-    outputs: an NDArray or a list of NDArrays.
+    outputs: a list of NDArrays.
         The output data concatenated from the output of all iterations.
     states: a list of NDArrays.
         The loop states in the last iteration.
@@ -188,8 +188,6 @@ def foreach(body, data, init_states):
         tmp_outputs.append(ndarray.op.stack(*out))
     outputs = tmp_outputs
 
-    if not_data_list and len(outputs) == 1:
-        outputs = outputs[0]
     return (outputs, states)
 
 def while_loop(cond, func, loop_vars, max_iterations=None):

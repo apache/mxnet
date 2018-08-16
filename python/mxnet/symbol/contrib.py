@@ -208,7 +208,7 @@ def foreach(body, data, init_states, name="foreach"):
 
     Returns
     -------
-    outputs: a Symbol or a list of Symbols.
+    outputs: a list of Symbols.
         The output data concatenated from the output of all iterations.
     states: a list of Symbols.
         The loop states in the last iteration.
@@ -325,14 +325,9 @@ def foreach(body, data, init_states, name="foreach"):
     ret = symbol._internal._foreach(g, *ordered_ins, num_outputs=num_outputs,
                                     num_out_data=num_out_data, in_state_locs=in_state_locs,
                                     in_data_locs=in_data_locs, remain_locs=remain_locs)
-    if num_outputs - num_states > 1:
-        outs = []
-        for i in range(num_outputs - num_states):
-            outs.append(ret[i])
-    elif num_outputs - num_states == 1:
-        outs = ret[0]
-    else:
-        outs = []
+    outs = []
+    for i in range(num_outputs - num_states):
+        outs.append(ret[i])
     states = []
     for i in range(num_states):
         states.append(ret[num_outputs - num_states + i])
