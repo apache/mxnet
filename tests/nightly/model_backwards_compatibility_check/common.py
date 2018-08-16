@@ -30,7 +30,7 @@ import re
 from mxnet.test_utils import assert_almost_equal
 
 try:
-    cmp             # Python 2 
+    cmp             # Python 2
 except NameError:
     # See: https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
     def cmp(x, y):  # Python 3
