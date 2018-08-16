@@ -58,6 +58,7 @@ COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
 COPY install/ubuntu_docs.sh /work/
+COPY install/docs_requirements /work/
 RUN /work/ubuntu_docs.sh
 
 COPY install/ubuntu_nightly_tests.sh /work/
