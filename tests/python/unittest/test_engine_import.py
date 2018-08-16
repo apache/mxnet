@@ -33,7 +33,7 @@ def test_engine_import():
             os.environ['MXNET_ENGINE_TYPE'] = type
         else:
             os.environ.pop('MXNET_ENGINE_TYPE', None)
-        reload(mxnet) 
+        reload(mxnet)
 
 
 if __name__ == '__main__':
