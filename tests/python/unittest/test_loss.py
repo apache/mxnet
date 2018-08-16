@@ -274,7 +274,7 @@ def test_saveload():
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-@with_seed(1234)
+@with_seed()
 def test_huber_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))

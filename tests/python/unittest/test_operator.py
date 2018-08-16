@@ -3190,7 +3190,7 @@ def test_norm():
     for order in [1, 2]:
         for dtype in [np.float16, np.float32, np.float64]:
             in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
-            in_data[abs(in_data) < epsilon] = epsilon
+            in_data[abs(in_data) < epsilon] = 2 * epsilon
             for i in range(in_data_dim):
                 norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, keepdims=True)
                 npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
@@ -3204,20 +3204,22 @@ def test_norm():
                                         atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
                 # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
                 # # check gradient
-                # check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-2, atol=1e-3)
-                # if i < in_data_dim-1:
-                #     norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                #     npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
-                #     npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                #     check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                #                            rtol=1e-2 if dtype is np.float16 else 1e-5,
-                #                            atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                #     check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
-                #                             [npy_out_backward],
-                #                             rtol=1e-2 if dtype is np.float16 else 1e-5,
-                #                             atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                #     # check gradient
-                #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-2, atol=1e-3)
+                # if dtype is not np.float16:
+                #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
+                if i < in_data_dim-1:
+                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
+                    npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                    npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
+                    check_symbolic_forward(norm_sym, [in_data], [npy_out],
+                                           rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                           atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                    check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
+                                            [npy_out_backward],
+                                            rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                            atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                    # # check gradient
+                    # if dtype is not np.float16:
+                    #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
 
 
 def test_layer_norm():
@@ -3810,6 +3812,31 @@ def test_take():
         exe.backward([mx.nd.array(grad_out)])
         assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
 
+    def check_autograd_req():
+        row_len = 2
+        col_len = 8
+        shape = (row_len, col_len)
+        sc = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype="float32")
+        sc.attach_grad()
+        i = mx.nd.array([0], dtype="int64")
+        j = mx.nd.array([0], dtype="int64")
+        with mx.autograd.record(train_mode=True):
+            xs = []
+            for _ in range(row_len):
+                x_i = []
+                for _ in range(col_len):
+                    x_ij = sc.take(i).squeeze(axis=0).take(j).squeeze(axis=0)
+                    x_i.append(x_ij)
+                    j = j + 1
+                i = i + 1
+                j = j - col_len  # reset j
+                xs.append(mx.nd.stack(*x_i))
+            x = mx.nd.stack(*xs)
+            x = x.sum()
+
+        x.backward()
+        assert_almost_equal(np.ones(sc.grad.shape), sc.grad.asnumpy())
+
     for mode in ['clip', 'wrap']:
         for data_ndim in range(1, 5):
             for idx_ndim in range(1, 4):
@@ -3821,6 +3848,8 @@ def test_take():
                     for _ in range(idx_ndim):
                         idx_shape += (np.random.randint(low=1, high=5), )
                     check_output_n_grad(data_shape, idx_shape, axis, mode)
+
+    check_autograd_req()
 
 
 @with_seed()
