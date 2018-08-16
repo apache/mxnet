@@ -1,8 +1,6 @@
 /*Preprocess*/
-
-var LANG = ['python', 'scala', 'clojure', 'r', 'julia', 'c++', 'perl'];
-var TITLE_WITH_LANG = ['/tutorials/', '/faq/', '/architecture/', '/community/'];
-
+var LANG = ['python', 'c++', 'clojure', 'julia', 'perl', 'r', 'scala'];
+var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/faq/', '/architecture/', '/community/'];
 for(var i = 0; i < LANG.length; ++i) {
     TITLE_WITH_LANG.push('/api/' + LANG[i] + '/');
 }
@@ -29,23 +27,27 @@ function render_left_helper(toc) {
 /*Render content tree of different pages*/
 function render_lefttoc() {
     var url = window.location.href, indexTrailing = 'index.html';
+    if (url.indexOf('/get_started/') != -1) {
+        var leftToc = "<ul><li class='leaf'><a href='install.html'>Installation</a></li><li class='leaf'><a href='why_mxnet.html'>Why MXNet</a></li></ul>";
+        render_left_helper($($.parseHTML(leftToc)), 'Get Started');
+        keepExpand();
+        $('.sphinxsidebar').css("visibility", "visible");
+        return;
+    }
     // If current page is not index page
     if (url.indexOf(indexTrailing) == -1) {
         for(var i = 0; i < TITLE_WITH_LANG.length; ++i) {
             var path = TITLE_WITH_LANG[i];
-            // if it is an API page
             if (url.indexOf(path) != -1) {
                 urlElem = url.split('/');
                 version = '';
                 for (var j = 0; j < urlElem.length; ++j) {
                     if(urlElem[j] == 'versions') {
-                        // get what version this is
                         version = '/versions/' + urlElem[j + 1];
                         break;
                     }
                 }
                 var protocol = location.protocol.concat("//");
-                // regenerate the url with the version in it
                 var urlPath = protocol + window.location.host + version +  path;
                 $.get(urlPath + indexTrailing, null, function(data) {
                     var lastToc = $($.parseHTML(data)).find('.leftsidebar > .sphinxsidebarwrapper > ul.current > li.current > ul')
