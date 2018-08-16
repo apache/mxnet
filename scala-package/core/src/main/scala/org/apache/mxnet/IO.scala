@@ -144,6 +144,9 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // (must match the order of input data/label)
                 private val providedDataDesc: IndexedSeq[DataDesc],
                 private val providedLabelDesc: IndexedSeq[DataDesc]) {
+  // TODO: change the data/label type into IndexedSeq[(NDArray, DataDesc)]
+  // However, since the data and label can be accessed publicly (no getter and setter)
+  // the change on this will break BC
   def this(data: IndexedSeq[NDArray],
             label: IndexedSeq[NDArray],
             index: IndexedSeq[Long],
