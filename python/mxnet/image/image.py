@@ -1155,7 +1155,7 @@ class ImageIter(io.DataIter):
         else:
             self.auglist = aug_list
         self.cur = 0
-        self._is_allowed_reading = True
+        self._allow_read = True
         self.last_batch_handle = last_batch_handle
         self.num_image = len(self.seq) if self.seq is not None else None
         self._cache_data = None
@@ -1172,8 +1172,8 @@ class ImageIter(io.DataIter):
             if self.imgrec is not None:
                 self.imgrec.reset()
             self.cur = 0
-            if self._is_allowed_reading is False:
-                self._is_allowed_reading = True
+            if self._allow_read is False:
+                self._allow_read = True
 
     def hard_reset(self):
         """Resets the iterator and ignore roll over data"""
@@ -1182,14 +1182,14 @@ class ImageIter(io.DataIter):
         if self.imgrec is not None:
             self.imgrec.reset()
         self.cur = 0
-        self._is_allowed_reading = True
+        self._allow_read = True
         self._cache_data = None
         self._cache_label = None
         self._cache_idx = None
 
     def next_sample(self):
         """Helper function for reading in next sample."""
-        if self._is_allowed_reading is False:
+        if self._allow_read is False:
             raise StopIteration
         if self.seq is not None:
             if self.cur < self.num_image:
@@ -1274,7 +1274,7 @@ class ImageIter(io.DataIter):
             else:
                 _ = self._batchify(batch_data, batch_label, i)
                 if self.last_batch_handle == 'pad':
-                    self._is_allowed_reading = False
+                    self._allow_read = False
                 else:
                     self._cache_data = None
                     self._cache_label = None
