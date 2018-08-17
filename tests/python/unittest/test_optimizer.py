@@ -1035,7 +1035,7 @@ def test_adagrad():
 
 def test_factor_scheduler():
     base_lr = 1
-    step = 50
+    step = 100
     factor = 0.1
     sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
                                         warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
@@ -1085,7 +1085,6 @@ def test_cosine_scheduler():
     np.testing.assert_almost_equal(cosine_sched(0), base_lr)
     np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
     assert (cosine_sched(500) > 1.5)
-    assert False
 
 if __name__ == '__main__':
     import nose
