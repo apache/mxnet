@@ -1586,6 +1586,7 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12219")
 @with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
