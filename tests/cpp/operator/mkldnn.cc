@@ -126,7 +126,6 @@ static void VerifyDefMem(const mkldnn::memory &mem) {
       = static_cast<mshadow::default_real_t *>(mem.get_data_handle());
   size_t size = pd.get_size() / sizeof(mshadow::default_real_t);
   size_t num_same = 0;
-  int shift = size >> 1;
   for (int i = 0; i < size; i++)
     num_same += data[i] == static_cast<mshadow::default_real_t>(i % 100 - 50);
   EXPECT_EQ(num_same, size);
