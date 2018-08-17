@@ -105,8 +105,7 @@ static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
     if (is_rand) {
       data[i] = (std::rand() % 100) - 50;
     } else {
-      int shift = size >> 1;
-      data[i] = i - shift;
+      data[i] = i % 100 - 50;
     }
 }
 
