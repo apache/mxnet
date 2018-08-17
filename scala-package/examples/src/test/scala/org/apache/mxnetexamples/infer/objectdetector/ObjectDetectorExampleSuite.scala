@@ -21,7 +21,7 @@ import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, NDArrayCollector}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -60,12 +60,16 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       context = Context.gpu()
     }
 
-    val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
-      inputImagePath, context)
+    val output = NDArrayCollector.auto().withScope {
+      SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
+        inputImagePath, context)
+    }
 
-    val outputList = SSDClassifierExample.runObjectDetectionBatch(
-      modelDirPath + "resnet50_ssd_model",
-      inputImageDir, context)
+    val outputList = NDArrayCollector.auto().withScope {
+      SSDClassifierExample.runObjectDetectionBatch(
+        modelDirPath + "resnet50_ssd_model",
+        inputImageDir, context)
+    }
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 

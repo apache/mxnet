@@ -18,14 +18,14 @@
 package org.apache.mxnetexamples.gan
 
 import java.io.File
-import org.apache.mxnet.Context
+
+import org.apache.mxnet.{Context, NDArrayCollector}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
-@Ignore
 class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
   private val logger = LoggerFactory.getLogger(classOf[GanExampleSuite])
 
@@ -44,7 +44,9 @@ class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
 
         val context = Context.gpu()
 
-        val output = GanMnist.runTraining(modelDirPath, context, modelDirPath, 5)
+        val output = NDArrayCollector.auto().withScope {
+          GanMnist.runTraining(modelDirPath, context, modelDirPath, 3)
+        }
         Process("rm -rf " + modelDirPath) !
 
         assert(output >= 0.0f)

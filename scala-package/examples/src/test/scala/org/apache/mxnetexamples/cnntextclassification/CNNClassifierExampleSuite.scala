@@ -21,7 +21,7 @@ import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, NDArrayCollector}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -57,8 +57,10 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
       val modelDirPath = tempDirPath + File.separator + "CNN"
 
-      val output = CNNTextClassification.test(modelDirPath + File.separator + w2vModelName,
-        modelDirPath, context, modelDirPath)
+      val output = NDArrayCollector.auto().withScope {
+          CNNTextClassification.test(modelDirPath + File.separator + w2vModelName,
+            modelDirPath, context, modelDirPath)
+        }
 
       Process("rm -rf " + modelDirPath) !
 

@@ -17,26 +17,11 @@
 
 package org.apache.mxnetexamples.multitask
 
-import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
-import org.scalatest.FunSuite
+import org.apache.mxnet._
 import org.slf4j.LoggerFactory
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.DataIter
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.EvalMetric
 import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
-import org.apache.mxnet.optimizer.RMSProp
-import java.io.File
-import java.net.URL
 
-import scala.sys.process.Process
-import scala.collection.immutable.ListMap
-import scala.collection.immutable.IndexedSeq
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import org.scalatest.FunSuite
 
 
 /**
@@ -55,7 +40,9 @@ class MultiTaskSuite extends FunSuite {
       val ctx = Context.gpu()
 
       val modelPath = ExampleMultiTask.getTrainingData
-      val (executor, evalMetric) = ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
+      val (executor, evalMetric) = NDArrayCollector.auto().withScope {
+        ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
+      }
       evalMetric.get.foreach { case (name, value) =>
         assert(value >= 0.95f)
       }
