@@ -158,7 +158,9 @@ for key in ${!build_arr[@]}; do
     cp ../../Doxyfile $tag/docs/
 
     echo "Building $tag..."
+
     cd $tag/docs
+
     make html USE_OPENMP=1 BUILD_VER=$tag || exit 1
     # Navigate back to build_version_doc folder
     cd ../../../

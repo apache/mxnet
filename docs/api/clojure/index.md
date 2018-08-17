@@ -1,9 +1,20 @@
 # MXNet - Clojure API
+
 MXNet supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU
 computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.
 
 See the [MXNet Clojure API Documentation](docs/index.html) for detailed API information.
 
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   kvstore.md
+   module.md
+   ndarray.md
+   symbol_in_pictures.md
+   symbol.md
+```
 
 ## Tensor and Matrix Computations
 You can perform tensor or matrix computation in pure Clojure:
