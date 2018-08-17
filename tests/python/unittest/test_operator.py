@@ -5702,14 +5702,20 @@ def test_softmax():
     check_softmax_grad(default_context())
     check_smoothed_softmax_grad(default_context())
 
+@with_seed()
 def test_variance():
-  def true_var(x):
+  def true_var(x, axis=None):
     if len(x.shape) == 1:
-      return np.var(x, keepdims=True)
+      return np.var(x, keepdims=True, axis=axis)
     else:
-      return np.var(x)
-  def true_var_grad(x, ograd):
-    return 2 * (x - np.mean(x)) * ograd / np.prod(x.shape)
+      return np.var(x, axis=axis)
+  def true_var_grad(x, ograd, axis=None):
+    if axis is None:
+      return 2 * (x - np.mean(x)) * ograd / np.prod(x.shape)
+    else:
+      denom = x.shape[axis]
+      ograd_shape = tuple(1 if i == axis else k for i, k in enumerate(x.shape))
+      return 2 * (x - np.mean(x, axis=axis, keepdims=True)) * ograd.reshape(ograd_shape) / denom
 
   for ndim in range(1, 6):
     # check forward
@@ -5719,42 +5725,75 @@ def test_variance():
     expected = true_var(data_np)
     output = mx.nd.variance(data)
     assert_almost_equal(output.asnumpy(), expected)
+    for axis in range(ndim):
+      expected = true_var(data_np, axis=axis)
+      output = mx.nd.variance(data, axis=axis)
+      assert_almost_equal(output.asnumpy(), expected)
 
     # check backward
     data = mx.sym.Variable('data')
     var_sym = mx.sym.variance(data=data)
     check_numeric_gradient(var_sym, [data_np], atol=1e-3)
-    ograd = np.random.random(size=output.shape)
+    ograd = np.random.random(size=(1,))
     check_symbolic_backward(var_sym, [data_np], [ograd],
-      [true_var_grad(data_np, ograd)], atol=1e-8)
+      [true_var_grad(data_np, ograd)], atol=1e-6)
+    for axis in range(ndim):
+      data = mx.sym.Variable('data')
+      var_sym = mx.sym.variance(data=data, axis=axis)
+      check_numeric_gradient(var_sym, [data_np], atol=1e-3)
+      if ndim == 1:
+        ograd = np.random.random(size=(1,))
+      else:
+        ograd = np.random.random(size=tuple(x for i, x in enumerate(data_np.shape) if i != axis))
+      check_symbolic_backward(var_sym, [data_np], [ograd],
+        [true_var_grad(data_np, ograd, axis=axis)], atol=1e-6)
 
+@with_seed()
 def test_std():
-  def true_std(x):
+  np.set_printoptions(threshold=np.nan)
+  def true_std(x, axis=None):
     if len(x.shape) == 1:
-      return np.std(x, keepdims=True)
+      return np.std(x, keepdims=True, axis=axis)
     else:
-      return np.std(x)
-  def true_std_grad(x, ograd):
-    return (x - np.mean(x)) * ograd / true_std(x) / np.prod(x.shape)
+      return np.std(x, axis=axis)
+  def true_std_grad(x, ograd, axis=None):
+    if axis is None:
+      return (x - np.mean(x)) * ograd / true_std(x) / np.prod(x.shape)
+    else:
+      denom = x.shape[axis]
+      ograd_shape = tuple(1 if i == axis else k for i, k in enumerate(x.shape))
+      return (x - np.mean(x, axis=axis, keepdims=True)) * ograd.reshape(ograd_shape) / true_std(x, axis=axis).reshape(ograd_shape) / denom
 
   for ndim in range(1, 6):
     # check forward
-    shape = rand_shape_nd(ndim, 5)
-    while np.prod(shape[0]) == 1:  # avoid length-1 array
-      shape = rand_shape_nd(ndim, 5)
+    shape = rand_shape_nd(ndim, 4)
+    while not np.all(np.array(shape) > 1):  # avoid length 1 in all dimension
+      shape = rand_shape_nd(ndim, 4)
     data = rand_ndarray(shape=shape, stype='default')
     data_np = data.asnumpy()
     expected = true_std(data_np)
     output = mx.nd.std(data)
     assert_almost_equal(output.asnumpy(), expected)
+    for axis in range(ndim):
+      expected = true_std(data_np, axis=axis)
+      output = mx.nd.std(data, axis=axis)
+      assert_almost_equal(output.asnumpy(), expected)
 
     # check backward
     data = mx.sym.Variable('data')
     std_sym = mx.sym.std(data=data)
-    check_numeric_gradient(std_sym, [data_np], atol=1e-3)
-    ograd = np.random.random(size=output.shape)
+    ograd = np.random.random(size=(1,))
     check_symbolic_backward(std_sym, [data_np], [ograd],
-      [true_std_grad(data_np, ograd)], atol=1e-8)
+      [true_std_grad(data_np, ograd)], atol=1e-5)
+    for axis in range(ndim):
+      data = mx.sym.Variable('data')
+      std_sym = mx.sym.std(data=data, axis=axis)
+      if ndim == 1:
+        ograd = np.random.random(size=(1,))
+      else:
+        ograd = np.random.random(size=tuple(x for i, x in enumerate(data_np.shape) if i != axis))
+      check_symbolic_backward(std_sym, [data_np], [ograd],
+        [true_std_grad(data_np, ograd, axis=axis)], atol=1e-5)
 
 @with_seed()
 def test_slice():
