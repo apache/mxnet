@@ -136,8 +136,8 @@ void MKLDNNLRNFwd::_Init(const LRNParam &param,
 void MKLDNNLRNFwd::SetNewMem(const NDArray &in_data,
                              const NDArray &out_data,
                              const OpReqType req) {
-  const mkldnn::memory *in_data_mem   = in_data.GetMKLDNNData();
-  output_mem_t = CreateMKLDNNMem(out_data, this->out_mem->get_primitive_desc(), req, &in_data);
+  const mkldnn::memory *in_data_mem = in_data.GetMKLDNNData();
+  output_mem_t = CreateMKLDNNMem(out_data, this->out_mem->get_primitive_desc(), req);
   this->in_mem->set_data_handle(in_data_mem->get_data_handle());
   this->out_mem->set_data_handle(output_mem_t.second->get_data_handle());
 }
@@ -190,8 +190,11 @@ void MKLDNNLRNForward(const OpContext &ctx,
                       const NDArray &in_data,
                       const OpReqType req,
                       const NDArray &out_data) {
-  MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_data);
-  fwd.SetNewMem(in_data, out_data, req);
+  auto in_buffer = in_data;
+  if (in_buffer.IsView() && in_buffer.IsMKLDNNData())
+    in_buffer = in_buffer.Reorder2Default();
+  MKLDNNLRNFwd fwd = GetLRNFwd(param, ctx, in_buffer);
+  fwd.SetNewMem(in_buffer, out_data, req);
   fwd.Execute(out_data);
 }
 
