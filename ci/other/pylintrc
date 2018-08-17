@@ -152,7 +152,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 
 [FORMAT]
 
-# Maximum number of characters on a single line.
+# Maximum number of characters on a single line
 max-line-length=120
 
 # Regexp for a line that is allowed to be longer than the limit.
