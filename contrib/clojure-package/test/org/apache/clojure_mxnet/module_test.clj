@@ -101,13 +101,20 @@
         (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})})
         (m/update)
         (m/save-checkpoint {:prefix "test" :epoch 0 :save-opt-states true}))
-
     (let [mod2 (m/load-checkpoint {:prefix "test" :epoch 0 :load-optimizer-states true})]
       (-> mod2
           (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
           (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
-      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json)))
-      (is (= (-> mod m/params first) (-> mod2 m/params first))))))
+      (is (= (-> mod m/symbol sym/to-json) (-> mod2 m/symbol sym/to-json)))
+      (is (= (-> mod m/params first) (-> mod2 m/params first))))
+    ;; arity 2 version of above. `load-optimizer-states` is `false` here by default,
+    ;; but optimizers states aren't checked here so it's not relevant to the test outcome.
+    (let [mod3 (m/load-checkpoint "test" 0)]
+      (-> mod3
+          (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
+          (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
+      (is (= (-> mod m/symbol sym/to-json) (-> mod3 m/symbol sym/to-json)))
+      (is (= (-> mod m/params first) (-> mod3 m/params first))))))
 
 (deftest test-module-save-load-multi-device
   (let [s (sym/variable "data")
@@ -321,4 +328,3 @@
 (comment
 
   (m/data-shapes x))
-

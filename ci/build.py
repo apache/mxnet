@@ -39,8 +39,46 @@ from copy import deepcopy
 from itertools import chain
 from subprocess import call, check_call
 from typing import *
+from util import *
 
 CCACHE_MAXSIZE = '500G'
+
+
+
+def retry(ExceptionToCheck, tries=4, delay_s=1, backoff=2):
+    """Retry calling the decorated function using an exponential backoff.
+
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+
+    :param ExceptionToCheck: the exception to check. may be a tuple of
+        exceptions to check
+    :type ExceptionToCheck: Exception or tuple
+    :param tries: number of times to try (not retry) before giving up
+    :type tries: int
+    :param delay_s: initial delay between retries in seconds
+    :type delay_s: int
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay
+        each retry
+    :type backoff: int
+    """
+    import time
+    from functools import wraps
+    def decorated_retry(f):
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay_s
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                except ExceptionToCheck as e:
+                    logging.warning("Exception: %s, Retrying in %d seconds...", str(e), mdelay)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+        return f_retry  # true decorator
+    return decorated_retry
 
 def under_ci() -> bool:
     """:return: True if we run in Jenkins."""
@@ -76,9 +114,8 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     :param num_retries: Number of retries to build the docker image
     :return: Id of the top level image
     """
-
     tag = get_docker_tag(platform=platform, registry=registry)
-    logging.info("Building container tagged '%s' with %s", tag, docker_binary)
+    logging.info("Building docker container tagged '%s' with %s", tag, docker_binary)
     #
     # We add a user with the same group as the executing non-root user so files created in the
     # container match permissions of the local user. Same for the group.
@@ -90,40 +127,24 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     # docker pull see: docker_cache.load_docker_cache
     #
     # This doesn't work with multi head docker files.
-    # 
+    #
+    cmd = [docker_binary, "build",
+           "-f", get_dockerfile(platform),
+           "--build-arg", "USER_ID={}".format(os.getuid()),
+           "--build-arg", "GROUP_ID={}".format(os.getgid()),
+           "--cache-from", tag,
+           "-t", tag,
+           "docker"]
 
-    for i in range(num_retries):
-        logging.info('%d out of %d tries to build the docker image.', i + 1, num_retries)
-
-        cmd = [docker_binary, "build",
-               "-f", get_dockerfile(platform),
-               "--build-arg", "USER_ID={}".format(os.getuid()),
-               "--build-arg", "GROUP_ID={}".format(os.getgid()),
-               "--cache-from", tag,
-               "-t", tag,
-               "docker"]
+    @retry(subprocess.CalledProcessError, tries=num_retries)
+    def run_cmd():
         logging.info("Running command: '%s'", ' '.join(cmd))
-        try:
-            check_call(cmd)
-            # Docker build was successful. Call break to break out of the retry mechanism
-            break
-        except subprocess.CalledProcessError as e:
-            saved_exception = e
-            logging.error('Failed to build docker image')
-            # Building the docker image failed. Call continue to trigger the retry mechanism
-            continue
-    else:
-        # Num retries exceeded
-        logging.exception('Exception during build of docker image', saved_exception)
-        logging.fatal('Failed to build the docker image, aborting...')
-        sys.exit(1)
+        check_call(cmd)
 
+    run_cmd()
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
-    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
-    if not image_id:
-        raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
-    return image_id
+    return _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
 
 
 def _get_local_image_id(docker_binary, docker_tag):
@@ -135,26 +156,13 @@ def _get_local_image_id(docker_binary, docker_tag):
     cmd = [docker_binary, "images", "-q", docker_tag]
     image_id_b = subprocess.check_output(cmd)
     image_id = image_id_b.decode('utf-8').strip()
+    if not image_id:
+        raise RuntimeError('Unable to find docker image id matching with tag {}'.format(tag))
     return image_id
-
-
-def get_mxnet_root() -> str:
-    curpath = os.path.abspath(os.path.dirname(__file__))
-
-    def is_mxnet_root(path: str) -> bool:
-        return os.path.exists(os.path.join(path, ".mxnet_root"))
-
-    while not is_mxnet_root(curpath):
-        parent = os.path.abspath(os.path.join(curpath, os.pardir))
-        if parent == curpath:
-            raise RuntimeError("Got to the root and couldn't find a parent folder with .mxnet_root")
-        curpath = parent
-    return curpath
 
 
 def buildir() -> str:
     return os.path.join(get_mxnet_root(), "build")
-
 
 def default_ccache_dir() -> str:
     # Share ccache across containers
@@ -200,7 +208,7 @@ def container_run(platform: str,
                '-e', "CCACHE_LOGFILE=/tmp/ccache.log",  # a container-scoped log, useful for ccache verification.
                tag]
     runlist.extend(command)
-    cmd = '\\\n\t'.join(runlist)
+    cmd = ' \\\n\t'.join(runlist)
     ret = 0
     if not dry_run and not interactive:
         logging.info("Running %s in container %s", command, tag)
@@ -213,14 +221,14 @@ def container_run(platform: str,
         # -ti can't be after the tag, as is interpreted as a command so hook it up after the -u argument
         idx = into_cmd.index('-u') + 2
         into_cmd[idx:idx] = ['-ti']
-        cmd = '\\\n\t'.join(into_cmd)
+        cmd = ' \\\n\t'.join(into_cmd)
         logging.info("Executing:\n%s\n", cmd)
         docker_run_cmd = ' '.join(into_cmd)
         ret = call(into_cmd)
 
     if not dry_run and not interactive and ret != 0:
         logging.error("Running of command in container failed (%s):\n%s\n", ret, cmd)
-        logging.error("You can get into the container by adding the -i option")
+        logging.error("You can get into the container by adding the -i option to this script")
         raise subprocess.CalledProcessError(ret, cmd)
 
     return docker_run_cmd
@@ -317,7 +325,6 @@ def main() -> int:
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
     shared_memory_size = args.shared_memory_size
-    num_docker_build_retires = args.docker_build_retries
 
     if args.list:
         list_platforms()
@@ -326,7 +333,7 @@ def main() -> int:
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
         if use_cache():
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform, docker_binary, registry=args.docker_registry, num_retries=num_docker_build_retires)
+        build_docker(platform, docker_binary, registry=args.docker_registry, num_retries=args.docker_build_retries)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
@@ -360,7 +367,7 @@ def main() -> int:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             if use_cache():
                 load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary, args.docker_registry, num_retries=num_docker_build_retires)
+            build_docker(platform, docker_binary, args.docker_registry, num_retries=args.docker_build_retries)
             if args.build_only:
                 continue
             build_platform = "build_{}".format(platform)

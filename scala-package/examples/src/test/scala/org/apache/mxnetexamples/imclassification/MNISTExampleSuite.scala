@@ -22,14 +22,14 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
 /**
-  * Integration test for imageClassifier example.
-  * This will run as a part of "make scalatest"
+  * Integration test for MNIST example.
   */
 class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[MNISTExampleSuite])
@@ -41,11 +41,8 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
       val tempDirPath = System.getProperty("java.io.tmpdir")
       val modelDirPath = tempDirPath + File.separator + "mnist/"
       logger.info("tempDirPath: %s".format(tempDirPath))
-      val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
-          tmpFile)
-      }
+      Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
+        tempDirPath + "/mnist/mnist.zip")
       // TODO: Need to confirm with Windows
       Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
         + tempDirPath + "/mnist/") !

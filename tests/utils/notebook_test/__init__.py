@@ -21,6 +21,7 @@
     warning or exception.
 """
 import io
+import logging
 import os
 import shutil
 import time
@@ -31,6 +32,9 @@ import nbformat
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
 TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
+RETRIES = 8
+KERNEL_ERROR_MSG = 'Kernel died before replying to kernel_info'
+
 
 def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='tmp_notebook'):
     """Run tutorial Jupyter notebook to catch any execution error.
@@ -57,12 +61,12 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
     -------
        Returns true if the workbook runs with no warning or exception.
     """
-
+    logging.info("Running notebook '{}'".format(notebook))
     notebook_path = os.path.join(*([notebook_dir] + notebook.split('/')))
     working_dir = os.path.join(*([temp_dir] + notebook.split('/')))
 
     if no_cache == '1':
-        print("Cleaning and setting up temp directory '{}'".format(working_dir))
+        logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     errors = []
@@ -71,15 +75,28 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
         os.makedirs(working_dir)
     try:
         notebook = nbformat.read(notebook_path + '.ipynb', as_version=IPYTHON_VERSION)
-        # Adding a small delay to allow time for sockets to be freed
-        # stop-gap measure to battle the 1000ms linger of socket hard coded
-        # in the kernel API code
-        time.sleep(1.1)
         if kernel is not None:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT, kernel_name=kernel)
         else:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
-        nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+
+        # There is a low (< 1%) chance that starting a notebook executor will fail due to the kernel
+        # taking to long to start, or a port collision, etc.
+        for i in range(RETRIES):
+            try:
+                nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+            except RuntimeError as rte:
+                # We check if the exception has to do with the Jupyter kernel failing to start. If
+                # not, we rethrow to prevent the notebook from erring RETRIES times. It is not ideal
+                # to inspect the exception message, but necessary for retry logic, as Jupyter client
+                # throws the generic RuntimeError that can be confused with other Runtime errors.
+                if str(rte) != KERNEL_ERROR_MSG:
+                    raise rte
+
+                logging.info("Error starting preprocessor: {}. Attempt {}/{}".format(str(rte), i+1, RETRIES))
+                time.sleep(1)
+                continue
+            break
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
@@ -92,6 +109,6 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
                 if "Warning:" in line:
                     errors.append("Warning:\n" + line)
         if len(errors) > 0:
-            print('\n'.join(errors))
+            logging.error('\n'.join(errors))
             return False
         return True

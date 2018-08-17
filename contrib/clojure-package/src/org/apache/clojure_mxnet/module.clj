@@ -309,7 +309,6 @@
 
 (defn load-checkpoint
   "Create a model from previously saved checkpoint.
-   - mod module
    - opts map of
      -  prefix Path prefix of saved model files. You should have prefix-symbol.json,
                  prefix-xxxx.params, and optionally prefix-xxxx.states,
@@ -341,7 +340,7 @@
     (util/->option (when workload-list (util/vec->indexed-seq workload-list)))
     (util/->option (when fixed-param-names (util/vec->set fixed-param-names)))))
   ([prefix epoch]
-   (load-checkpoint mod {:prefix prefix :epoch epoch})))
+   (load-checkpoint {:prefix prefix :epoch epoch})))
 
 (defn load-optimizer-states [mod fname]
   (.mod load fname))
@@ -670,4 +669,3 @@
 
   (fit-params {:allow-missing true})
   (fit-params {}))
-

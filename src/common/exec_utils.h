@@ -24,10 +24,14 @@
 #ifndef MXNET_COMMON_EXEC_UTILS_H_
 #define MXNET_COMMON_EXEC_UTILS_H_
 
+#include <nnvm/graph.h>
+#include <nnvm/pass_functions.h>
+#include <map>
 #include <vector>
 #include <string>
 #include <utility>
 #include "../common/utils.h"
+#include "../executor/exec_pass.h"
 
 namespace mxnet {
 namespace common {
@@ -366,6 +370,257 @@ inline void LogInferStorage(const nnvm::Graph& g) {
   }
 }
 
+// prints a helpful message after shape inference errors in executor.
+inline void HandleInferShapeError(const size_t num_forward_inputs,
+                                  const nnvm::IndexedGraph& idx,
+                                  const nnvm::ShapeVector& inferred_shapes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const TShape& inferred_shape = inferred_shapes[eid];
+    if (inferred_shape.ndim() == 0 || inferred_shape.Size() == 0U) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << inferred_shape << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
+                "(0s means unknown dimensions). Please consider providing them as inputs:\n"
+             << oss.str();
+}
+
+// prints a helpful message after type inference errors in executor.
+inline void HandleInferTypeError(const size_t num_forward_inputs,
+                                 const nnvm::IndexedGraph& idx,
+                                 const nnvm::DTypeVector& inferred_dtypes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const int inferred_dtype = inferred_dtypes[eid];
+    if (inferred_dtype == -1) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << inferred_dtype << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferType pass cannot decide dtypes for the following arguments "
+                "(-1 means unknown dtype). Please consider providing them as inputs:\n"
+             << oss.str();
+}
+
+// prints a helpful message after storage type checking errors in executor.
+inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
+                                        const nnvm::IndexedGraph& idx,
+                                        const StorageTypeVector& inferred_stypes) {
+  int cnt = 10;
+  std::ostringstream oss;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const uint32_t eid = idx.entry_id(nid, 0);
+    const int inferred_stype = inferred_stypes[eid];
+    if (inferred_stype == -1) {
+      const std::string& arg_name = idx[nid].source->attrs.name;
+      oss << arg_name << ": " << common::stype_string(inferred_stype) << ", ";
+      if (--cnt == 0) {
+        oss << "...";
+        break;
+      }
+    }
+  }
+  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
+                "(-1 means unknown stype). Please consider providing them as inputs:\n"
+             << oss.str();
+}
+
+/*!
+ * \brief If the requested ndarray's shape size is less than
+ * the corresponding shared_data_array's shape size and the
+ * storage type is shareable, reuse the memory allocation
+ * in shared_buffer; otherwise, create a zero ndarray.
+ * Shareable storages include both default storage and row_sparse storage
+ * if enable_row_sparse_sharing is `True`, otherwise default storage only.
+ */
+inline NDArray ReshapeOrCreate(const std::string& name,
+                               const TShape& dest_arg_shape,
+                               const int dest_arg_dtype,
+                               const NDArrayStorageType dest_arg_stype,
+                               const Context& ctx,
+                               std::unordered_map<std::string, NDArray>* shared_buffer,
+                               bool enable_row_sparse_sharing) {
+  bool stype_shareable = dest_arg_stype == kDefaultStorage;
+  if (enable_row_sparse_sharing) {
+    stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
+  }
+  auto it = shared_buffer->find(name);
+  if (it != shared_buffer->end()) {
+    // check if size is large enough for sharing
+    bool size_shareable = it->second.shape().Size() >= dest_arg_shape.Size();
+    if (size_shareable && stype_shareable) {  // memory can be reused
+      CHECK_EQ(it->second.dtype(), dest_arg_dtype)
+          << "Requested arg array's dtype does not match that of the reusable ndarray";
+      CHECK_EQ(it->second.storage_type(), dest_arg_stype)
+          << "Requested arg array's stype does not match that of the reusable ndarray";
+      return it->second.Reshape(dest_arg_shape);
+    } else if (stype_shareable) {
+      LOG(WARNING) << "Bucketing: data " << name << " has a shape " << dest_arg_shape
+                   << ", which is larger than already allocated shape " << it->second.shape()
+                   << ". Need to re-allocate. Consider putting default bucket key to be "
+                   << "the bucket taking the largest input for better memory sharing.";
+      // size is not large enough, creating a larger one for sharing
+      // the NDArrays in shared_buffer are guaranteed to be of shareable storages
+      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+      return it->second;
+    } else {
+      // not shareable storage
+      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    }
+  } else {
+    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    if (stype_shareable) {
+      shared_buffer->emplace(name, ret);
+    }
+    return ret;
+  }  // if (it != shared_buffer->end())
+}
+
+/*!
+ * \brief Assign context to the graph.
+ * This is triggered by both simple_bind and bind flows.
+ */
+inline nnvm::Graph AssignContext(nnvm::Graph g,
+                                 const Context& default_ctx,
+                                 const std::map<std::string, Context>& ctx_map,
+                                 const std::vector<Context>& in_arg_ctxes,
+                                 const std::vector<Context>& arg_grad_ctxes,
+                                 const std::vector<Context>& aux_state_ctxes,
+                                 const std::vector<OpReqType>& grad_req_types,
+                                 size_t num_forward_inputs,
+                                 size_t num_forward_outputs) {
+  const auto& idx = g.indexed_graph();
+  const auto& mutable_nodes = idx.mutable_input_nodes();
+  // default use default context.
+  if (ctx_map.size() == 0) {
+    g.attrs["context"] = std::make_shared<nnvm::any>(
+        exec::ContextVector(idx.num_nodes(), default_ctx));
+    for (const auto& x : in_arg_ctxes) {
+      CHECK(x == default_ctx)
+          << "Input array is in " << x << " while binding with ctx=" << default_ctx
+          << ". All arguments must be in global context (" << default_ctx
+          << ") unless group2ctx is specified for cross-device graph.";
+    }
+    for (const auto& x : arg_grad_ctxes) {
+      CHECK(x == default_ctx)
+          << "Gradient array is in " << x << " while binding with ctx="
+          << default_ctx << ". All gradients must be in global context (" << default_ctx
+          << ") unless group2ctx is specified for cross-device graph.";
+    }
+    return g;
+  }
+
+  // otherwise, use context assignment.
+  std::map<Context, int> ctx2id;  // map ctx to device id
+  std::vector<Context> ctx_list;  // index is device id
+  nnvm::DeviceVector device(idx.num_nodes(), -1);  // index is node id
+  nnvm::DeviceAssignMap device_map;  // map arg name to device id
+
+  // loop through the user input ctx_map and
+  // populate maps and lists
+  for (auto &kv : ctx_map) {
+    if (ctx2id.count(kv.second) == 0) {  // if context has no device id, create one
+      ctx2id[kv.second] = static_cast<int>(ctx_list.size());  // assign device id to ctx
+      ctx_list.push_back(kv.second);  // save ctx to the list
+    }
+    // assign device id to to the arg name with the corresponding ctx
+    device_map[kv.first] = ctx2id.at(kv.second);
+  }
+
+  // loop through all the rest of input nodes not specified
+  // in the ctx_map and populate maps and lists
+  size_t arg_top = 0, aux_top = 0;
+  for (size_t i = 0; i < num_forward_inputs; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    Context ctx;
+    if (mutable_nodes.count(nid)) {  // aux node is mutable
+      CHECK_LT(aux_top, aux_state_ctxes.size());
+      ctx = aux_state_ctxes[aux_top];
+      ++aux_top;
+    } else {  // regular input node is immutable
+      CHECK_LT(arg_top, in_arg_ctxes.size());
+      ctx = in_arg_ctxes[arg_top];
+      ++arg_top;
+    }
+    if (ctx2id.count(ctx) == 0) {  // if the current ctx is not in the map of ctx and device id
+      ctx2id[ctx] = static_cast<int>(ctx_list.size());  // assign the current ctx with device id
+      ctx_list.push_back(ctx);  // save the current ctx in the list
+    }
+    device[nid] = ctx2id.at(ctx);  // assign device id to the current node
+  }
+
+  // loop through backward input nodes and populate maps and lists
+  // the backward input nodes is the gradient of the loss wrt the output
+  size_t arg_grad_offset = 0;
+  // keep an offset into the arg_grad_ctxes vector,
+  // since g.outputs exclude arg_grad whose req == null
+  CHECK_GE(grad_req_types.size(), g.outputs.size() - num_forward_outputs)
+      << "insufficient number of grad_reqs";
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
+    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
+    const uint32_t nid = idx.outputs()[i].node_id;
+    Context ctx = arg_grad_ctxes[arg_grad_offset];
+    if (ctx2id.count(ctx) == 0) {
+      ctx2id[ctx] = static_cast<int>(ctx_list.size());
+      ctx_list.push_back(ctx);
+    }
+    int devid = ctx2id.at(ctx);
+    if (device[nid] != -1) {
+      CHECK_EQ(device[nid], devid) << "device of same output not equal to each other";
+    } else {
+      device[nid] = devid;
+    }
+  }
+
+  g.attrs["device"] = std::make_shared<dmlc::any>(std::move(device));
+  g = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
+  const auto& assigned_device = g.GetAttr<nnvm::DeviceVector>("device");
+
+  exec::ContextVector vcontext;
+  for (size_t i = 0; i < assigned_device.size(); ++i) {
+    if (assigned_device[i] == -1) {
+      vcontext.push_back(default_ctx);
+    } else {
+      vcontext.push_back(ctx_list[assigned_device[i]]);
+    }
+  }
+
+  // after device planning, we should check again
+  // if the assigned device of gradient node
+  // corresponds to storage of grads
+  auto &new_idx = g.indexed_graph();
+  arg_grad_offset = 0;
+  for (size_t i = num_forward_outputs; i < g.outputs.size(); ++i, ++arg_grad_offset) {
+    while (grad_req_types[arg_grad_offset] == kNullOp) ++arg_grad_offset;
+    const uint32_t nid = new_idx.outputs()[i].node_id;
+    Context ctx = arg_grad_ctxes[arg_grad_offset];
+    CHECK(ctx == vcontext[nid])
+        << "Trying to save gradient to " << ctx
+        << " while its source node \"" << new_idx[nid].source->attrs.name
+        << "\" computes it on " << vcontext[nid]
+        << ". Check your ctx in NDArray allocation.";
+  }
+
+  g.attrs["context"] = std::make_shared<nnvm::any>(std::move(vcontext));
+  return g;
+}
 
 }  // namespace common
 }  // namespace mxnet

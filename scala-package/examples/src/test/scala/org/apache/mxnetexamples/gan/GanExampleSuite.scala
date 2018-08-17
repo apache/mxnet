@@ -18,43 +18,38 @@
 package org.apache.mxnetexamples.gan
 
 import java.io.File
-import java.net.URL
-
-import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.apache.mxnetexamples.Util
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
+@Ignore
 class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
   private val logger = LoggerFactory.getLogger(classOf[GanExampleSuite])
 
   test("Example CI: Test GAN MNIST") {
-    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-      logger.info("Downloading mnist model")
-      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-      val tempDirPath = System.getProperty("java.io.tmpdir")
-      val modelDirPath = tempDirPath + File.separator + "mnist/"
-      logger.info("tempDirPath: %s".format(tempDirPath))
-      val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
-          tmpFile)
+      if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+        System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+        logger.info("Downloading mnist model")
+        val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+        val tempDirPath = System.getProperty("java.io.tmpdir")
+        val modelDirPath = tempDirPath + File.separator + "mnist/"
+        logger.info("tempDirPath: %s".format(tempDirPath))
+        Util.downloadUrl(baseUrl + "/mnist/mnist.zip", tempDirPath + "/mnist/mnist.zip")
+        // TODO: Need to confirm with Windows
+        Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+          + tempDirPath + "/mnist/") !
+
+        val context = Context.gpu()
+
+        val output = GanMnist.runTraining(modelDirPath, context, modelDirPath, 5)
+        Process("rm -rf " + modelDirPath) !
+
+        assert(output >= 0.0f)
+      } else {
+        logger.info("GPU test only, skipped...")
       }
-      // TODO: Need to confirm with Windows
-      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-        + tempDirPath + "/mnist/") !
-
-      val context = Context.gpu()
-
-      val output = GanMnist.runTraining(modelDirPath, context, modelDirPath, 5)
-      Process("rm -rf " + modelDirPath) !
-
-      assert(output >= 0.0f)
-    } else {
-      logger.info("GPU test only, skipped...")
-    }
   }
 }

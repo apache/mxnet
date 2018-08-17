@@ -21,6 +21,7 @@
     warning or exception.
 """
 import glob
+import logging
 import re
 import os
 import unittest
@@ -32,17 +33,27 @@ NOTEBOOKS_WHITELIST = [
     'chapter01_crashcourse/introduction',
     'chapter01_crashcourse/chapter-one-problem-set',
     'chapter02_supervised-learning/environment',
+    'chapter03_deep-neural-networks/kaggle-gluon-kfold',
     'chapter07_distributed-learning/multiple-gpus-scratch',
     'chapter07_distributed-learning/multiple-gpus-gluon',
-    'chapter07_distributed-learning/training-with-multiple-machines'
+    'chapter07_distributed-learning/training-with-multiple-machines',
+    'chapter12_time-series/intro-forecasting-gluon',
+    'chapter12_time-series/intro-forecasting-2-gluon',
+    'chapter13_unsupervised-learning/vae-gluon',
+    'chapter18_variational-methods-and-uncertainty/bayes-by-backprop-rnn',
+    'chapter17_deep-reinforcement-learning/DQN',
+    'chapter17_deep-reinforcement-learning/DDQN',
+    'chapter19_graph-neural-networks/Graph-Neural-Networks',
+    'chapter16_tensor_methods/tensor_basics',
+    'cheatsheets/kaggle-gluon-kfold'
 ]
 
 
 class StraightDopeSingleGpuTests(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        logging.basicConfig(level=logging.INFO)
         assert _download_straight_dope_notebooks()
-
 
     def test_completeness(self):
         """
@@ -79,9 +90,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_probability(self):
         assert _test_notebook('chapter01_crashcourse/probability')
 
-    # TODO(vishaalk): Notebook contains the word 'Warning'. Needs to be updated to a synonym.
-    #def test_autograd(self):
-    #    assert _test_notebook('chapter01_crashcourse/autograd')
+    def test_autograd(self):
+        assert _test_notebook('chapter01_crashcourse/autograd')
 
     # Chapter 2
 
@@ -91,10 +101,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_linear_regression_gluon(self):
         assert _test_notebook('chapter02_supervised-learning/linear-regression-gluon')
 
-    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
-    # python code can be run from another directory.
-    #def test_logistic_regression_gluon(self):
-    #    assert _test_notebook('chapter02_supervised-learning/logistic-regression-gluon')
+    def test_logistic_regression_gluon(self):
+        assert _test_notebook('chapter02_supervised-learning/logistic-regression-gluon')
 
     def test_softmax_regression_scratch(self):
         assert _test_notebook('chapter02_supervised-learning/softmax-regression-scratch')
@@ -105,9 +113,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_regularization_scratch(self):
         assert _test_notebook('chapter02_supervised-learning/regularization-scratch')
 
-    # TODO(vishaalk): Notebook does not appear to be JSON: '{\n "cells": [\n  {\n   "cell_type": "m....
-    #def test_regularization_gluon(self):
-    #    assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
+    def test_regularization_gluon(self):
+        assert _test_notebook('chapter02_supervised-learning/regularization-gluon')
 
     def test_perceptron(self):
         assert _test_notebook('chapter02_supervised-learning/perceptron')
@@ -131,9 +138,6 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     def test_custom_layer(self):
         assert _test_notebook('chapter03_deep-neural-networks/custom-layer')
-
-    #def test_kaggle_gluon_kfold(self):
-    #    assert _test_notebook('chapter03_deep-neural-networks/kaggle-gluon-kfold')
 
     # TODO(vishaalk): Load params and Save params are deprecated warning.
     #def test_serialization(self):
@@ -162,20 +166,14 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     # Chapter 5
 
-    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
-    # python code can be run from another directory.
-    #def test_simple_rnn(self):
-    #    assert _test_notebook('chapter05_recurrent-neural-networks/simple-rnn')
+    def test_simple_rnn(self):
+        assert _test_notebook('chapter05_recurrent-neural-networks/simple-rnn')
 
-    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
-    # python code can be run from another directory.
-    #def test_lstm_scratch(self):
-    #    assert _test_notebook('chapter05_recurrent-neural-networks/lstm-scratch')
+    def test_lstm_scratch(self):
+        assert _test_notebook('chapter05_recurrent-neural-networks/lstm-scratch')
 
-    # TODO(vishaalk): There is a relative file path needs to be fixed so that the
-    # python code can be run from another directory.
-    #def test_gru_scratch(self):
-    #    assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
+    def test_gru_scratch(self):
+        assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
 
     #def test_rnns_gluon(self):
     #    assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
@@ -259,22 +257,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_lds_scratch(self):
         assert _test_notebook('chapter12_time-series/lds-scratch')
 
-    # TODO(vishaalk): File doesn't appear to be valid JSON.
-    #def test_issm_scratch(self):
-    #    assert _test_notebook('chapter12_time-series/issm-scratch')
-
-    # TODO(vishaalk): Error: sequential1_batchnorm0_running_mean' has not been initialized
-    # def test_intro_forecasting_gluon(self):
-    #    assert _test_notebook('chapter12_time-series/intro-forecasting-gluon')
-
-    #def test_intro_forecasting_2_gluon(self):
-    #    assert _test_notebook('chapter12_time-series/intro-forecasting-2-gluon')
-
-    # Chapter 13
-
-    # TODO(vishaalk): Load params and Save params are deprecated warning.
-    #def test_vae_gluon(self):
-    #    assert _test_notebook('chapter13_unsupervised-learning/vae-gluon')
+    def test_issm_scratch(self):
+        assert _test_notebook('chapter12_time-series/issm-scratch')
 
     # Chapter 14
 
@@ -287,46 +271,14 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_generative_adversarial_networks(self):
         assert _test_notebook('chapter14_generative-adversarial-networks/conditional')
 
-    # Chapter 16
-
-    # TODO(vishaalk): Checked failed oshape.Size() != dshape.Size()
-    #def test_tensor_basics(self):
-    #    assert _test_notebook('chapter16_tensor_methods/tensor_basics')
-
-    # TODO(vishaalk): Notebook does not appear to be valid JSON.
+    # TODO(vishaalk): Investigate.
     #def test_pixel2pixel(self):
     #    assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')
 
-    # Chapter 17
+    # Chapter 18
 
-    # TODO(vishaalk): Requires OpenAI Gym. Also uses deprecated load_params.
-    #def test_dqn(self):
-#    assert _test_notebook('chapter17_deep-reinforcement-learning/DQN')
+    #def test_bayes_by_backprop(self):
+    #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop')
 
-#def test_ddqn(self):
-#    assert _test_notebook('chapter17_deep-reinforcement-learning/DDQN')
-
-# Chapter 18
-
-#def test_bayes_by_backprop(self):
-#    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop')
-
-#def test_bayes_by_backprop_gluon(self):
-#    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-gluon')
-
-# TODO(vishaalk): AttributeError: 'list' object has no attribute 'keys'
-#def test_bayes_by_backprop_rnn(self):
-#    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-rnn')
-
-# Chapter 19
-
-# TODO(vishaalk): Requires deepchem
-#def test_graph_neural_networks(self):
-#    assert _test_notebook('chapter19_graph-neural-networks/Graph-Neural-Networks')
-
-# Cheatsheets
-
-# TODO(vishaalk): There is a relative file path needs to be fixed so that the
-# python code can be run from another directory.
-#def test_kaggle_gluon_kfold(self):
-#    assert _test_notebook('cheatsheets/kaggle-gluon-kfold')
+    #def test_bayes_by_backprop_gluon(self):
+    #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-gluon')

@@ -250,9 +250,15 @@ The learnable parameters include both ``weight`` and ``bias``.
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
-Note that the operator also supports forward computation with `row_sparse` weight and bias,
-where the length of `weight.indices` and `bias.indices` must be equal to `num_hidden`.
-This could be used for model inference with `row_sparse` weights trained with `SparseEmbedding`.
+.. Note::
+
+    The sparse support for FullyConnected is limited to forward evaluation with `row_sparse`
+    weight and bias, where the length of `weight.indices` and `bias.indices` must be equal
+    to `num_hidden`. This could be useful for model inference with `row_sparse` weights
+    trained with importance sampling or noise contrastive estimation.
+
+    To compute linear transformation with 'csr' sparse data, sparse.dot is recommended instead
+    of sparse.FullyConnected.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {

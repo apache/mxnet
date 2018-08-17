@@ -514,27 +514,27 @@ def test_sparse_nd_astype_copy():
         assert (id(x) == id(y))
 
 
-@with_seed(0)
+@with_seed()
 def test_sparse_nd_pickle():
-    repeat = 1
     dim0 = 40
     dim1 = 40
     stypes = ['row_sparse', 'csr']
     densities = [0, 0.5]
     stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-    for _ in range(repeat):
-        shape = rand_shape_2d(dim0, dim1)
-        for stype in stypes:
-            for density in densities:
-                a, _ = rand_sparse_ndarray(shape, stype, density)
-                assert isinstance(a, stype_dict[stype])
-                data = pkl.dumps(a)
-                b = pkl.loads(data)
-                assert isinstance(b, stype_dict[stype])
-                assert same(a.asnumpy(), b.asnumpy())
+    shape = rand_shape_2d(dim0, dim1)
+    for stype in stypes:
+        for density in densities:
+            a, _ = rand_sparse_ndarray(shape, stype, density)
+            assert isinstance(a, stype_dict[stype])
+            data = pkl.dumps(a)
+            b = pkl.loads(data)
+            assert isinstance(b, stype_dict[stype])
+            assert same(a.asnumpy(), b.asnumpy())
 
 
-@with_seed(0)
+# @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11741
+@with_seed()
 def test_sparse_nd_save_load():
     repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
