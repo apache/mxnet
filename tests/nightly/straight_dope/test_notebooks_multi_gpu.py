@@ -20,6 +20,7 @@
     This file tests that the notebooks requiring multi GPUs run without
     warning or exception.
 """
+import logging
 import unittest
 from straight_dope_test_utils import _test_notebook
 from straight_dope_test_utils import _download_straight_dope_notebooks
@@ -27,6 +28,7 @@ from straight_dope_test_utils import _download_straight_dope_notebooks
 class StraightDopeMultiGpuTests(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        logging.basicConfig(level=logging.INFO)
         assert _download_straight_dope_notebooks()
 
     # Chapter 7

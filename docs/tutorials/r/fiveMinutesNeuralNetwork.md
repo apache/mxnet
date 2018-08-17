@@ -1,18 +1,21 @@
 Develop a Neural Network with MXNet in Five Minutes
 =============================================
 
-This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package.
+This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](http://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=R&processor=CPU). 
 
 ## Classification
 
-
-
- ```r
-    require(mlbench)
- ```
-
  ```
     ## Loading required package: mlbench
+ ```
+ ```r
+    if (!require(mlbench)) {
+      install.packages('mlbench')
+    }
+ ```
+
+ ```
+    ## Loading required package: mxnet
  ```
 
  ```r
@@ -20,8 +23,7 @@ This tutorial is designed for new users of the `mxnet` package for R. It shows h
  ```
 
  ```
-    ## Loading required package: mxnet
-    ## Loading required package: methods
+    ## Loading required datasets
  ```
 
  ```r
@@ -235,7 +237,8 @@ Currently, we have four predefined metrics: "accuracy", "rmse", "mae", and "rmsl
 
  ```r
     demo.metric.mae <- mx.metric.custom("mae", function(label, pred) {
-      res <- mean(abs(label-pred))
+      pred <- mx.nd.reshape(pred, shape = 0)
+      res <- mx.nd.mean(mx.nd.abs(label-pred))
       return(res)
     })
  ```
@@ -253,56 +256,56 @@ This is an example of the mean absolute error metric. Simply plug it into the tr
  ```
     ## Auto detect layout of input matrix, use rowmajor.
     ## Start training with 1 devices
-    ## [1] Train-mae=13.1889538083225
-    ## [2] Train-mae=9.81431959337658
-    ## [3] Train-mae=9.21576419870059
-    ## [4] Train-mae=8.38071537613869
-    ## [5] Train-mae=7.45462437611487
-    ## [6] Train-mae=6.93423301743136
-    ## [7] Train-mae=6.91432357016537
-    ## [8] Train-mae=7.02742733055105
-    ## [9] Train-mae=7.00618194618469
-    ## [10] Train-mae=6.92541576984028
-    ## [11] Train-mae=6.87530243690643
-    ## [12] Train-mae=6.84757369098564
-    ## [13] Train-mae=6.82966501611388
-    ## [14] Train-mae=6.81151759574811
-    ## [15] Train-mae=6.78394182841811
-    ## [16] Train-mae=6.75914719419347
-    ## [17] Train-mae=6.74180388773481
-    ## [18] Train-mae=6.725853071279
-    ## [19] Train-mae=6.70932178215848
-    ## [20] Train-mae=6.6928868798746
-    ## [21] Train-mae=6.6769521329138
-    ## [22] Train-mae=6.66184809505939
-    ## [23] Train-mae=6.64754504809777
-    ## [24] Train-mae=6.63358514060577
-    ## [25] Train-mae=6.62027640889088
-    ## [26] Train-mae=6.60738245232238
-    ## [27] Train-mae=6.59505546771818
-    ## [28] Train-mae=6.58346195800437
-    ## [29] Train-mae=6.57285477783945
-    ## [30] Train-mae=6.56259003960424
-    ## [31] Train-mae=6.5527790788975
-    ## [32] Train-mae=6.54353428422991
-    ## [33] Train-mae=6.5344172368447
-    ## [34] Train-mae=6.52557652526432
-    ## [35] Train-mae=6.51697905850079
-    ## [36] Train-mae=6.50847898812758
-    ## [37] Train-mae=6.50014844106303
-    ## [38] Train-mae=6.49207674844397
-    ## [39] Train-mae=6.48412070125341
-    ## [40] Train-mae=6.47650500999557
-    ## [41] Train-mae=6.46893867486053
-    ## [42] Train-mae=6.46142131653097
-    ## [43] Train-mae=6.45395035048326
-    ## [44] Train-mae=6.44652914123403
-    ## [45] Train-mae=6.43916216409869
-    ## [46] Train-mae=6.43183777381976
-    ## [47] Train-mae=6.42455544223388
-    ## [48] Train-mae=6.41731406417158
-    ## [49] Train-mae=6.41011292926139
-    ## [50] Train-mae=6.40312503493494
+    ## [1] Train-mae=14.953625731998
+    ## [2] Train-mae=11.4802955521478
+    ## [3] Train-mae=8.50700579749213
+    ## [4] Train-mae=7.30591265360514
+    ## [5] Train-mae=7.38049803839789
+    ## [6] Train-mae=7.36036252975464
+    ## [7] Train-mae=7.06519222259521
+    ## [8] Train-mae=6.9962231847975
+    ## [9] Train-mae=6.96296903822157
+    ## [10] Train-mae=6.9046172036065
+    ## [11] Train-mae=6.87867620256212
+    ## [12] Train-mae=6.85872554779053
+    ## [13] Train-mae=6.81936407089233
+    ## [14] Train-mae=6.79135354359945
+    ## [15] Train-mae=6.77438741260105
+    ## [16] Train-mae=6.75365140702989
+    ## [17] Train-mae=6.73369296391805
+    ## [18] Train-mae=6.71600982877943
+    ## [19] Train-mae=6.69932826360067
+    ## [20] Train-mae=6.6852519777086
+    ## [21] Train-mae=6.67343420452542
+    ## [22] Train-mae=6.66315894656711
+    ## [23] Train-mae=6.65314838621351
+    ## [24] Train-mae=6.64388704299927
+    ## [25] Train-mae=6.63480265935262
+    ## [26] Train-mae=6.62583245171441
+    ## [27] Train-mae=6.61697626113892
+    ## [28] Train-mae=6.60842116673787
+    ## [29] Train-mae=6.60040124257406
+    ## [30] Train-mae=6.59264140658908
+    ## [31] Train-mae=6.58551020092434
+    ## [32] Train-mae=6.57864215638902
+    ## [33] Train-mae=6.57178926467896
+    ## [34] Train-mae=6.56495311525133
+    ## [35] Train-mae=6.55813185373942
+    ## [36] Train-mae=6.5513252152337
+    ## [37] Train-mae=6.54453214009603
+    ## [38] Train-mae=6.53775374094645
+    ## [39] Train-mae=6.53098879920112
+    ## [40] Train-mae=6.52423816257053
+    ## [41] Train-mae=6.51764053768582
+    ## [42] Train-mae=6.51121346155802
+    ## [43] Train-mae=6.5047902001275
+    ## [44] Train-mae=6.49837123023139
+    ## [45] Train-mae=6.49216641320123
+    ## [46] Train-mae=6.48598252402412
+    ## [47] Train-mae=6.4798010720147
+    ## [48] Train-mae=6.47362396452162
+    ## [49] Train-mae=6.46745183732775
+    ## [50] Train-mae=6.46128723356459
  ```
 
 Congratulations! You've learned the basics for using MXNet in R. To learn how to use MXNet's advanced features, see the other tutorials.

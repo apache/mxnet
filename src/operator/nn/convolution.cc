@@ -300,7 +300,9 @@ inline static bool ConvStorageType(const nnvm::NodeAttrs& attrs,
 
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
+    wanted_mode = DispatchMode::kFComputeFallback;
+  else if (dev_mask == mshadow::cpu::kDevMask)
     wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif
@@ -322,7 +324,9 @@ inline static bool BackwardConvStorageType(const nnvm::NodeAttrs& attrs,
 
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask)
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
+    wanted_mode = DispatchMode::kFComputeFallback;
+  else if (dev_mask == mshadow::cpu::kDevMask)
     wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif

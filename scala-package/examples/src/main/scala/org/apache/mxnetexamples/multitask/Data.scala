@@ -21,9 +21,6 @@ import org.apache.mxnet.Shape
 import org.apache.mxnet.IO
 import org.apache.mxnet.DataIter
 
-/**
- * @author Depeng Liang
- */
 object Data {
 
   // return train and val iterators for mnist
