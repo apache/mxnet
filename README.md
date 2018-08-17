@@ -2,7 +2,7 @@
   <a href="https://mxnet.incubator.apache.org/"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet_logo_2.png"></a><br>
 </div>
 
-2 Apache MXNet (incubating) for Deep Learning
+3 Apache MXNet (incubating) for Deep Learning
 =====
 | Master         | Docs          | License  |
 | :-------------:|:-------------:|:--------:|
