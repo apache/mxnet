@@ -27,4 +27,4 @@ cd tests/nightly/model_backwards_compatibility_check
 echo `pwd`
 
 echo '=========================='
-python model_backwards_compat_inference.py
+python3 model_backwards_compat_inference.py
