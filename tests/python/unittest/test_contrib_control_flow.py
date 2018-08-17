@@ -1139,7 +1139,7 @@ class TestRNNLayer(gluon.HybridBlock):
 
     def hybrid_forward(self, F, inputs, states):
         out, states = F.contrib.foreach(self.cell, inputs, states)
-        return out[0]
+        return out
 
 def check_contrib_rnn(cell_type, num_states):
     batch_size = 10
@@ -1522,11 +1522,11 @@ def test_foreach_nested():
         return (out, [out])
 
     def step_sym(in1, states):
-        out1, states1 = mx.sym.contrib.foreach(step_in, in1, states)
+        out1 = mx.sym.contrib.foreach(step_in, in1, states)
         out = mx.sym.broadcast_add(out1[0], states[0])
         return (out, [mx.sym.squeeze(mx.sym.slice(out, begin=(0, 0), end=(1, 2)))])
     def step_nd(in1, states):
-        out1, states1 = mx.nd.contrib.foreach(step_in, in1, states)
+        out1 = mx.nd.contrib.foreach(step_in, in1, states)
         out = mx.nd.broadcast_add(out1[0], states[0])
         return (out, [mx.nd.squeeze(mx.nd.slice(out, begin=(0, 0), end=(1, 2)))])
 
@@ -1535,7 +1535,7 @@ def test_foreach_nested():
     out, states = mx.sym.contrib.foreach(step_sym, data_sym, [state_sym])
     assert isinstance(states, list)
     assert len(states) == 1
-    out = mx.sym.broadcast_add(out[0], states[0])
+    out = mx.sym.broadcast_add(out, states[0])
 
     js_1 = out.tojson()
     out = mx.sym.load_json(js_1)
@@ -1560,7 +1560,7 @@ def test_foreach_nested():
         out, states = mx.nd.contrib.foreach(step_nd, data, [state])
         assert isinstance(states, list)
         assert len(states) == 1
-        res = mx.nd.broadcast_add(out[0], states[0])
+        res = mx.nd.broadcast_add(out, states[0])
     assert_almost_equal(res.asnumpy(), e.outputs[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
     res.backward(out_grads[0])
@@ -1676,11 +1676,11 @@ def test_cut_subgraph_foreach():
             def step1(data, states):
                 return data + 1, states
             out1, states1 = F.contrib.foreach(step1, inputs, states)
-            out2, states2 = F.contrib.foreach(step1, out1[0], states)
+            out2, states2 = F.contrib.foreach(step1, out1, states)
             def step2(data, states):
                 return data + states[0], states1
-            out, states = F.contrib.foreach(step2, out2[0], states)
-            return out[0]
+            out, states = F.contrib.foreach(step2, out2, states)
+            return out
 
     data = mx.nd.normal(loc=0, scale=1, shape=(5, 10))
     states = mx.nd.normal(loc=0, scale=1, shape=(10))
