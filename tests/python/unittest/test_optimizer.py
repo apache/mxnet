@@ -1035,10 +1035,11 @@ def test_adagrad():
 
 def test_factor_scheduler():
     base_lr = 1
-    step = 100
+    step = 50
     factor = 0.1
     sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
                                         warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
+
     assert (sched(0) == 0.1)
     np.testing.assert_almost_equal(sched(10), 0.1)
     assert (sched(21) == base_lr), sched(21)
@@ -1052,6 +1053,7 @@ def test_multifactor_scheduler():
     factor = 0.1
     sched = mx.lr_scheduler.MultiFactorScheduler(steps, factor, base_lr=base_lr,
                                         warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
+
     assert sched(0) == 0.05
     np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05)/2)
     np.testing.assert_almost_equal(sched(15), base_lr)
@@ -1066,6 +1068,7 @@ def test_poly_scheduler():
     steps = 1000
     poly_sched = mx.lr_scheduler.PolyScheduler(steps, base_lr=base_lr, pwr=2, final_lr=final_lr,
                                     warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
+
     np.testing.assert_almost_equal(poly_sched(0), 0)
     np.testing.assert_almost_equal(poly_sched(50), float(base_lr)/2)
     np.testing.assert_almost_equal(poly_sched(100), base_lr)
@@ -1082,6 +1085,7 @@ def test_cosine_scheduler():
     np.testing.assert_almost_equal(cosine_sched(0), base_lr)
     np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
     assert (cosine_sched(500) > 1.5)
+    assert False
 
 if __name__ == '__main__':
     import nose
