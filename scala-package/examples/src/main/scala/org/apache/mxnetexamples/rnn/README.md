@@ -1,7 +1,7 @@
 # RNN Example for MXNet Scala
 This folder contains the following examples writing in new Scala type-safe API:
 - [x] LSTM Bucketing
-- [ ] CharRNN Inference (still fixing issues): Generate similar text based on the model
+- [x] CharRNN Inference : Generate similar text based on the model
 - [x] CharRNN Training: Training the language model using RNN
 
 These example is only for Illustration and not modeled to achieve the best accuracy.
@@ -40,7 +40,6 @@ Then you need to define the arguments that you would like to pass in the model:
 <path>/
 ```
 #### TestCharRnn
-This model currently does not working, still fixing the issues
 ```bash
 --data-path
 <path>/obama.txt

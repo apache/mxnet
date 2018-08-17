@@ -17,11 +17,9 @@
 
 package org.apache.mxnetexamples.rnn
 
-import java.io.File
-import java.net.URL
 
-import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -30,21 +28,16 @@ import scala.sys.process.Process
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ExampleRNNSuite])
 
-  def downloadUrl(url: String, filePath: String) : Unit = {
-    val tmpFile = new File(filePath)
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(url), tmpFile)
-    }
-  }
-
   override def beforeAll(): Unit = {
     logger.info("Downloading LSTM model")
     val tempDirPath = System.getProperty("java.io.tmpdir")
     logger.info("tempDirPath: %s".format(tempDirPath))
     val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/RNN/"
-    downloadUrl(baseUrl + "obama.zip", tempDirPath + "/RNN/obama.zip")
-    downloadUrl(baseUrl + "sherlockholmes.train.txt", tempDirPath + "/RNN/sherlockholmes.train.txt")
-    downloadUrl(baseUrl + "sherlockholmes.valid.txt", tempDirPath + "/RNN/sherlockholmes.valid.txt")
+    Util.downloadUrl(baseUrl + "obama.zip", tempDirPath + "/RNN/obama.zip")
+    Util.downloadUrl(baseUrl + "sherlockholmes.train.txt",
+      tempDirPath + "/RNN/sherlockholmes.train.txt")
+    Util.downloadUrl(baseUrl + "sherlockholmes.valid.txt",
+      tempDirPath + "/RNN/sherlockholmes.valid.txt")
     // TODO: Need to confirm with Windows
     Process(s"unzip $tempDirPath/RNN/obama.zip -d $tempDirPath/RNN/") !
   }
@@ -56,8 +49,10 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       ctx = Context.gpu()
     }
-    LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
-      tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 3)
+    NDArrayCollector.auto().withScope {
+      LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
+        tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
+    }
   }
 
   test("Example CI: Test TrainCharRNN") {
@@ -65,10 +60,21 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
-      TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
-        tempDirPath, ctx, 1)
+      NDArrayCollector.auto().withScope {
+        TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
+          tempDirPath, ctx, 1)
+      }
     } else {
       logger.info("CPU not supported for this test, skipped...")
+    }
+  }
+
+  test("Example CI: Test TestCharRNN") {
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    val ctx = Context.gpu()
+    NDArrayCollector.auto().withScope {
+      TestCharRnn.runTestCharRNN(tempDirPath + "/RNN/obama.txt",
+        tempDirPath + "/RNN/obama", "The joke")
     }
   }
 }
