@@ -654,7 +654,7 @@ class Conv3DTranspose(_Conv):
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
+        assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):
