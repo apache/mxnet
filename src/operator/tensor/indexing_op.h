@@ -1034,8 +1034,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 2U);
-  CHECK_EQ(req[take_::kIdx], kNullOp)
-    << "take layer doesn't support gradient into index";
+  CHECK_NE(req[take_::kIdx], kAddTo)
+    << "take layer doesn't support gradient of req type kAddTo to index";
 
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
 
@@ -1051,6 +1051,11 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       const TShape& idxshape = inputs[1].shape_;
       const TShape& arrshape = outputs[0].shape_;
       const TShape& oshape = inputs[0].shape_;
+
+      if (req[take_::kIdx] != kNullOp) {
+        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+          s, idxshape.Size(), outputs[take_::kIdx].dptr<IType>());
+      }
 
       const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 

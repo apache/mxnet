@@ -837,11 +837,14 @@ build_docs() {
     pushd .
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
-    # $1 is the list of branches to build; $2 is the list of tags to display
+    # $1: the list of branches/tags to build
+    # $2: the list of tags to display
     # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
-    ./build_all_version.sh $1 $2
-    # $3 is the default version tag for the website; $4 is the base URL
-    ./update_all_version.sh $2 $3 $4
+    # $3: the fork URL
+    ./build_all_version.sh $1 $2 $3
+    # $4: the default version tag for the website
+    # $5: the base URL
+    ./update_all_version.sh $2 $4 $5
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
     popd
