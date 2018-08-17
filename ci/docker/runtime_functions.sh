@@ -994,7 +994,6 @@ broken_link_checker() {
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
-
 ##############################################################
 # MAIN
 #
