@@ -824,10 +824,9 @@ OpStatePtr CachedOp::DynamicForward(
   // If CachedOp is running in the inline mode, it uses RunGraph to record
   // computation; otherwise, CachedOp records computation itself.
   // So if it's not the inline mode, we disable recording.
-  if (recording && !inlining_) recording = false;
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes,
-           recording);
+           recording && inlining_);
 
   return op_state;
 }
