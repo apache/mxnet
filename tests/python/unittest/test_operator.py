@@ -1916,7 +1916,6 @@ def test_broadcast_binary_op():
         # doubles as well. This was a flaky test before when using float32. seed 1688524483, 1768433044
         a = mx.sym.cast(a_, dtype='float64')
         b = mx.sym.cast(b_, dtype='float64')
-        mx.sym.cast(b, dtype='float64')
         # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
         #check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
         c = mx.sym.broadcast_mod(a, b)
