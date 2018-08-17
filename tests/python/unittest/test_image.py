@@ -186,17 +186,19 @@ class TestImage(unittest.TestCase):
                     first_batch_roll_over.data[0][1].asnumpy(), first_image.asnumpy())
                 assert first_batch_roll_over.pad == 2
                 # test iteratopr work properly after calling reset several times when last_batch_handle is roll_over
-                # we've called next once
-                i = 1
                 for _ in test_iter:
-                    i += 1
-                # test second epoch with size 5
-                assert i == 5
+                    pass
                 test_iter.reset()
                 first_batch_roll_over_twice = test_iter.next()
                 assert np.array_equal(
                     first_batch_roll_over_twice.data[0][2].asnumpy(), first_image.asnumpy())
                 assert first_batch_roll_over_twice.pad == 1
+                # we've called next once
+                i = 1
+                for _ in test_iter:
+                    i += 1
+                # test the third epoch with size 6
+                assert i == 6
                 # test shuffle option for sanity test
                 test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
                                                path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
