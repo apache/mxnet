@@ -47,10 +47,8 @@ def check_with_device(device, dtype):
         },
         {
             'name': 'randn',
-            'symbol': mx.sym.random.normal,
             'ndop': mx.nd.random.randn,
             'params': { 'loc': 10.0, 'scale': 0.5 },
-            'inputs': [ ('loc', 10) , ('scale', 5) ],
             'checks': [
                 ('mean', lambda x, params: np.mean(x.astype(np.float64) - params['loc']),  tol),
                 ('std',  lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
@@ -134,10 +132,14 @@ def check_with_device(device, dtype):
         # check directly
         params = symbdic['params'].copy()
         params.update(shape=shape, dtype=dtype, ctx=device)
+        args = ()
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args = shape
         mx.random.seed(128)
-        ret1 = ndop(**params).asnumpy()
+        ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
-        ret2 = ndop(**params).asnumpy()
+        ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
 
@@ -145,12 +147,14 @@ def check_with_device(device, dtype):
             assert np.abs(check_func(ret1, params)) < tol, "ndarray test: %s check for `%s` did not pass" % (check_name, name)
 
         # check multi-distribution sampling
+        if 'inputs' not in symbdic: continue  # randn does not support multi-distribution sampling
+
         params = {'shape': shape, 'dtype': dtype, 'ctx': device}
         params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
         mx.random.seed(128)
-        ret1 = ndop(**params).asnumpy()
+        ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
-        ret2 = ndop(**params).asnumpy()
+        ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
         for i in range(2):
@@ -159,6 +163,8 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     err = np.abs(check_func(ret2[i,j], stats))
                     assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
+
+        if 'symbol' not in symbdic: continue  # randn does not have symbol
 
         # check symbolic
         symbol = symbdic['symbol']
