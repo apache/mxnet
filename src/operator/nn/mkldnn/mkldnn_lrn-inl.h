@@ -231,7 +231,6 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
           lrn_forward(pdesc_fwd, mkldnn::primitive::at(*data_mem),
           *ws_mem, *dst_temp));
 
-//  const mkldnn::memory::desc data_in_md = pdesc_fwd.src_primitive_desc().desc();
   const mkldnn::memory *diff_mem = out_grad.GetMKLDNNData();
   const mkldnn::memory::desc diff_md = diff_mem->get_primitive_desc().desc();
   const mkldnn::lrn_backward::primitive_desc pdesc_bwd = GetLRNBwd(param, data_md,
