@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.spark.io
-
-import org.apache.mxnet.DType.DType
-import org.apache.mxnet.{DataBatch, NDArray}
+package org.apache.mxnet
 
 /**
- * Dispose only when 'disposeForce' called
- * @author Yizhi Liu
- */
-class LongLivingDataBatch(
-  override val data: IndexedSeq[NDArray],
-  override val label: IndexedSeq[NDArray],
-  override val index: IndexedSeq[Long],
-  override val pad: Int) extends DataBatch(data, label, index, pad,
-  null, null, null) {
-  override def dispose(): Unit = {}
-  def disposeForce(): Unit = super.dispose()
+  * Layout definition of DataDesc
+  * N Batch size
+  * C channels
+  * H Height
+  * W Weight
+  * T sequence length
+  * __undefined__ default value of Layout
+  */
+object Layout {
+  val UNDEFINED = "__undefined__"
+  val NCHW = "NCHW"
+  val NTC = "NTC"
+  val NT = "NT"
+  val N = "N"
 }
