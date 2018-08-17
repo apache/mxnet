@@ -20,11 +20,12 @@ package org.apache.mxnetexamples.rnn
 
 import org.apache.mxnet.{Context, NDArrayCollector}
 import org.apache.mxnetexamples.Util
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
+@Ignore
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ExampleRNNSuite])
 
@@ -49,10 +50,8 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       ctx = Context.gpu()
     }
-    NDArrayCollector.auto().withScope {
-      LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
+    LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
         tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
-    }
   }
 
   test("Example CI: Test TrainCharRNN") {
@@ -60,10 +59,8 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
-      NDArrayCollector.auto().withScope {
-        TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
+      TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
           tempDirPath, ctx, 1)
-      }
     } else {
       logger.info("CPU not supported for this test, skipped...")
     }
@@ -72,9 +69,7 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   test("Example CI: Test TestCharRNN") {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val ctx = Context.gpu()
-    NDArrayCollector.auto().withScope {
-      TestCharRnn.runTestCharRNN(tempDirPath + "/RNN/obama.txt",
+    TestCharRnn.runTestCharRNN(tempDirPath + "/RNN/obama.txt",
         tempDirPath + "/RNN/obama", "The joke")
-    }
   }
 }
