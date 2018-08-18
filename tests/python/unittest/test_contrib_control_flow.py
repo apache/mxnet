@@ -1020,6 +1020,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
                 then_func=lambda: then_func(input_vars, free_vars),
                 else_func=lambda: else_func(input_vars, free_vars),
             )
+            outputs = _as_list(outputs)
             outputs = [x * 2 for x in outputs]
             grads = []
             if is_train:
@@ -1036,6 +1037,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
             then_func=lambda: then_func(_input_syms, _free_syms),
             else_func=lambda: else_func(_input_syms, _free_syms),
         )
+        outputs_sym = _as_list(outputs_sym)
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)
         executor = outputs_sym.bind(
@@ -1745,12 +1747,12 @@ def test_cut_subgraph_cond():
         def __init__(self, prefix=None, params=None):
             super(TestLayer, self).__init__(prefix=prefix, params=params)
         def hybrid_forward(self, F, data):
-            (data1, ) = F.contrib.cond(
+            data1 = F.contrib.cond(
                 data > 0.5,
                 then_func=lambda: data * 2,
                 else_func=lambda: data * 3,
             )
-            (data2, ) = F.contrib.cond(
+            data2 = F.contrib.cond(
                 data1 > 0.5,
                 then_func=lambda: data1 * 2,
                 else_func=lambda: data1 * 3,
@@ -1867,7 +1869,8 @@ def test_output_format_while():
             self.step = step
         def hybrid_forward(self, F, states):
             def cond(state1):
-                return state1.slice_axis(axis=0, begin=0, end=1)
+                scalar = state1.slice_axis(axis=0, begin=0, end=1)
+                return scalar == scalar
             out, states = F.contrib.while_loop(cond, self.step, [states], max_iterations=5)
             return out, states
 
@@ -1901,6 +1904,45 @@ def test_output_format_while():
             assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
         for i in range(len(state1)):
             assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
+
+
+def test_output_format_cond():
+    class TestLayer1(gluon.HybridBlock):
+        def __init__(self, func, prefix=None, params=None):
+            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+            self.func = func
+        def hybrid_forward(self, F, data):
+            def then_func():
+                return self.func(data)
+            def else_func():
+                return self.func(data)
+            return F.contrib.cond(data.slice_axis(axis=0, begin=0, end=1),
+                    then_func, else_func)
+
+    def func1(data):
+        return data
+    def func2(data):
+        return [data]
+    def func3(data):
+        return [data, data]
+
+    funcs = [func1, func2, func3]
+    data = mx.nd.normal(loc=0, scale=1, shape=(2))
+    for func in funcs:
+        layer1 = TestLayer1(func)
+        layer1.initialize(ctx=default_context())
+        layer2 = TestLayer1(func)
+        layer2.initialize(ctx=default_context())
+        layer2.hybridize()
+        out1 = layer1(data)
+        out2 = layer2(data)
+        func_out = func(data)
+        assert type(out1) == type(func_out)
+        assert type(out2) == type(func_out)
+        out1 = _as_list(out1)
+        out2 = _as_list(out2)
+        for i in range(len(out1)):
+            assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
 
 if __name__ == '__main__':

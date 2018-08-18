@@ -454,21 +454,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
-    def _to_symbol_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
-        a tuple of mxnet Symbol, into a tuple of Symbol
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, Symbol):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
-        for item in inputs:
-            if not isinstance(item, Symbol):
-                raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
-        return inputs
-
     def _cond_wrapper(loop_vars):
         result = cond(*loop_vars)
         if not isinstance(result, Symbol):
@@ -565,7 +550,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars = _to_symbol_tuple(loop_vars, "loop_vars")
+    loop_vars, _ = _flatten(loop_vars, "loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -647,20 +632,6 @@ def cond(pred, then_func, else_func, name="cond"):
     >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.sym.contrib.cond(pred, then_func, else_func)
     """
-    def _to_symbol_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet Symbol, a list of mxnet Symbol,
-        a tuple of mxnet Symbol, into a tuple of Symbol
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, Symbol):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
-        for item in inputs:
-            if not isinstance(item, Symbol):
-                raise ValueError("%s must be a Symbol, or a tuple or list of Symbol" % (name, ))
-        return inputs
 
     def _create_subgraph(graph_vars, graph_func, subgraph_name):
         subgraph_name = _get_unique_subgraph_name(subgraph_name)
@@ -669,7 +640,7 @@ def cond(pred, then_func, else_func, name="cond"):
             # them feed them to the given func
             new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
             outputs = graph_func(*new_graph_vars)
-            outputs = _to_symbol_tuple(outputs, "outputs")
+            outputs, out_fmt = _flatten(outputs, "outputs")
             num_outputs = len(outputs)
             # nnvm cut-graph does not allow inputs and outputs overlap
             # so we calculate the name of inputs, and copy outputs once it overlaps with inputs
@@ -680,7 +651,7 @@ def cond(pred, then_func, else_func, name="cond"):
             make_identity = lambda x: symbol.op.identity(x) if in_input(x) or not in_graph(x) \
                                       else x
             graph = symbol.Group(list(map(make_identity, outputs)))
-        return graph, num_outputs
+        return graph, num_outputs, out_fmt
 
     def _union_inputs(*graphs):
         # Given a list of graphs, each whose inputs are either from input_vars or other variables.
@@ -722,13 +693,13 @@ def cond(pred, then_func, else_func, name="cond"):
         return inputs, locs
     inputs = []
     # create graph for `cond_func'
-    cond_g, cond_num_outputs = _create_subgraph(inputs, lambda: pred, name + "_pred")
+    cond_g, cond_num_outputs, _ = _create_subgraph(inputs, lambda: pred, name + "_pred")
     if cond_num_outputs != 1:
         raise ValueError("pred should always be a single output")
     # create graph for `then`
-    then_g, then_num_outputs = _create_subgraph(inputs, then_func, name + "_then")
+    then_g, then_num_outputs, then_fmt = _create_subgraph(inputs, then_func, name + "_then")
     # create graph for `else`
-    else_g, else_num_outputs = _create_subgraph(inputs, else_func, name + "_else")
+    else_g, else_num_outputs, else_fmt = _create_subgraph(inputs, else_func, name + "_else")
     if then_num_outputs != else_num_outputs:
         raise ValueError("Number of outputs differs between then-branch and else-branch")
     # find symbols used in either cond_g or func_g
@@ -745,4 +716,6 @@ def cond(pred, then_func, else_func, name="cond"):
         else_input_locs=else_input_locs,
         num_outputs=then_num_outputs
     )
-    return [result[i] for i in range(then_num_outputs)]
+    outputs = [result[i] for i in range(then_num_outputs)]
+    outputs, _ = _regroup(outputs, then_fmt)
+    return outputs

@@ -323,21 +323,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
-    def _to_ndarray_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet NDArray, a list of mxnet NDArray,
-        a tuple of mxnet NDArray, into a tuple of NDArray
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, ndarray.NDArray):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        for item in inputs:
-            if not isinstance(item, ndarray.NDArray):
-                raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        return inputs
-
     def _func_wrapper(loop_vars):
         """This wrapper unifies
              "func: loop_vars -> new_loop_vars"
@@ -362,7 +347,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars = _to_ndarray_tuple(loop_vars, "loop_vars")
+    loop_vars, _ = _flatten(loop_vars, "loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -418,12 +403,12 @@ def cond(pred, then_func, else_func):
     `then_func` is a user-defined function, used as computation of the then branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `then_func` should be
-    `then_func() => List[NDArray]`.
+    `then_func() => NDArray or List[NDArray]`.
 
     `else_func` is a user-defined function, used as computation of the else branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `else_func` should be
-    `else_func() => List[NDArray]`.
+    `else_func() => NDArray or List[NDArray]`.
 
     The `outputs` produces by `then_func` and `else_func` should have the same number
     of elements, all of which should be in the same shape, of the same dtype and stype.
@@ -441,7 +426,7 @@ def cond(pred, then_func, else_func):
 
     Returns
     -------
-    outputs: a list of NDArrays, representing the result of computation.
+    outputs: an NDArray or a list of NDArrays, representing the result of computation.
 
     Examples
     --------
@@ -466,26 +451,8 @@ def cond(pred, then_func, else_func):
             raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
-    def _to_ndarray_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet NDArray, a list of mxnet NDArray,
-        a tuple of mxnet NDArray, into a tuple of NDArray
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, ndarray.NDArray):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        for item in inputs:
-            if not isinstance(item, ndarray.NDArray):
-                raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        return inputs
-
     branch = _to_python_scalar(pred, bool, "pred")
     if branch:
-        outputs = then_func()
-        outputs = _to_ndarray_tuple(outputs, "outputs of then_func")
+        return then_func()
     else:
-        outputs = else_func()
-        outputs = _to_ndarray_tuple(outputs, "outputs of else_func")
-    return list(outputs)
+        return else_func()
