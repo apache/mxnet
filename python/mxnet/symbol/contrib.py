@@ -699,7 +699,7 @@ def cond(pred, then_func, else_func, name="cond"):
     # create graph for `then`
     then_g, then_num_outputs, then_fmt = _create_subgraph(inputs, then_func, name + "_then")
     # create graph for `else`
-    else_g, else_num_outputs, else_fmt = _create_subgraph(inputs, else_func, name + "_else")
+    else_g, else_num_outputs, _ = _create_subgraph(inputs, else_func, name + "_else")
     if then_num_outputs != else_num_outputs:
         raise ValueError("Number of outputs differs between then-branch and else-branch")
     # find symbols used in either cond_g or func_g

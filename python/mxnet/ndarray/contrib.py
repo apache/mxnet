@@ -21,7 +21,6 @@
 import math
 from ..context import current_context
 from ..random import uniform
-from ..base import _as_list
 from . import ndarray
 try:
     from .gen_contrib import *
