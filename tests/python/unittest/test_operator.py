@@ -3689,6 +3689,14 @@ def test_order():
     a_npy = a_npy.reshape(dshape)
     a = mx.sym.Variable('a')
 
+    def get_large_matrix():
+      data = np.array([np.arange(300096).astype(np.float32)])
+      data = np.repeat(data, 100, axis=0)
+      np.apply_along_axis(np.random.shuffle, 1, data)
+      return data
+
+    large_matrix_npy = get_large_matrix()
+
     for axis in [1, 3, None]:
         K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
         for k in K:
@@ -3707,6 +3715,15 @@ def test_order():
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
             check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
             check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
+
+    b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
+    check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
+                            out_grads=[np.random.normal(size=(100, 5))],
+                            expected=[np.zeros((100, 300096))])
+    check_symbolic_forward(b, location={'a': large_matrix_npy},
+                           expected=[gt_topk(dat=large_matrix_npy, axis=1,
+                                             ret_typ="indices", k=5,
+                                             is_ascend=is_ascend)])
 
     b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
     check_symbolic_backward(sym=b, location={'a': a_npy},
