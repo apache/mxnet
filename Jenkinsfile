@@ -302,17 +302,18 @@ core_logic: {
         }
       }
     },
-    'TensorRT': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-tensorrt') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
-            utils.pack_lib('tensorrt', mx_tensorrt_lib)
-          }
-        }
-      }
-    },
+    // Disabled due to flaky failures https://github.com/apache/incubator-mxnet/issues/12234
+    // 'TensorRT': {
+    //   node(NODE_LINUX_CPU) {
+    //     ws('workspace/build-tensorrt') {
+    //       timeout(time: max_time, unit: 'MINUTES') {
+    //         utils.init_git()
+    //         utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+    //         utils.pack_lib('tensorrt', mx_tensorrt_lib)
+    //       }
+    //     }
+    //   }
+    // },
     'Build CPU windows':{
       node(NODE_WINDOWS_CPU) {
         timeout(time: max_time, unit: 'MINUTES') {
@@ -628,22 +629,23 @@ core_logic: {
         }
       }
     },
-    'Python3: TensorRT GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/build-tensorrt') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.init_git()
-              utils.unpack_lib('tensorrt', mx_tensorrt_lib)
-              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
-            }
-          }
-        }
-      }
-    },
+    // Disabled due to flaky build failures: https://github.com/apache/incubator-mxnet/issues/12234
+    // 'Python3: TensorRT GPU': {
+    //   node(NODE_LINUX_GPU_P3) {
+    //     ws('workspace/build-tensorrt') {
+    //       timeout(time: max_time, unit: 'MINUTES') {
+    //         try {
+    //           utils.init_git()
+    //           utils.unpack_lib('tensorrt', mx_tensorrt_lib)
+    //           utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+    //           utils.publish_test_coverage()
+    //         } finally {
+    //           utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+    //         }
+    //       }
+    //     }
+    //   }
+    // },
     'Scala: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-cpu') {
