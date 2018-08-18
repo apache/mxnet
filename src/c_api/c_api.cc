@@ -122,6 +122,12 @@ int MXGetGPUCount(int* out) {
   API_END();
 }
 
+int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem) {
+  API_BEGIN();
+  Context::GetGPUMemoryInformation(dev, free_mem, total_mem);
+  API_END();
+}
+
 int MXGetVersion(int *out) {
   API_BEGIN();
   *out = static_cast<int>(MXNET_VERSION);

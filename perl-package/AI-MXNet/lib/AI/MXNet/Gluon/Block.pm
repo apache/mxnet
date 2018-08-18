@@ -855,20 +855,20 @@ package AI::MXNet::Gluon::HybridBlock;
 
 =head2 DESCRIPTION
 
-    `HybridBlock` supports forwarding with both Symbol and NDArray.
+    HybridBlock supports forwarding with both Symbol and NDArray.
 
-    Forward computation in `HybridBlock` must be static to work with `Symbol`s,
-    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on tensors.
+    Forward computation in HybridBlock must be static to work with Symbols,
+    i.e. you cannot call aspdl, shape, dtype, etc on tensors.
     Also, you cannot use branching or loop logic that bases on non-constant
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.
 
-    Before activating with `hybridize()`, `HybridBlock` works just like normal
-    `Block`. After activation, `HybridBlock` will create a symbolic graph
+    Before activating with hybridize(), HybridBlock works just like normal
+    Block. After activation, HybridBlock will create a symbolic graph
     representing the forward computation and cache it. On subsequent forwards,
-    the cached graph will be used instead of `hybrid_forward`.
+    the cached graph will be used instead of hybrid_forward.
 
-    Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
+    Refer Hybrid tutorial L<http://mxnet.io/tutorials/gluon/hybrid.html> to see
     the end-to-end usage.
 =cut
 
@@ -1141,7 +1141,7 @@ method _call_cached_op(@args)
 =head2 forward
 
         Defines the forward computation. Arguments can be either
-        `NDArray` or `Symbol`.
+        NDArray or Symbol
 =cut
 
 method forward($x, @args)
@@ -1225,12 +1225,12 @@ method hybrid_forward($F, $x, @args)
         or the C++ interface.
 
         When there are only one input, it will have name 'data'. When there
-        Are more than one inputs, they will be named as `data0`, `data1`, etc.
+        Are more than one inputs, they will be named as 'data0', 'data1', etc.
 
         Parameters
         ----------
         $path : str
-            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            Path to save model. Two files 'path-symbol.json' and 'path-xxxx.params'
             will be created, where xxxx is the 4 digits epoch number.
         :$epoch=0 : Int
             Epoch number of saved model.
@@ -1298,20 +1298,20 @@ extends 'AI::MXNet::Gluon::HybridBlock';
 
     Examples
     --------
-    >>> # To extract the feature from fc1 and fc2 layers of AlexNet:
-    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
-                                                 prefix='model_')
-    >>> inputs = mx.sym.var('data')
-    >>> out = alexnet(inputs)
-    >>> internals = out.get_internals()
-    >>> print(internals.list_outputs())
+    >>> # To extract the feature from fc1 and fc2 layers of AlexNet
+    >>> $alexnet = gluon->model_zoo->vision->alexnet(pretrained=>1, ctx=>mx->cpu(),
+                                                 prefix=>'model_');
+    >>> $inputs = mx->sym->var('data');
+    >>> $out = $alexnet->($inputs);
+    >>> $internals = $out->get_internals()
+    >>> print($internals->list_outputs())
     ['data', ..., 'model_dense0_relu_fwd_output', ..., 'model_dense1_relu_fwd_output', ...]
-    >>> outputs = [internals['model_dense0_relu_fwd_output'],
-                   internals['model_dense1_relu_fwd_output']]
+    >>> $outputs = [$internals->slice('model_dense0_relu_fwd_output'),
+                   $internals->slice('model_dense1_relu_fwd_output')];
     >>> # Create SymbolBlock that shares parameters with alexnet
-    >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
-    >>> print(feat_model(x))
+    >>> $feat_model = gluon->SymbolBlock($outputs, $inputs, params=>$alexnet->collect_params());
+    >>> $x = mx->nd->random_normal(shape=>[16, 3, 224, 224]);
+    >>> print($feat_model->($x));
 =cut
 
 has [qw/outputs inputs/] => (is => 'rw', isa => 'AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]');

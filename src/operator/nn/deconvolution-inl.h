@@ -113,7 +113,8 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
       .add_enum("NDHWC", mshadow::kNDHWC)
       .set_default(dmlc::optional<int>())
       .describe("Set layout for input, output and weight. Empty for "
-                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d."
+                "NHWC and NDHWC are only supported on GPU.");
   }
 
   template<size_t ndim>

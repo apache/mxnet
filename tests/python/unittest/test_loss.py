@@ -83,8 +83,8 @@ def test_ce_loss():
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
-@with_seed(1234)
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11691
+@with_seed()
 def test_bce_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20))
@@ -107,7 +107,7 @@ def test_bce_loss():
     prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
     label_npy = label.asnumpy()
     npy_bce_loss = - label_npy * np.log(prob_npy) - (1 - label_npy) * np.log(1 - prob_npy)
-    assert_almost_equal(mx_bce_loss, npy_bce_loss)
+    assert_almost_equal(mx_bce_loss, npy_bce_loss, rtol=1e-4, atol=1e-5)
 
 @with_seed()
 def test_bce_equal_ce2():
@@ -129,7 +129,7 @@ def test_logistic_loss_equal_bce():
     assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
     assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
 
-@with_seed(1234)
+@with_seed()
 def test_kl_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -274,7 +274,7 @@ def test_saveload():
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-@with_seed(1234)
+@with_seed()
 def test_huber_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -328,7 +328,7 @@ def test_squared_hinge_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_triplet_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
