@@ -3923,8 +3923,6 @@ def test_grid_generator():
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1234)
 def test_bilinear_sampler():
     from math import floor
 
