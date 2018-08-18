@@ -100,6 +100,41 @@ def rand_zipfian(true_classes, num_sampled, range_max):
     expected_count_sampled = expected_prob_sampled * num_sampled
     return sampled_classes, expected_count_true, expected_count_sampled
 
+
+def _flatten(args, inout_str):
+    if isinstance(args, symbol.Symbol):
+        length = len(args.list_outputs())
+        length = length if length > 1 else 0
+        return [args], int(length)
+
+    assert isinstance(args, (list, tuple)), \
+        "HybridBlock %s must be (nested) list of Symbol or NDArray, " \
+        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
+    flat = []
+    fmts = []
+    for i in args:
+        arg, fmt = _flatten(i, inout_str)
+        flat.extend(arg)
+        fmts.append(fmt)
+    return flat, fmts
+
+
+def _regroup(args, fmt):
+    if isinstance(fmt, int):
+        if fmt == 0:
+            return args[0], args[1:]
+        return args[:fmt], args[fmt:]
+
+    assert isinstance(args, (list, tuple)), \
+        "HybridBlock output must be (nested) list of Symbol or NDArray, " \
+        "but got %s of type %s"%(str(args), str(type(args)))
+    ret = []
+    for i in fmt:
+        res, args = _regroup(args, i)
+        ret.append(res)
+    return ret, args
+
+
 def _get_graph_inputs(subg):
     num_handles = ctypes.c_int(0)
     handles = ctypes.POINTER(SymbolHandle)()
@@ -201,14 +236,14 @@ def foreach(body, data, init_states, name="foreach"):
         Define computation in an iteration.
     data: a symbol or a list of symbols.
         The input data.
-    init_states: a symbol or a list of symbols.
+    init_states: a list of symbols.
         The initial values of the loop states.
     name: string.
         The name of the operator.
 
     Returns
     -------
-    outputs: a list of Symbols.
+    outputs: a Symbol or a list of Symbols.
         The output data concatenated from the output of all iterations.
     states: a list of Symbols.
         The loop states in the last iteration.
@@ -234,7 +269,6 @@ def foreach(body, data, init_states, name="foreach"):
 
     check_data(data, symbol.Symbol, "data should be a symbol or a list of symbols")
     check_data(init_states, symbol.Symbol, "init_states should be a symbol or a list of symbols")
-    not_state_list = isinstance(init_states, symbol.Symbol)
 
     # If the input python function references to the symbols outside
     # the python function, we need to prune the computation graph constructed from
@@ -260,6 +294,8 @@ def foreach(body, data, init_states, name="foreach"):
             assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
                     "the number of output states (%d) should be the same as input states (%d)" \
                     % (len(sym_states), len(init_states))
+        sym_out, out_fmt = _flatten(sym_out, "flatten the outputs of Symbol foreach")
+        sym_states, state_fmt = _flatten(sym_states, "flatten the states of Symbol foreach")
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
@@ -328,14 +364,11 @@ def foreach(body, data, init_states, name="foreach"):
     outs = []
     for i in range(num_outputs - num_states):
         outs.append(ret[i])
+    outs, _ = _regroup(outs, out_fmt)
     states = []
     for i in range(num_states):
         states.append(ret[num_outputs - num_states + i])
-
-    if not_state_list:
-        # If there is only one input state, there should be only one output state.
-        assert len(states) == 1
-        states = states[0]
+    states, _ = _regroup(states, state_fmt)
 
     return (outs, states)
 
@@ -397,9 +430,9 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
 
     Returns
     ------
-    outputs: list of Symbols
+    outputs: a Symbol or a list of Symbols
         stacked output from each step
-    states: list of Symbols
+    states: a list of Symbols
         final state
 
     Examples
@@ -440,7 +473,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         result = cond(*loop_vars)
         if not isinstance(result, Symbol):
             raise ValueError("Return of cond must be a Symbol")
-        return [], [result]
+        return [], [result], [], []
 
     def _func_wrapper(loop_vars):
         """This wrapper unifies
@@ -453,11 +486,15 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             step_output = []
         if new_loop_vars is None:
             new_loop_vars = []
-        step_output = _to_symbol_tuple(step_output, "step_output")
-        new_loop_vars = _to_symbol_tuple(new_loop_vars, "new_loop_vars")
+        if isinstance(step_output, tuple):
+            step_output = list(step_output)
+        if isinstance(new_loop_vars, tuple):
+            new_loop_vars = list(new_loop_vars)
+        step_output, out_fmt = _flatten(step_output, "step_output")
+        new_loop_vars, var_fmt = _flatten(new_loop_vars, "new_loop_vars")
         if len(loop_vars) != len(new_loop_vars):
             raise ValueError("The number of loop_vars should be consistent during the loop")
-        return list(step_output), list(new_loop_vars)
+        return step_output, new_loop_vars, out_fmt, var_fmt
 
     def _create_subgraph(graph_vars, graph_func, subgraph_name):
         subgraph_name = _get_unique_subgraph_name(subgraph_name)
@@ -465,7 +502,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             # create new variables with the same name,
             # them feed them to the given func
             new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
-            outputs, final_state = graph_func(new_graph_vars)
+            outputs, final_state, out_fmt, var_fmt = graph_func(new_graph_vars)
             # first `num_out_data` elements belong to `outputs`
             # other elements belong to `final_state`
             num_out_data = len(outputs)
@@ -479,7 +516,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             make_identity = lambda x: symbol.op.identity(x) if in_input(x) or not in_graph(x) \
                                       else x
             graph = symbol.Group(list(map(make_identity, outputs + final_state)))
-        return graph, num_out_data, num_outputs
+        return graph, num_out_data, num_outputs, out_fmt, var_fmt
 
     def _union_inputs(*graphs):
         # Given a list of graphs, each whose inputs are either from loop_vars or other variables.
@@ -534,12 +571,12 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     if len(loop_vars) == 0:
         raise ValueError("loop_vars should contain at least one element")
     # create graph for `cond'
-    cond_g, num_out_data, num_outputs = \
+    cond_g, num_out_data, num_outputs, _, _ = \
         _create_subgraph(loop_vars, _cond_wrapper, name + "_cond")
     assert num_out_data == 0
     assert num_outputs == 1
     # create graph for `func`
-    func_g, num_out_data, num_outputs = \
+    func_g, num_out_data, num_outputs, out_fmt, var_fmt = \
         _create_subgraph(loop_vars, _func_wrapper, name + "_func")
     # find symbols used in either cond_g or func_g
     input_syms, ((cond_input_locs, _), (func_input_locs, func_var_locs)) = \
@@ -560,7 +597,9 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         num_outputs=num_outputs
     )
     outputs = [result[i] for i in range(num_out_data)]
+    outputs, _ = _regroup(outputs, out_fmt)
     final_loop_vars = [result[i] for i in range(num_out_data, num_outputs)]
+    final_loop_vars, _ = _regroup(final_loop_vars, var_fmt)
     return outputs, final_loop_vars
 
 def cond(pred, then_func, else_func, name="cond"):
