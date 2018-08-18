@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.gan
 
-import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
 import org.apache.mxnet.optimizer.Adam
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -146,29 +146,31 @@ object GanMnist {
       t = 0
       while (mnistIter.hasNext) {
         dataBatch = mnistIter.next()
-        gMod.update(dataBatch)
-        gMod.dLabel.set(0f)
-        metricAcc.update(Array(gMod.dLabel), gMod.outputsFake)
-        gMod.dLabel.set(1f)
-        metricAcc.update(Array(gMod.dLabel), gMod.outputsReal)
+        NDArrayCollector.auto().withScope {
+          gMod.update(dataBatch)
+          gMod.dLabel.set(0f)
+          metricAcc.update(Array(gMod.dLabel), gMod.outputsFake)
+          gMod.dLabel.set(1f)
+          metricAcc.update(Array(gMod.dLabel), gMod.outputsReal)
 
-        if (t % 50 == 0) {
-          val (name, value) = metricAcc.get
-          acc = value(0)
-          logger.info(s"epoch: $epoch, iter $t, metric=${value.mkString(" ")}")
-          Viz.imSave("gout", outputPath, gMod.tempOutG(0), flip = true)
-          val diff = gMod.tempDiffD
-          val arr = diff.toArray
-          val mean = arr.sum / arr.length
-          val std = {
-            val tmpA = arr.map(a => (a - mean) * (a - mean))
-            Math.sqrt(tmpA.sum / tmpA.length).toFloat
+          if (t % 50 == 0) {
+            val (name, value) = metricAcc.get
+            acc = value(0)
+            logger.info(s"epoch: $epoch, iter $t, metric=${value.mkString(" ")}")
+            Viz.imSave("gout", outputPath, gMod.tempOutG(0), flip = true)
+            val diff = gMod.tempDiffD
+            val arr = diff.toArray
+            val mean = arr.sum / arr.length
+            val std = {
+              val tmpA = arr.map(a => (a - mean) * (a - mean))
+              Math.sqrt(tmpA.sum / tmpA.length).toFloat
+            }
+            diff.set((diff - mean) / std + 0.5f)
+            Viz.imSave("diff", outputPath, diff, flip = true)
+            Viz.imSave("data", outputPath, dataBatch.data(0), flip = true)
           }
-          diff.set((diff - mean) / std + 0.5f)
-          Viz.imSave("diff", outputPath, diff, flip = true)
-          Viz.imSave("data", outputPath, dataBatch.data(0), flip = true)
         }
-
+        dataBatch.dispose()
         t += 1
       }
     }
