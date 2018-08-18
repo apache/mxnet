@@ -2907,13 +2907,9 @@ def test_roipooling():
 
 def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
     # bind with label
-    real_types = ["float16", "float32", "float64"]
     X = mx.symbol.Variable('X', dtype=dtype)
     Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
-    if dtype in real_types:
-        x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
-    else:
-        x = mx.nd.ones(shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
     # numpy result
     pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
     np_out = np.pad(x.asnumpy(), pad_grouped, mode)
@@ -2925,26 +2921,25 @@ def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
     # compare numpy + mxnet
     assert_almost_equal(out, np_out)
     # grad check
-    if dtype in real_types:
-        check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
+    check_numeric_gradient(Y, [x.asnumpy()], numeric_eps=1e-2, rtol=1e-2)
 
 
 @with_seed()
 def test_pad():
-    ct = default_context()
+    ctx = default_context()
     shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
     shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     # note: this op doesn't support ints yet. Add tests when supported
-    test_types = ["float32", "float64", "float16"]
-    for d in test_types:
-        check_pad_with_shape(shape1, ct, pad1, 'constant', d)
-        check_pad_with_shape(shape1, ct, pad1, 'edge', d)
-        check_pad_with_shape(shape2, ct, pad2, 'constant', d)
-        check_pad_with_shape(shape2, ct, pad2, 'edge', d)
-        check_pad_with_shape(shape1, ct, pad1, 'reflect', d)
-        check_pad_with_shape(shape2, ct, pad2, 'reflect', d)
+    test_types = ["float16", "float32", "float64"]
+    for dtype in dtypes:
+        check_pad_with_shape(shape1, ctx, pad1, 'constant', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'edge', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'constant', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'edge', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'reflect', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'reflect', dtype)
 
 
 def np_instance_norm(data, weight, bias, eps):
