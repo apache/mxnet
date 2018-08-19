@@ -86,20 +86,10 @@
   ([start stop  {:keys [step repeat ctx dtype]
                  :or {step (float 1) repeat (int 1) ctx (mx-context/default-context) dtype base/MX_REAL_TYPE}
                  :as opts}]
-   (NDArray/arange (float start) ($/option (float stop)) step repeat false ctx dtype))
+   (NDArray/arange (float start) ($/option (float stop)) step repeat ctx dtype))
   ([start stop]
    (arange start stop {})))
-
-(defn arange-with-inference
-  "Behaves like arange operator, but infers the stop value from the output shape,
-   which must be known from the rest of the net."
-  ([start stop  {:keys [step repeat ctx dtype]
-                 :or {step (float 1) repeat (int 1) ctx (mx-context/default-context) dtype base/MX_REAL_TYPE}
-                 :as opts}]
-   (NDArray/arange (float start) ($/option (float stop)) step repeat true ctx dtype))
-  ([start stop]
-   (arange start stop {})))
-
+  
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
   ([ndarray i]
