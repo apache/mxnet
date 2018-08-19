@@ -5106,6 +5106,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
 
     return output_offset
 
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
 @with_seed()
 def test_deformable_psroipooling():
     sample_per_part = 4
