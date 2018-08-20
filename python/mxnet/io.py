@@ -745,42 +745,81 @@ class NDArrayIter(DataIter):
                     ]]) for x in data_source
             ]
         else:
+            # if self.last_batch_handle == 'roll_over':
+            #     assert self._cache_data is not None or self._cache_label is not None, \
+            #         'next epoch should have cached data'
+            #     cache_data = self._cache_data if self._cache_data is not None else self._cache_label
+            #     data = [
+            #         concat(cache_data[0], x[1][:self.cursor + self.batch_size], dim=0)
+            #         if isinstance(x[1], (np.ndarray, NDArray)) else
+            #         concat(
+            #             cache_data[0],
+            #             array(x[1][sorted(self.idx[:self.cursor + self.batch_size])][[
+            #                 list(self.idx[:self.cursor + self.batch_size]).index(i)
+            #                 for i in sorted(self.idx[:self.cursor + self.batch_size])
+            #             ]]), dim=0
+            #         ) for x in data_source
+            #     ]
+            #     if self._cache_data is not None:
+            #         self._cache_data = None
+            #     else:
+            #         self._cache_label = None
+            #     return data
+            # else:
+            #     pad = self.batch_size - self.num_data + self.cursor
+            #     data = [
+            #         # np.ndarray or NDArray case
+            #         concat(x[1][self.cursor:], x[1][:pad], dim=0)
+            #         if isinstance(x[1], (np.ndarray, NDArray)) else
+            #         # h5py (only supports indices in increasing order)
+            #         concat(
+            #             array(x[1][sorted(self.idx[self.cursor:])][[
+            #                 list(self.idx[self.cursor:]).index(i)
+            #                 for i in sorted(self.idx[self.cursor:])
+            #             ]]),
+            #             array(x[1][sorted(self.idx[:pad])][[
+            #                 list(self.idx[:pad]).index(i)
+            #                 for i in sorted(self.idx[:pad])
+            #             ]]), dim=0
+            #         ) for x in data_source
+            #     ]
+            #     return data
             if self.last_batch_handle == 'roll_over':
                 assert self._cache_data is not None or self._cache_label is not None, \
                     'next epoch should have cached data'
                 cache_data = self._cache_data if self._cache_data is not None else self._cache_label
-                if isinstance(data_source[0][1], (np.ndarray, NDArray)):
-                    data = [x[1][:self.cursor + self.batch_size] for x in data_source]
-                else:
-                    data = [array(x[1][sorted(self.idx[:self.cursor + self.batch_size])][[
-                        list(self.idx[:self.cursor + self.batch_size]).index(i)
-                        for i in sorted(self.idx[:self.cursor + self.batch_size])
-                        ]]) for x in data_source]
-                
-                data = concat(cache_data[0], data[0], dim=0)
+            if self.last_batch_handle == 'roll_over':
+                first_data = cache_data
+            elif isinstance(data_source[0][1], (np.ndarray, NDArray)):
+                first_data = [x[1][self.cursor:] for x in data_source]
+            else:
+                first_data = [
+                    array(x[1][sorted(self.idx[self.cursor:])][[
+                        list(self.idx[self.cursor:]).index(i)
+                        for i in sorted(self.idx[self.cursor:])
+                    ]]) for x in data_source]
+            if self.last_batch_handle == 'roll_over':
+                second_idx = self.cursor + self.batch_size
+            else:
+                # pad
+                second_idx = self.batch_size - self.num_data + self.cursor
+            data = [
+                concat(first_data[0], x[1][:second_idx], dim=0)
+                if isinstance(x[1], (np.ndarray, NDArray)) else
+                concat(
+                    first_data[0],
+                    array(x[1][sorted(self.idx[:second_idx])][[
+                        list(self.idx[:second_idx]).index(i)
+                        for i in sorted(self.idx[:second_idx])
+                    ]]), dim=0
+                ) for x in data_source
+            ]
+            if self.last_batch_handle == 'roll_over':
                 if self._cache_data is not None:
                     self._cache_data = None
                 else:
                     self._cache_label = None
-                return [data]
-            else:
-                pad = self.batch_size - self.num_data + self.cursor
-                return [
-                    # np.ndarray or NDArray case
-                    concat(x[1][self.cursor:], x[1][:pad], dim=0)
-                    if isinstance(x[1], (np.ndarray, NDArray)) else
-                    # h5py (only supports indices in increasing order)
-                    concat(
-                        array(x[1][sorted(self.idx[self.cursor:])][[
-                            list(self.idx[self.cursor:]).index(i)
-                            for i in sorted(self.idx[self.cursor:])
-                        ]]),
-                        array(x[1][sorted(self.idx[:pad])][[
-                            list(self.idx[:pad]).index(i)
-                            for i in sorted(self.idx[:pad])
-                        ]]), dim=0
-                    ) for x in data_source
-                ]
+            return data
 
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
