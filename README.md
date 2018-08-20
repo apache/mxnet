@@ -15,7 +15,7 @@ MXNet.jl is the [dmlc/mxnet](https://github.com/dmlc/mxnet) [Julia](http://julia
 * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
 * Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
 
-The current support julia version is 0.6. Julia 0.7/1.0 is 
+The current support julia version is 0.6. Julia 0.7/1.0 is not supported yet.
 
 Here is an example of how training a simple 3-layer MLP on MNIST looks like:
 
