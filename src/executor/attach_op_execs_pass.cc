@@ -234,6 +234,7 @@ class FComputeExExecutor : public MKLDNNOpExecutor {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
+    // TODO (alex): (MXNET-847) Remove this fallback feature after subgraph implemented
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
     if (!is_mkldnn.get(attrs_.op, false)) {
       in_array_fallback = CreateDefaultInputs(in_array);
