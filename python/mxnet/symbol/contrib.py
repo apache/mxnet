@@ -296,6 +296,8 @@ def foreach(body, data, init_states, name="foreach"):
                     % (len(sym_states), len(init_states))
         sym_out, out_fmt = _flatten(sym_out, "foreach output")
         sym_states, state_fmt = _flatten(sym_states, "foreach loop_vars")
+        _, in_state_fmt = _flatten(states, "foreach input loop_vars")
+        assert in_state_fmt == state_fmt, "The input and output loop_vars have different format"
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
