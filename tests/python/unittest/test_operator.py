@@ -2932,7 +2932,7 @@ def test_pad():
     shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
     # note: this op doesn't support ints yet. Add tests when supported
-    test_types = ["float16", "float32", "float64"]
+    dtypes = ["float16", "float32", "float64"]
     for dtype in dtypes:
         check_pad_with_shape(shape1, ctx, pad1, 'constant', dtype)
         check_pad_with_shape(shape1, ctx, pad1, 'edge', dtype)
