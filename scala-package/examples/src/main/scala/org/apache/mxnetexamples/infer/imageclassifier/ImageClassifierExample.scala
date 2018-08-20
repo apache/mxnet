@@ -28,13 +28,13 @@ import java.io.File
 
 import scala.collection.mutable.ListBuffer
 
+// scalastyle:off
 /**
   * <p>
   * Example inference showing usage of the Infer package on a resnet-152 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/sca\
-  * la-package/examples/src/main/scala/org/apache/mxnetexamples/infer/im\
-  * ageclassifier" target="_blank">Instructions to run this example</a>
+  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier" target="_blank">Instructions to run this example</a>
   */
+// scalastyle:on
 object ImageClassifierExample {
 
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
