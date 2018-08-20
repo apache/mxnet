@@ -54,6 +54,7 @@ symbol_buckets <- sapply(bucket_list, function(seq) {
             masking = T)
 })
 
+# Accuracy on Training Data = 0.84066
 model_sentiment_lstm <- mx.model.buckets(symbol = symbol_buckets,
                                          train.data = train.data,
                                          eval.data = eval.data,
@@ -62,7 +63,9 @@ model_sentiment_lstm <- mx.model.buckets(symbol = symbol_buckets,
                                          verbose = FALSE,
                                          metric = mx.metric.accuracy,
                                          optimizer = optimizer,
-                                         initializer = mx.init.Xavier(rnd_type = "gaussian", factor_type = "in", magnitude = 2),
+                                         initializer = mx.init.Xavier(rnd_type = "gaussian",
+                                                                      factor_type = "in",
+                                                                      magnitude = 2),
                                          batch.end.callback = mx.callback.log.train.metric(period = 50),
                                          epoch.end.callback = NULL)
 
@@ -83,6 +86,7 @@ while (eval.data$iter.next()) {
 
 ylabel <- as.array(packer$get())
 
+# Accuracy on Test Data = 0.81194
 acc <- sum(ylabel == ypred)/length(ylabel)
 
 message(paste("Acc:", acc))
