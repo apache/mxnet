@@ -421,8 +421,8 @@ def test_non_mkldnn_fcomputeex():
 
     data = mx.symbol.Variable('data')
     conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
-    mlp = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
-    exec1 = mlp.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
+    exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
 
