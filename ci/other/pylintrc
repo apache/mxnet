@@ -111,7 +111,6 @@ disable=
     invalid-unary-operand-type,
     chained-comparison,
     consider-using-dict-comprehension,
-    consider-using-in,
     consider-using-set-comprehension,
     invalid-envvar-default,
     singleton-comparison,
