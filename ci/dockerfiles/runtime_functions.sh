@@ -163,7 +163,7 @@ build_armv7() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
-        -DUSE_OPENMP=ON \
+        -DUSE_OPENMP=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
