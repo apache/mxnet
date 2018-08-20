@@ -108,7 +108,7 @@ def _flatten(args, inout_str):
         return [args], int(length)
 
     assert isinstance(args, (list, tuple)), \
-        "HybridBlock %s must be (nested) list of Symbol or NDArray, " \
+        "%s must be (nested) list of Symbol, " \
         "but got %s of type %s"%(inout_str, str(args), str(type(args)))
     flat = []
     fmts = []
@@ -126,7 +126,7 @@ def _regroup(args, fmt):
         return args[:fmt], args[fmt:]
 
     assert isinstance(args, (list, tuple)), \
-        "HybridBlock output must be (nested) list of Symbol or NDArray, " \
+        "output must be (nested) list of Symbol, " \
         "but got %s of type %s"%(str(args), str(type(args)))
     ret = []
     for i in fmt:
@@ -294,8 +294,8 @@ def foreach(body, data, init_states, name="foreach"):
             assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
                     "the number of output states (%d) should be the same as input states (%d)" \
                     % (len(sym_states), len(init_states))
-        sym_out, out_fmt = _flatten(sym_out, "flatten the outputs of Symbol foreach")
-        sym_states, state_fmt = _flatten(sym_states, "flatten the states of Symbol foreach")
+        sym_out, out_fmt = _flatten(sym_out, "foreach output")
+        sym_states, state_fmt = _flatten(sym_states, "foreach loop_vars")
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
@@ -475,8 +475,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             step_output = list(step_output)
         if isinstance(new_loop_vars, tuple):
             new_loop_vars = list(new_loop_vars)
-        step_output, out_fmt = _flatten(step_output, "step_output")
-        new_loop_vars, var_fmt = _flatten(new_loop_vars, "new_loop_vars")
+        step_output, out_fmt = _flatten(step_output, "while output")
+        new_loop_vars, var_fmt = _flatten(new_loop_vars, "while loop_vars")
         if len(loop_vars) != len(new_loop_vars):
             raise ValueError("The number of loop_vars should be consistent during the loop")
         return step_output, new_loop_vars, out_fmt, var_fmt
@@ -550,7 +550,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars, _ = _flatten(loop_vars, "loop_vars")
+    loop_vars, _ = _flatten(loop_vars, "while loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -640,7 +640,7 @@ def cond(pred, then_func, else_func, name="cond"):
             # them feed them to the given func
             new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
             outputs = graph_func(*new_graph_vars)
-            outputs, out_fmt = _flatten(outputs, "outputs")
+            outputs, out_fmt = _flatten(outputs, "cond outputs")
             num_outputs = len(outputs)
             # nnvm cut-graph does not allow inputs and outputs overlap
             # so we calculate the name of inputs, and copy outputs once it overlaps with inputs

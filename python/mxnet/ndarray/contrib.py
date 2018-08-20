@@ -103,7 +103,7 @@ def _flatten(args, inout_str):
         return [args], int(0)
 
     assert isinstance(args, (list, tuple)), \
-        "HybridBlock %s must be (nested) list of Symbol or NDArray, " \
+        "%s must be (nested) list of NDArray, " \
         "but got %s of type %s"%(inout_str, str(args), str(type(args)))
     flat = []
     fmts = []
@@ -121,7 +121,7 @@ def _regroup(args, fmt):
         return args[:fmt], args[fmt:]
 
     assert isinstance(args, (list, tuple)), \
-        "HybridBlock output must be (nested) list of Symbol or NDArray, " \
+        "output must be (nested) list of NDArray, " \
         "but got %s of type %s"%(str(args), str(type(args)))
     ret = []
     for i in fmt:
@@ -212,7 +212,7 @@ def foreach(body, data, init_states):
         else:
             eles = [d[i] for d in data]
         outs, states = body(eles, states)
-        outs, out_fmt = _flatten(outs, "flatten the outputs of NDArray foreach")
+        outs, out_fmt = _flatten(outs, "foreach output")
         outputs.append(outs)
     outputs = zip(*outputs)
     tmp_outputs = []
@@ -337,8 +337,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             step_output = list(step_output)
         if isinstance(new_loop_vars, tuple):
             new_loop_vars = list(new_loop_vars)
-        step_output, out_fmt = _flatten(step_output, "step_output")
-        new_loop_vars, var_fmt = _flatten(new_loop_vars, "new_loop_vars")
+        step_output, out_fmt = _flatten(step_output, "while output")
+        new_loop_vars, var_fmt = _flatten(new_loop_vars, "while loop_vars")
         if len(loop_vars) != len(new_loop_vars):
             raise ValueError("The length of loop_vars should be consistent during the loop")
         return step_output, new_loop_vars, out_fmt, var_fmt
@@ -346,7 +346,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars, _ = _flatten(loop_vars, "loop_vars")
+    loop_vars, _ = _flatten(loop_vars, "while loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
