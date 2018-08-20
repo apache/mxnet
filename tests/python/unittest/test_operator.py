@@ -6415,7 +6415,6 @@ def test_quadratic_function():
     def f(x, a, b, c):
         return a * x**2 + b * x + c
 
-    ctx = default_context()
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
@@ -6430,12 +6429,12 @@ def test_quadratic_function():
             # check forward
             check_symbolic_forward(quad_sym, [data_np], [expected],
                                     rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                    atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward
             check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
                                         [backward_expected],
                                         rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                                        atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 

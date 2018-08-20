@@ -551,14 +551,12 @@ module `mxnet.symbol.quadratic` or `mx.sym.quadratic` for short.
 In order to unit test it in frontend, we need to add the following code
 to the python file `test_operator.py`. A typical operator implementation
 tests for both the `symbol` API and the `ndarray` API. In this tutorial 
-we will go over the symbol API test. Note that while testing
-the `ndarray` API is pretty straight forward as we are testing only the
-forward pass of the operator, testing for the `symbol` API is more involved
-as it tests the complete functionality of the operator - the forward pass,
-the backward pass and the gradient computation in the operator implementation.
-To facilitate the testing of these functionalities we use three helper
+we will go over the symbol API test. The `symbol` API test, tests for the
+complete functionality of the operator - the forward pass, the backward
+pass and the gradient computation in the operator implementation. To
+facilitate the testing of these functionalities we use three helper
 functions available in the `mxnet.test_utils` module:
- - `check_symbolic_forward `
+ - `check_symbolic_forward`
  - `check_symbolic_backward`
  - `check_numeric_gradient`
 
@@ -567,7 +565,6 @@ def test_quadratic_function():
     def f(x, a, b, c):
         return a * x**2 + b * x + c
 
-    ctx = default_context()
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
@@ -596,22 +593,33 @@ In the above test we create a `quadratic` symbol and feed it into the three
 utility functions. The `check_symbolic_forward` and `check_symbolic_backward`
 tests the computed values against the expected values that we pass
 as an argument to the function. The `check_numeric_gradient` utility function
-will perform a perturbation on the input and calculate the response rate of the
-output using the [finite difference method](https://en.wikipedia.org/wiki/Finite_difference_method).
+performs [gradient checking](http://ufldl.stanford.edu/tutorial/supervised/DebuggingGradientChecking/)
+to verify the implementation for the backward function of the operator.
+It will perform a perturbation on the input and calculate the response
+rate of the output using the
+[finite difference method](https://en.wikipedia.org/wiki/Finite_difference_method).
 Then it will compare the gradient from the backward pass with the values
 from the finite difference method. All three of these tests will be successful
 once the comparison satisfies user specified `rtol` and `atol` values. Here `rtol`
 and `atol` expand to relative tolerance and absolute tolerance respectively. They
 are used to specify how far the computed values can deviate from the expected values.
-They are defined as follows -
+They are defined as follows
 ```
-|Expected Value - Computed Value| < RTOL * |Expected Value| + ATOL
+|Expected Value - Computed Value| < RTOL * |Expected Value| + ATOL.
 ```
+
 For example, if `rtol` is `1e-5` and `atol` is `1e-5` and the expected value is
 `1.5623145`, then the computed value should lie within the range of
 `(1.562288876855, 1.562340123145)` else the test will fail. Make sure you
 tune the `rtol` and `atol` values accordingly. Giving very low values for `rtol`
-and `atol` will likely make the test very flaky.
+and `atol` will likely make the test very flaky. It is recommended that you
+use the flakiness checker tool to check if the test you have written is flaky
+or not. You can run the flakiness checker tool for the above test with the
+following command -
+
+```bash
+python tools/flakiness_checker.py test_operator.test_quadratic_function
+```
 
 Please note that for `check_symbolic_forward` and `check_symbolic_backward` we pass
 both the operator symbols and expected results for comparison, for
