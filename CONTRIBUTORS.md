@@ -177,3 +177,4 @@ List of Contributors
 * [Istvan Fehervari](https://github.com/ifeherva)
 * [Aaron Markham](https://github.com/aaronmarkham)
 * [Sam Skalicky](https://github.com/samskalicky)
+* [Per Goncalves da Silva](https://github.com/perdasilva)
