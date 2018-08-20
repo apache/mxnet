@@ -1215,5 +1215,5 @@
 
 %typemap(in) (void* callback_handle)
 {
-    $1 = (void*)$input;
+    $1 = (void*)newSVsv($input);
 }

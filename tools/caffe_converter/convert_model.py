@@ -77,9 +77,8 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
     layers_proto = caffe_parser.get_layers(caffe_parser.read_prototxt(prototxt_fname))
 
     for layer_name, layer_type, layer_blobs in layer_iter:
-        if layer_type == 'Convolution' or layer_type == 'InnerProduct'  \
-           or layer_type == 4 or layer_type == 14 or layer_type == 'PReLU' \
-           or layer_type == 'Deconvolution' or layer_type == 39:
+        if layer_type in ('Convolution', 'InnerProduct', 4, 14, 'PReLU', 'Deconvolution',
+                          39):
             if layer_type == 'PReLU':
                 assert (len(layer_blobs) == 1)
                 weight_name = layer_name + '_gamma'
@@ -99,7 +98,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             wmat = np.array(layer_blobs[0].data).reshape(wmat_dim)
 
             channels = wmat_dim[1]
-            if channels == 3 or channels == 4:  # RGB or RGBA
+            if channels in (3, 4):  # RGB or RGBA
                 if first_conv:
                     # Swapping BGR of caffe into RGB in mxnet
                     wmat[:, [0, 2], :, :] = wmat[:, [2, 0], :, :]
@@ -133,8 +132,7 @@ def convert_model(prototxt_fname, caffemodel_fname, output_prefix=None):
             arg_params[weight_name] = mx.nd.zeros(wmat.shape)
             arg_params[weight_name][:] = wmat
 
-
-            if first_conv and (layer_type == 'Convolution' or layer_type == 4):
+            if first_conv and layer_type in ('Convolution', 4):
                 first_conv = False
 
         elif layer_type == 'Scale':

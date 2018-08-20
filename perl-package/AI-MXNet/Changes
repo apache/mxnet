@@ -1,4 +1,10 @@
 Revision history for Perl extension AI::MXNet
+
+1.32    Sun Aug  5 14:25:31 PDT 2018
+        - Several new metric classes
+        - Expanded documentation
+        - Bugfixes.
+
 1.31    Tue Jul 10 21:19:13 PDT 2018
         - Memory leak fix for Gluon API
         - Added summary function for Gluon models

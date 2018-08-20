@@ -46,6 +46,9 @@
 #include <limits>
 
 #include "../operator/mxnet_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#endif
 
 namespace mxnet {
 namespace common {
@@ -468,6 +471,10 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+#endif
 }
 
 // heuristic to dermine number of threads per GPU
@@ -673,6 +680,37 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
   int k = 1;
   while (a >>= 1) ++k;
   return k;
+}
+
+/*!
+ * \brief Return an NDArray of all zeros.
+ */
+inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                         const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+/*!
+ * \brief Helper to add a NDArray of zeros to a std::vector.
+ */
+inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
 }
 
 }  // namespace common

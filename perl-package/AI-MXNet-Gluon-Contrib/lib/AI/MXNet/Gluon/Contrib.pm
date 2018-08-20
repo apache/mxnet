@@ -15,10 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+package AI::MXNet::Gluon::Contrib;
 use strict;
 use warnings;
 use AI::MXNet;
 use AI::MXNet::Gluon::Contrib::NN::BasicLayers;
-our $VERSION = '1.3';
+our $VERSION = '1.32';
+=head1 NAME 
+
+    AI::MXNet::Gluon::Contrib - A collection of supplemental Gluon blocks.
+=cut
 
 1;
