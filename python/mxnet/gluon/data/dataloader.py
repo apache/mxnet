@@ -160,7 +160,8 @@ def _as_in_context(data, ctx):
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
-    dataset._fork()
+    if hasattr(dataset, '_fork') and callable(dataset._fork):
+        dataset._fork()
     while True:
         idx, samples = key_queue.get()
         if idx is None:
@@ -182,7 +183,8 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False):
 
 class _MultiWorkerIter(object):
     """Interal multi-worker iterator for DataLoader."""
-    def __init__(self, num_workers, dataset, batchify_fn, batch_sampler, pin_memory=False):
+    def __init__(self, num_workers, dataset, batchify_fn, batch_sampler, pin_memory=False,
+                 worker_fn=worker_loop):
         assert num_workers > 0, "_MultiWorkerIter is not for {} workers".format(num_workers)
         self._num_workers = num_workers
         self._dataset = dataset
@@ -199,7 +201,7 @@ class _MultiWorkerIter(object):
         workers = []
         for _ in range(self._num_workers):
             worker = multiprocessing.Process(
-                target=worker_loop,
+                target=worker_fn,
                 args=(self._dataset, self._key_queue, self._data_queue, self._batchify_fn))
             worker.daemon = True
             worker.start()

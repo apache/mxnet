@@ -926,7 +926,7 @@ core_logic: {
         timeout(time: max_time, unit: 'MINUTES') {
           utils.init_git()
           utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-          sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
         }
       }
     }
