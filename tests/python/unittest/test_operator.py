@@ -3940,6 +3940,7 @@ def test_grid_generator():
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12248")
 def test_bilinear_sampler():
     from math import floor
 
