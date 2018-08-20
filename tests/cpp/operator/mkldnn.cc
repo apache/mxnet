@@ -1230,7 +1230,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
   std::vector<OpReqType> req(forward_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
-  std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
