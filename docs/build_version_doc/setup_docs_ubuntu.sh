@@ -110,10 +110,10 @@ sudo apt-get update && sudo apt-get install -y \
 wget -nv https://bootstrap.pypa.io/get-pip.py
 echo "Installing for Python 3..."
 sudo python3 get-pip.py
-pip3 install --user -r ../../ci/docker/install/docs_requirements
+pip3 install --user -r ../../ci/dockerfiles/install/docs_requirements.txt
 echo "Installing for Python 2..."
 sudo python2 get-pip.py
-pip2 install --user -r ../../ci/docker/install/docs_requirements
+pip2 install --user -r ../../ci/dockerfiles/install/docs_requirements.txt
 
 
 cd ../../
