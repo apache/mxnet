@@ -34,8 +34,8 @@ import scala.collection.mutable.ListBuffer
   * Example single shot detector (SSD) using the Infer package
   * on a ssd_resnet50_512 model.
   * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/s\
-  *      cala-package/examples/src/main/scala/org/apache/mxnetexamples/in\
-  *      fer/objectdetector" target="_blank">Instructions to run this example</a>
+  * cala-package/examples/src/main/scala/org/apache/mxnetexamples/in\
+  * fer/objectdetector" target="_blank">Instructions to run this example</a>
   */
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
