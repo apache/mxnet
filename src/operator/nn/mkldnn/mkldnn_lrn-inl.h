@@ -207,7 +207,7 @@ void MKLDNNLRNBackward(const OpContext &ctx, const LRNParam &param,
     return;
   }
 
-  // TODO(alex): figure out why in_grad output incorrect when in_data is nchw8c
+  // TODO(alex): (MXNET-846) figure out why in_grad output incorrect when in_data is nchw8c
   auto in_buffer = in_data;
   if (in_buffer.IsMKLDNNData()) {
     in_buffer = in_data.Reorder2Default();
