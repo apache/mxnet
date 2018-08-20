@@ -88,10 +88,12 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFComputeFallback);
+  } else if (dev_mask == mshadow::cpu::kDevMask) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                         dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
   }
 #endif
   storage_type_assign(out_attrs, mxnet::kDefaultStorage,
@@ -106,15 +108,16 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFComputeFallback);
+  } else if (dev_mask == mshadow::cpu::kDevMask) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                         dispatch_mode, DispatchMode::kFComputeEx);
-    return true;
   }
 #endif
-  storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                       dispatch_mode, DispatchMode::kFCompute);
-  return true;
 }
 
 #if MXNET_USE_MKLDNN == 1
@@ -204,6 +207,8 @@ NNVM_REGISTER_OP(_backward_LRN)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
+// Native compute requires norm while MKLDNN does not so cannot be compared in debug mode
+.set_attr<bool>("TExcludeMKLDNNDebug", true)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 

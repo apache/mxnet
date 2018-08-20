@@ -20,9 +20,28 @@ use strict;
 use warnings;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Base;
+
 =head1 NAME
 
-    AI::MXNet::Engine - Engine properties management.
+    AI::MXNet::Engine - Allows management of properties of the MXNet's engine.
+=cut
+
+=head1 SYNOPSIS
+
+    my $x;
+    mx->engine->bulk(10, sub {
+        $x = mx->nd->ones([10]);
+        $x *= 2;
+        $x += 1;
+        $x->wait_to_read();
+        $x += 1;
+        ok(($x->aspdl == 4)->all);
+        for my $i (1..100)
+        {
+            $x += 1;
+        }
+    });
+    ok(($x->aspdl == 104)->all);
 =cut
 
 =head2 set_bulk_size

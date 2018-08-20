@@ -690,6 +690,7 @@ class CuDNNConvolutionOp {
       const int kMaxAlgos = 10;
       int nalgo = kMaxAlgos;
       int i = 0;
+      size_t min_memory_needs = 0;
       // Forward Algorithm Find/Get, v6 and earlier
       if (CUDNN_MAJOR == 6 && param_.layout.value() == mshadow::kNHWC) {
         // In cuDNNv6, for kNHWC, only CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM is
@@ -720,10 +721,16 @@ class CuDNNConvolutionOp {
         while (i < nalgo
                && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == conv::kLimited
-                       && fwd_algo[i].memory > workspace_byte)))
+                       && fwd_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs =
+            (i == 0) ? fwd_algo[i].memory : std::min(min_memory_needs, fwd_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a forward convolution algorithm.";
+          LOG(FATAL) << nalgo << " forward algorithms with minimum memory requirement "
+                     << min_memory_needs << " bytes have been tried. Workspace size is set to "
+                     << workspace_byte << " bytes, please consider reducing the batch/model size, "
+                     << "or increasing workspace size.";
         } else {
           forward_algo_.Set(fwd_algo[i].algo, false);
         }
@@ -754,10 +761,17 @@ class CuDNNConvolutionOp {
         while (i < nalgo
                && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == conv::kLimited
-                       && bwd_filter_algo[i].memory > workspace_byte)))
+                       && bwd_filter_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs = (i == 0) ?
+                             bwd_filter_algo[i].memory :
+                             std::min(min_memory_needs, bwd_filter_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a backward filter convolution algorithm.";
+          LOG(FATAL) << nalgo << " backward filter algorithms with minimum memory requirement "
+                     << min_memory_needs << " bytes have been tried. Workspace size is set to "
+                     << workspace_byte << " bytes, please consider reducing the batch/model size, "
+                     << "or increasing workspace size.";
         } else {
           back_algo_w_.Set(bwd_filter_algo[i].algo, false);
         }
@@ -788,10 +802,17 @@ class CuDNNConvolutionOp {
         while (i < nalgo
                && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
                    || (param_.cudnn_tune.value() == conv::kLimited
-                       && bwd_data_algo[i].memory > workspace_byte)))
+                       && bwd_data_algo[i].memory > workspace_byte))) {
           ++i;
+          min_memory_needs = (i == 0) ?
+                             bwd_data_algo[i].memory :
+                             std::min(min_memory_needs, bwd_data_algo[i].memory);
+        }
         if (i == nalgo) {
-          LOG(FATAL) << "Failed to find a backward data convolution algorithm.";
+          LOG(FATAL) << nalgo << " backward data algorithms with minimum memory requirement "
+                     << min_memory_needs << " bytes have been tried. Workspace size is set to "
+                     << workspace_byte << " bytes, please consider reducing the batch/model size, "
+                     << "or increasing workspace size.";
         } else {
           back_algo_.Set(bwd_data_algo[i].algo, false);
         }
@@ -846,7 +867,9 @@ class CuDNNConvolutionOp {
       }
     }
     auto mode = param_.cudnn_tune.value() == conv::kOff ? " get " : " find ";
-    LOG(FATAL) << "Failed to" << mode << "any " << kernel_name << " convolution algorithm.";
+    LOG(FATAL) << "Failed to" << mode << "any " << kernel_name << " convolution algorithm. "
+               << " with workspace size of " << workspace_byte << " bytes,"
+               << " please consider reducing batch/model size or increasing the workspace size";
   }
 
   void GetTempSize(const OpContext& ctx) {

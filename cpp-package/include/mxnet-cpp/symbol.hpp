@@ -172,6 +172,14 @@ inline std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   return ret;
 }
 
+inline std::string Symbol::GetName() const {
+  int success;
+  const char* out_name;
+  CHECK_EQ(MXSymbolGetName(GetHandle(), &out_name, &success), 0);
+  CHECK_EQ(success, 1);
+  return std::string(out_name);
+}
+
 inline void Symbol::InferShape(
     const std::map<std::string, std::vector<mx_uint> > &arg_shapes,
     std::vector<std::vector<mx_uint> > *in_shape,

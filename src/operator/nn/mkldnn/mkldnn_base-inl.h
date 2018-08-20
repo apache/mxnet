@@ -137,6 +137,11 @@ static inline bool SupportMKLDNN(const NDArray &input) {
       && SupportStorageMKLDNN(input.storage_type());
 }
 
+static inline bool MKLDNNEnvSet() {
+  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_ENABLED", true);
+  return is_mkldnn_enabled;
+}
+
 /*
  * This is to align address to a certain alignment.
  */
