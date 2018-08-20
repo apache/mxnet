@@ -259,6 +259,8 @@ class SyncBatchNorm : public Operator {
                        const std::vector<TBlob> &aux_states) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using namespace mshadow_op;
+    using namespace mxnet_op;
     CHECK_EQ(in_data.size(), 3U);
     CHECK_EQ(aux_states.size(), 2U);
     if (ctx.is_train) {
@@ -271,69 +273,102 @@ class SyncBatchNorm : public Operator {
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const real_t scale = static_cast<real_t>(in_data[syncbatchnorm::kData].shape_[1]) /
-      static_cast<real_t>(in_data[syncbatchnorm::kData].shape_.Size());
-    Tensor<xpu, 4> data;
-    Tensor<xpu, 4> out;
-    if (in_data[syncbatchnorm::kData].ndim() == 2) {
-      Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
-                               in_data[syncbatchnorm::kData].shape_[1], 1, 1);
-      data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
-      out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-    } else {
-      data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
-      out = out_data[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
-    }
-    Tensor<xpu, 1> slope = in_data[syncbatchnorm::kGamma].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> bias = in_data[syncbatchnorm::kBeta].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> moving_mean = aux_states[syncbatchnorm::kMovingMean].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> moving_var = aux_states[syncbatchnorm::kMovingVar].get<xpu, 1, real_t>(s);
+    MSHADOW_TYPE_SWITCH(in_data[syncbatchnorm::kData].type_flag_, DType, {
+      const bool is_double = std::is_same<DType, double>::value;
+      CHECK_EQ(is_double, false)
+        << "Synchronized BatchNorm does not support double-precision floating number yet...";
+      const real_t scale = static_cast<real_t>(in_data[syncbatchnorm::kData].shape_[1]) /
+        static_cast<real_t>(in_data[syncbatchnorm::kData].shape_.Size());
+      const size_t data_size = in_data[syncbatchnorm::kData].Size();
+      Tensor<xpu, 4> data;
+      Tensor<xpu, 4> out;
+      Tensor<xpu, 1> workspace;
+      if (!std::is_same<DType, real_t>::value) {
+        workspace = ctx.requested[syncbatchnorm::kTempSpace].get_space<xpu, 1>(
+          Shape1(data_size * 2), s);
+      }
+      if (in_data[syncbatchnorm::kData].ndim() == 2) {
+        Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
+                                in_data[syncbatchnorm::kData].shape_[1], 1, 1);
+        if (std::is_same<DType, real_t>::value) {
+          data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
+          out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
+        } else {
+          data = Tensor<xpu, 4>(workspace.dptr_, dshape, s);
+          out = Tensor<xpu, 4>(workspace.dptr_ + data_size, dshape, s);
+        }
+      } else {
+        if (std::is_same<DType, real_t>::value) {
+          data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
+          out = out_data[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
+        } else {
+          Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
+                                   in_data[syncbatchnorm::kData].shape_[1],
+                                   in_data[syncbatchnorm::kData].shape_[2],
+                                   in_data[syncbatchnorm::kData].shape_[3]);
+          data = Tensor<xpu, 4>(workspace.dptr_, dshape, s);
+          out = Tensor<xpu, 4>(workspace.dptr_ + data_size, dshape, s);
+        }
+      }
+      if (!std::is_same<DType, real_t>::value) {
+        Kernel<identity_with_cast, xpu>::Launch(
+          s, data.shape_.Size(), data.dptr_, in_data[syncbatchnorm::kData].dptr<DType>());
+      }
+      Tensor<xpu, 1> slope = in_data[syncbatchnorm::kGamma].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> bias = in_data[syncbatchnorm::kBeta].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> moving_mean = aux_states[syncbatchnorm::kMovingMean].get<xpu, 1, real_t>(s);
+      Tensor<xpu, 1> moving_var = aux_states[syncbatchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
-    if (param_.fix_gamma) slope = 1.f;
+      if (param_.fix_gamma) slope = 1.f;
 
-    // whether use global statistics
-    if (ctx.is_train && !param_.use_global_stats) {
-      // get my rank
-      Barrier *global_barrier = global_shared_barrier_forward.Register(param_.key, param_.ndev);
-      int myRank = global_shared_rank_forward.Register(param_.key, param_.ndev);
-      // get the mean and var
-      Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
-      Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
-      CHECK(req[syncbatchnorm::kMean] == kNullOp || req[syncbatchnorm::kMean] == kWriteTo);
-      CHECK(req[syncbatchnorm::kVar] == kNullOp || req[syncbatchnorm::kVar] == kWriteTo);
-      // E(x) and E(x^2)
-      mean = scale * sumall_except_dim<1>(data);
-      var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data));
-      SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
-        global_shared_mean.Register(param_.key, param_.ndev);
-      SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedVar =
-        global_shared_var.Register(param_.key, param_.ndev);
-      // copy to cpu, push and pull
-      Tensor<cpu, 1, real_t>* mean_cpu_ptr = sharedMean->Retrieve(mean.shape_, myRank);
-      Tensor<cpu, 1, real_t>* var_cpu_ptr = sharedVar->Retrieve(mean.shape_, myRank);
-      mshadow::Copy(*mean_cpu_ptr, mean, s);
-      mshadow::Copy(*var_cpu_ptr, var, s);
-      sharedMean->SetReady(myRank);
-      sharedVar->SetReady(myRank);
-      global_barrier->Wait();
-      Tensor<cpu, 1, real_t> mean_cpu = sharedMean->Pop(myRank);
-      Tensor<cpu, 1, real_t> var_cpu = sharedVar->Pop(myRank);
-      // copy back to gpu
-      mshadow::Copy(mean, mean_cpu, s);
-      mshadow::Copy(var, var_cpu, s);
+      // whether use global statistics
+      if (ctx.is_train && !param_.use_global_stats) {
+        // get my rank
+        Barrier *global_barrier = global_shared_barrier_forward.Register(param_.key, param_.ndev);
+        int myRank = global_shared_rank_forward.Register(param_.key, param_.ndev);
+        // get the mean and var
+        Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
+        Tensor<xpu, 1> var = out_data[syncbatchnorm::kVar].get<xpu, 1, real_t>(s);
+        CHECK(req[syncbatchnorm::kMean] == kNullOp || req[syncbatchnorm::kMean] == kWriteTo);
+        CHECK(req[syncbatchnorm::kVar] == kNullOp || req[syncbatchnorm::kVar] == kWriteTo);
+        // E(x) and E(x^2)
+        mean = scale * sumall_except_dim<1>(data);
+        var = scale * sumall_except_dim<1>(F<mshadow_op::square>(data));
+        SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedMean =
+          global_shared_mean.Register(param_.key, param_.ndev);
+        SharedND<mshadow::Tensor<cpu, 1, real_t>> *sharedVar =
+          global_shared_var.Register(param_.key, param_.ndev);
+        // copy to cpu, push and pull
+        Tensor<cpu, 1, real_t>* mean_cpu_ptr = sharedMean->Retrieve(mean.shape_, myRank);
+        Tensor<cpu, 1, real_t>* var_cpu_ptr = sharedVar->Retrieve(mean.shape_, myRank);
+        mshadow::Copy(*mean_cpu_ptr, mean, s);
+        mshadow::Copy(*var_cpu_ptr, var, s);
+        sharedMean->SetReady(myRank);
+        sharedVar->SetReady(myRank);
+        global_barrier->Wait();
+        Tensor<cpu, 1, real_t> mean_cpu = sharedMean->Pop(myRank);
+        Tensor<cpu, 1, real_t> var_cpu = sharedVar->Pop(myRank);
+        // copy back to gpu
+        mshadow::Copy(mean, mean_cpu, s);
+        mshadow::Copy(var, var_cpu, s);
 
-      var = var-F<mshadow_op::square>(mean);
-      Assign(out, req[syncbatchnorm::kOut], broadcast<1>(slope, out.shape_) *
-             (data - broadcast<1>(mean, data.shape_)) /
-             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-             broadcast<1>(bias, out.shape_));
-    } else {
-      Assign(out, req[syncbatchnorm::kOut], broadcast<1>(slope /
-                                          F<mshadow_op::square_root>(moving_var + param_.eps),
-                                          data.shape_) * data +
-             broadcast<1>(bias - (slope * moving_mean) /
-                          F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
-    }
+        var = var-F<mshadow_op::square>(mean);
+        Assign(out, req[syncbatchnorm::kOut], broadcast<1>(slope, out.shape_) *
+              (data - broadcast<1>(mean, data.shape_)) /
+              F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+              broadcast<1>(bias, out.shape_));
+      } else {
+        Assign(out, req[syncbatchnorm::kOut], broadcast<1>(slope /
+                                            F<mshadow_op::square_root>(moving_var + param_.eps),
+                                            data.shape_) * data +
+              broadcast<1>(bias - (slope * moving_mean) /
+                            F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+      }
+      if (!std::is_same<DType, real_t>::value) {
+        Kernel<identity_with_cast, xpu>::Launch(
+          s, out.shape_.Size(), out_data[syncbatchnorm::kOut].dptr<DType>(), out.dptr_);
+      }
+    });
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -343,6 +378,7 @@ class SyncBatchNorm : public Operator {
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &in_grad,
                         const std::vector<TBlob> &aux_states) {
+    // Adding this line with more than 100 chars in this line to prevent passing the lint checker!!!
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), param_.output_mean_var ? 3U : 1U);
@@ -530,6 +566,11 @@ class SyncBatchNormProp : public OperatorProperty {
 
   std::string TypeString() const override {
     return "_contrib_SyncBatchNorm";
+  }
+
+  std::vector<ResourceRequest> ForwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    return {ResourceRequest::kTempSpace};
   }
 
   std::vector<int> DeclareBackwardDependency(

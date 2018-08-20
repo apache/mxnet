@@ -193,10 +193,12 @@ def test_sync_batchnorm():
     if get_num_devices() < 2:
         return
     ndev = 2
+    dtypes = [np.float16, np.float32]
     # check with unsync version
     for i in range(10):
-        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                                num_devices=ndev, cuda=True)
+        for dtype in dtypes:
+            _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)).astype(dtype),
+                                    num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
     import nose
