@@ -30,7 +30,7 @@ object TestCharRnn {
 
   private val logger = LoggerFactory.getLogger(classOf[TrainCharRnn])
 
-  def runTestCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
+  def runInferenceCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
     // The batch size for training
     val batchSize = 32
     // We can support various length input
@@ -86,7 +86,7 @@ object TestCharRnn {
     try {
       parser.parseArgument(args.toList.asJava)
       assert(stcr.dataPath != null && stcr.modelPrefix != null && stcr.starterSentence != null)
-      runTestCharRNN(stcr.dataPath, stcr.modelPrefix, stcr.starterSentence)
+      runInferenceCharRNN(stcr.dataPath, stcr.modelPrefix, stcr.starterSentence)
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)

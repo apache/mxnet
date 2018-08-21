@@ -69,11 +69,11 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("Example CI: Test TestCharRNN") {
+  test("Example CI: Test Inference on CharRNN") {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val ctx = Context.gpu()
     NDArrayCollector.auto().withScope {
-      TestCharRnn.runTestCharRNN(tempDirPath + "/RNN/obama.txt",
+      TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
         tempDirPath + "/RNN/obama", "The joke")
     }
   }
