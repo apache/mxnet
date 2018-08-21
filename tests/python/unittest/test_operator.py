@@ -4522,13 +4522,18 @@ def test_where():
 @with_seed()
 def test_new_softmax():
     for ndim in range(1, 5):
-        for _ in range(5):
-            shape = np.random.randint(1, 5, size=ndim)
-            axis = np.random.randint(-ndim, ndim)
-            data = np.random.uniform(-2, 2, size=shape)
-            sym = mx.sym.softmax(axis=axis)
-            check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
-            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+        shape = np.random.randint(1, 5, size=ndim)
+        axis = np.random.randint(-ndim, ndim)
+        data = np.random.uniform(-2, 2, size=shape)
+        sym = mx.sym.softmax(axis=axis)
+        expected_fwd = np_softmax(data, axis=axis)
+        expected_bwd = np.zeros(shape)
+        check_symbolic_forward(sym, [data], [expected_fwd])
+        for req in ['null', 'add', 'write']:
+            check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                    rtol=1e-2, atol=1e-3, grad_req=req)
+        check_numeric_gradient(sym, [data], rtol=1e-2, atol=1e-3)
+
 
 @with_seed()
 def test_softmax_with_temperature():
@@ -5722,8 +5727,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-# test fails with seed 990952066: 0 output seen with dropout ratio=0. See issue #9816
-@with_seed(1234)
+@with_seed()
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -5775,6 +5779,7 @@ def test_dropout():
 
         exe.arg_arrays[0][:] = 1
         exe.forward(is_train=True)
+
         if not math.isnan(max_value):
             assert exe.outputs[0].asnumpy().max() > 0
         else:
