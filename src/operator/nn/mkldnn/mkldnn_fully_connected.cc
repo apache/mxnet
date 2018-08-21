@@ -137,7 +137,6 @@ class MKLDNNFullyConnectForward {
               mkldnn::primitive::at(*this->weight), *this->out));
     }
   }
-
   const mkldnn::inner_product_forward &GetIpFwd() const {
     return *ipFwd;
   }
