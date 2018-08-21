@@ -236,7 +236,7 @@ def foreach(body, data, init_states, name="foreach"):
         Define computation in an iteration.
     data: a symbol or a list of symbols.
         The input data.
-    init_states: a Symbol or a list of symbols.
+    init_states: a Symbol or nested lists of symbols.
         The initial values of the loop states.
     name: string.
         The name of the operator.
@@ -245,7 +245,7 @@ def foreach(body, data, init_states, name="foreach"):
     -------
     outputs: a Symbol or a list of Symbols.
         The output data concatenated from the output of all iterations.
-    states: a Symbol or a list of Symbols.
+    states: a Symbol or nested lists of Symbols.
         The loop states in the last iteration.
 
     Examples
@@ -267,8 +267,12 @@ def foreach(body, data, init_states, name="foreach"):
             is_NDArray_or_list = isinstance(inputs, in_type)
         assert is_NDArray_or_list, msg
 
-    check_data(data, symbol.Symbol, "data should be a symbol or a list of symbols")
-    check_data(init_states, symbol.Symbol, "init_states should be a symbol or a list of symbols")
+    flatten_data, data_fmt = _flatten(data, "foreach input")
+    check_data(flatten_data, symbol.Symbol,
+            "data should be a symbol or a nested list of symbols")
+    init_flatten_states, init_state_fmt = _flatten(init_states, "foreach states")
+    check_data(init_flatten_states, symbol.Symbol,
+            "init_states should be a symbol or a nested list of symbols")
 
     # If the input python function references to the symbols outside
     # the python function, we need to prune the computation graph constructed from
@@ -276,28 +280,19 @@ def foreach(body, data, init_states, name="foreach"):
     # with AttrScope and prune the nodes without the special attribute.
     name = _get_unique_subgraph_name(name)
     with AttrScope(__subgraph_name__=name):
-        if isinstance(data, list):
-            in_eles = [symbol.var(sym.name) for sym in data]
-        else:
-            in_eles = symbol.var(data.name)
-        if isinstance(init_states, list):
-            states = [symbol.var(s.name) for s in init_states]
-        else:
-            states = symbol.var(init_states.name)
+        in_eles = [symbol.var(sym.name) for sym in flatten_data]
+        in_eles, _ = _regroup(in_eles, data_fmt)
+        states = [symbol.var(s.name) for s in init_flatten_states]
+        states, _ = _regroup(states, copy.deepcopy(init_state_fmt))
         sym_out, sym_states = body(in_eles, states)
 
-        check_data(sym_out, symbol.Symbol,
-                   "the output should be an NDArray or a list of NDArrays")
-        check_data(sym_states, symbol.Symbol,
-                   "the output states should be an NDArray or a list of NDArrays")
-        if isinstance(sym_states, list):
-            assert isinstance(init_states, list) and len(sym_states) == len(init_states), \
-                    "the number of output states (%d) should be the same as input states (%d)" \
-                    % (len(sym_states), len(init_states))
         sym_out, out_fmt = _flatten(sym_out, "foreach output")
         sym_states, state_fmt = _flatten(sym_states, "foreach loop_vars")
-        _, in_state_fmt = _flatten(states, "foreach input loop_vars")
-        assert in_state_fmt == state_fmt, "The input and output loop_vars have different format"
+        assert init_state_fmt == state_fmt, "The input and output loop_vars have different format"
+        check_data(sym_out, symbol.Symbol,
+                   "the output should be an NDArray or a nested list of NDArrays")
+        check_data(sym_states, symbol.Symbol,
+                   "the output states should be an NDArray or a nested list of NDArrays")
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
@@ -315,17 +310,15 @@ def foreach(body, data, init_states, name="foreach"):
     gin_names = input_syms.keys()
     # This array contains the symbols for the inputs of foreach.
     # They are ordered according to the inputs of the subgraph.
-    init_states = _as_list(init_states)
-    state_names = [sym.name for sym in init_states]
-    data_syms = _as_list(data)
-    data_names = [sym.name for sym in data_syms]
+    state_names = [sym.name for sym in init_flatten_states]
+    data_names = [sym.name for sym in flatten_data]
     cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
     cut_var_names = cut_var_map.keys()
 
     subg_input_names = g.list_inputs()
     # ordered_ins contains input symbols in the following order:
     # data_syms, state_syms, followed by cut_vars and vars in the closure.
-    ordered_ins = data_syms
+    ordered_ins = copy.deepcopy(flatten_data)
     # this defines the location of data_syms in the list of subgraph inputs
     in_data_locs = []
     for dname in data_names:
@@ -335,7 +328,7 @@ def foreach(body, data, init_states, name="foreach"):
         else:
             raise AssertionError("the data arrays have to be used in the loop body")
 
-    ordered_ins.extend(init_states)
+    ordered_ins.extend(init_flatten_states)
     # this defines the location of state_syms in the list of subgraph inputs.
     in_state_locs = []
     for sname in state_names:

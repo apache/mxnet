@@ -167,7 +167,7 @@ def foreach(body, data, init_states):
         Define computation in an iteration.
     data: an NDArray or a list of NDArrays.
         The input data.
-    init_states: an NDArray or a list of NDArrays.
+    init_states: an NDArray or nested lists of NDArrays.
         The initial values of the loop states.
     name: string.
         The name of the operator.
@@ -176,7 +176,7 @@ def foreach(body, data, init_states):
     -------
     outputs: an NDArray or a list of NDArrays.
         The output data concatenated from the output of all iterations.
-    states: an NDArray or a list of NDArrays.
+    states: an NDArray or nested lists of NDArrays.
         The loop states in the last iteration.
 
     Examples
@@ -198,9 +198,12 @@ def foreach(body, data, init_states):
             is_NDArray_or_list = isinstance(inputs, in_type)
         assert is_NDArray_or_list, msg
 
-    check_input(data, ndarray.NDArray, "data should be an NDArray or a list of NDArrays")
-    check_input(init_states, ndarray.NDArray,
-                "init_states should be an NDArray or a list of NDArrays")
+    flatten, _ = _flatten(data, "foreach input")
+    check_input(flatten, ndarray.NDArray,
+            "data should be an NDArray or a nested list of NDArrays")
+    flatten, _ = _flatten(init_states, "foreach states")
+    check_input(flatten, ndarray.NDArray,
+                "init_states should be an NDArray or a nested list of NDArrays")
 
     not_data_list = isinstance(data, ndarray.NDArray)
     num_iters = data.shape[0] if not_data_list else data[0].shape[0]
