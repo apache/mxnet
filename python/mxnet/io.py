@@ -661,16 +661,13 @@ class NDArrayIter(DataIter):
         self.last_batch_handle = last_batch_handle
         self.batch_size = batch_size
         self.cursor = -self.batch_size
+        self.num_data = self.idx.shape[0]
         # shuffle
         self.reset()
-        # discard data with option discard
-        if last_batch_handle == 'discard':
-            self._discard_data()
 
         self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
         self.num_source = len(self.data_list)
-        self.num_data = self.idx.shape[0]
-
+        # used for 'roll_over'
         self._cache_data = None
         self._cache_label = None
 
@@ -692,17 +689,21 @@ class NDArrayIter(DataIter):
 
     def hard_reset(self):
         """Ignore roll over data and set to start."""
+        if self.shuffle:
+            self._shuffle()
         self.cursor = -self.batch_size
+        self._cache_data = None
+        self._cache_label = None
 
     def reset(self):
         if self.shuffle:
             self._shuffle()
-        if self.last_batch_handle == 'discard':
-            self._discard_data()
-        # last_batch_cursor = self.data[0][1].shape[0] - self.data[0][1].shape[0] % self.batch_size
+        # need to check if self.num_data exists
+        # the range below indicate the last batch
         if self.last_batch_handle == 'roll_over' and \
-                hasattr(self, 'num_data') and \
-                self.num_data - self.batch_size < self.cursor < self.num_data:
+            hasattr(self, 'num_data') and \
+            self.num_data - self.batch_size < self.cursor < self.num_data:
+            # self.cursor - self.num_data represents the data we have for the last batch
             self.cursor = self.cursor - self.num_data - self.batch_size
         else:
             self.cursor = -self.batch_size
@@ -712,86 +713,66 @@ class NDArrayIter(DataIter):
         return self.cursor < self.num_data
 
     def next(self):
-        if self.iter_next():
-            data = self.getdata()
-            label = self.getlabel()
-            if data[0].shape[0] != self.batch_size:
-                self._cache_data = data
-                self._cache_label = label
-                raise StopIteration
-            return DataBatch(data=data, label=label, \
-                    pad=self.getpad(), index=None)
-        else:
+        if not self.iter_next():
             raise StopIteration
+        data = self.getdata()
+        label = self.getlabel()
+        # iter should stop when last batch is not complete
+        if data[0].shape[0] != self.batch_size:
+        # in this case, cache it for next epoch
+            self._cache_data = data
+            self._cache_label = label
+            raise StopIteration
+        return DataBatch(data=data, label=label, \
+            pad=self.getpad(), index=None)
 
-    def _getdata(self, data_source, need_concat=False):
-        if not need_concat:
+    def _getdata(self, data_source, start=None, end=None):
+        assert start is not None or end is not None, 'should at least specify start or end'
+        start = start if start is not None else 0
+        end = end if end is not None else data_source[0][1].shape[0]
+        s = slice(start, end)
+        return [
+            x[1][s]
+            if isinstance(x[1], (np.ndarray, NDArray)) else
+            # h5py (only supports indices in increasing order)
+            array(x[1][sorted(self.idx[s])][[
+                list(self.idx[s]).index(i)
+                for i in sorted(self.idx[s])
+            ]]) for x in data_source
+        ]
+
+    def _concat(self, first_data, second_data):
+        return [
+            concat(first_data[0], second_data[0], dim=0)
+        ]
+
+    def _batchify(self, data_source):
+        """Load data from underlying arrays, internal use only."""
+        assert self.cursor < self.num_data, 'DataIter needs reset.'
+        if self.last_batch_handle == 'roll_over' and \
+            -self.batch_size < self.cursor < 0:
+            assert self._cache_data is not None or self._cache_label is not None, \
+                'next epoch should have cached data'
+            cache_data = self._cache_data if self._cache_data is not None else self._cache_label
+            second_data = self._getdata(
+                data_source, end=self.cursor + self.batch_size)
+            if self._cache_data is not None:
+                self._cache_data = None
+            else:
+                self._cache_label = None
+            return self._concat(cache_data, second_data)
+        elif self.last_batch_handle == 'pad' and \
+            self.cursor + self.batch_size > self.num_data:
+            pad = self.batch_size - self.num_data + self.cursor
+            first_data = self._getdata(data_source, start=self.cursor)
+            second_data = self._getdata(data_source, end=pad)
+            return self._concat(first_data, second_data)
+        else:
             if self.cursor + self.batch_size < self.num_data:
                 end_idx = self.cursor + self.batch_size
             else:
                 end_idx = self.num_data
-            return [
-                # np.ndarray or NDArray case
-                x[1][self.cursor:end_idx]
-                if isinstance(x[1], (np.ndarray, NDArray)) else
-                # h5py (only supports indices in increasing order)
-                array(x[1][sorted(self.idx[
-                    self.cursor:end_idx])][[
-                        list(self.idx[self.cursor:
-                                      end_idx]).index(i)
-                        for i in sorted(self.idx[
-                            self.cursor:end_idx])
-                    ]]) for x in data_source
-            ]
-        else:
-            if self.last_batch_handle == 'roll_over':
-                assert self._cache_data is not None or self._cache_label is not None, \
-                    'next epoch should have cached data'
-                cache_data = self._cache_data if self._cache_data is not None else self._cache_label
-            if self.last_batch_handle == 'roll_over':
-                first_data = cache_data
-            elif isinstance(data_source[0][1], (np.ndarray, NDArray)):
-                first_data = [x[1][self.cursor:] for x in data_source]
-            else:
-                first_data = [
-                    array(x[1][sorted(self.idx[self.cursor:])][[
-                        list(self.idx[self.cursor:]).index(i)
-                        for i in sorted(self.idx[self.cursor:])
-                    ]]) for x in data_source]
-            if self.last_batch_handle == 'roll_over':
-                second_idx = self.cursor + self.batch_size
-            else:
-                # pad
-                second_idx = self.batch_size - self.num_data + self.cursor
-            data = [
-                concat(first_data[0], x[1][:second_idx], dim=0)
-                if isinstance(x[1], (np.ndarray, NDArray)) else
-                concat(
-                    first_data[0],
-                    array(x[1][sorted(self.idx[:second_idx])][[
-                        list(self.idx[:second_idx]).index(i)
-                        for i in sorted(self.idx[:second_idx])
-                    ]]), dim=0
-                ) for x in data_source
-            ]
-            if self.last_batch_handle == 'roll_over':
-                if self._cache_data is not None:
-                    self._cache_data = None
-                else:
-                    self._cache_label = None
-            return data
-
-    def _batchify(self, data_source):
-        """Load data from underlying arrays, internal use only."""
-        assert self.cursor < self.num_data, "DataIter needs reset."
-        if self.last_batch_handle == 'roll_over' and \
-            -self.batch_size < self.cursor < 0:
-            return self._getdata(data_source, True)
-        elif self.last_batch_handle == 'pad' and \
-            self.cursor + self.batch_size > self.num_data:
-            return self._getdata(data_source, True)
-        else:
-            return self._getdata(data_source)
+            return self._getdata(data_source, self.cursor, end_idx)
 
     def getdata(self):
         return self._batchify(self.data)
@@ -814,11 +795,6 @@ class NDArrayIter(DataIter):
         np.random.shuffle(self.idx)
         self.data = _shuffle(self.data, self.idx)
         self.label = _shuffle(self.label, self.idx)
-
-    def _discard_data(self):
-        new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % self.batch_size
-        self.idx = self.idx[:new_n]
-        self.num_data = self.idx.shape[0]
 
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
