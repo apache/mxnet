@@ -121,7 +121,7 @@ class MKLDNNFullyConnectForward {
     if (bias != nullptr) {
       if (this->bias == nullptr)
         this->bias = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-            ipFwd_pd.bias_primitive_desc(), bias->get_data_handle()));
+        ipFwd_pd.bias_primitive_desc(), bias->get_data_handle()));
       else
         this->bias->set_data_handle(bias->get_data_handle());
       if (this->ipFwd == nullptr)
@@ -213,7 +213,7 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto data_mem = data.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.src_primitive_desc());
   auto weight_mem = weight.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.weights_primitive_desc());
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
-      FCFwd.ipFwd_pd.dst_primitive_desc(), req[fullc::kOut]);
+      FCFwd.ipFwd_pd.dst_primitive_desc(), req[fullc::kOut], &data);
   if (!param.no_bias) {
     auto bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(
         FCFwd.ipFwd_pd.bias_primitive_desc());
