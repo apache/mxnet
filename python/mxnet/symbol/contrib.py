@@ -380,7 +380,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     This operator simulates a while loop which iterately does customized computation
     as long as the condition is satisfied.
 
-    `loop_vars` is a list of Symbols on which the computation uses.
+    `loop_vars` is a Symbol or a list of Symbols on which the computation uses.
 
     `cond` is a user-defined function, used as the loop condition.
     It consumes `loop_vars`, and produces a scalar MXNet symbol,
@@ -396,7 +396,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
-    `func(*loop_vars) => (List[Symbol] step_output, List[Symbol] new_loop_vars)`.
+    `func(*loop_vars) => (Symbol or List[Symbol] step_output, Symbol or List[Symbol] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
@@ -425,7 +425,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         The loop condition.
     func: a Python function.
         The loop body.
-    loop_vars: list of Symbol.
+    loop_vars: a Symbol or list of Symbol.
         The initial values of the loop variables.
     max_iterations: a python int.
         Maximum number of iterations.
@@ -434,7 +434,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     ------
     outputs: a Symbol or a list of Symbols
         stacked output from each step
-    states: a list of Symbols
+    states: a Symbol or a list of Symbols
         final state
 
     Examples

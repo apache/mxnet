@@ -1885,29 +1885,56 @@ def test_output_format_foreach():
 
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, prefix=None, params=None):
+        def __init__(self, step, use_list, prefix=None, params=None):
             super(TestLayer1, self).__init__(prefix=prefix, params=params)
             self.step = step
+            self.use_list = use_list
         def hybrid_forward(self, F, states):
             def cond(state1):
                 scalar = state1.slice_axis(axis=0, begin=0, end=1)
                 return scalar == scalar
-            out, states = F.contrib.while_loop(cond, self.step, [states], max_iterations=5)
+            if self.use_list:
+                states = [states]
+            out, states = F.contrib.while_loop(cond, self.step, states, max_iterations=5)
             return out, states
 
     def step1(state):
         return state, state
     def step2(state):
-        return [state], state
+        if isinstance(state, list):
+            return state, state
+        else:
+            return [state], state
     def step3(state):
         return [], state
 
     steps = [step1, step2, step3]
     state = mx.nd.normal(loc=0, scale=1, shape=(2))
     for step in steps:
-        layer1 = TestLayer1(step)
+        layer1 = TestLayer1(step, False)
         layer1.initialize(ctx=default_context())
-        layer2 = TestLayer1(step)
+        layer2 = TestLayer1(step, False)
+        layer2.initialize(ctx=default_context())
+        layer2.hybridize()
+        out1, state1 = layer1(state)
+        out2, state2 = layer2(state)
+        step_out, step_state = step(state)
+        assert type(out1) == type(step_out)
+        assert type(out2) == type(step_out)
+        assert type(state1) == type(step_state)
+        assert type(state2) == type(step_state)
+        out1 = _as_list(out1)
+        out2 = _as_list(out2)
+        state1 = _as_list(state1)
+        state2 = _as_list(state2)
+        for i in range(len(out1)):
+            assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
+        for i in range(len(state1)):
+            assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
+
+        layer1 = TestLayer1(step, True)
+        layer1.initialize(ctx=default_context())
+        layer2 = TestLayer1(step, True)
         layer2.initialize(ctx=default_context())
         layer2.hybridize()
         out1, state1 = layer1(state)
