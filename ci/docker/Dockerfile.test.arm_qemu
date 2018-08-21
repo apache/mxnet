@@ -29,6 +29,9 @@ RUN /work/ubuntu_python3.sh
 COPY install/ubuntu_arm_qemu.sh /work
 RUN /work/ubuntu_arm_qemu.sh
 
+COPY install/ubuntu_arm_qemu_bin.sh /work
+RUN /work/ubuntu_arm_qemu_bin.sh
+
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

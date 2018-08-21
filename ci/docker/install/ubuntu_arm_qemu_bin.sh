@@ -22,15 +22,12 @@
 
 set -exuo pipefail
 
-apt-get install -y \
-    cmake \
-    curl \
-    wget \
-    git \
-    qemu \
-    qemu-system-arm \
-    unzip \
-    bzip2 \
-    vim-nox
+REMOTE="https://s3-eu-west-1.amazonaws.com/mxnet-edge-public/qemu"
+#curl -O ${REMOTE}/vda.qcow2
+curl -fO ${REMOTE}/vda_02.qcow2.bz2
+curl -fO ${REMOTE}/initrd.img-3.16.0-6-armmp-lpae
+curl -fO ${REMOTE}/vmlinuz-3.16.0-6-armmp-lpae
 
-pip3 install ansible ipython
+bunzip2 vda_02.qcow2.bz2
+mv vda_02.qcow2 vda.qcow2
+
