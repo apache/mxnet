@@ -30,6 +30,10 @@ def eprint(*args, **kwargs):
 def test_models():
     all_models = ['resnet18_v1', 'resnet34_v1', 'resnet50_v1', 'resnet101_v1', 'resnet152_v1',
                   'resnet18_v2', 'resnet34_v2', 'resnet50_v2', 'resnet101_v2', 'resnet152_v2',
+                  'se_resnet18_v1', 'se_resnet34_v1', 'se_resnet50_v1',
+                  'se_resnet101_v1', 'se_resnet152_v1',
+                  'se_resnet18_v2', 'se_resnet34_v2', 'se_resnet50_v2',
+                  'se_resnet101_v2', 'se_resnet152_v2',
                   'vgg11', 'vgg13', 'vgg16', 'vgg19',
                   'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',
                   'alexnet', 'inceptionv3',
