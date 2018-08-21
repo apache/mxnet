@@ -90,32 +90,33 @@ def test_Cifar10Rec():
 
 def test_NDArrayIter():
     data = np.ones([1000, 2, 2])
-    label = np.ones([1000, 1])
+    labels = np.ones([1000, 1])
     for i in range(1000):
         data[i] = i / 100
-        label[i] = i / 100
-    dataiter = mx.io.NDArrayIter(
-        data, label, 128, True, last_batch_handle='pad')
-    batchidx = 0
-    for batch in dataiter:
-        batchidx += 1
-    assert(batchidx == 8)
-    dataiter = mx.io.NDArrayIter(
-        data, label, 128, False, last_batch_handle='pad')
-    batchidx = 0
-    labelcount = [0 for i in range(10)]
-    for batch in dataiter:
-        label = batch.label[0].asnumpy().flatten()
-        assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
-        for i in range(label.shape[0]):
-            labelcount[int(label[i])] += 1
+        labels[i] = i / 100
+    
+    idx = 0
+    last_batch_handle_list = ['pad', 'discard' , 'roll_over']
+    labelcount_list = [(124, 100), (100, 96), (100, 96)]
+    batch_count_list = [8, 7, 7]
 
-    for i in range(10):
-        if i == 0:
-            assert(labelcount[i] == 124)
-        else:
-            assert(labelcount[i] == 100)
-
+    for idx in range(len(last_batch_handle_list)):
+        dataiter = mx.io.NDArrayIter(
+            data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
+        batch_count = 0
+        labelcount = [0 for i in range(10)]
+        tmp = 0
+        for batch in dataiter:
+            label = batch.label[0].asnumpy().flatten()
+            assert((batch.data[0].asnumpy()[:, 0, 0] == label).all()), last_batch_handle_list[idx]
+            for i in range(label.shape[0]):
+                labelcount[int(label[i])] += 1
+            batch_count += 1
+        # assert result
+        assert(labelcount[0] == labelcount_list[idx][0]), last_batch_handle_list[idx]
+        assert(labelcount[8] == labelcount_list[idx][1]), last_batch_handle_list[idx]
+            
+        assert batch_count == batch_count_list[idx]
 
 def test_NDArrayIter_h5py():
     if not h5py:
