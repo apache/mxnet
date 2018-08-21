@@ -111,7 +111,7 @@ struct log_softmax_bwd {
 };
 
 
-template<typename OP1, typename OP2, typename DType, int ndim>
+template<typename OP1, typename OP2, int Req, typename DType, int ndim>
 inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
                         DType *igrad, Shape<ndim> shape, int axis,
                         const DType temperature) {
@@ -134,13 +134,16 @@ inline void SoftmaxGrad(Stream<cpu> *s, DType *out, DType *ograd,
     // By default temperature is 1.0, and only in reinforcement training
     // users would set it to other values.
     // Adding a branch here to save the CPU 'divide-by-1' computation at runtime
+    DType final_result;
     if (temperature == 1.0) {
       for (index_t j = 0; j < M; ++j) {
-        igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
+        final_result = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum);
+        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
       }
     } else {
       for (index_t j = 0; j < M; ++j) {
-        igrad[base + j*sa] = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum)/temperature;
+        final_result = OP2::Map(ograd[base + j*sa], out[base + j*sa], sum) / temperature;
+        KERNEL_ASSIGN(igrad[base + j*sa], Req, final_result);
       }
     }
   }
@@ -202,7 +205,7 @@ inline void Softmax(Stream<gpu> *s, DType *in, DType *out,
 }
 
 
-template<int x_bits, typename OP1, typename OP2, typename DType, int ndim>
+template<int x_bits, typename OP1, typename OP2, int Req, typename DType, int ndim>
 __global__ void softmax_gradient_kernel(DType *out, DType *ograd, DType *igrad,
                                         index_t M, int axis, Shape<ndim> sshape,
                                         Shape<ndim> stride, const double temperature) {
@@ -222,14 +225,16 @@ __global__ void softmax_gradient_kernel(DType *out, DType *ograd, DType *igrad,
   DType ssum = smem[0];
   __syncthreads();
 
+  DType final_result;
   for (index_t i = x; i < M; i += x_size) {
-    igrad[base + i*sa] = OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum)/
-    static_cast<DType>(temperature);
+    final_result =
+      OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum) / static_cast<DType>(temperature);
+    KERNEL_ASSIGN(igrad[base + i*sa], Req, final_result);
   }
 }
 
 
-template<typename OP1, typename OP2, typename DType, int ndim>
+template<typename OP1, typename OP2, int Req, typename DType, int ndim>
 inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
                         DType *igrad, Shape<ndim> shape, int axis,
                         const double temperature) {
@@ -241,7 +246,7 @@ inline void SoftmaxGrad(Stream<gpu> *s, DType *out, DType *ograd,
   Shape<ndim> sshape = shape;
   sshape[axis] = 1;
 
-  softmax_gradient_kernel<x_bits, OP1, OP2, DType, ndim>
+  softmax_gradient_kernel<x_bits, OP1, OP2, Req, DType, ndim>
     <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
       out, ograd, igrad, M, axis, sshape, stride, temperature);
   MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_gradient_kernel);
@@ -298,24 +303,23 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
-  CHECK_NE(req[0], kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
   TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    if (shape.ndim() == 2) {
-      SoftmaxGrad<OP1, OP2>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
-                            inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
-                            shape.get<2>(), axis,
-                            static_cast<DType>(temperature));
-    } else {
-      SoftmaxGrad<OP1, OP2>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
-                            inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
-                            shape.get<3>(), axis,
-                            static_cast<DType>(temperature));
-    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      if (shape.ndim() == 2) {
+        SoftmaxGrad<OP1, OP2, Req>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+                                   shape.get<2>(), axis, static_cast<DType>(temperature));
+      } else {
+        SoftmaxGrad<OP1, OP2, Req>(ctx.get_stream<xpu>(), inputs[1].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+                                   shape.get<3>(), axis, static_cast<DType>(temperature));
+      }
+    });
   });
 }
 
