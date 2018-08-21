@@ -18,8 +18,6 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
-# Temporary fix due to https://github.com/apache/incubator-mxnet/issues/10837
-#FROM dockcross/linux-arm64
 FROM mxnetci/dockcross-linux-arm64:05082018
 
 ENV ARCH aarch64
