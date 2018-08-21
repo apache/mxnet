@@ -103,9 +103,8 @@ object CNNTextClassification {
   def trainCNN(model: CNNModel, trainBatches: Array[Array[Array[Float]]],
                trainLabels: Array[Float], devBatches: Array[Array[Array[Float]]],
                devLabels: Array[Float], batchSize: Int, saveModelPath: String,
-               learningRate: Float = 0.001f): Float = {
+               learningRate: Float = 0.001f, epoch : Int = 10): Float = {
     val maxGradNorm = 0.5f
-    val epoch = 10
     val initializer = new Uniform(0.1f)
     val opt = new RMSProp(learningRate)
     val updater = Optimizer.getUpdater(opt)
@@ -236,7 +235,7 @@ object CNNTextClassification {
   }
 
   def test(w2vFilePath : String, mrDatasetPath: String,
-           ctx : Context, saveModelPath: String) : Float = {
+           ctx : Context, saveModelPath: String, epoch : Int) : Float = {
     val (numEmbed, word2vec) = DataHelper.loadGoogleModel(w2vFilePath)
     val (datas, labels) = DataHelper.loadMSDataWithWord2vec(
       mrDatasetPath, numEmbed, word2vec)
@@ -259,7 +258,7 @@ object CNNTextClassification {
     val lr = 0.001f
     val cnnModel = setupCnnModel(ctx, batchSize, sentenceSize, numEmbed)
     val result = trainCNN(cnnModel, trainDats, trainLabels, devDatas, devLabels, batchSize,
-      saveModelPath, learningRate = lr)
+      saveModelPath, learningRate = lr, epoch)
     result
   }
 

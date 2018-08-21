@@ -58,7 +58,7 @@ class CNNClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       val modelDirPath = tempDirPath + File.separator + "CNN"
 
       val output = CNNTextClassification.test(modelDirPath + File.separator + w2vModelName,
-        modelDirPath, context, modelDirPath)
+        modelDirPath, context, modelDirPath, 10)
 
       Process("rm -rf " + modelDirPath) !
 
