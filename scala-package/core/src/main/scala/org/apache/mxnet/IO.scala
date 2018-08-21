@@ -408,10 +408,7 @@ object DataDesc {
   @deprecated
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
     if (shapes != null) {
-      if (shapes.toIndexedSeq(0)._2.length == 2) {
-        shapes.map { case (k, s) => new DataDesc(k, s, layout = "NT") }.toIndexedSeq
-      }
-      else shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
+      shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq
     } else {
       null
     }
