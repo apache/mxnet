@@ -30,9 +30,8 @@ import org.apache.mxnet.module.BucketingModule
 import org.apache.mxnet.module.FitParams
 
 /**
- * Bucketing LSTM examples
- * @author Yizhi Liu
- */
+  * Bucketing LSTM examples
+  */
 class LstmBucketing {
   @Option(name = "--data-train", usage = "training set")
   private val dataTrain: String = "example/rnn/sherlockholmes.train.txt"
@@ -61,6 +60,60 @@ object LstmBucketing {
     Math.exp(loss / labelArr.length).toFloat
   }
 
+  def runTraining(trainData : String, validationData : String,
+                  ctx : Array[Context], numEpoch : Int): Unit = {
+    val batchSize = 32
+    val buckets = Array(10, 20, 30, 40, 50, 60)
+    val numHidden = 200
+    val numEmbed = 200
+    val numLstmLayer = 2
+
+    logger.info("Building vocab ...")
+    val vocab = BucketIo.defaultBuildVocab(trainData)
+
+    def BucketSymGen(key: AnyRef):
+    (Symbol, IndexedSeq[String], IndexedSeq[String]) = {
+      val seqLen = key.asInstanceOf[Int]
+      val sym = Lstm.lstmUnroll(numLstmLayer, seqLen, vocab.size,
+        numHidden = numHidden, numEmbed = numEmbed, numLabel = vocab.size)
+      (sym, IndexedSeq("data"), IndexedSeq("softmax_label"))
+    }
+
+    val initC = (0 until numLstmLayer).map(l =>
+      (s"l${l}_init_c_beta", (batchSize, numHidden))
+    )
+    val initH = (0 until numLstmLayer).map(l =>
+      (s"l${l}_init_h_beta", (batchSize, numHidden))
+    )
+    val initStates = initC ++ initH
+
+    val dataTrain = new BucketSentenceIter(trainData, vocab,
+      buckets, batchSize, initStates)
+    val dataVal = new BucketSentenceIter(validationData, vocab,
+      buckets, batchSize, initStates)
+
+    val model = new BucketingModule(
+      symGen = BucketSymGen,
+      defaultBucketKey = dataTrain.defaultBucketKey,
+      contexts = ctx)
+
+    val fitParams = new FitParams()
+    fitParams.setEvalMetric(
+      new CustomMetric(perplexity, name = "perplexity"))
+    fitParams.setKVStore("device")
+    fitParams.setOptimizer(
+      new SGD(learningRate = 0.01f, momentum = 0f, wd = 0.00001f))
+    fitParams.setInitializer(new Xavier(factorType = "in", magnitude = 2.34f))
+    fitParams.setBatchEndCallback(new Speedometer(batchSize, 50))
+
+    logger.info("Start training ...")
+    model.fit(
+      trainData = dataTrain,
+      evalData = Some(dataVal),
+      numEpoch = numEpoch, fitParams)
+    logger.info("Finished training...")
+  }
+
   def main(args: Array[String]): Unit = {
     val inst = new LstmBucketing
     val parser: CmdLineParser = new CmdLineParser(inst)
@@ -71,56 +124,7 @@ object LstmBucketing {
         else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
         else Array(Context.cpu(0))
 
-      val batchSize = 32
-      val buckets = Array(10, 20, 30, 40, 50, 60)
-      val numHidden = 200
-      val numEmbed = 200
-      val numLstmLayer = 2
-
-      logger.info("Building vocab ...")
-      val vocab = BucketIo.defaultBuildVocab(inst.dataTrain)
-
-      def BucketSymGen(key: AnyRef):
-        (Symbol, IndexedSeq[String], IndexedSeq[String]) = {
-        val seqLen = key.asInstanceOf[Int]
-        val sym = Lstm.lstmUnroll(numLstmLayer, seqLen, vocab.size,
-          numHidden = numHidden, numEmbed = numEmbed, numLabel = vocab.size)
-        (sym, IndexedSeq("data"), IndexedSeq("softmax_label"))
-      }
-
-      val initC = (0 until numLstmLayer).map(l =>
-        (s"l${l}_init_c_beta", (batchSize, numHidden))
-      )
-      val initH = (0 until numLstmLayer).map(l =>
-        (s"l${l}_init_h_beta", (batchSize, numHidden))
-      )
-      val initStates = initC ++ initH
-
-      val dataTrain = new BucketSentenceIter(inst.dataTrain, vocab,
-        buckets, batchSize, initStates)
-      val dataVal = new BucketSentenceIter(inst.dataVal, vocab,
-        buckets, batchSize, initStates)
-
-      val model = new BucketingModule(
-        symGen = BucketSymGen,
-        defaultBucketKey = dataTrain.defaultBucketKey,
-        contexts = contexts)
-
-      val fitParams = new FitParams()
-      fitParams.setEvalMetric(
-        new CustomMetric(perplexity, name = "perplexity"))
-      fitParams.setKVStore("device")
-      fitParams.setOptimizer(
-        new SGD(learningRate = 0.01f, momentum = 0f, wd = 0.00001f))
-      fitParams.setInitializer(new Xavier(factorType = "in", magnitude = 2.34f))
-      fitParams.setBatchEndCallback(new Speedometer(batchSize, 50))
-
-      logger.info("Start training ...")
-      model.fit(
-        trainData = dataTrain,
-        evalData = Some(dataVal),
-        numEpoch = inst.numEpoch, fitParams)
-      logger.info("Finished training...")
+      runTraining(inst.dataTrain, inst.dataVal, contexts, 5)
     } catch {
       case ex: Exception =>
         logger.error(ex.getMessage, ex)

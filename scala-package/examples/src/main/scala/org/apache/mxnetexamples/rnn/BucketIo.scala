@@ -34,7 +34,7 @@ object BucketIo {
   type ReadContent = String => String
 
   def defaultReadContent(path: String): String = {
-    Source.fromFile(path).mkString.replaceAll("\\. |\n", " <eos> ")
+    Source.fromFile(path, "UTF-8").mkString.replaceAll("\\. |\n", " <eos> ")
   }
 
   def defaultBuildVocab(path: String): Map[String, Int] = {
@@ -56,7 +56,7 @@ object BucketIo {
       val tmp = sentence.split(" ").filter(_.length() > 0)
       for (w <- tmp) yield theVocab(w)
     }
-    words.toArray
+    words
   }
 
   def defaultGenBuckets(sentences: Array[String], batchSize: Int,
@@ -162,8 +162,6 @@ object BucketIo {
       labelBuffer.append(NDArray.zeros(_batchSize, buckets(iBucket)))
     }
 
-    private val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
-
     private val _provideData = { val tmp = ListMap("data" -> Shape(_batchSize, _defaultBucketKey))
       tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
     }
@@ -208,12 +206,13 @@ object BucketIo {
         tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
       }
       val batchProvideLabel = ListMap("softmax_label" -> labelBuf.shape)
-      new DataBatch(IndexedSeq(dataBuf) ++ initStateArrays,
-                    IndexedSeq(labelBuf),
-                    getIndex(),
-                    getPad(),
-                    this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel)
+      val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
+      new DataBatch(IndexedSeq(dataBuf.copy()) ++ initStateArrays,
+        IndexedSeq(labelBuf.copy()),
+        getIndex(),
+        getPad(),
+        this.buckets(bucketIdx).asInstanceOf[AnyRef],
+        batchProvideData, batchProvideLabel)
     }
 
     /**
