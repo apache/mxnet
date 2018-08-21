@@ -245,7 +245,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
-    `func(*loop_vars) => (NDArray or List[NDArray] step_output, NDArray or List[NDArray] new_loop_vars)`.
+    `func(*loop_vars) =>
+    (NDArray or List[NDArray] step_output, NDArray or List[NDArray] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 

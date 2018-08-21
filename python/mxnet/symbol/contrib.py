@@ -396,7 +396,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
-    `func(*loop_vars) => (Symbol or List[Symbol] step_output, Symbol or List[Symbol] new_loop_vars)`.
+    `func(*loop_vars) =>
+    (Symbol or List[Symbol] step_output, Symbol or List[Symbol] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
