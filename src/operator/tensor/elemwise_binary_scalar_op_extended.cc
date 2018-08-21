@@ -105,7 +105,7 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    if(attrs->dict.find("scalar") != attrs->dict.end())
+    if (attrs->dict.find("scalar") != attrs->dict.end())
       attrs->parsed = std::stod(attrs->dict["scalar"]);
     else
       attrs->parsed = 1.0;
@@ -113,22 +113,23 @@ Example::
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-				[](const NodeAttrs& attrs){
-				  return std::vector<std::pair<int, int> >{{0, 0}};
-				})
+                                [](const NodeAttrs& attrs){
+                                  return std::vector<std::pair<int, int> >{{0, 0}};
+                                })
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input")
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::smooth_l1_loss>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_smooth_l1" });
-  
+
 MXNET_OPERATOR_REGISTER_BINARY(_backward_smooth_l1)
   .set_attr_parser([](NodeAttrs *attrs) {
-  if(attrs->dict.find("scalar") != attrs->dict.end())
+  if (attrs->dict.find("scalar") != attrs->dict.end())
     attrs->parsed = std::stod(attrs->dict["scalar"]);
   else
     attrs->parsed = 1.0;
 })
-  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::smooth_l1_gradient>);
-  
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::smooth_l1_gradient>);
+
 }  // namespace op
 }  // namespace mxnet
