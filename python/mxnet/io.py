@@ -39,8 +39,6 @@ from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concat
-from .ndarray import arange
-from .ndarray.random import shuffle as random_shuffle
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -696,23 +694,24 @@ class NDArrayIter(DataIter):
         self._cache_label = None
 
     def reset(self):
+        """Resets the iterator to the beginning of the data."""
         if self.shuffle:
             self._shuffle()
-        # need to check if self.num_data exists
         # the range below indicate the last batch
         if self.last_batch_handle == 'roll_over' and \
-            hasattr(self, 'num_data') and \
             self.num_data - self.batch_size < self.cursor < self.num_data:
-            # self.cursor - self.num_data represents the data we have for the last batch
+            # (self.cursor - self.num_data) represents the data we have for the last batch
             self.cursor = self.cursor - self.num_data - self.batch_size
         else:
             self.cursor = -self.batch_size
 
     def iter_next(self):
+        """Increments the coursor and check current cursor if exceed num of data."""
         self.cursor += self.batch_size
         return self.cursor < self.num_data
 
     def next(self):
+        """Returns the next batch of data."""
         if not self.iter_next():
             raise StopIteration
         data = self.getdata()
@@ -727,6 +726,7 @@ class NDArrayIter(DataIter):
             pad=self.getpad(), index=None)
 
     def _getdata(self, data_source, start=None, end=None):
+        """Load data from underlying arrays."""
         assert start is not None or end is not None, 'should at least specify start or end'
         start = start if start is not None else 0
         end = end if end is not None else data_source[0][1].shape[0]
@@ -742,6 +742,7 @@ class NDArrayIter(DataIter):
         ]
 
     def _concat(self, first_data, second_data):
+        """Helper function to concat two NDArrays."""
         return [
             concat(first_data[0], second_data[0], dim=0)
         ]
@@ -749,6 +750,7 @@ class NDArrayIter(DataIter):
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
         assert self.cursor < self.num_data, 'DataIter needs reset.'
+        # first batch of next epoch with 'roll_over'
         if self.last_batch_handle == 'roll_over' and \
             -self.batch_size < self.cursor < 0:
             assert self._cache_data is not None or self._cache_label is not None, \
@@ -761,26 +763,32 @@ class NDArrayIter(DataIter):
             else:
                 self._cache_label = None
             return self._concat(cache_data, second_data)
+        # last batch with 'pad'
         elif self.last_batch_handle == 'pad' and \
             self.cursor + self.batch_size > self.num_data:
             pad = self.batch_size - self.num_data + self.cursor
             first_data = self._getdata(data_source, start=self.cursor)
             second_data = self._getdata(data_source, end=pad)
             return self._concat(first_data, second_data)
+        # normal case
         else:
             if self.cursor + self.batch_size < self.num_data:
                 end_idx = self.cursor + self.batch_size
+            # get incomplete last batch
             else:
                 end_idx = self.num_data
             return self._getdata(data_source, self.cursor, end_idx)
 
     def getdata(self):
+        """Get data."""
         return self._batchify(self.data)
 
     def getlabel(self):
+        """Get label."""
         return self._batchify(self.label)
 
     def getpad(self):
+        """Get pad value of DataBatch."""
         if self.last_batch_handle == 'pad' and \
            self.cursor + self.batch_size > self.num_data:
             return self.cursor + self.batch_size - self.num_data
@@ -792,6 +800,7 @@ class NDArrayIter(DataIter):
             return 0
 
     def _shuffle(self):
+        """Shuffle the data."""
         np.random.shuffle(self.idx)
         self.data = _shuffle(self.data, self.idx)
         self.label = _shuffle(self.label, self.idx)
