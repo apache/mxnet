@@ -684,6 +684,9 @@ def test_order():
         np.apply_along_axis(np.random.shuffle, 1, data)
         return data
 
+    large_matrix_npy = get_large_matrix()
+    large_matrix_nd = mx.nd.array(large_matrix_npy, ctx=ctx)
+
     nd_ret_topk = mx.nd.topk(large_matrix_nd, axis=1, ret_typ="indices", k=5, is_ascend=False).asnumpy()
     gt = gt_topk(large_matrix_npy, axis=1, ret_typ="indices", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
