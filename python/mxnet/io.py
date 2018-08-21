@@ -631,11 +631,11 @@ class NDArrayIter(DataIter):
         Only supported if no h5py.Dataset inputs are used.
     last_batch_handle : str, optional
         How to handle the last batch. This parameter can be 'pad', 'discard' or
-        'roll_over'. 'roll_over' is intended for training and can cause problems
-        if used for prediction.
+        'roll_over'.
         If 'pad', the last batch will be padded with data starting from the begining
         If 'discard', the last batch will be discarded
-        If 'roll_over', the remaining elements will be rolled over to the next iteration
+        If 'roll_over', the remaining elements will be rolled over to the next iteration and
+        note that it is intended for training and can cause problems if used for prediction.
     data_name : str, optional
         The data name.
     label_name : str, optional
