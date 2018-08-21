@@ -13,21 +13,23 @@
     - command: hostname
       register: h
     - debug: msg="{{ h.stdout }}"
-#    - name: sync mxnet/tests
-#      synchronize:
-#        src: /work/mxnet/tests
-#        dest: mxnet/tests
-#        delete: no
-#        owner: no
-#
-    - name: copy artifact
+
+    - name: copy mxnet artifacts
       copy:
         src: "{{ item }}"
         dest: mxnet_dist/
       with_fileglob: "/work/mxnet/build/*.whl"
 
+    - name: copy runtime_functions.py
+      copy:
+        src: "/work/runtime_functions.py"
+        dest: .
+    - file:
+        path: runtime_functions.py
+        mode: 0755
+
     - name: 'run tests'
-      command: /bin/sleep 15
+      command: ./runtime_functions.py run_unittests_python3_qemu_
       async: 1000
       poll: 0
       register: tests
@@ -36,7 +38,9 @@
       async_status: jid={{ tests.ansible_job_id }}
       register: job_result
       until: job_result.finished
-      retries: 30
+      # 6h timeout
+      retries: 2160
+      delay: 10
 
 #
 #    - name: copy runtime_functions.py
