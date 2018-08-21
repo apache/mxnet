@@ -37,7 +37,7 @@ class _RNNLayer(HybridBlock):
                  i2h_bias_initializer, h2h_bias_initializer,
                  mode, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
-        assert layout == 'TNC' or layout == 'NTC', \
+        assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
         self._hidden_size = hidden_size
         self._num_layers = num_layers

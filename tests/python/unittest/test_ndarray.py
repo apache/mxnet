@@ -673,6 +673,18 @@ def test_order():
     a_npy = get_values(ensure_unique=True)
     a_nd = mx.nd.array(a_npy, ctx=ctx)
 
+    # Produce a large matrix (256, 300096) as the input data, to cover the case which
+    # has a large size of matrix (exceed the express range by float precisly), but
+    # the number of elements in each dimension could be expressed by float precisly.
+    def get_large_matrix():
+        data = np.array([np.arange(300096).astype(np.float32)])
+        data = np.repeat(data, 100, axis=0)
+        np.apply_along_axis(np.random.shuffle, 1, data)
+        return data
+
+    large_matrix_npy = get_large_matrix()
+    large_matrix_nd = mx.nd.array(large_matrix_npy, ctx=ctx)
+
     # test for ret_typ=indices
     nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
     gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
@@ -682,6 +694,9 @@ def test_order():
     assert_almost_equal(nd_ret_topk, gt)
     nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="indices", k=21, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=21, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(large_matrix_nd, axis=1, ret_typ="indices", k=5, is_ascend=False).asnumpy()
+    gt = gt_topk(large_matrix_npy, axis=1, ret_typ="indices", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
 
     # test for ret_typ=value
@@ -693,6 +708,12 @@ def test_order():
     assert_almost_equal(nd_ret_topk, gt)
     nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="value", k=21, is_ascend=False).asnumpy()
     gt = gt_topk(a_npy, axis=None, ret_typ="value", k=21, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(large_matrix_nd, axis=0, ret_typ="value", k=3, is_ascend=False).asnumpy()
+    gt = gt_topk(large_matrix_npy, axis=0, ret_typ="value", k=3, is_ascend=False)
+    assert_almost_equal(nd_ret_topk, gt)
+    nd_ret_topk = mx.nd.topk(large_matrix_nd, axis=1, ret_typ="value", k=5, is_ascend=False).asnumpy()
+    gt = gt_topk(large_matrix_npy, axis=1, ret_typ="value", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
 
     # test for ret_typ=mask

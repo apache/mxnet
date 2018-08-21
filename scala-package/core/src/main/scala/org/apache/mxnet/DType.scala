@@ -35,4 +35,15 @@ object DType extends Enumeration {
       case DType.Unknown => 0
     }
   }
+  private[mxnet] def getType(dtypeStr: String): DType = {
+    dtypeStr match {
+      case "UInt8" => DType.UInt8
+      case "Int32" => DType.Int32
+      case "Float16" => DType.Float16
+      case "Float32" => DType.Float32
+      case "Float64" => DType.Float64
+      case _ => throw new IllegalArgumentException(
+        s"DType: $dtypeStr not found! please set it in DType.scala")
+    }
+  }
 }

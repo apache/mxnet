@@ -19,6 +19,8 @@ package org.apache.mxnet.infer
 
 // scalastyle:off
 import java.awt.image.BufferedImage
+
+import org.apache.mxnet.{DType, Layout}
 // scalastyle:on
 import org.apache.mxnet.Context
 import org.apache.mxnet.DataDesc
@@ -69,7 +71,8 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
   }
 
   test("objectDetectWithInputImage") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
+      DType.Float32, Layout.NCHW))
     val inputImage = new BufferedImage(512, 512, BufferedImage.TYPE_INT_RGB)
     val testObjectDetector: ObjectDetector =
       new MyObjectDetector(modelPath, inputDescriptor)
@@ -109,7 +112,8 @@ class ObjectDetectorSuite extends ClassifierSuite with BeforeAndAfterAll {
   }
 
   test("objectDetectWithBatchImages") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc(modelPath, Shape(1, 3, 512, 512),
+      DType.Float32, Layout.NCHW))
     val inputImage = new BufferedImage(224, 224, BufferedImage.TYPE_INT_RGB)
     val imageBatch = IndexedSeq[BufferedImage](inputImage, inputImage)
 

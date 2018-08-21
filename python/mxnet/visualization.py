@@ -309,7 +309,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
-        elif op == "Activation" or op == "LeakyReLU":
+        elif op in ('Activation', 'LeakyReLU'):
             label = r"%s\n%s" % (op, node["attrs"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
@@ -318,7 +318,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                              "x".join(_str2tuple(node["attrs"]["stride"]))
                                              if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
-        elif op == "Concat" or op == "Flatten" or op == "Reshape":
+        elif op in ("Concat", "Flatten", "Reshape"):
             attr["fillcolor"] = cm[5]
         elif op == "Softmax":
             attr["fillcolor"] = cm[6]

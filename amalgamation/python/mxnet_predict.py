@@ -65,8 +65,8 @@ def _find_lib_path():
         except ImportError:
             libinfo_path = os.path.join(curr_path, '../../python/mxnet/libinfo.py')
             if os.path.exists(libinfo_path) and os.path.isfile(libinfo_path):
-                libinfo = {'__file__': libinfo_py}
-                exec(compile(open(libinfo_py, "rb").read(), libinfo_py, 'exec'), libinfo, libinfo)
+                libinfo = {'__file__': libinfo_path}
+                exec(compile(open(libinfo_path, "rb").read(), libinfo_path, 'exec'), libinfo, libinfo)
                 lib_path = libinfo['find_lib_path']()
                 return lib_path
             else:
