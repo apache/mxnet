@@ -101,6 +101,16 @@ class SubgraphPropertyRegistry {
     return it->second();
   }
 
+  SubgraphPropertyCreateFn __REGISTER_OR_GET__(const std::string& name,
+                                               SubgraphPropertyCreateFn fn) {
+    if (prop_fn_map_.count(name) == 0U) {
+      return __REGISTER__(name, fn);
+    } else {
+      return prop_fn_map_.at(name);
+    }
+  }
+
+ private:
   SubgraphPropertyCreateFn __REGISTER__(const std::string& name, SubgraphPropertyCreateFn fn) {
     CHECK_EQ(prop_fn_map_.count(name), 0U) << "Subgraph property " << name
                                            << " has been registered";
@@ -108,7 +118,6 @@ class SubgraphPropertyRegistry {
     return prop_fn_map_[name];
   }
 
- private:
   SubgraphPropertyRegistry() = default;
   SubgraphPropertyRegistry(const SubgraphPropertyRegistry&) = delete;
   SubgraphPropertyRegistry(SubgraphPropertyRegistry&&) = delete;
@@ -125,7 +134,7 @@ typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_se
 
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
   static DMLC_ATTRIBUTE_UNUSED auto __make_ ## SubgraphPropertyType ## _ ## Name ## __ = \
-    SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
+    SubgraphPropertyRegistry::Get()->__REGISTER_OR_GET__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
 }  // namespace mxnet
