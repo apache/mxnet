@@ -1861,6 +1861,27 @@ def test_output_format_foreach():
         for i in range(len(state1)):
             assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
+        layer1 = TestLayer1(step)
+        layer1.initialize(ctx=default_context())
+        layer2 = TestLayer1(step)
+        layer2.initialize(ctx=default_context())
+        layer2.hybridize()
+        out1, state1 = layer1(data, state)
+        out2, state2 = layer2(data, state)
+        step_out, step_state = step(data, state)
+        assert type(out1) == type(step_out)
+        assert type(out2) == type(step_out)
+        assert type(state1) == type(step_state)
+        assert type(state2) == type(step_state)
+        out1 = _as_list(out1)
+        out2 = _as_list(out2)
+        state1 = _as_list(state1)
+        state2 = _as_list(state2)
+        for i in range(len(out1)):
+            assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
+        for i in range(len(state1)):
+            assert_almost_equal(state1[i].asnumpy(), state2[i].asnumpy(), rtol=0.001, atol=0.0001)
+
 
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):

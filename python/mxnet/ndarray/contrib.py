@@ -167,7 +167,7 @@ def foreach(body, data, init_states):
         Define computation in an iteration.
     data: an NDArray or a list of NDArrays.
         The input data.
-    init_states: a list of NDArrays.
+    init_states: an NDArray or a list of NDArrays.
         The initial values of the loop states.
     name: string.
         The name of the operator.
@@ -176,7 +176,7 @@ def foreach(body, data, init_states):
     -------
     outputs: an NDArray or a list of NDArrays.
         The output data concatenated from the output of all iterations.
-    states: a list of NDArrays.
+    states: an NDArray or a list of NDArrays.
         The loop states in the last iteration.
 
     Examples

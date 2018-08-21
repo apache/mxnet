@@ -236,7 +236,7 @@ def foreach(body, data, init_states, name="foreach"):
         Define computation in an iteration.
     data: a symbol or a list of symbols.
         The input data.
-    init_states: a list of symbols.
+    init_states: a Symbol or a list of symbols.
         The initial values of the loop states.
     name: string.
         The name of the operator.
@@ -245,7 +245,7 @@ def foreach(body, data, init_states, name="foreach"):
     -------
     outputs: a Symbol or a list of Symbols.
         The output data concatenated from the output of all iterations.
-    states: a list of Symbols.
+    states: a Symbol or a list of Symbols.
         The loop states in the last iteration.
 
     Examples
