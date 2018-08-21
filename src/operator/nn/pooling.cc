@@ -295,7 +295,10 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
 
 #if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                        dispatch_mode, DispatchMode::kFComputeFallback);
+  } else if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -316,7 +319,10 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1);
 
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFComputeFallback);
+  } else if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
     return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                dispatch_mode, DispatchMode::kFComputeEx);
   }
@@ -377,8 +383,7 @@ We can see that Lp pooling stands between those two, in practice the most common
 
 For each window ``X``, the mathematical expression for Lp pooling is:
 
-..math::
-  f(X) = \sqrt{p}{\sum\limits_{x \in X} x^p}
+:math:`f(X) = \sqrt[p]{\sum_{x}^{X} x^p}`
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

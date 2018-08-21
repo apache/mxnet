@@ -73,6 +73,7 @@ class Executor(object):
         self.aux_arrays = []
         self.outputs = self._get_outputs()
         self._symbol = copy.deepcopy(symbol)
+        self._optimized_symbol = None
         self._arg_dict = None
         self._grad_dict = None
         self._aux_dict = None

@@ -24,14 +24,11 @@ import atexit
 import ctypes
 import os
 import sys
-import warnings
 import inspect
 import platform
 import numpy as np
 
 from . import libinfo
-
-warnings.filterwarnings('default', category=DeprecationWarning)
 
 __all__ = ['MXNetError']
 #----------------------------

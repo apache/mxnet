@@ -26,7 +26,7 @@ use AI::MXNet::Gluon::ModelZoo::Vision;
 use Exporter;
 use base qw(Exporter);
 @AI::MXNet::Gluon::ModelZoo::EXPORT_OK = qw(get_model);
-our $VERSION = '1.3';
+our $VERSION = '1.32';
 
 =head1 NAME
 

@@ -235,14 +235,21 @@ class Trainer(object):
         else:
             self._optimizer.set_learning_rate(lr)
 
-    def _row_sparse_pull(self, parameter, out, row_id):
+    def _row_sparse_pull(self, parameter, out, row_id, full_idx=False):
+        """Internal method to invoke pull operations on KVStore. If `full_idx` is set to True,
+        `kv.pull` is preferred instead of `kv.row_sparse_pull`.
+        """
         # initialize kv and params if not already
         if not self._kv_initialized:
             self._init_kvstore()
         if self._params_to_init:
             self._init_params()
         idx = self._param2idx[parameter.name]
-        self._kvstore.row_sparse_pull(idx, out=out, row_ids=row_id, priority=-idx)
+        if full_idx and 'dist' not in self._kvstore.type:
+            assert row_id.size == out.shape[0]
+            self._kvstore.pull(idx, out=out, priority=-idx, ignore_sparse=False)
+        else:
+            self._kvstore.row_sparse_pull(idx, out=out, row_ids=row_id, priority=-idx)
 
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after

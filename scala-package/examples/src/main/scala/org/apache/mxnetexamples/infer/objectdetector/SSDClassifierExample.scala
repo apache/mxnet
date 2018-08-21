@@ -29,14 +29,14 @@ import java.nio.file.{Files, Paths}
 
 import scala.collection.mutable.ListBuffer
 
+// scalastyle:off
 /**
   * <p>
   * Example single shot detector (SSD) using the Infer package
   * on a ssd_resnet50_512 model.
-  * @see <pre><a href="https://github.com/apache/incubator-mxnet/tree/master/s
-    cala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/object
-    detector" target="_blank">Instructions to run this example</a></pre>
+  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector" target="_blank">Instructions to run this example</a>
   */
+// scalastyle:on
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
   private val modelPathPrefix: String = "/model/ssd_resnet50_512"

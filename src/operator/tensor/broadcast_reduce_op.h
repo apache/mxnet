@@ -99,6 +99,8 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   }
 };
 
+enum PickOpMode {kWrap, kClip};
+
 struct PickParam : public dmlc::Parameter<PickParam> {
   dmlc::optional<int> axis;
   int mode;
@@ -112,6 +114,14 @@ struct PickParam : public dmlc::Parameter<PickParam> {
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If true, the axis where we pick the elements is left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("wrap", kWrap)
+    .add_enum("clip", kClip)
+    .set_default(kClip)
+    .describe("Specify how out-of-bound indices behave. Default is \"clip\"."
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around.");
   }
 };
 
@@ -1108,7 +1118,7 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
                      const std::vector<NDArray>& outputs);
 
 /*! \brief index element from array along axes */
-template<int ndim>
+template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
@@ -1117,15 +1127,20 @@ struct pick {
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     int j = static_cast<int>(idx[i]);
-    if (j < 0) j = 0;
-    else if (j >= M) j = M-1;
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= M) j = M - 1;
+    } else {
+      j = j % M;
+      j += (j < 0) ? M : 0;
+    }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     out[i] = a[j];
   }
 };
 
 /*! \brief index element from array along axes */
-template<int ndim>
+template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
@@ -1134,8 +1149,13 @@ struct pick_grad {
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     int j = static_cast<int>(idx[i]);
-    if (j < 0) j = 0;
-    else if (j >= M) j = M-1;
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= M) j = M - 1;
+    } else {
+      j = j % M;
+      j += (j < 0) ? M : 0;
+    }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     igrad[j] += ograd[i];
   }
@@ -1195,15 +1215,28 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
-      if (trailing == 1) {
-        Kernel<pick<2>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      if (param.mode == kWrap) {
+        if (trailing == 1) {
+            Kernel<pick<2, false>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                    M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+            Kernel<pick<3, false>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                    M, trailing, Shape3(leading, M, trailing),
+                                    Shape3(leading, 1, trailing));
+        }
       } else {
-        Kernel<pick<3>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, trailing, Shape3(leading, M, trailing),
-                                     Shape3(leading, 1, trailing));
+        if (trailing == 1) {
+            Kernel<pick<2, true>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                   M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+            Kernel<pick<3, true>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                   M, trailing, Shape3(leading, M, trailing),
+                                   Shape3(leading, 1, trailing));
+        }
       }
     });
   });
@@ -1230,15 +1263,28 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
       if (req[0] != kAddTo) outputs[0].FlatTo1D<xpu, DType>(s) = 0;
-      if (trailing == 1) {
-        Kernel<pick_grad<2>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      if (param.mode == kWrap) {
+        if (trailing == 1) {
+          Kernel<pick_grad<2, false>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+          Kernel<pick_grad<3, false>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, trailing, Shape3(leading, M, trailing),
+                                      Shape3(leading, 1, trailing));
+        }
       } else {
-        Kernel<pick_grad<3>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, trailing, Shape3(leading, M, trailing),
-                                     Shape3(leading, 1, trailing));
+          if (trailing == 1) {
+          Kernel<pick_grad<2, true>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+          Kernel<pick_grad<3, true>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, trailing, Shape3(leading, M, trailing),
+                                      Shape3(leading, 1, trailing));
+        }
       }
     });
   });

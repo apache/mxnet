@@ -78,6 +78,13 @@ use overload
     This class governs the device context of AI::MXNet::NDArray objects.
 =cut
 
+=head1 SYNOPSIS
+
+    use AI::MXNet qw(mx);
+    print nd->array([[1,2],[3,4]], ctx => mx->cpu)->aspdl;
+    my $arr_gpu = nd->random->uniform(shape => [10, 10], ctx => mx->gpu(0));
+=cut
+
 =head2
 
     Constructing a context.
