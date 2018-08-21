@@ -55,7 +55,7 @@ batch_size<- 64
 data = mx.symbol.Variable('data')
 
 gen_rand<- mx.symbol.normal(loc=0, scale=1, shape=c(1, 1, random_dim, batch_size), name="gen_rand")
-gen_concat<- mx.symbol.Concat(data = list(data, gen_rand), num.args = 2, name="gen_concat")
+gen_concat<- mx.symbol.concat(data = list(data, gen_rand), num.args = 2, name="gen_concat")
 
 g1 = mx.symbol.Deconvolution(gen_concat, name='g1', kernel=c(4,4), num_filter=gen_features*4, no_bias=T)
 gbn1 = mx.symbol.BatchNorm(g1, name='gbn1', fix_gamma=fix_gamma, eps=eps)
@@ -83,7 +83,7 @@ label = mx.symbol.Variable('label')
 dis_digit<- mx.symbol.Reshape(data=dis_digit, shape=c(1,1,10,batch_size), name="digit_reshape")
 dis_digit<- mx.symbol.broadcast_to(data=dis_digit, shape=c(28,28,10, batch_size), name="digit_broadcast")
 
-data_concat <- mx.symbol.Concat(list(data, dis_digit), num.args = 2, dim = 1, name='dflat_concat')
+data_concat <- mx.symbol.concat(list(data, dis_digit), num.args = 2, dim = 1, name='dflat_concat')
 
 d1 = mx.symbol.Convolution(data=data_concat, name='d1', kernel=c(3,3), stride=c(1,1), pad=c(0,0), num_filter=24, no_bias=no_bias)
 dbn1 = mx.symbol.BatchNorm(d1, name='dbn1', fix_gamma=fix_gamma, eps=eps)
