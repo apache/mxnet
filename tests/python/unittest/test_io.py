@@ -87,14 +87,15 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
-
-def test_NDArrayIter():
+def _init_NDArrayIter_data():
     data = np.ones([1000, 2, 2])
     labels = np.ones([1000, 1])
     for i in range(1000):
         data[i] = i / 100
         labels[i] = i / 100
-    
+    return data, labels
+
+def _test_last_batch_handle(data, labels):
     idx = 0
     last_batch_handle_list = ['pad', 'discard' , 'roll_over']
     labelcount_list = [(124, 100), (100, 96), (100, 96)]
@@ -105,7 +106,6 @@ def test_NDArrayIter():
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
         batch_count = 0
         labelcount = [0 for i in range(10)]
-        tmp = 0
         for batch in dataiter:
             label = batch.label[0].asnumpy().flatten()
             assert((batch.data[0].asnumpy()[:, 0, 0] == label).all()), last_batch_handle_list[idx]
@@ -117,52 +117,37 @@ def test_NDArrayIter():
         assert(labelcount[8] == labelcount_list[idx][1]), last_batch_handle_list[idx]
             
         assert batch_count == batch_count_list[idx]
+        # shuffle equals True for sanity test
+        dataiter = mx.io.NDArrayIter(
+            data, labels, 128, True, last_batch_handle=last_batch_handle_list[idx])
+        batch_count = 0
+        for _ in dataiter:
+            batch_count += 1
+        assert batch_count == batch_count_list[idx]
+
+def test_NDArrayIter():
+    data, labels = _init_NDArrayIter_data()
+    _test_last_batch_handle(data, labels)
 
 def test_NDArrayIter_h5py():
     if not h5py:
         return
 
-    data = np.ones([1000, 2, 2])
-    label = np.ones([1000, 1])
-    for i in range(1000):
-        data[i] = i / 100
-        label[i] = i / 100
+    data, labels = _init_NDArrayIter_data()
 
+    try:
+        os.remove('ndarraytest.h5')
+    except OSError:
+        pass
+    with h5py.File('ndarraytest.h5') as f:
+        f.create_dataset('data', data=data)
+        f.create_dataset('label', data=labels)
+
+        _test_last_batch_handle(f['data'], f['label'])
     try:
         os.remove("ndarraytest.h5")
     except OSError:
         pass
-    with h5py.File("ndarraytest.h5") as f:
-        f.create_dataset("data", data=data)
-        f.create_dataset("label", data=label)
-
-        dataiter = mx.io.NDArrayIter(
-            f["data"], f["label"], 128, True, last_batch_handle='pad')
-        batchidx = 0
-        for batch in dataiter:
-            batchidx += 1
-        assert(batchidx == 8)
-
-        dataiter = mx.io.NDArrayIter(
-            f["data"], f["label"], 128, False, last_batch_handle='pad')
-        labelcount = [0 for i in range(10)]
-        for batch in dataiter:
-            label = batch.label[0].asnumpy().flatten()
-            assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
-            for i in range(label.shape[0]):
-                labelcount[int(label[i])] += 1
-
-    try:
-        os.remove("ndarraytest.h5")
-    except OSError:
-        pass
-
-    for i in range(10):
-        if i == 0:
-            assert(labelcount[i] == 124)
-        else:
-            assert(labelcount[i] == 100)
-
 
 def test_NDArrayIter_csr():
     # creating toy data
