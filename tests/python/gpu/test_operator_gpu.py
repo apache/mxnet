@@ -2021,8 +2021,8 @@ def _check_inplace_abn(input, training=True, ndev=1):
     ch = input.shape[1]
     sync = ndev > 1
     ctx_list = mx.gpu(0) if ndev <=1 else [mx.gpu(i) for i in range(ndev)]
-    layer1 = NormAct(in_channels=ch, slope=0.01)
-    layer2 = mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.01)
+    layer1 = NormAct(in_channels=ch, slope=0.1)
+    layer2 = mx.gluon.contrib.nn.InplaceABN(in_channels=ch, slope=0.1)
 
     layer1.initialize(ctx=ctx_list)
     layer2.initialize(ctx=ctx_list)
@@ -2045,22 +2045,22 @@ def _check_inplace_abn(input, training=True, ndev=1):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
-    #assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-5, rtol=1e-3)
     assert_almost_equal(layer1.running_mean.data(mx.gpu(0)).asnumpy(),
                         layer2.running_mean.data(mx.gpu(0)).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=1e-5, rtol=1e-3)
     assert_almost_equal(layer1.running_var.data(mx.gpu(0)).asnumpy(),
                         layer2.running_var.data(mx.gpu(0)).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=1e-5, rtol=1e-3)
     assert_almost_equal(layer1.gamma.data(mx.gpu(0)).grad.asnumpy(),
                         layer2.gamma.data(mx.gpu(0)).grad.asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=1e-5, rtol=1e-3)
     assert_almost_equal(layer1.beta.data(mx.gpu(0)).grad.asnumpy(),
                         layer2.beta.data(mx.gpu(0)).grad.asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=1e-5, rtol=1e-3)
 
 def _check_inplace_abn2(input, training=True, ndev=1):
     ch = input.shape[1]
@@ -2094,7 +2094,7 @@ def _check_inplace_abn2(input, training=True, ndev=1):
     if not training:
         output1 = layer1(input1)
         output2 = layer2(input2)
-        assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
+        assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-5, rtol=1e-3)
         return
 
     with mx.autograd.record():
@@ -2105,10 +2105,10 @@ def _check_inplace_abn2(input, training=True, ndev=1):
         mx.autograd.backward(loss1)
         mx.autograd.backward(loss2)
 
-    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(loss1.asnumpy(), loss2.asnumpy(), atol=1e-5, rtol=1e-3)
+    assert_almost_equal(input1.grad.asnumpy(), input2.grad.asnumpy(), atol=1e-5, rtol=1e-3)
 
 def test_inpabn():
     def get_num_devices():
@@ -2118,17 +2118,16 @@ def test_inpabn():
             except:
                 return i
     for i in range(10):
-        target_shape = np.random.randint(2, 6, size=(4,))
+        target_shape = np.random.randint(2,32, size=(4,))
         print(i, target_shape)
-        _check_inplace_abn(mx.nd.random.uniform(shape=tuple(target_shape)), True, 1)
-        _check_inplace_abn(mx.nd.random.uniform(shape=tuple(target_shape)), False, 1)
-        _check_inplace_abn2(mx.nd.random.uniform(shape=tuple(target_shape)), True, 1)
+        _check_inplace_abn(mx.nd.random.uniform(-2, 2, shape=tuple(target_shape)), True, 1)
+        _check_inplace_abn(mx.nd.random.uniform(-2, 2, shape=tuple(target_shape)), False, 1)
+        _check_inplace_abn2(mx.nd.random.uniform(-2, 2, shape=tuple(target_shape)), True, 1)
     # no need to use SyncBN with 1 gpu
     if get_num_devices() < 2:
         return
     ndev = 2
 
 if __name__ == '__main__':
-    test_inpabn()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()

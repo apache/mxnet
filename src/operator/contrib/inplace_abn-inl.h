@@ -177,6 +177,10 @@ class InplaceABN : public Operator {
          F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
          broadcast<1>(beta, out.shape_);
       */
+      // update running mean and var
+      moving_mean = moving_mean * param_.momentum + mean * (1.0f - param_.momentum);
+      moving_var = moving_var * param_.momentum + var / scale / (1.0f / scale - 1.0f)
+          * (1.0f - param_.momentum);
       Assign(out, req[inplaceabn::kOut], broadcast<1>(gamma, out.shape_) *
          (data - broadcast<1>(mean, data.shape_)) /
          F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
@@ -243,7 +247,7 @@ class InplaceABN : public Operator {
     Tensor<xpu, 1> beta = in_data[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> ggamma = in_grad[inplaceabn::kGamma].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> gbeta = in_grad[inplaceabn::kBeta].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
+    // Tensor<xpu, 1> moving_mean = aux_states[inplaceabn::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[inplaceabn::kMovingVar].get<xpu, 1, real_t>(s);
     // get the work space
     size_t data_size = out.shape_[0] * out.shape_[1] * out.shape_[2] * out.shape_[3];
@@ -276,9 +280,6 @@ class InplaceABN : public Operator {
         out.dptr_, real_t(param_.slope));
 
     if (ctx.is_train && !param_.use_global_stats) {
-      // update running mean and var
-      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
-      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // cal
       sumGrad = sumall_except_dim<1>(grad_y);
       sumProd = sumall_except_dim<1>(grad_y * data_y);
