@@ -86,6 +86,7 @@ class OpExecutor {
   virtual OpStatePtr state() const {
     return OpStatePtr();
   }
+
  protected:
   std::vector<NDArray> in_array_fallback;
 };
