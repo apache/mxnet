@@ -79,7 +79,7 @@ We have defined the input parameters required for the `export_model` API. Now, w
 converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
 ```
 
-This API returns path of the converted model which you can use further to import in other frameworks.
+This API returns path of the converted model which you can later use to import the model into other frameworks.
 
 ## Check validity of ONNX model
 
