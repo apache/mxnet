@@ -49,10 +49,8 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       ctx = Context.gpu()
     }
-    NDArrayCollector.auto().withScope {
-      LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
-        tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
-    }
+    LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
+      tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
   }
 
   test("Example CI: Test TrainCharRNN") {
@@ -60,10 +58,8 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
-      NDArrayCollector.auto().withScope {
-        TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
-          tempDirPath, ctx, 1)
-      }
+      TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
+        tempDirPath, ctx, 1)
     } else {
       logger.info("CPU not supported for this test, skipped...")
     }
@@ -72,9 +68,7 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   test("Example CI: Test Inference on CharRNN") {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val ctx = Context.gpu()
-    NDArrayCollector.auto().withScope {
-      TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
-        tempDirPath + "/RNN/obama", "The joke")
-    }
+    TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
+      tempDirPath + "/RNN/obama", "The joke")
   }
 }

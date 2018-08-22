@@ -60,16 +60,12 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       context = Context.gpu()
     }
 
-    val output = NDArrayCollector.auto().withScope {
-      SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
+    val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
         inputImagePath, context)
-    }
 
-    val outputList = NDArrayCollector.auto().withScope {
-      SSDClassifierExample.runObjectDetectionBatch(
+    val outputList = SSDClassifierExample.runObjectDetectionBatch(
         modelDirPath + "resnet50_ssd_model",
         inputImageDir, context)
-    }
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 

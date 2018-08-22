@@ -63,15 +63,11 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
       context = Context.gpu()
     }
 
-    val output = NDArrayCollector.auto().withScope {
-      ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
+    val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
         inputImagePath, context)
-    }
 
-    val outputList = NDArrayCollector.auto().withScope {
-      ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
+    val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
         inputImageDir, context)
-    }
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 

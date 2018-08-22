@@ -239,30 +239,33 @@ object CNNTextClassification {
 
   def test(w2vFilePath : String, mrDatasetPath: String,
            ctx : Context, saveModelPath: String) : Float = {
-    val (numEmbed, word2vec) = DataHelper.loadGoogleModel(w2vFilePath)
-    val (datas, labels) = DataHelper.loadMSDataWithWord2vec(
-      mrDatasetPath, numEmbed, word2vec)
-    // randomly shuffle data
-    val randIdx = Random.shuffle((0 until datas.length).toList)
-    // split train/dev set
-    val (trainDats, devDatas) = {
-      val train = randIdx.dropRight(1000).map(datas(_)).toArray
-      val dev = randIdx.takeRight(1000).map(datas(_)).toArray
-      (train, dev)
+    val output = NDArrayCollector.auto().withScope {
+      val (numEmbed, word2vec) = DataHelper.loadGoogleModel(w2vFilePath)
+      val (datas, labels) = DataHelper.loadMSDataWithWord2vec(
+        mrDatasetPath, numEmbed, word2vec)
+      // randomly shuffle data
+      val randIdx = Random.shuffle((0 until datas.length).toList)
+      // split train/dev set
+      val (trainDats, devDatas) = {
+        val train = randIdx.dropRight(1000).map(datas(_)).toArray
+        val dev = randIdx.takeRight(1000).map(datas(_)).toArray
+        (train, dev)
+      }
+      val (trainLabels, devLabels) = {
+        val train = randIdx.dropRight(1000).map(labels(_)).toArray
+        val dev = randIdx.takeRight(1000).map(labels(_)).toArray
+        (train, dev)
+      }
+      // reshpae for convolution input
+      val sentenceSize = datas(0).length
+      val batchSize = 100
+      val lr = 0.001f
+      val cnnModel = setupCnnModel(ctx, batchSize, sentenceSize, numEmbed)
+      val result = trainCNN(cnnModel, trainDats, trainLabels, devDatas, devLabels, batchSize,
+        saveModelPath, learningRate = lr)
+      result
     }
-    val (trainLabels, devLabels) = {
-      val train = randIdx.dropRight(1000).map(labels(_)).toArray
-      val dev = randIdx.takeRight(1000).map(labels(_)).toArray
-      (train, dev)
-    }
-    // reshpae for convolution input
-    val sentenceSize = datas(0).length
-    val batchSize = 100
-    val lr = 0.001f
-    val cnnModel = setupCnnModel(ctx, batchSize, sentenceSize, numEmbed)
-    val result = trainCNN(cnnModel, trainDats, trainLabels, devDatas, devLabels, batchSize,
-      saveModelPath, learningRate = lr)
-    result
+    output
   }
 
   def main(args: Array[String]): Unit = {

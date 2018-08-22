@@ -60,10 +60,8 @@ class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       ctx = Context.gpu()
     }
-    NDArrayCollector.auto().withScope {
-      BoostInference.runInference(tempDirPath + "/NS/model", tempDirPath + "/NS", 2,
-        tempDirPath + "/NS/IMG_4343.jpg", ctx)
-    }
+    BoostInference.runInference(tempDirPath + "/NS/model", tempDirPath + "/NS", 2,
+      tempDirPath + "/NS/IMG_4343.jpg", ctx)
   }
 
   test("Example CI: Test Boost Training") {
@@ -71,10 +69,8 @@ class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
-      NDArrayCollector.auto().withScope {
-        BoostTrain.runTraining(tempDirPath + "/NS/images", tempDirPath + "/NS/vgg19.params", ctx,
-          tempDirPath + "/NS/starry_night.jpg", tempDirPath + "/NS")
-      }
+      BoostTrain.runTraining(tempDirPath + "/NS/images", tempDirPath + "/NS/vgg19.params", ctx,
+        tempDirPath + "/NS/starry_night.jpg", tempDirPath + "/NS")
     } else {
       logger.info("GPU test only, skip CPU...")
     }
@@ -85,12 +81,10 @@ class NeuralStyleSuite extends FunSuite with BeforeAndAfterAll {
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
-      NDArrayCollector.auto().withScope {
-        NeuralStyle.runTraining("vgg19", tempDirPath + "/NS/IMG_4343.jpg",
-          tempDirPath + "/NS/starry_night.jpg",
-          ctx, tempDirPath + "/NS/vgg19.params", tempDirPath + "/NS",
-          1f, 20f, 0.01f, 1, 10f, 60, 600, 50, 0.0005f)
-      }
+      NeuralStyle.runTraining("vgg19", tempDirPath + "/NS/IMG_4343.jpg",
+        tempDirPath + "/NS/starry_night.jpg",
+        ctx, tempDirPath + "/NS/vgg19.params", tempDirPath + "/NS",
+        1f, 20f, 0.01f, 1, 10f, 60, 600, 50, 0.0005f)
     } else {
       logger.info("GPU test only, skip CPU")
     }

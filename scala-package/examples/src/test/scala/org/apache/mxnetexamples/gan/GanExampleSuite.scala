@@ -44,9 +44,8 @@ class GanExampleSuite extends FunSuite with BeforeAndAfterAll{
 
         val context = Context.gpu()
 
-        val output = NDArrayCollector.auto().withScope {
-          GanMnist.runTraining(modelDirPath, context, modelDirPath, 3)
-        }
+        val output = GanMnist.runTraining(modelDirPath, context, modelDirPath, 3)
+
         Process("rm -rf " + modelDirPath) !
 
         assert(output >= 0.0f)
