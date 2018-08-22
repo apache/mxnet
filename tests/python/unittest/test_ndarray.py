@@ -240,20 +240,18 @@ def test_ndarray_scalar():
     assert(np.sum(d.asnumpy()) < 1e-5)
 
 
-@with_seed(0)
+@with_seed()
 def test_ndarray_pickle():
     maxdim = 5
-    nrepeat = 10
-    for repeat in range(nrepeat):
-        for dim in range(1, maxdim):
-            a = random_ndarray(dim)
-            b = mx.nd.empty(a.shape)
-            a[:] = np.random.uniform(-10, 10, a.shape)
-            b[:] = np.random.uniform(-10, 10, a.shape)
-            a = a + b
-            data = pkl.dumps(a)
-            a2 = pkl.loads(data)
-            assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
+    for dim in range(1, maxdim):
+        a = random_ndarray(dim)
+        b = mx.nd.empty(a.shape)
+        a[:] = np.random.uniform(-10, 10, a.shape)
+        b[:] = np.random.uniform(-10, 10, a.shape)
+        a = a + b
+        data = pkl.dumps(a)
+        a2 = pkl.loads(data)
+        assert np.sum(a.asnumpy() != a2.asnumpy()) == 0
 
 
 @with_seed()
