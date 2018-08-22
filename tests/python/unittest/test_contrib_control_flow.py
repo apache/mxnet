@@ -1708,6 +1708,92 @@ def test_cut_subgraph_foreach():
 
 
 @with_seed()
+def test_uniq_name():
+    class ForeachLayer1(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(ForeachLayer1, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def step1(data, states):
+                return data + 1, states
+            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            # The input variables have the same symbol name.
+            out, states = F.contrib.foreach(step1, out1, states1)
+            return out
+
+    class ForeachLayer2(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(ForeachLayer2, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def step1(data, states):
+                return data + 1, states
+            out1, states1 = F.contrib.foreach(step1, inputs, states)
+            def step2(data, states):
+                return data, [states[0] + states1[0] + F.squeeze(out1.slice_axis(axis=0, begin=0, end=1))]
+            # The input variables have the same symbol names.
+            # The free variables have the same symbol names as the input variables.
+            out, states = F.contrib.foreach(step2, out1, states1)
+            return out
+
+    class WhileLayer1(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(WhileLayer1, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def cond(state1, state2):
+                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                return s == s
+            def step(state1, state2):
+                return state1 + 1, [state1, state2]
+            states = [states[0], states[0] + 1]
+            out1, states1 = F.contrib.while_loop(cond, step, states, max_iterations=5)
+            # The input variables have the same symbol name.
+            out, states = F.contrib.while_loop(cond, step, states1, max_iterations=5)
+            return out
+
+    class WhileLayer2(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(WhileLayer2, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, inputs, states):
+            def cond(state1, state2):
+                s = F.squeeze(state1.slice_axis(axis=0, begin=0, end=1))
+                return s == s
+            def step1(state1, state2):
+                return state1 + 1, [state1, state2]
+            states = [states[0], states[0] + 1]
+            out1, states1 = F.contrib.while_loop(cond, step1, states, max_iterations=5)
+            def step2(state1, state2):
+                return state1 + 1, [state1 + states1[0], state2 + states1[1]]
+            # The input variables have the same symbol name.
+            out, states = F.contrib.while_loop(cond, step2, states1, max_iterations=5)
+            return out
+
+    TestLayers = [ForeachLayer1, ForeachLayer2,
+            WhileLayer1, WhileLayer2]
+
+    data = mx.nd.normal(loc=0, scale=1, shape=(2, 5))
+    states = mx.nd.normal(loc=0, scale=1, shape=(5))
+    for TestLayer in TestLayers:
+        layer = TestLayer()
+        layer.initialize(ctx=default_context())
+        res1 = layer(data, [states])
+
+        with mx.autograd.record():
+            res1 = layer(data, [states])
+
+        layer = TestLayer()
+        layer.initialize(ctx=default_context())
+        layer.hybridize()
+        res2 = layer(data, [states])
+
+        with mx.autograd.record():
+            res2 = layer(data, [states])
+        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+
+
+@with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):

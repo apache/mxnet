@@ -135,6 +135,12 @@ def _regroup(args, fmt):
     return ret, args
 
 
+# We want to generate a unique name for input symbols to a control flow
+# operator. The names are generated on purpose differently from the symbols
+# cut from the graph.
+def _get_sym_uniq_name(sym):
+    return '{}-{}'.format(sym.name, sym.attr('_value_index'))
+
 def _get_graph_inputs(subg):
     num_handles = ctypes.c_int(0)
     handles = ctypes.POINTER(SymbolHandle)()
@@ -280,9 +286,9 @@ def foreach(body, data, init_states, name="foreach"):
     # with AttrScope and prune the nodes without the special attribute.
     name = _get_unique_subgraph_name(name)
     with AttrScope(__subgraph_name__=name):
-        in_eles = [symbol.var(sym.name) for sym in flatten_data]
+        in_eles = [symbol.var(_get_sym_uniq_name(sym)) for sym in flatten_data]
         in_eles, _ = _regroup(in_eles, data_fmt)
-        states = [symbol.var(s.name) for s in init_flatten_states]
+        states = [symbol.var(_get_sym_uniq_name(s)) for s in init_flatten_states]
         states, _ = _regroup(states, copy.deepcopy(init_state_fmt))
         sym_out, sym_states = body(in_eles, states)
 
@@ -310,12 +316,14 @@ def foreach(body, data, init_states, name="foreach"):
     gin_names = input_syms.keys()
     # This array contains the symbols for the inputs of foreach.
     # They are ordered according to the inputs of the subgraph.
-    state_names = [sym.name for sym in init_flatten_states]
-    data_names = [sym.name for sym in flatten_data]
+    state_names = [_get_sym_uniq_name(sym) for sym in init_flatten_states]
+    data_names = [_get_sym_uniq_name(sym) for sym in flatten_data]
     cut_var_map = {sym.list_outputs()[0]:sym for sym in cut_syms}
     cut_var_names = cut_var_map.keys()
 
     subg_input_names = g.list_inputs()
+    assert len(set(subg_input_names)) == len(subg_input_names), \
+            "The inputs of the subgraph don't have unique names: " + str(subg_input_names)
     # ordered_ins contains input symbols in the following order:
     # data_syms, state_syms, followed by cut_vars and vars in the closure.
     ordered_ins = [x for x in flatten_data]
@@ -483,7 +491,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             # create new variables with the same name,
             # them feed them to the given func
             graph_vars, var_fmt = _flatten(graph_vars, "while loop_vars")
-            new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
+            new_graph_vars = [symbol.var(_get_sym_uniq_name(sym)) for sym in graph_vars]
             new_graph_vars, _ = _regroup(new_graph_vars, var_fmt)
             outputs, final_state, out_fmt, var_fmt = graph_func(new_graph_vars)
             # first `num_out_data` elements belong to `outputs`
@@ -517,17 +525,20 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
                                 # to a `loc`, where inputs[loc] = sym
         for graph in graphs:
             # some loop_vars are inputs to `graph`, some are not
-            name_to_loop_vars = {sym.name: sym for sym in flatten_loop_vars}
+            name_to_loop_vars = {_get_sym_uniq_name(sym): sym for sym in flatten_loop_vars}
             # other inputs to `graph` created by cut_graph
             name_to_cut_g_syms = {sym.list_outputs()[0]: sym for sym in _cut_subgraph(graph)}
             # input_syms: all inputs to the `graph`
             name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
             # also we collect the mapping from var's name to var's loc in loop_vars
-            name_to_var_locs = {sym.name: i for i, sym in enumerate(flatten_loop_vars)}
+            name_to_var_locs = {_get_sym_uniq_name(sym): i for i, sym in enumerate(flatten_loop_vars)}
             # collect arguments for each subgraph
             input_locs = []                         # results from the second step
             var_locs = [-1] * len(flatten_loop_vars)        # results from the third step
-            for name in graph.list_inputs():
+            subg_input_names = graph.list_inputs()
+            assert len(set(subg_input_names)) == len(subg_input_names), \
+                    "The inputs of the subgraph don't have unique names: " + str(subg_input_names)
+            for name in subg_input_names:
                 assert name in name_to_input_syms   # it should obviously hold
                 # name -> sym
                 if name in name_to_loop_vars:
