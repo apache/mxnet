@@ -195,7 +195,7 @@ def _construct_subgraph(sym_out, sym_states, name):
 
     for s in sym_states:
         if s.name in all_input_names or s.name in output_names or \
-                s.list_attr().get("__subgraph_name__", "") != name:
+           s.list_attr().get("__subgraph_name__", "") != name:
             flat_out.append(symbol.op.identity(s))
         else:
             flat_out.append(s)
