@@ -71,16 +71,23 @@ def run_unittests_python3_qemu():
     from vmcontrol import VM
     with VM() as vm:
         logging.info("VM provisioning with ansible")
-        check_call(["ansible-playbook", "-v", "-u", "qemu", "-i", "localhost:2222,", "playbook.yml"])
+        check_call(["ansible-playbook", "-v", "-u", "qemu", "-i", "localhost:{},".format(vm.ssh_port), "playbook.yml"])
         logging.info("VM provisioned successfully.")
+        logging.info("sync tests")
+        check_call(['rsync', '-e', 'ssh -p{}'.format(vm.ssh_port), '-a', 'mxnet/tests', 'qemu@localhost:mxnet'])
+        logging.info("execute tests")
+        check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(vm.ssh_port), "qemu@localhost", "./runtime_functions.py", "run_unittests_python3_qemu_"])
+        logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
 def run_unittests_python3_qemu_():
     """this runs inside the vm, it's run by the playbook above by ansible"""
     pkg = glob.glob('mxnet_dist/*.whl')[0]
+    logging.info("PIP Installing %s", pkg)
     check_call(['sudo', 'pip3', 'install', pkg])
-    check_call(['rsync', '-e', 'ssh', '-p2222', '-vaP', 'mxnet/tests', 'qemu@localhost:mxnet'])
+    logging.info("PIP Installing mxnet/tests/requirements.txt")
     check_call(['sudo', 'pip3', 'install', '-r', 'mxnet/tests/requirements.txt'])
+    logging.info("Running tests in mxnet/tests/python/unittest/")
     check_call(['nosetests', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/'])
 
 def parsed_args():

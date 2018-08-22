@@ -1,5 +1,5 @@
 ---
-- name: provision
+- name: provision QEMU VM
   hosts: all
   gather_facts: no
   become: true
@@ -28,20 +28,20 @@
         path: runtime_functions.py
         mode: 0755
 
-    - name: 'run tests'
-      command: ./runtime_functions.py run_unittests_python3_qemu_
-      async: 1000
-      poll: 0
-      register: tests
-
-    - name: 'wait for tests to finish'
-      async_status: jid={{ tests.ansible_job_id }}
-      register: job_result
-      until: job_result.finished
-      # 6h timeout
-      retries: 2160
-      delay: 10
-
+#    - name: 'run tests'
+#      command: ./runtime_functions.py run_unittests_python3_qemu_
+#      async: 1000
+#      poll: 0
+#      register: tests
+#
+#    - name: 'wait for tests to finish'
+#      async_status: jid={{ tests.ansible_job_id }}
+#      register: job_result
+#      until: job_result.finished
+#      # 6h timeout
+#      retries: 2160
+#      delay: 10
+#
 #
 #    - name: copy runtime_functions.py
 #      copy:
