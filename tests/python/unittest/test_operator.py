@@ -2132,6 +2132,59 @@ def test_reshape():
 
 
 @with_seed()
+def test_reshape_like():
+    def test_reshape_like_new(lhs_shape, rhs_shape, lbeg, lend, rbeg, rend, dst_shape):
+        lhs = mx.sym.Variable("lhs")
+        rhs = mx.sym.Variable("rhs")
+        net = mx.sym.reshape_like(lhs, rhs, lhs_begin=lbeg, lhs_end=lend, rhs_begin=rbeg, rhs_end=rend)
+        js = net.tojson()
+        net = mx.sym.load_json(js)
+        _, output_shape, __ = net.infer_shape(lhs=lhs_shape, rhs=rhs_shape)
+
+        assert output_shape[0] == dst_shape, \
+            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
+            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+
+        lhs_npy = np.random.rand(*lhs_shape)
+        rhs_npy = np.random.rand(*rhs_shape)
+        grad_npy = np.random.rand(*dst_shape)
+
+        exe = net.simple_bind(default_context(), lhs=lhs_shape, rhs=rhs_shape)
+        exe.arg_dict['lhs'][:] = lhs_npy
+        exe.arg_dict['rhs'][:] = rhs_npy
+        exe.forward(is_train=True)
+        assert np.square(exe.outputs[0].asnumpy() - lhs_npy.reshape(dst_shape)).mean() < 1E-7, \
+            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
+            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+        exe.backward(out_grads=mx.nd.array(grad_npy))
+        assert np.square(exe.grad_dict['lhs'].asnumpy() - grad_npy.reshape(lhs_shape)).mean() < 1E-7, \
+            'LHS Shape = %s, RHS Shape = %s, lhs_begin = %s, lhs_end = %s, rhs_begin= %s, rhs_end= %s'\
+            %(str(lhs_shape), str(rhs_shape), str(lbeg), str(lend), str(rbeg), str(rend))
+    # Test new api (Using shape)
+    test_cases = [
+        [(30,), (15,2,4), 0, None, 0, 2, (15,2)],
+        [(30,), (15,2,4), None, 1, None, 2, (15,2)],
+        [(30,7), (15,2,4), 0, 1, 0, 2, (15,2,7)],
+        [(3,5), (1,15,4), 0, 2, 1, 2, (15,)],
+        [(3,5), (1,15,4), 0, None, 1, -1, (15,)],
+        [(30,12), (4,2,2,3), -1, None, 1, None, (30,2,2,3)],
+        [(1,1,7,3,1,1), (81,1,1,21), 1, -1, 1, None, (1,1,1,21,1)]
+    ]
+    # for test_case in test_cases:
+    for test_case in test_cases:
+        test_reshape_like_new(*test_case)
+
+    # Test old api
+    lhs = mx.sym.Variable("lhs")
+    rhs = mx.sym.Variable("rhs")
+    net = mx.sym.reshape_like(lhs, rhs)
+    js = net.tojson()
+    net = mx.sym.load_json(js)
+    _, output_shape, __ = net.infer_shape(lhs=(40, 30), rhs=(30,20,2))
+    assert(output_shape[0] == (30,20,2))
+
+
+@with_seed()
 def test_reduce():
     sample_num = 500
     def test_reduce_inner(numpy_reduce_func, numpy_reduce_grad_func, mx_reduce_sym, nan_prob=0,

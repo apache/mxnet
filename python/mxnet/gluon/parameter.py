@@ -319,7 +319,7 @@ class Parameter(object):
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
             data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
-            self._trainer._row_sparse_pull(self, data, all_row_ids)
+            self._trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
