@@ -139,6 +139,8 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input1 = input.copy()
     input2 = input.copy()
 
+    rtol, atol = (1e-2, 1e-2) if input.dtype is np.float16 else (1e-3, 1e-3)
+
     if cuda:
         input1 = input.as_in_context(mx.gpu(0))
         ctx_list = [mx.gpu(i) for i in range(num_devices)]
@@ -151,9 +153,6 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)
-
-    # using the same values for gamma and beta
-    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
 
     input1.attach_grad()
     inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
@@ -170,18 +169,19 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
     # assert forwarding
-    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=atol, rtol=rtol)
+    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=atol, rtol=rtol)
     assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
                         _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=atol, rtol=rtol)
     assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
                         _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=atol, rtol=rtol)
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=atol, rtol=rtol)
 
 
+@with_seed()
 def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
@@ -193,10 +193,12 @@ def test_sync_batchnorm():
     if get_num_devices() < 2:
         return
     ndev = 2
+    dtypes = [np.float16, np.float32]
     # check with unsync version
     for i in range(10):
-        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                                num_devices=ndev, cuda=True)
+        for dtype in dtypes:
+            _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)).astype(dtype),
+                                    num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
     import nose
