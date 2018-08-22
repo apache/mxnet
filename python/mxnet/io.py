@@ -36,7 +36,7 @@ from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concat
 
-from .io_utils import init_data, has_instance, shuffle
+from .io_utils import init_data, has_instance, getdata_by_idx
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -766,8 +766,8 @@ class NDArrayIter(DataIter):
         # shuffle index
         np.random.shuffle(self.idx)
         # get the data by corresponding index
-        self.data = shuffle(self.data, self.idx)
-        self.label = shuffle(self.label, self.idx)
+        self.data = getdata_by_idx(self.data, self.idx)
+        self.label = getdata_by_idx(self.label, self.idx)
 
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.

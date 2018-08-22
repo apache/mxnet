@@ -71,7 +71,7 @@ def has_instance(data, dtype):
     return False
 
 
-def shuffle(data, idx):
+def getdata_by_idx(data, idx):
     """Shuffle the data."""
     shuffle_data = []
 
