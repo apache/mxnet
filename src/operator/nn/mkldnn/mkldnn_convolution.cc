@@ -244,11 +244,21 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
                                const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
-  NDArray weight = in_data[conv::kWeight];
-  MKLDNNConvForward &fwd = GetConvFwd(attrs, ctx.is_train, in_data[conv::kData], weight,
-      param.no_bias ? nullptr : &in_data[conv::kBias], out_data[conv::kOut]);
 
-  auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
+  auto data = in_data[conv::kData];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+
+  auto weight = in_data[conv::kWeight];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+
+  const NDArray* bias = param.no_bias ? nullptr : &in_data[conv::kBias];
+
+  MKLDNNConvForward &fwd = GetConvFwd(attrs, ctx.is_train, data, weight,
+                                      bias, out_data[conv::kOut]);
+
+  auto data_mem = data.GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
