@@ -17,17 +17,14 @@
 
 """Data iterators for common data formats."""
 from __future__ import absolute_import
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 
 import sys
 import ctypes
 import logging
 import threading
-try:
-    import h5py
-except ImportError:
-    h5py = None
 import numpy as np
+
 from .base import _LIB
 from .base import c_str_array, mx_uint, py_str
 from .base import DataIterHandle, NDArrayHandle
@@ -35,10 +32,11 @@ from .base import mx_real_t
 from .base import check_call, build_param_doc as _build_param_doc
 from .ndarray import NDArray
 from .ndarray.sparse import CSRNDArray
-from .ndarray.sparse import array as sparse_array
 from .ndarray import _ndarray_cls
 from .ndarray import array
 from .ndarray import concat
+
+from .io_utils import init_data, has_instance, shuffle
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -487,59 +485,6 @@ class PrefetchingIter(DataIter):
     def getpad(self):
         return self.current_batch.pad
 
-def _init_data(data, allow_empty, default_name):
-    """Convert data into canonical form."""
-    assert (data is not None) or allow_empty
-    if data is None:
-        data = []
-
-    if isinstance(data, (np.ndarray, NDArray, h5py.Dataset)
-                  if h5py else (np.ndarray, NDArray)):
-        data = [data]
-    if isinstance(data, list):
-        if not allow_empty:
-            assert(len(data) > 0)
-        if len(data) == 1:
-            data = OrderedDict([(default_name, data[0])]) # pylint: disable=redefined-variable-type
-        else:
-            data = OrderedDict( # pylint: disable=redefined-variable-type
-                [('_%d_%s' % (i, default_name), d) for i, d in enumerate(data)])
-    if not isinstance(data, dict):
-        raise TypeError("Input must be NDArray, numpy.ndarray, h5py.Dataset " + \
-                "a list of them or dict with them as values")
-    for k, v in data.items():
-        if not isinstance(v, (NDArray, h5py.Dataset) if h5py else NDArray):
-            try:
-                data[k] = array(v)
-            except:
-                raise TypeError(("Invalid type '%s' for %s, "  % (type(v), k)) + \
-                                "should be NDArray, numpy.ndarray or h5py.Dataset")
-
-    return list(sorted(data.items()))
-
-def _has_instance(data, dtype):
-    """Return True if ``data`` has instance of ``dtype``.
-    This function is called after _init_data.
-    ``data`` is a list of (str, NDArray)"""
-    for item in data:
-        _, arr = item
-        if isinstance(arr, dtype):
-            return True
-    return False
-
-def _shuffle(data, idx):
-    """Shuffle the data."""
-    shuffle_data = []
-
-    for k, v in data:
-        if (isinstance(v, h5py.Dataset) if h5py else False):
-            shuffle_data.append((k, v))
-        elif isinstance(v, CSRNDArray):
-            shuffle_data.append((k, sparse_array(v.asscipy()[idx], v.context)))
-        else:
-            shuffle_data.append((k, array(v.asnumpy()[idx], v.context)))
-
-    return shuffle_data
 
 class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
@@ -662,10 +607,10 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        self.data = _init_data(data, allow_empty=False, default_name=data_name)
-        self.label = _init_data(label, allow_empty=True, default_name=label_name)
+        self.data = init_data(data, allow_empty=False, default_name=data_name)
+        self.label = init_data(label, allow_empty=True, default_name=label_name)
 
-        if ((_has_instance(self.data, CSRNDArray) or _has_instance(self.label, CSRNDArray)) and
+        if ((has_instance(self.data, CSRNDArray) or has_instance(self.label, CSRNDArray)) and
                 (last_batch_handle != 'discard')):
             raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
                                       " with `last_batch_handle` set to `discard`.")
@@ -820,9 +765,9 @@ class NDArrayIter(DataIter):
         """Shuffle the data."""
         # shuffle index
         np.random.shuffle(self.idx)
-        # get the data with corresponding index
-        self.data = _shuffle(self.data, self.idx)
-        self.label = _shuffle(self.label, self.idx)
+        # get the data by corresponding index
+        self.data = shuffle(self.data, self.idx)
+        self.label = shuffle(self.label, self.idx)
 
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.
