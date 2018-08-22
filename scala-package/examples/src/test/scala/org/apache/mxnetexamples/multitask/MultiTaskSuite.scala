@@ -40,9 +40,7 @@ class MultiTaskSuite extends FunSuite {
       val ctx = Context.gpu()
 
       val modelPath = ExampleMultiTask.getTrainingData
-      val (executor, evalMetric) = NDArrayCollector.auto().withScope {
-        ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
-      }
+      val (executor, evalMetric) = ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
       evalMetric.get.foreach { case (name, value) =>
         assert(value >= 0.95f)
       }
