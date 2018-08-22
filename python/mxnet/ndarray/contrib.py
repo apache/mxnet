@@ -277,7 +277,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
         The loop condition.
     func: a Python function.
         The loop body.
-    loop_vars: an NDArray or a list of NDArrays.
+    loop_vars: an NDArray or nested lists of NDArrays.
         The initial values of the loop variables.
     max_iterations: a python int.
         Maximum number of iterations.
@@ -286,7 +286,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     ------
     outputs: an NDArray or list of NDArrays
         stacked output from each step
-    states: an NDArray or list of NDArrays
+    states: an NDArray or nested lists of NDArrays
         final state
 
     Examples
@@ -430,7 +430,7 @@ def cond(pred, then_func, else_func):
 
     Returns
     -------
-    outputs: an NDArray or a list of NDArrays, representing the result of computation.
+    outputs: an NDArray or nested lists of NDArrays, representing the result of computation.
 
     Examples
     --------

@@ -622,7 +622,7 @@ def cond(pred, then_func, else_func, name="cond"):
 
     Returns
     -------
-    outputs: a list of Symbols, representing the result of computation.
+    outputs: a Symbol or nested lists of Symbols, representing the result of computation.
 
     Examples
     --------
