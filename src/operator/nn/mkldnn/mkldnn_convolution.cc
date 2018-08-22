@@ -300,18 +300,32 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const ConvolutionParam& param = nnvm::get<ConvolutionParam>(attrs.parsed);
+
+  auto data = inputs[conv::kData + 1];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+
+  auto weight = inputs[conv::kWeight + 1];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+
+  const NDArray* bias = param.no_bias ? nullptr : &inputs[conv::kBias + 1];
+
+  auto output = inputs[conv::kOut];
+  if (output.IsView() && output.IsMKLDNNData())
+    output = output.Reorder2Default();
+
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwdImpl(param, ctx.is_train,
-      inputs[conv::kData + 1], inputs[conv::kWeight + 1],
-      param.no_bias ? nullptr : &inputs[conv::kBias + 1], inputs[conv::kOut]);
+      data, weight, param.no_bias ? nullptr : bias, output);
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
   mkldnn::convolution_backward_data::primitive_desc bwdData_pd
-    = GetConvBwdData(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1],
-        inputs[conv::kOut], fwd_pd);
-  auto out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
+    = GetConvBwdData(param, data, weight,
+        output, fwd_pd);
+  auto out_grad_mem = output.GetMKLDNNDataReorder(
       bwdData_pd.diff_dst_primitive_desc());
   if (req[conv::kData]) {
-    auto weight_mem = GetWeights(inputs[conv::kWeight + 1],
+    auto weight_mem = GetWeights(weight,
         bwdData_pd.weights_primitive_desc(), param.num_group);
     auto in_grad_mem = CreateMKLDNNMem(in_grad[conv::kData],
         bwdData_pd.diff_src_primitive_desc(), req[conv::kData]);
@@ -321,13 +335,13 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   }
   if (req[conv::kWeight]) {
     mkldnn::convolution_backward_weights::primitive_desc bwdWeights_pd
-        = GetConvBwdWeights(param, inputs[conv::kData + 1], inputs[conv::kWeight + 1],
-                            param.no_bias ? nullptr : &inputs[conv::kBias + 1],
-                            inputs[conv::kOut], fwd_pd);
+        = GetConvBwdWeights(param, data, weight,
+                            bias,
+                            output, fwd_pd);
     if (bwdData_pd.diff_dst_primitive_desc() != bwdWeights_pd.diff_dst_primitive_desc())
-      out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
+      out_grad_mem = output.GetMKLDNNDataReorder(
           bwdWeights_pd.diff_dst_primitive_desc());
-    auto data_mem = inputs[conv::kData + 1].GetMKLDNNDataReorder(
+    auto data_mem = data.GetMKLDNNDataReorder(
         bwdWeights_pd.src_primitive_desc());
     auto in_grad_weight = CreateMKLDNNWeightGrad(in_grad[conv::kWeight],
                                                  bwdWeights_pd.diff_weights_primitive_desc(),
