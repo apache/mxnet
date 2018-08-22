@@ -308,9 +308,7 @@ class DetRandomCropAug(DetAugmenter):
                 h -= 1
                 w = int(round(h * ratio))
                 area = w * h
-            if not min_area <= area <= max_area:
-                continue
-            if w <= 0 or w > width or h <= 0 or h > height:
+            if not (min_area <= area <= max_area and 0 <= w <= width and 0 <= h <= height):
                 continue
 
             y = random.randint(0, max(0, height - h))
