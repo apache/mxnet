@@ -40,7 +40,7 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 
 namespace exec {
 
-class MKLDNNOpExecutor : public OpExecutor {
+class FallbackOpExecutor : public OpExecutor {
  protected:
   std::vector<NDArray> in_array_fallback;
 };
@@ -158,7 +158,7 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
 
 
 // stateful compute_ex executor
-class StatefulComputeExExecutor : public MKLDNNOpExecutor {
+class StatefulComputeExExecutor : public FallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
@@ -228,7 +228,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
 };
 
 // fcompute_ex executor
-class FComputeExExecutor : public MKLDNNOpExecutor {
+class FComputeExExecutor : public FallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
