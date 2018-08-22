@@ -534,6 +534,21 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
 
@@ -1533,7 +1548,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TShape stride = param.stride;
   int num_filter = param.num_filter;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(ArrayTypes::All, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -1543,11 +1558,6 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     // can only conv only 4D inputs
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
-      continue;
-
-    // cannot pool if ndarray and mkldnn memory have different ndim
-    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
-        != in_arr.arr.shape().ndim())
       continue;
 
     float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0])
@@ -1564,8 +1574,8 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     scale_vector[3] = scale;
 
     for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector, true, forward_attrs.output_types);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
     NDArray ndbias = CreateBiasNDArray(num_filter);
@@ -1594,7 +1604,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_input[2] = inputs[1];  // kernel
       backwards_input[3] = inputs[2];  // bias
 
-      auto tmp_output = GetTestInputArrays(ArrayTypes::All, true)[i1];
+      auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias = CreateBiasNDArray(num_filter);
 
@@ -1602,7 +1612,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_outputs[1] = &tmp_kernel;
       backwards_outputs[2] = &tmp_bias;
 
-      auto tmp_output2 = GetTestInputArrays(ArrayTypes::All, true)[i1];
+      auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
       NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
       backwards_ex_outputs[0] = &tmp_output2.arr;
@@ -1610,7 +1620,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_ex_outputs[2] = &tmp_bias2;
 
       for (size_t i = 0; i < backwards_attrs.num_outputs; ++i)
-        back_req[0] = kWriteTo;
+        back_req[i] = kWriteTo;
 
       std::cout << "Backwards: ";
       PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
