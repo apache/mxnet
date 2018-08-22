@@ -139,7 +139,7 @@ def _regroup(args, fmt):
 # operator. The names are generated on purpose differently from the symbols
 # cut from the graph.
 def _get_sym_uniq_name(sym):
-    return sym.name + "-" + sym.attr("_value_index")
+    return '{}-{}'.format(sym.name, sym.attr('_value_index'))
 
 def _get_graph_inputs(subg):
     num_handles = ctypes.c_int(0)
