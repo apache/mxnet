@@ -501,7 +501,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             graph = symbol.Group(list(map(make_identity, outputs + final_state)))
         return graph, num_out_data, num_outputs, out_fmt, var_fmt
 
-    flatten_loop_vars, _ = _flatten(loop_vars, "while loop_vars")
+    flatten_loop_vars, init_loop_var_fmt = _flatten(loop_vars, "while loop_vars")
     _check_data(flatten_loop_vars, symbol.Symbol,
                 "loop_vars should be a symbol or a nested list of symbols")
 
@@ -562,7 +562,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     assert num_out_data == 0
     assert num_outputs == 1
     # create graph for `func`
-    func_g, num_out_data, num_outputs, out_fmt, var_fmt = \
+    func_g, num_out_data, num_outputs, out_fmt, _ = \
         _create_subgraph(loop_vars, _func_wrapper, name + "_func")
     # find symbols used in either cond_g or func_g
     input_syms, ((cond_input_locs, _), (func_input_locs, func_var_locs)) = \
@@ -584,7 +584,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     outputs = [result[i] for i in range(num_out_data)]
     outputs, _ = _regroup(outputs, out_fmt)
     final_loop_vars = [result[i] for i in range(num_out_data, num_outputs)]
-    final_loop_vars, _ = _regroup(final_loop_vars, var_fmt)
+    final_loop_vars, _ = _regroup(final_loop_vars, init_loop_var_fmt)
     return outputs, final_loop_vars
 
 def cond(pred, then_func, else_func, name="cond"):
