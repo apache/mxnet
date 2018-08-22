@@ -90,3 +90,9 @@ For all builds a directory from the host system is mapped where ccache will stor
 compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
 significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
 variable. All ccache instances are currently set to be 10 Gigabytes max in size.
+
+
+## Testing with QEMU
+```
+./build.py -p test.arm_qemu ./runtime_functions.py run_unittests_python3_qemu
+```
