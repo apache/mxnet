@@ -23,7 +23,7 @@ from mxnet import autograd
 from nose.tools import *
 
 def test_infer_multiout_op():
-    data = mx.nd.arange(16, dtype='float64').reshape((4, 4))
+    data = mx.nd.arange(16, dtype=np.float64).reshape((4, 4))
     data.attach_grad()
 
     with autograd.record():
@@ -36,13 +36,13 @@ def test_infer_multiout_op2():
         q, l = mx.nd.linalg.gelqf(a)
         return mx.nd.sum(l)
 
-    data32 = mx.nd.random.normal(shape=(2, 3), ctx=mx.cpu(), dtype='float32')
+    data32 = mx.nd.random.normal(shape=(2, 3), ctx=mx.cpu(), dtype=np.float32)
     data32.attach_grad()
     with autograd.record():
         test32 = test_func(data32)
         test32.backward()
 
-    data64 = mx.nd.Cast(data32, dtype='float64')
+    data64 = mx.nd.Cast(data32, dtype=np.float64)
     data64.attach_grad()
     with autograd.record():
         test64 = test_func(data64)
@@ -50,6 +50,6 @@ def test_infer_multiout_op2():
     assert_almost_equal(data64.grad.asnumpy().all(), data32.grad.asnumpy().all())
 
 
-if __name__ == "__main__":
-    test_infer_multiout_op()
-    test_infer_multiout_op2()
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
