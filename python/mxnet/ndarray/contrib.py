@@ -175,7 +175,7 @@ def foreach(body, data, init_states):
 
     Returns
     -------
-    outputs: an NDArray or a list of NDArrays.
+    outputs: an NDArray or nested lists of NDArrays.
         The output data concatenated from the output of all iterations.
     states: an NDArray or nested lists of NDArrays.
         The loop states in the last iteration.
@@ -250,7 +250,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
     `func(*loop_vars) =>
-    (NDArray or List[NDArray] step_output, NDArray or List[NDArray] new_loop_vars)`.
+    (NDArray or nested List[NDArray] step_output, NDArray or nested List[NDArray] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
@@ -284,7 +284,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
 
     Returns
     ------
-    outputs: an NDArray or list of NDArrays
+    outputs: an NDArray or nested lists of NDArrays
         stacked output from each step
     states: an NDArray or nested lists of NDArrays
         final state
@@ -407,12 +407,12 @@ def cond(pred, then_func, else_func):
     `then_func` is a user-defined function, used as computation of the then branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `then_func` should be
-    `then_func() => NDArray or List[NDArray]`.
+    `then_func() => NDArray or nested List[NDArray]`.
 
     `else_func` is a user-defined function, used as computation of the else branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `else_func` should be
-    `else_func() => NDArray or List[NDArray]`.
+    `else_func() => NDArray or nested List[NDArray]`.
 
     The `outputs` produces by `then_func` and `else_func` should have the same number
     of elements, all of which should be in the same shape, of the same dtype and stype.

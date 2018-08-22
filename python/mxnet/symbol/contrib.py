@@ -254,7 +254,7 @@ def foreach(body, data, init_states, name="foreach"):
 
     Returns
     -------
-    outputs: a Symbol or a list of Symbols.
+    outputs: a Symbol or nested lists of Symbols.
         The output data concatenated from the output of all iterations.
     states: a Symbol or nested lists of Symbols.
         The loop states in the last iteration.
@@ -390,7 +390,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
     `func(*loop_vars) =>
-    (Symbol or List[Symbol] step_output, Symbol or List[Symbol] new_loop_vars)`.
+    (Symbol or nested List[Symbol] step_output, Symbol or nested List[Symbol] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
@@ -426,7 +426,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
 
     Returns
     ------
-    outputs: a Symbol or a list of Symbols
+    outputs: a Symbol or nested lists of Symbols
         stacked output from each step
     states: a Symbol or nested lists of Symbols
         final state
@@ -599,12 +599,12 @@ def cond(pred, then_func, else_func, name="cond"):
     `then_func` is a user-defined function, used as computation of the then branch.
     It produces `outputs`, which is a list of Symbols.
     The signature of `then_func` should be
-    `then_func() => List[Symbol]`.
+    `then_func() => nested List[Symbol]`.
 
     `else_func` is a user-defined function, used as computation of the else branch.
     It produces `outputs`, which is a list of Symbols.
     The signature of `else_func` should be
-    `else_func() => List[Symbol]`.
+    `else_func() => nested List[Symbol]`.
 
     The `outputs` produces by `then_func` and `else_func` should have the same number
     of elements, all of which should be in the same shape, of the same dtype and stype.
