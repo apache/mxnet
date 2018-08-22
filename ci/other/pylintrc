@@ -101,7 +101,6 @@ disable=
     import-error,
     unsubscriptable-object,
     unbalanced-tuple-unpacking,
-    undefined-variable,
     protected-access,
     superfluous-parens,
     invalid-name,
