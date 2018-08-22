@@ -1730,7 +1730,7 @@ def test_uniq_name():
                 return data + 1, states
             out1, states1 = F.contrib.foreach(step1, inputs, states)
             def step2(data, states):
-                return data, states[0] + states1[0] + F.squeeze(out1.slice_axis(axis=0, begin=0, end=1))
+                return data, [states[0] + states1[0] + F.squeeze(out1.slice_axis(axis=0, begin=0, end=1))]
             # The input variables have the same symbol names.
             # The free variables have the same symbol names as the input variables.
             out, states = F.contrib.foreach(step2, out1, states1)
@@ -1750,7 +1750,7 @@ def test_uniq_name():
             out1, states1 = F.contrib.while_loop(cond, step, states, max_iterations=5)
             # The input variables have the same symbol name.
             out, states = F.contrib.while_loop(cond, step, states1, max_iterations=5)
-            return out[0]
+            return out
 
     class WhileLayer2(gluon.HybridBlock):
         def __init__(self, prefix=None, params=None):
@@ -1768,7 +1768,7 @@ def test_uniq_name():
                 return state1 + 1, [state1 + states1[0], state2 + states1[1]]
             # The input variables have the same symbol name.
             out, states = F.contrib.while_loop(cond, step2, states1, max_iterations=5)
-            return out[0]
+            return out
 
     TestLayers = [ForeachLayer1, ForeachLayer2,
             WhileLayer1, WhileLayer2]
@@ -1776,7 +1776,6 @@ def test_uniq_name():
     data = mx.nd.normal(loc=0, scale=1, shape=(2, 5))
     states = mx.nd.normal(loc=0, scale=1, shape=(5))
     for TestLayer in TestLayers:
-        print(TestLayer)
         layer = TestLayer()
         layer.initialize(ctx=default_context())
         res1 = layer(data, [states])
