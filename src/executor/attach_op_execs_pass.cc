@@ -40,11 +40,6 @@ const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
 
 namespace exec {
 
-class FallbackOpExecutor : public OpExecutor {
- protected:
-  std::vector<NDArray> in_array_fallback;
-};
-
 // abstract OpExecutor which provides storage fallback procedure on
 // non-default inputs and outputs
 // FComputeExecutor and FStatefulComputeExecutor inherit from this class
@@ -158,7 +153,7 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
 
 
 // stateful compute_ex executor
-class StatefulComputeExExecutor : public FallbackOpExecutor {
+class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
@@ -228,7 +223,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
 };
 
 // fcompute_ex executor
-class FComputeExExecutor : public FallbackOpExecutor {
+class FComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
