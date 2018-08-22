@@ -184,7 +184,7 @@ build_armv8() {
         -DUSE_CUDA=OFF\
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
+        -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
