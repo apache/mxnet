@@ -201,7 +201,7 @@ def foreach(body, data, init_states):
 
     flatten, _ = _flatten(data, "foreach input")
     check_input(flatten, ndarray.NDArray,
-            "data should be an NDArray or a nested list of NDArrays")
+                "data should be an NDArray or a nested list of NDArrays")
     flatten, _ = _flatten(init_states, "foreach states")
     check_input(flatten, ndarray.NDArray,
                 "init_states should be an NDArray or a nested list of NDArrays")

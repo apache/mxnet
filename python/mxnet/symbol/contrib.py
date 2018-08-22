@@ -269,10 +269,10 @@ def foreach(body, data, init_states, name="foreach"):
 
     flatten_data, data_fmt = _flatten(data, "foreach input")
     _check_data(flatten_data, symbol.Symbol,
-            "data should be a symbol or a nested list of symbols")
+                "data should be a symbol or a nested list of symbols")
     init_flatten_states, init_state_fmt = _flatten(init_states, "foreach states")
     _check_data(init_flatten_states, symbol.Symbol,
-            "init_states should be a symbol or a nested list of symbols")
+                "init_states should be a symbol or a nested list of symbols")
 
     # If the input python function references to the symbols outside
     # the python function, we need to prune the computation graph constructed from
@@ -290,9 +290,9 @@ def foreach(body, data, init_states, name="foreach"):
         sym_states, state_fmt = _flatten(sym_states, "foreach loop_vars")
         assert init_state_fmt == state_fmt, "The input and output loop_vars have different format"
         _check_data(sym_out, symbol.Symbol,
-                   "the output should be an NDArray or a nested list of NDArrays")
+                    "the output should be an NDArray or a nested list of NDArrays")
         _check_data(sym_states, symbol.Symbol,
-                   "the output states should be an NDArray or a nested list of NDArrays")
+                    "the output states should be an NDArray or a nested list of NDArrays")
         num_out_data = len(sym_out)
         num_states = len(sym_states)
         num_outputs = num_out_data + num_states
@@ -501,9 +501,9 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             graph = symbol.Group(list(map(make_identity, outputs + final_state)))
         return graph, num_out_data, num_outputs, out_fmt, var_fmt
 
-    flatten_loop_vars, loop_vars_fmt = _flatten(loop_vars, "while loop_vars")
+    flatten_loop_vars, _ = _flatten(loop_vars, "while loop_vars")
     _check_data(flatten_loop_vars, symbol.Symbol,
-            "loop_vars should be a symbol or a nested list of symbols")
+                "loop_vars should be a symbol or a nested list of symbols")
 
     def _union_inputs(*graphs):
         # Given a list of graphs, each whose inputs are either from loop_vars or other variables.
