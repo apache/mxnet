@@ -1,4 +1,4 @@
-# Symbol - Neural network graphs and auto-differentiation
+# Symbol - Neural network graphs
 
 In a [previous tutorial](http://mxnet.io/tutorials/basic/ndarray.html), we introduced `NDArray`,
 the basic data structure for manipulating data in MXNet.

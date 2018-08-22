@@ -194,6 +194,10 @@ inline static bool ConcatForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+#endif
   return dispatched;
 }
 
@@ -213,6 +217,10 @@ inline static bool BackwardConcatStorageType(const nnvm::NodeAttrs& attrs,
   else
 #endif
     wanted_mode = DispatchMode::kFCompute;
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    wanted_mode = DispatchMode::kFComputeFallback;
+#endif
   return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                              dispatch_mode, wanted_mode);
 }

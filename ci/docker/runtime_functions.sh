@@ -184,7 +184,7 @@ build_armv8() {
         -DUSE_CUDA=OFF\
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
+        -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
@@ -431,7 +431,8 @@ build_ubuntu_gpu_tensorrt() {
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
-    ninja -v
+    ninja -j 1 -v onnx/onnx.proto
+    ninja -j 1 -v
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     popd
@@ -993,7 +994,6 @@ broken_link_checker() {
     set -ex
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
-
 
 ##############################################################
 # MAIN

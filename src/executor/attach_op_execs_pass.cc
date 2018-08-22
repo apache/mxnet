@@ -261,7 +261,6 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   const auto& vshape = g.GetAttr<ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-
   // get the graph
   const auto& idx = g.indexed_graph();
   OpExecVector& ret = *p_ret;
