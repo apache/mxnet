@@ -599,6 +599,22 @@ class NDArrayIter(DataIter):
     ...
     >>> batchidx # Remaining examples are discarded. So, 10/3 batches are created.
     3
+    >>> dataiter = mx.io.NDArrayIter(data, labels, 3, False, last_batch_handle='roll_over')
+    >>> batchidx = 0
+    >>> for batch in dataiter:
+    ...     batchidx += 1
+    ...
+    >>> batchidx # Remaining examples are rolled over to the next iteration.
+    3
+    >>> dataiter.reset()
+    >>> dataiter.next().data[0].asnumpy()
+    [[[ 36.  37.]
+      [ 38.  39.]]
+     [[ 0.  1.]
+      [ 2.  3.]]
+     [[ 4.  5.]
+      [ 6.  7.]]]
+    (3L, 2L, 2L)
 
     `NDArrayIter` also supports multiple input and labels.
 
