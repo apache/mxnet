@@ -1285,9 +1285,10 @@ class Symbol(SymbolBase):
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
+    # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,
-                    shared_buffer=None, **kwargs):  # pylint: disable=too-many-locals
+                    shared_buffer=None, **kwargs):
         """Bind current symbol to get an executor, allocate all the arguments needed.
         Allows specifying data types.
 
