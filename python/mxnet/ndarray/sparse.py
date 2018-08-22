@@ -527,7 +527,7 @@ class CSRNDArray(BaseSparseNDArray):
             return super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'csr':
+            if stype in ('default', 'csr'):
                 return super(CSRNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -774,7 +774,7 @@ class RowSparseNDArray(BaseSparseNDArray):
             return super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'row_sparse':
+            if stype in ('default', 'row_sparse'):
                 return super(RowSparseNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -1531,7 +1531,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
+    if stype in ('row_sparse', 'csr'):
         aux_types = _STORAGE_AUX_TYPES[stype]
     else:
         raise ValueError("unknown storage type" + stype)
@@ -1566,7 +1566,7 @@ def empty(stype, shape, ctx=None, dtype=None):
     if dtype is None:
         dtype = mx_real_t
     assert(stype is not None)
-    if stype == 'csr' or stype == 'row_sparse':
+    if stype in ('csr', 'row_sparse'):
         return zeros(stype, shape, ctx=ctx, dtype=dtype)
     else:
         raise Exception("unknown stype : " + str(stype))

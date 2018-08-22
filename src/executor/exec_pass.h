@@ -66,13 +66,13 @@ class OpExecutor {
   virtual ~OpExecutor() {}
   /*!
    * \brief Setup the executor for given NDArray member
-   * this can be called multiple times if NDArray changed during reshape.
-   *  It is safe to call it via asynchronize engine lambda
+   *  This can be called multiple times if NDArray changed during reshape.
+   *  It is safe to call it via an asynchronous engine lambda.
    */
   virtual void Setup() = 0;
   /*!
    * \brief run the operator given runtime context on device.
-   *  This function call do not synchronize the stream.
+   *  This function call does not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx, bool is_gpu) = 0;

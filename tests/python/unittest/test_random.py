@@ -626,6 +626,23 @@ def test_with_random_seed():
             check_data(data[i],data[j])
 
 @with_seed()
+def test_unique_zipfian_generator():
+    ctx = mx.context.current_context()
+    if ctx.device_type == 'cpu':
+        num_sampled = 8192
+        range_max = 793472
+        batch_size = 4
+        op = mx.nd._internal._sample_unique_zipfian
+        classes, num_trials = op(range_max, shape=(batch_size, num_sampled))
+        for i in range(batch_size):
+            num_trial = num_trials[i].asscalar()
+            # test uniqueness
+            assert np.unique(classes[i].asnumpy()).size == num_sampled
+            # test num trials. reference count obtained from pytorch implementation
+            assert num_trial > 14500
+            assert num_trial < 17000
+
+@with_seed()
 def test_zipfian_generator():
     # dummy true classes
     num_true = 5

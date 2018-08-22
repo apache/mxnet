@@ -489,7 +489,7 @@ def quantize_model(sym, arg_params, aux_params,
             excluded_syms.append(nodes[idx])
     logger.info('Quantizing symbol')
 
-    if quantized_dtype != 'int8' and quantized_dtype != 'uint8':
+    if quantized_dtype not in ('int8', 'uint8'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8` or `uint8`' % quantized_dtype)
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_syms,
