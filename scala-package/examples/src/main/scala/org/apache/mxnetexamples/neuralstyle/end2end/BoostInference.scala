@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.{Context, Shape}
+import org.apache.mxnet.{Context, NDArrayCollector, Shape}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -46,11 +46,13 @@ object BoostInference {
       DataProcessing.preprocessContentImage(s"$inputImage", dShape, ctx)
     var data = Array(contentNp)
     for (i <- 0 until gens.length) {
-      gens(i).forward(data.takeRight(1))
-      val newImg = gens(i).getOutputs()(0)
-      data :+= newImg
-      DataProcessing.saveImage(newImg, s"$outputPath/out_$i.jpg", guassianRadius)
-      logger.info(s"Converted image: $outputPath/out_$i.jpg")
+      NDArrayCollector.auto().withScope {
+        gens(i).forward(data.takeRight(1))
+        val newImg = gens(i).getOutputs()(0)
+        data :+= newImg
+        DataProcessing.saveImage(newImg, s"$outputPath/out_$i.jpg", guassianRadius)
+        logger.info(s"Converted image: $outputPath/out_$i.jpg")
+      }
     }
   }
 

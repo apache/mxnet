@@ -18,7 +18,7 @@
 package org.apache.mxnetexamples.cnntextclassification
 
 import org.apache.mxnet.optimizer.RMSProp
-import org.apache.mxnet.{Context, Executor, Model, NDArray, Optimizer, Shape, Symbol, Uniform}
+import org.apache.mxnet.{Context, Executor, Model, NDArray, NDArrayCollector, Optimizer, Shape, Symbol, Uniform}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -131,56 +131,58 @@ object CNNTextClassification {
       numTotal = 0f
       updateRate = 0
 
-      for (begin <- 0 until trainBatches.length by batchSize) {
-        val (batchD, batchL) = {
-          if (begin + batchSize <= trainBatches.length) {
-            val datas = trainBatches.drop(begin).take(batchSize)
-            val labels = trainLabels.drop(begin).take(batchSize)
-            (datas, labels)
-          } else {
-            val right = (begin + batchSize) - trainBatches.length
-            val left = trainBatches.length - begin
-            val datas = trainBatches.drop(begin).take(left) ++ trainBatches.take(right)
-            val labels = trainLabels.drop(begin).take(left) ++ trainLabels.take(right)
-            (datas, labels)
-          }
-        }
-        numTotal += batchSize
-        model.data.set(batchD.flatten.flatten)
-        model.label.set(batchL)
-
-        model.cnnExec.forward(isTrain = true)
-        model.cnnExec.backward()
-
-        val tmpCorrect = {
-          val predLabel = NDArray.api.argmax_channel(model.cnnExec.outputs(0))
-          val result = predLabel.toArray.zip(batchL).map { predLabel =>
-            if (predLabel._1 == predLabel._2) 1
-            else 0
-          }.sum.toFloat
-          predLabel.dispose()
-          result
-        }
-
-        numCorrect = numCorrect + tmpCorrect
-        val norm = Math.sqrt(paramBlocks.map { case (idx, weight, grad, state, name) =>
-          val temp = NDArray.api.norm(grad / batchSize).disposeDepsExcept(grad)
-          val l2Norm = temp.toScalar
-          temp.dispose()
-          l2Norm * l2Norm
-        }.sum).toFloat
-
-        if (updateRate % 2 == 0) {
-          paramBlocks.foreach { case (idx, weight, grad, state, name) =>
-            if (norm > maxGradNorm) {
-              grad.set(grad.toArray.map(_ * (maxGradNorm / norm)))
-              opt.update(idx, weight, grad, state)
+      NDArrayCollector.auto().withScope {
+        for (begin <- 0 until trainBatches.length by batchSize) {
+          val (batchD, batchL) = {
+            if (begin + batchSize <= trainBatches.length) {
+              val datas = trainBatches.drop(begin).take(batchSize)
+              val labels = trainLabels.drop(begin).take(batchSize)
+              (datas, labels)
+            } else {
+              val right = (begin + batchSize) - trainBatches.length
+              val left = trainBatches.length - begin
+              val datas = trainBatches.drop(begin).take(left) ++ trainBatches.take(right)
+              val labels = trainLabels.drop(begin).take(left) ++ trainLabels.take(right)
+              (datas, labels)
             }
-            else opt.update(idx, weight, grad, state)
-            grad.set(0f)
           }
+          numTotal += batchSize
+          model.data.set(batchD.flatten.flatten)
+          model.label.set(batchL)
+
+          model.cnnExec.forward(isTrain = true)
+          model.cnnExec.backward()
+
+          val tmpCorrect = {
+            val predLabel = NDArray.api.argmax_channel(model.cnnExec.outputs(0))
+            val result = predLabel.toArray.zip(batchL).map { predLabel =>
+              if (predLabel._1 == predLabel._2) 1
+              else 0
+            }.sum.toFloat
+            predLabel.dispose()
+            result
+          }
+
+          numCorrect = numCorrect + tmpCorrect
+          val norm = Math.sqrt(paramBlocks.map { case (idx, weight, grad, state, name) =>
+            val temp = NDArray.api.norm(grad / batchSize).disposeDepsExcept(grad)
+            val l2Norm = temp.toScalar
+            temp.dispose()
+            l2Norm * l2Norm
+          }.sum).toFloat
+
+          if (updateRate % 2 == 0) {
+            paramBlocks.foreach { case (idx, weight, grad, state, name) =>
+              if (norm > maxGradNorm) {
+                grad.set(grad.toArray.map(_ * (maxGradNorm / norm)))
+                opt.update(idx, weight, grad, state)
+              }
+              else opt.update(idx, weight, grad, state)
+              grad.set(0f)
+            }
+          }
+          updateRate = updateRate + 1
         }
-        updateRate = updateRate + 1
       }
 
       // decay learning rate
