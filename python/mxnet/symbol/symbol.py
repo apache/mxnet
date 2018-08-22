@@ -1287,7 +1287,7 @@ class Symbol(SymbolBase):
 
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,
-                    shared_buffer=None, **kwargs):
+                    shared_buffer=None, **kwargs):  # pylint: disable=too-many-locals
         """Bind current symbol to get an executor, allocate all the arguments needed.
         Allows specifying data types.
 

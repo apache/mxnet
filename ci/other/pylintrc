@@ -105,6 +105,16 @@ disable=
     consider-using-set-comprehension,
     try-except-raise,
     useless-object-inheritance,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-branches,
+    too-many-instance-attributes,
+    too-many-locals,
+    too-many-public-methods,
+    too-many-statements,
+    c-extension-no-member,
+    deprecated-lambda,
+    redefined-builtin,
 
 # disable=unicode-builtin,delslice-method,using-cmp-argument,setslice-method,dict-view-method,parameter-unpacking,range-builtin-not-iterating,print-statement,file-builtin,old-raise-syntax,basestring-builtin,execfile-builtin,indexing-exception,import-star-module-level,coerce-method,long-builtin,old-ne-operator,old-division,no-absolute-import,raw_input-builtin,old-octal-literal,oct-method,xrange-builtin,hex-method,unpacking-in-except,nonzero-method,raising-string,intern-builtin,reload-builtin,metaclass-assignment,cmp-method,filter-builtin-not-iterating,apply-builtin,map-builtin-not-iterating,next-method-called,unichr-builtin,buffer-builtin,dict-iter-method,input-builtin,coerce-builtin,getslice-method,useless-suppression,standarderror-builtin,zip-builtin-not-iterating,suppressed-message,cmp-builtin,backtick,long-suffix,reduce-builtin,round-builtin
 
