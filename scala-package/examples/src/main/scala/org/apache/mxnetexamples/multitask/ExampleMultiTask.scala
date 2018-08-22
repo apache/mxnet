@@ -231,7 +231,8 @@ object ExampleMultiTask {
 
       val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
 
-      val (argShapes, outputShapes, auxShapes) = network.inferShape(trainMultiIt.provideData("data"))
+      val (argShapes, outputShapes, auxShapes)
+      = network.inferShape(trainMultiIt.provideData("data"))
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
       val argNames = network.listArguments
