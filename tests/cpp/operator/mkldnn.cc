@@ -911,7 +911,8 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
         scale_vector[i] = 1;
       scale_vector[dim] = num_inputs;
 
-      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(ArrayTypes::All, false, scale_vector);
+      std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(
+          ArrayTypes::All, false, scale_vector);
       int i = 0;
       for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
@@ -1574,8 +1575,10 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     scale_vector[3] = scale;
 
     for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector, true, forward_attrs.output_types);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector, true, forward_attrs.output_types);
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+          scale_vector, true, forward_attrs.output_types);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+          scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
     NDArray ndbias = CreateBiasNDArray(num_filter);
