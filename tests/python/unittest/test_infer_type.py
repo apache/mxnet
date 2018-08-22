@@ -31,6 +31,25 @@ def test_infer_multiout_op():
     y[0].backward()
     assert data.grad.dtype == np.float64
 
+def test_infer_multiout_op2():
+    def test_func(a):
+        q, l = mx.nd.linalg.gelqf(a)
+        return mx.nd.sum(l)
+
+    data32 = mx.nd.random.normal(shape=(2, 3), ctx=mx.cpu(), dtype='float32')
+    data32.attach_grad()
+    with autograd.record():
+        test32 = test_func(data32)
+        test32.backward()
+
+    data64 = mx.nd.Cast(data32, dtype='float64')
+    data64.attach_grad()
+    with autograd.record():
+        test64 = test_func(data64)
+        test64.backward()
+    assert_almost_equal(data64.grad.asnumpy().all(), data32.grad.asnumpy().all())
+
 
 if __name__ == "__main__":
     test_infer_multiout_op()
+    test_infer_multiout_op2()
