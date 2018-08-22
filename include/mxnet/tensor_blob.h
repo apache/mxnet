@@ -72,11 +72,14 @@ class TBlob {
   TShape shape_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
+  // The pointer to the deleter function
+  std::function<void()> deleter_;
 
   /*! \brief default constructor, default copy assign will work */
   TBlob(void)
       : dptr_(NULL),
-        type_flag_(mshadow::DataType<real_t>::kFlag) {
+        type_flag_(mshadow::DataType<real_t>::kFlag),
+        deleter_(nullptr) {
     SetDLTensor(cpu::kDevMask, 0);
   }
   /*!
@@ -89,7 +92,8 @@ class TBlob {
   template<typename DType>
   TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
-        type_flag_(mshadow::DataType<DType>::kFlag) {
+        type_flag_(mshadow::DataType<DType>::kFlag),
+        deleter_(nullptr) {
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
@@ -101,16 +105,20 @@ class TBlob {
    * \param dev_id the device id
    */
   TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
-      : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
+      : dptr_(dptr), shape_(shape), type_flag_(type_flag),
+        deleter_(nullptr) {
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
    * \brief constructor that construct TBlob from DLTensor
-   * \param DLTensor Object
+   * \param DLTensor Object, the deleter function
    */
-  explicit TBlob(const DLTensor &dltensor) : dptr_(dltensor.data),
-    shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
-    type_flag_(DLDataTypeTransform(dltensor.dtype)), dltensor_(dltensor) {
+  explicit TBlob(const DLTensor &dltensor, const std::function<void()>& deleter = nullptr)
+      : dptr_(dltensor.data),
+        shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
+        type_flag_(DLDataTypeTransform(dltensor.dtype)),
+        deleter_(deleter),
+        dltensor_(dltensor) {
     // compactness check for DLTensor
     if (dltensor.strides != nullptr) {
       // check strides

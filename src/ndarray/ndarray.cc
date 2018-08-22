@@ -109,11 +109,12 @@ NDArray::Chunk::~Chunk() {
   ChunkMem mem;
   mem.h = this->shandle;
   mem.aux_h = this->aux_handles;
+  std::function<void()> deleter(this->deleter_);
 #if MXNET_USE_MKLDNN == 1
   // We want to delete mkldnn memory after deleting the variable.
   mem.mem = this->mkl_mem_;
 #endif
-  Engine::Get()->DeleteVariable([mem, skip_free](RunContext s) {
+  Engine::Get()->DeleteVariable([mem, skip_free, deleter](RunContext s) {
     if (skip_free == false) {
 #if MXNET_USE_MKLDNN == 1
       if (mem.mem) {
@@ -125,6 +126,7 @@ NDArray::Chunk::~Chunk() {
       for (size_t i = 0; i < mem.aux_h.size(); i++) {
         if (mem.aux_h[i].size > 0) Storage::Get()->Free(mem.aux_h[i]);
       }
+      if (deleter != nullptr) deleter();
     }
   }, shandle.ctx, var);
 }
@@ -332,7 +334,12 @@ DLManagedTensor* NDArray::ToDLPack() const {
 
 NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
   const DLTensor &dl_tensor = tensor->dl_tensor;
-  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id);
+  auto deleter = [tensor](){
+    if (tensor->deleter != nullptr) {
+      tensor->deleter(const_cast<DLManagedTensor*>(tensor));
+    }
+  };
+  return NDArray(TBlob(dl_tensor, deleter), dl_tensor.ctx.device_id);
 }
 
 bool NDArray::fresh_out_grad() const {
