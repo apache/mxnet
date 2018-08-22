@@ -35,6 +35,7 @@ This document describes all the ONNX-MXNet APIs.
    :maxdepth: 1
    
    /tutorials/onnx/super_resolution.md
+   /tutorials/onnx/export_mxnet_to_onnx.md
    /tutorials/onnx/inference_on_onnx_model.md
    /tutorials/onnx/fine_tuning_gluon.md
 ```
