@@ -318,7 +318,7 @@ def foreach(body, data, init_states, name="foreach"):
     subg_input_names = g.list_inputs()
     # ordered_ins contains input symbols in the following order:
     # data_syms, state_syms, followed by cut_vars and vars in the closure.
-    ordered_ins = copy.deepcopy(flatten_data)
+    ordered_ins = [x for x in flatten_data]
     # this defines the location of data_syms in the list of subgraph inputs
     in_data_locs = []
     for dname in data_names:
