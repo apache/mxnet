@@ -31,24 +31,21 @@ from ..base import check_call
 
 class NDArrayBase(object):
     """Base data structure for ndarray"""
-    __slots__ = ["handle", "writable", "dlpack"]
+    __slots__ = ["handle", "writable"]
     # pylint: disable= no-member
 
-    def __init__(self, handle, writable=True, dlpack=None):
+    def __init__(self, handle, writable=True):
         """initialize a new NDArray
 
         Parameters
         ----------
         handle : NDArrayHandle
             NDArray handle of C API
-        dlpack : PyCapsule (DLPack)
-            DLPack Object
         """
         if handle is not None:
             assert isinstance(handle, NDArrayHandle)
         self.handle = handle
         self.writable = writable
-        self.dlpack = dlpack
 
     def __del__(self):
         check_call(_LIB.MXNDArrayFree(self.handle))

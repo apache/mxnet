@@ -330,7 +330,7 @@ DLManagedTensor* NDArray::ToDLPack() const {
   return &(dlmanager->tensor);
 }
 
-NDArray NDArray::FromDLPack(DLManagedTensor* tensor) {
+NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
   const DLTensor &dl_tensor = tensor->dl_tensor;
   return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id);
 }

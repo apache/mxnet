@@ -1361,7 +1361,7 @@ def test_dlpack():
             pack4 = mx.nd.to_dlpack_for_write(a_copy)
             e = mx.nd.from_dlpack(pack4)
 
-            del a, pack, pack2, pack3, pack4
+            del a
 
             b_np = b.asnumpy()
             c_np = c.asnumpy()
@@ -1371,6 +1371,7 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, c_np)
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
+            del pack, pack2, pack3, pack4
 
 if __name__ == '__main__':
     import nose

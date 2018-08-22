@@ -360,7 +360,7 @@ fixed-size items.
 
     def __getstate__(self):
         handle = self.handle
-        this = {'handle' : None, 'dlpack' : self.dlpack}
+        this = {'handle' : None}
         if handle is not None:
             length = ctypes.c_size_t()
             cptr = ctypes.POINTER(ctypes.c_char)()
@@ -382,7 +382,6 @@ fixed-size items.
             self.handle = handle
         else:
             self.handle = None
-        self.dlpack = state['dlpack']
 
     # pylint: disable=line-too-long
     def __setitem__(self, key, value):
@@ -4018,11 +4017,4 @@ def from_dlpack(dlpack):
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
     check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
-    # Rename PyCapsule (DLPack)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
-    # delete the deleter of the old dlpack
-    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
-    # copy dlpack
-    dlpack_copy = ctypes.pythonapi.PyCapsule_New(
-        dlpack_handle, _c_str_used_dltensor, _c_dlpack_deleter)
-    return NDArray(handle=handle, dlpack=dlpack_copy)
+    return NDArray(handle=handle)
