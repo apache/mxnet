@@ -21,6 +21,7 @@
 import math
 from ..context import current_context
 from ..random import uniform
+from ..base import _as_list
 from . import ndarray
 try:
     from .gen_contrib import *
@@ -341,16 +342,14 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             step_output = list(step_output)
         if isinstance(new_loop_vars, tuple):
             new_loop_vars = list(new_loop_vars)
-        step_output, out_fmt = _flatten(step_output, "while output")
-        new_loop_vars, var_fmt = _flatten(new_loop_vars, "while loop_vars")
+        new_loop_vars = _as_list(new_loop_vars)
         if len(loop_vars) != len(new_loop_vars):
             raise ValueError("The length of loop_vars should be consistent during the loop")
-        return step_output, new_loop_vars, out_fmt, var_fmt
+        return step_output, new_loop_vars
 
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars, _ = _flatten(loop_vars, "while loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -360,10 +359,12 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     outputs = []
     # there might not be an iteration.
     out_fmt = None
-    var_fmt = None
+    not_loop_var_list = isinstance(loop_vars, ndarray.NDArray)
+    loop_vars = _as_list(loop_vars)
     while steps < max_iterations and \
             _to_python_scalar(cond(*loop_vars), bool, "Return value of cond"): # loop condition
-        step_output, loop_vars, out_fmt, var_fmt = _func_wrapper(loop_vars)
+        step_output, loop_vars = _func_wrapper(loop_vars)
+        step_output, out_fmt = _flatten(step_output, "while output")
         outputs.append(step_output)
         steps += 1
         if len(outputs) != steps or len(step_output) != len(outputs[0]):
@@ -390,8 +391,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             ))
     if out_fmt is not None:
         stacked_outputs, _ = _regroup(stacked_outputs, out_fmt)
-    if var_fmt is not None:
-        loop_vars, _ = _regroup(loop_vars, var_fmt)
+    if not_loop_var_list:
+        loop_vars = loop_vars[0]
     return stacked_outputs, loop_vars
 
 def cond(pred, then_func, else_func):

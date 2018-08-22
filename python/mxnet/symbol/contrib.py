@@ -195,6 +195,17 @@ def _construct_subgraph(sym_out, sym_states, name):
             flat_out.append(s)
     return symbol.Group(flat_out)
 
+def _check_data(inputs, in_type, msg):
+    is_NDArray_or_list = True
+    if isinstance(inputs, list):
+        for i in inputs:
+            if not isinstance(i, in_type):
+                is_NDArray_or_list = False
+                break
+    else:
+        is_NDArray_or_list = isinstance(inputs, in_type)
+    assert is_NDArray_or_list, msg
+
 def foreach(body, data, init_states, name="foreach"):
     """Run a for loop with user-defined computation over Symbols on dimension 0.
 
@@ -256,22 +267,11 @@ def foreach(body, data, init_states, name="foreach"):
     >>> outs, states = mx.sym.contrib.foreach(step, data, states)
     """
 
-    def check_data(inputs, in_type, msg):
-        is_NDArray_or_list = True
-        if isinstance(inputs, list):
-            for i in inputs:
-                if not isinstance(i, in_type):
-                    is_NDArray_or_list = False
-                    break
-        else:
-            is_NDArray_or_list = isinstance(inputs, in_type)
-        assert is_NDArray_or_list, msg
-
     flatten_data, data_fmt = _flatten(data, "foreach input")
-    check_data(flatten_data, symbol.Symbol,
+    _check_data(flatten_data, symbol.Symbol,
             "data should be a symbol or a nested list of symbols")
     init_flatten_states, init_state_fmt = _flatten(init_states, "foreach states")
-    check_data(init_flatten_states, symbol.Symbol,
+    _check_data(init_flatten_states, symbol.Symbol,
             "init_states should be a symbol or a nested list of symbols")
 
     # If the input python function references to the symbols outside
@@ -289,9 +289,9 @@ def foreach(body, data, init_states, name="foreach"):
         sym_out, out_fmt = _flatten(sym_out, "foreach output")
         sym_states, state_fmt = _flatten(sym_states, "foreach loop_vars")
         assert init_state_fmt == state_fmt, "The input and output loop_vars have different format"
-        check_data(sym_out, symbol.Symbol,
+        _check_data(sym_out, symbol.Symbol,
                    "the output should be an NDArray or a nested list of NDArrays")
-        check_data(sym_states, symbol.Symbol,
+        _check_data(sym_states, symbol.Symbol,
                    "the output states should be an NDArray or a nested list of NDArrays")
         num_out_data = len(sym_out)
         num_states = len(sym_states)
@@ -373,7 +373,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     This operator simulates a while loop which iterately does customized computation
     as long as the condition is satisfied.
 
-    `loop_vars` is a Symbol or a list of Symbols on which the computation uses.
+    `loop_vars` is a Symbol or nested lists of Symbols on which the computation uses.
 
     `cond` is a user-defined function, used as the loop condition.
     It consumes `loop_vars`, and produces a scalar MXNet symbol,
@@ -419,7 +419,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         The loop condition.
     func: a Python function.
         The loop body.
-    loop_vars: a Symbol or list of Symbol.
+    loop_vars: a Symbol or nested lists of Symbol.
         The initial values of the loop variables.
     max_iterations: a python int.
         Maximum number of iterations.
@@ -428,7 +428,7 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     ------
     outputs: a Symbol or a list of Symbols
         stacked output from each step
-    states: a Symbol or a list of Symbols
+    states: a Symbol or nested lists of Symbols
         final state
 
     Examples
@@ -482,7 +482,9 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         with AttrScope(__subgraph_name__=subgraph_name):
             # create new variables with the same name,
             # them feed them to the given func
+            graph_vars, var_fmt = _flatten(graph_vars, "while loop_vars")
             new_graph_vars = [symbol.var(sym.name) for sym in graph_vars]
+            new_graph_vars, _ = _regroup(new_graph_vars, var_fmt)
             outputs, final_state, out_fmt, var_fmt = graph_func(new_graph_vars)
             # first `num_out_data` elements belong to `outputs`
             # other elements belong to `final_state`
@@ -499,6 +501,10 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
             graph = symbol.Group(list(map(make_identity, outputs + final_state)))
         return graph, num_out_data, num_outputs, out_fmt, var_fmt
 
+    flatten_loop_vars, loop_vars_fmt = _flatten(loop_vars, "while loop_vars")
+    _check_data(flatten_loop_vars, symbol.Symbol,
+            "loop_vars should be a symbol or a nested list of symbols")
+
     def _union_inputs(*graphs):
         # Given a list of graphs, each whose inputs are either from loop_vars or other variables.
         # 1) calculate a list `inputs`, the union of their inputs.
@@ -511,16 +517,16 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
                                 # to a `loc`, where inputs[loc] = sym
         for graph in graphs:
             # some loop_vars are inputs to `graph`, some are not
-            name_to_loop_vars = {sym.name: sym for sym in loop_vars}
+            name_to_loop_vars = {sym.name: sym for sym in flatten_loop_vars}
             # other inputs to `graph` created by cut_graph
             name_to_cut_g_syms = {sym.list_outputs()[0]: sym for sym in _cut_subgraph(graph)}
             # input_syms: all inputs to the `graph`
             name_to_input_syms = {sym.name: sym for sym in _get_graph_inputs(graph)}
             # also we collect the mapping from var's name to var's loc in loop_vars
-            name_to_var_locs = {sym.name: i for i, sym in enumerate(loop_vars)}
+            name_to_var_locs = {sym.name: i for i, sym in enumerate(flatten_loop_vars)}
             # collect arguments for each subgraph
             input_locs = []                         # results from the second step
-            var_locs = [-1] * len(loop_vars)        # results from the third step
+            var_locs = [-1] * len(flatten_loop_vars)        # results from the third step
             for name in graph.list_inputs():
                 assert name in name_to_input_syms   # it should obviously hold
                 # name -> sym
@@ -546,7 +552,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars, _ = _flatten(loop_vars, "while loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -566,7 +571,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None, name="while_loop"):
         if loc == -1:
             raise ValueError("The %d-th loop_var doesn't involve into the computation" % i_th)
     result = symbol._internal._while_loop(
-        # [cond, func_g, *input_syms]
         cond_g,
         func_g,
         *input_syms,
