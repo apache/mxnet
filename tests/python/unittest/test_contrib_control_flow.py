@@ -20,8 +20,10 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon
 from numpy.testing import assert_allclose, assert_array_equal
+from collections import defaultdict
 from mxnet.test_utils import *
 from mxnet.base import _as_list
+from mxnet.attribute import AttrScope
 from common import with_seed
 
 
@@ -1763,6 +1765,45 @@ def test_cut_subgraph_cond():
     with mx.autograd.record():
         res2 = layer(data)
     assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
+
+
+def test_scope():
+    class TestBlock1(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestBlock1, self).__init__(prefix=prefix, params=params)
+        def hybrid_forward(self, F, data):
+            (new_data, ) = F.contrib.cond(
+                data > 0.5,
+                then_func=lambda: data * 2,
+                else_func=lambda: data * 3,
+                name="my_cond",
+            )
+            return new_data
+    class TestBlock2(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(TestBlock2, self).__init__(prefix=prefix, params=params)
+        def hybrid_forward(self, F, data):
+            (new_data, ) = F.contrib.cond(
+                data > 0.5,
+                then_func=lambda: data * 2,
+                else_func=lambda: data * 3,
+                name="my_cond",
+            )
+            return new_data
+    AttrScope._subgraph_names = defaultdict(int)
+    data = mx.nd.normal(loc=0, scale=1, shape=(1, ))
+    block1 = TestBlock1()
+    block1.initialize(ctx=default_context())
+    block1.hybridize()
+    _ = block1(data)
+    block2 = TestBlock2()
+    block2.initialize(ctx=default_context())
+    block2.hybridize()
+    _ = block2(data)
+    assert len(AttrScope._subgraph_names) == 3
+    assert AttrScope._subgraph_names['my_cond_else'] == 2
+    assert AttrScope._subgraph_names['my_cond_pred'] == 2
+    assert AttrScope._subgraph_names['my_cond_then'] == 2
 
 
 if __name__ == '__main__':
