@@ -124,6 +124,9 @@ def test_nlp_cnn():
 def test_onnx_super_resolution():
     assert _test_tutorial_nb('onnx/super_resolution')
 
+def test_onnx_export_mxnet_to_onnx():
+    assert _test_tutorial_nb('onnx/export_mxnet_to_onnx')
+
 def test_onnx_fine_tuning_gluon():
     assert _test_tutorial_nb('onnx/fine_tuning_gluon')
 
