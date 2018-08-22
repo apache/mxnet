@@ -704,7 +704,7 @@ class NDArrayIter(DataIter):
     def hard_reset(self):
         """Ignore roll over data and set to start."""
         if self.shuffle:
-            self._shuffle()
+            self._shuffle_data()
         self.cursor = -self.batch_size
         self._cache_data = None
         self._cache_label = None
@@ -712,7 +712,7 @@ class NDArrayIter(DataIter):
     def reset(self):
         """Resets the iterator to the beginning of the data."""
         if self.shuffle:
-            self._shuffle()
+            self._shuffle_data()
         # the range below indicate the last batch
         if self.last_batch_handle == 'roll_over' and \
             self.num_data - self.batch_size < self.cursor < self.num_data:
@@ -722,7 +722,8 @@ class NDArrayIter(DataIter):
             self.cursor = -self.batch_size
 
     def iter_next(self):
-        """Increments the coursor and check current cursor if exceed num of data."""
+        """Increments the coursor by batch_size for next batch
+        and check current cursor if it exceed the number of data points."""
         self.cursor += self.batch_size
         return self.cursor < self.num_data
 
@@ -815,9 +816,11 @@ class NDArrayIter(DataIter):
         else:
             return 0
 
-    def _shuffle(self):
+    def _shuffle_data(self):
         """Shuffle the data."""
+        # shuffle index
         np.random.shuffle(self.idx)
+        # get the data with corresponding index
         self.data = _shuffle(self.data, self.idx)
         self.label = _shuffle(self.label, self.idx)
 
@@ -831,7 +834,7 @@ class MXDataIter(DataIter):
     underlying C++ data iterators.
 
     Usually you don't need to interact with `MXDataIter` directly unless you are
-    implementing your own data iterators in C++. To do that, please refer to
+    implementing your own data iterators in C+ +. To do that, please refer to
     examples under the `src/io` folder.
 
     Parameters
