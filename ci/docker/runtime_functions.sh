@@ -349,11 +349,11 @@ build_ubuntu_cpu_clang39() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang50() {
+build_ubuntu_cpu_clang60() {
     set -ex
 
-    export CXX=clang++-5.0
-    export CC=clang-5.0
+    export CXX=clang++-6.0
+    export CC=clang-6.0
 
     build_ccache_wrappers
 
@@ -381,11 +381,11 @@ build_ubuntu_cpu_clang39_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang50_mkldnn() {
+build_ubuntu_cpu_clang60_mkldnn() {
     set -ex
 
-    export CXX=clang++-5.0
-    export CC=clang-5.0
+    export CXX=clang++-6.0
+    export CC=clang-6.0
 
     build_ccache_wrappers
 
