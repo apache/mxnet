@@ -550,8 +550,15 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
 endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
+  # Workaroud to prevent mshadow from processing BLAS libraries. The main problem is with MKL - if MKLML is used it
+  # would still try to find MKL instead and will fail.
+  # BLAS libraries for MXNet are setup in cmake/ChooseBLAS.cmake
+  set(__BLAS ${BLAS})
+  set(BLAS "Override")
   add_subdirectory("3rdparty/mshadow")
+  set(BLAS ${__BLAS})
 endif()
+
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
