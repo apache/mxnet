@@ -89,6 +89,7 @@ bool LRNForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
                            out_attrs);
 }
@@ -99,6 +100,7 @@ bool LRNBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_attrs,
                                  std::vector<int> *out_attrs) {
   CHECK(!in_attrs->empty());
+
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
                            out_attrs);
 }
