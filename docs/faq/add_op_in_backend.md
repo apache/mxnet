@@ -318,9 +318,10 @@ parallel computation on both CPU and GPU. This allows most of
 the simple operators to share the same piece of code for CPU and GPU as
 parallelization approaches are often identical on both types of devices.
 The kernel function is defined as the following, where the function
-`Map` is executed by each thread for each input element. The `out_data.Size()`
-specifies the number of threads that need to be spawned, which here corresponds
-to the number of elements in the output array. To explain a little
+`Map` is executed by each thread for each input element. The `out_data.Size()`,
+in the `Kernel::Launch` function corresponds to the factor by which the
+workload will get parallelized among the different threads, which here
+corresponds to the size of the output array. To explain a little
 bit more on the two macros used in the kernel struct: (1) `MSHADOW_XINLINE` is
 a consolidated macro for inlining functions compiled by both CPU and GPU
 compilers. It enables CPU and GPU computing to share the same piece of code.
@@ -550,12 +551,12 @@ module `mxnet.symbol.quadratic` or `mx.sym.quadratic` for short.
 
 In order to unit test it in frontend, we need to add the following code
 to the python file `test_operator.py`. A typical operator implementation
-tests for both the `symbol` API and the `ndarray` API. In this tutorial 
-we will go over the symbol API test. The `symbol` API test, tests for the
-complete functionality of the operator - the forward pass, the backward
-pass and the gradient computation in the operator implementation. To
-facilitate the testing of these functionalities we use three helper
-functions available in the `mxnet.test_utils` module:
+tests for both the `symbol` API and the `ndarray` API. The following test
+has both these tests. The imperative API test, tests for the `ndarray` API,
+`mx.nd.contrib.quadratic`. The `symbol` API test, tests for the complete
+functionality of the operator - the forward pass and the backward
+pass. To facilitate the testing of these functionalities we use three
+helper functions available in the `mxnet.test_utils` module:
  - `check_symbolic_forward`
  - `check_symbolic_backward`
  - `check_numeric_gradient`
@@ -576,15 +577,21 @@ def test_quadratic_function():
             data_np = np.random.randn(*shape).astype(dtype)
             expected = f(data_np, a, b, c)
             backward_expected = 2 * a * data_np + b
+
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            assert_almost_equal(output.asnumpy(),expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
             # check forward
             check_symbolic_forward(quad_sym, [data_np], [expected],
                                     rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                    atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward
             check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
                                         [backward_expected],
                                         rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
+                                        atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 ```
@@ -605,7 +612,7 @@ and `atol` expand to relative tolerance and absolute tolerance respectively. The
 are used to specify how far the computed values can deviate from the expected values.
 They are defined as follows
 ```
-|Expected Value - Computed Value| < RTOL * |Expected Value| + ATOL.
+abs(Expected_Value - Computed_Value) < RTOL * abs(Expected_Value) + ATOL
 ```
 
 For example, if `rtol` is `1e-5` and `atol` is `1e-5` and the expected value is
@@ -639,8 +646,8 @@ using nnvm. Congratulations! You now know how to add operators.
 We welcome your contributions to MXNet.
 
 **Note**: Source code in the tutorial can be found in
-[quadratic_op-inl.h](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op-inl.h),
-[quadratic_op.cc](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cc),
-[quadratic_op.cu](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cu),
+[quadratic_op-inl.h](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op-inl.h),
+[quadratic_op.cc](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cc),
+[quadratic_op.cu](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
 and
-[test_operator.py](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/tests/python/unittest/test_operator.py#L4008).
+[test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L4734).

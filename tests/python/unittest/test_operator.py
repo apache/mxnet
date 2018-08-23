@@ -6426,6 +6426,12 @@ def test_quadratic_function():
             data_np = np.random.randn(*shape).astype(dtype)
             expected = f(data_np, a, b, c)
             backward_expected = 2 * a * data_np + b
+
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            assert_almost_equal(output.asnumpy(),expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
             # check forward
             check_symbolic_forward(quad_sym, [data_np], [expected],
                                     rtol=1e-2 if dtype is np.float16 else 1e-5,
