@@ -42,62 +42,7 @@ import pprint
 import requests
 
 
-def retry(target_exception, tries=4, delay_s=1, backoff=2):
-    """Retry calling the decorated function using an exponential backoff.
-
-    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
-    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
-
-    :param target_exception: the exception to check. may be a tuple of
-        exceptions to check
-    :type target_exception: Exception or tuple
-    :param tries: number of times to try (not retry) before giving up
-    :type tries: int
-    :param delay_s: initial delay between retries in seconds
-    :type delay_s: int
-    :param backoff: backoff multiplier e.g. value of 2 will double the delay
-        each retry
-    :type backoff: int
-    """
-    import time
-    from functools import wraps
-
-    def decorated_retry(f):
-        @wraps(f)
-        def f_retry(*args, **kwargs):
-            mtries, mdelay = tries, delay_s
-            while mtries > 1:
-                try:
-                    return f(*args, **kwargs)
-                except target_exception as e:
-                    logging.warning("Exception: %s, Retrying in %d seconds...", str(e), mdelay)
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return f(*args, **kwargs)
-
-        return f_retry  # true decorator
-
-    return decorated_retry
-
-
 CCACHE_MAXSIZE = '500G'
-
-
-# noinspection SyntaxError
-def under_ci() -> bool:
-    """:return: True if we run in Jenkins."""
-    return 'JOB_NAME' in os.environ
-
-
-def git_cleanup() -> None:
-    """Clean repo and subrepos, update subrepos"""
-    logging.info("cleaning up repository")
-    with remember_cwd():
-        os.chdir(get_mxnet_root())
-        check_call(['git', 'clean', '-ffdx'])
-        check_call(['git', 'submodule', 'foreach', '--recursive', 'git', 'clean', '-ffdx'])
-        check_call(['git', 'submodule', 'update', '--recursive', '--init'])
 
 
 def get_dockerfiles_path():
@@ -147,6 +92,10 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     #
     # cache-from is needed so we use the cached images tagged from the remote via
     # docker pull see: docker_cache.load_docker_cache
+    #
+    # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
+    # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
+    # script.
     #
     # This doesn't work with multi head docker files.
     #
@@ -253,7 +202,7 @@ def container_run(platform: str,
         logging.error("You can get into the container by adding the -i option")
         raise subprocess.CalledProcessError(ret, cmd)
 
-    return ret 
+    return ret
 
 
 def list_platforms() -> str:
@@ -273,37 +222,12 @@ def load_docker_cache(tag, docker_registry) -> None:
         logging.info('Distributed docker cache disabled')
 
 
-def ec2_instance_id_hostname() -> str:
-    if under_ci():
-        result = []
-        try:
-            r = requests.get("http://instance-data/latest/meta-data/instance-id")
-            if r.status_code == 200:
-                result.append(r.content.decode())
-            r = requests.get("http://instance-data/latest/meta-data/public-hostname")
-            if r.status_code == 200:
-                result.append(r.content.decode())
-            return ' '.join(result)
-        except ConnectionError:
-            pass
-        return '?'
-    else:
-        return ''
-
-
 def log_environment():
     instance_id = ec2_instance_id_hostname()
     if instance_id:
         logging.info("EC2 Instance id: %s", instance_id)
     pp = pprint.PrettyPrinter(indent=4)
     logging.debug("Build environment: %s", pp.pformat(dict(os.environ)))
-
-
-def chdir_to_script_directory():
-    # We need to be in the same directory than the script so the commands in the dockerfiles work as
-    # expected. But the script can be invoked from a different path
-    base = os.path.split(os.path.realpath(__file__))[0]
-    os.chdir(base)
 
 
 def script_name() -> str:
@@ -364,8 +288,10 @@ def main() -> int:
                         default=1,
                         type=int)
 
-    parser.add_argument("--no-cache", action="store_true",
-                        help="Enable docker registry cache")
+    parser.add_argument("-c", "--no-dockerhub-cache", action="store_true",
+                        help="Disables use of --cache-from option on docker build, allowing docker"
+                        " to use local layers for caching. If absent, we use the cache from dockerhub"
+                        " which is the default.")
 
     parser.add_argument("command",
                         help="command to run in the container",
@@ -379,12 +305,10 @@ def main() -> int:
     args = parser.parse_args()
 
     def use_cache():
-        return not args.no_cache or under_ci()
+        return not args.no_dockerhub_cache or under_ci()
 
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
-    shared_memory_size = args.shared_memory_size
-    num_docker_build_retires = args.docker_build_retries
 
     if args.list:
         print(list_platforms())
@@ -394,21 +318,21 @@ def main() -> int:
         if use_cache():
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
-                     num_retries=num_docker_build_retires, use_cache=use_cache())
+                     num_retries=args.docker_build_retries, use_cache=use_cache())
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
         if command:
-            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
                           command=command, docker_registry=args.docker_registry,
                           local_ccache_dir=args.ccache_dir, interactive=args.interactive)
         elif args.print_docker_run:
-            print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+            print(container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
                                 command=[], dry_run=True, docker_registry=args.docker_registry,
                                 local_ccache_dir=args.ccache_dir))
         elif args.interactive:
-            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
                           command=command, docker_registry=args.docker_registry,
                           local_ccache_dir=args.ccache_dir, interactive=args.interactive)
 
@@ -417,7 +341,7 @@ def main() -> int:
             assert not args.interactive, "when running with -i must provide a command"
             cmd = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(cmd))
-            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
                           command=cmd, docker_registry=args.docker_registry,
                           local_ccache_dir=args.ccache_dir)
 
@@ -433,7 +357,6 @@ def main() -> int:
                          use_cache=use_cache())
             if args.build_only:
                 continue
-            git_cleanup()
             shutil.rmtree(buildir(), ignore_errors=True)
             build_platform = "build_{}".format(platform)
             plat_buildir = os.path.abspath(os.path.join(get_mxnet_root(), '..',
@@ -442,7 +365,7 @@ def main() -> int:
                 logging.warning("{} already exists, skipping".format(plat_buildir))
                 continue
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
-            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=shared_memory_size,
+            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
                           command=command, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
@@ -472,8 +395,7 @@ Examples:
 
 ./build.py -a
 
-    Builds for all platforms and leaves artifacts in build_<platform>. **WARNING** it performs git
-    cleanup of the repo.
+    Builds for all platforms and leaves artifacts in build_<platform>.
 
     """)
 
