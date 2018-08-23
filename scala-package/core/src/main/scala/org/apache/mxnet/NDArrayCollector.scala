@@ -18,6 +18,7 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.Base.CPtrAddress
+import org.apache.mxnet.annotation.Experimental
 import org.slf4j.LoggerFactory
 
 import scala.annotation.varargs
@@ -80,6 +81,7 @@ object NDArrayCollector {
    * Create a collector allows users to later dispose the collected NDArray manually.
    * @return a manually-disposable collector.
    */
+  @Experimental
   def manual(): NDArrayCollector = new NDArrayCollector(false)
 
   /**
@@ -135,6 +137,7 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
    * @tparam T return type of the function <em>codeBlock</em>.
    * @return The result of function <em>codeBlock</em>.
    */
+  @Experimental
   def withScope[T](codeBlock: => T): T = {
     val old = NDArrayCollector.currCollector.get()
     NDArrayCollector.currCollector.set(this)

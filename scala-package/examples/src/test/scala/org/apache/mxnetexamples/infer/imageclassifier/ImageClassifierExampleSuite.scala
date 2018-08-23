@@ -23,7 +23,7 @@ import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, NDArrayCollector}
 import org.apache.mxnetexamples.Util
 
 import sys.process.Process
@@ -64,10 +64,10 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
-      inputImagePath, context)
+        inputImagePath, context)
 
     val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
-      inputImageDir, context)
+        inputImageDir, context)
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 
