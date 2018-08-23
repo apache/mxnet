@@ -61,26 +61,6 @@ elseif(UNIX)
 
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
 
-  # The MXNet option USE_OPENMP is switching OpenMP for the MXNet project. MKLML will depend on it in any case.
-  # Using -fopenmp with -liomp5 (linking to Intel OpenMP) leads to undefined behavior. The not needed
-  # Intel OpenMP library needs to be removed that it couldn't be used accidentially. For example,
-  # MKLDNN 3rdparty/mkldnn/cmake/MKL.cmake will discover it and use if found.
-  # https://github.com/intel/mkl-dnn/blob/master/README.md
-  set(REMOVE_INTEL_OPENMP ${USE_OPENMP})
-
-  if(REMOVE_INTEL_OPENMP)
-    message(STATUS "Intel OpenMP library will be removed")
-  endif()
-
-  if(REMOVE_INTEL_OPENMP)
-    file(REMOVE ${MKLROOT}/lib/libiomp5.so)
-    file(REMOVE ${MKLROOT}/lib/libmklml_intel.so)
-    file(RENAME ${MKLROOT}/lib/libmklml_gnu.so ${MKLROOT}/lib/libmklml.so)
-  else()
-    file(REMOVE ${MKLROOT}/lib/libmklml_gnu.so)
-    file(RENAME ${MKLROOT}/lib/libmklml_intel.so ${MKLROOT}/lib/libmklml.so)
-  endif()
-
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
 else()
