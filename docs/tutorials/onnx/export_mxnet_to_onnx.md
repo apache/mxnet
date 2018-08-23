@@ -7,13 +7,13 @@ In this tutorial, we will show how you can save MXNet models to the ONNX format.
 
 MXNet-ONNX operators coverage and features are updated regularly. Visit the [ONNX operator coverage](https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage) page for the latest information.
 
-In this tutorial we will learn how to use MXNet to ONNX exporter on pre-trained models.
+In this tutorial, we will learn how to use MXNet to ONNX exporter on pre-trained models.
 
 ## Prerequisites
 
 To run the tutorial you will need to have installed the following python modules:
-- [MXNet == 1.3.0](http://mxnet.incubator.apache.org/install/index.html)
-- [onnx](https://github.com/onnx/onnx) v1.2.1 (follow the install guide)
+- [MXNet >= 1.3.0](http://mxnet.incubator.apache.org/install/index.html)
+- [onnx]( https://github.com/onnx/onnx#installation) v1.2.1 (follow the install guide)
 
 *Note:* MXNet ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
 
@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 
 ## Downloading a model from the MXNet model zoo
 
-We download a pre-trained model, in this case ResNet-18 model, trained on [ImageNet](http://www.image-net.org/) from the [MXNet Model Zoo](http://data.mxnet.io/models/imagenet/).
+We download the pre-trained ResNet-18 [ImageNet](http://www.image-net.org/) model from the [MXNet Model Zoo](http://data.mxnet.io/models/imagenet/).
 We will also download synset file to match labels.
 
 ```python
@@ -43,24 +43,53 @@ Now, we have downloaded ResNet-18 symbol, params and synset file on the disk.
 
 ## MXNet to ONNX exporter API
 
-We can check MXNet's ONNX `export_model` API usage as follows: 
+Let us describe the MXNet's `export_model` API. 
 
 ```python
 help(onnx_mxnet.export_model)
 ```
 
-From the above API description, we can see that the `export_model` API accepts two kinds of inputs:
+```python
+Help on function export_model in module mxnet.contrib.onnx.mx2onnx.export_model:
+
+export_model(sym, params, input_shape, input_type=<type 'numpy.float32'>, onnx_file_path=u'model.onnx', verbose=False)
+    Exports the MXNet model file, passed as a parameter, into ONNX model.
+    Accepts both symbol,parameter objects as well as json and params filepaths as input.
+    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    
+    Parameters
+    ----------
+    sym : str or symbol object
+        Path to the json file or Symbol object
+    params : str or symbol object
+        Path to the params file or params dictionary. (Including both arg_params and aux_params)
+    input_shape : List of tuple
+        Input shape of the model e.g [(1,3,224,224)]
+    input_type : data type
+        Input data type e.g. np.float32
+    onnx_file_path : str
+        Path where to save the generated onnx file
+    verbose : Boolean
+        If true will print logs of the model conversion
+    
+    Returns
+    -------
+    onnx_file_path : str
+        Onnx file path
+```
+
+`export_model` API can accept the MXNet model in one of the following two ways.
 
 1. MXNet sym, params objects:
     * This is useful if we are training a model. At the end of training, we just need to invoke the `export_model` function and provide sym and params objects as inputs with other attributes to save the model in ONNX format.
 2. MXNet's exported json and params files:
     * This is useful if we have pre-trained models and we want to convert them to ONNX format.
 
-In this tutorial, we will show second use case to convert pre-trained model to ONNX format:
+Since we have downloaded pre-trained model files, we will use the `export_model` API by passing the path for symbol and params files.
 
 ## How to use MXNet to ONNX exporter API
 
-We will use downloaded files and define input variables.
+We will use the downloaded pre-trained model files (sym, params) and define input variables.
 
 ```python
 # Downloaded input symbol and params files
