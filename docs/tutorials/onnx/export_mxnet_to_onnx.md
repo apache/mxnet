@@ -15,7 +15,7 @@ To run the tutorial you will need to have installed the following python modules
 - [MXNet >= 1.3.0](http://mxnet.incubator.apache.org/install/index.html)
 - [onnx]( https://github.com/onnx/onnx#installation) v1.2.1 (follow the install guide)
 
-*Note:* MXNet ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
+*Note:* MXNet-ONNX importer and exporter follows version 7 of ONNX operator set which comes with ONNX v1.2.1.
 
 
 ```python
