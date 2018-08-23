@@ -119,7 +119,7 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
 
 
-@with_seed(0)
+@with_seed()
 def test_ndarray_elementwise():
     nrepeat = 10
     maxdim = 4
