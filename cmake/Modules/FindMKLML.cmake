@@ -100,14 +100,24 @@ else()
   list(APPEND __MKL_LIB_NAMES mklml_gnu)
 endif()
 
+list(APPEND __MKL_LIB_NAMES mklml)
+
 mark_as_advanced(__MKL_LIB_NAMES)
 
+message("MKLML_LIBRARY=${MKLML_LIBRARY}")
+message("__MKL_LIB_NAMES=${__MKL_LIB_NAMES}")
+message("MKLML_LIB_SEARCH_PATHS=${MKLML_LIB_SEARCH_PATHS}")
+message("PATH_SUFFIXES=${PATH_SUFFIXES}")
+
 find_library(MKLML_LIBRARY
-             NAMES ${__MKL_LIB_NAMES} mklml
+             NAMES ${__MKL_LIB_NAMES}
              PATHS ${MKLML_LIB_SEARCH_PATHS}
              PATH_SUFFIXES ${PATH_SUFFIXES}
              )
+
 mark_as_advanced(MKLML_LIBRARY)
+
+message("AFTER: MKLML_LIBRARY=${MKLML_LIBRARY}")
 
 list(APPEND LOOKED_FOR MKLML_LIBRARY)
 list(APPEND MKLML_LIBRARIES ${MKLML_LIBRARY})
