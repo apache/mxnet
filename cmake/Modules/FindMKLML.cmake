@@ -104,11 +104,6 @@ list(APPEND __MKL_LIB_NAMES mklml_gnu mklml)
 
 mark_as_advanced(__MKL_LIB_NAMES)
 
-message("MKLML_LIBRARY=${MKLML_LIBRARY}")
-message("__MKL_LIB_NAMES=${__MKL_LIB_NAMES}")
-message("MKLML_LIB_SEARCH_PATHS=${MKLML_LIB_SEARCH_PATHS}")
-message("PATH_SUFFIXES=${__PATH_SUFFIXES}")
-
 find_library(MKLML_LIBRARY
              NAMES ${__MKL_LIB_NAMES}
              PATHS ${MKLML_LIB_SEARCH_PATHS}
@@ -117,7 +112,13 @@ find_library(MKLML_LIBRARY
 
 mark_as_advanced(MKLML_LIBRARY)
 
-message("AFTER: MKLML_LIBRARY=${MKLML_LIBRARY}")
+if(MKLML_LIBRARY MATCHES "mklml_intel")
+  set(MKL_USE_INTEL_OMP True)
+  message("MKLML uses Intel OpenMP libraries")
+else()
+  set(MKL_USE_INTEL_OMP False)
+  message("MKLML uses GNU OpenMP libraries")
+endif()
 
 list(APPEND LOOKED_FOR MKLML_LIBRARY)
 list(APPEND MKLML_LIBRARIES ${MKLML_LIBRARY})
