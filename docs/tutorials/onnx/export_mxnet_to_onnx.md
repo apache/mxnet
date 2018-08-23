@@ -9,7 +9,7 @@ MXNet-ONNX operators coverage and features are updated regularly. Visit the [ONN
 
 In this tutorial we will learn how to use MXNet to ONNX exporter on pre-trained models.
 
-## Prerequisite
+## Prerequisites
 
 To run the tutorial you will need to have installed the following python modules:
 - [MXNet == 1.3.0](http://mxnet.incubator.apache.org/install/index.html)
@@ -49,7 +49,7 @@ We can check MXNet's ONNX `export_model` API usage as follows:
 help(onnx_mxnet.export_model)
 ```
 
-From the above API description, we can see that export_model API accepts two kinds of inputs:
+From the above API description, we can see that the `export_model` API accepts two kinds of inputs:
 
 1. MXNet sym, params objects:
     * This is useful if we are training a model. At the end of training, we just need to invoke the `export_model` function and provide sym and params objects as inputs with other attributes to save the model in ONNX format.
@@ -95,7 +95,7 @@ model_proto = onnx.load(converted_model_path)
 checker.check_graph(model_proto.graph)
 ```
 
-If the converted protobuf format doesn't qualify to ONNX proto specifications, the checker will throw errors but in this case it successfully passes. 
+If the converted protobuf format doesn't qualify to ONNX proto specifications, the checker will throw errors, but in this case it successfully passes. 
 
 This method confirms exported model protobuf is valid. Now, the model is ready to be imported in other frameworks for inference!
     
