@@ -117,7 +117,7 @@ if(MKLML_LIBRARY MATCHES "mklml_intel")
   message("MKLML uses Intel OpenMP libraries")
 else()
   set(MKL_USE_INTEL_OMP False)
-  message("MKLML uses GNU OpenMP libraries")
+  message("MKLML uses platform provided OpenMP libraries")
 endif()
 
 list(APPEND LOOKED_FOR MKLML_LIBRARY)
