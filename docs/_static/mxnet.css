@@ -188,9 +188,47 @@ img {
     text-decoration: none;
 }
 
+
 #logo > img {
-  display: block;
+/*  display: block; */
   width: 110px;
+}
+
+
+@media (max-width: 1040px) {
+    #logo > img.logo-small {
+        display: block;
+    }
+    #logo > img.logo-medium {
+        display: none;
+    }
+    #logo > img.logo-reco {
+        display: none;
+    }
+}
+
+@media (min-width: 1040px) and (max-width: 2200px) {
+    #logo > img.logo-small {
+        display: none;
+    }
+    #logo > img.logo-medium {
+        display: block;
+    }
+    #logo > img.logo-reco {
+        display: none;
+    }
+}
+
+@media (min-width: 2200px) {
+   #logo > img.logo-reco {
+        display: block;
+   }
+   #logo > img.logo-medium {
+        display: none;
+   }
+   #logo > img.logo-small {
+        display: none;
+   }
 }
 
 .nav-bar {
