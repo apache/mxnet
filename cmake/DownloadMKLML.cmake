@@ -19,10 +19,13 @@
 
 message(STATUS "Downloading MKLML...")
 
-if(MSVC)
-  set(MKL_NAME "mklml_win_2018.0.3.20180406")
+set(MKLML_RELEASE v0.16)
+set(MKLML_RELEASE_FILE_SUFFIX 2019.0.20180710)
 
-  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.14/${MKL_NAME}.zip"
+if(MSVC)
+  set(MKL_NAME "mklml_win_${MKLML_RELEASE_FILE_SUFFIX}")
+
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.zip"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip"
        EXPECTED_MD5 "8DD73E7D3F19F004551809824C4E8970" SHOW_PROGRESS)
   file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe"
@@ -38,9 +41,9 @@ if(MSVC)
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
 elseif(APPLE)
-  set(MKL_NAME "mklml_mac_2018.0.3.20180406")
+  set(MKL_NAME "mklml_mac_${MKLML_RELEASE_FILE_SUFFIX}")
 
-  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.14/${MKL_NAME}.tgz"
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.tgz"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
        EXPECTED_MD5 "23a6f7fd04fb1fa6de0d52a2ec5a2a14" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
@@ -51,9 +54,9 @@ elseif(APPLE)
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
 elseif(UNIX)
-  set(MKL_NAME "mklml_lnx_2018.0.3.20180406")
+  set(MKL_NAME "mklml_lnx_${MKLML_RELEASE_FILE_SUFFIX}")
 
-  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.14/${MKL_NAME}.tgz"
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.tgz"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
        EXPECTED_MD5 "DAF7EFC3C1C0036B447213004467A8AE" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
