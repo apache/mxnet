@@ -602,6 +602,21 @@ OpAttrs GetPoolingOp(int kernel, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.dict.insert({"pool_type" , "max"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
 
@@ -1410,7 +1425,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
   TShape padding = param.pad;
   TShape stride = param.stride;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -1421,10 +1436,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
-    // cannot pool if ndarray and mkldnn memory have different ndim
-    if (in_arr.arr.IsView() || in_arr.arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims
-        != in_arr.arr.shape().ndim())
-      continue;
+
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     for (size_t i = 0; i < in_arr.arr.shape().ndim(); ++i) {
       if (i < 2)
@@ -1435,8 +1447,10 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
             static_cast<float>(input_shape[i]);
     }
     for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
-      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
-      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector);
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector,
+          true, forward_attrs.input_types);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds, scale_vector,
+          true, forward_attrs.input_types);
     }
 
     for (size_t i = 0; i < forward_attrs.num_inputs; ++i)
@@ -1474,8 +1488,8 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
 
       // needs copies of inputs since they be reused in next iteration
       // cannot use Copy method since we need to maintain MKLDNN format
-      auto tmp_output = GetTestInputArrays()[i1];
-      auto tmp_output2 = GetTestInputArrays()[i1];
+      auto tmp_output = GetTestInputArrays(forward_attrs.input_types)[i1];
+      auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types)[i1];
       backwards_outputs[0] = &tmp_output.arr;
       backwards_ex_outputs[0] = &tmp_output2.arr;
       back_req[0] = kWriteTo;
