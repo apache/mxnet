@@ -226,12 +226,12 @@
   (let [arange (sym/arange-with-inference 0)
         data (sym/variable "data")
         added (sym/+ arange data)
-        result (range 0. 4.)
+        result (range 0 4)
         data-tmp (ndarray/zeros [4])
         exec (sym/bind added (context/default-context) {"data" data-tmp})]
     (executor/forward exec)
     (is (= 0 (count (executor/grad-arrays exec))))
-    (is (= result (-> (executor/outputs exec) (first) (ndarray/->vec))))))
+    (is (approx= 1e-4 result (-> (executor/outputs exec) (first))))))
 
 (deftest test-scalar-pow
   (let [data (sym/variable "data")
