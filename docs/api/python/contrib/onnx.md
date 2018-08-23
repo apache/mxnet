@@ -22,10 +22,9 @@ This document describes all the ONNX-MXNet APIs.
 .. autosummary::
     :nosignatures:
 
-    mxnet.contrib.onnx.import_model
-    mxnet.contrib.onnx.get_model_metadata
-    mxnet.contrib.onnx.import_to_gluon
-    mxnet.contrib.onnx.export_model
+    mxnet.contrib.onnx.onnx2mx.import_model
+    mxnet.contrib.onnx.onnx2mx.import_to_gluon
+    mxnet.contrib.onnx.mx2onnx.export_model
 ```
 
 ## ONNX Tutorials
@@ -33,7 +32,7 @@ This document describes all the ONNX-MXNet APIs.
 ```eval_rst
 .. toctree::
    :maxdepth: 1
-   
+
    /tutorials/onnx/super_resolution.md
    /tutorials/onnx/inference_on_onnx_model.md
    /tutorials/onnx/fine_tuning_gluon.md
@@ -42,7 +41,7 @@ This document describes all the ONNX-MXNet APIs.
 ## ONNX Examples
 
 * Face Recognition with [ArcFace](https://github.com/onnx/models/tree/master/models/face_recognition/ArcFace)
-* Image Classification with [MobileNet](https://github.com/onnx/models/tree/master/models/image_classification/mobilenet), [ResNet](https://github.com/onnx/models/tree/master/models/image_classification/resnet), [SqueezeNet](https://github.com/onnx/models/tree/master/models/image_classification/squeezenet), [VGG](https://github.com/onnx/models/tree/master/models/image_classification/vgg) 
+* Image Classification with [MobileNet](https://github.com/onnx/models/tree/master/models/image_classification/mobilenet), [ResNet](https://github.com/onnx/models/tree/master/models/image_classification/resnet), [SqueezeNet](https://github.com/onnx/models/tree/master/models/image_classification/squeezenet), [VGG](https://github.com/onnx/models/tree/master/models/image_classification/vgg)
 
 ## API Reference
 
@@ -50,11 +49,12 @@ This document describes all the ONNX-MXNet APIs.
 
 ```eval_rst
 
-.. automodule:: mxnet.contrib.onnx.import_model
-.. automodule:: mxnet.contrib.onnx.get_model_metadata
-.. automodule:: mxnet.contrib.onnx.import_to_gluon
-.. automodule:: mxnet.contrib.onnx.export_model
-
+.. automodule:: mxnet.contrib.onnx.onnx2mx.import_model
+    :members: import_model, get_model_metadata
+.. automodule:: mxnet.contrib.onnx.onnx2mx.import_to_gluon
+    :members: import_to_gluon
+.. automodule:: mxnet.contrib.onnx.mx2onnx.export_model
+    :members: export_model
 ```
 
 <script>auto_index("api-reference");</script>
