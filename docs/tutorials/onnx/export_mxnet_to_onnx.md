@@ -93,12 +93,14 @@ We will use the downloaded pre-trained model files (sym, params) and define inpu
 
 ```python
 # Downloaded input symbol and params files
-sym = 'resnet-18-symbol.json'
-params = 'resnet-18-0000.params'
+sym = './resnet-18-symbol.json'
+params = './resnet-18-0000.params'
+
 # Standard Imagenet input - 3 channels, 224*224
 input_shape = (1,3,224,224)
+
 # Path of the output file
-onnx_file = 'mxnet_exported_resnet50.onnx'
+onnx_file = './mxnet_exported_resnet50.onnx'
 ```
 
 We have defined the input parameters required for the `export_model` API. Now, we are ready to covert the MXNet model into ONNX format.
@@ -117,6 +119,7 @@ Now we can check validity of the converted ONNX model by using ONNX checker tool
 ```python
 from onnx import checker
 import onnx
+
 # Load onnx model
 model_proto = onnx.load(converted_model_path)
 
