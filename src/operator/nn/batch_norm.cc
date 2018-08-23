@@ -461,6 +461,9 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
     dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
                                    in_attrs, out_attrs);
   }
+  if (!MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+  }
 #else
   for (int& v : *in_attrs)
     if (v == - 1) v = kDefaultStorage;

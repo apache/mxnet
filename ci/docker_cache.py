@@ -31,7 +31,6 @@ import sys
 import subprocess
 import json
 import build as build_util
-from joblib import Parallel, delayed
 
 
 
@@ -43,6 +42,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     :param load_cache: Load cache before building
     :return: 1 if error occurred, 0 otherwise
     """
+    from joblib import Parallel, delayed
     if len(platforms) == 0:
         return 0
 

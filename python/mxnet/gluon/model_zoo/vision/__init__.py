@@ -101,7 +101,7 @@ def get_model(name, **kwargs):
         Number of classes for the output layer.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
 
     Returns

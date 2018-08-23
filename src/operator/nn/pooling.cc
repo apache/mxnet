@@ -363,8 +363,7 @@ We can see that Lp pooling stands between those two, in practice the most common
 
 For each window ``X``, the mathematical expression for Lp pooling is:
 
-..math::
-  f(X) = \sqrt{p}{\sum\limits_{x \in X} x^p}
+:math:`f(X) = \sqrt[p]{\sum_{x}^{X} x^p}`
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

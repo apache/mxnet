@@ -1,0 +1,16 @@
+beautifulsoup4==4.6.3
+breathe==4.10.0
+cpplint==1.3.0
+CommonMark==0.5.4
+h5py==2.8.0rc1
+mock==2.0.0
+nose==1.3.7
+nose-timer==0.7.3
+numpy<1.15.0,>=1.8.2
+pylint==1.8.3
+pypandoc==1.4
+recommonmark==0.4.0
+requests<2.19.0,>=2.18.4
+scipy==1.0.1
+six==1.11.0
+sphinx==1.5.6

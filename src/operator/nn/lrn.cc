@@ -193,6 +193,8 @@ NNVM_REGISTER_OP(_backward_LRN)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
+// Native compute requires norm while MKLDNN does not so cannot be compared in debug mode
+.set_attr<bool>("TExcludeMKLDNNDebug", true)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", LRNGradCompute<cpu>);
 
