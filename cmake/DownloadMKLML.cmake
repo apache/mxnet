@@ -27,7 +27,7 @@ if(MSVC)
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.zip"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip"
-       EXPECTED_MD5 "8DD73E7D3F19F004551809824C4E8970" SHOW_PROGRESS)
+       EXPECTED_MD5 "b4f7676b4ad5448782945559bfe4a418" SHOW_PROGRESS)
   file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe"
        EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
@@ -45,7 +45,7 @@ elseif(APPLE)
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.tgz"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
-       EXPECTED_MD5 "23a6f7fd04fb1fa6de0d52a2ec5a2a14" SHOW_PROGRESS)
+       EXPECTED_MD5 "fecd3083f20fc009b95f7554005eb7ef" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
                   "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
 
