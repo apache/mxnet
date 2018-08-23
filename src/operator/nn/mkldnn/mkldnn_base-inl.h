@@ -356,6 +356,7 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
   }
 }
 
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
 static inline std::vector<NDArray> CreateDefaultInputs(const std::vector<NDArray> &arrs) {
   std::vector<NDArray> buffer(arrs.size());
   for (size_t i = 0; i < arrs.size(); ++i) {

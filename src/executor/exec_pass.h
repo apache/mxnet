@@ -87,6 +87,7 @@ class OpExecutor {
     return OpStatePtr();
   }
 
+  // TODO(alexzai): (MXNET-856) Remove instance member after subgraph feature added
  protected:
   std::vector<NDArray> in_array_fallback;
 };
