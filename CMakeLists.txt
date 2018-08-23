@@ -372,9 +372,12 @@ else()
     # would still try to find MKL instead and will fail.
     # BLAS libraries for MXNet are setup in cmake/ChooseBLAS.cmake
     set(__BLAS ${BLAS})
+    set(__USE_MKL_IF_AVAILABLE ${USE_MKL_IF_AVAILABLE})
+    set(USE_MKL_IF_AVAILABLE False)
     set(BLAS "Override")
     include(3rdparty/mshadow/cmake/mshadow.cmake)
     set(BLAS ${__BLAS})
+    set(USE_MKL_IF_AVAILABLE ${__USE_MKL_IF_AVAILABLE})
 
     include(3rdparty/mshadow/cmake/Utils.cmake)
     include(3rdparty/mshadow/cmake/Cuda.cmake)
@@ -554,9 +557,12 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/cmake)
   # would still try to find MKL instead and will fail.
   # BLAS libraries for MXNet are setup in cmake/ChooseBLAS.cmake
   set(__BLAS ${BLAS})
+  set(__USE_MKL_IF_AVAILABLE ${USE_MKL_IF_AVAILABLE})
+  set(USE_MKL_IF_AVAILABLE False)
   set(BLAS "Override")
   add_subdirectory("3rdparty/mshadow")
   set(BLAS ${__BLAS})
+  set(USE_MKL_IF_AVAILABLE ${__USE_MKL_IF_AVAILABLE})
 endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
