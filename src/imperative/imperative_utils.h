@@ -436,8 +436,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
       }
     };
 
-  if (exec_type == ExecType::kCrossDeviceCopy
-      || exec_type == ExecType::kSubgraphExec) {
+  if (exec_type == ExecType::kCrossDeviceCopy) {
     run(RunContext{ctx, nullptr});
   } else {
     CHECK(exec_type == ExecType::kSync);
