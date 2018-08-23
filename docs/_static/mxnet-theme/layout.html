@@ -175,7 +175,9 @@
   <body role="document" background="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/mxnet-background-compressed.jpeg">
     <div class='content-block'>
     {%- include "navbar.html" %}
-    {%- include "social.html" %}
+    {% if pagename == 'index' %}
+      {%- include "social.html" %}
+    {%- endif %}
     {% if pagename != 'index' %}
     <div class="container">
       <div class="row">
