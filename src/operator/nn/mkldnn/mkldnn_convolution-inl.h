@@ -35,19 +35,48 @@
 namespace mxnet {
 namespace op {
 
+struct ConvFusionParam : public dmlc::Parameter<ConvFusionParam> {
+  // When adding more members into this clss, please double check GetHash()
+  // won't overflow.
+  bool with_bn;
+  bool with_relu;
+  bool with_sum;
+  bool with_postsum_relu;
+  DMLC_DECLARE_PARAMETER(ConvFusionParam) {
+    DMLC_DECLARE_FIELD(with_bn).set_default(false)
+    .describe("Add post batchnorm.");
+    DMLC_DECLARE_FIELD(with_relu).set_default(false)
+    .describe("Add post relu");
+    DMLC_DECLARE_FIELD(with_sum).set_default(false)
+    .describe("Add post sum");
+    DMLC_DECLARE_FIELD(with_postsum_relu).set_default(false)
+    .describe("Add post relu after sum");
+  }
+  const int GetHash() const {
+    int hash = 0;
+    hash = hash * 2 + this->with_bn ? 1 : 0;
+    hash = hash * 2 + this->with_relu ? 1 : 0;
+    hash = hash * 2 + this->with_sum ? 1 : 0;
+    hash = hash * 2 + this->with_postsum_relu ? 1 : 0;
+    return hash;
+    }
+};
+
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
-    const ConvolutionParam& param, const bool is_train, const NDArray &data,
-    const NDArray &weights, const NDArray *bias, const NDArray &output);
+    const ConvolutionParam &param, const ConvFusionParam &fusion_param,
+    const bool is_train, const NDArray &data, const NDArray &weights,
+    const NDArray *bias, const NDArray &output);
 
 class MKLDNNConvForward {
  public:
   mkldnn::convolution_forward::primitive_desc fwd_pd;
 
-  MKLDNNConvForward(const ConvolutionParam& param, const bool is_train,
+  MKLDNNConvForward(const ConvolutionParam &param,
+                    const ConvFusionParam &fusion_param, const bool is_train,
                     const NDArray &data, const NDArray &weights,
-                    const NDArray *bias, const NDArray &output): fwd_pd(
-                        GetConvFwdImpl(param, is_train, data, weights, bias, output)) {
-  }
+                    const NDArray *bias, const NDArray &output)
+      : fwd_pd(GetConvFwdImpl(param, fusion_param, is_train, data, weights,
+                              bias, output)) {}
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
                  const mkldnn::memory *bias, const mkldnn::memory &output);

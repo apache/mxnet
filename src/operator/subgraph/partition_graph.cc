@@ -630,11 +630,8 @@ void CreateSubgraphNode(Graph* g,
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_id);
-
   // Connect the external nodes to the subgraph node.
-  for (size_t i = 0; i < output_entries.size(); ++i) {
-    *output_entries[i] = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
-  }
+  subg_prop->ConnectSubgraphOutput(n, output_entries);
   n->inputs = orig_input_entries;
   const auto& indexed_graph = g->indexed_graph();
   for (size_t i = 0; i < n->inputs.size(); ++i) {

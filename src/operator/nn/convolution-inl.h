@@ -53,7 +53,7 @@ enum ConvolutionOpInputs {kData, kWeight, kBias};
 enum ConvolutionOpOutputs {kOut};
 enum ConvolutionOpResource {kTempSpace};
 enum ConvolutionOpCudnnTune {kOff, kLimited, kFastest};
-}
+}  // namespace conv
 
 struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   TShape kernel;
@@ -129,6 +129,10 @@ void ConvolutionParamParser(nnvm::NodeAttrs* attrs);
 
 typedef ParamOpSign<ConvolutionParam> ConvSignature;
 
+static inline size_t GetInShapeSize(const ConvolutionParam &param_) {
+  return 2 + (param_.no_bias ? 0 : 1);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
@@ -176,8 +180,7 @@ class ConvolutionOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[conv::kOut], kWriteTo);
-    size_t expected = param_.no_bias ? 2 : 3;
-    CHECK_EQ(in_data.size(), expected);
+    CHECK_EQ(in_data.size(), GetInShapeSize(param_));
     CHECK_EQ(out_data.size(), 1U);
     CHECK_EQ(req[conv::kOut], kWriteTo);
     LayerSetUp(in_data[conv::kData].shape_, out_data[conv::kOut].shape_);
