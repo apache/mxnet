@@ -25,7 +25,7 @@
 #include <mxnet/c_api_test.h>
 #include <nnvm/pass.h>
 #include "./c_api_common.h"
-#include "../operator/subgraph/default_subgraph_property.h"
+#include "../operator/subgraph/subgraph_property.h"
 
 int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
                               const char* prop_name,

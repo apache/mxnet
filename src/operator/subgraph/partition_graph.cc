@@ -663,7 +663,6 @@ void CreateSubgraphNode(Graph* g,
     // update entry_top_order_map with newly created orig_input_entries
     auto it = entry_top_order_map->find(input_entries[i]);
     CHECK(it != entry_top_order_map->end());
-    CHECK_EQ(entry_top_order_map->count(&e), 0U);
     entry_top_order_map->emplace(&e, it->second);
     // update input entries' source simple nodes' outputs map
     nnvm::Node* node = e.node.get();

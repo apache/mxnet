@@ -39,7 +39,6 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../engine/engine_impl.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>

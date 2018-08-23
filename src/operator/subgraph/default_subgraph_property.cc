@@ -17,9 +17,6 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_PROPERTY_H_
-
 #include <vector>
 #include <string>
 #include "./common.h"
@@ -77,5 +74,3 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(default, DefaultSubgraphProperty);
 
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_OPERATOR_SUBGRAPH_DEFAULT_SUBGRAPH_PROPERTY_H_
