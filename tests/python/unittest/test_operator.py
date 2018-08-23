@@ -3008,16 +3008,16 @@ def test_roipooling():
                            numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
 
 
-def check_pad_with_shape(shape, xpu, pad_width, mode):
+def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
     # bind with label
-    X = mx.symbol.Variable('X')
+    X = mx.symbol.Variable('X', dtype=dtype)
     Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
     # numpy result
     pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
     np_out = np.pad(x.asnumpy(), pad_grouped, mode)
     # mxnet result
-    grad = mx.nd.empty(shape, ctx = xpu)
+    grad = mx.nd.empty(shape, ctx = xpu, dtype=dtype)
     exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
     exec1.forward(is_train=True)
     out = exec1.outputs[0].asnumpy()
@@ -3029,16 +3029,20 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
 
 @with_seed()
 def test_pad():
+    ctx = default_context()
     shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
     shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
-    check_pad_with_shape(shape1, default_context(), pad1, 'constant')
-    check_pad_with_shape(shape1, default_context(), pad1, 'edge')
-    check_pad_with_shape(shape2, default_context(), pad2, 'constant')
-    check_pad_with_shape(shape2, default_context(), pad2, 'edge')
-    check_pad_with_shape(shape1, default_context(), pad1, 'reflect')
-    check_pad_with_shape(shape2, default_context(), pad2, 'reflect')
+    # note: this op doesn't support ints yet. Add tests when supported
+    dtypes = ["float16", "float32", "float64"]
+    for dtype in dtypes:
+        check_pad_with_shape(shape1, ctx, pad1, 'constant', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'edge', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'constant', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'edge', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'reflect', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'reflect', dtype)
 
 
 def np_instance_norm(data, weight, bias, eps):
@@ -3940,6 +3944,7 @@ def test_grid_generator():
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12248")
 def test_bilinear_sampler():
     from math import floor
 
@@ -4517,13 +4522,18 @@ def test_where():
 @with_seed()
 def test_new_softmax():
     for ndim in range(1, 5):
-        for _ in range(5):
-            shape = np.random.randint(1, 5, size=ndim)
-            axis = np.random.randint(-ndim, ndim)
-            data = np.random.uniform(-2, 2, size=shape)
-            sym = mx.sym.softmax(axis=axis)
-            check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
-            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+        shape = np.random.randint(1, 5, size=ndim)
+        axis = np.random.randint(-ndim, ndim)
+        data = np.random.uniform(-2, 2, size=shape)
+        sym = mx.sym.softmax(axis=axis)
+        expected_fwd = np_softmax(data, axis=axis)
+        expected_bwd = np.zeros(shape)
+        check_symbolic_forward(sym, [data], [expected_fwd])
+        for req in ['null', 'add', 'write']:
+            check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                    rtol=1e-2, atol=1e-3, grad_req=req)
+        check_numeric_gradient(sym, [data], rtol=1e-2, atol=1e-3)
+
 
 @with_seed()
 def test_softmax_with_temperature():
@@ -5106,6 +5116,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
 
     return output_offset
 
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
 @with_seed()
 def test_deformable_psroipooling():
     sample_per_part = 4
@@ -5716,8 +5727,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-# test fails with seed 990952066: 0 output seen with dropout ratio=0. See issue #9816
-@with_seed(1234)
+@with_seed()
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -5769,6 +5779,7 @@ def test_dropout():
 
         exe.arg_arrays[0][:] = 1
         exe.forward(is_train=True)
+
         if not math.isnan(max_value):
             assert exe.outputs[0].asnumpy().max() > 0
         else:

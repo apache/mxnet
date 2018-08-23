@@ -71,7 +71,7 @@ confidence=
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where
 # it should appear only once). See also the "--disable" option for examples.
-enable=indexing-exception,old-raise-syntax
+enable=indexing-exception,old-raise-syntax,undefined-variable
 
 # Disable the message, report, category or checker with the given id(s). You
 # can either give multiple identifiers separated by comma (,) or put this
@@ -82,7 +82,45 @@ enable=indexing-exception,old-raise-syntax
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=design,similarities,no-self-use,attribute-defined-outside-init,locally-disabled,star-args,pointless-except,bad-option-value,global-statement,fixme,suppressed-message,useless-suppression,locally-enabled,no-member,no-name-in-module,import-error,unsubscriptable-object,unbalanced-tuple-unpacking,undefined-variable,protected-access,superfluous-parens,invalid-name,no-else-return,useless-super-delegation,len-as-condition,invalid-unary-operand-type
+disable=
+    design,
+    similarities,
+    no-self-use,
+    attribute-defined-outside-init,
+    locally-disabled,
+    star-args,
+    pointless-except,
+    bad-option-value,
+    global-statement,
+    fixme,
+    suppressed-message,
+    useless-suppression,
+    locally-enabled,
+    no-member,
+    no-name-in-module,
+    import-error,
+    unsubscriptable-object,
+    unbalanced-tuple-unpacking,
+    protected-access,
+    superfluous-parens,
+    invalid-name,
+    no-else-return,
+    useless-super-delegation,
+    len-as-condition,
+    invalid-unary-operand-type,
+    chained-comparison,
+    consider-using-dict-comprehension,
+    consider-using-set-comprehension,
+    invalid-envvar-default,
+    singleton-comparison,
+    try-except-raise,
+    useless-object-inheritance,
+    useless-return,
+    c-extension-no-member,
+    deprecated-lambda,
+    redefined-builtin,
+    unexpected-keyword-arg
+
 # disable=unicode-builtin,delslice-method,using-cmp-argument,setslice-method,dict-view-method,parameter-unpacking,range-builtin-not-iterating,print-statement,file-builtin,old-raise-syntax,basestring-builtin,execfile-builtin,indexing-exception,import-star-module-level,coerce-method,long-builtin,old-ne-operator,old-division,no-absolute-import,raw_input-builtin,old-octal-literal,oct-method,xrange-builtin,hex-method,unpacking-in-except,nonzero-method,raising-string,intern-builtin,reload-builtin,metaclass-assignment,cmp-method,filter-builtin-not-iterating,apply-builtin,map-builtin-not-iterating,next-method-called,unichr-builtin,buffer-builtin,dict-iter-method,input-builtin,coerce-builtin,getslice-method,useless-suppression,standarderror-builtin,zip-builtin-not-iterating,suppressed-message,cmp-builtin,backtick,long-suffix,reduce-builtin,round-builtin
 
 
@@ -117,7 +155,7 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 [FORMAT]
 
 # Maximum number of characters on a single line.
-max-line-length=100
+max-line-length=120
 
 # Regexp for a line that is allowed to be longer than the limit.
 ignore-long-lines=^\s*(# )?<?https?://\S+>?$

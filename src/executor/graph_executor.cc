@@ -1111,7 +1111,7 @@ void GraphExecutor::InitCachedOps() {
       }
     }
   }
-  // Note that this modifies the requirment of kWriteInplace
+  // Note that this modifies the requirement of kWriteInplace
   for (size_t j = num_forward_outputs_; j < idx.outputs().size(); ++j) {
     auto& e = idx.outputs()[j];
     op_nodes_[e.node_id].exec->req[e.index] =
