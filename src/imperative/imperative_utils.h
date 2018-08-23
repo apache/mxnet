@@ -803,13 +803,14 @@ inline NDArray AllocateMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  const size_t page_size = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
 
   size_t total_size = 0;
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID ||
         mem_plan[i].storage_id == exec::kDynamicStorageID ||
         mem_plan[i].root != i) continue;
-    total_size += mem_plan[i].size;
+    total_size += (mem_plan[i].size + page_size - 1) / page_size * page_size;
   }
 
   if (use_pool && (pool.is_none() || total_size > pool.shape().Size())) {
@@ -835,7 +836,7 @@ inline NDArray AllocateMemory(
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
       } else {
         *arrays[i] = pool.AsArray(shapes[i], dtypes[i], offset);
-        offset += mem_plan[i].size;
+        offset += (mem_plan[i].size + page_size - 1) / page_size * page_size;
       }
     } else {
       CHECK_GE(mem_plan[mem_plan[i].root].storage_id, 0);
