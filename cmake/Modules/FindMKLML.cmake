@@ -46,10 +46,12 @@ set(MKLML_INCLUDE_SEARCH_PATHS
 
 # ---[ Find libraries
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(PATH_SUFFIXES lib lib/ia32)
+  set(__PATH_SUFFIXES lib lib/ia32)
 else()
-  set(PATH_SUFFIXES lib lib/intel64)
+  set(__PATH_SUFFIXES lib lib64 lib/intel64)
 endif()
+
+mark_as_advanced(__PATH_SUFFIXES)
 
 set(MKLML_LIB_SEARCH_PATHS
     ${MKLML_LIB_SEARCH_PATHS}
@@ -80,7 +82,7 @@ set(MKL_USE_INTEL_OMP)
 find_library(IOMP5_LIBRARY
              NAMES iomp5 libiomp5.lib libiomp5md.lib
              PATHS ${MKLML_LIB_SEARCH_PATHS}
-             PATH_SUFFIXES ${PATH_SUFFIXES}
+             PATH_SUFFIXES ${__PATH_SUFFIXES}
              )
 mark_as_advanced(IOMP5_LIBRARY)
 
@@ -96,23 +98,21 @@ set(__MKL_LIB_NAMES libmklml.lib libmklmlmd.lib)
 
 if(MKL_USE_INTEL_OMP)
   list(APPEND __MKL_LIB_NAMES mklml_intel)
-else()
-  list(APPEND __MKL_LIB_NAMES mklml_gnu)
 endif()
 
-list(APPEND __MKL_LIB_NAMES mklml)
+list(APPEND __MKL_LIB_NAMES mklml_gnu mklml)
 
 mark_as_advanced(__MKL_LIB_NAMES)
 
 message("MKLML_LIBRARY=${MKLML_LIBRARY}")
 message("__MKL_LIB_NAMES=${__MKL_LIB_NAMES}")
 message("MKLML_LIB_SEARCH_PATHS=${MKLML_LIB_SEARCH_PATHS}")
-message("PATH_SUFFIXES=${PATH_SUFFIXES}")
+message("PATH_SUFFIXES=${__PATH_SUFFIXES}")
 
 find_library(MKLML_LIBRARY
              NAMES ${__MKL_LIB_NAMES}
              PATHS ${MKLML_LIB_SEARCH_PATHS}
-             PATH_SUFFIXES ${PATH_SUFFIXES}
+             PATH_SUFFIXES ${__PATH_SUFFIXES}
              )
 
 mark_as_advanced(MKLML_LIBRARY)
