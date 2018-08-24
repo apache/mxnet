@@ -40,7 +40,7 @@ MXNet Change Log
 - Symbol.api and NDArray.api would bring new set of functions that have complete definition for all arguments.
 - Please see this [Type safe API design document](https://cwiki.apache.org/confluence/display/MXNET/Scala+Type-safe+API+Design+Doc) for more details.
 
-### New Features - Rounding GPU Memory Pool for dynamic networks with variable-length input-output (experimental)
+### New Features - Rounding GPU Memory Pool for dynamic networks with variable-length inputs and outputs (experimental)
 - MXNet now supports a new memory pool type for GPU memory (#11041).
 - Unlike the default memory pool requires exact size match to reuse released memory chunks, this new memory pool uses exponential-linear rounding so that similar sized memory chunks can all be reused, which is more suitable for all the workloads with dynamic-shape inputs and outputs. Set environment variable `MXNET_GPU_MEM_POOL_TYPE=Round` to enable.
 
