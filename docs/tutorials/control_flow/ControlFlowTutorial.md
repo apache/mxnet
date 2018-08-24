@@ -1,5 +1,5 @@
 
-MXNet currently provides three control flow operators: `cond`, `foreach` and `while_loop`. Like other MXNet operators, they all have a version for NDArray and a version for Symbol. These two versions have exactly the same semantics. We can take advantage of this and use Gluon hybrid blocks and switch between hybrid and non-hybrid modes seamleessly.
+MXNet currently provides three control flow operators: `cond`, `foreach` and `while_loop`. Like other MXNet operators, they all have a version for NDArray and a version for Symbol. These two versions have exactly the same semantics. We can take advantage of this and use them in Gluon to hybridize models.
 
 In this tutorial, we use a few examples to demonstrate the use of control flow operators in Gluon and show how a model that requires control flow is hybridized.
 
@@ -18,13 +18,13 @@ from mxnet.gluon import HybridBlock
 foreach(body, data, init_states, name) => (outputs, states)
 ```
 
-It iterates over the first dimension of the input data (it can be an array or multiple arrays) and run the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
+It iterates over the first dimension of the input data (it can be an array or a list of arrays) and run the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
 
 ```python
 body(data, states) => (outputs, states)
 ```
 
-The inputs of the `body` function have two parts: `data` is a slice of an array (if there is only one input array in `foreach`) or a list of slices (if there are multiple input arrays); `states` are the arrays from the previous iteration. The outputs of the `body` function also have two parts: `outputs` is an array or a list of arrays; `states` is the computation states of the current iteration. `outputs` from all iterations are concatenated as the outputs of `foreach`.
+The inputs of the `body` function have two parts: `data` is a slice of an array (if there is only one input array in `foreach`) or a list of slices (if there are a list of input arrays); `states` are the arrays from the previous iteration. The outputs of the `body` function also have two parts: `outputs` is an array or a list of arrays; `states` is the computation states of the current iteration. `outputs` from all iterations are concatenated as the outputs of `foreach`.
 
 The pseudocode below illustrates the execution of `foreach`.
 
@@ -42,7 +42,7 @@ def foreach(body, data, init_states):
 ```
 
 ### Example 1: foreach works like map
-`foreach` can work like a map function in a functional language. In this case, the states of foreach can be an empty list, which means the computation doesn't carry computation states across iterations.
+`foreach` can work like a map function of a functional language. In this case, the states of foreach can be an empty list, which means the computation doesn't carry computation states across iterations.
 
 In this example, we use `foreach` to add each element in an array by one.
 
@@ -336,7 +336,7 @@ class RNNLayer(HybridBlock):
             i = states[0]
             out, states = self.cell(i, length, data, states[1])
             return out, [i + 1, states]
-
+        print()
         out, state = F.contrib.foreach(body, data, [F.zeros((1)), init_states])
         return out, state
 ```
@@ -360,23 +360,24 @@ print(rnn_data)
 print(out)
 ```
 
+    ()
     
-    [[[-0.70893967  0.79505837  1.01872194]]
+    [[[-1.25296438  0.387312   -0.41055229]]
     
-     [[-0.15738758 -1.5379014  -0.78309226]]
+     [[ 1.28453672  0.21001032 -0.08666432]]
     
-     [[ 0.5364728  -1.49940979  0.18817241]]
+     [[ 1.46422136 -1.30581355  0.9344402 ]]
     
-     [[-0.52421683  0.29636207 -0.53233677]]
+     [[ 0.5380863  -0.16038011  0.84187603]]
     
-     [[ 0.85569632 -0.87393355 -0.10898105]]]
+     [[-1.00553632  3.13221502 -0.4358989 ]]]
     <NDArray 5x1x3 @cpu(0)>
     
-    [[[ 0.32939154 -0.01365058 -0.25545752]]
+    [[[-0.02620504  0.1605694   0.29636264]]
     
-     [[ 0.15680683 -0.00335424 -0.14627317]]
+     [[-0.00474182  0.08719197  0.17757624]]
     
-     [[ 0.07623718 -0.00953147 -0.09720358]]
+     [[ 0.00631597  0.04674901  0.12468992]]
     
      [[ 0.          0.          0.        ]]
     
