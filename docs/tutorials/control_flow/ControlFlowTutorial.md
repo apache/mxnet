@@ -253,12 +253,12 @@ Instead of running over the first dimension of an array, `while_loop` checks a c
 body(state1, state2, ...) => (outputs, states)
 ```
 
-The inputs of the `body` function in `while_loop` are a little different from the one in `foreach`. It has a variable number of input arguments. Each input argument is a loop variable and the number of arguments is determined by the number of loop variables. The outputs of the `body` function also have two parts: `outputs` is an array or a list of arrays; `states` is the computation states of the current iteration. Like `foreach`, both `outputs` and `states` can be an empty list. `outputs` from all iterations are concatenated as the outputs of `while_loop`.
+The inputs of the `body` function in `while_loop` are a little different from the one in `foreach`. It has a variable number of input arguments. Each input argument is a loop variable and the number of arguments is determined by the number of loop variables. The outputs of the `body` function also have two parts: `outputs` is an array or a list of arrays; `states` are loop variables and will be passed to the next iteration as inputs of `body`. Like `foreach`, both `outputs` and `states` can be an empty list. `outputs` from all iterations are concatenated as the outputs of `while_loop`.
 
 ### Example 5: scan with while_loop
 `while_loop` is more general than `foreach`. We can also use it to iterate over an array and sum all of its values together. In this example, instead of summing over the entire array, we only sum over the first 4 elements.
 
-**Note**: the output arrays of the current implementation of `while_loop` is determined by `max_iterations`. As such, even though the while loop in this example runs 4 iterations, it still outputs an array of 5 elements. The last element in the output array is actually filled with a random number.
+**Note**: the output arrays of the current implementation of `while_loop` is determined by `max_iterations`. As such, even though the while loop in this example runs 4 iterations, it still outputs an array of 5 elements. The last element in the output array is actually filled with an arbitrary value.
 
 
 ```python
@@ -310,7 +310,9 @@ func() => [outputs]
 `cond` requires all outputs from `then_func` and `else_func` have the same number of Symbols/NDArrays with the same shapes and data types.
 
 ### Example 6: skip RNN computation with cond
-Example 4 shows how to process a batch with sequences of different lengths. In this example, we show how to skip computation after we have met the end of the sequence.
+Example 4 shows how to process a batch with sequences of different lengths. It performs computation for all steps but discards some of the computation results.
+
+In this example, we show how to skip computation after we have reached the end of a sequence, whose length is indicated by `length`. The code below only works for a batch with one sequence.
 
 
 ```python
