@@ -4507,6 +4507,14 @@ def test_where():
                                              y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                              condition=mx.nd.array([1,0])), MXNetError)
 
+    def test_1d_cond():
+        cond = mx.nd.array([1, 0, 1])
+        x = mx.nd.array([[2, 3], [4, 5], [6, 7]])
+        y = mx.nd.array([[7, 8], [9, 10], [10, 11]])
+        expect_out = np.array([[2, 3], [9, 10], [6, 7]])
+        out = mx.nd.where(cond, x, y).asnumpy()
+        assert(expect_out.all() == out.all())
+
     test_where_helper((5, 9), True)
     test_where_helper((5, 9), False)
     test_where_helper((5, 7, 9), True)
@@ -4518,6 +4526,7 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
     test_invalid_shape()
+    test_1d_cond()
 
 @with_seed()
 def test_new_softmax():
