@@ -529,15 +529,16 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 
   DispatchMode wanted_mode;
   bool dispatched = false;
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
+
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    wanted_mode = DispatchMode::kFComputeFallback;
     dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                                         dispatch_mode, DispatchMode::kFComputeFallback);
-  else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)
+                                         dispatch_mode, wanted_mode);
+  } else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn) {
     wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
+  } else {
     wanted_mode = DispatchMode::kFCompute;
+  }
 
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = op::storage_type_assign(out_attrs, mxnet::kDefaultStorage,
