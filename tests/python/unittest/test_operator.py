@@ -5728,6 +5728,7 @@ def test_stack():
 
 
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12329")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
