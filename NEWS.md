@@ -35,6 +35,11 @@ MXNet Change Log
 - This is the first step towards optimizing dynamic neural networks with variable computation graphs, by adding symbolic and imperative control flow operators. [Proposal](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators).
 - New operators introduced: foreach([#11531](https://github.com/apache/incubator-mxnet/pull/11531)), while_loop([#11566](https://github.com/apache/incubator-mxnet/pull/11566)), cond([#11760](https://github.com/apache/incubator-mxnet/pull/11760)).
 
+### New Features - Scala API Improvements (experimental)
+- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/incubator-mxnet/pull/10660), [#10787](https://github.com/apache/incubator-mxnet/pull/10787), [#10991](https://github.com/apache/incubator-mxnet/pull/10991))
+- Symbol.api and NDArray.api would bring new set of functions that have complete definition for all arguments.
+- Please see this [Type safe API design document](https://cwiki.apache.org/confluence/display/MXNET/Scala+Type-safe+API+Design+Doc) for more details.
+
 ### New Features - Rounding GPU Memory Pool for dynamic networks with variable-length input-output (experimental)
 - MXNet now supports a new memory pool type for GPU memory (#11041).
 - Unlike the default memory pool requires exact size match to reuse released memory chunks, this new memory pool uses exponential-linear rounding so that similar sized memory chunks can all be reused, which is more suitable for all the workloads with dynamic-shape inputs and outputs. Set environment variable `MXNET_GPU_MEM_POOL_TYPE=Round` to enable.
@@ -152,7 +157,7 @@ MXNet Change Log
 - Add DataDesc type for the Scala Package (#11844)
 
 ### Usability Improvements
-- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/incubator-mxnet/pull/10660), [#10787](https://github.com/apache/incubator-mxnet/pull/10787), [#10991](https://github.com/apache/incubator-mxnet/pull/10991))
+- Added NDArray auto-collector for Scala (#11751, #12232)
 - Added docs for mx.initializer.Constant (#10637)
 - Added build from souce instructions on windows (#11276)
 - Added a tutorial explaining how to use the profiler (#11274)
