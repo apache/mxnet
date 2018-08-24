@@ -111,6 +111,7 @@ disable=
     too-many-arguments,
     too-many-branches,
     too-many-instance-attributes,
+    too-many-locals,
     too-many-public-methods,
     too-many-statements
 
