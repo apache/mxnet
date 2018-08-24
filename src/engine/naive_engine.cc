@@ -159,6 +159,10 @@ class NaiveEngine final : public Engine {
       opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
       opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
     }
+    // increment mutable var version
+    for (auto var : mutable_vars) {
+      ++var->version_;
+    }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
@@ -178,10 +182,6 @@ class NaiveEngine final : public Engine {
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
-    // increment var version
-    for (auto var : mutable_vars) {
-      ++var->version_;
-    }
     if (profiling) {
       opr->opr_profile->stop();
     }
