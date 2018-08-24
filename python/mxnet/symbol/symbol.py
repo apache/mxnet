@@ -2886,7 +2886,7 @@ def full(shape, val, dtype=None, **kwargs):
     return _internal._full(shape=shape, dtype=dtype, value=float(val), **kwargs)
 
 # pylint: disable=redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
     Parameters
@@ -2911,7 +2911,7 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     if dtype is None:
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             name=name, dtype=dtype)
+                             infer_range=infer_range, name=name, dtype=dtype)
 
 def histogram(a, bins=10, range=None, **kwargs):
     """Compute the histogram of the input data.
