@@ -21,7 +21,7 @@ import java.lang.annotation.{ElementType, Retention, Target, _}
 
 /**
   * Experimental: there is a comparably high chance that
-  * the API will undergo some kind of changes
+  * the API will be changed or removed.
   */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(Array(ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER,
