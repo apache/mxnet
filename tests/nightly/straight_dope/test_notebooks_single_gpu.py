@@ -35,6 +35,7 @@ NOTEBOOKS_WHITELIST = [
     'chapter02_supervised-learning/environment',
     'chapter03_deep-neural-networks/kaggle-gluon-kfold',
     'chapter04_convolutional-neural-networks/deep-cnns-alexnet',  # > 10 mins.
+    'chapter05_recurrent-neural-networks/rnns-gluon', # > 10 mins.
     'chapter06_optimization/gd-sgd-scratch',  # Overflow warning is intended.
     'chapter06_optimization/gd-sgd-gluon',  # Overflow warning is intended.
     'chapter07_distributed-learning/multiple-gpus-scratch',
@@ -175,9 +176,6 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     def test_gru_scratch(self):
         assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
-
-    def test_rnns_gluon(self):
-        assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
 
     # Chapter 6
 
