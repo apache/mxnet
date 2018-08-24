@@ -18,19 +18,6 @@ MXNet Change Log
   pretrained models.
 - Updated pre-trained models provide state-of-the-art performance on all resnetv1, resnetv2, and vgg16, vgg19, vgg16_bn, vgg19_bn models (#11327 #11860 #11830).
 
-### New Features - Scala API Improvements
-- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/incubator-mxnet/pull/10660), [#10787](https://github.com/apache/incubator-mxnet/pull/10787), [#10991](https://github.com/apache/incubator-mxnet/pull/10991))
-- Symbol.api and NDArray.api would bring new set of functions that have complete definition for all arguments.
-- Please see this [Type safe API design document](https://cwiki.apache.org/confluence/display/MXNET/Scala+Type-safe+API+Design+Doc) for more details.
-
-### New Features - Scala examples
-- Refurnished Scala Examples with improved API, documentation and CI test coverage. ([#11753](https://github.com/apache/incubator-mxnet/pull/11753), [#11621](https://github.com/apache/incubator-mxnet/pull/11621) )
-- Now all Scala examples have:
-  - No bugs block in the middle
-  - Good Readme to start with
-  - with Type-safe API usage inside
-  - monitored in CI in each PR runs
-
 ### New Features - Clojure package (experimental)
 - MXNet now supports the Clojure programming language. The MXNet Clojure package brings flexible and efficient GPU computing and state-of-art deep learning to Clojure. It enables you to write seamless tensor/matrix computation with multiple GPUs in Clojure. It also lets you construct and customize the state-of-art deep learning models in Clojure, and apply them to tasks, such as image classification and data science challenges.([#11205](https://github.com/apache/incubator-mxnet/pull/11205))
 - Checkout examples and API documentation [here](http://mxnet.incubator.apache.org/api/clojure/index.html).
@@ -64,6 +51,14 @@ MXNet Change Log
 - [TensorRT](https://developer.nvidia.com/tensorrt) provides significant acceleration of model inference on NVIDIA GPUs compared to running the full graph in MxNet using unfused GPU operators. In addition to faster fp32 inference, TensorRT optimizes fp16 inference, and is capable of int8 inference (provided the quantization steps are performed). Besides increasing throughput, TensorRT significantly reduces inference latency, especially for small batches.
 - This feature in MXNet now introduces runtime integration of TensorRT into MXNet, in order to accelerate inference.([#11325](https://github.com/apache/incubator-mxnet/pull/11325))
 - Currently, its in contrib package.
+
+### New Examples - Scala
+- Refurnished Scala Examples with improved API, documentation and CI test coverage. ([#11753](https://github.com/apache/incubator-mxnet/pull/11753), [#11621](https://github.com/apache/incubator-mxnet/pull/11621) )
+- Now all Scala examples have:
+  - No bugs block in the middle
+  - Good Readme to start with
+  - with Type-safe API usage inside
+  - monitored in CI in each PR runs
 
 ### Maintenance - Flaky Tests improvement effort
 - Fixed 130 flaky tests on CI. Tracked progress of the project [here](https://github.com/apache/incubator-mxnet/projects/9).
@@ -157,6 +152,7 @@ MXNet Change Log
 - Add DataDesc type for the Scala Package (#11844)
 
 ### Usability Improvements
+- Improvements to MXNet Scala API usability([#10660](https://github.com/apache/incubator-mxnet/pull/10660), [#10787](https://github.com/apache/incubator-mxnet/pull/10787), [#10991](https://github.com/apache/incubator-mxnet/pull/10991))
 - Added docs for mx.initializer.Constant (#10637)
 - Added build from souce instructions on windows (#11276)
 - Added a tutorial explaining how to use the profiler (#11274)
