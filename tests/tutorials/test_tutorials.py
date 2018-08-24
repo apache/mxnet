@@ -185,4 +185,4 @@ def test_vision_cnn_visualization():
     assert _test_tutorial_nb('vision/cnn_visualization')
 
 def test_control_flow():
-    assert _test_control_flow('control_flow/ControlFlowTutorial')
+    assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
