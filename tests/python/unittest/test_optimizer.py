@@ -442,7 +442,7 @@ class PyNAG(PySGD):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
-@with_seed(0)
+@with_seed()
 def test_nag():
     opt1 = PyNAG
     opt2 = mx.optimizer.NAG
@@ -512,7 +512,7 @@ class PyFTML(mx.optimizer.Optimizer):
         prev_v[:] = v_t
         prev_z[:] = z_t
 
-@with_seed(0)
+@with_seed()
 def test_ftml():
     opt1 = PyFTML
     opt2 = mx.optimizer.FTML
@@ -534,7 +534,7 @@ def test_ftml():
                             kwarg.update(cg_option)
                             kwarg.update(rg_option)
                             kwarg.update(wd_option)
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
 
 # ADAM
@@ -702,7 +702,7 @@ class PySignum(mx.optimizer.Optimizer):
         else:
             weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
 
-@with_seed(0)
+@with_seed()
 def test_signum():
     opt1 = PySignum
     opt2 = mx.optimizer.Signum
@@ -943,7 +943,7 @@ def test_ftrl():
         compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
-@with_seed(1234)
+@with_seed()
 def test_nadam():
 
     def get_net(num_hidden, flatten=True):
@@ -965,10 +965,10 @@ def test_nadam():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.0005, 'wd': 0.0005},
+    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.001, 'wd': 0.0005},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='nadam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.11
 
 # AdaGrad
 class PyAdaGrad(mx.optimizer.Optimizer):

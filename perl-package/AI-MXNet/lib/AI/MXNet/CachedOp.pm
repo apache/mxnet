@@ -22,6 +22,11 @@ package AI::MXNet::CachedOp;
     AI::MXNet::CachedOp - A wrapper around CachedOpHandle
 =cut
 
+=head1 DESCRIPTION
+
+    Internal module, used as a part of AI::MXNet::Gluon::HybridBlock.
+=cut
+
 use strict;
 use warnings;
 use AI::MXNet::Base;

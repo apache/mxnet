@@ -25,14 +25,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.DataIter
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.EvalMetric
-import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
+
+import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, NDArray, Shape, Symbol, Xavier}
+import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnet.Executor
 import org.apache.mxnetexamples.Util
@@ -70,9 +65,9 @@ object ExampleMultiTask {
         val batch = this.dataIter.next()
         val label = batch.label(0)
         new DataBatch(batch.data,
-                                     IndexedSeq(label, label),
-                                     batch.index,
-                                     batch.pad)
+          IndexedSeq(label, label),
+          batch.index,
+          batch.pad, null, null, null)
       } else {
         throw new NoSuchElementException
       }
@@ -107,11 +102,22 @@ object ExampleMultiTask {
     override def getIndex(): IndexedSeq[Long] = this.dataIter.getIndex()
 
     // The name and shape of label provided by this iterator
+    @deprecated
     override def provideLabel: ListMap[String, Shape] = {
       val provideLabel = this.dataIter.provideLabel.toArray
       // Different labels should be used here for actual application
       ListMap("softmax1_label" -> provideLabel(0)._2,
               "softmax2_label" -> provideLabel(0)._2)
+    }
+
+    // The name and shape of label provided by this iterator
+    override def provideLabelDesc: IndexedSeq[DataDesc] = {
+      val head = this.dataIter.provideLabelDesc(0)
+      // Different labels should be used here for actual application
+      IndexedSeq(
+        new DataDesc("softmax1_label", head.shape, head.dtype, head.layout),
+        new DataDesc("softmax2_label", head.shape, head.dtype, head.layout)
+      )
     }
 
     /**
@@ -122,7 +128,10 @@ object ExampleMultiTask {
     override def getPad(): Int = this.dataIter.getPad()
 
     // The name and shape of data provided by this iterator
+    @deprecated
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData
+
+    override def provideDataDesc: IndexedSeq[DataDesc] = this.dataIter.provideDataDesc
 
     override def hasNext: Boolean = this.dataIter.hasNext
   }

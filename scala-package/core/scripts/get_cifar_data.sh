@@ -20,8 +20,8 @@
 
 set -e
 
-if [ ! -z "$MXNET_DATA_DIR" ]; then
-  data_path="$MXNET_DATA_DIR"
+if [ ! -z "$MXNET_HOME" ]; then
+  data_path="$MXNET_HOME"
 else
   data_path="./data"
 fi
