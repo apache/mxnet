@@ -639,6 +639,7 @@ def test_arange():
     assert_almost_equal(pred, gt)
 
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12310")
 def test_order():
     ctx = default_context()
     dat_size = 5
