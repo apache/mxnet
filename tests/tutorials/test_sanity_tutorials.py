@@ -25,6 +25,7 @@ import re
 # Rules to be in the whitelist:
 # - not a python tutorial
 whitelist = ['c++/basics.md',
+             'c++/index.md',
              'embedded/wine_detector.md',
              'r/CallbackFunction.md',
              'r/charRnnModel.md',
