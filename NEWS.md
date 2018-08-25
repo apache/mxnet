@@ -110,7 +110,7 @@ MXNet Change Log
 - CTC operator performance improvement from HawkAaron/MXNet-CTC (#11834)
 - Improve performance of broadcast ops backward pass (#11252)
 - Improved numerical stability as a result of using stable L2 norm (#11573)
-- Accelerate the performance of topk for CPU side (#12085)
+- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input) 
 - Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/incubator-mxnet/pull/11113))
 - Performance improvement for Batch Dot on CPU from mshadow ([mshadow PR#342](https://github.com/dmlc/mshadow/pull/342))
 
