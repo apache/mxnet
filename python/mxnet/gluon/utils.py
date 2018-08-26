@@ -125,6 +125,13 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     check_isfinite : bool, default True
          If True, check that the total_norm is finite (not nan or inf). This
          requires a blocking .asscalar() call.
+
+    Returns
+    -------
+    NDArray or float
+      Total norm. Return type is NDArray of shape (1,) if check_isfinite is
+      False. Otherwise a float is returned.
+
     """
     def _norm(array):
         if array.stype == 'default':
@@ -144,7 +151,10 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     scale = ndarray.min(ndarray.concat(scale, ndarray.ones(1, ctx=ctx), dim=0))
     for arr in arrays:
         arr *= scale.as_in_context(arr.context)
-    return total_norm
+    if check_isfinite:
+        return total_norm.asscalar()
+    else:
+        return total_norm
 
 
 def _indent(s_, numSpaces):

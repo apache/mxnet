@@ -746,8 +746,8 @@ def test_global_norm_clip():
         x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            gluon.utils.clip_global_norm([x1, x3], 2.0)
-            assert len(w) == 1
+            gluon.utils.clip_global_norm([x1, x3], 2.0, check_isfinite=check_isfinite)
+            assert len(w) == check_isfinite
 
     for stype in stypes:
         for check_isfinite in [True, False]:
