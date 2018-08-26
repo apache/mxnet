@@ -85,7 +85,7 @@
               (m/module (get-symbol) {:contexts devs}))
         metric (eval-metric/accuracy)]
     (-> mod
-        (m/bind {:data-shapes (mx-io/provide-data train-data) :label-shapes (mx-io/provide-label train-data)})
+        (m/bind {:data-shapes (mx-io/provide-data-desc train-data) :label-shapes (mx-io/provide-label-desc train-data)})
         (m/init-params)
         (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.01 :momentum 0.9})}))
 

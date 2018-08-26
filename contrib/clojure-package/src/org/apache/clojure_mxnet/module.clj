@@ -88,8 +88,8 @@
    can perform computation with the module.
    mod : module
    map of opts:
-     :data-shapes Typically is  (provide-data data-iter). Data shape must be in the form of io/data-desc with is a map of :name :shape :dtype and :layout
-     :label-shapes Typically is  (provide-label data-iter). map of :name :shape :dtype and :layout
+     :data-shapes Typically is  (provide-data-desc data-iter). Data shape must be in the form of io/data-desc with is a map of :name :shape :dtype and :layout
+     :label-shapes Typically is  (provide-label-desc data-iter). map of :name :shape :dtype and :layout
      :for-training Default is `true`. Whether the executors should be bind for training.
      :inputs-need-grad Default is `false`.
                        Whether the gradients to the input data need to be computed.
@@ -547,49 +547,7 @@
         `:or {num-epoch 1
               fit-params (new FitParams)}}]
   (util/validate! ::fit-options opts "Invalid options for fit")
-  (let [fmod (-> mod
-                 (bind {:data-shapes (mx-io/provide-data train-data)
-                        :label-shapes (mx-io/provide-label train-data)
-                        :for-training true
-                        :force-rebind (.forceRebind fit-params)})
-                 (init-params (remove (fn [[k v]] (nil? v))
-                                      {:initializer (.initializer fit-params)
-                                       :arg-params (.argParams fit-params)
-                                       :aux-params (.auxParams fit-params)
-                                       :allow-missing (.allowMissing fit-params)}))
-                 (init-optimizer (remove (fn [[k v]] (nil? v))
-                                         {:optimizer (.optimizer fit-params)
-                                          :kvstore (.kvstore fit-params)})))
-        eval-metric (or (.evalMetric fit-params) (eval-metric/accuracy))
-        val-metric (or (util/option->value (.validationMetric fit-params)) (eval-metric/accuracy))]
-    (doseq [i (range num-epoch)]
-      (let [tic (System/currentTimeMillis)]
-        (mx-io/reduce-batches train-data
-                              (fn [batch-num batch]
-                                (-> fmod
-                                    (forward batch)
-                                    (backward)
-                                    (update)
-                                    (update-metric eval-metric (mx-io/batch-label batch)))
-                                (when-let [cb (util/option->value (.batchEndCallback fit-params))]
-                                  (callback/invoke cb i batch-num eval-metric))
-                                (.dispose batch)
-                                (inc batch-num)))
-        (println "Epoch " i " Train-" (eval-metric/get eval-metric))
-        (println "Epoch " i " Time cost-" (- (System/currentTimeMillis) tic))
-
-       ;;sync across kvstores
-        (get-params fmod)
-        (when-let [cb (util/option->value (.epochEndCallback fit-params))]
-          (callback/invoke cb i 0 val-metric))
-
-       ;; evaluation on the validation set
-        (when eval-data
-          (let [res (score fmod {:eval-data eval-data :eval-metric eval-metric :epoch i})]
-            (println "Epoch " i " Validation- " res)))))
-    fmod)
-  ;; old way if the problem with the sizes get resolved in DataDesc
-  #_(doto mod
+  (doto mod
       (.fit
        train-data
        (util/->option eval-data)
