@@ -114,12 +114,10 @@ def test_global_norm_clip_multi_device():
     x1 = mx.nd.ones((3,3), ctx=mx.gpu(0))
     x2 = mx.nd.ones((4,4), ctx=mx.cpu(0))
     for check_isfinite in [True, False]:
-        for check_scale in [True, False]:
-            norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite,
-                                                check_scale=check_scale)
-            assert norm == 5.0
-            assert_almost_equal(x1.asnumpy(), np.ones((3, 3)) / 5)
-            assert_almost_equal(x2.asnumpy(), np.ones((4, 4)) / 5)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite)
+        assert norm == 5.0
+        assert_almost_equal(x1.asnumpy(), np.ones((3, 3)) / 5)
+        assert_almost_equal(x2.asnumpy(), np.ones((4, 4)) / 5)
 
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):

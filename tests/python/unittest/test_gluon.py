@@ -735,11 +735,10 @@ def test_sequential_warning():
 @with_seed()
 def test_global_norm_clip():
     stypes = ['default', 'row_sparse']
-    def check_global_norm_clip(stype, check_isfinite, check_scale):
+    def check_global_norm_clip(stype, check_isfinite):
         x1 = mx.nd.ones((3,3)).tostype(stype)
         x2 = mx.nd.ones((4,4)).tostype(stype)
-        norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite,
-                                            check_scale=check_scale)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite)
         assert norm == 5.0
         assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
         assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
@@ -752,8 +751,7 @@ def test_global_norm_clip():
 
     for stype in stypes:
         for check_isfinite in [True, False]:
-            for check_scale in [True, False]:
-                check_global_norm_clip(stype, check_isfinite, check_scale)
+            check_global_norm_clip(stype, check_isfinite)
 
 @with_seed()
 def test_embedding():
