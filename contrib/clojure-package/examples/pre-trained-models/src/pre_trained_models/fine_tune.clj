@@ -80,7 +80,7 @@
 
 (defn fit [devs msymbol arg-params aux-params]
   (let [mod (-> (m/module msymbol {:contexts devs})
-                (m/bind {:data-shapes (mx-io/provide-data train-iter) :label-shapes (mx-io/provide-label val-iter)})
+                (m/bind {:data-shapes (mx-io/provide-data-desc train-iter) :label-shapes (mx-io/provide-label-desc val-iter)})
                 (m/init-params {:arg-params arg-params :aux-params aux-params
                                 :allow-missing true}))]
     (m/fit mod
