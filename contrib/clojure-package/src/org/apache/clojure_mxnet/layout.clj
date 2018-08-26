@@ -18,7 +18,6 @@
 (ns org.apache.clojure-mxnet.layout
   (:import (org.apache.mxnet Layout)))
 
-
 ;;
 ;;    Layout definition of DataDesc
 ;;    N Batch size
