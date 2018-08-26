@@ -17,11 +17,12 @@
 
 (ns org.apache.clojure-mxnet.io
   (:refer-clojure :exclude [next])
-  (:require [org.apache.clojure-mxnet.base :as base]
+  (:require [clojure.spec.alpha :as s]
+            [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.dtype :as dtype]
-            [clojure.spec.alpha :as s]
+            [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.random :as random])
   (:import (org.apache.mxnet IO DataDesc DataBatch NDArray)
@@ -68,6 +69,24 @@
        (.provideLabel)
        (util/scala-map->map)
        (mapv (fn [[k v]] {:name k :shape (mx-shape/->vec v)}))))
+
+(defn data-desc->map [dd]
+  {:name (.name dd)
+   :shape (mx-shape/->vec (.shape dd))
+   :dtype (.dtype dd)
+   :layout (.layout dd)})
+
+(defn provide-data-desc [pack-iterator]
+  (->> pack-iterator
+       (.provideDataDesc)
+       (util/scala-vector->vec)
+       (mapv data-desc->map)))
+
+(defn provide-label-desc [pack-iterator]
+  (->> pack-iterator
+       (.provideLabelDesc)
+       (util/scala-vector->vec)
+       (mapv data-desc->map)))
 
 (defn reset [iterator]
   (.reset iterator))
@@ -194,7 +213,8 @@
 (defn ndarray-iter
   " * NDArrayIter object in mxnet. Taking NDArray to get dataiter.
   *
-  * @param data vector of iter
+  * @param data vector of iter - Can either by in the form for [ndarray..] or
+  *  {data-desc0 ndarray0 data-desc2 ndarray2 ...}
   * @opts map of:
   *     :label Same as data, but is not fed to the model during testing.
   *     :data-batch-size Batch Size (default 1)
@@ -213,14 +233,24 @@
                last-batch-handle "pad"
                data-name "data"
                label-name "label"}}]
-   (new NDArrayIter
-        (util/vec->indexed-seq data)
-        (if label (util/vec->indexed-seq label) (util/empty-indexed-seq))
-        (int data-batch-size)
-        shuffle
-        last-batch-handle
-        data-name
-        label-name))
+   (let [specify-data-desc? (map? data)]
+     (if specify-data-desc?
+       (new NDArrayIter
+            (.toIndexedSeq (util/list-map data))
+            (if label
+              (.toIndexedSeq (util/list-map label))
+              (util/empty-indexed-seq))
+            (int data-batch-size)
+            shuffle
+            last-batch-handle)
+       (new NDArrayIter
+            (util/vec->indexed-seq data)
+            (if label (util/vec->indexed-seq label) (util/empty-indexed-seq))
+            (int data-batch-size)
+            shuffle
+            last-batch-handle
+            data-name
+            label-name))))
   ([data]
    (ndarray-iter data {})))
 
@@ -230,24 +260,19 @@
 (s/def ::name string?)
 (s/def ::shape vector?)
 (s/def ::dtype #{dtype/UINT8 dtype/INT32 dtype/FLOAT16 dtype/FLOAT32 dtype/FLOAT64})
+(s/def ::layout (s/or :custom string? :standard #{layout/UNDEFINED
+                                                  layout/NCHW
+                                                  layout/NTC
+                                                  layout/NT
+                                                  layout/N}))
 (s/def ::data-desc (s/keys :req-un [::name ::shape] :opt-un [::dtype ::layout]))
 
-;; NCHW is N:batch size C: channel H: height W: width
-;;; other layouts are
-;; NT, TNC, nad N
-;; the shape length must match the lengh of the layout string size
 (defn data-desc
   ([{:keys [name shape dtype layout] :as opts
-     :or {dtype base/MX_REAL_TYPE}}]
+     :or {dtype base/MX_REAL_TYPE
+          layout layout/UNDEFINED}}]
    (util/validate! ::data-desc opts "Invalid data description")
-   (let [sc (count shape)
-         layout (or layout (cond
-                             (= 1 sc) "N"
-                             (= 2 sc) "NT"
-                             (= 3 sc) "TNC"
-                             (= 4 sc) "NCHW"
-                             :else (apply str (repeat sc "?"))))]
-     (new DataDesc name (mx-shape/->shape shape) dtype layout)))
+   (new DataDesc name (mx-shape/->shape shape) dtype layout))
   ([name shape]
    (data-desc {:name name :shape shape})))
 

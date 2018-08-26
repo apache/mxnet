@@ -22,7 +22,9 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.shape :as mx-shape]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.layout :as layout]))
 
 (deftest test-mnsit-iter-and-mnist-pack
   (let [_ (when-not (.exists (io/file "data/train-images-idx3-ubyte"))
@@ -162,4 +164,26 @@
                                                :last-batch-handle "discard"})
           nbatch2 7]
       (is (= nbatch2 (mx-io/reduce-batches data-iter2 (fn [result batch] (inc result)))))
-      (is (= [] (mx-io/iter-init-label data-iter2))))))
+      (is (= [] (mx-io/iter-init-label data-iter2))))
+
+    ;;; testing with a specified layout
+    (let [label-desc (mx-io/data-desc {:name "label"
+                                       :shape [2 2]
+                                       :dtype dtype/INT32
+                                       :layout layout/NT})
+          data-desc (mx-io/data-desc {:name "data"
+                                      :shape [2 2 2]
+                                      :dtype dtype/FLOAT32
+                                      :layout layout/NTC})
+          label (ndarray/ones [2 2] {:dtype dtype/INT32})
+          data (ndarray/ones [2 2 2] {:dtype dtype/FLOAT32})
+          data-iter3 (mx-io/ndarray-iter {data-desc data}
+                                         {:label {label-desc label}})]
+      (is (= {:dtype dtype/FLOAT32 :layout layout/NTC}
+             (-> (mx-io/provide-data-desc data-iter3)
+                 first
+                 (select-keys [:dtype :layout]))))
+      (is (= {:dtype dtype/INT32 :layout layout/NT}
+             (-> (mx-io/provide-label-desc data-iter3)
+                 first
+                 (select-keys [:dtype :layout])))))))
