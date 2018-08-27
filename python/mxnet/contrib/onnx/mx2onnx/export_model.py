@@ -18,7 +18,7 @@
 # coding: utf-8
 #pylint: disable-msg=too-many-arguments
 
-"""export function"""
+"""Exports an MXNet model to the ONNX model format"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function

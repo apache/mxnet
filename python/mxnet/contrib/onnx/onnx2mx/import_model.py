@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-"""import function"""
+"""Functions for importing ONNX models to MXNet and for checking metadata"""
 # pylint: disable=no-member
 
 from .import_onnx import GraphProto
@@ -72,6 +72,7 @@ def get_model_metadata(model_file):
             'output_tensor_data' : <list of tuples representing the shape of the output
                                     of the model>
         }
+
     """
     graph = GraphProto()
     try:
