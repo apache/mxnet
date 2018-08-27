@@ -22,7 +22,6 @@ __all__ = ['VariationalDropoutCell', 'LSTMPCell']
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell, HybridRecurrentCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
 from ... import tensor_types
-from .... import symbol, ndarray
 from ....base import _as_list
 
 class VariationalDropoutCell(ModifierCell):
