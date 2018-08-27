@@ -43,5 +43,4 @@ COPY runtime_functions.py /work/
 COPY *.py /work/
 COPY qemu/playbook.yml /work
 COPY qemu/*.sh /work
-COPY qemu/*.py /work
 COPY qemu/ansible.cfg /etc/ansible/ansible.cfg 
