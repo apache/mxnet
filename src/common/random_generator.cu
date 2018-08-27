@@ -24,7 +24,7 @@
  */
 
 #include <algorithm>
-#include "./random_generator.h"
+#include "<mxnet/random_generator.h>"
 #include "../operator/mxnet_op.h"
 
 namespace mxnet {
