@@ -65,7 +65,7 @@ class RandGenerator<cpu, DType> {
     MSHADOW_XINLINE FType uniform() {
       typedef typename std::conditional<std::is_integral<DType>::value,
       std::uniform_int_distribution<DType>,
-          std::uniform_real_distribution<FType>>::type GType;
+      std::uniform_real_distribution<FType>>::type GType;
       GType dist_uniform;
       return dist_uniform(*engine_);
     }
