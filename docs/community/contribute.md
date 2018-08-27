@@ -64,19 +64,22 @@ To join the MXNet slack channel send request to the contributor mailing list.
 
 Keep connected with the latest MXNet news and updates.
 
-
+<p>
 <a id="medium">
 <a href="https://medium.com/apache-mxnet"><img src="../_static/images/medium.svg" height="120px"/> Contributor and guest blogs about MXNet</a>
-
+</p>
+<p>
 <a id="reddit">
 <a href="https://reddit.com/r/mxnet"><img src="../_static/images/reddit.svg" height="120px" alt="reddit"/> Discuss MXNet on r/mxnet</a>
-
+</p>
+<p>
 <a id="twitter">
 <a href="https://twitter.com/apachemxnet"><img src="../_static/images/twitter.svg" height="120px"/> Apache MXNet on Twitter</a>
-
+</p>
+<p>
 <a id="youtube">
-<a href="https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A"><img src="../_static/images/youtube.svg" height="120px"/> MXNet YouTube channel</a>
-
+<a href="https://www.youtube.com/apachemxnet"><img src="../_static/images/youtube.svg" height="120px"/> MXNet YouTube channel</a>
+</p>
 
 ## JIRA
 
