@@ -79,7 +79,7 @@ class RandGenerator<cpu, DType> {
     std::mt19937 *engine_;
   };
 
-  static void AllocState(RandGenerator<cpu, DType> *inst) {
+  static void  AllocState(RandGenerator<cpu, DType> *inst) {
     inst->states_ = new std::mt19937[kNumRandomStates];
   }
 
@@ -149,9 +149,9 @@ class RandGenerator<gpu, DType> {
     curandStatePhilox4_32_10_t state_;
   };  // class RandGenerator<gpu, DType>::Impl
 
-  static void AllocState(RandGenerator<gpu, DType> *inst) {}
+  static void AllocState(RandGenerator<gpu, DType> *inst);
 
-  static void FreeState(RandGenerator<gpu, DType> *inst) {}
+  static void FreeState(RandGenerator<gpu, DType> *inst);
 
   void Seed(mshadow::Stream<gpu> *s, uint32_t seed);
 
