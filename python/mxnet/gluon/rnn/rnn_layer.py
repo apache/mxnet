@@ -21,6 +21,8 @@
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
+import re
+
 __all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray, symbol
@@ -35,7 +37,7 @@ class _RNNLayer(HybridBlock):
                  i2h_bias_initializer, h2h_bias_initializer,
                  mode, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
-        assert layout == 'TNC' or layout == 'NTC', \
+        assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
         self._hidden_size = hidden_size
         self._num_layers = num_layers
@@ -92,10 +94,17 @@ class _RNNLayer(HybridBlock):
     def _collect_params_with_prefix(self, prefix=''):
         if prefix:
             prefix += '.'
-        def convert_key(key): # for compatibility with old parameter format
-            key = key.split('_')
-            return '_unfused.{}.{}_cell.{}'.format(key[0][1:], key[0][0], '_'.join(key[1:]))
-        ret = {prefix + convert_key(key) : val for key, val in self._reg_params.items()}
+        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h)_(weight|bias)\Z')
+        def convert_key(m, bidirectional): # for compatibility with old parameter format
+            d, l, g, t = [m.group(i) for i in range(1, 5)]
+            if bidirectional:
+                return '_unfused.{}.{}_cell.{}_{}'.format(l, d, g, t)
+            else:
+                return '_unfused.{}.{}_{}'.format(l, g, t)
+        bidirectional = any(pattern.match(k).group(1) == 'r' for k in self._reg_params)
+
+        ret = {prefix + convert_key(pattern.match(key), bidirectional) : val
+               for key, val in self._reg_params.items()}
         for name, child in self._children.items():
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret

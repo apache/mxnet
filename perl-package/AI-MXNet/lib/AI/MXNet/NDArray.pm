@@ -22,6 +22,41 @@ package AI::MXNet::NDArray;
     AI::MXNet::NDArray - Multidimensional tensor object of MXNet.
 =cut
 
+=head1 DESCRIPTION
+
+    AI::MXNet::NDArray - Imperative tensor operations on CPU/GPU
+    In AI::MXNet, NDArray is the core data structure for all mathematical computations.
+    An NDArray represents a multidimensional, fixed-size homogenous array.
+    If you’re familiar with the PDL, you might notice some similarities.
+    However, NDArray is row-major, unlike the PDL that is column-major.
+    Like the PDL, MXNet’s NDArray enables imperative computation.
+
+    Some NDArray advandages compared to PDL:
+    MXNet’s NDArray supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines.
+    MXNet also scales to distributed systems in the cloud.
+    MXNet’s NDArray executes code lazily, allowing it to automatically parallelize multiple operations across the available hardware.
+
+    An NDArray is a multidimensional array of numbers with the same type.
+    We could represent the coordinates of a point in 3D space, e.g. [2, 1, 6] as a 1D array with shape (3).
+    Similarly, we could represent a 2D array.
+    Below, we present an array with length 2 along the first axis and length 3 along the second axis.
+
+    [[0, 1, 2]
+     [3, 4, 5]]
+    Note that here the use of “dimension” is overloaded. When we say a 2D array, we mean an array with 2 axes, not an array with two components.
+
+    Each NDArray supports some important attributes that you’ll often want to query:
+
+    $ndarray->shape: The dimensions of the array.
+    It is an array ref of integers indicating the length of the array along each axis.
+    For a matrix with $n rows and $m columns, its shape will be [$n, $m].
+    $ndarray->dtype: A string describing the type of its elements.
+    Dtype (defined in AI::MXNet::Types) is one of (float32 float64 float16 uint8 int8 int32 int64)
+    $ndarray->size: The total number of components in the array - equal to the product of the components of its shape.
+    $ndarray->context: The device on which this array is stored, represented by an object of AI::MXNet::Context class, e.g. cpu() or gpu(1).
+
+=cut
+
 use strict;
 use warnings;
 use AI::MXNet::Base;
@@ -692,35 +727,6 @@ method onehot_encode(AI::MXNet::NDArray $indices, AI::MXNet::NDArray $out)
 {
     return __PACKAGE__->_onehot_encode($indices, $out, { out => $out });
 }
-
-=head2 _ufunc_helper(lhs, rhs, fn_array, lfn_scalar, rfn_scalar):
-
-    Helper function for element-wise operation
-    The function will perform numpy-like broadcasting if needed and call different functions
-
-    Parameters
-    ----------
-    lhs : NDArray or numeric value
-        left hand side operand
-
-    rhs : NDArray or numeric value
-        right hand side operand
-
-    fn_array : function
-        function to be called if both lhs and rhs are of NDArray type
-
-    lfn_scalar : function
-        function to be called if lhs is NDArray while rhs is numeric value
-
-    rfn_scalar : function
-        function to be called if lhs is numeric value while rhs is NDArray;
-        if none is provided, then the function is commutative, so rfn_scalar is equal to lfn_scalar
-
-    Returns
-    -------
-    out: NDArray
-        result array
-=cut
 
 sub  _ufunc_helper
 {

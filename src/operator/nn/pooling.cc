@@ -30,8 +30,8 @@
 #endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_pooling-inl.h"
+#include "./mkldnn/mkldnn_base-inl.h"
 #endif  // MXNET_USE_MKLDNN
-
 namespace mxnet {
 namespace op {
 
@@ -284,7 +284,6 @@ void PoolingGradComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
   FallBackCompute(PoolingGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
-#endif
 
 inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       const int dev_mask,
@@ -292,18 +291,11 @@ inline static bool PoolingStorageType(const nnvm::NodeAttrs &attrs,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
-
-#if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                               dispatch_mode, DispatchMode::kFComputeEx);
-  }
-#else
-  CHECK_EQ(out_attrs->size(), 1);
-#endif
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, DispatchMode::kFCompute);
+  bool support_mkldnn_pool = SupportMKLDNNPooling(param);
+
+  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
+                           dispatch_mode, in_attrs, out_attrs);
 }
 
 inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
@@ -314,18 +306,12 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), GetNumBackInputs(param));
   CHECK_EQ(out_attrs->size(), 1);
+  bool support_mkldnn_pool = SupportMKLDNNPooling(param);
 
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && SupportMKLDNNPooling(param)) {
-    return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                               dispatch_mode, DispatchMode::kFComputeEx);
-  }
-#else
-  CHECK_EQ(in_attrs->size(), 3);
-#endif
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, DispatchMode::kFCompute);
+  return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_pool,
+                           dispatch_mode, in_attrs, out_attrs);
 }
+#endif
 
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
@@ -377,8 +363,7 @@ We can see that Lp pooling stands between those two, in practice the most common
 
 For each window ``X``, the mathematical expression for Lp pooling is:
 
-..math::
-  f(X) = \sqrt{p}{\sum\limits_{x \in X} x^p}
+:math:`f(X) = \sqrt[p]{\sum_{x}^{X} x^p}`
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -403,7 +388,9 @@ For each window ``X``, the mathematical expression for Lp pooling is:
     return std::vector<std::string>{"output"};
 })
 .set_attr_parser(PoolingParamParser)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
+#endif
 .set_attr<nnvm::FInferType>("FInferType", PoolingType)
 .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
@@ -432,9 +419,9 @@ NNVM_REGISTER_OP(_backward_Pooling)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#endif
 .set_attr<FInferStorageType>("FInferStorageType",
                              BackwardPoolingStorageType)
+#endif
 .set_attr_parser(PoolingParamParser)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradComputeExCPU)

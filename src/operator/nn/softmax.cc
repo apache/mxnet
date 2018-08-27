@@ -25,8 +25,11 @@
 #include "./softmax-inl.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
+#include "../operator_common.h"
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -50,7 +53,6 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::softmax_fwd>, attrs, ctx,
                   inputs, req, outputs);
 }
-#endif
 
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
@@ -60,17 +62,10 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  // We only run MKLDNN op if it runs on CPU.
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, static_cast<NDArrayStorageType>((*in_attrs)[0]),
-                             dispatch_mode, wanted_mode);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
+#endif
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
 .describe(R"code(Applies the softmax function.
@@ -104,8 +99,8 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
-#endif
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmax"})
 .add_arguments(SoftmaxParam::__FIELDS__());
 

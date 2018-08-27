@@ -25,9 +25,6 @@ import org.apache.mxnet.Model
 import org.apache.mxnet.Symbol
 import scala.util.Random
 
-/**
- * @author Depeng Liang
- */
 object Utils {
 
   def readContent(path: String): String = Source.fromFile(path).mkString

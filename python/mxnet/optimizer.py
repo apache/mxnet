@@ -1,3 +1,4 @@
+# coding: utf-8
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
 # pylint: disable=too-many-lines
 """Weight updating functions."""
 import logging
@@ -548,7 +548,7 @@ class SGD(Optimizer):
 
 @register
 class Signum(Optimizer):
-    """The Signum optimizer that takes the sign of gradient or momentum.
+    r"""The Signum optimizer that takes the sign of gradient or momentum.
 
     The optimizer updates the weight by::
 
@@ -556,7 +556,11 @@ class Signum(Optimizer):
         state = momentum * state + (1-momentum)*rescaled_grad
         weight = (1 - lr * wd_lh) * weight - lr * sign(state)
 
-    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
+    Reference:
+    Jeremy Bernstein, Yu-Xiang Wang, Kamyar Azizzadenesheli & Anima Anandkumar. (2018).
+    signSGD: Compressed Optimisation for Non-Convex Problems. In ICML'18.
+
+    See: https://arxiv.org/abs/1802.04434
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.

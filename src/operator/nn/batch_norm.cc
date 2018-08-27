@@ -27,6 +27,7 @@
 #include "batch_norm-inl.h"
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
+#include "../operator_common.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
 #endif
@@ -460,6 +461,9 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
     dispatched = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode,
                                    in_attrs, out_attrs);
   }
+  if (!MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+  }
 #else
   for (int& v : *in_attrs)
     if (v == - 1) v = kDefaultStorage;
@@ -541,7 +545,7 @@ Both *mean* and *var* returns a scalar by treating the input as a vector.
 
 Assume the input has size *k* on axis 1, then both ``gamma`` and ``beta``
 have shape *(k,)*. If ``output_mean_var`` is set to be true, then outputs both ``data_mean`` and
-the inverse of ``data_var``, which are needed for the backward pass. Note that gradient of these 
+the inverse of ``data_var``, which are needed for the backward pass. Note that gradient of these
 two outputs are blocked.
 
 Besides the inputs and the outputs, this operator accepts two auxiliary
