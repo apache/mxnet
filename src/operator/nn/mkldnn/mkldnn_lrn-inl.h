@@ -256,7 +256,7 @@ class MKLDNNLRNBwd {
     }
   }
 
-  void Execute(const NDArray &in_grad, mkldnn_output_t &diff_src_mem_) {
+  void Execute(const NDArray &in_grad, const mkldnn_output_t &diff_src_mem_) {
     MKLDNNStream::Get()->RegisterPrim(*(this->bwd));
     CommitOutput(in_grad, diff_src_mem_);
     MKLDNNStream::Get()->Submit();
