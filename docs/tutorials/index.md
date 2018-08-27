@@ -96,7 +96,7 @@ Select API:&nbsp;
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
-    * []()
+    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
 * API Guides
     * Core APIs
         * NDArray
