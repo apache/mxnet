@@ -261,7 +261,7 @@ img.social-logo {
     padding: 0px 0px 0px 10px;
 }
 
-@media screen and (max-width:768px) {
+@media screen and (max-width:1380px) {
     div #social-container {
         display: none !important;
     }
