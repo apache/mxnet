@@ -27,7 +27,7 @@ MXNet Change Log
 - This enables stable training on large-scale networks with high memory consumption such as FCN for image segmentation.
 
 ### New Features - Sparse Tensor Support for Gluon (experimental)
-- Sparse gradient support is added to `gluon.nn.Embedding`. ([#10924](https://github.com/apache/incubator-mxnet/pull/10924))
+- Sparse gradient support is added to `gluon.nn.Embedding`. Set `sparse_grad=True` to enable when constructing the Embedding block. ([#10924](https://github.com/apache/incubator-mxnet/pull/10924))
 - Gluon Parameter now supports "row_sparse" storage type, which reduces communication cost and memory consumption for multi-GPU training for large models. `gluon.contrib.nn.SparseEmbedding` is an example empowered by this. ([#11001](https://github.com/apache/incubator-mxnet/pull/11001), [#11429](https://github.com/apache/incubator-mxnet/pull/11429))
 - Gluon HybridBlock now supports hybridization with sparse operators ([#11306](https://github.com/apache/incubator-mxnet/pull/11306)).
 
