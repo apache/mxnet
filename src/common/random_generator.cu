@@ -23,8 +23,8 @@
  * \brief gpu implements for parallel random number generator.
  */
 
-#include <algorithm>
 #include <mxnet/random_generator.h>
+#include <algorithm>
 #include "../operator/mxnet_op.h"
 
 namespace mxnet {

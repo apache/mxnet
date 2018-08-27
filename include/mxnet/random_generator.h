@@ -22,12 +22,12 @@
  * \file random_generator.h
  * \brief Parallel random number generator.
  */
-#ifndef MXNET_COMMON_RANDOM_GENERATOR_H_
-#define MXNET_COMMON_RANDOM_GENERATOR_H_
+#ifndef MXNET_RANDOM_GENERATOR_H_
+#define MXNET_RANDOM_GENERATOR_H_
 
-#include "./base.h"
 #include <random>
 #include <new>
+#include "./base.h"
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
@@ -209,4 +209,4 @@ class RandGenerator<gpu, double> {
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet
-#endif  // MXNET_COMMON_RANDOM_GENERATOR_H_
+#endif  // MXNET_RANDOM_GENERATOR_H_
