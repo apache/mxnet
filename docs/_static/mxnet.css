@@ -258,7 +258,7 @@ img.social-logo {
     margin-bottom: 15px;
     max-height: 8vh;
     max-width: 3vw;
-    padding: 0px 0px 0px 10px;
+    padding: 10px 10px 10px 10px;
 }
 
 @media screen and (max-width:1380px) {
