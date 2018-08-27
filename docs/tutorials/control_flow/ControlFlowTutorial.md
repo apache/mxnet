@@ -13,13 +13,13 @@ from mxnet.gluon import HybridBlock
 ```
 
 ## foreach
-`foreach` is defined with the following signature:
+`foreach` is a for loop that iterates over the first dimension of the input data (it can be an array or a list of arrays). It is defined with the following signature:
 
 ```python
 foreach(body, data, init_states, name) => (outputs, states)
 ```
 
-It iterates over the first dimension of the input data (it can be an array or a list of arrays) and runs the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
+It runs the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
 
 ```python
 body(data, states) => (outputs, states)
@@ -241,11 +241,12 @@ res, states = lstm(rnn_data, [x for x in init_states], valid_length)
 ```
 
 ## while_loop
-`while_loop` is defined with the following signature:
+`while_loop` defines a while loop. It has the following signature:
 
 ```python
 while_loop(cond, body, loop_vars, max_iterations, name) => (outputs, states)
 ```
+
 Instead of running over the first dimension of an array, `while_loop` checks a condition function in every iteration and runs a `body` function for computation. The signature of the `body` function is defined as follows:
 
 ```python
@@ -294,7 +295,7 @@ print(state)
 
 
 ## cond
-`cond` is defined with the following signature:
+`cond` defines an if condition. It has the following signature:
 
 ```python
 cond(pred, then_func, else_func, name)
