@@ -548,11 +548,11 @@
               fit-params (new FitParams)}}]
   (util/validate! ::fit-options opts "Invalid options for fit")
   (doto mod
-      (.fit
-       train-data
-       (util/->option eval-data)
-       (int num-epoch)
-       fit-params)))
+    (.fit
+     train-data
+     (util/->option eval-data)
+     (int num-epoch)
+     fit-params)))
 
 (s/def ::eval-data ::train-data)
 (s/def ::num-batch integer?)

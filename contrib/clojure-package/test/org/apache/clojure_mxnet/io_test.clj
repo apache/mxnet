@@ -61,6 +61,31 @@
         (is (= label1 label0))
         (is (= data1 data0))))))
 
+(deftest test-provide-data-and-label
+  (let [test-data (mx-io/mnist-iter {:image "data/train-images-idx3-ubyte"
+                                     :label "data/train-labels-idx1-ubyte"
+                                     :label-name "softmax_label"
+                                     :data-shape [1 28 28]
+                                     :label-shape [1 1 10]
+                                     :batch-size 100
+                                     :shuffle true
+                                     :flat false
+                                     :silent false
+                                     :seed 10})]
+    (is (= [{:name "data", :shape [100 1 28 28]}]
+           (mx-io/provide-data test-data)))
+    (is (= [{:name "softmax_label", :shape [100]}]
+           (mx-io/provide-label test-data)))
+    (is (= [{:name "data", :shape [100 1 28 28]
+             :dtype dtype/FLOAT32
+             :layout layout/UNDEFINED}]
+           (mx-io/provide-data-desc test-data)))
+    (is (= [{:name "softmax_label"
+             :shape [100]
+             :dtype dtype/FLOAT32
+             :layout layout/UNDEFINED}]
+           (mx-io/provide-label-desc test-data)))))
+
 (deftest test-image-record-iter
   (let [_ (when-not (.exists (io/file "data/cifar/train.rec"))
             (sh "scripts/get_cifar_data.sh"))

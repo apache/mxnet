@@ -58,13 +58,19 @@
 
 (defn resize-iter [iter nbatch])
 
-(defn provide-data [pack-iterator]
+(defn provide-data
+  "Provides the description of the data iterator in the form of
+  [{:name name :shape shape-vec}]"
+  [pack-iterator]
   (->> pack-iterator
        (.provideData)
        (util/scala-map->map)
        (mapv (fn [[k v]] {:name k :shape (mx-shape/->vec v)}))))
 
-(defn provide-label [pack-iterator]
+(defn provide-label
+  "Provides the description of the label iterator in the form of
+  [{:name name :shape shape-vec}]"
+  [pack-iterator]
   (->> pack-iterator
        (.provideLabel)
        (util/scala-map->map)
@@ -76,13 +82,19 @@
    :dtype (.dtype dd)
    :layout (.layout dd)})
 
-(defn provide-data-desc [pack-iterator]
+(defn provide-data-desc
+  "Provides the Data Desc of the data iterator in the form of
+  [{:name name :shape shape-vec :dtype dtype :layout layout}]"
+  [pack-iterator]
   (->> pack-iterator
        (.provideDataDesc)
        (util/scala-vector->vec)
        (mapv data-desc->map)))
 
-(defn provide-label-desc [pack-iterator]
+(defn provide-label-desc
+  "Provides the Data Desc of the label iterator in the form of
+  [{:name name :shape shape-vec :dtype dtype :layout layout}]"
+  [pack-iterator]
   (->> pack-iterator
        (.provideLabelDesc)
        (util/scala-vector->vec)
