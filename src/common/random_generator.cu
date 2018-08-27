@@ -60,13 +60,13 @@ void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
 }
 
 template<>
-void RandGenerator<gpu, DType>::AllocState(RandGenerator<gpu, DType> *inst) {
+void RandGenerator<gpu, float>::AllocState(RandGenerator<gpu, float> *inst) {
   CUDA_CALL(cudaMalloc(&inst->states_,
                        kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
 }
 
 template<>
-void RandGenerator<gpu, DType>::FreeState(RandGenerator<gpu, DType> *inst) {
+void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu, float> *inst) {
   CUDA_CALL(cudaFree(inst->states_));
 }
 
