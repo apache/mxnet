@@ -4,7 +4,7 @@ MXNet Change Log
 
 ### New Features - Gluon RNN layers are now HybridBlocks
 - In this release, Gluon RNN layers such as `gluon.rnn.RNN`, `gluon.rnn.LSTM`, `gluon.rnn.GRU` becomes `HybridBlock`s as part of [gluon.rnn improvements project](https://github.com/apache/incubator-mxnet/projects/11) (#11482).
-- This is the result of newly available fused RNN operators added for CPU: LSTM([#10104](https://github.com/apache/incubator-mxnet/pull/10104)), vanilla RNN([#10104](https://github.com/apache/incubator-mxnet/pull/10104)), GRU([#10311](https://github.com/apache/incubator-mxnet/pull/10311))
+- This is the result of newly available fused RNN operators added for CPU: LSTM([#10104](https://github.com/apache/incubator-mxnet/pull/10104)), vanilla RNN([#11399](https://github.com/apache/incubator-mxnet/pull/11399)), GRU([#10311](https://github.com/apache/incubator-mxnet/pull/10311))
 - Now many dynamic networks that are based on Gluon RNN layers can now be completely hybridized, exported, and used in the inference APIs in other language bindings such as R, Scala, etc.
 
 ### MKL-DNN improvements
