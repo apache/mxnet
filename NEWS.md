@@ -27,8 +27,8 @@ MXNet Change Log
 - This enables stable training on large-scale networks with high memory consumption such as FCN for image segmentation.
 
 ### New Features - Sparse Tensor Support for Gluon (experimental)
-- Sparse gradient support is added to nn.Embedding. ([#10924](https://github.com/apache/incubator-mxnet/pull/10924))
-- Gluon Parameter now supports "row_sparse" stype, which speeds up multi-GPU training ([#11001](https://github.com/apache/incubator-mxnet/pull/11001), [#11429](https://github.com/apache/incubator-mxnet/pull/11429))
+- Sparse gradient support is added to `gluon.nn.Embedding`. ([#10924](https://github.com/apache/incubator-mxnet/pull/10924))
+- Gluon Parameter now supports "row_sparse" storage type, which reduces communication cost and memory consumption for multi-GPU training for large models. `gluon.contrib.nn.SparseEmbedding` is an example empowered by this. ([#11001](https://github.com/apache/incubator-mxnet/pull/11001), [#11429](https://github.com/apache/incubator-mxnet/pull/11429))
 - Gluon HybridBlock now supports hybridization with sparse operators ([#11306](https://github.com/apache/incubator-mxnet/pull/11306)).
 
 ### New Features - Control flow operators (experimental)
@@ -47,6 +47,7 @@ MXNet Change Log
 ### New Features - Topology-aware AllReduce (experimental)
 - This features uses trees to perform the Reduce and Broadcast. It uses the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it. This topology aware approach reduces the existing limitations for single machine communication shown by mehods like parameter server and NCCL ring reduction. It is an experimental feature ([#11591](https://github.com/apache/incubator-mxnet/pull/11591)).
 - Paper followed for implementation: [Optimal message scheduling for aggregation](https://www.sysml.cc/doc/178.pdf).
+- Set environment variable `MXNET_KVSTORE_USETREE=1` to enable.
 
 ### New Features - Export MXNet models to ONNX format (experimental)
 - With this feature, now MXNet models can be exported to ONNX format([#11213](https://github.com/apache/incubator-mxnet/pull/11213)). Currently, MXNet supports ONNX v1.2.1. [API documentation](http://mxnet.incubator.apache.org/api/python/contrib/onnx.html).
