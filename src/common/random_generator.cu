@@ -59,6 +59,16 @@ void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
   s->Wait();
 }
 
+
+static void RandGenerator<gpu, float>::AllocState(RandGenerator<gpu, DType> *inst) {
+  CUDA_CALL(cudaMalloc(&inst->states_,
+                       kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
+}
+
+static void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu, DType> *inst) {
+  CUDA_CALL(cudaFree(inst->states_));
+}
+
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet
