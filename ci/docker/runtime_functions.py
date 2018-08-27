@@ -83,6 +83,7 @@ def run_unittests_python3_qemu():
 def run_unittests_python3_qemu_():
     """this runs inside the vm, it's run by the playbook above by ansible"""
     pkg = glob.glob('mxnet_dist/*.whl')[0]
+    logging.info("=== NOW Running inside QEMU ===")
     logging.info("PIP Installing %s", pkg)
     check_call(['sudo', 'pip3', 'install', pkg])
     logging.info("PIP Installing mxnet/tests/requirements.txt")
