@@ -394,12 +394,6 @@ void* Resource::get_host_space_internal(size_t size) const {
   return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
 }
 
-template<typename xpu, typename DType>
-inline common::random::RandGenerator<xpu, DType>* Resource::get_parallel_random() const {
-  CHECK_EQ(req.type, ResourceRequest::kParallelRandom);
-  return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
-}
-
 ResourceManager* ResourceManager::Get() {
   typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;
   return inst::Get();
