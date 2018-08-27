@@ -141,8 +141,8 @@
 
                 "perplexity")]
 
-    ;; Train for 2 epochs and then show the results of 75
-    (doseq [epoch-num (range 2)]
+    ;; Train for 1 epochs and then show the results of 75
+    (doseq [epoch-num (range 1)]
       (println "Doing epoch " epoch-num)
       (mx-io/reduce-batches
        train-iter
