@@ -593,6 +593,9 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_blc() {
+    echo "pass"
+}
 
 # Testing
 
