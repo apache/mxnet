@@ -24,6 +24,7 @@
     the notebook. e.g: `export MXNET_TEST_KERNEL=python2`
 """
 import io
+import logging
 import os
 import re
 import shutil
@@ -40,6 +41,7 @@ GIT_PATH = '/usr/bin/git'
 GIT_REPO = 'https://github.com/zackchase/mxnet-the-straight-dope'
 KERNEL = os.getenv('MXNET_TEST_KERNEL', None)
 NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), 'tmp_notebook')
+RELATIVE_PATH_REGEX = r'\.\.(?=\/(data|img)\/)'  # Regular expression to match the relative data path.
 
 def _test_notebook(notebook, override_epochs=True):
     """Run Jupyter notebook to catch any execution error.
@@ -47,13 +49,19 @@ def _test_notebook(notebook, override_epochs=True):
     Args:
         notebook : string
             notebook name in folder/notebook format
-        epochs : boolean
+        override_epochs : boolean
             whether or not to override the number of epochs to 1
+
     Returns:
         True if the notebook runs without warning or error.
     """
+    # Some notebooks will fail to run without error if we do not override
+    # relative paths to the data and image directories.
+    _override_relative_paths(notebook)
+
     if override_epochs:
         _override_epochs(notebook)
+
     return run_notebook(notebook, NOTEBOOKS_DIR, kernel=KERNEL, temp_dir=NOTEBOOKS_DIR)
 
 
@@ -63,15 +71,14 @@ def _override_epochs(notebook):
     Args:
         notebook : string
             notebook name in folder/notebook format
-
     """
     notebook_path = os.path.join(*([NOTEBOOKS_DIR] + notebook.split('/'))) + ".ipynb"
 
-    # Read the notebook and set epochs to num_epochs
+    # Read the notebook and set epochs to num_epochs.
     with io.open(notebook_path, 'r', encoding='utf-8') as f:
         notebook = f.read()
 
-    # Set number of epochs to 1
+    # Set number of epochs to 1.
     modified_notebook = re.sub(EPOCHS_REGEX, 'epochs = 1', notebook)
 
     # Replace the original notebook with the modified one.
@@ -79,13 +86,35 @@ def _override_epochs(notebook):
         f.write(modified_notebook)
 
 
+def _override_relative_paths(notebook):
+    """Overrides the relative path for the data and image directories to point
+    to the right places. This is required as we run the notebooks in a different
+    directory hierarchy more suitable for testing.
+
+    Args:
+        notebook : string
+            notebook name in folder/notebook format
+    """
+    notebook_path = os.path.join(*([NOTEBOOKS_DIR] + notebook.split('/'))) + ".ipynb"
+
+    # Read the notebook and set epochs to num_epochs.
+    with io.open(notebook_path, 'r', encoding='utf-8') as f:
+        notebook = f.read()
+
+    # Update the location for the data directory.
+    modified_notebook = re.sub(RELATIVE_PATH_REGEX, NOTEBOOKS_DIR, notebook)
+
+    # Replace the original notebook with the modified one.
+    with io.open(notebook_path, 'w', encoding='utf-8') as f:
+        f.write(modified_notebook)
+
 def _download_straight_dope_notebooks():
     """Downloads the Straight Dope Notebooks.
 
     Returns:
         True if it succeeds in downloading the notebooks without error.
     """
-    print('Cleaning and setting up notebooks directory "{}"'.format(NOTEBOOKS_DIR))
+    logging.info('Cleaning and setting up notebooks directory "{}"'.format(NOTEBOOKS_DIR))
     shutil.rmtree(NOTEBOOKS_DIR, ignore_errors=True)
 
     cmd = [GIT_PATH,
@@ -98,7 +127,7 @@ def _download_straight_dope_notebooks():
     if proc.returncode != 0:
         err_msg = 'Error downloading Straight Dope notebooks.\n'
         err_msg += msg
-        print(err_msg)
+        logging.error(err_msg)
         return False
     return True
 

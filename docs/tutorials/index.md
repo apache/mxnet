@@ -34,11 +34,13 @@ Select API:&nbsp;
 * Models
     * [Model Zoo: using pre-trained models](/tutorials/gluon/pretrained_models.html)
     * [Linear Regression](http://gluon.mxnet.io/chapter02_supervised-learning/linear-regression-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+    * [Logistic Regression](/tutorials/gluon/logistic_regression_explained.html)
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
+    * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
@@ -150,6 +152,17 @@ Select API:&nbsp;
     * [Callbacks](/tutorials/r/CallbackFunction.html)
     * [Custom Data Iterators](/tutorials/r/CustomIterator.html)
     * [Custom Loss Functions](/tutorials/r/CustomLossFunction.html)
+
+<hr>
+
+## Perl Tutorials
+
+* Getting Started
+    * [Machine learning in Perl](http://blogs.perl.org/users/sergey_kolychev/2017/02/machine-learning-in-perl.html)
+    * [Calculator and Robo-Shakespeare](http://blogs.perl.org/users/sergey_kolychev/2017/04/machine-learning-in-perl-part2-a-calculator-handwritten-digits-and-roboshakespeare.html)
+* Gluon
+    * [DCGAN](http://blogs.perl.org/users/sergey_kolychev/2017/10/machine-learning-in-perl-part3-deep-convolutional-generative-adversarial-network.html)
+    * [Image classification and Style transfer](http://blogs.perl.org/users/sergey_kolychev/2018/07/machine-learning-in-perl-kyuubi-goes-to-a-modelzoo-during-the-starry-night.html)
 
 <hr>
 

@@ -21,3 +21,4 @@ set -evx
 MXNET_HOME=${PWD}
 cd ${MXNET_HOME}/contrib/clojure-package
 lein test
+lein cloverage --codecov

@@ -23,7 +23,8 @@ import java.io.File
 import java.net.URL
 
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnetexamples.Util
 
 import sys.process.Process
 
@@ -42,28 +43,14 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     val baseUrl = "https://s3.us-east-2.amazonaws.com/scala-infer-models"
 
-    var tmpFile = new File(tempDirPath + "/resnet18/resnet-18-symbol.json")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-symbol.json"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnet18/resnet-18-0000.params")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/resnet-18-0000.params"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/resnet18/synset.txt")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(new URL(baseUrl + "/resnet-18/synset.txt"),
-        tmpFile)
-    }
-    tmpFile = new File(tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg")
-    if (!tmpFile.exists()) {
-      FileUtils.copyURLToFile(
-        new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg"),
-        tmpFile
-      )
-    }
+    Util.downloadUrl(baseUrl + "/resnet-18/resnet-18-symbol.json",
+      tempDirPath + "/resnet18/resnet-18-symbol.json")
+    Util.downloadUrl(baseUrl + "/resnet-18/resnet-18-0000.params",
+      tempDirPath + "/resnet18/resnet-18-0000.params")
+    Util.downloadUrl(baseUrl + "/resnet-18/synset.txt",
+      tempDirPath + "/resnet18/synset.txt")
+    Util.downloadUrl("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg",
+      tempDirPath + "/inputImages/resnet18/Pug-Cookie.jpg")
 
     val modelDirPath = tempDirPath + File.separator + "resnet18/"
     val inputImagePath = tempDirPath + File.separator +
@@ -77,10 +64,10 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
-      inputImagePath, context)
+        inputImagePath, context)
 
     val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
-      inputImageDir, context)
+        inputImageDir, context)
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
 

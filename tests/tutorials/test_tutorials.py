@@ -124,6 +124,9 @@ def test_nlp_cnn():
 def test_onnx_super_resolution():
     assert _test_tutorial_nb('onnx/super_resolution')
 
+def test_onnx_export_mxnet_to_onnx():
+    assert _test_tutorial_nb('onnx/export_mxnet_to_onnx')
+
 def test_onnx_fine_tuning_gluon():
     assert _test_tutorial_nb('onnx/fine_tuning_gluon')
 
@@ -135,6 +138,9 @@ def test_python_matrix_factorization():
 
 def test_python_linear_regression():
     assert _test_tutorial_nb('python/linear-regression')
+
+def test_python_logistic_regression() :
+    assert _test_tutorial_nb('gluon/logistic_regression_explained')
 
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')

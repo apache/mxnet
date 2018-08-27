@@ -23,8 +23,9 @@ import numpy
 import os
 import pickle
 from collections import OrderedDict
+from utils import (get_bucket_key, save_params,
+                   save_misc, load_params)
 import logging
-from utils import *
 
 logger = logging.getLogger(__name__)
 

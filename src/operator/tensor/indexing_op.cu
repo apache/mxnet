@@ -36,7 +36,7 @@ namespace op {
 
 struct is_valid_check {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int32_t* out, const DType* data,
+  MSHADOW_XINLINE static void Map(int i, char* out, const DType* data,
                                   const DType min, const DType max) {
     if (data[i] < min || data[i] > max) *out = 1;
   }
@@ -116,6 +116,27 @@ struct AddTakeGradRspDeterministicKernel {
   }
 };
 
+/*
+ * \brief returns true if all indices are between [min, max]
+ * \param s the stream
+ * \param data_ptr the indices on the stream
+ * \param data_size the number of indices to examine
+ * \param min the expected min value for indices
+ * \param max the expected max value for indices
+ * \param is_valid_ptr the temparary workspace
+ */
+template<typename DType>
+bool CheckIndexOutOfBound(mshadow::Stream<gpu> *s, const DType* data_ptr, size_t data_size,
+                          const DType min, const DType max, char* is_valid_ptr) {
+  using namespace mxnet_op;
+  int32_t is_valid = 0;
+  Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
+  Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
+  CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(char),
+            cudaMemcpyDeviceToHost));
+  return is_valid == 0;
+}
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -136,21 +157,17 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
     return;
   }
   // check out-of-bound indices
-  int32_t is_valid = 0;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
     Tensor<gpu, 1, char> workspace = ctx.requested[0]
-        .get_space_typed<gpu, 1, char>(Shape1(sizeof(int32_t)), s);
-    int32_t* is_valid_ptr = reinterpret_cast<int32_t*>(workspace.dptr_);
-    Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
-    Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
-    CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
-              cudaMemcpyDeviceToHost));
+        .get_space_typed<gpu, 1, char>(Shape1(1), s);
+    char* is_valid_ptr = reinterpret_cast<char*>(workspace.dptr_);
+    bool is_valid = CheckIndexOutOfBound(s, data_ptr, data_size, min, max, is_valid_ptr);
+    CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   })
-  CHECK_EQ(is_valid, 0) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
   if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
     EmbeddingOpForwardDnsImpl<gpu>(s, data, weight.data(), req, output);
@@ -207,6 +224,17 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
                                           sorted_data_storage_bytes);
   temp_storage = workspace.dptr_ + total_storage_bytes - temp_workspace_bytes;
 
+  // check out-of-bound indices
+  {
+    IType min = 0;
+    IType max = static_cast<IType>(output.shape()[0] - 1);
+    IType* data_ptr = data.dptr<IType>();
+    size_t data_size = data.shape_.Size();
+    bool is_valid = CheckIndexOutOfBound(s, data_ptr, data_size, min, max,
+                                         reinterpret_cast<char*>(temp_storage));
+    CHECK(is_valid) << "Embedding input contains data out of bound";
+  }
+
   // make a copy of the data, to be sorted
   TBlob sorted_data_blob(sorted_data, Shape1(data_size), gpu::kDevMask);
   auto sorted_data_tensor = sorted_data_blob.FlatTo1D<gpu, dim_t>(s);
@@ -217,7 +245,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
                                  static_cast<dim_t>(1), kWriteTo, original_idx);
   // sort data with its original idx
-  int num_bits = ilog2(num_rows - 1);
+  int num_bits = common::ilog2ui(num_rows - 1);
   char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
   Tensor<gpu, 1, char> temp_storage_tensor(temp_storage_ptr,
                                            Shape1(sort_workspace_size), s);

@@ -1302,6 +1302,22 @@ fixed-size items.
         """
         return op.flip(self, *args, **kwargs)
 
+    def depth_to_space(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`depth_to_space`.
+
+        The arguments are the same as for :py:func:`depth_to_space`, with
+        this array as data.
+        """
+        return op.depth_to_space(self, *args, **kwargs)
+
+    def space_to_depth(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`space_to_depth`.
+
+        The arguments are the same as for :py:func:`space_to_depth`, with
+        this array as data.
+        """
+        return op.space_to_depth(self, *args, **kwargs)
+
     def diag(self, k=0, **kwargs):
         """Convenience fluent method for :py:func:`diag`.
 
@@ -2459,7 +2475,7 @@ def moveaxis(tensor, source, destination):
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [`start`, `stop`). In other
@@ -2503,7 +2519,7 @@ def arange(start, stop=None, step=1.0, repeat=1, ctx=None, dtype=mx_real_t):
     if ctx is None:
         ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             dtype=dtype, ctx=str(ctx))
+                             infer_range=infer_range, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 

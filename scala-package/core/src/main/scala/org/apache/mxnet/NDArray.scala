@@ -407,11 +407,10 @@ object NDArray extends NDArrayBase {
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
    */
-  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
-    repeat: Int = 1, ctx: Context = Context.defaultCtx,
-    dType: DType = Base.MX_REAL_TYPE): NDArray = {
-    val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> dType.toString())
+  def arange(start: Float, stop: Option[Float], step: Float,
+             repeat: Int, ctx: Context, dType: DType): NDArray = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
+      "infer_range" -> false, "ctx" -> ctx.toString, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     NDArray.genericNDArrayFunctionInvoke("_arange", Seq(), fParams)(0)
   }
