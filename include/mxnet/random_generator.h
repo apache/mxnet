@@ -31,7 +31,6 @@
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
-#include "../common/cuda_utils.h"
 #endif  // MXNET_USE_CUDA
 
 namespace mxnet {
