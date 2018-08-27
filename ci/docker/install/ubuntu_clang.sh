@@ -26,6 +26,11 @@ wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-3.9 main" && \
     apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main" && \
     apt-get update && \
-    apt-get install -y clang-3.9 clang-6.0 && \
+    apt-get install -y clang-3.9 clang-6.0 clang-tidy-6.0 && \
     clang-3.9 --version && \
     clang-6.0 --version
+
+# Use llvm's master version of run-clang-tidy.py.  This version has mostly minor updates, but
+# importantly will properly return a non-zero exit code when an error is reported in clang-tidy.
+# Please remove the below if we install a clang version higher than 6.0.
+wget https://raw.githubusercontent.com/llvm-mirror/clang-tools-extra/7654135f0cbd155c285fd2a37d87e27e4fff3071/clang-tidy/tool/run-clang-tidy.py -O /usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
