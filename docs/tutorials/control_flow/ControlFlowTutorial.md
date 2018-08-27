@@ -3,7 +3,7 @@ MXNet currently provides three control flow operators: `cond`, `foreach` and `wh
 
 In this tutorial, we use a few examples to demonstrate the use of control flow operators in Gluon and show how a model that requires control flow is hybridized.
 
-# Prepare running the code
+## Prepare running the code
 
 
 ```python
@@ -11,14 +11,14 @@ import mxnet as mx
 from mxnet.gluon import HybridBlock
 ```
 
-# foreach
+## foreach
 `foreach` is defined with the following signature:
 
 ```python
 foreach(body, data, init_states, name) => (outputs, states)
 ```
 
-It iterates over the first dimension of the input data (it can be an array or a list of arrays) and run the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
+It iterates over the first dimension of the input data (it can be an array or a list of arrays) and runs the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
 
 ```python
 body(data, states) => (outputs, states)
@@ -26,7 +26,7 @@ body(data, states) => (outputs, states)
 
 The inputs of the `body` function have two parts: `data` is a slice of an array (if there is only one input array in `foreach`) or a list of slices (if there are a list of input arrays); `states` are the arrays from the previous iteration. The outputs of the `body` function also have two parts: `outputs` is an array or a list of arrays; `states` is the computation states of the current iteration. `outputs` from all iterations are concatenated as the outputs of `foreach`.
 
-The pseudocode below illustrates the execution of `foreach`.
+The following pseudocode illustrates the execution of `foreach`.
 
 ```python
 def foreach(body, data, init_states):
@@ -41,10 +41,10 @@ def foreach(body, data, init_states):
     return outs, states
 ```
 
-### Example 1: foreach works like map
-`foreach` can work like a map function of a functional language. In this case, the states of foreach can be an empty list, which means the computation doesn't carry computation states across iterations.
+### Example 1: `foreach` works like map
+`foreach` can work like a map function of a functional language. In this case, the states of `foreach` can be an empty list, which means the computation doesn't carry computation states across iterations.
 
-In this example, we use `foreach` to add each element in an array by one.
+In this example, we use `foreach` to increase each element's value of an array by one.
 
 
 ```python
@@ -99,7 +99,7 @@ print(out)
     <NDArray 5x1 @cpu(0)>
 
 
-### Example 2: foreach works like scan
+### Example 2: `foreach` works like scan
 `foreach` can work like a scan function in a functional language. In this case, the outputs of the Python function is an empty list.
 
 
@@ -137,8 +137,8 @@ print(state)
     <NDArray 1 @cpu(0)>
 
 
-### Example 3: foreach with both outputs and states
-This is probably the most common use case of `foreach`. We extend the scan example above and return both output and states.
+### Example 3: `foreach` with both outputs and states
+This is probably the most common use case of `foreach`. We extend the previous scan example and return both output and states.
 
 
 ```python
@@ -187,8 +187,8 @@ print(state)
     <NDArray 1 @cpu(0)>
 
 
-### Example 4: use foreach to run RNN on a variable-length sequence
-Previous examples illustrate `foreach` with simple use cases. Here I show an example of processing variable-length sequences with `foreach`. The same idea is used by dynamic_rnn in TensorFlow for processing variable-length sequences.
+### Example 4: use `foreach` to run an RNN on a variable-length sequence
+Previous examples illustrate `foreach` with simple use cases. Here we show an example of processing variable-length sequences with `foreach`. The same idea is used by `dynamic_rnn` in TensorFlow for processing variable-length sequences.
 
 
 ```python
@@ -220,10 +220,8 @@ class DynamicRNNLayer(HybridBlock):
                                  use_sequence_length=True, axis=0)
         # the last state is the iteration number. We don't need it.
         return outputs, states[:-1]
-```
 
 
-```python
 seq_len = 10
 batch_size = 2
 input_size = 5
@@ -241,7 +239,7 @@ lstm.hybridize()
 res, states = lstm(rnn_data, [x for x in init_states], valid_length)
 ```
 
-# while_loop
+## while_loop
 `while_loop` is defined with the following signature:
 
 ```python
@@ -294,7 +292,7 @@ print(state)
     <NDArray 1 @cpu(0)>]
 
 
-# cond
+## cond
 `cond` is defined with the following signature:
 
 ```python
@@ -341,10 +339,8 @@ class RNNLayer(HybridBlock):
         print()
         out, state = F.contrib.foreach(body, data, [F.zeros((1)), init_states])
         return out, state
-```
 
 
-```python
 seq_len = 5
 batch_size = 1
 input_size = 3
