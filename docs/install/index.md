@@ -78,9 +78,6 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
-
-<br/>
-
 <div class="v1-2-1">
 
 ```
@@ -189,9 +186,6 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-
-<br/>
-
 <div class="v1-2-1">
 
 ```
@@ -336,7 +330,7 @@ $ make rpkg
 
 <div class="scala">
 <div class="gpu">
-
+<br/>
 You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
@@ -351,7 +345,7 @@ You can use the Maven packages defined in the following `dependency` to include 
 </div> <!-- End of gpu -->
 
 <div class="cpu">
-
+<br/>
 You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
@@ -367,17 +361,27 @@ You can use the Maven packages defined in the following `dependency` to include 
 </div> <!-- End of scala -->
 
 
-<div class="julia perl">
+<div class="julia">
 <div class="cpu gpu">
-
-Follow the installation instructions [in this guide](./ubuntu_setup.md) to set up MXNet.
+</br>
+Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Ubuntu installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of julia perl -->
+</div> <!-- End of julia -->
+
+<div class="perl">
+<div class="cpu gpu">
+</br>
+Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl section of the MXNet Ubuntu installation guide</a>.
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of julia -->
+
 
 
 <div class="cpp">
 <div class="cpu gpu">
+<br/>
 <p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
 <br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
@@ -395,9 +399,6 @@ For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ub
 <div class="python">
 <div class="cpu">
 <div class="pip">
-
-<br/>
-
 <div class="v1-2-1">
 
 ```
@@ -563,19 +564,30 @@ Not available at this time. <br>
 </div> <!-- End of scala -->
 
 
-<div class="julia perl">
+
+<div class="julia">
 <div class="cpu gpu">
-<br/>
-Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
+</br>
+Refer to the <a href="osx_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet macOS installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of julia perl -->
+</div> <!-- End of julia -->
+
+<div class="perl">
+<div class="cpu gpu">
+</br>
+Refer to the <a href="osx_setup.html#install-the-mxnet-package-for-perl">Perl section of the MXNet macOS installation guide</a>.
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of julia -->
+
 
 
 <div class="cpp">
 <br/>
 <p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
 <br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
+<br/>
 </div>
 <hr>
 For more installation options, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
@@ -587,9 +599,6 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-
-<br/>
-
 <div class="v1-2-1">
 
 ```
@@ -655,9 +664,6 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 <div class="gpu">
 <div class="pip">
-
-<br/>
-
 <div class="v1-2-1">
 
 ```
@@ -773,7 +779,7 @@ Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently,
 <div class="cpu gpu">
 <br/>
 MXNet-Scala for Windows is not yet available.
-
+<br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala -->
 
