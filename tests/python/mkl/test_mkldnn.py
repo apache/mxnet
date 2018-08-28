@@ -22,6 +22,7 @@ import sys
 import os
 import numpy as np
 import mxnet as mx
+import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -280,6 +281,7 @@ def test_pooling():
         check_pooling_training(stype)
 
 
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/12377")
 @with_seed()
 def test_activation():
     def check_activation_training(stype):
