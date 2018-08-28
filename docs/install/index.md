@@ -136,7 +136,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 
-Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
+Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
 
@@ -240,7 +240,9 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 
-**NOTE:**
+Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+
+**NOTES:**
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
 
@@ -250,7 +252,7 @@ CUDA should be installed first. Instructions can be found in the <a href="ubuntu
 nvcc --version
 ```
 
-You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version. Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
 </div> <!-- END of pip -->
 
@@ -376,7 +378,8 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 
 <div class="cpp">
 <div class="cpu gpu">
-<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
+<p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
+<br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
@@ -446,7 +449,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 
-<a href="validate_mxnet.html">Validate the installation</a>.
+Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- END of pip -->
 
@@ -492,7 +495,7 @@ To build from source, refer to the <a href="osx_setup.html">MXNet macOS installa
 
 <!-- START - Mac OS Python GPU Installation Instructions -->
 <div class="gpu">
-<div class="pip virtualenv docker">
+<div class="pip docker">
 <br/>
 
 Try the **Build from Source** option for now.
@@ -514,7 +517,7 @@ Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
 <div class="r">
 <div class="cpu">
-
+</br>
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
 
@@ -529,7 +532,7 @@ install.packages("mxnet")
 
 
 <div class="gpu">
-
+</br>
 Will be available soon.
 
 </div> <!-- END of GPU -->
@@ -537,7 +540,7 @@ Will be available soon.
 
 <div class="scala">
 <div class="cpu">
-
+</br>
 You can use the Maven packages defined in the following `dependency` to include MXNet in your Scala project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process.
 
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
@@ -633,18 +636,18 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 
-<a href="validate_mxnet.html">Validate the installation</a>.
+Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
 
 
-<div class="virtualenv docker build-from-source">
+<div class="docker build-from-source">
 <br/>
 
 Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 
-</div> <!-- End of virtualenv docker build-from-source -->
+</div> <!-- End of docker build-from-source -->
 </div> <!-- End of CPU -->
 
 
@@ -701,6 +704,8 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 
+Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+
 **NOTES:**
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
@@ -715,14 +720,14 @@ nvcc --version
 
 Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
 
-You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version. Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
 </div>
 
 <div class="build-from-source">
 <br/>
 
-Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
+To build from source, refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 
 </div> <!-- End of pip -->
@@ -734,7 +739,7 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 <div class="r">
 <div class="cpu">
-
+</br>
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
@@ -748,7 +753,7 @@ install.packages("mxnet")
 </div> <!-- END - Windows R CPU -->
 
 <div class="gpu">
-
+</br>
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -764,23 +769,33 @@ Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently,
 
 <div class="scala">
 <div class="cpu gpu">
-
+<br/>
 MXNet-Scala for Windows is not yet available.
-<br>
+
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala -->
 
-<div class="julia perl">
+<div class="julia">
 <div class="cpu gpu">
-
-Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
+</br>
+Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Windows installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
-</div> <!-- End of julia perl -->
+</div> <!-- End of julia -->
+
+<div class="perl">
+<div class="cpu gpu">
+</br>
+Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-perl">Perl section of the MXNet Windows installation guide</a>.
+
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of julia -->
 
 <div class="cpp">
 <div class="cpu gpu">
-<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
+</br>
+<p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
+<br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of C++ -->
