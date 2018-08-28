@@ -44,7 +44,7 @@ import shlex
 #
 
 QEMU_RUN="""
-qemu-system-arm -M virt -m 1024 \
+qemu-system-arm -M virt -m {ram} \
   -kernel vmlinuz-3.16.0-6-armmp-lpae \
   -initrd initrd.img-3.16.0-6-armmp-lpae \
   -smp {smp} \
@@ -64,8 +64,8 @@ class VM:
     def __init__(self, ssh_port=2222):
         self.log = logging.getLogger(VM.__name__)
         self.ssh_port = ssh_port
-        #self.timeout_s = 300
-        self.timeout_s = None
+        self.timeout_s = 300
+        #self.timeout_s = None
         self.qemu_process = None
 
     def __enter__(self):
@@ -81,18 +81,22 @@ class VM:
             raise VMError("VM is running, shutdown first")
         self.qemu_process = run_qemu(self.ssh_port)
         # give a bit of time for early execution failures
-        time.sleep(1)
+        time.sleep(0)
+        def keep_waiting():
+            return self.running()
+
+        ssh_working = wait_ssh_open('127.0.0.1', self.ssh_port, keep_waiting, self.timeout_s)
+
         if not self.running():
             (_, stderr) = self.qemu_process.communicate()
-            raise VMError("VM failed to start, retcode: {}, stderr: {}".format(self.retcode(), stderr))
+            raise VMError("VM failed to start, retcode: {}, stderr: {}".format( self.retcode(), stderr.decode()))
 
-        ssh_working = wait_port_open('127.0.0.1', self.ssh_port, self.timeout_s)
         if not ssh_working:
             if self.running():
                 self.log.error("VM running but SSH is not working")
             self.terminate()
             raise VMError("SSH is not working after {} seconds".format(self.timeout_s))
-        self.log.info("VM is online")
+        self.log.info("VM is online and SSH is up")
 
     def running(self):
         return self.qemu_process and self.qemu_process.poll() is None
@@ -111,6 +115,7 @@ class VM:
             logging.info("send kill signal")
             self.qemu_process.kill()
             self.qemu_process.wait()
+            self.qemu_process = None
 
     def shutdown(self):
         if self.qemu_process:
@@ -132,12 +137,82 @@ class VM:
             self.terminate()
 
 def run_qemu(ssh_port=2222):
-    cmd = QEMU_RUN.format(ssh_port=ssh_port, smp=multiprocessing.cpu_count())
+    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=2048, smp=min(multiprocessing.cpu_count(), 8))
     logging.info("QEMU command: %s", cmd)
     #check_call(cmd, shell=True)
     qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
     #qemu_process = Popen(cmd, shell=True)
     return qemu_process
+
+
+def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
+    """ Wait for network service to appear
+        @param server: host to connect to (str)
+        @param port: port (int)
+        @param timeout: in seconds, if None or 0 wait forever
+        @return: True of False, if timeout is None may return only True or
+                 throw unhandled network exception
+    """
+    import socket
+    import errno
+    import time
+    log = logging.getLogger('wait_ssh_open')
+    sleep_s = 0
+    if timeout:
+        from time import time as now
+        # time module is needed to calc timeout shared between two exceptions
+        end = now() + timeout
+
+    while True:
+        log.debug("Sleeping for %s second(s)", sleep_s)
+        time.sleep(sleep_s)
+        s = socket.socket()
+        try:
+            if keep_waiting and not keep_waiting():
+                log.debug("keep_waiting() is set and evaluates to False")
+                return False
+
+            if timeout:
+                next_timeout = end - now()
+                if next_timeout < 0:
+                    log.debug("connect time out")
+                    return False
+                else:
+                    log.debug("connect timeout %d s", next_timeout)
+                    s.settimeout(next_timeout)
+
+            log.info("connect %s:%d", server, port)
+            s.connect((server, port))
+            ret = s.recv(1024).decode()
+            if ret and ret.startswith('SSH'):
+                s.close()
+                log.info("wait_ssh_open: port %s:%s is open and ssh is ready", server, port)
+                return True
+            else:
+                log.debug("Didn't get the SSH banner")
+                s.close()
+
+        except ConnectionError as err:
+            log.debug("ConnectionError %s", err)
+            if sleep_s == 0:
+                sleep_s = 1
+            else:
+                sleep_s *= 2
+
+        except socket.gaierror as err:
+            log.debug("gaierror %s",err)
+            return False
+
+        except socket.timeout as err:
+            # this exception occurs only if timeout is set
+            if timeout:
+                return False
+
+        except TimeoutError as err:
+            # catch timeout exception from underlying network library
+            # this one is different from socket.timeout
+            raise
+
 
 def wait_port_open(server, port, timeout=None):
     """ Wait for network service to appear

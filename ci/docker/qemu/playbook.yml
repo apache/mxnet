@@ -7,7 +7,7 @@
   tasks:
     - name: Wait until ssh is available
       wait_for_connection:
-        delay: 90
+        delay: 0
         sleep: 3
         timeout: 400
     - command: hostname
