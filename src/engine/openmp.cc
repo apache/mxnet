@@ -74,9 +74,9 @@ void OpenMP::set_reserve_cores(int cores) {
   reserve_cores_ = cores;
 #ifdef _OPENMP
   if (reserve_cores_ >= omp_thread_max_) {
-    omp_set_num_threads(1);
+    omp_thread_max_ = 1;
   } else {
-    omp_set_num_threads(omp_thread_max_ - reserve_cores_);
+    omp_thread_max_ -= reserve_cores_;
   }
 #endif
 }
