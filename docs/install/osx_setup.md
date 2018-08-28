@@ -102,10 +102,19 @@ If building with ```GPU``` support, add the following configuration to config.mk
 &nbsp;
 
 We have installed MXNet core library. Next, we will install MXNet interface package for the programming language of your choice:
+- [Python](#install-mxnet-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Scala](#install-the-mxnet-package-for-scala)
 - [Perl](#install-the-mxnet-package-for-perl)
+
+## Install MXNet for Python
+To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
+
+```bash
+$ cd python
+$ pip install -e .
+```
 
 ## Install the MXNet Package for R
 You have 2 options:

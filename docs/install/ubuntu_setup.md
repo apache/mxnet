@@ -173,24 +173,42 @@ If building on GPU (make sure you have installed the [CUDA dependencies first](#
 
 Executing these commands creates a library called ```libmxnet.so```.
 
-Next, you may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
+After building the MXNet library, you may install language bindings.
 
-```bash
-    sudo apt-get install -y python-pip
-    sudo pip install graphviz
-    sudo pip install jupyter
-```
 <hr>
 
 
 ## Installing Language Packages for MXNet
 
 After you have installed the MXNet core library. You may install MXNet interface packages for the programming language of your choice:
+- [Python](#install-mxnet-for-python)
 - [Scala](#install-the-mxnet-package-for-scala)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Perl](#install-the-mxnet-package-for-perl)
 
+<hr>
+
+### Install MXNet for Python
+
+To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
+
+```bash
+$ cd python
+$ pip install -e .
+```
+
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+
+#### Optional Python Packages
+
+You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
+
+```bash
+sudo pip install graphviz
+sudo pip install jupyter
+```
+<hr>
 
 ### Install the MXNet Package for Scala
 
@@ -291,7 +309,6 @@ You should see the following output:
 [2,]    3    3    3
 > quit()
 ```
-
 <hr>
 
 
@@ -326,7 +343,7 @@ To use the MXNet-Scala package, you can acquire the Maven package as a dependenc
 Further information is in the [MXNet-Scala Setup Instructions](./scala_setup.md).
 
 If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead.
-
+<hr>
 
 ### Install the MXNet Package for Perl
 

@@ -407,74 +407,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 <div class="build-from-source">
 <br/>
 
-Building *MXNet* from source is a 2 step process.
-1. Build the *MXNet* core shared library, `libmxnet.so`, from the C++ sources.
-2. Build the language specific bindings. Example - Python bindings, Scala bindings.
-
-**Minimum Requirements**
-1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
-
-<br/>
-
-**Build the MXNet core shared library**
-
-**Step 1** Install build tools and git.
-```bash
-$ sudo apt-get update
-$ sudo apt-get install -y build-essential git
-```
-
-**Step 2** Install OpenBLAS.
-
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
-```bash
-$ sudo apt-get install -y libopenblas-dev liblapack-dev
-```
-
-**Step 3** Install OpenCV.
-
-*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
-```bash
-$ sudo apt-get install -y libopencv-dev
-```
-
-**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
-
-```bash
-$ git clone --recursive https://github.com/apache/incubator-mxnet
-$ cd incubator-mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
-```
-
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
-
-<br/>
-
-**Build the MXNet Python binding**
-
-**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy).
-
-```bash
-$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
-```
-
-**Step 2** Install the MXNet Python binding.
-
-```bash
-$ cd python
-$ pip install -e .
-```
-
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
-```bash
-sudo apt-get install graphviz
-pip install graphviz
-```
-
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div><!-- END of build from source -->
 </div><!-- END of CPU -->
@@ -860,75 +793,8 @@ mxnet/python        gpu                 493b2683c269        3 weeks ago         
 
 <div class="build-from-source">
 
-<br/>
+Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
-Building *MXNet* from source is a 2 step process.
-1. Build the *MXNet* core shared library, `libmxnet.so`, from the C++ sources.
-2. Build the language specific bindings. Example - Python bindings, Scala bindings.
-
-**Minimum Requirements**
-1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
-
-<br/>
-
-**Build the MXNet core shared library**
-
-**Step 1** Install build tools and git.
-```bash
-$ sudo apt-get update
-$ sudo apt-get install -y build-essential git
-```
-**Step 2** Install OpenBLAS.
-
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](http://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
-```bash
-$ sudo apt-get install -y libopenblas-dev liblapack-dev
-```
-
-**Step 3** Install OpenCV.
-
-*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
-```bash
-$ sudo apt-get install -y libopencv-dev
-```
-
-**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
-
-```bash
-$ git clone --recursive https://github.com/apache/incubator-mxnet
-$ cd incubator-mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
-```
-
-*Note* - USE_OPENCV, USE_BLAS, USE_CUDA, USE_CUDA_PATH AND USE_CUDNN are make file flags to set compilation options to use OpenCV, OpenBLAS, CUDA and cuDNN libraries. You can explore and use more compilation options in `make/config.mk`. Make sure to set USE_CUDA_PATH to right CUDA installation path. In most cases it is - */usr/local/cuda*.
-
-<br/>
-
-**Install the MXNet Python binding**
-
-**Step 1** Install prerequisites - python, setup-tools, python-pip and libfortran (required for Numpy)..
-
-```bash
-$ sudo apt-get install -y python-dev python-setuptools python-pip libgfortran3
-```
-
-**Step 2** Install the MXNet Python binding.
-
-```bash
-$ cd python
-$ pip install -e .
-```
-
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
-```bash
-sudo apt-get install graphviz
-pip install graphviz
-```
-
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
@@ -1010,7 +876,7 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 
 <div class="cpp">
 <div class="cpu gpu">
-<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
@@ -1292,39 +1158,8 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 <div class="build-from-source">
 <br/>
 
-**Prerequisites**
+Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
-If not already installed, [download and install Xcode](https://developer.apple.com/xcode/) (or [insall it from the App Store](https://itunes.apple.com/us/app/xcode/id497799835)) for macOS. [Xcode](https://en.wikipedia.org/wiki/Xcode) is an integrated development environment for macOS containing a suite of software development tools like C/C++ compilers, BLAS library and more.
-
-<br/>
-
-Building *MXNet* from source is a 2 step process.
-1. Build the *MXNet* core shared library, `libmxnet.so`, from the C++ sources.
-2. Build the language specific bindings. Example - Python bindings, Scala bindings.
-
-Make sure you have installed Xcode before proceeding further.
-
-<br/>
-
-All the instructions to build *MXNet* core shared library and *MXNet* Python bindings are compiled as one helper *bash* script. You can use [this bash script](https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-osx-python.sh) to build *MXNet* for Python, from source, on macOS.
-
-**Step 1** Download the bash script for building MXNet from source.
-
-```bash
-$ curl -O https://raw.githubusercontent.com/dmlc/mxnet/master/setup-utils/install-mxnet-osx-python.sh
-```
-
-**Step 2** Run the script to get latest MXNet source and build.
-
-```bash
-# Make the script executable
-$ chmod 744 install-mxnet-osx-python.sh
-
-# Run the script. It takes around 5 mins.
-$ bash install-mxnet-osx-python.sh
-```
-
-**Step 3** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
 
 </div> <!-- END of build from source -->
 </div> <!-- END of CPU -->
@@ -1341,68 +1176,8 @@ Try the **Build from Source** option for now.
 
 <div class="build-from-source">
 
-**Step 1**  Install prerequisites - Homebrew, python development tools.
+Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
-```bash
-# Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-$ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
-
-# Install python development tools - python2.7, pip, python-setuptools
-$ brew install python pkg-config graphviz
-```
-
-**Step 2**  Install optional components - OpenCV
-
-If you want to use OpenCV you should install it first, then build MXNet with the `USE_OPENCV=1` option in the later steps.
-
-```bash
-brew tap homebrew/science
-brew install opencv
-
-```
-
-**Step 3**  Install CUDA and cuDNN
-
-The following instructions are for CUDA 9.1 and cuDNN 7 for macOS 10.12+ and a CUDA-capable GPU. They summarize confirmed successful builds in [#9217](https://github.com/apache/incubator-mxnet/issues/9217).
-Alternatively, you may follow the [CUDA installation instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html).
-
-1. [Download Xcode 8.3.3 from Apple](https://developer.apple.com/download/more/). This is the version [NVIDIA specifies in its instructions for macOS](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html). Unzip and rename to `Xcode8.3.3.app`.
-
-2. Run `sudo xcode-select -s /Applications/Xcode8.3.3.app` or to wherever you have placed Xcode.
-
-3. Run `xcode-select --install` to install all command line tools, compilers, etc.
-
-4. Run `sudo xcodebuild -license accept` to accept Xcode's licensing terms.
-
-5. Install CUDA for macOS. Specific steps are provided in NVIDIA's [CUDA installation instructions](https://docs.nvidia.com/cuda/cuda-installation-guide-mac-os-x/index.html#installation).
-
-6. [Download](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#download-mac) and [install](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installmac) cuDNN for macOS. You will need to [create a free developer account](https://developer.nvidia.com/accelerated-computing-developer) with NVIDIA prior to getting the download link.
-
-**Step 4**  Build MXNet
-
-1. Run `git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet` to get the latest version.
-
-2. Run `cd mxnet`.
-
-3. Edit the `make/osx.mk` file to set the following parameters:
-
-    ```
-    USE_CUDA = 1
-    USE_CUDA_PATH = /usr/local/cuda
-    USE_CUDNN = 1
-    USE_OPENCV = 0   # set to 1 if you want to build with OpenCV
-    ```
-
-4. Copy the `make/osx.mk` to `config.mk`
-
-5. Run `make`. If you previously attempted to compile you might want to do `make clean_all` first. You can also run `make -j` with the number of processors you have to compile with multithreading. There'll be plenty of warnings, but there should be no errors.
-
-6. Once finished, you should have a file called `libmxnet.so` in `lib/`.
-
-7. Do `cd python`.
-
-8. Run `sudo pip install -e .` **Note**: the `.` is part of the command.
 
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
@@ -1467,7 +1242,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 
 <div class="cpp">
-<p>To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>.</p>
+<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
 </div>
 </div> <!-- END - Mac OS -->
@@ -1566,7 +1341,8 @@ $ pip install mxnet --pre
 
 <div class="virtualenv docker build-from-source">
 
-Follow the installation instructions [in this guide](./windows_setup.md) to set up MXNet.
+Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
+
 
 </div> <!-- End of virtualenv docker build-from-source -->
 </div> <!-- End of CPU -->
@@ -1687,92 +1463,9 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 <div class="build-from-source">
 <br/>
 
-We provide both options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), and [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
-
-**Option 1**
-
-To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
-
-1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and install [CMake](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
-3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
-6. If you don’t have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
-8. Download and install CUDA: Install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal), and Download the base installer (e.g., ```cuda_9.1.85_win10.exe```).
-9. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
-10. Download and install [git](https://git-for-windows.github.io/).
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Start ```cmd``` in windows.
-
-2. Download the MXNet source code from GitHub by using following command:
-
-```r
-cd C:\
-git clone https://github.com/apache/incubator-mxnet.git --recursive
-```
-
-3. Follow [this link](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify ```Individual components```, and check ```VC++ 2017 version 15.4 v14.11 toolset```, and click ```Modify```.
-
-4. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
-
-```r
-"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
-```
-
-5. Create a build dir using the following command and go to the directory, for example:
-
-```r
-mkdir C:\build
-cd C:\build
-```
-
-6. CMake the MXNet source code by using following command:
-
-```r
-cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.1,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.1 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
-```
-
-NOTE: make sure the DCUDNN_INCLUDE and DCUDNN_LIBRARY pointing to the “include” and “cudnn.lib” of your CUDA installed location, and the ```C:\incubator-mxnet``` is the location of the source code you just git in the previous step
-
-7. After the CMake successfully completed, compile the the MXNet source code by using following command:
-
-```r
-msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
-```
-
-**Option 2**
-
-To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. Install the required dependencies:
-
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition. At least Update 3 of Microsoft Visual Studio 2015 is required to build MXNet from source. Upgrade via it's ```Tools -> Extensions and Updates... | Product Updates``` menu.
-2. Download and install [CMake](https://cmake.org/) if it is not already installed.
-3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```C:\opencv\build\x64\vc14``` for example). Also, you need to add the OpenCV bin directory (```C:\opencv\build\x64\vc14\bin``` for example) to the ``PATH`` variable.
-6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
-8. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) and [cuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
-9. Set the environment variable ```CUDACXX``` to point to the ```CUDA Compiler```(```C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\bin\nvcc.exe``` for example).
-10. Set the environment variable ```CUDNN_ROOT``` to point to the ```cuDNN``` directory that contains the ```include```,  ```lib``` and ```bin``` directories (```C:\Downloads\cudnn-9.1-windows7-x64-v7\cuda``` for example).
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) (make sure you also download third parties submodules e.g. ```git clone --recurse-submodules```).
-2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
-3. In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-
-&nbsp;
-Next, we install the ```graphviz``` library that we use for visualizing network graphs that you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
-- Install the ```graphviz``` by downloading the installer from the [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
-**Note** Make sure to add the `graphviz` executable path to the PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
+Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 
-&nbsp;
 </div> <!-- End of pip -->
 </div> <!-- End of GPU -->
 </div> <!-- End of Python -->
@@ -1828,7 +1521,7 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 
 <div class="cpp">
 <div class="cpu gpu">
-<p> To build the C++ package, please refer to <a href="build_from_source.html#build-the-c-package">this guide</a>. </p>
+<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of C++ -->
