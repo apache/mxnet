@@ -63,7 +63,6 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="cpu gpu">
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default environs opt active">Pip</button>
-  <button type="button" class="btn btn-default environs opt">Virtualenv</button>
   <button type="button" class="btn btn-default environs opt">Docker</button>
   <button type="button" class="btn btn-default environs opt">Build from Source</button>
 </div>
@@ -289,7 +288,7 @@ mxnet/python        gpu                 493b2683c269        3 weeks ago         
 </div> <!-- END of docker -->
 
 <div class="build-from-source">
-
+</br>
 Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 
@@ -386,7 +385,9 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 <div class="python">
 <div class="cpu">
 <div class="pip">
+
 <br/>
+
 <div class="v1-2-1">
 
 ```
@@ -1054,6 +1055,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 
 <!-- Download -->
+<hr>
 
 # Source Download
 
