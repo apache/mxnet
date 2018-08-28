@@ -17,34 +17,33 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
+import org.apache.mxnet.{Context, Shape, Symbol, Xavier}
 
-/**
- * @author Depeng Liang
- */
+
 object GenV3 {
   def Conv(data: Symbol, numFilter: Int, kernel: (Int, Int) = (5, 5),
-      pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
-    var sym = Symbol.Convolution()()(Map("data" -> data, "num_filter" -> numFilter,
-        "kernel" -> s"$kernel", "stride" -> s"$stride", "pad" -> s"$pad", "no_bias" -> false))
-    sym = Symbol.BatchNorm()()(Map("data" -> sym, "fix_gamma" -> false))
-    sym = Symbol.LeakyReLU()()(Map("data" -> sym, "act_type" -> "leaky"))
-    sym
+           pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
+    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
+      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
+    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
+    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    sym2.dispose()
+    sym1.dispose()
+    sym3
   }
 
   def Deconv(data: Symbol, numFilter: Int, imHw: (Int, Int),
-      kernel: (Int, Int) = (7, 7), pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2),
-      crop: Boolean = true, out: Boolean = false): Symbol = {
-    var sym = Symbol.Deconvolution()()(Map("data" -> data, "num_filter" -> numFilter,
-        "kernel" -> s"$kernel", "stride" -> s"$stride", "pad" -> s"$pad", "no_bias" -> true))
-    if (crop) sym = Symbol.Crop()(sym)(
-        Map("offset" -> "(1, 1)", "h_w" -> s"$imHw", "num_args" -> 1))
-    sym = Symbol.BatchNorm()()(Map("data" -> sym, "fix_gamma" -> false))
-    if (out == false) Symbol.LeakyReLU()()(Map("data" -> sym, "act_type" -> "leaky"))
-    else Symbol.Activation()()(Map("data" -> sym, "act_type" -> "tanh"))
+             kernel: (Int, Int) = (7, 7), pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2),
+             crop: Boolean = true, out: Boolean = false): Symbol = {
+    var sym = Symbol.api.Deconvolution(data = Some(data), num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
+      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(true))
+    if (crop) sym = Symbol.api.Crop(data = Array(sym), offset = Some(Shape(1, 1)),
+      h_w = Some(Shape(imHw._1, imHw._2)), num_args = 1)
+    sym = Symbol.api.BatchNorm(data = Some(sym), fix_gamma = Some(false))
+    if (out == false) Symbol.api.LeakyReLU(data = Some(sym), act_type = Some("leaky"))
+    else Symbol.api.Activation(data = Some(sym), act_type = "tanh")
   }
 
   def getGenerator(prefix: String, imHw: (Int, Int)): Symbol = {
@@ -61,12 +60,12 @@ object GenV3 {
     val conv5_1 = Conv(deconv2, 96, kernel = (3, 3), pad = (1, 1), stride = (1, 1))
     val deconv3 = Deconv(conv5_1, 3, imHw, kernel = (8, 8), pad = (3, 3), out = true, crop = false)
     val rawOut = (deconv3 * 128) + 128
-    val norm = Symbol.SliceChannel()(rawOut)(Map("num_outputs" -> 3))
+    val norm = Symbol.api.SliceChannel(data = Some(rawOut), num_outputs = 3)
     val rCh = norm.get(0) - 123.68f
     val gCh = norm.get(1) - 116.779f
     val bCh = norm.get(2) - 103.939f
-    val normOut = Symbol.Concat()(rCh, gCh, bCh)() * 0.4f + data * 0.6f
-    normOut
+    val normOut = Symbol.api.Concat(data = Array(rCh, gCh, bCh), num_args = 3)
+    normOut * 0.4f + data * 0.6f
   }
 
   def getModule(prefix: String, dShape: Shape, ctx: Context, isTrain: Boolean = true): Module = {
@@ -77,9 +76,9 @@ object GenV3 {
       else (dataShape, false, false)
     }
     val mod = new Module(symbol = sym, context = ctx,
-                         dataShapes = dataShapes,
-                         initializer = new Xavier(magnitude = 2f),
-                         forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
+      dataShapes = dataShapes,
+      initializer = new Xavier(magnitude = 2f),
+      forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
     mod
   }
 }

@@ -46,7 +46,7 @@ my %WriteMakefileArgs = (
     "GraphViz" => "2.14"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.31",
+  "VERSION" => "1.32",
   "test" => {
     "TESTS" => "t/*.t"
   }

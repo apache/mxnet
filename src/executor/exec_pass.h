@@ -66,13 +66,13 @@ class OpExecutor {
   virtual ~OpExecutor() {}
   /*!
    * \brief Setup the executor for given NDArray member
-   * this can be called multiple times if NDArray changed during reshape.
-   *  It is safe to call it via asynchronize engine lambda
+   *  This can be called multiple times if NDArray changed during reshape.
+   *  It is safe to call it via an asynchronous engine lambda.
    */
   virtual void Setup() = 0;
   /*!
    * \brief run the operator given runtime context on device.
-   *  This function call do not synchronize the stream.
+   *  This function call does not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx, bool is_gpu) = 0;
@@ -197,6 +197,18 @@ Graph InferType(Graph&& graph,
 Graph InferStorageType(Graph&& graph,
                        StorageTypeVector&& storage_type_inputs = StorageTypeVector(),
                        const std::string& storage_type_attr_key = "");
+
+#if MXNET_USE_TENSORRT
+/*!
+ * \brief Replace subgraphs by TRT (forward only)
+ */
+Graph ReplaceSubgraph(Graph&& g,
+                      const std::unordered_set<nnvm::Node*>& set_subgraph,
+                      std::unordered_map<std::string, NDArray>* const params_map);
+
+std::vector<std::unordered_set<nnvm::Node*>> GetTrtCompatibleSubsets(const Graph& g,
+    std::unordered_map<std::string, NDArray>* const params_map);
+#endif
 
 }  // namespace exec
 }  // namespace mxnet

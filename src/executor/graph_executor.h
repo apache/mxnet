@@ -163,20 +163,21 @@ class GraphExecutor : public Executor {
                      std::vector<NDArray>* aux_state_vec);
   // Initialize in_args, arg_grads and aux_states with
   // shared_buffer and shared_exec
-  void InitArguments(const nnvm::IndexedGraph& idx,
-                     const nnvm::ShapeVector& inferred_shapes,
-                     const nnvm::DTypeVector& inferred_dtypes,
-                     const StorageTypeVector& inferred_stypes,
-                     const std::vector<Context>& in_arg_ctxes,
-                     const std::vector<Context>& arg_grad_ctxes,
-                     const std::vector<Context>& aux_state_ctxes,
-                     const std::vector<OpReqType>& grad_req_types,
-                     const std::unordered_set<std::string>& shared_arg_names,
-                     const Executor* shared_exec,
-                     std::unordered_map<std::string, NDArray>* shared_buffer,
-                     std::vector<NDArray>* in_arg_vec,
-                     std::vector<NDArray>* arg_grad_vec,
-                     std::vector<NDArray>* aux_state_vec);
+  virtual void InitArguments(const nnvm::IndexedGraph& idx,
+                             const nnvm::ShapeVector& inferred_shapes,
+                             const nnvm::DTypeVector& inferred_dtypes,
+                             const StorageTypeVector& inferred_stypes,
+                             const std::vector<Context>& in_arg_ctxes,
+                             const std::vector<Context>& arg_grad_ctxes,
+                             const std::vector<Context>& aux_state_ctxes,
+                             const std::vector<OpReqType>& grad_req_types,
+                             const std::unordered_set<std::string>& shared_arg_names,
+                             const Executor* shared_exec,
+                             std::unordered_map<std::string, NDArray>* shared_buffer,
+                             std::vector<NDArray>* in_arg_vec,
+                             std::vector<NDArray>* arg_grad_vec,
+                             std::vector<NDArray>* aux_state_vec);
+
   // internal initialization of the graph for simple bind
   Graph InitGraph(nnvm::Symbol symbol,
                   const Context& default_ctx,
@@ -212,7 +213,6 @@ class GraphExecutor : public Executor {
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
   void BulkTrainingOpSegs(size_t total_num_nodes);
-
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
   // internal graph

@@ -93,16 +93,18 @@ object TrainMnist {
   }
 
   def test(dataPath : String) : Float = {
-    val (dataShape, net) = (Shape(784), getMlp)
-    val devs = Array(Context.cpu(0))
-    val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-    val Acc = ModelTrain.fit(dataDir = dataPath,
-      batchSize = 128, numExamples = 60000, devs = devs,
-      network = net, dataLoader = getIterator(dataShape),
-      kvStore = "local", numEpochs = 10)
-    logger.info("Finish test fit ...")
-    val (_, num) = Acc.get
-    num(0)
+    NDArrayCollector.auto().withScope {
+      val (dataShape, net) = (Shape(784), getMlp)
+      val devs = Array(Context.cpu(0))
+      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+      val Acc = ModelTrain.fit(dataDir = dataPath,
+        batchSize = 128, numExamples = 60000, devs = devs,
+        network = net, dataLoader = getIterator(dataShape),
+        kvStore = "local", numEpochs = 10)
+      logger.info("Finish test fit ...")
+      val (_, num) = Acc.get
+      num(0)
+    }
   }
 
 
@@ -112,7 +114,7 @@ object TrainMnist {
     try {
       parser.parseArgument(args.toList.asJava)
 
-      val dataPath = if (inst.dataDir == null) System.getenv("MXNET_DATA_DIR")
+      val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
         else inst.dataDir
 
       val (dataShape, net) =

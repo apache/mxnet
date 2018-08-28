@@ -46,6 +46,15 @@ def check_with_device(device, dtype):
             ]
         },
         {
+            'name': 'randn',
+            'ndop': mx.nd.random.randn,
+            'params': { 'loc': 10.0, 'scale': 0.5 },
+            'checks': [
+                ('mean', lambda x, params: np.mean(x.astype(np.float64) - params['loc']),  tol),
+                ('std',  lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
+            ]
+        },
+        {
             'name': 'uniform',
             'symbol': mx.sym.random.uniform,
             'ndop': mx.nd.random.uniform,
@@ -123,10 +132,14 @@ def check_with_device(device, dtype):
         # check directly
         params = symbdic['params'].copy()
         params.update(shape=shape, dtype=dtype, ctx=device)
+        args = ()
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args = shape
         mx.random.seed(128)
-        ret1 = ndop(**params).asnumpy()
+        ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
-        ret2 = ndop(**params).asnumpy()
+        ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
 
@@ -134,12 +147,14 @@ def check_with_device(device, dtype):
             assert np.abs(check_func(ret1, params)) < tol, "ndarray test: %s check for `%s` did not pass" % (check_name, name)
 
         # check multi-distribution sampling
+        if 'inputs' not in symbdic: continue  # randn does not support multi-distribution sampling
+
         params = {'shape': shape, 'dtype': dtype, 'ctx': device}
         params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
         mx.random.seed(128)
-        ret1 = ndop(**params).asnumpy()
+        ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
-        ret2 = ndop(**params).asnumpy()
+        ret2 = ndop(*args, **params).asnumpy()
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed" % name
         for i in range(2):
@@ -148,6 +163,8 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     err = np.abs(check_func(ret2[i,j], stats))
                     assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
+
+        if 'symbol' not in symbdic: continue  # randn does not have symbol
 
         # check symbolic
         symbol = symbdic['symbol']
@@ -448,18 +465,19 @@ def test_uniform_generator():
 
 @with_seed()
 def test_gamma_generator():
+    success_rate = 0.05
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for kappa, theta in [(0.5, 1.0), (1.0, 5.0)]:
             print("ctx=%s, dtype=%s, Shape=%g, Scale=%g:" % (ctx, dtype, kappa, theta))
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.gamma.ppf(x, a=kappa, loc=0, scale=theta), 5)
             generator_mx = lambda x: mx.nd.random.gamma(kappa, theta, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, success_rate=success_rate)
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.gamma(kappa, theta, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                      for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=success_rate)
 
 @with_seed()
 def test_exponential_generator():
@@ -623,6 +641,23 @@ def test_with_random_seed():
     for i in range(0, num_seeds-1):
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
+
+@with_seed()
+def test_unique_zipfian_generator():
+    ctx = mx.context.current_context()
+    if ctx.device_type == 'cpu':
+        num_sampled = 8192
+        range_max = 793472
+        batch_size = 4
+        op = mx.nd._internal._sample_unique_zipfian
+        classes, num_trials = op(range_max, shape=(batch_size, num_sampled))
+        for i in range(batch_size):
+            num_trial = num_trials[i].asscalar()
+            # test uniqueness
+            assert np.unique(classes[i].asnumpy()).size == num_sampled
+            # test num trials. reference count obtained from pytorch implementation
+            assert num_trial > 14500
+            assert num_trial < 17000
 
 @with_seed()
 def test_zipfian_generator():
