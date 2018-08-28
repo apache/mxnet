@@ -34,10 +34,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import platform
-from copy import deepcopy
 from itertools import chain
-from subprocess import call, check_call, check_output
+from subprocess import check_call, check_output
 from typing import *
 from util import *
 import docker
@@ -87,9 +85,6 @@ class Cleanup:
         """Perform cleanup"""
         self._cleanup_containers()
 
-def under_ci() -> bool:
-    """:return: True if we run in Jenkins."""
-    return 'JOB_NAME' in os.environ
 
 def get_dockerfiles_path():
     return "docker"
@@ -139,6 +134,10 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     # cache-from is needed so we use the cached images tagged from the remote via
     # docker pull see: docker_cache.load_docker_cache
     #
+    # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
+    # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
+    # script.
+    #
     # This doesn't work with multi head docker files.
     #
     cmd = [docker_binary, "build",
@@ -182,10 +181,11 @@ def buildir() -> str:
 
 
 def default_ccache_dir() -> str:
+    """:return: ccache directory for the current platform"""
     # Share ccache across containers
     if 'CCACHE_DIR' in os.environ:
+        ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
         try:
-            ccache_dir = os.path.realpath(os.environ['CCACHE_DIR'])
             os.makedirs(ccache_dir, exist_ok=True)
             return ccache_dir
         except PermissionError:
@@ -198,8 +198,11 @@ def default_ccache_dir() -> str:
         return ccache_dir
     return os.path.join(tempfile.gettempdir(), "ci_ccache")
 
+
 def trim_container_id(cid):
+    """:return: trimmed container id"""
     return cid[:12]
+
 
 def container_run(platform: str,
                   nvidia_runtime: bool,
@@ -208,9 +211,9 @@ def container_run(platform: str,
                   local_ccache_dir: str,
                   command: List[str],
                   cleanup: Cleanup,
-                  dry_run: bool = False,
-                  interactive: bool = False) -> int:
-    CONTAINER_WAIT_S = 600
+                  dry_run: bool = False) -> int:
+    """Run command in a container"""
+    container_wait_s = 600
     #
     # Environment setup
     #
@@ -227,8 +230,8 @@ def container_run(platform: str,
     # https://wiki.jenkins.io/display/JENKINS/ProcessTreeKiller
     # https://github.com/jenkinsci/jenkins/blob/578d6bacb33a5e99f149de504c80275796f0b231/core/src/main/java/hudson/model/Run.java#L2393
     #
-    JENKINS_ENV_VARS = ['BUILD_NUMBER', 'BUILD_ID', 'BUILD_TAG']
-    environment.update({k: os.environ[k] for k in JENKINS_ENV_VARS if k in os.environ})
+    jenkins_env_vars = ['BUILD_NUMBER', 'BUILD_ID', 'BUILD_TAG']
+    environment.update({k: os.environ[k] for k in jenkins_env_vars if k in os.environ})
     environment.update({k: os.environ[k] for k in ['CCACHE_MAXSIZE'] if k in os.environ})
 
     tag = get_docker_tag(platform=platform, registry=docker_registry)
@@ -240,43 +243,48 @@ def container_run(platform: str,
     logging.info("Using ccache directory: %s", local_ccache_dir)
     docker_client = docker.from_env()
     # Equivalent command
-    docker_cmd_list = [get_docker_binary(nvidia_runtime), 'run',
-       '--rm',
-       '--shm-size={}'.format(shared_memory_size),
-       '-v', "{}:/work/mxnet".format(mx_root),  # mount mxnet root
-       '-v', "{}:/work/build".format(local_build_folder),  # mount mxnet/build for storing build
-                                                           # artifacts
-       '-v', "{}:/work/ccache".format(local_ccache_dir),
-       '-u', '{}:{}'.format(os.getuid(), os.getgid()),
-       '-e', 'CCACHE_MAXSIZE={}'.format(environment['CCACHE_MAXSIZE']),
-       '-e', 'CCACHE_TEMPDIR={}'.format(environment['CCACHE_TEMPDIR']),  # temp dir should be local and not shared
-       '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),  # this path is inside the container as /work/ccache is mounted
-       '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),  # a container-scoped log, useful for ccache verification.
-       '-ti',
-       tag]
+    docker_cmd_list = [
+        get_docker_binary(nvidia_runtime),
+        'run',
+        '--rm',
+        '--shm-size={}'.format(shared_memory_size),
+        # mount mxnet root
+        '-v', "{}:/work/mxnet".format(mx_root),
+        # mount mxnet/build for storing build
+        '-v', "{}:/work/build".format(local_build_folder),
+        '-v', "{}:/work/ccache".format(local_ccache_dir),
+        '-u', '{}:{}'.format(os.getuid(), os.getgid()),
+        '-e', 'CCACHE_MAXSIZE={}'.format(environment['CCACHE_MAXSIZE']),
+        # temp dir should be local and not shared
+        '-e', 'CCACHE_TEMPDIR={}'.format(environment['CCACHE_TEMPDIR']),
+        # this path is inside the container as /work/ccache is mounted
+        '-e', "CCACHE_DIR={}".format(environment['CCACHE_DIR']),
+        # a container-scoped log, useful for ccache verification.
+        '-e', "CCACHE_LOGFILE={}".format(environment['CCACHE_LOGFILE']),
+        '-ti',
+        tag]
     docker_cmd_list.extend(command)
     docker_cmd = ' \\\n\t'.join(docker_cmd_list)
     logging.info("Running %s in container %s", command, tag)
     logging.info("Executing the equivalent of:\n%s\n", docker_cmd)
-    ret = 0 # return code of the command inside docker
+    # return code of the command inside docker
+    ret = 0
     if not dry_run:
-
-
         #############################
         #
         signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
+        # noinspection PyShadowingNames
+        runtime = None
         if nvidia_runtime:
-            runtime='nvidia'
-        else:
+            # noinspection PyShadowingNames
             # runc is default (docker info | grep -i runtime)
-            runtime=None
+            runtime = 'nvidia'
 
         container = docker_client.containers.run(
             tag,
             runtime=runtime,
             detach=True,
             command=command,
-            #auto_remove=True,
             shm_size=shared_memory_size,
             user='{}:{}'.format(os.getuid(), os.getgid()),
             volumes={
@@ -305,8 +313,10 @@ def container_run(platform: str,
         sys.stdout.flush()
         stream.close()
         try:
-            logging.info("Waiting for status of container %s for %d s.", trim_container_id(container.id), CONTAINER_WAIT_S)
-            wait_result = container.wait(timeout=CONTAINER_WAIT_S)
+            logging.info("Waiting for status of container %s for %d s.",
+                         trim_container_id(container.id),
+                         container_wait_s)
+            wait_result = container.wait(timeout=container_wait_s)
             logging.info("Container exit status: %s", wait_result)
             ret = wait_result.get('StatusCode', 200)
         except Exception as e:
@@ -336,10 +346,13 @@ def container_run(platform: str,
 
 
 def list_platforms() -> str:
-    print("\nSupported platforms:\n{}".format('\n'.join(get_platforms())))
+    return "\nSupported platforms:\n{}".format('\n'.join(get_platforms()))
+
 
 def load_docker_cache(tag, docker_registry) -> None:
+    """Imports tagged container from the given docker registry"""
     if docker_registry:
+        # noinspection PyBroadException
         try:
             import docker_cache
             logging.info('Docker cache download is enabled from registry %s', docker_registry)
@@ -359,6 +372,7 @@ def log_environment():
 
 
 def script_name() -> str:
+    """:returns: script name with leading paths removed"""
     return os.path.split(sys.argv[0])[1]
 
 
@@ -402,10 +416,6 @@ def main() -> int:
                         help="print docker run command for manual inspection",
                         action='store_true')
 
-    parser.add_argument("-i", "--interactive",
-                        help="go in a shell inside the container",
-                        action='store_true')
-
     parser.add_argument("-d", "--docker-registry",
                         help="Dockerhub registry name to retrieve cache from. Default is 'mxnetci'",
                         default='mxnetci',
@@ -427,20 +437,20 @@ def main() -> int:
 
     parser.add_argument("--ccache-dir",
                         default=default_ccache_dir(),
-                        help="Ccache directory",
+                        help="ccache directory",
                         type=str)
 
     args = parser.parse_args()
+
     def use_cache():
         return not args.no_dockerhub_cache or under_ci()
 
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
-    shared_memory_size = args.shared_memory_size
-    num_docker_build_retires = args.docker_build_retries
 
     # Cleanup on signals and exit
     cleanup = Cleanup()
+
     def signal_handler(signum, _):
         signal.pthread_sigmask(signal.SIG_BLOCK, {signum})
         logging.warning("Signal %d received, cleaning up...", signum)
@@ -465,42 +475,42 @@ def main() -> int:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
 
+        # noinspection PyUnusedLocal
         ret = 0
         if command:
-            ret = container_run(platform=platform, nvidia_runtime=args.nvidiadocker,
+            ret = container_run(
+                platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, interactive=args.interactive, cleanup=cleanup)
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
         elif args.print_docker_run:
-            ret = container_run(platform=platform, nvidia_runtime=args.nvidiadocker,
-            shared_memory_size=args.shared_memory_size, command=[], dry_run=True, docker_registry=args.docker_registry,
-            local_ccache_dir=args.ccache_dir, cleanup=cleanup)
-            command=[]
-        elif args.interactive:
-            ret = container_run(platform=platform, nvidia_runtime=args.nvidiadocker, shared_memory_size=shared_memory_size,
-                          command=command, docker_registry=args.docker_registry,
-                          local_ccache_dir=args.ccache_dir, interactive=args.interactive, cleanup=cleanup)
+            command = []
+            ret = container_run(
+                platform=platform, nvidia_runtime=args.nvidiadocker,
+                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
+                local_ccache_dir=args.ccache_dir, dry_run=True, cleanup=cleanup)
         else:
             # With no commands, execute a build function for the target platform
-            assert not args.interactive, "when running with -i must provide a command"
-
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(command))
-            ret = container_run(platform=platform, nvidia_runtime=args.nvidiadocker, shared_memory_size=args.shared_memory_size,
-                command=command, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir, cleanup=cleanup)
+            ret = container_run(
+                platform=platform, nvidia_runtime=args.nvidiadocker,
+                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
 
         if ret != 0:
             logging.critical("Execution of %s failed with status: %d", command, ret)
-            return(ret)
+            return ret
 
     elif args.all:
         platforms = get_platforms()
-        logging.info("Building for all architectures: {}".format(platforms))
+        logging.info("Building for all architectures: %s", platforms)
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             if use_cache():
                 load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary=docker_binary, registry=args.docker_registry, num_retries=num_docker_build_retires)
+            build_docker(platform, docker_binary=docker_binary, registry=args.docker_registry,
+                         num_retries=args.docker_build_retries, use_cache=use_cache())
             if args.build_only:
                 continue
             shutil.rmtree(buildir(), ignore_errors=True)
@@ -508,11 +518,13 @@ def main() -> int:
             plat_buildir = os.path.abspath(os.path.join(get_mxnet_root(), '..',
                                                         "mxnet_{}".format(build_platform)))
             if os.path.exists(plat_buildir):
-                logging.warning("{} already exists, skipping".format(plat_buildir))
+                logging.warning("%s already exists, skipping", plat_buildir)
                 continue
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
-            container_run(platform=platform, docker_binary=docker_binary, shared_memory_size=args.shared_memory_size,
-                          command=command, docker_registry=args.docker_registry, local_ccache_dir=args.ccache_dir)
+            container_run(
+                platform=platform, nvidia_runtime=args.nvidiadocker,
+                shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
 
@@ -534,10 +546,6 @@ Examples:
 ./build.py -p armv7 --print-docker-run
 
     Will print a docker run command to get inside the container in a shell
-
-./build.py -p armv7 --interactive
-
-    Will execute a shell into the container
 
 ./build.py -a
 
