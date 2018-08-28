@@ -136,7 +136,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 
-For more options, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>. Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
+Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
 
 </div> <!-- End of pip -->
 
@@ -178,7 +178,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 <div class="build-from-source">
 <br/>
 
-Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
+To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div><!-- END of build from source -->
 
@@ -380,6 +380,9 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
+
+For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
+
 </div> <!-- END - Linux -->
 
 
@@ -480,7 +483,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 <div class="build-from-source">
 <br/>
 
-Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
+To build from source, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
 
 </div> <!-- END of build from source -->
@@ -557,19 +560,21 @@ Not available at this time. <br>
 
 <div class="julia perl">
 <div class="cpu gpu">
-
-Follow the installation instructions [in this guide](./osx_setup.md) to set up MXNet.
+<br/>
+Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of julia perl -->
 
 
 <div class="cpp">
-<p>To enable C++ package, just add `USE_CPP_PACKAGE=1` when building from source. Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 <br/>
+<p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
+<br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 </div>
+<br/>
+For more installation options, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 </div> <!-- END - Mac OS -->
-
 
 
 
@@ -648,56 +653,23 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 <br/>
 
-**Step 1**  Install Python.
-
-[Anaconda](https://www.anaconda.com/download/) is recommended.
-
-
 <div class="v1-2-1">
-
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
-
-**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
-Check your CUDA version with the following command:
-
-```
-nvcc --version
-```
-
-You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
 ```
 $ pip install mxnet-cu92
 ```
 
-Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
-
 </div> <!-- End of v1-2-1-->
 
 <div class="v1-1-0">
-
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.1.
-
-**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
-Check your CUDA version with the following command:
-
-```
-nvcc --version
-```
-
-You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
 ```
 $ pip install mxnet-cu91==1.1.0
 ```
 
-Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
-
 </div> <!-- End of v1-1-0-->
 
 <div class="v1-0-0">
-
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
 
 ```
 $ pip install mxnet-cu90==1.0.0
@@ -707,23 +679,13 @@ $ pip install mxnet-cu90==1.0.0
 
 <div class="v0-12-1">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
-
 ```
 $ pip install mxnet-cu90==0.12.1
-```
-
-Install *MXNet* 0.12.0 with GPU support using CUDA 9.0.
-
-```
-$ pip install mxnet-cu90==0.12.0
 ```
 
 </div> <!-- End of v0-12-1-->
 
 <div class="v0-11-0">
-
-**Step 2**  Install *MXNet* with GPU support using CUDA 8.0.
 
 ```
 $ pip install mxnet-cu80==0.11.0
@@ -733,26 +695,27 @@ $ pip install mxnet-cu80==0.11.0
 
 <div class="master">
 
-**Step 2**  Install *MXNet* with GPU support using CUDA 9.2.
+```
+$ pip install mxnet-cu92 --pre
+```
 
-**Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
-Check your CUDA version with the following command:
+</div> <!-- End of master-->
+
+**NOTES:**
+
+[Anaconda](https://www.anaconda.com/download/) is recommended.
+
+CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
+
+**Important:** Make sure your installed CUDA version matches the CUDA version in the pip package. Check your CUDA version with the following command:
 
 ```
 nvcc --version
 ```
 
-You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
-
-```
-$ pip install mxnet-cu92 --pre
-```
-
-Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
-
-</div> <!-- End of master-->
-
 Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
+
+You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version. Refer to [pypi for other MXNet packages](https://pypi.org/project/mxnet/).
 
 </div>
 
@@ -821,6 +784,8 @@ Follow the installation instructions [in this guide](./windows_setup.md) to set 
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of C++ -->
+<br/>
+For more installation options, refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 </div> <!-- End of Windows -->
 
 
