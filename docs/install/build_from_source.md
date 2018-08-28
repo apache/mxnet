@@ -1,7 +1,5 @@
 # Build MXNet from Source
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
-
 This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
 
 1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
@@ -14,7 +12,7 @@ This document explains how to build MXNet from sources. Building MXNet from sour
 
 ### Prerequisites
 
-You need C++ build tools and BLAS library to build MXNet shared library. If you want to run MXNet on GPUs, you need to install CUDA and CuDNN.
+You need C++ build tools and a BLAS library to build the MXNet shared library. If you want to run MXNet with GPUs, you will need to install CUDA and CuDNN first.
 
 #### C++ build tools
 
@@ -53,11 +51,7 @@ Then select the Linux distribution:
 
 <div class="ubuntu">
 
-Install build tools and git on `Ubuntu >= 13.10` and `Debian >= 8`.
-
-```bash
-sudo apt-get update && sudo apt-get install build-essential git
-```
+Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a> for build from source instructions as well as installation of language bindings.
 
 </div>
 
@@ -325,7 +319,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 - Download and install the latest NCCL library from NVIDIA.
 - Note the directory path in which NCCL libraries and header files are installed.
 - Ensure that the installation directory contains ```lib``` and ```include``` folders.
-- Ensure that the prerequisites for using NCCL such as Cuda libraries are met. 
+- Ensure that the prerequisites for using NCCL such as Cuda libraries are met.
 - Append the ```config.mk``` file with following, in addition to the CUDA related options.
 - USE_NCCL=1
 - USE_NCCL_PATH=path-to-nccl-installation-folder
