@@ -488,6 +488,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 
 To build from source, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
+MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.org/confluence/display/MXNET/MXNet+Developer+Setup+on+Mac">Developer Setup on Mac</a>.
 
 </div> <!-- END of build from source -->
 </div> <!-- END of CPU -->
@@ -507,6 +508,7 @@ Try the **Build from Source** option for now.
 
 Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
+MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.org/confluence/display/MXNET/MXNet+Developer+Setup+on+Mac">Developer Setup on Mac</a>.
 
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
