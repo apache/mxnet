@@ -79,7 +79,7 @@ class RandGenerator<cpu, DType> {
     std::mt19937 *engine_;
   };
 
-  static void  AllocState(RandGenerator<cpu, DType> *inst) {
+  static void AllocState(RandGenerator<cpu, DType> *inst) {
     inst->states_ = new std::mt19937[kNumRandomStates];
   }
 
