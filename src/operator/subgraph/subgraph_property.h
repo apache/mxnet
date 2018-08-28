@@ -41,10 +41,18 @@ class SubgraphSelector {
   virtual ~SubgraphSelector() {}
   // Determine if the node should be selected for a subgraph.
   virtual bool Select(const nnvm::Node &n) = 0;
-  // Determine if the input node should be selected for a subgraph.
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
-  // Determine if the output node should be selected for a subgraph.
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) = 0;
+  /*!
+   * \brief Determines if to select input_node while at node n.
+   * \param n the base node whose input node is to be selected
+   * \param input_node the input node of the base node n
+   */
+  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &input_node) = 0;
+  /*!
+   * \brief Determines if to select output_node while at node n.
+   * \param n the base node whose output node is to be selected
+   * \param output_node the output node of the base node n
+   */
+  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &output_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
