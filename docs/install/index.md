@@ -133,7 +133,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
 
@@ -234,7 +234,7 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 **NOTES:**
 
@@ -450,7 +450,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- END of pip -->
 
@@ -490,7 +490,7 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 To build from source, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
 MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.org/confluence/display/MXNET/MXNet+Developer+Setup+on+Mac">Developer Setup on Mac</a>.
-
+<br/>
 </div> <!-- END of build from source -->
 </div> <!-- END of CPU -->
 
@@ -499,9 +499,8 @@ MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.
 <div class="gpu">
 <div class="pip docker">
 <br/>
-
-Try the **Build from Source** option for now.
-
+This option is only available by building from source. Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
+<br/>
 </div>
 
 <div class="build-from-source">
@@ -510,7 +509,7 @@ Try the **Build from Source** option for now.
 Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
 MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.org/confluence/display/MXNET/MXNet+Developer+Setup+on+Mac">Developer Setup on Mac</a>.
-
+<br/>
 </div> <!-- END of build from source -->
 </div> <!-- END of GPU -->
 </div> <!-- END of Python -->
@@ -647,7 +646,7 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
 
@@ -712,7 +711,7 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 **NOTES:**
 
