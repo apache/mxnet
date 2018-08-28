@@ -232,6 +232,14 @@ $ pip install mxnet-cu80==0.11.0
 
 </div> <!-- End of v0-11-0-->
 
+<div class="master">
+
+```
+$ pip install mxnet-cu92 --pre
+```
+
+</div> <!-- End of master-->
+
 **NOTE:**
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
