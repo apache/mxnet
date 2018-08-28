@@ -383,7 +383,7 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
-
+<hr>
 For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div> <!-- END - Linux -->
@@ -577,7 +577,7 @@ Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 <p>To enable the C++ package, build from source using `make USE_CPP_PACKAGE=1`.
 <br/>Refer to the <a href="c_plus_plus.html">MXNet C++ setup guide</a> for more info.</p>
 </div>
-<br/>
+<hr>
 For more installation options, refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 </div> <!-- END - Mac OS -->
 
@@ -801,7 +801,7 @@ Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-perl">Per
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of C++ -->
-<br/>
+<hr>
 For more installation options, refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 </div> <!-- End of Windows -->
 
