@@ -32,7 +32,7 @@ if num_gpus > 8 :
 
 gpus = range(1, 1+num_gpus)
 
-@unittest.skip("Test requires NCCL library installed and enabled during build")
+# @unittest.skip("Test requires NCCL library installed and enabled during build")
 def test_nccl_pushpull():
     for shape, key in zip(shapes, keys):
         for n_gpus in gpus:
