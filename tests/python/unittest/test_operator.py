@@ -1583,7 +1583,6 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12219")
 @with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
@@ -1614,7 +1613,7 @@ def test_convolution_grouping():
         exe2.backward(exe2.outputs[0])
 
         for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
