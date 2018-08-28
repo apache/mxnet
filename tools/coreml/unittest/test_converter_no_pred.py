@@ -23,12 +23,6 @@ from converter._mxnet_converter import convert
 from collections import namedtuple
 from converter import utils
 
-def _mxnet_remove_batch(input_data):
-    for blob in input_data:
-        input_data[blob] = np.reshape(input_data[blob], input_data[blob].shape[1:])
-    return input_data
-
-
 def _get_mxnet_module(net, data_shapes, mode, label_names, input_names=None):
     """ Given a symbolic graph, input shape and the initialization mode,
         returns an MXNet module.
@@ -57,7 +51,7 @@ def _get_mxnet_module(net, data_shapes, mode, label_names, input_names=None):
 
 class SingleLayerTest(unittest.TestCase):
     """
-    Unit test class for testing where converter is able to convert individual layers or not.
+    Unit test class for testing whether converter is able to convert individual layers or not.
     In order to do so, it converts model and generates preds on both CoreML and MXNet and check they are the same.
     """
     def _test_mxnet_model(self, net, input_shape, mode, class_labels=None, coreml_mode=None, label_names=None, delta=1e-3,
@@ -105,13 +99,18 @@ class SingleLayerTest(unittest.TestCase):
         )
 
     def test_tiny_inner_product_zero_input(self):
-        np.random.seed(1988)
+        """
+        Verifying the behavior of inner product with zeros input.
+        """
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         self._test_mxnet_model(net, input_shape=input_shape, mode='zeros')
 
     def test_really_tiny_inner_product_ones_input(self):
+        """
+        Verifying the behavior of inner product with ones input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1)
         net = mx.sym.Variable('data')
@@ -119,6 +118,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
 
     def test_really_tiny_2_inner_product_ones_input(self):
+        """
+        Verifying the behavior of inner product with ones input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1)
         net = mx.sym.Variable('data')
@@ -126,6 +128,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
 
     def test_tiny_inner_product_ones_input(self):
+        """
+        Verifying the behavior of inner product with ones input.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -133,6 +138,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
 
     def test_tiny_inner_product_random_input(self):
+        """
+        Verifying the behavior of inner product with random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -140,6 +148,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_inner_product_no_bias(self):
+        """
+        Verifying the behavior of inner product with no bias.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -147,6 +158,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_softmax_random_input(self):
+        """
+        Verifying the behavior of softmax activation.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -155,6 +169,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
 
     def test_tiny_relu_activation_random_input(self):
+        """
+        Verifying the behavior of relu activation.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -163,6 +180,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_sigmoid_activation_random_input(self):
+        """
+        Verifying the behavior of sigmoid activation.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -171,6 +191,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_tanh_activation_random_input(self):
+        """
+        Verifying the behavior of tanh activation.
+        """
         np.random.seed(1988)
         input_shape = (1, 10)
 
@@ -181,6 +204,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_really_tiny_conv_random_input(self):
+        """
+        Verifying the behavior of convolution with random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -201,6 +227,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_ones_input(self):
+        """
+        Verifying the behavior of convolution with ones input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -221,6 +250,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
 
     def test_tiny_conv_random_input(self):
+        """
+        Verifying the behavior of convolution with random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -241,6 +273,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_asym_conv_random_input(self):
+        """
+        Verifying the behavior of asymmetric convolution with random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -259,6 +294,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_asym_conv_random_asym_input(self):
+        """
+        Verifying the behavior of asymmetric convolution with asymmetric random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 28, 18)
         num_filter = 16
@@ -280,6 +318,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_valid_pooling_random_input(self):
+        """
+        Verifying the behavior of pooling with random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -307,6 +348,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_pooling_full_random_input(self):
+        """
+        Verifying the behavior of pooling with full random input.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -334,6 +378,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_pooling_full_random_input_with_padding(self):
+        """
+        Verifying the behavior of pooling with padding.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 2
@@ -361,6 +408,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_really_tiny_conv_random_3d_input(self):
+        """
+        Verifying the behavior of convolution with random 3d input.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 1
@@ -379,6 +429,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_really_tiny_conv_random_input_multi_filter(self):
+        """
+        Verifying the behavior of convolution with multiple filters.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 64
@@ -397,6 +450,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_random_3d_input(self):
+        """
+        Verifying the behavior of convolution with 3d input.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 1
@@ -415,6 +471,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_conv_random_input_multi_filter(self):
+        """
+        Verifying the behavior of convolution with multiple filters.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 64
@@ -433,6 +492,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_conv_random(self):
+        """
+        Verifying the behavior of convolution with random.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 64
@@ -451,6 +513,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_flatten(self):
+        """
+        Verifying the behavior of flattening.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 64
@@ -474,6 +539,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
 
     def test_transpose(self):
+        """
+        Verifying the behavior of transpose.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 64
@@ -494,6 +562,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_reshape(self):
+        """
+        Verifying the behavior of reshape.
+        """
         np.random.seed(1988)
         input_shape = (1, 8)
         net = mx.sym.Variable('data')
@@ -501,6 +572,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_synset_random_input(self):
+        """
+        Verifying the behavior of synset.
+        """
         np.random.seed(1989)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
@@ -527,6 +601,9 @@ class SingleLayerTest(unittest.TestCase):
         )
 
     def test_really_tiny_deconv_random_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -548,6 +625,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_deconv_ones_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -569,6 +649,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
 
     def test_tiny_deconv_random_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -590,6 +673,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_asym_deconv_random_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -611,6 +697,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_asym_deconv_random_asym_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 28, 18)
         num_filter = 16
@@ -635,6 +724,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_deconv_pooling_random_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
@@ -664,6 +756,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_really_tiny_deconv_random_3d_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 1
@@ -685,6 +780,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_really_tiny_deconv_random_input_multi_filter(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 64
@@ -706,6 +804,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_deconv_random_3d_input(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 1
@@ -727,6 +828,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_deconv_random_input_multi_filter(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 64
@@ -748,6 +852,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_deconv_random(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 4, 4)
         num_filter = 3
@@ -770,6 +877,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_deconv_random_output_shape(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 4, 4)
         num_filter = 3
@@ -794,6 +904,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_deconv_random_padding(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 9, 9)
         num_filter = 3
@@ -815,6 +928,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_conv_random_padding_odd(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 6, 6)
         num_filter = 3
@@ -836,6 +952,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_conv_random_padding_even(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 6, 6)
         num_filter = 3
@@ -857,6 +976,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_deconv_random_all_inputs(self):
+        """
+        Verifying the behavior of deconvolution.
+        """
         np.random.seed(1988)
         input_shape = (1, 10, 5, 5)
         num_filter = 3
@@ -882,6 +1004,9 @@ class SingleLayerTest(unittest.TestCase):
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_batch_norm(self):
+        """
+        Verifying the behavior of batch normalization.
+        """
         np.random.seed(1988)
         input_shape = (1, 1, 2, 3)
 
