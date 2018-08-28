@@ -78,38 +78,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="linux">
 <div class="python">
 <div class="cpu">
-<div class="virtualenv">
-<br/>
-
-**Step 1**  Install virtualenv for Ubuntu.
-
-```bash
-$ sudo apt-get update
-$ sudo apt-get install -y python-dev python-virtualenv
-```
-
-**Step 2**  Create and activate virtualenv environment for MXNet.
-
-Following command creates a virtualenv environment at `~/mxnet` directory. However, you can choose any directory by replacing `~/mxnet` with a directory of your choice.
-
-```bash
-$ virtualenv --system-site-packages ~/mxnet
-```
-
-Activate the virtualenv environment created for *MXNet*.
-
-```bash
-$ source ~/mxnet/bin/activate
-```
-
-After activating the environment, you should see the prompt as below.
-
-```bash
-(mxnet)$
-```
-</div>
-
-<div class="pip virtualenv">
+<div class="pip">
 <br/>
 
 <div class="v1-2-1">
@@ -202,7 +171,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
 ```
 
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- END of docker -->
 
@@ -314,7 +283,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        gpu                 493b2683c269        3 weeks ago         4.77 GB
 ```
 
-**Step 5** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 5** <a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- END of docker -->
 
@@ -415,46 +384,18 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 <div class="macos">
 <div class="python">
 <div class="cpu">
-
-The following installation instructions have been tested on OSX Sierra and El Capitan.
-
-
 <div class="pip">
 <br/>
-
-**Step 1**  Install prerequisites - Homebrew, python development tools.
-
-```bash
-# Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-$ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
-
-# Install python development tools - python2.7, pip, python-setuptools
-$ brew install python
-```
-
-**Step 2** Install MXNet with OpenBLAS acceleration.
-
-Installing *MXNet* with pip requires a latest version of `pip`. Install the latest version of `pip` by issuing the following command.
-
-```bash
-$ pip install --upgrade pip
-$ pip install --upgrade setuptools
-```
-
 <div class="v1-2-1">
-
-Then use pip to install MXNet:
 
 ```bash
 $ pip install mxnet
 ```
+
 </div> <!-- End of v1-2-1 -->
 
 
 <div class="v1-1-0">
-
-Then use pip to install MXNet:
 
 ```bash
 $ pip install mxnet==1.1.0
@@ -465,8 +406,6 @@ $ pip install mxnet==1.1.0
 
 <div class="v1-0-0">
 
-Then use pip to install MXNet:
-
 ```bash
 $ pip install mxnet==1.0.0
 ```
@@ -475,25 +414,14 @@ $ pip install mxnet==1.0.0
 
 <div class="v0-12-1">
 
-Then use pip to install MXNet:
-
 ```bash
 $ pip install mxnet=0.12.1
 ```
-
-For MXNet 0.12.0 -
-
-```bash
-$ pip install mxnet=0.12.0
-```
-
 
 </div> <!-- End of v0-12-1-->
 
 
 <div class="v0-11-0">
-
-Then use pip to install MXNet:
 
 ```bash
 $ pip install mxnet==0.11.0
@@ -503,154 +431,15 @@ $ pip install mxnet==0.11.0
 
 <div class="master">
 
-Then use pip to install MXNet:
-
 ```bash
 $ pip install mxnet --pre
 ```
 
 </div> <!-- End of master-->
 
-**Step 3**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
-```bash
-$ brew install graphviz
-$ pip install graphviz
-```
-
-**Step 4**  Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+<a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- END of pip -->
-
-
-<div class="virtualenv">
-<br/>
-
-**Step 1**  Install prerequisites - Homebrew, python development tools.
-
-```bash
-# Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-$ export PATH=/usr/local/bin:/usr/local/sbin:$PATH
-
-# Install python development tools - python2.7, pip, python-setuptools
-$ brew install python
-```
-
-**Step 2**  Install virtualenv for macOS.
-
-```bash
-$ pip install virtualenv
-```
-
-**Step 3**  Create and activate virtualenv environment for MXNet.
-
-Following command creates a virtualenv environment at `~/mxnet` directory. However, you can choose any directory by replacing `~/mxnet` with a directory of your choice.
-
-```bash
-$ virtualenv --system-site-packages ~/mxnet
-```
-
-Activate the virtualenv environment created for *MXNet*.
-
-```bash
-$ source ~/mxnet/bin/activate
-```
-
-After activating the environment, you should see the prompt as below.
-
-```bash
-(mxnet)$
-```
-
-**Step 4**  Install MXNet in the active virtualenv environment.
-
-Installing *MXNet* with pip requires a latest version of `pip`. Install the latest version of `pip` by issuing the following command.
-
-```bash
-(mxnet)$ pip install --upgrade pip
-(mxnet)$ pip install --upgrade setuptools
-```
-
-<div class="v1-2-1">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet
-```
-
-</div> <!-- End of v1-2-1-->
-
-<div class="v1-1-0">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet==1.1.0
-```
-
-</div> <!-- End of v1-1-0-->
-
-<div class="v1-0-0">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet==1.0.0
-```
-
-</div> <!-- End of v1-0-0-->
-
-
-<div class="v0-12-1">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet==0.12.1
-```
-
-For *MXNet* 0.12.0 -
-
-```bash
-(mxnet)$ pip install mxnet==0.12.0
-```
-
-
-</div> <!-- End of v0-12-1-->
-
-<div class="v0-11-0">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet==0.11.0
-```
-
-</div> <!-- End of v0-11-0-->
-
-<div class="master">
-
-Install *MXNet* with OpenBLAS acceleration.
-
-```bash
-(mxnet)$ pip install mxnet --pre
-```
-
-</div> <!-- End of master-->
-
-
-**Step 5**  Install [Graphviz](http://www.graphviz.org/). (Optional, needed for graph visualization using `mxnet.viz` package).
-```bash
-$ brew install graphviz
-(mxnet)$ pip install graphviz
-```
-
-**Step 6**  Validate the installation by running simple *MXNet* code described [here](#validate-mxnet-installation).
-
-**Note**  You can read more about virtualenv [here](https://virtualenv.pypa.io/en/stable/userguide/).
-
-</div> <!-- End of virtualenv -->
 
 
 <div class="docker">
@@ -677,7 +466,7 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
 ```
 
-**Step 4** Validate the installation by running simple MXNet code described [here](#validate-mxnet-installation).
+**Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- END of docker -->
 
@@ -777,11 +566,6 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 
 
-
-
-
-
-
 <div class="windows">
 <div class="python">
 <div class="cpu">
@@ -789,13 +573,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 <br/>
 
-**Step 1**  Install Python.
-
-[Anaconda](https://www.anaconda.com/download/) is recommended.
-
 <div class="v1-2-1">
-
-**Step 2**  Install *MXNet*.
 
 ```bash
 $ pip install mxnet
@@ -805,8 +583,6 @@ $ pip install mxnet
 
 <div class="v1-1-0">
 
-**Step 2**  Install *MXNet*.
-
 ```bash
 $ pip install mxnet==1.1.0
 ```
@@ -815,46 +591,29 @@ $ pip install mxnet==1.1.0
 
 <div class="v1-0-0">
 
-**Step 2**  Install *MXNet*.
-
 ```bash
 $ pip install mxnet==1.0.0
 ```
 
 </div> <!-- End of v1-0-0-->
 
-
 <div class="v0-12-1">
-
-**Step 2**  Install *MXNet*.
 
 ```bash
 $ pip install mxnet==0.12.1
 ```
 
-For *MXNet* 0.12.0 -
-
-```bash
-$ pip install mxnet==0.12.0
-```
-
-
 </div> <!-- End of v0-12-1-->
 
 <div class="v0-11-0">
-
-**Step 2**  Install *MXNet*.
 
 ```bash
 $ pip install mxnet==0.11.0
 ```
 
-
 </div> <!-- End of v0-11-0-->
 
 <div class="master">
-
-**Step 2**  Install *MXNet*.
 
 ```bash
 $ pip install mxnet --pre
@@ -1293,456 +1052,6 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
  of the div classes for validation sections, etc -->
 
 
-# Validate MXNet Installation
-
-<div class="linux macos">
-<div class="python">
-<div class="cpu">
-
-<div class="pip build-from-source">
-
-Start the python terminal.
-
-```bash
-$ python
-```
-</div>
-
-<div class="docker">
-
-Launch a Docker container with `mxnet/python` image and run example *MXNet* python program on the terminal.
-
-```bash
-$ docker run -it mxnet/python bash # Use sudo if you skip Step 2 in the installation instruction
-
-# Start a python terminal
-root@4919c4f58cac:/# python
-```
-</div>
-
-<div class="virtualenv">
-
-Activate the virtualenv environment created for *MXNet*.
-
-```bash
-$ source ~/mxnet/bin/activate
-```
-
-After activating the environment, you should see the prompt as below.
-
-```bash
-(mxnet)$
-```
-
-Start the python terminal.
-
-```bash
-$ python
-```
-
-</div>
-
-Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
-
-```python
->>> import mxnet as mx
->>> a = mx.nd.ones((2, 3))
->>> b = a * 2 + 1
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-       [ 3.,  3.,  3.]], dtype=float32)
-```
-</div><!-- linux macos -->
-</div><!-- python -->
-</div><!-- cpu -->
-
-<!-- Validate Windows CPU pip install -->
-
-<div class="windows">
-<div class="python">
-<div class="cpu">
-<div class="pip">
-
-Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
-
-```python
->>> import mxnet as mx
->>> a = mx.nd.ones((2, 3))
->>> b = a * 2 + 1
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-       [ 3.,  3.,  3.]], dtype=float32)
-```
-
-</div>
-</div>
-</div>
-</div>
-
-<!-- Mac OS GPU installation validation -->
-
-<div class="macos">
-<div class="python">
-<div class="gpu">
-
-<div class="pip virtualenv docker">
-</br>
-
-Will be available soon.
-
-</div>
-
-<div class="build-from-source">
-</br>
-
-From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
-
-</div>
-
-</div>
-</div>
-</div>
-
-<!-- Windows GPU installation validation -->
-
-<div class="windows">
-<div class="python">
-<div class="gpu">
-
-<div class="virtualenv docker">
-</br>
-
-Will be available soon.
-
-</div>
-
-<div class="pip build-from-source">
-</br>
-
-From the MXNet root directory run: `python example/image-classification/train_mnist.py --network lenet --gpus 0` to test GPU training.
-
-</div>
-
-</div><!-- windows -->
-</div><!-- python -->
-</div><!-- gpu -->
-
-<!-- Validation for GPU machines -->
-
-<div class="linux">
-<div class="python">
-<div class="gpu">
-
-<div class="pip build-from-source">
-
-Start the python terminal.
-
-```bash
-$ python
-```
-</div>
-
-<div class="docker">
-
-Launch a NVIDIA Docker container with `mxnet/python:gpu` image and run example *MXNet* python program on the terminal.
-
-```bash
-$ nvidia-docker run -it mxnet/python:gpu bash # Use sudo if you skip Step 2 in the installation instruction
-
-# Start a python terminal
-root@4919c4f58cac:/# python
-```
-</div>
-
-<div class="virtualenv">
-
-Activate the virtualenv environment created for *MXNet*.
-
-```bash
-$ source ~/mxnet/bin/activate
-```
-
-After activating the environment, you should see the prompt as below.
-
-```bash
-(mxnet)$
-```
-
-Start the python terminal.
-
-```bash
-$ python
-```
-
-</div>
-
-Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
-
-```python
->>> import mxnet as mx
->>> a = mx.nd.ones((2, 3), mx.gpu())
->>> b = a * 2 + 1
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-       [ 3.,  3.,  3.]], dtype=float32)
-```
-</div><!-- linux -->
-</div><!-- python -->
-</div><!-- gpu -->
-
-
-
-
-
-
-<!-- Linux Clean up -->
-<div class="linux">
-<div class="python">
-<div class="cpu">
-
-<div class="pip build-from-source">
-
-Exit the Python terminal.
-
-```python
->>> exit()
-$
-```
-</div>
-
-<div class="virtualenv">
-
-Exit the Python terminal and Deactivate the virtualenv *MXNet* environment.
-```python
->>> exit()
-(mxnet)$ deactivate
-$
-```
-
-</div>
-
-<div class="docker">
-
-Exit the Python terminal and mxnet/python docker container.
-```python
->>> exit()
-root@4919c4f58cac:/# exit
-```
-
-</div>
-
-</div>
-</div>
-</div>
-
-<!-- MacOS Clean up -->
-<div class="macos">
-<div class="python">
-<div class="cpu">
-
-<div class="pip build-from-source">
-
-Exit the Python terminal.
-
-```python
->>> exit()
-$
-```
-</div>
-
-<div class="virtualenv">
-
-Exit the Python terminal and Deactivate the virtualenv *MXNet* environment.
-```python
->>> exit()
-(mxnet)$ deactivate
-$
-```
-
-</div>
-
-<div class="docker">
-
-Exit the Python terminal and then the docker container.
-```python
->>> exit()
-root@4919c4f58cac:/# exit
-```
-
-</div>
-
-</div>
-</div>
-</div>
-
-<!-- Validation for cloud installation -->
-
-<div class="cloud">
-
-Login to the cloud instance you launched, with pre-installed *MXNet*, following the guide by corresponding cloud provider.
-
-
-Start the python terminal.
-
-```bash
-$ python
-```
-<!-- Example Python code for CPU -->
-
-<div class="cpu">
-
-Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
-
-```python
->>> import mxnet as mx
->>> a = mx.nd.ones((2, 3))
->>> b = a * 2 + 1
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-         [ 3.,  3.,  3.]], dtype=float32)
-  ```
-
-Exit the Python terminal.
-
-```python
->>> exit()
-$
-```
-
-</div>
-
-<!-- Example Python code for CPU -->
-
-<div class="gpu">
-
-Run a short *MXNet* python program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
-
-```python
->>> import mxnet as mx
->>> a = mx.nd.ones((2, 3), mx.gpu())
->>> b = a * 2 + 1
->>> b.asnumpy()
-array([[ 3.,  3.,  3.],
-       [ 3.,  3.,  3.]], dtype=float32)
-```
-
-</div>
-
-</div>
-
-<!-- Example R code for CPU -->
-
-<div class="linux macos windows">
-<div class="r">
-<div class="cpu">
-
-Run a short *MXNet* R program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
-
-```r
-library(mxnet)
-a <- mx.nd.ones(c(2,3), ctx = mx.cpu())
-b <- a * 2 + 1
-b
-```
-
-You should see the following output:
-
-```r
-[,1] [,2] [,3]
-[1,]    3    3    3
-[2,]    3    3    3
-```
-
-</div>
-</div>
-</div>
-
-<!-- Example R code for GPU -->
-
-<div class="linux macos windows">
-<div class="r">
-<div class="gpu">
-
-Run a short *MXNet* R program to create a 2X3 matrix of ones *a* on a *GPU*, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3. We use *mx.gpu()*, to set *MXNet* context to be GPUs.
-
-```r
-library(mxnet)
-a <- mx.nd.ones(c(2,3), ctx = mx.gpu())
-b <- a * 2 + 1
-b
-```
-
-You should see the following output:
-
-```r
-[,1] [,2] [,3]
-[1,]    3    3    3
-[2,]    3    3    3
-```
-
-</div>
-</div>
-</div>
-
-
-
-<div class="linux">
-<div class="scala">
-
-<div class="cpu gpu">
-      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
-</div>
-
-</div><!-- scala -->
-
-<div class="julia perl cpp">
-<div class="cpu gpu">
-
-Will be available soon.
-
-</div><!-- cpu gpu -->
-</div><!-- julia perl cpp -->
-</div><!-- linux -->
-
-<div class="macos">
-<div class="scala">
-<div class="cpu gpu">
-      Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.
-</div><!-- cpu gpu-->
-</div><!-- scala -->
-<div class="julia perl cpp">
-<div class="cpu gpu">
-
-Will be available soon.
-
-</div><!-- cpu gpu -->
-</div><!-- julia perl cpp -->
-</div><!-- macos -->
-
-<!-- Windows MXNet Installation validation -->
-<div class="windows">
-<div class="python">
-<div class="cpu">
-
-<div class="build-from-source virtualenv docker">
-<br/>
-Will be available soon.
-</div>
-
-</div>
-</div>
-
-<div class="scala julia perl cpp">
-<div class="cpu gpu">
-
-Will be available soon.
-
-</div>
-</div>
-</div>
-<!-- End Windows Installation validation -->
-
-<br/>
 <!-- Download -->
 
 # Source Download
