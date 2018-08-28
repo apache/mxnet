@@ -104,7 +104,6 @@ NNVM_REGISTER_OP(_default_subgraph_op)
 .set_attr<FInferStorageType>("FInferStorageType", DefaultSubgraphOpStorageType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", DefaultSubgraphOpForward)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", DefaultSubgraphOpMutableInputs)
-.set_attr<FResourceRequest>("FResourceRequest", DefaultSubgraphOpResourceRequest)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<FExecType>("FExecType", DefaultSubgraphOpExecType)
 .add_argument("data", "NDArray-or-Symbol[]", "input data list");
