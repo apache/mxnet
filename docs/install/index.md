@@ -79,11 +79,12 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
+
 <br/>
 
 <div class="v1-2-1">
 
-```bash
+```
 $ pip install mxnet
 ```
 
@@ -91,7 +92,7 @@ $ pip install mxnet
 
 <div class="v1-1-0">
 
-```bash
+```
 $ pip install mxnet==1.1.0
 ```
 
@@ -99,7 +100,7 @@ $ pip install mxnet==1.1.0
 
 <div class="v1-0-0">
 
-```bash
+```
 $ pip install mxnet==1.0.0
 ```
 
@@ -108,13 +109,13 @@ $ pip install mxnet==1.0.0
 
 <div class="v0-12-1">
 
-```bash
+```
 $ pip install mxnet==0.12.1
 ```
 
 For MXNet 0.12.0:
 
-```bash
+```
 $ pip install mxnet==0.12.0
 ```
 
@@ -122,7 +123,7 @@ $ pip install mxnet==0.12.0
 
 <div class="v0-11-0">
 
-```bash
+```
 $ pip install mxnet==0.11.0
 ```
 
@@ -130,7 +131,7 @@ $ pip install mxnet==0.11.0
 
 <div class="master">
 
-```bash
+```
 $ pip install mxnet --pre
 ```
 
@@ -158,13 +159,13 @@ If you skip this step, you need to use *sudo* each time you invoke Docker.
 
 **Step 3** Pull the MXNet docker image.
 
-```bash
+```
 $ docker pull mxnet/python # Use sudo if you skip Step 2
 ```
 
 You can list docker images to see if mxnet/python docker image pull was successful.
 
-```bash
+```
 $ docker images # Use sudo if you skip Step 2
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
@@ -193,7 +194,7 @@ Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 <div class="v1-2-1">
 
-```bash
+```
 $ pip install mxnet-cu92
 ```
 
@@ -202,7 +203,7 @@ $ pip install mxnet-cu92
 
 <div class="v1-1-0">
 
-```bash
+```
 $ pip install mxnet-cu91==1.1.0
 ```
 
@@ -212,7 +213,7 @@ $ pip install mxnet-cu91==1.1.0
 
 <div class="v1-0-0">
 
-```bash
+```
 $ pip install mxnet-cu90==1.0.0
 ```
 
@@ -221,7 +222,7 @@ $ pip install mxnet-cu90==1.0.0
 
 <div class="v0-12-1">
 
-```bash
+```
 $ pip install mxnet-cu90==0.12.1
 ```
 
@@ -230,7 +231,7 @@ $ pip install mxnet-cu90==0.12.1
 
 <div class="v0-11-0">
 
-```bash
+```
 $ pip install mxnet-cu80==0.11.0
 ```
 
@@ -242,7 +243,7 @@ CUDA should be installed first. Instructions can be found in the <a href="ubuntu
 
 **Important:** Make sure your installed CUDA version matches the CUDA version in the pip package. Check your CUDA version with the following command:
 
-```bash
+```
 nvcc --version
 ```
 
@@ -270,13 +271,13 @@ If you skip this step, you need to use *sudo* each time you invoke Docker.
 
 **Step 4** Pull the MXNet docker image.
 
-```bash
+```
 $ docker pull mxnet/python:gpu # Use sudo if you skip Step 2
 ```
 
 You can list docker images to see if mxnet/python docker image pull was successful.
 
-```bash
+```
 $ docker images # Use sudo if you skip Step 2
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
@@ -305,7 +306,7 @@ The default version of R that is installed with `apt-get` is insufficient. You w
 
 After you have setup R v3.4.4+ and MXNet, you can build and install the MXNet R bindings with the following, assuming that `incubator-mxnet` is the source directory you used to build MXNet as follows:
 
-```bash
+```
 $ cd incubator-mxnet
 $ make rpkg
 ```
@@ -319,7 +320,7 @@ The default version of R that is installed with `apt-get` is insufficient. You w
 
 After you have setup R v3.4.4+ and MXNet, you can build and install the MXNet R bindings with the following, assuming that `incubator-mxnet` is the source directory you used to build MXNet as follows:
 
-```bash
+```
 $ cd incubator-mxnet
 $ make rpkg
 ```
@@ -388,7 +389,7 @@ Follow the installation instructions [in this guide](./ubuntu_setup.md) to set u
 <br/>
 <div class="v1-2-1">
 
-```bash
+```
 $ pip install mxnet
 ```
 
@@ -397,7 +398,7 @@ $ pip install mxnet
 
 <div class="v1-1-0">
 
-```bash
+```
 $ pip install mxnet==1.1.0
 ```
 
@@ -406,7 +407,7 @@ $ pip install mxnet==1.1.0
 
 <div class="v1-0-0">
 
-```bash
+```
 $ pip install mxnet==1.0.0
 ```
 
@@ -414,7 +415,7 @@ $ pip install mxnet==1.0.0
 
 <div class="v0-12-1">
 
-```bash
+```
 $ pip install mxnet=0.12.1
 ```
 
@@ -423,7 +424,7 @@ $ pip install mxnet=0.12.1
 
 <div class="v0-11-0">
 
-```bash
+```
 $ pip install mxnet==0.11.0
 ```
 
@@ -431,7 +432,7 @@ $ pip install mxnet==0.11.0
 
 <div class="master">
 
-```bash
+```
 $ pip install mxnet --pre
 ```
 
@@ -453,13 +454,13 @@ Docker images with *MXNet* are available at [Docker Hub](https://hub.docker.com/
 
 **Step 2** Pull the MXNet docker image.
 
-```bash
+```
 $ docker pull mxnet/python
 ```
 
 You can list docker images to see if mxnet/python docker image pull was successful.
 
-```bash
+```
 $ docker images
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
@@ -575,7 +576,7 @@ Follow the installation instructions [in this guide](./osx_setup.md) to set up M
 
 <div class="v1-2-1">
 
-```bash
+```
 $ pip install mxnet
 ```
 
@@ -583,7 +584,7 @@ $ pip install mxnet
 
 <div class="v1-1-0">
 
-```bash
+```
 $ pip install mxnet==1.1.0
 ```
 
@@ -591,7 +592,7 @@ $ pip install mxnet==1.1.0
 
 <div class="v1-0-0">
 
-```bash
+```
 $ pip install mxnet==1.0.0
 ```
 
@@ -599,7 +600,7 @@ $ pip install mxnet==1.0.0
 
 <div class="v0-12-1">
 
-```bash
+```
 $ pip install mxnet==0.12.1
 ```
 
@@ -607,7 +608,7 @@ $ pip install mxnet==0.12.1
 
 <div class="v0-11-0">
 
-```bash
+```
 $ pip install mxnet==0.11.0
 ```
 
@@ -615,7 +616,7 @@ $ pip install mxnet==0.11.0
 
 <div class="master">
 
-```bash
+```
 $ pip install mxnet --pre
 ```
 
@@ -651,13 +652,13 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 **Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
 Check your CUDA version with the following command:
 
-```bash
+```
 nvcc --version
 ```
 
 You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
-```bash
+```
 $ pip install mxnet-cu92
 ```
 
@@ -672,13 +673,13 @@ Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 **Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
 Check your CUDA version with the following command:
 
-```bash
+```
 nvcc --version
 ```
 
 You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
-```bash
+```
 $ pip install mxnet-cu91==1.1.0
 ```
 
@@ -690,7 +691,7 @@ Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
 
-```bash
+```
 $ pip install mxnet-cu90==1.0.0
 ```
 
@@ -700,13 +701,13 @@ $ pip install mxnet-cu90==1.0.0
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 9.0.
 
-```bash
+```
 $ pip install mxnet-cu90==0.12.1
 ```
 
 Install *MXNet* 0.12.0 with GPU support using CUDA 9.0.
 
-```bash
+```
 $ pip install mxnet-cu90==0.12.0
 ```
 
@@ -716,7 +717,7 @@ $ pip install mxnet-cu90==0.12.0
 
 **Step 2**  Install *MXNet* with GPU support using CUDA 8.0.
 
-```bash
+```
 $ pip install mxnet-cu80==0.11.0
 ```
 
@@ -729,13 +730,13 @@ $ pip install mxnet-cu80==0.11.0
 **Important**: Make sure your installed CUDA version matches the CUDA version in the pip package.
 Check your CUDA version with the following command:
 
-```bash
+```
 nvcc --version
 ```
 
 You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
-```bash
+```
 $ pip install mxnet-cu92 --pre
 ```
 
@@ -854,7 +855,7 @@ The following command will build a container with dependencies and tools and the
 ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this
 file to your Raspberry Pi.
 
-```bash
+```
 ci/build.py -p armv7
 ```
 
@@ -862,7 +863,7 @@ ci/build.py -p armv7
 
 Create a virtualenv and install the package we created previously.
 
-```bash
+```
 virtualenv -p `which python3` mxnet_py3
 source mxnet_py3/bin/activate
 pip install mxnet-x.x.x-py2.py3-none-any.whl
@@ -893,19 +894,19 @@ On Raspbian versions Wheezy and later, you need the following dependencies:
 
 Install these dependencies using the following commands in any directory:
 
-```bash
+```
     sudo apt-get update
     sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev virtualenv
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
-```bash
+```
     git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd incubator-mxnet
 ```
 
 Build:
-```bash
+```
     mkdir -p build && cd build
     cmake \
         -DUSE_SSE=OFF \
@@ -928,7 +929,7 @@ compiler is running out of memory (especially if you are on Raspberry Pi 1, 2 or
 less than 1GB of RAM), this can often be rectified by increasing the swapfile size on the Pi by
 editing the file /etc/dphys-swapfile and changing the line CONF_SWAPSIZE=100 to CONF_SWAPSIZE=1024,
 then running:
-```bash
+```
   sudo /etc/init.d/dphys-swapfile stop
   sudo /etc/init.d/dphys-swapfile start
   free -m # to verify the swapfile size has been increased
@@ -938,7 +939,7 @@ then running:
 
 To install Python bindings run the following commands in the MXNet directory:
 
-```bash
+```
     cd python
     pip install --upgrade pip
     pip install -e .
@@ -947,7 +948,7 @@ To install Python bindings run the following commands in the MXNet directory:
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 Alternatively you can create a whl package installable with pip with the following command:
-```bash
+```
 ci/docker/runtime_functions.sh build_wheel python/ $(realpath build)
 ```
 
@@ -990,7 +991,7 @@ You need the following additional dependencies:
 
 Install these dependencies using the following commands in any directory:
 
-```bash
+```
     sudo apt-get update
     sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
     sudo pip install pip --upgrade
@@ -999,23 +1000,23 @@ Install these dependencies using the following commands in any directory:
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
-```bash
+```
     git clone https://github.com/apache/incubator-mxnet.git --recursive
     cd incubator-mxnet
 ```
 
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
-```bash
+```
     cp make/crosscompile.jetson.mk config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
-```bash
+```
 MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
 ```
 
 Now you can build the complete MXNet library with the following command:
-```bash
+```
     make -j $(nproc)
 ```
 
@@ -1025,7 +1026,7 @@ Executing this command creates a file called `libmxnet.so` in the mxnet/lib dire
 
 To install Python bindings run the following commands in the MXNet directory:
 
-```bash
+```
     cd python
     pip install --upgrade pip
     pip install -e .
@@ -1035,11 +1036,11 @@ Note that the `-e` flag is optional. It is equivalent to `--editable` and means 
 
 Add the mxnet folder to the path:
 
-```bash
+```
     cd ..
     export MXNET_HOME=$(pwd)
-    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.bashrc
-    source ~/.bashrc
+    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
+    source ~/.rc
 ```
 
 You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
