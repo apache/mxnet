@@ -7,13 +7,13 @@ The goal of this tutorial is to explain some common misconceptions about using [
 
 Instead of using NumPy arrays Apache MXNet offers its own array implementation named [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html). `NDArray API` was intentionally designed to be similar to `NumPy`, but there are differences.
 
-One key difference is in the way calculations are executed. Every `NDArray` manipulation in Apache MXNet is done in asynchronous, non-blocking way. That means, that when we write code like `c = a * b`, where both `a` and `b` are `NDArrays`, the function got pushed to the [Execution Engine](https://mxnet.incubator.apache.org/architecture/overview.html#execution-engine), which starts the calculation. The function immediately returns back, and the  user thread can continue execution, despite the fact that the calculation may not have been completed yet. 
+One key difference is in the way calculations are executed. Every `NDArray` manipulation in Apache MXNet is done in asynchronous, non-blocking way. That means, that when we write code like `c = a * b`, where both `a` and `b` are `NDArrays`, the function is pushed to the [Execution Engine](https://mxnet.incubator.apache.org/architecture/overview.html#execution-engine), which starts the calculation. The function immediately returns back, and the  user thread can continue execution, despite the fact that the calculation may not have been completed yet. 
 
-`Execution Engine` builds computation graph which may reorder or combine some calculations, but it honors dependency order: if there are other manipulation with `c` done later in the code, the `Execution Engine` will start doing them once the result of `c` is available. We don't need to write callbacks to start execution of subsequent code - the `Execution Engine` is going to do it for us. 
+`Execution Engine` builds the computation graph which may reorder or combine some calculations, but it honors dependency order: if there are other manipulation with `c` done later in the code, the `Execution Engine` will start doing them once the result of `c` is available. We don't need to write callbacks to start execution of subsequent code - the `Execution Engine` is going to do it for us. 
 
 To get the result of the computation we only need to access the resulting variable, and the flow of the code will be blocked until the computation results are assigned to the resulting variable. This behavior allows to increase code performance while still supporting imperative programming mode. 
 
-Refer to [this tutorial](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html), if you are new to Apache MXNet and would like to learn more how to manipulate NDArrays.
+Refer to the [intro tutorial to NDArray](https://mxnet.incubator.apache.org/tutorials/basic/ndarray.html), if you are new to Apache MXNet and would like to learn more how to manipulate NDArrays.
 
 ## Converting NDArray to NumPy Array blocks calculation
 
@@ -27,13 +27,7 @@ The best solution is to **make manipulations directly on NDArrays by methods pro
 
 ## NumPy operators vs. NDArray operators
 
-Despite the fact that [NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html) was specifically designed to be similar to `NumPy`, sometimes it is not easy to replace existing `NumPy` computations. The main reason is that not all operators, that are available in `NumPy`, are available in `NDArray API`. [This regularly updated page](https://github.com/apache/incubator-mxnet/issues/3199) contains the list of `NDArray API`  operators in progress, where:
-
-* v : Already done and it is consistent to NumPy
-* p : Partially done. The part that should be fixed is in the comments
-* x : Does not exist. Needs to be added into Apache MXNet
-* = : Does not exist, and will not be supported any time soon
-* ? : Unsure whether x or =, open for discussion
+Despite the fact that [NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html) was specifically designed to be similar to `NumPy`, sometimes it is not easy to replace existing `NumPy` computations. The main reason is that not all operators, that are available in `NumPy`, are available in `NDArray API`. The list of currently available operators is available on [NDArray class page](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#the-ndarray-class).
 
 If a required operator is missing from `NDArray API`, there are few things you can do.
 
@@ -90,7 +84,7 @@ pad_array(nd.array([1, 2, 3]), max_length=10)
     <NDArray 10 @cpu(0)> <!--notebook-skip-line-->
 
 
-### Search for an operator on [Github](https://github.com/apache/incubator-mxnet/pulls)
+### Search for an operator on [Github](https://github.com/apache/incubator-mxnet/labels/Operator)
 
 Apache MXNet community is responsive to requests, and everyone is welcomed to contribute new operators. Have in mind, that there is always a lag between new operators being merged into the codebase and release of a next stable version. For example, [nd.diag()](https://github.com/apache/incubator-mxnet/pull/11643) operator was recently introduced to Apache MXNet, but on the moment of writing this tutorial, it is not in any stable release. You can always get all latest implementations by installing the [master version](https://mxnet.incubator.apache.org/install/index.html?version=master#) of Apache MXNet.
 
@@ -152,19 +146,19 @@ for data, label in train_data:
         print("Loss: {}".format(np.mean(prev_loss.asnumpy())))
 ```
 
-    Loss: 2.327800989151001 <!--notebook-skip-line-->
+    Loss: 2.310760974884033 <!--notebook-skip-line-->
 
-    Loss: 2.329122304916382 <!--notebook-skip-line-->
-    
-    Loss: 2.33107852935791 <!--notebook-skip-line-->
+    Loss: 2.334498643875122 <!--notebook-skip-line-->
 
-    Loss: 2.3314738273620605 <!--notebook-skip-line-->
+    Loss: 2.3244147300720215 <!--notebook-skip-line-->
 
-    Loss: 2.322233200073242 <!--notebook-skip-line-->
-    
-    Loss: 2.3387062549591064 <!--notebook-skip-line-->
-    
-    Loss: 2.3265180587768555 <!--notebook-skip-line-->
+    Loss: 2.332686424255371 <!--notebook-skip-line-->
+
+    Loss: 2.321366310119629 <!--notebook-skip-line-->
+
+    Loss: 2.3236165046691895 <!--notebook-skip-line-->
+
+    Loss: 2.3178648948669434 <!--notebook-skip-line-->
 
 
 ## Conclusion
