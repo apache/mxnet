@@ -234,10 +234,10 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
-<br/>
 
 **NOTES:**
+
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
 
@@ -713,10 +713,10 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr>
-Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
-<br/>
 
 **NOTES:**
+
+Refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
