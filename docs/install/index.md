@@ -1,6 +1,6 @@
 # Installing MXNet
 
-Indicate your preferred configuration. Then, follow the customized commands to install *MXNet*.
+Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
   <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
@@ -181,14 +181,15 @@ mxnet/python        latest              00d026968b3c        3 weeks ago         
 Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div><!-- END of build from source -->
+
 </div><!-- END of CPU -->
 <!-- END - Linux Python CPU Installation Instructions -->
 
 <!-- START - Linux Python GPU Installation Instructions -->
 
 <div class="gpu">
-
 <div class="pip">
+
 <br/>
 
 <div class="v1-2-1">
@@ -199,16 +200,13 @@ $ pip install mxnet-cu92
 
 </div> <!-- End of v1-2-1-->
 
-
 <div class="v1-1-0">
 
 ```
 $ pip install mxnet-cu91==1.1.0
 ```
 
-
 </div> <!-- End of v1-1-0-->
-
 
 <div class="v1-0-0">
 
@@ -218,7 +216,6 @@ $ pip install mxnet-cu90==1.0.0
 
 </div> <!-- End of v1-0-0-->
 
-
 <div class="v0-12-1">
 
 ```
@@ -226,7 +223,6 @@ $ pip install mxnet-cu90==0.12.1
 ```
 
 </div> <!-- End of v0-12-1-->
-
 
 <div class="v0-11-0">
 
@@ -288,7 +284,7 @@ mxnet/python        gpu                 493b2683c269        3 weeks ago         
 </div> <!-- END of docker -->
 
 <div class="build-from-source">
-</br>
+<br/>
 Refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 
@@ -486,13 +482,14 @@ Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 <!-- START - Mac OS Python GPU Installation Instructions -->
 <div class="gpu">
 <div class="pip virtualenv docker">
-</br>
+<br/>
 
 Try the **Build from Source** option for now.
 
 </div>
 
 <div class="build-from-source">
+<br/>
 
 Refer to the <a href="osx_setup.html">MXNet macOS installation guide</a>.
 
@@ -623,11 +620,13 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 
+<a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- End of pip -->
 
 
 <div class="virtualenv docker build-from-source">
+<br/>
 
 Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
@@ -748,6 +747,7 @@ Refer to [pypi for older packages](https://pypi.org/project/mxnet/).
 Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for status on CUDA 9.1 support.
 
 </div>
+
 <div class="build-from-source">
 <br/>
 
