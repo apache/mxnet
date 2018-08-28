@@ -159,7 +159,7 @@ class StatefulComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
-    CreateDefaultInputs(in_array, in_array_fallback);
+    CreateDefaultInputs(in_array, &in_array_fallback);
     fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
     return;
 #endif
@@ -232,7 +232,7 @@ class FComputeExExecutor : public OpExecutor {
     // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
     const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
     if (!is_mkldnn.get(attrs_.op, false)) {
-      CreateDefaultInputs(in_array, in_array_fallback);
+      CreateDefaultInputs(in_array, &in_array_fallback);
       fcompute_(attrs_, op_ctx, in_array_fallback, req, out_array);
       return;
     }

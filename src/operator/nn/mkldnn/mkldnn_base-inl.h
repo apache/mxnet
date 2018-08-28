@@ -358,12 +358,12 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
 
 // TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
 static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
-                                       const std::vector<NDArray> &out_arrs) {
+                                       std::vector<NDArray> *out_arrs) {
   for (size_t i = 0; i < arrs.size(); ++i) {
     if (arrs[i].IsMKLDNNData())
-      out_arrs[i] = arrs[i].Reorder2Default();
+      out_arrs->emplace_back(arrs[i].Reorder2Default());
     else
-      out_arrs[i] = arrs[i];
+      out_arrs->emplace_back(arrs[i]);
   }
 }
 
