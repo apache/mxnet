@@ -1,5 +1,20 @@
 # Validate Your MXNet Installation
 
+- [Python](#python)
+- [Python with GPU](#python-with-gpu)
+- [Verify GPU training](#verify-gpu-training)
+- [Virtualenv](#virtualenv)
+- [Docker with CPU](#docker-with-cpu)
+- [Docker with GPU](#docker-with-gpu)
+- [Cloud](#cloud)
+- [C++](#alternative-language-bindings)
+- [Clojure](#clojure)
+- [Julia](#julia)
+- [Perl](#perl)
+- [R](#r)
+- [Scala](#scala)
+
+
 ## Python
 
 Start the python terminal.
