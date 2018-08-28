@@ -69,7 +69,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 </div>
 </div>
 </div>
-
+<hr>
 <!-- END - Main Menu -->
 
 <!-- START - Linux Python CPU Installation Instructions -->
@@ -135,7 +135,7 @@ $ pip install mxnet --pre
 ```
 
 </div> <!-- End of master-->
-
+<hr>
 Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
@@ -239,7 +239,7 @@ $ pip install mxnet-cu92 --pre
 ```
 
 </div> <!-- End of master-->
-
+<hr>
 Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 **NOTES:**
@@ -448,7 +448,7 @@ $ pip install mxnet --pre
 ```
 
 </div> <!-- End of master-->
-
+<hr>
 Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- END of pip -->
@@ -637,7 +637,7 @@ $ pip install mxnet --pre
 ```
 
 </div> <!-- End of master-->
-
+<hr>
 Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 </div> <!-- End of pip -->
@@ -705,7 +705,7 @@ $ pip install mxnet-cu92 --pre
 ```
 
 </div> <!-- End of master-->
-
+<hr>
 Refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/), or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 **NOTES:**
