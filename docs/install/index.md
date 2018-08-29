@@ -1059,4 +1059,4 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 # Source Download
 
-<a href="download.html">Download</a> your required version of MXNet.
+<a href="download.html">Download</a> your required version of MXNet and <a href="build_from_source.html">build from source</a>.
