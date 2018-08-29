@@ -579,16 +579,15 @@ rpkg:
 	echo "import(methods)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
-	rm -rf R-package/NAMESPACE
 	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
 	R CMD INSTALL R-package
-	rm -rf R-package/src/image_recordio.h
 
 rpkgtest:
-	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
+	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
+	Rscript -e 'library(covr); codecov("R-package")'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
