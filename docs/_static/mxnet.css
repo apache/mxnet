@@ -256,7 +256,6 @@ img {
 img.social-logo {
     min-width: 5vmin;
     margin-bottom: 15px;
-    max-height: 8vh;
     max-width: 3vw;
     padding: 10px 10px 10px 10px;
 }
