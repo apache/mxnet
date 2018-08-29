@@ -228,8 +228,14 @@ class MXNetGraph(object):
         # Deriving the output_label name.
         output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
 
-        # Determine output shape
-        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape, output_label)
+        # Determine outputs shapes
+        input_names = [n for n in sym.list_inputs() if n not in params]
+        input_pairs = {n: in_shape[i] for i, n in enumerate(input_names)}
+        _, output_shapes, _ = sym.get_internals().infer_shape(**input_pairs)
+
+        output_suffix = '_output'
+        output_names = [
+            o[:-len(output_suffix)] for o in sym.list_outputs() if o.endswith(output_suffix)]
 
         weights = MXNetGraph.convert_weights_to_numpy(params)
 
@@ -265,6 +271,7 @@ class MXNetGraph(object):
                     weights=weights,
                     in_shape=in_shape[graph_input_idx],
                     in_type=in_type,
+                    out_shape=output_shapes[idx],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     index_lookup=index_lookup)
@@ -279,6 +286,7 @@ class MXNetGraph(object):
                     weights=weights,
                     in_shape=in_shape,
                     in_type=in_type,
+                    out_shape=output_shapes[idx],
                     proc_nodes=all_processed_nodes,
                     initializer=initializer,
                     index_lookup=index_lookup,
@@ -294,14 +302,14 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        if idx == (len(mx_graph) - 1):
+                        if idx == (len(mx_graph) - 1) or converted_node.name in output_names:
                             # If converted node doesnt have name, use it from output field
                             if not converted_node.name:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=converted_node.output[0],
                                         elem_type=in_type,
-                                        shape=output_shape
+                                        shape=output_shapes[idx]
                                     )
                                 )
                             else:
@@ -309,7 +317,7 @@ class MXNetGraph(object):
                                     make_tensor_value_info(
                                         name=converted_node.name,
                                         elem_type=in_type,
-                                        shape=output_shape
+                                        shape=output_shapes[idx]
                                     )
                                 )
                             if verbose:
