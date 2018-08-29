@@ -109,6 +109,45 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_softmax)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
 
+MXNET_OPERATOR_REGISTER_UNARY(softmin)
+.describe(R"code(Applies the softmin function.
+
+The resulting array contains elements in the range (0,1) and the elements along the given axis sum
+up to 1.
+
+.. math::
+   softmin(\mathbf{z/t})_j = \frac{e^{-z_j/t}}{\sum_{k=1}^K e^{-z_k/t}}
+
+for :math:`j = 1, ..., K`
+
+t is the temperature parameter in softmax function. By default, t equals 1.0
+
+Example::
+
+  x = [[ 1.  2.  3.]
+       [ 3.  2.  1.]]
+
+  softmin(x,axis=0) = [[ 0.88079703,  0.5,  0.11920292],
+                       [ 0.11920292,  0.5,  0.88079703]]
+
+  softmin(x,axis=1) = [[ 0.66524094,  0.24472848,  0.09003057],
+                       [ 0.09003057,  0.24472848,  0.66524094]]
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd, true>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmin"})
+.add_arguments(SoftmaxParam::__FIELDS__());
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_softmin)
+.set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
+                                                        mxnet_op::softmax_bwd, true>);
+
 MXNET_OPERATOR_REGISTER_UNARY(log_softmax)
 .describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
