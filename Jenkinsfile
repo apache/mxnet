@@ -907,7 +907,7 @@ core_logic: {
             utils.init_git()
             utils.unpack_lib('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
-            utils.publish_test_coverage()disable_test_mkldnn.test_activation
+            utils.publish_test_coverage()
           }
         }
       }
