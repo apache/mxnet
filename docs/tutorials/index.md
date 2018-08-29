@@ -40,6 +40,7 @@ Select API:&nbsp;
 * Practitioner Guides
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
+    * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
@@ -96,6 +97,7 @@ Select API:&nbsp;
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
+    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
 * API Guides
     * Core APIs
         * NDArray

@@ -1844,7 +1844,6 @@ def test_binary_op():
         #c = a % b
         c = mx.sym.cast(a, dtype='float64') % mx.sym.cast(b, dtype='float64')
         # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
-        #check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
         check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data, rtol=0, atol=0)
         check_binary_op_backward(c,
             lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
@@ -1913,10 +1912,16 @@ def test_broadcast_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data, mx_nd_func=mx.nd.divide)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
-    def test_bmod(a, b):
+    def test_bmod(a_, b_):
+        # Python and numpy operate only in double so to avoid numerical errors we have to use
+        # doubles as well. This was a flaky test before when using float32. seed 1688524483, 1768433044
+        a = mx.sym.cast(a_, dtype='float64')
+        b = mx.sym.cast(b_, dtype='float64')
+        # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
         c = mx.sym.broadcast_mod(a, b)
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1, mx_nd_func=mx.nd.modulo)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data, atol=1)
+        check_binary_op_backward(c,
+                                 lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.broadcast_mod(mx.sym.cast(a, dtype='int32'), mx.sym.cast(b, dtype='int32'))
@@ -1974,13 +1979,7 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
-    '''
-    Flaky Test Disabled due to master build failure:
-    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline
-    Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
-
     test_bmod(a, b)
-    '''
     test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
@@ -3646,10 +3645,18 @@ def test_init():
                 nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
                 assert_almost_equal(np_out, nd_out.asnumpy())
 
+    def test_arange_inferstop():
+        s = mx.sym.arange(start=0, stop=None, infer_range=True)
+        s = mx.sym.elemwise_add(s, mx.sym.zeros(shape=[5]))
+        exe = s.bind(ctx=mx.cpu(), args={})
+        exe.forward()
+        assert_almost_equal(exe.outputs[0].asnumpy(), np.array([0,1,2,3,4]))
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
     test_arange()
+    test_arange_inferstop()
 
 
 @with_seed()
@@ -4507,6 +4514,14 @@ def test_where():
                                              y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                              condition=mx.nd.array([1,0])), MXNetError)
 
+    def test_1d_cond():
+        cond = mx.nd.array([1, 0, 1])
+        x = mx.nd.array([[2, 3], [4, 5], [6, 7]])
+        y = mx.nd.array([[7, 8], [9, 10], [10, 11]])
+        expect_out = np.array([[2, 3], [9, 10], [6, 7]])
+        out = mx.nd.where(cond, x, y).asnumpy()
+        assert(expect_out.all() == out.all())
+
     test_where_helper((5, 9), True)
     test_where_helper((5, 9), False)
     test_where_helper((5, 7, 9), True)
@@ -4518,6 +4533,7 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
     test_invalid_shape()
+    test_1d_cond()
 
 @with_seed()
 def test_new_softmax():
@@ -5728,6 +5744,7 @@ def test_stack():
 
 
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12329")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0

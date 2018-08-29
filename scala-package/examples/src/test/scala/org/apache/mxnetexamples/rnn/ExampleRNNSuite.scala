@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory
 
 import scala.sys.process.Process
 
-@Ignore
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ExampleRNNSuite])
 
@@ -51,7 +50,7 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
       ctx = Context.gpu()
     }
     LstmBucketing.runTraining(tempDirPath + "/RNN/sherlockholmes.train.txt",
-        tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
+      tempDirPath + "/RNN/sherlockholmes.valid.txt", Array(ctx), 1)
   }
 
   test("Example CI: Test TrainCharRNN") {
@@ -60,16 +59,16 @@ class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       val ctx = Context.gpu()
       TrainCharRnn.runTrainCharRnn(tempDirPath + "/RNN/obama.txt",
-          tempDirPath, ctx, 1)
+        tempDirPath, ctx, 1)
     } else {
       logger.info("CPU not supported for this test, skipped...")
     }
   }
 
-  test("Example CI: Test TestCharRNN") {
+  test("Example CI: Test Inference on CharRNN") {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val ctx = Context.gpu()
-    TestCharRnn.runTestCharRNN(tempDirPath + "/RNN/obama.txt",
-        tempDirPath + "/RNN/obama", "The joke")
+    TestCharRnn.runInferenceCharRNN(tempDirPath + "/RNN/obama.txt",
+      tempDirPath + "/RNN/obama", "The joke")
   }
 }

@@ -46,9 +46,9 @@ from ..context import Context, current_context
 from . import _internal
 from . import op
 try:
-    from .gen_sparse import * # pylint: disable=redefined-builtin
+    from .gen_sparse import retain as gs_retain # pylint: disable=redefined-builtin
 except ImportError:
-    pass
+    gs_retain = None
 from ._internal import _set_ndarray_class
 from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
@@ -787,7 +787,9 @@ class RowSparseNDArray(BaseSparseNDArray):
         The arguments are the same as for :py:func:`retain`, with
         this array as data.
         """
-        return retain(self, *args, **kwargs)
+        if not gs_retain:
+            raise ImportError("gen_sparse could not be imported")
+        return gs_retain(*args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.

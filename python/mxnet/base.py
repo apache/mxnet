@@ -574,7 +574,7 @@ def _get_op_name_prefix(op_name):
     return ""
 
 
-# pylint: enable=too-many-locals, invalid-name
+# pylint: enable=invalid-name
 def _init_op_module(root_namespace, module_name, make_op_func):
     """
     Registers op functions created by `make_op_func` under

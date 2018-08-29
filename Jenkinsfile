@@ -173,12 +173,22 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5': {
+    'CPU: Clang 6': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang50') {
+        ws('workspace/build-cpu-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
+          }
+        }
+      }
+    },
+    'CPU: Clang Tidy': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang60_tidy') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
           }
         }
       }
@@ -194,13 +204,13 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5 MKLDNN': {
+    'CPU: Clang 6 MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang50') {
+        ws('workspace/build-cpu-mkldnn-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
+            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
           }
         }
       }
@@ -363,16 +373,16 @@ core_logic: {
         }
       }
     },
-    // 'ARMv7':{
-    //   node(NODE_LINUX_CPU) {
-    //     ws('workspace/build-ARMv7') {
-    //       timeout(time: max_time, unit: 'MINUTES') {
-    //         utils.init_git()
-    //         utils.docker_run('armv7', 'build_armv7', false)
-    //       }
-    //     }
-    //   }
-    // },
+    'ARMv7':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ARMv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('armv7', 'build_armv7', false)
+          }
+        }
+      }
+    },
     'ARMv6':{
       node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv6') {
