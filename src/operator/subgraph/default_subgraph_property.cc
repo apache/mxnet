@@ -34,16 +34,16 @@ class ContainOpSelector: public SubgraphSelector {
   explicit ContainOpSelector(const std::unordered_set<std::string>& op_names)
     : op_names_(op_names) {}
 
-  virtual bool Select(const nnvm::Node &n) {
-    return !n.is_variable() && op_names_.count(n.op()->name);
+  virtual bool Select(const nnvm::Node &seed_node) {
+    return !seed_node.is_variable() && op_names_.count(seed_node.op()->name);
   }
 
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return !new_node.is_variable() && op_names_.count(new_node.op()->name);
+  virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) {
+    return !input_node.is_variable() && op_names_.count(input_node.op()->name);
   }
 
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return !new_node.is_variable() && op_names_.count(new_node.op()->name);
+  virtual bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) {
+    return !output_node.is_variable() && op_names_.count(output_node.op()->name);
   }
  private:
   const std::unordered_set<std::string>& op_names_;

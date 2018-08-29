@@ -31,28 +31,45 @@ namespace mxnet {
 namespace op {
 
 /*
- * This provides criteria for selecting nodes in a subgraph.
- * When a node is passed to this object, the selection criteria may be changed.
- * We can also specify what links we should use when traversing the neighbor
- * nodes.
+ * This provides criteria for the graph partitioning algorithm to select
+ * nodes to subgraphs.
+ * The algorithm first sorts all the nodes in topological order, and then
+ * loops through the sorted nodes and tries to find a subgraph starting
+ * from each node (we call it a seed node) that satisfies the following two conditions:
+ * 1. The node has not been selected before.
+ * 2. The function Select is called on the node and returns true.
+ *
+ * Expanding from this seed node, we do BFS to traverse the graph.
+ * During the traversal, we call SelectInput and SelectOutput to determine
+ * if a neighboring node of the current node should be selected as a candidate for the subgraph.
+ * The search continues when a new node is selected as a candidate, and terminates when no more
+ * qualified nodes are found. When the search ends, all of the candidate nodes will
+ * be passed to the function Filter to finalize the subgraph. The filtering gives
+ * developers the last opportunity to drop off some of the candidate nodes.
+ * By default, Filter returns all nodes as the subgraph nodes.
+ * If the pre-selected subgraph becomes disconnected because some
+ * nodes are filtered out in the Filter function, the algorithm will automatically convert
+ * the rest of the nodes to multiple valid subgraphs based upon their connectivity.
  */
 class SubgraphSelector {
  public:
   virtual ~SubgraphSelector() {}
-  // Determine if the node should be selected for a subgraph.
-  virtual bool Select(const nnvm::Node &n) = 0;
   /*!
-   * \brief Determines if to select input_node while at node n.
-   * \param n the base node whose input node is to be selected
-   * \param input_node the input node of the base node n
+   * \brief Determines if to search for other nodes to form a subgraph from the seed_node.
    */
-  virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &input_node) = 0;
+  virtual bool Select(const nnvm::Node &seed_node) = 0;
   /*!
-   * \brief Determines if to select output_node while at node n.
-   * \param n the base node whose output node is to be selected
-   * \param output_node the output node of the base node n
+   * \brief Determines if to select input_node when traverse to the cur_node.
+   * \param cur_node the node for determining whether its input_node should be selected
+   * \param input_node the input node of the cur_node
    */
-  virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &output_node) = 0;
+  virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) = 0;
+  /*!
+   * \brief Determines if to select output_node when traverse to the cur_node.
+   * \param cur_node the node for determining whether its output_node should be selected
+   * \param output_node the output node of the cur_node
+   */
+  virtual bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) = 0;
   // Post processes pre-selected subgraph nodes. Return a list of nodes that
   // users want to keep in subgraph(s).
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
