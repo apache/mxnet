@@ -116,6 +116,8 @@ $ cd python
 $ pip install -e .
 ```
 
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+
 ## Install the MXNet Package for R
 You have 2 options:
 1. Building MXNet with the Prebuilt Binary Package

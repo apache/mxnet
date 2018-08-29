@@ -890,8 +890,8 @@ On Raspbian versions Wheezy and later, you need the following dependencies:
 
 - A C++ compiler that supports C++ 11. The C++ compiler compiles and builds MXNet source code. Supported compilers include the following:
 
-- [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/). Make sure to use gcc 4 and not 5 or 6 as there
-  are known bugs with these compilers.
+    - [G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/). Make sure to use gcc 4 and not 5 or 6 as there are known bugs with these compilers.
+    - [Clang (3.9 - 6)](https://clang.llvm.org/)
 
 Install these dependencies using the following commands in any directory:
 
@@ -918,7 +918,7 @@ Build:
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -GNinja ..
-    ninja -j1
+    ninja -j$(nproc)
 ```
 Some compilation units require memory close to 1GB, so it's recommended that you enable swap as
 explained below and be cautious about increasing the number of jobs when building (-j)
