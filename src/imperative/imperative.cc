@@ -107,7 +107,15 @@ OpStatePtr Imperative::Invoke(
   std::vector<OpReqType> req;
   SetWriteInplaceReq(inputs, outputs, &req);
 
-  return InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
+  auto ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
+  for (size_t i = 0; i < outputs.size(); i++) {
+    if (outputs[i]->shape().ndim() == 0) {
+      outputs[i]->WaitToRead();
+      outputs[i]->SetShapeFromChunk();
+    }
+    CHECK(outputs[i]->shape().ndim());
+  }
+  return ret;
 }
 
 void Imperative::MarkVariables(

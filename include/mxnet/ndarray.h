@@ -104,6 +104,13 @@ class NDArray {
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
           TShape storage_shape = TShape(mshadow::Shape1(0)));
 
+  NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
+    ptr_ = std::make_shared<Chunk>(TShape(mshadow::Shape1(0)), ctx, true, dtype);
+    dtype_ = dtype;
+    storage_type_ = kDefaultStorage;
+    entry_ = {nullptr, 0, 0};
+  }
+
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
@@ -136,6 +143,15 @@ class NDArray {
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
+  }
+
+  void Init(const TShape &shape) {
+    ptr_->Init(shape, this->dtype_);
+    this->shape_ = shape;
+  }
+
+  void SetShapeFromChunk() {
+    shape_ = ptr_->storage_shape;
   }
 
   /*
@@ -858,6 +874,13 @@ class NDArray {
         aux_types.emplace_back(aux.type_flag_);
         aux_shapes.emplace_back(aux.shape_);
       }
+    }
+
+    void Init(TShape shape, int dtype) {
+      auto size = shape.Size();
+      storage_shape = shape;
+      shandle.size = size * mshadow::mshadow_sizeof(dtype);
+      this->CheckAndAlloc();
     }
 
     /*! \brief set the shape for ith aux data, and update storage shape if necessary */
