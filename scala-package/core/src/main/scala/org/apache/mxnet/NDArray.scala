@@ -562,16 +562,24 @@ object NDArray extends NDArrayBase {
  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true,
-                             addToCollector: Boolean = true) extends WarnIfNotDisposed {
+                             addToCollector: Boolean = true)
+  extends WarnIfNotDisposed with NativeResource {
   if (addToCollector) {
     NDArrayCollector.collect(this)
   }
 
+  override def nativeAddress: CPtrAddress = handle
+
+  override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxNDArrayFree
+
+  override val phantomRef: NativeResourcePhantomRef = super.register(this)
+
+  override def bytesAllocated: Long = DType.numOfBytes(this.dtype) * this.shape.product
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
-  @volatile private var disposed = false
-  def isDisposed: Boolean = disposed
+  @volatile private var disposed = isDisposed
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -584,13 +592,13 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * The NDArrays it depends on will NOT be disposed. <br />
    * The object shall never be used after it is disposed.
    */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxNDArrayFree(handle)
-      dependencies.clear()
-      disposed = true
-    }
-  }
+//  def dispose(): Unit = {
+//    if (!disposed) {
+//      _LIB.mxNDArrayFree(handle)
+//      dependencies.clear()
+//      disposed = true
+//    }
+//  }
 
   /**
    * Dispose all NDArrays who help to construct this array. <br />
@@ -1034,6 +1042,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     // TODO: naive implementation
     shape.hashCode + toArray.hashCode
   }
+
 }
 
 private[mxnet] object NDArrayConversions {

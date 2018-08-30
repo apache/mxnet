@@ -109,7 +109,6 @@ private[mxnet] trait NativeResource extends AutoCloseable {
 
   /* call {@link deAllocFn} if !{@link isDispose} */
   def dispose(): Unit = {
-    print("dispose called\n")
     if (!isDisposed) {
       checkCall(nativeDeAllocAddress(this.nativeAddress))
       deRegister(phantomRef)
@@ -118,7 +117,6 @@ private[mxnet] trait NativeResource extends AutoCloseable {
   }
 
   override def close(): Unit = {
-    print("close called\n")
     dispose()
   }
 }

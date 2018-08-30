@@ -29,21 +29,33 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
-class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotDisposed {
+class Symbol private(private[mxnet] val handle: SymbolHandle)
+  extends WarnIfNotDisposed with NativeResource {
+
+  override def nativeAddress: CPtrAddress = handle
+
+  override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxSymbolFree
+
+  override val phantomRef: NativeResourcePhantomRef = super.register(this)
+
+  override def bytesAllocated: Long = 0
+
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
   private var disposed = false
-  protected def isDisposed = disposed
+//  protected def isDisposed = disposed
 
   /**
    * Release the native memory.
    * The object shall never be used after it is disposed.
    */
+/*
   def dispose(): Unit = {
     if (!disposed) {
       _LIB.mxSymbolFree(handle)
       disposed = true
     }
   }
+*/
 
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {

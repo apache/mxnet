@@ -45,7 +45,17 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends WarnIfNotDisposed {
+                              private[mxnet] val symbol: Symbol)
+  extends WarnIfNotDisposed with NativeResource {
+
+  override def nativeAddress: CPtrAddress = handle
+
+  override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxExecutorFree
+
+  override val phantomRef: NativeResourcePhantomRef = super.register(this)
+
+  override def bytesAllocated: Long = 0
+
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -60,8 +70,8 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
   private var disposed = false
-  protected def isDisposed = disposed
-
+//  protected def isDisposed = disposed
+/*
   def dispose(): Unit = {
     if (!disposed) {
       outputs.foreach(_.dispose())
@@ -69,6 +79,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
       disposed = true
     }
   }
+*/
 
   /**
    * Return a new executor with the same symbol and shared memory,
