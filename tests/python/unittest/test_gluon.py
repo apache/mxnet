@@ -1220,8 +1220,8 @@ def check_hybrid_static_memory(**kwargs):
     net1(x)
     net2(x)
 
-    def test(net, x):
-        with mx.autograd.record():
+    def test(net, x, record=True):
+        with mx.autograd.record(record):
             y = net(x) + net(x)
             y.backward()
 
@@ -1229,12 +1229,13 @@ def check_hybrid_static_memory(**kwargs):
 
         return y, grads
 
-    y1, grads1 = test(net1, x)
-    y2, grads2 = test(net2, x)
+    for record in (True, False):
+        y1, grads1 = test(net1, x, record)
+        y2, grads2 = test(net2, x, record)
 
-    assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
-    for key in grads1:
-        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
+        for key in grads1:
+            assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
 
 @with_seed()
 def test_hybrid_static_memory():
