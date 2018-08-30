@@ -25,13 +25,129 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <mkldnn_types.h>
+#include <cmath>
+#include <climits>
+#include <set>
+#include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../../src/operator/nn/pooling-inl.h"
+
+using namespace mxnet;
+
+static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
+                                               mkldnn::memory::format format) {
+  mkldnn::memory::dims dims(s.ndim());
+  for (size_t i = 0; i < dims.size(); i++)
+    dims[i] = s[i];
+  mkldnn::memory::desc desc{dims, get_mkldnn_type(dtype), format};
+  return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
+}
+
+static mkldnn::memory::primitive_desc GetExpandedMemPD(
+    mkldnn::memory::primitive_desc pd, float scale, int dim = 0) {
+  CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
+  nnvm::TShape s(pd.desc().data.ndims);
+  for (size_t i = 0; i < pd.desc().data.ndims; i++)
+    s[i] = pd.desc().data.dims[i];
+  s[dim] = static_cast<int>(s[dim] * scale);
+  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
+                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
+}
 
 struct TestArrayShapes {
   std::vector<nnvm::TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
 };
+
+// Init arrays with the default layout.
+static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
+  const TBlob &blob = arr->data();
+  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
+  int size = blob.Size();
+
+  for (int i = 0; i < size; i++)
+    if (is_rand) {
+      data[i] = (std::rand() % 100) - 50;
+    } else {
+      data[i] = i % 100 - 50;
+    }
+}
+
+
+// Init arrays with the specified layout.
+static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
+                            bool is_rand = false) {
+  InitDefaultArray(arr, is_rand);
+  arr->MKLDNNDataReorderAsync(pd);
+  arr->WaitToRead();
+}
+
+static bool IsSameShape(mkldnn::memory::primitive_desc pd, TShape shape) {
+  if (pd.desc().data.ndims != shape.ndim()) return false;
+  for (size_t i = 0; i < shape.ndim(); i++)
+    if (pd.desc().data.dims[i] != shape[i]) return false;
+  return true;
+}
+
+// This function gets special MKLDNN formats without knowing the specific
+// hardware configuration. Certainly, it potentially misses some format if
+// it's specific for certain array shapes. It covers at least one special format
+// for each of the formats: nchw, oihw, goihw.
+// To test the logic of the code in NDArray, these formats should be enough.
+static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int dtype) {
+  if (num_dims == 4) {
+    mkldnn::memory::dims data_dims{1, 3, 224, 224};
+    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
+                                 mkldnn::memory::format::any};
+    mkldnn::memory::dims weight_dims{96, 3, 11, 11};
+    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
+                                   mkldnn::memory::format::any};
+    mkldnn::memory::dims output_dims{1, 96, 54, 54};
+    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
+                                mkldnn::memory::format::any};
+    mkldnn::memory::dims strides{4, 4};
+    mkldnn::memory::dims padding{0, 0};
+
+    mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md, weight_md, out_md, strides,
+                                           padding, padding, mkldnn::padding_kind::zero);
+    mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    std::vector<mkldnn::memory::format> ret(2);
+    ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
+    ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
+    printf("format: %d, %d\n", ret[0], ret[1]);
+    return ret;
+  } else if (num_dims == 5) {
+    mkldnn::memory::dims data_dims{1, 32, 112, 112};
+    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
+                                 mkldnn::memory::format::any};
+    mkldnn::memory::dims weight_dims{32, 1, 1, 3, 3};
+    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
+                                   mkldnn::memory::format::any};
+    mkldnn::memory::dims output_dims{1, 32, 112, 112};
+    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
+                                mkldnn::memory::format::any};
+    mkldnn::memory::dims strides{1, 1};
+    mkldnn::memory::dims padding{1, 1};
+
+    mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
+                                           mkldnn::algorithm::convolution_direct,
+                                           data_md, weight_md, out_md, strides,
+                                           padding, padding, mkldnn::padding_kind::zero);
+    mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    std::vector<mkldnn::memory::format> ret(1);
+    ret[0] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
+    printf("format: %d\n", ret[0]);
+    return ret;
+  } else {
+    return std::vector<mkldnn::memory::format>();
+  }
+}
 
 static TestArrayShapes GetTestArrayShapes() {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
@@ -90,112 +206,6 @@ static TestArrayShapes GetTestArrayShapes() {
   ret.shapes = shapes;
   ret.pds = pds;
   return ret;
-}
-
-// Init arrays with the default layout.
-static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
-  const TBlob &blob = arr->data();
-  mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
-  int size = blob.Size();
-
-  for (int i = 0; i < size; i++)
-    if (is_rand) {
-      data[i] = (std::rand() % 100) - 50;
-    } else {
-      data[i] = i % 100 - 50;
-    }
-}
-
-
-// Init arrays with the specified layout.
-static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive_desc &pd,
-                            bool is_rand = false) {
-  InitDefaultArray(arr, is_rand);
-  arr->MKLDNNDataReorderAsync(pd);
-  arr->WaitToRead();
-}
-
-static bool IsSameShape(mkldnn::memory::primitive_desc pd, TShape shape) {
-  if (pd.desc().data.ndims != shape.ndim()) return false;
-  for (size_t i = 0; i < shape.ndim(); i++)
-    if (pd.desc().data.dims[i] != shape[i]) return false;
-  return true;
-}
-
-static mkldnn::memory::primitive_desc GetMemPD(const TShape s, int dtype,
-                                               mkldnn::memory::format format) {
-  mkldnn::memory::dims dims(s.ndim());
-  for (size_t i = 0; i < dims.size(); i++)
-    dims[i] = s[i];
-  mkldnn::memory::desc desc{dims, get_mkldnn_type(dtype), format};
-  return mkldnn::memory::primitive_desc(desc, CpuEngine::Get()->get_engine());
-}
-
-static mkldnn::memory::primitive_desc GetExpandedMemPD(
-    mkldnn::memory::primitive_desc pd, float scale, int dim = 0) {
-  CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
-  nnvm::TShape s(pd.desc().data.ndims);
-  for (size_t i = 0; i < pd.desc().data.ndims; i++)
-    s[i] = pd.desc().data.dims[i];
-  s[dim] = static_cast<int>(s[dim] * scale);
-  return GetMemPD(s, mshadow::DataType<mshadow::default_real_t>::kFlag,
-                  static_cast<mkldnn::memory::format>(pd.desc().data.format));
-}
-
-// This function gets special MKLDNN formats without knowing the specific
-// hardware configuration. Certainly, it potentially misses some format if
-// it's specific for certain array shapes. It covers at least one special format
-// for each of the formats: nchw, oihw, goihw.
-// To test the logic of the code in NDArray, these formats should be enough.
-static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int dtype) {
-  if (num_dims == 4) {
-    mkldnn::memory::dims data_dims{1, 3, 224, 224};
-    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
-                                 mkldnn::memory::format::any};
-    mkldnn::memory::dims weight_dims{96, 3, 11, 11};
-    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
-                                   mkldnn::memory::format::any};
-    mkldnn::memory::dims output_dims{1, 96, 54, 54};
-    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
-                                mkldnn::memory::format::any};
-    mkldnn::memory::dims strides{4, 4};
-    mkldnn::memory::dims padding{0, 0};
-
-    mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
-                                           mkldnn::algorithm::convolution_direct,
-                                           data_md, weight_md, out_md, strides,
-                                           padding, padding, mkldnn::padding_kind::zero);
-    mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
-    std::vector<mkldnn::memory::format> ret(2);
-    ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
-    ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
-    printf("format: %d, %d\n", ret[0], ret[1]);
-    return ret;
-  } else if (num_dims == 5) {
-    mkldnn::memory::dims data_dims{1, 32, 112, 112};
-    mkldnn::memory::desc data_md{data_dims, get_mkldnn_type(dtype),
-                                 mkldnn::memory::format::any};
-    mkldnn::memory::dims weight_dims{32, 1, 1, 3, 3};
-    mkldnn::memory::desc weight_md{weight_dims, get_mkldnn_type(dtype),
-                                   mkldnn::memory::format::any};
-    mkldnn::memory::dims output_dims{1, 32, 112, 112};
-    mkldnn::memory::desc out_md{output_dims, get_mkldnn_type(dtype),
-                                mkldnn::memory::format::any};
-    mkldnn::memory::dims strides{1, 1};
-    mkldnn::memory::dims padding{1, 1};
-
-    mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
-                                           mkldnn::algorithm::convolution_direct,
-                                           data_md, weight_md, out_md, strides,
-                                           padding, padding, mkldnn::padding_kind::zero);
-    mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
-    std::vector<mkldnn::memory::format> ret(1);
-    ret[0] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
-    printf("format: %d\n", ret[0]);
-    return ret;
-  } else {
-    return std::vector<mkldnn::memory::format>();
-  }
 }
 
 struct NDArrayAttrs {
@@ -520,5 +530,50 @@ int GetBlockSize(TShape shape, int dim) {
 int CalculateWidthPoolOutput(int width, int kernel, int padding, int stride) {
   return (width - kernel + 2 * padding) / stride  + 1;
 }
+
+using VerifyFunc = std::function<void (const std::vector<NDArray *> &in_arrs,
+                                       const std::vector<NDArray *> &out_arrs)>;
+
+void VerifyAddRequest(const std::vector<NDArray*> &in_arrs,
+                      const std::vector<NDArray*> &original_outputs,
+                      const std::vector<NDArray*> &new_outputs,
+                      VerifyFunc verify_fn) {
+  CHECK(original_outputs.size() == new_outputs.size());
+  std::vector<NDArray*> tmp_outputs;
+  NDArray tmp;
+  for (size_t i = 0; i < new_outputs.size(); i++) {
+    tmp = new_outputs[i]->Reorder2Default() - original_outputs[i]->Reorder2Default();
+    tmp_outputs.push_back(&tmp);
+  }
+  Engine::Get()->WaitForAll();
+  verify_fn(in_arrs, tmp_outputs);
+}
+
+void VerifyCopyResult(const std::vector<NDArray *> &in_arrs,
+                      const std::vector<NDArray *> &out_arrs) {
+  NDArray tmp1 = in_arrs[0]->Reorder2Default();
+  NDArray tmp2 = out_arrs[0]->Reorder2Default();
+  EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+  TBlob d1 = tmp1.data();
+  TBlob d2 = tmp2.data();
+  EXPECT_EQ(memcmp(d1.dptr_, d2.dptr_,
+                   tmp1.shape().Size() * sizeof(mshadow::default_real_t)), 0);
+}
+
+void VerifySumResult(const std::vector<NDArray *> &in_arrs,
+                     const std::vector<NDArray *> &out_arrs) {
+  NDArray in1 = in_arrs[0]->Reorder2Default();
+  NDArray in2 = in_arrs[1]->Reorder2Default();
+  NDArray out = out_arrs[0]->Reorder2Default();
+  EXPECT_EQ(in1.shape().Size(), in2.shape().Size());
+  EXPECT_EQ(in1.shape().Size(), out.shape().Size());
+
+  mshadow::default_real_t *d1 = in1.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *d2 = in2.data().dptr<mshadow::default_real_t>();
+  mshadow::default_real_t *o = out.data().dptr<mshadow::default_real_t>();
+  for (size_t i = 0; i < in1.shape().Size(); i++)
+    ASSERT_EQ(d1[i] + d2[i], o[i]);
+}
+
 
 #endif
