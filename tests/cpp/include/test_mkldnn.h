@@ -23,6 +23,9 @@
  *  \author Alex Zai
  */
 
+#ifndef TESTS_MKLDNN_H_
+#define TESTS_MKLDNN_H_
+
 #if MXNET_USE_MKLDNN == 1
 
 #include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
@@ -35,9 +38,6 @@
 #include "../../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
 #include "../../../src/operator/nn/pooling-inl.h"
-
-#ifndef MXNET_STORAGE_H_
-#define MXNET_STORAGE_H_
 
 using namespace mxnet;
 

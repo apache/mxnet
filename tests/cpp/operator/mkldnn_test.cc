@@ -291,7 +291,7 @@ TEST(MKLDNN_BASE, CreateMKLDNNMem) {
     InitMKLDNNArray(&orig_arr.arr, input_mem->get_primitive_desc());
     orig_arr.arr.CopyFrom(*input_mem);
     auto output_mem_t = CreateMKLDNNMem(in_arr.arr,
-                                        input_mem->get_primitive_desc(), kWriteInplace, &in_arr.arr);
+        input_mem->get_primitive_desc(), kWriteInplace, &in_arr.arr);
     op::MKLDNNSum(*input_mem, *input_mem2, *output_mem_t.second);
     CommitOutput(in_arr.arr, output_mem_t);
     stream->Submit();
