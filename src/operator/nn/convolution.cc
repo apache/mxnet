@@ -73,7 +73,7 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
-  if (SupportMKLDNNConv(params, inputs[0])) {
+  if (SupportMKLDNNConv(params, inputs[0]) && ctx.is_train) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNConvolutionBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConvolutionGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
