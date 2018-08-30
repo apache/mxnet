@@ -1053,13 +1053,36 @@ class SymbolBlock(HybridBlock):
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
 
-        for i in out.list_arguments():
-            if i not in input_names:
-                self.params.get(i, allow_deferred_init=True)
+        # Infer type of parameters. Without this, every parameter will be created with
+        # default type i.e., fp32
+        arg_params = out.list_arguments()
+        aux_params = out.list_auxiliary_states()
 
-        for i in out.list_auxiliary_states():
-            if i not in input_names:
-                self.params.get(i, grad_req='null', allow_deferred_init=True)
+        infer_type_success, arg_types, aux_types = _infer_param_types(self,
+                                                                      inputs[0],
+                                                                      out,
+                                                                      arg_params,
+                                                                      aux_params)
+
+        if infer_type_success:
+            # Use inferred types for params
+            for i, arg in enumerate(arg_params):
+                if arg not in input_names:
+                    self.params.get(arg, allow_deferred_init=True, dtype=arg_types[i])
+
+            for i, aux in enumerate(aux_params):
+                if aux not in input_names:
+                    self.params.get(aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
+        else:
+            # Use default types for params
+            for i, arg in enumerate(arg_params):
+                if arg not in input_names:
+                    dt = inputs[0].infer_type()[0]
+                    self.params.get(arg, allow_deferred_init=True)
+
+            for i, aux in out.list_auxiliary_states():
+                if aux not in input_names:
+                    self.params.get(aux, grad_req='null', allow_deferred_init=True)
 
         self._cached_graph = syms, out
         len_prefix = len(_common_prefix(list(self._params.keys())))
@@ -1086,3 +1109,49 @@ class SymbolBlock(HybridBlock):
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
+
+def _infer_param_types(self, in_params, out_params, arg_params, aux_params):
+    """Utility function that helps in inferring DType of args and auxs params
+    from given input param.
+
+    Parameters
+    ----------
+    in_params: Symbol
+        Input symbol variable.
+    out_params: Symbol
+        Output symbol variable.
+    arg_params: List of Str
+        List of names of argument parametrs.
+    aux_params: List of Str
+        List of names of auxiliary parameters.
+
+    Returns
+    -------
+    infer_type_success: Boolean
+        True if able to infer types for all given arg_params and aux_params.
+        False, otherwise.
+    arg_types: List of numpy.dtype
+        List of arg_params type. Order is same as arg_params.
+        None if unable to infer type.
+    aux_types: List of numpy.dtype
+        List of aux_params type. Order is same as aux_params.
+        None if unable to infer type.
+    """
+    infer_type_success = False
+    arg_types = None
+    aux_types = None
+
+    # Get Input symbol details. This will be used to infer types of
+    # other parameters.
+    input_sym_name = in_params.name
+    input_sym_arg_type = in_params.infer_type()[0]
+
+    # Try to infer types of other parameters.
+    if input_sym_arg_type and len(input_sym_arg_type) > 0:
+        params = {input_sym_name:input_sym_arg_type[0]}
+        arg_types, _, aux_types = out_params.infer_type(**params)
+        if arg_types is not None and len(arg_types) == len(arg_params) and \
+           aux_types is not None and len(aux_types) == len(aux_params):
+            infer_type_success = True
+
+    return (infer_type_success, arg_types, aux_types)
