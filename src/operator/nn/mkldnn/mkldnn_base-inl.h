@@ -361,9 +361,9 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
                                        std::vector<NDArray> *out_arrs) {
   for (size_t i = 0; i < arrs.size(); ++i) {
     if (arrs[i].IsMKLDNNData())
-      out_arrs->emplace_back(arrs[i].Reorder2Default());
+      out_arrs->push_back(arrs[i].Reorder2Default());
     else
-      out_arrs->emplace_back(arrs[i]);
+      out_arrs->push_back(arrs[i]);
   }
 }
 
