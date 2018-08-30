@@ -91,7 +91,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   bool relu = param.act_type == activation::kReLU;
   CHECK_EQ(inputs.size(), relu ? 2U : 3U);
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNN(inputs[0]) && ctx.is_train) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     // XXX: for y = relu(x), y is passed as "in_data" to Backward()
     MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? inputs[1] : inputs[2], req[0],
