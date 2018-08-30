@@ -422,7 +422,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())
-      && ctx.is_train) {
+      && ctx.need_grad) {
     std::vector<NDArray> out_grad(1);
     std::vector<NDArray> out_data(3);
     std::vector<NDArray> in_data(3);
