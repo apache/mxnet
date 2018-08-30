@@ -19,7 +19,7 @@
 
 /*!
  *  \file mkldnn_test.cc
- *  \brief test functions in mkldnn.
+ *  \brief test functions for mkldnn operators.
  *  \author Alex Zai
  */
 
