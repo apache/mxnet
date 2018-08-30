@@ -205,7 +205,7 @@ make USE_OPENCV=0
 make -j USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
-* Build on **macOS** with the default BLAS library and clang installed with `xcode` (OPENMP is disabled because it is not supported in default by clang):
+* Build on **macOS** with the default BLAS library (Apple Accelerate) and Clang installed with `xcode` (OPENMP is disabled because it is not supported by the Apple version of Clang):
 
 ```bash
 make -j USE_BLAS=apple USE_OPENCV=0 USE_OPENMP=0
