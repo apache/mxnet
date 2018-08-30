@@ -23,15 +23,15 @@
  *  \author Alex Zai
  */
 
-#ifndef TESTS_MKLDNN_H_
-#define TESTS_MKLDNN_H_
+#ifndef TEST_MKLDNN_H_
+#define TEST_MKLDNN_H_
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <set>
+#include <string>
+#include <vector>
 #include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
-#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/cmath"
-#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/climits"
-#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/set"
 #include "../../../3rdparty/googletest/googletest/include/gtest/gtest.h"
 #include "../../../include/mxnet/imperative.h"
 #include "../../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
@@ -578,4 +578,4 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs,
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-#endif
+#endif  // TEST_MKLDNN_H_
