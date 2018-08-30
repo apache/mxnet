@@ -18,7 +18,7 @@
  */
 
 /*!
- *  \file mkldnn_utils.cc
+ *  \file test_mkldnn.h
  *  \brief helper functions to test mkldnn.
  *  \author Alex Zai
  */
