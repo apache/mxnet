@@ -24,7 +24,7 @@ node('mxnetlinux-cpu') {
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node)labels(linux_gpu: 'mxnetlinux-gpu')
+utils.assign_node_labels(linux_gpu: 'mxnetlinux-gpu')
 
 
 utils.main_wrapper(

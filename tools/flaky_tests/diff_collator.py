@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -170,7 +171,7 @@ def parse_args():
     arg_parser = argparse.ArgumentParser()
 
     arg_parser.add_argument(
-        "--verbosity", "-v", action="count", 
+        "--verbosity", "-v", action="count", default=2,
         help="verbosity level, repeat up to 3 times, defaults to 2")
     arg_parser.add_argument(
         "--logging-level", "-l", dest="level", default="INFO",
@@ -215,4 +216,3 @@ if __name__ == "__main__":
             del changes[file_name]
 
     output_changes(changes, args.verbosity)
-

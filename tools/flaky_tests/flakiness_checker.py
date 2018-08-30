@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -29,6 +29,7 @@ import random
 import argparse
 import re
 import logging
+import nose
 
 logger = logging.getLogger(__name__)
 
