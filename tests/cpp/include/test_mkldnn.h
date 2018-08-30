@@ -25,16 +25,19 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include <mkldnn_types.h>
-#include <cmath>
-#include <climits>
-#include <set>
-#include "gtest/gtest.h"
-#include "mxnet/imperative.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
-#include "../../src/operator/nn/pooling-inl.h"
+#include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
+#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/cmath"
+#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/climits"
+#include "../../../../../../Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1/set"
+#include "../../../3rdparty/googletest/googletest/include/gtest/gtest.h"
+#include "../../../include/mxnet/imperative.h"
+#include "../../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
+#include "../../../src/operator/nn/pooling-inl.h"
+
+#ifndef MXNET_STORAGE_H_
+#define MXNET_STORAGE_H_
 
 using namespace mxnet;
 
@@ -574,6 +577,5 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs,
   for (size_t i = 0; i < in1.shape().Size(); i++)
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
-
 
 #endif
