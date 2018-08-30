@@ -32,9 +32,6 @@
 #include "gtest/gtest.h"
 #include "mxnet/imperative.h"
 #include "../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
-#include "../../src/operator/nn/pooling-inl.h"
 #include "../include/test_mkldnn.h"
 
 using namespace mxnet;

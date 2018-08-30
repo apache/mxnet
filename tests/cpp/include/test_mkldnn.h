@@ -33,11 +33,7 @@
 #include <vector>
 #include "../../../3rdparty/mkldnn/include/mkldnn_types.h"
 #include "../../../3rdparty/googletest/googletest/include/gtest/gtest.h"
-#include "../../../include/mxnet/imperative.h"
 #include "../../../src/operator/nn/mkldnn/mkldnn_base-inl.h"
-#include "../../../src/operator/nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
-#include "../../../src/operator/nn/pooling-inl.h"
 
 using namespace mxnet;
 
