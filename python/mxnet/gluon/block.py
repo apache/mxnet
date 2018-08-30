@@ -1058,8 +1058,7 @@ class SymbolBlock(HybridBlock):
         arg_params = out.list_arguments()
         aux_params = out.list_auxiliary_states()
 
-        infer_type_success, arg_types, aux_types = _infer_param_types(self,
-                                                                      inputs[0],
+        infer_type_success, arg_types, aux_types = _infer_param_types(inputs[0],
                                                                       out,
                                                                       arg_params,
                                                                       aux_params)
@@ -1077,10 +1076,9 @@ class SymbolBlock(HybridBlock):
             # Use default types for params
             for i, arg in enumerate(arg_params):
                 if arg not in input_names:
-                    dt = inputs[0].infer_type()[0]
                     self.params.get(arg, allow_deferred_init=True)
 
-            for i, aux in out.list_auxiliary_states():
+            for i, aux in enumerate(aux_params):
                 if aux not in input_names:
                     self.params.get(aux, grad_req='null', allow_deferred_init=True)
 
@@ -1110,7 +1108,7 @@ class SymbolBlock(HybridBlock):
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
-def _infer_param_types(self, in_params, out_params, arg_params, aux_params):
+def _infer_param_types(in_params, out_params, arg_params, aux_params):
     """Utility function that helps in inferring DType of args and auxs params
     from given input param.
 
