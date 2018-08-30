@@ -29,14 +29,28 @@ utils.assign_node_labels(linux_gpu: 'mxnetlinux-gpu')
 
 utils.main_wrapper(
 core_logic: {
-    stage('Flakiness Check'){
-        node(NODE_LINUX_GPU) {
-            ws('workspace/flakiness_check'){
+    stage('Preprocessing'){
+        node(NODE_LINUX_GPU){
+            ws('workspace/fc-preprocessing'){
                 utils.init_git()
                 utils.docker_run('ubuntu_cpu', 'select_tests', false)
-                // only continue if some tests were selected
+            }
+        }
+    }
+    stage('Compilation'){
+        node(NODE_LINUX_GPU){
+            ws('workspace/fc-compilation'){
                 if(fileExists('tests.tmp')){
                     utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+                }
+            }
+        }
+    }
+    stage('Flakiness Check'){
+        node(NODE_LINUX_GPU) {
+            ws('workspace/fc-execution'){
+                // only continue if some tests were selected
+                if(fileExists('tests.tmp')){
                     utils.docker_run('ubuntu_gpu', 'run_flakiness_checker', false)
                 }
             }

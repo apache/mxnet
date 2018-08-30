@@ -25,8 +25,12 @@ if none is provided. This script is designed only for python files--
 it uses python's ast module parse files and find function calls.
 The function calls are then compared to the list of dependencies
 and if there is a match, the top-level function name is added to
-the set of dependent functions. Cross-file dependencies are handled
-by storing them in a json file, which currently is updated manually.
+the set of dependent functions. 
+
+Cross-file dependencies are handled by storing them in a json file, 
+called config.json. Each test file with outside dependecies 
+should be listed in this file along with a list of its dependncies.
+Currently this file is updated manually.
 """
 import sys
 import os
