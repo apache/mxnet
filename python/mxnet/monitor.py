@@ -67,7 +67,7 @@ class Monitor(object):
             array = NDArray(array, writable=False)
             if not self.activated or not self.re_prog.match(py_str(name)):
                 return
-            self.queue.append((self.step, py_str(name), self.stat_func(array)))
+            self.queue.append((self.step, py_str(name), self.stat_func(py_str(name), self.step, array)))
         self.stat_helper = stat_helper
 
     def install(self, exe):
@@ -113,10 +113,10 @@ class Monitor(object):
         for exe in self.exes:
             for name, array in zip(exe._symbol.list_arguments(), exe.arg_arrays):
                 if self.re_prog.match(name):
-                    self.queue.append((self.step, name, self.stat_func(array)))
+                    self.queue.append((self.step, name, self.stat_func(name, self.step, array)))
             for name, array in zip(exe._symbol.list_auxiliary_states(), exe.aux_arrays):
                 if self.re_prog.match(name):
-                    self.queue.append((self.step, name, self.stat_func(array)))
+                    self.queue.append((self.step, name, self.stat_func(name, self.step, array)))
         self.activated = False
         res = []
         if self.sort:
