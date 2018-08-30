@@ -180,6 +180,7 @@ number of kernels in the layer.
 })
 .set_attr<FCompute>("FCompute<cpu>", LRNCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", LRNGrad{"_backward_LRN"})
@@ -194,6 +195,7 @@ NNVM_REGISTER_OP(_backward_LRN)
 #endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", LRNGradComputeExCPU)
 // Native compute requires norm while MKLDNN does not so cannot be compared in debug mode
 .set_attr<bool>("TExcludeMKLDNNDebug", true)
