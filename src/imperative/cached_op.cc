@@ -1067,6 +1067,10 @@ void CachedOp::Backward(
   Engine::Get()->set_bulk_size(prev_bulk_size);
 }
 
+/*
+ * This is the operator state of CachedOp when CachedOp is used in the symbol
+ * executor. This is different from the OpState returned by CachedOp::Forward.
+ */
 struct CachedOpActualState {
   std::shared_ptr<CachedOp> op;
   OpStatePtr forward_state;
@@ -1076,6 +1080,10 @@ struct CachedOpActualState {
   }
 };
 
+/*
+ * This is the forward computation when CachedOp is used as an operator in
+ * a symbol executor.
+ */
 void CachedOpForward(const OpStatePtr& state_ptr,
                      const OpContext& ctx,
                      const std::vector<NDArray>& inputs,
@@ -1113,6 +1121,10 @@ void CachedOpForward(const OpStatePtr& state_ptr,
       CopyFromTo(out_bufs[i], outputs[i]);
 }
 
+/*
+ * This is the backward computation when CachedOp is used as an operator in
+ * a symbol executor.
+ */
 void CachedOpBackward(const OpStatePtr& state_ptr,
                       const OpContext& ctx,
                       const std::vector<NDArray>& inputs,
