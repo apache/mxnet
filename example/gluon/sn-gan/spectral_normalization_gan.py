@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This example is inspired by https://github.com/jason71995/Keras-GAN-Library
+# This example is inspired by https://github.com/jason71995/Keras-GAN-Library,
+# https://github.com/kazizzad/DCGAN-Gluon-MxNet/blob/master/MxnetDCGAN.ipynb
+
 
 import math
 import os
@@ -32,19 +34,15 @@ from mxnet.gluon.data.vision import CIFAR10
 from mxnet.gluon import Block
 
 
-class Options:
-    """ Hyperparameter """
-    def __init__(self):
-        self.batch_size = 64  # input batch size
-        self.image_size = 64  # the height / width of the input image to network'
-        self.z_dim = 100  # size of the latent z vector
-        self.niter = 1000  # number of epochs to train for
-        self.learning_rate = 0.0002  # learning rate, default=0.0002
-        self.beta1 = 0.5  # beta1 for adam
-        self.outf = './data'  # help='folder to output images and model checkpoints')
-        self.manual_seed = random.randint(1, 10000)  # manual seed
-        self.clip_gradient = 10.0
-        self.ctx = mx.cpu()
+BATCH_SIZE = 64  # input batch size
+IMAGE_SIZE = 64
+Z_DIM = 100  # size of the latent z vector
+NUM_ITER = 1000  # number of epochs to train for
+LEARNING_RATE = 0.0002  # learning rate
+BETA = 0.5  # beta1 for adam
+OUTPUT_DIR = './data'
+MANUAL_SEED = random.randint(1, 10000)  # manual seed
+CTX = mx.cpu()
 
 
 class SNConv2D(Block):
@@ -70,11 +68,11 @@ class SNConv2D(Block):
 
     def spectral_norm(self):
         """ spectral normalization """
-        w = self.params.get('weight').data(opt.ctx)
+        w = self.params.get('weight').data(opt.CTX)
         w_mat = w
         w_mat = nd.reshape(w_mat, [w_mat.shape[0], -1])
 
-        _u = self.u.data(opt.ctx)
+        _u = self.u.data(opt.CTX)
         _v = None
 
         for _ in range(1):
@@ -100,7 +98,7 @@ class SNConv2D(Block):
 
 def transformer(data, label):
     """ data preparation """
-    data = mx.image.imresize(data, opt.image_size, opt.image_size)
+    data = mx.image.imresize(data, opt.IMAGE_SIZE, opt.IMAGE_SIZE)
     data = mx.nd.transpose(data, (2, 0, 1))
     data = data.astype(np.float32) / 128.0 - 1
     return data, label
@@ -111,15 +109,15 @@ def save_image(data, padding=2):
     data = data.asnumpy().transpose((0, 2, 3, 1))
     datanp = np.clip(
         (data - np.min(data))*(255.0/(np.max(data) - np.min(data))), 0, 255).astype(np.uint8)
-    x_dim = min(8, opt.batch_size)
-    y_dim = int(math.ceil(float(opt.batch_size) / x_dim))
-    height, width = int(opt.image_size + padding), int(opt.image_size + padding)
+    x_dim = min(8, opt.BATCH_SIZE)
+    y_dim = int(math.ceil(float(opt.BATCH_SIZE) / x_dim))
+    height, width = int(opt.IMAGE_SIZE + padding), int(opt.IMAGE_SIZE + padding)
     grid = np.zeros((height * y_dim + 1 + padding // 2, width *
                      x_dim + 1 + padding // 2, 3), dtype=np.uint8)
     k = 0
     for y in range(y_dim):
         for x in range(x_dim):
-            if k >= opt.batch_size:
+            if k >= opt.BATCH_SIZE:
                 break
             start_y = y * height + 1 + padding // 2
             end_y = start_y + height - padding
@@ -128,7 +126,7 @@ def save_image(data, padding=2):
             np.copyto(grid[start_y:end_y, start_x:end_x, :], datanp[k])
             k += 1
     imageio.imwrite(
-        '{}/fake_samples_epoch_{}.png'.format(opt.outf, epoch), grid)
+        '{}/fake_samples_epoch_{}.png'.format(opt.OUTPUT_DIR, epoch), grid)
 
 
 def facc(label, pred):
@@ -140,14 +138,14 @@ def facc(label, pred):
 
 opt = Options()
 try:
-    os.makedirs(opt.outf)
+    os.makedirs(opt.OUTPUT_DIR)
 except OSError:
     pass
-mx.random.seed(opt.manual_seed)
+mx.random.seed(opt.MANUAL_SEED)
 
 train_data = gluon.data.DataLoader(
     CIFAR10(train=True, transform=transformer),
-    batch_size=opt.batch_size, shuffle=True, last_batch='discard')
+    batch_size=opt.BATCH_SIZE, shuffle=True, last_batch='discard')
 
 g_net = gluon.nn.Sequential()
 with g_net.name_scope():
@@ -193,12 +191,12 @@ with d_net.name_scope():
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 
 #Initialization
-g_net.collect_params().initialize(mx.init.Normal(0.02), ctx=opt.ctx)
-d_net.collect_params().initialize(mx.init.Normal(0.02), ctx=opt.ctx)
+g_net.collect_params().initialize(mx.init.Normal(0.02), ctx=opt.CTX)
+d_net.collect_params().initialize(mx.init.Normal(0.02), ctx=opt.CTX)
 g_trainer = gluon.Trainer(
-    g_net.collect_params(), 'Adam', {'learning_rate': opt.learning_rate, 'beta1': opt.beta1})
+    g_net.collect_params(), 'Adam', {'learning_rate': opt.LEARNING_RATE, 'beta1': opt.BETA})
 d_trainer = gluon.Trainer(
-    d_net.collect_params(), 'Adam', {'learning_rate': opt.learning_rate, 'beta1': opt.beta1})
+    d_net.collect_params(), 'Adam', {'learning_rate': opt.LEARNING_RATE, 'beta1': opt.BETA})
 
 
 g_net.collect_params().zero_grad()
@@ -206,16 +204,16 @@ d_net.collect_params().zero_grad()
 
 metric = mx.metric.CustomMetric(facc)
 
-real_label = nd.ones(opt.batch_size, opt.ctx)
-fake_label = nd.zeros(opt.batch_size, opt.ctx)
+real_label = nd.ones(opt.BATCH_SIZE, opt.CTX)
+fake_label = nd.zeros(opt.BATCH_SIZE, opt.CTX)
 logging.basicConfig(level=logging.DEBUG)
 
-for epoch in range(opt.niter):
+for epoch in range(opt.NUM_ITER):
     for i, (d, _) in enumerate(train_data):
         # update D
-        data = d.as_in_context(opt.ctx)
+        data = d.as_in_context(opt.CTX)
         noise = nd.normal(loc=0, scale=1, shape=(
-            opt.batch_size, opt.z_dim, 1, 1), ctx=opt.ctx)
+            opt.BATCH_SIZE, opt.Z_DIM, 1, 1), ctx=opt.CTX)
         with autograd.record():
             # train with real image
             output = d_net(data).reshape((-1, 1))
@@ -230,7 +228,7 @@ for epoch in range(opt.niter):
             errD.backward()
             metric.update([fake_label, ], [output, ])
 
-        d_trainer.step(opt.batch_size)
+        d_trainer.step(opt.BATCH_SIZE)
         # update G
         with autograd.record():
             fake_image = g_net(noise)
@@ -238,7 +236,7 @@ for epoch in range(opt.niter):
             errG = loss(output, real_label)
             errG.backward()
 
-        g_trainer.step(opt.batch_size)
+        g_trainer.step(opt.BATCH_SIZE)
 
         # print log infomation every ten batches
         if i % 100 == 0:
