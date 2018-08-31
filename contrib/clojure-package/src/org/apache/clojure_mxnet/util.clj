@@ -204,3 +204,18 @@
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
 
+(defmacro with-resources
+  "bindings => [name init ...]
+  Similar to with-open. Evaluates body in a try expression with names bound to the values
+  of the inits, and a finally clause that calls (.dispose name) on each
+  name in reverse order. Use for NDArrays, Symbols, Iterators, Executors and others that need to be disposed"
+  [bindings & body]
+  (cond
+    (= (count bindings) 0) `(do ~@body)
+    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
+                              (try
+                                (with-resources ~(subvec bindings 2) ~@body)
+                                (finally
+                                  (. ~(bindings 0) dispose))))
+    :else (throw (IllegalArgumentException.
+                  "with-open only allows Symbols in bindings"))))

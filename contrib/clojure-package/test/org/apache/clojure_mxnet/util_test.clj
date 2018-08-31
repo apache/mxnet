@@ -191,3 +191,33 @@
         data3 [1 1 1 2]]
     (is (not (test-util/approx= 1e-9 data1 data2)))
     (is (test-util/approx= 2 data1 data3))))
+
+(deftest test-with-resources
+  (testing "with ndarrays"
+   (let [a (ndarray/array [-1 0 1 2 3 4] [2 3])
+         result-map (util/with-resources
+                      [b (ndarray/relu a)
+                       c (ndarray/+ a b)]
+                      {:result (ndarray/slice c 0 1)
+                       :b b
+                       :c c})]
+     (is (= [-1.0 0.0 2.0] (ndarray/->vec (:result result-map))))
+     (is (true? (.isDisposed (:b result-map))))
+     (is (true? (.isDisposed (:c result-map))))
+     (is (false? (.isDisposed a)))))
+
+    (testing "with nested ndarrays"
+      (let [result-map1 (util/with-resources
+                          [a (ndarray/array [-1 0 1 2 3 4] [2 3])]
+                          (let [result-map2 (util/with-resources
+                                             [b (ndarray/relu a)
+                                              c (ndarray/+ a b)]
+                                             {:result (ndarray/slice c 0 1)
+                                              :b b
+                                              :c c})]
+                            (is (= [-1.0 0.0 2.0] (ndarray/->vec (:result result-map2))))
+                            (is (true? (.isDisposed (:b result-map2))))
+                            (is (true? (.isDisposed (:c result-map2))))
+                            (is (false? (.isDisposed a))))
+                          {:a a})]
+        (is (true? (.isDisposed (:a result-map1)))))))
