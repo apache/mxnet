@@ -58,3 +58,5 @@ moderngpu/*
 deformable_im2col.cuh
 deformable_im2col.h
 REQUIRE
+ci/qemu/.*
+ci/qemu/initrd_modif/inittab
