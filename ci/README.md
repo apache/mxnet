@@ -76,7 +76,7 @@ verifying that the container stops shortly afterwards by running docker ps.
 ## Add a platform
 
 To add a platform, you should add the appropriate dockerfile in
-docker/Dockerfile.build.<platform> and add a shell function named
+docker/Dockerfile.<platform> and add a shell function named
 build_<platform> to the file docker/runtime_functions.sh with build
 instructions for that platform.
 
