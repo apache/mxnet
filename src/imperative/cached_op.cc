@@ -1266,92 +1266,6 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-bool CachedOp::ForwardInferShape(const nnvm::NodeAttrs& attrs,
-                                 std::vector<TShape> *in_shapes,
-                                 std::vector<TShape> *out_shapes) {
-  using namespace exec;
-  nnvm::Graph g(fwd_graph_);
-  const auto& idx_g = g.indexed_graph();
-  CHECK_EQ(idx_g.input_nodes().size(), in_shapes->size());
-  CHECK_EQ(idx_g.outputs().size(), out_shapes->size());
-
-  // TODO(zhengda) we can cache the shape vector.
-  // Put the input and output shapes to the shape vector.
-  nnvm::ShapeVector shapes(idx_g.num_node_entries());
-  const auto &input_nids = idx_g.input_nodes();
-  CHECK_EQ(input_nids.size(), in_shapes->size());
-  for (size_t i = 0; i < in_shapes->size(); i++) {
-    auto eid = idx_g.entry_id(input_nids[i], 0);
-    shapes[eid] = in_shapes->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_shapes->size());
-  for (size_t i = 0; i < out_shapes->size(); i++) {
-    auto eid = idx_g.entry_id(g.outputs[i]);
-    shapes[eid] = out_shapes->at(i);
-  }
-
-  // Infer shape of the graph.
-  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
-  g = exec::InferShape(std::move(g));
-
-  // Copy the inferred shape back to the input shapes and the output shapes.
-  shapes = g.GetAttr<nnvm::ShapeVector>("shape");
-  // assign to in_shapes
-  for (size_t i = 0; i < in_shapes->size(); ++i) {
-    const auto eid = idx_g.entry_id(input_nids[i], 0);
-    SHAPE_ASSIGN_CHECK(*in_shapes, i, shapes[eid]);
-  }
-  // assign to out_shapes
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    const auto eid = idx_g.entry_id(g.outputs[i]);
-    SHAPE_ASSIGN_CHECK(*out_shapes, i, shapes[eid]);
-  }
-  // Check if we have inferred the shapes correctly.
-  return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
-}
-
-bool CachedOp::ForwardInferType(const nnvm::NodeAttrs& attrs,
-                                std::vector<int> *in_types,
-                                std::vector<int> *out_types) {
-  nnvm::Graph g(fwd_graph_);
-  const auto& idx_g = g.indexed_graph();
-  CHECK_EQ(idx_g.input_nodes().size(), in_types->size());
-  CHECK_EQ(idx_g.outputs().size(), out_types->size());
-
-  // TODO(zhengda) we can cache the shape vector.
-  // Put the input and output data types to the dtype vector.
-  nnvm::DTypeVector types(idx_g.num_node_entries(), -1);
-  const auto &input_nids = idx_g.input_nodes();
-  CHECK_EQ(input_nids.size(), in_types->size());
-  for (size_t i = 0; i < in_types->size(); i++) {
-    auto eid = idx_g.entry_id(input_nids[i], 0);
-    types[eid] = in_types->at(i);
-  }
-  CHECK_EQ(g.outputs.size(), out_types->size());
-  for (size_t i = 0; i < out_types->size(); i++) {
-    auto eid = idx_g.entry_id(g.outputs[i]);
-    types[eid] = out_types->at(i);
-  }
-
-  // Infer data type of the graph.
-  g.attrs["dtype"] = std::make_shared<dmlc::any>(std::move(types));
-  g = exec::InferType(std::move(g));
-
-  types = g.GetAttr<nnvm::DTypeVector>("dtype");
-  // assign to in_types
-  for (size_t i = 0; i < in_types->size(); ++i) {
-    const auto eid = idx_g.entry_id(input_nids[i], 0);
-    TYPE_ASSIGN_CHECK(*in_types, i, types[eid]);
-  }
-  // assign to out_types
-  for (size_t i = 0; i < g.outputs.size(); ++i) {
-    const auto eid = idx_g.entry_id(g.outputs[i]);
-    TYPE_ASSIGN_CHECK(*out_types, i, types[eid]);
-  }
-  // Check if we have inferred the dtypes correctly.
-  return g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0;
-}
-
 std::vector<uint32_t> CachedOp::MutableInputs() const {
   nnvm::Symbol sym = GetForwardSym();
   const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
@@ -1447,14 +1361,14 @@ NNVM_REGISTER_OP(_CachedOp)
      std::vector<TShape> *in_shapes,
      std::vector<TShape> *out_shapes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->ForwardInferShape(attrs, in_shapes, out_shapes);
+    return DefaultSubgraphOpShape(op.GetForwardGraph(), in_shapes, out_shapes);
   })
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<int> *in_types,
      std::vector<int> *out_types) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->ForwardInferType(attrs, in_types, out_types);
+    return DefaultSubgraphOpType(op.GetForwardGraph(), in_types, out_types);
   })
 .set_attr<FInferStorageType>("FInferStorageType",
   [](const nnvm::NodeAttrs& attrs,

@@ -124,14 +124,6 @@ class CachedOp {
       DispatchMode* dispatch_mode,
       std::vector<int> *in_attrs,
       std::vector<int> *out_attrs);
-  bool ForwardInferShape(
-      const nnvm::NodeAttrs& attrs,
-      std::vector<TShape> *in_shapes,
-      std::vector<TShape> *out_shapes);
-  bool ForwardInferType(
-      const nnvm::NodeAttrs& attrs,
-      std::vector<int> *in_types,
-      std::vector<int> *out_types);
   std::vector<std::string> ListForwardInputNames() const {
     nnvm::Symbol sym = GetForwardSym();
     return sym.ListInputNames(nnvm::Symbol::kAll);
