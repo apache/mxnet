@@ -17,6 +17,7 @@
 
 # This example is inspired by https://github.com/jason71995/Keras-GAN-Library,
 # https://github.com/kazizzad/DCGAN-Gluon-MxNet/blob/master/MxnetDCGAN.ipynb
+# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py
 
 
 import math
@@ -34,15 +35,15 @@ from mxnet.gluon.data.vision import CIFAR10
 from mxnet.gluon import Block
 
 
-BATCH_SIZE = 64 # input batch size
-IMAGE_SIZE = 64 # image size
-Z_DIM = 100  # size of the latent z vector
+BATCH_SIZE = 64  # input batch size
+IMAGE_SIZE = 64  # image size
+Z_DIM = 100  # dimension of the latent z vector
 NUM_ITER = 1000  # number of epochs to train for
 LEARNING_RATE = 0.0002  # learning rate
 BETA = 0.5  # beta1 for adam
-OUTPUT_DIR = './data' # output directory
+OUTPUT_DIR = './data'  # output directory
 MANUAL_SEED = random.randint(1, 10000)  # manual seed
-CTX = mx.cpu() # change to gpu if you have gpu
+CTX = mx.gpu()  # change to gpu if you have gpu
 
 
 class SNConv2D(Block):
@@ -107,7 +108,7 @@ def transformer(data, label):
     return data, label
 
 
-def save_image(data, padding=2):
+def save_image(data, epoch, padding=2):
     """ save image """
     data = data.asnumpy().transpose((0, 2, 3, 1))
     datanp = np.clip(
@@ -138,6 +139,7 @@ def facc(label, pred):
     label = label.ravel()
     return ((pred > 0.5) == label).mean()
 
+
 # create output directory
 try:
     os.makedirs(OUTPUT_DIR)
@@ -149,57 +151,57 @@ train_data = gluon.data.DataLoader(
     CIFAR10(train=True, transform=transformer),
     batch_size=BATCH_SIZE, shuffle=True, last_batch='discard')
 
+# define the network structure
 g_net = gluon.nn.Sequential()
 with g_net.name_scope():
-    #first layer
+
     g_net.add(gluon.nn.Conv2DTranspose(512, 4, 1, 0, use_bias=False))
     g_net.add(gluon.nn.BatchNorm())
     g_net.add(gluon.nn.LeakyReLU(0.2))
-    #second layer
+
     g_net.add(gluon.nn.Conv2DTranspose(256, 4, 2, 1, use_bias=False))
     g_net.add(gluon.nn.BatchNorm())
     g_net.add(gluon.nn.LeakyReLU(0.2))
-    #tird layer
+
     g_net.add(gluon.nn.Conv2DTranspose(128, 4, 2, 1, use_bias=False))
     g_net.add(gluon.nn.BatchNorm())
     g_net.add(gluon.nn.LeakyReLU(0.2))
-    #fourth layer
+
     g_net.add(gluon.nn.Conv2DTranspose(64, 4, 2, 1, use_bias=False))
     g_net.add(gluon.nn.BatchNorm())
     g_net.add(gluon.nn.LeakyReLU(0.2))
-    #fifth layer
+
     g_net.add(gluon.nn.Conv2DTranspose(3, 4, 2, 1, use_bias=False))
     g_net.add(gluon.nn.Activation('tanh'))
 
 
 d_net = gluon.nn.Sequential()
 with d_net.name_scope():
-    #first layer
+
     d_net.add(SNConv2D(64, 4, 2, 1, in_channels=3))
     d_net.add(gluon.nn.LeakyReLU(0.2))
-    #second layer
+
     d_net.add(SNConv2D(128, 4, 2, 1, in_channels=64))
     d_net.add(gluon.nn.LeakyReLU(0.2))
-    #tird layer
+
     d_net.add(SNConv2D(256, 4, 2, 1, in_channels=128))
     d_net.add(gluon.nn.LeakyReLU(0.2))
-    #fourth layer
+
     d_net.add(SNConv2D(512, 4, 2, 1, in_channels=256))
     d_net.add(gluon.nn.LeakyReLU(0.2))
-    #fifth layer
+
     d_net.add(SNConv2D(1, 4, 1, 0, in_channels=512))
 
 # define loss function
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 
-#Initialization
+# initialization
 g_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
 d_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
 g_trainer = gluon.Trainer(
     g_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA})
 d_trainer = gluon.Trainer(
     d_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA})
-
 
 g_net.collect_params().zero_grad()
 d_net.collect_params().zero_grad()
@@ -208,6 +210,7 @@ metric = mx.metric.CustomMetric(facc)
 
 real_label = nd.ones(BATCH_SIZE, CTX)
 fake_label = nd.zeros(BATCH_SIZE, CTX)
+
 logging.basicConfig(level=logging.DEBUG)
 
 for epoch in range(NUM_ITER):
@@ -240,13 +243,13 @@ for epoch in range(NUM_ITER):
 
         g_trainer.step(BATCH_SIZE)
 
-        # print log infomation every ten batches
+        # print log infomation every 100 batches
         if i % 100 == 0:
             name, acc = metric.get()
             logging.info('discriminator loss = {}, generator loss = {}, \
                 binary training acc = {} at iter {} epoch {}'.format(
-                    nd.mean(errD).asscalar(), nd.mean(errG).asscalar(), acc, iter, epoch))
+                    nd.mean(errD).asscalar(), nd.mean(errG).asscalar(), acc, i, epoch))
         if i == 0:
-            save_image(fake_image)
+            save_image(fake_image, epoch)
 
     metric.reset()
