@@ -344,11 +344,12 @@ def test_symbol_block():
     # Load a resnet model, cast it to fp64 and export
     tmp = tempfile.mkdtemp()
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
+    ctx = mx.cpu(0)
 
-    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True)
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx)
     net_fp32.cast('float64')
     net_fp32.hybridize()
-    data = mx.nd.zeros((1,3,224,224), dtype='float64')
+    data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
     net_fp32.forward(data)
     net_fp32.export(tmpfile, 0)
 
@@ -357,7 +358,7 @@ def test_symbol_block():
     sm = mx.sym.load(tmpfile + '-symbol.json')
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.collect_params().load(tmpfile + '-0000.params')
+    net_fp64.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
     assert (net_fp64.params['resnetv20_stage1_conv2_weight'].dtype is np.float64)
 
 @with_seed()
