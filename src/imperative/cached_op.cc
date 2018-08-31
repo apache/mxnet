@@ -1267,43 +1267,6 @@ bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-std::vector<uint32_t> CachedOp::MutableInputs() const {
-  nnvm::Symbol sym = GetForwardSym();
-  const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
-  const std::vector<std::string> immutable_input_names =
-      sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-  const std::vector<std::string> mutable_input_names =
-      sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-  CHECK_EQ(immutable_input_names.size() + mutable_input_names.size(), input_names.size());
-  std::vector<uint32_t> ret;
-  size_t i1 = 0, i2 = 0;
-  for (size_t i = 0; i < input_names.size(); ++i) {
-    if (i1 < immutable_input_names.size() && input_names[i] == immutable_input_names[i1]) {
-      ++i1;
-    } else {
-      CHECK(i2 < mutable_input_names.size());
-      CHECK_EQ(input_names[i], mutable_input_names[i2]);
-      ++i2;
-      ret.push_back(i);
-    }
-  }
-  return ret;
-}
-
-std::vector<ResourceRequest> CachedOp::GetResourceRequest() const {
-  nnvm::Symbol sym = GetForwardSym();
-  static auto& fresource = Op::GetAttr<FResourceRequest>("FResourceRequest");
-  std::set<ResourceRequest::Type> resource_types;
-  DFSVisit(sym.outputs, [&](const nnvm::NodePtr& node) {
-    if (!node->is_variable() && fresource.count(node->op())) {
-      for (ResourceRequest& r : fresource[node->op()](node->attrs)){
-        resource_types.insert(r.type);
-      }
-    }
-  });
-  return std::vector<ResourceRequest>(resource_types.begin(), resource_types.end());
-}
-
 void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
   CachedOpConfig param;
   try {
@@ -1385,12 +1348,12 @@ NNVM_REGISTER_OP(_CachedOp)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->MutableInputs();
+    return DefaultSubgraphOpMutableInputs1(op->GetForwardSym());
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->GetResourceRequest();
+    return DefaultSubgraphOpResourceRequest1(op->GetForwardSym());
   })
 .set_attr<FExecType>("FExecType",
   [](const nnvm::NodeAttrs& attrs) {

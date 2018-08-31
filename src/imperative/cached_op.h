@@ -132,8 +132,6 @@ class CachedOp {
     nnvm::Symbol sym = GetForwardSym();
     return sym.ListOutputNames();
   }
-  std::vector<uint32_t> MutableInputs() const;
-  std::vector<ResourceRequest> GetResourceRequest() const;
   nnvm::Symbol GetForwardSym() const {
     nnvm::Symbol sym;
     sym.outputs = fwd_graph_.outputs;

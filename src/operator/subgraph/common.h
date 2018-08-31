@@ -212,8 +212,7 @@ inline ExecType DefaultSubgraphOpExecType(const nnvm::NodeAttrs& attrs) {
   return ExecType::kSubgraphExec;
 }
 
-inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttrs& attrs) {
-  const nnvm::Symbol& subgraph_sym = *attrs.subgraphs[0];
+inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs1(const nnvm::Symbol& subgraph_sym) {
   const std::vector<std::string> input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAll);
   const std::vector<std::string> immutable_input_names =
     subgraph_sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
@@ -235,8 +234,12 @@ inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttr
   return ret;
 }
 
-inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm::NodeAttrs& attrs) {
-  const nnvm::Symbol& subgraph_sym = *attrs.subgraphs[0];
+inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttrs& attrs) {
+  return DefaultSubgraphOpMutableInputs1(*attrs.subgraphs[0]);
+}
+
+inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest1(
+    const nnvm::Symbol& subgraph_sym) {
   static auto& fresource = Op::GetAttr<FResourceRequest>("FResourceRequest");
   std::set<ResourceRequest::Type> resource_types;
   DFSVisit(subgraph_sym.outputs, [&](const nnvm::NodePtr& node) {
@@ -247,6 +250,10 @@ inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm:
     }
   });
   return std::vector<ResourceRequest>(resource_types.begin(), resource_types.end());
+}
+
+inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm::NodeAttrs& attrs) {
+  return DefaultSubgraphOpResourceRequest1(*attrs.subgraphs[0]);
 }
 
 }  // namespace op
