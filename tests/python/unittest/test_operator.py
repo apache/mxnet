@@ -1650,7 +1650,7 @@ def test_depthwise_convolution():
                             exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group)+kernel,
                                     b=(num_filter,))
                             for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-                                arr1[:] = np.random.normal(size=arr1.shape)
+                                arr1[:] = np.float32(np.random.normal(size=arr1.shape))
                                 arr2[:] = arr1
                             exe1.forward(is_train=True)
                             exe1.backward(exe1.outputs[0])
