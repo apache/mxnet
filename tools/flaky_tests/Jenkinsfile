@@ -33,7 +33,7 @@ core_logic: {
         node(NODE_LINUX_CPU){
             ws('workspace/fc-preprocessing'){
                 utils.init_git()
-                utils.docker_run('ubuntu_cpu', 'select_tests', false)
+                utils.docker_run('ubuntu_cpu', 'flaky_check_select_tests', false)
                 tests = fileExists('tests.tmp')
                 stash name:'flaky_tests', includes:'tests.tmp' 
             }
@@ -41,28 +41,26 @@ core_logic: {
     }
 
     // only continue if some tests were selected
-    if( ! tests ) {
+    if (!tests) {
         currentBuild.result = 'SUCCESS'
-        return
     }
-    else{
-        stage('Compilation'){
-            node(NODE_LINUX_GPU){
-                ws('workspace/fc-compilation'){
+    else {
+        stage('Compilation') {
+            node(NODE_LINUX_GPU) {
+                ws('workspace/fc-compilation') {
                     utils.init_git()
                     utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
                     utils.pack_lib('gpu', mx_dist_lib)
                 }
             }
         }
-        stage('Flakiness Check'){
-
+        stage('Flakiness Check') {
             node(NODE_LINUX_GPU) {
-                ws('workspace/fc-execution'){
+                ws('workspace/fc-execution') {
                     utils.init_git()
-                    unstash 'flaky tests'
+                    unstash 'flaky_tests'
                     utils.unpack_lib('gpu', mx_lib)
-                    utils.docker_run('ubuntu_gpu', 'run_flakiness_checker', false)
+                    utils.docker_run('ubuntu_gpu', 'flaky_check_run_flakiness_checker', false)
                 }
             }
         }
