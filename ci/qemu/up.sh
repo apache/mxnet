@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,16 +17,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -ex
-disk=${1:-vda.qcow2}
-qemu-system-arm -M virt -m 1024 \
-  -kernel vmlinuz-3.16.0-6-armmp-lpae \
-  -initrd initrd.img-3.16.0-6-armmp-lpae \
-  -smp 4 \
-  -append 'root=/dev/vda1' \
-  -drive if=none,file=$disk,format=qcow2,id=hd \
-  -device virtio-blk-device,drive=hd \
-  -netdev user,id=mynet,hostfwd=tcp::2222-:22 \
-  -device virtio-net-device,netdev=mynet \
-  -nographic
-#  -display none
+set -exuo pipefail
+aws s3 cp vda_07.qcow2.bz2 s3://mxnet-edge-public/qemu/
