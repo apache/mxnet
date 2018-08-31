@@ -224,9 +224,9 @@ def test_symbol_block_fp16():
     # and choose one of the param to verify the type if fp16.
     sm = mx.sym.load(tmpfile + '-symbol.json')
     inputs = mx.sym.var('data', dtype='float16')
-    net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
-    assert (net_fp64.params['resnetv20_stage1_conv2_weight'].dtype is np.float16)
+    net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
+    net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
+    assert (net_fp16.params[list(net_fp16.params.keys())[0]].dtype is np.float16)
 
 if __name__ == '__main__':
     import nose
