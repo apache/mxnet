@@ -49,9 +49,9 @@ inline std::vector<std::string> DefaultSubgraphOpListOutputs(const nnvm::NodeAtt
   return sym.ListOutputNames();
 }
 
-inline bool DefaultSubgraphOpShape(const nnvm::Symbol& subgraph_sym,
-                                   std::vector<TShape> *in_shapes,
-                                   std::vector<TShape> *out_shapes) {
+inline bool DefaultSubgraphOpShape1(const nnvm::Symbol& subgraph_sym,
+                                    std::vector<TShape> *in_shapes,
+                                    std::vector<TShape> *out_shapes) {
   using namespace exec;
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
@@ -96,12 +96,12 @@ inline bool DefaultSubgraphOpShape(const nnvm::Symbol& subgraph_sym,
 inline bool DefaultSubgraphOpShape(const nnvm::NodeAttrs& attrs,
                                    std::vector<TShape> *in_shapes,
                                    std::vector<TShape> *out_shapes) {
-  return DefaultSubgraphOpShape(*attrs.subgraphs[0], in_shapes, out_shapes);
+  return DefaultSubgraphOpShape1(*attrs.subgraphs[0], in_shapes, out_shapes);
 }
 
-inline bool DefaultSubgraphOpType(const nnvm::Symbol& subgraph_sym,
-                                  std::vector<int> *in_types,
-                                  std::vector<int> *out_types) {
+inline bool DefaultSubgraphOpType1(const nnvm::Symbol& subgraph_sym,
+                                   std::vector<int> *in_types,
+                                   std::vector<int> *out_types) {
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
   const auto& idx_g = g.indexed_graph();
@@ -144,14 +144,14 @@ inline bool DefaultSubgraphOpType(const nnvm::Symbol& subgraph_sym,
 inline bool DefaultSubgraphOpType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *in_types,
                                   std::vector<int> *out_types) {
-  return DefaultSubgraphOpType(*attrs.subgraphs[0], in_types, out_types);
+  return DefaultSubgraphOpType1(*attrs.subgraphs[0], in_types, out_types);
 }
 
-inline bool DefaultSubgraphOpStorageType(const nnvm::Symbol& subgraph_sym,
-                                         const int dev_mask,
-                                         DispatchMode* dispatch_mode,
-                                         std::vector<int>* in_stypes,
-                                         std::vector<int>* out_stypes) {
+inline bool DefaultSubgraphOpStorageType1(const nnvm::Symbol& subgraph_sym,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int>* in_stypes,
+                                          std::vector<int>* out_stypes) {
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
   const auto& idx_g = g.indexed_graph();
@@ -204,8 +204,8 @@ inline bool DefaultSubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
                                          DispatchMode* dispatch_mode,
                                          std::vector<int>* in_stypes,
                                          std::vector<int>* out_stypes) {
-  return DefaultSubgraphOpStorageType(*attrs.subgraphs[0], dev_mask, dispatch_mode,
-                                      in_stypes, out_stypes);
+  return DefaultSubgraphOpStorageType1(*attrs.subgraphs[0], dev_mask, dispatch_mode,
+                                       in_stypes, out_stypes);
 }
 
 inline ExecType DefaultSubgraphOpExecType(const nnvm::NodeAttrs& attrs) {

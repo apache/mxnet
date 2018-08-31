@@ -134,6 +134,11 @@ class CachedOp {
   }
   std::vector<uint32_t> MutableInputs() const;
   std::vector<ResourceRequest> GetResourceRequest() const;
+  nnvm::Symbol GetForwardSym() const {
+    nnvm::Symbol sym;
+    sym.outputs = fwd_graph_.outputs;
+    return sym;
+  }
 
  private:
   struct GraphInfo;
@@ -185,11 +190,6 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
-  nnvm::Symbol GetForwardSym() const {
-    nnvm::Symbol sym;
-    sym.outputs = fwd_graph_.outputs;
-    return sym;
-  }
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

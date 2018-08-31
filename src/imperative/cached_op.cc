@@ -23,6 +23,7 @@
 #include "../executor/exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
+#include "../operator/subgraph/common.h"
 
 
 namespace mxnet {
@@ -1361,14 +1362,14 @@ NNVM_REGISTER_OP(_CachedOp)
      std::vector<TShape> *in_shapes,
      std::vector<TShape> *out_shapes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return DefaultSubgraphOpShape(op.GetForwardGraph(), in_shapes, out_shapes);
+    return op::DefaultSubgraphOpShape1(op->GetForwardSym(), in_shapes, out_shapes);
   })
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<int> *in_types,
      std::vector<int> *out_types) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return DefaultSubgraphOpType(op.GetForwardGraph(), in_types, out_types);
+    return op::DefaultSubgraphOpType1(op->GetForwardSym(), in_types, out_types);
   })
 .set_attr<FInferStorageType>("FInferStorageType",
   [](const nnvm::NodeAttrs& attrs,
