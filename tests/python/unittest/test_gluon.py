@@ -341,7 +341,8 @@ def test_symbol_block():
 
     # Test case to verify if initializing the SymbolBlock from a model with params 
     # other than fp32 param dtype.
-    # Load a resnet model, cast it to fp64 and export
+
+    # 1. Load a resnet model, cast it to fp64 and export
     tmp = tempfile.mkdtemp()
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
     ctx = mx.cpu(0)
@@ -353,8 +354,8 @@ def test_symbol_block():
     net_fp32.forward(data)
     net_fp32.export(tmpfile, 0)
 
-    # Load the saved model and verify if all the params are loaded correctly.
-    # and choose one of the param to verify the type.
+    # 2. Load the saved model and verify if all the params are loaded correctly.
+    # and choose one of the param to verify the type if fp64.
     sm = mx.sym.load(tmpfile + '-symbol.json')
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
