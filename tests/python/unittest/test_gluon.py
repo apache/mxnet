@@ -15,6 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
+import tempfile
+
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -339,19 +342,22 @@ def test_symbol_block():
     # Test case to verify if initializing the SymbolBlock from a model with params 
     # other than fp32 param dtype.
     # Load a resnet model, cast it to fp64 and export
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'resnet34_fp64')
+
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True)
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64')
     net_fp32.forward(data)
-    net_fp32.export('resnet34_fp64', 0)
+    net_fp32.export(tmpfile, 0)
 
     # Load the saved model and verify if all the params are loaded correctly.
     # and choose one of the param to verify the type.
-    sm = mx.sym.load('resnet34_fp64-symbol.json')
+    sm = mx.sym.load(tmpfile + '-symbol.json')
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.collect_params().load('resnet34_fp64-0000.params')
+    net_fp64.collect_params().load(tmpfile + '-0000.params')
     assert (net_fp64.params['resnetv20_stage1_conv2_weight'].dtype is np.float64)
 
 @with_seed()
