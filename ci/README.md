@@ -95,10 +95,8 @@ variable. All ccache instances are currently set to be 10 Gigabytes max in size.
 ## Testing with QEMU
 To run the unit tests under qemu:
 ```
-./build.py -p test.arm_qemu ./runtime_functions.py run_unittests_python3_qemu
+./build.py -p armv7 && ./build.py -p test.arm_qemu ./runtime_functions.py run_unittests_python3_qemu
 ```
 
 To get a shell on the container and debug issues with the emulator itself:
-```
-./build.py -p test.arm_qemu -i /bin/bash
-```
+Run the output of `./build.py -p test.arm_qemu --print-docker-run`
