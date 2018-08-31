@@ -213,7 +213,7 @@ def test_symbol_block_fp16():
     tmpfile = os.path.join(tmp, 'resnet34_fp16')
     ctx = mx.gpu(0)
 
-    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx)
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
     net_fp32.cast('float16')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float16', ctx=ctx)

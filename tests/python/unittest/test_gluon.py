@@ -347,7 +347,7 @@ def test_symbol_block():
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
     ctx = mx.cpu(0)
 
-    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx)
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
