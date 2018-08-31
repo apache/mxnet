@@ -245,24 +245,23 @@
                last-batch-handle "pad"
                data-name "data"
                label-name "label"}}]
-   (let [specify-data-desc? (map? data)]
-     (if specify-data-desc?
-       (new NDArrayIter
-            (.toIndexedSeq (util/list-map data))
-            (if label
-              (.toIndexedSeq (util/list-map label))
-              (util/empty-indexed-seq))
-            (int data-batch-size)
-            shuffle
-            last-batch-handle)
-       (new NDArrayIter
-            (util/vec->indexed-seq data)
-            (if label (util/vec->indexed-seq label) (util/empty-indexed-seq))
-            (int data-batch-size)
-            shuffle
-            last-batch-handle
-            data-name
-            label-name))))
+   (if (map? data)
+     (new NDArrayIter
+          (.toIndexedSeq (util/list-map data))
+          (if label
+            (.toIndexedSeq (util/list-map label))
+            (util/empty-indexed-seq))
+          (int data-batch-size)
+          shuffle
+          last-batch-handle)
+     (new NDArrayIter
+          (util/vec->indexed-seq data)
+          (if label (util/vec->indexed-seq label) (util/empty-indexed-seq))
+          (int data-batch-size)
+          shuffle
+          last-batch-handle
+          data-name
+          label-name)))
   ([data]
    (ndarray-iter data {})))
 
