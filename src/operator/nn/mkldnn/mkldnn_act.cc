@@ -287,6 +287,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
     in_buffer = in_data.Reorder2Default();
 
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
+  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
   auto diff_dst_memory = out_buffer.GetMKLDNNData();
   auto input_mem = in_buffer.GetMKLDNNData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
@@ -296,7 +297,6 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx
   MKLDNNActBackward &bwd =
       GetActBackward(param, ctx, in_buffer, out_buffer, *input_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
-  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
   mkldnn_output_t diff_src_memory =
       CreateMKLDNNMem(in_grad, bwd.pd.diff_src_primitive_desc(), req);
   bwd.SetNewMem(*input_mem, *diff_dst_memory, *diff_src_memory.second);
