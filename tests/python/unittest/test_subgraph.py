@@ -116,7 +116,7 @@ def test_make_subgraph():
     make_subgraphs = [make_subgraph1,
             lambda stype: make_subgraph2(stype, False),
             lambda stype: make_subgraph2(stype, True),
-            make_subgraph3]
+            make_subgraph3, make_subgraph4]
     stypes = ['default', 'row_sparse']
     for make_subg in make_subgraphs:
         for stype in stypes:
@@ -129,8 +129,8 @@ def test_make_subgraph():
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
             e2 = subg.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
-            e1.forward()
-            e2.forward()
+            e1.forward(is_train=True)
+            e2.forward(is_train=True)
             for i in range(len(e1.outputs)):
                 assert_almost_equal(e1.outputs[i].asnumpy(), e2.outputs[i].asnumpy(),
                         rtol=0.001, atol=0.0001)
