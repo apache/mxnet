@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.spark.io
 
-import org.apache.mxnet.{DataBatch, NDArray, Shape, DataIter}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.apache.spark.mllib.regression.LabeledPoint
 
 import scala.collection.immutable.ListMap
@@ -25,7 +26,6 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * A helper converter for LabeledPoint
- * @author Yizhi Liu
  */
 class LabeledPointIter private[mxnet](
   private val points: Iterator[LabeledPoint],
@@ -115,13 +115,25 @@ class LabeledPointIter private[mxnet](
   }
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = {
     ListMap(labelName -> Shape(_batchSize))
   }
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = {
     ListMap(dataName -> dataShape)
+  }
+
+  override def provideDataDesc: IndexedSeq[DataDesc] = {
+    // TODO: need to allow user to specify DType and Layout
+    IndexedSeq(new DataDesc(dataName, dataShape, DType.Float32, Layout.UNDEFINED))
+  }
+
+  override def provideLabelDesc: IndexedSeq[DataDesc] = {
+    // TODO: need to allow user to specify DType and Layout
+    IndexedSeq(new DataDesc(labelName, Shape(_batchSize), DType.Float32, Layout.UNDEFINED))
   }
 
   /**

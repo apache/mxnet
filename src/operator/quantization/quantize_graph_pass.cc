@@ -221,6 +221,9 @@ Graph QuantizeGraph(Graph &&src) {
 
           new_node->inputs.emplace_back(NodeEntry{dequantize_node, 0, 0});
           mirror_map[e.node.get()] = std::move(dequantize_node);
+        } else if (mirror_node->op() != nullptr
+                   && mirror_node->op()->name == "_contrib_quantize") {
+          new_node->inputs.emplace_back(NodeEntry{mirror_node->inputs[0].node, e.index, e.version});
         } else {
           new_node->inputs.emplace_back(NodeEntry{mirror_node, e.index, e.version});
         }

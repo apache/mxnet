@@ -153,6 +153,8 @@ class _Conv(HybridBlock):
             s += ', groups={num_group}'
         if self.bias is None:
             s += ', bias=False'
+        if self.act:
+            s += ', {}'.format(self.act)
         s += ')'
         shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
@@ -309,8 +311,7 @@ class Conv2D(_Conv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC', \
-            "Only supports 'NCHW' and 'NHWC' layout for now"
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
@@ -391,8 +392,7 @@ class Conv3D(_Conv):
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC', \
-            "Only supports 'NCDHW' and 'NDHWC' layout for now"
+        assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
@@ -564,8 +564,7 @@ class Conv2DTranspose(_Conv):
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC', \
-            "Only supports 'NCHW' and 'NHWC' layout for now"
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         if isinstance(output_padding, numeric_types):
@@ -657,8 +656,7 @@ class Conv3DTranspose(_Conv):
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC', \
-            "Only supports 'NCDHW' and 'NDHWC' layout for now"
+        assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):

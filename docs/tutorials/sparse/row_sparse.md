@@ -541,12 +541,7 @@ Note that only [mxnet.optimizer.SGD](https://mxnet.incubator.apache.org/api/pyth
 
 ### GPU Support
 
-By default, RowSparseNDArray operators are executed on CPU. In MXNet, GPU support for RowSparseNDArray is limited
-to a few sparse operators such as [sgd_update](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.sgd_update),
-[dot](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#mxnet.ndarray.sparse.dot) and
-[Embedding](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.Embedding).
-
-To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
+By default, RowSparseNDArray operators are executed on CPU. To create a RowSparseNDArray on gpu, we need to explicitly specify the context:
 
 **Note** If a GPU is not available, an error will be reported in the following section. In order to execute it on a cpu, set gpu_device to mx.cpu().
 

@@ -49,7 +49,8 @@ def _get_lr_scheduler(args, kv):
     steps = [epoch_size * (x - begin_epoch)
              for x in step_epochs if x - begin_epoch > 0]
     if steps:
-        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
+        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor,
+                                                         base_lr=args.lr))
     else:
         return (lr, None)
 
@@ -135,6 +136,12 @@ def add_fit_args(parser):
                        help='the epochs to ramp-up lr to scaled large-batch value')
     train.add_argument('--warmup-strategy', type=str, default='linear',
                        help='the ramping-up strategy for large batch sgd')
+    train.add_argument('--profile-worker-suffix', type=str, default='',
+                       help='profile workers actions into this file. During distributed training\
+                             filename saved will be rank1_ followed by this suffix')
+    train.add_argument('--profile-server-suffix', type=str, default='',
+                       help='profile server actions into a file with name like rank1_ followed by this suffix \
+                             during distributed training')
     return train
 
 
@@ -150,6 +157,17 @@ def fit(args, network, data_loader, **kwargs):
     if args.gc_type != 'none':
         kv.set_gradient_compression({'type': args.gc_type,
                                      'threshold': args.gc_threshold})
+    if args.profile_server_suffix:
+        mx.profiler.set_config(filename=args.profile_server_suffix, profile_all=True, profile_process='server')
+        mx.profiler.set_state(state='run', profile_process='server')
+
+    if args.profile_worker_suffix:
+        if kv.num_workers > 1:
+            filename = 'rank' + str(kv.rank) + '_' + args.profile_worker_suffix
+        else:
+            filename = args.profile_worker_suffix
+        mx.profiler.set_config(filename=filename, profile_all=True, profile_process='worker')
+        mx.profiler.set_state(state='run', profile_process='worker')
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
@@ -180,7 +198,6 @@ def fit(args, network, data_loader, **kwargs):
                 logging.info('Batch [%d]\tSpeed: %.2f samples/sec', i,
                              args.disp_batches * args.batch_size / (time.time() - tic))
                 tic = time.time()
-
         return
 
     # load model
@@ -314,3 +331,8 @@ def fit(args, network, data_loader, **kwargs):
               epoch_end_callback=checkpoint,
               allow_missing=True,
               monitor=monitor)
+
+    if args.profile_server_suffix:
+        mx.profiler.set_state(state='run', profile_process='server')
+    if args.profile_worker_suffix:
+        mx.profiler.set_state(state='run', profile_process='worker')
