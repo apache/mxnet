@@ -267,11 +267,8 @@ def test_rnnrelu_dropout():
     out[0].wait_to_read()
 
 def np_softmax(x, axis=-1, temperature=1.0):
-    # fix for old numpy on Travis not supporting keepdims
-    # x = x - np.max(x, axis=-1, keepdims=True)
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
-    # x /= np.sum(x, axis=-1, keepdims=True)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
 
@@ -1586,7 +1583,6 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12219")
 @with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
@@ -1609,7 +1605,7 @@ def test_convolution_grouping():
         exe1 = y1.simple_bind(default_context(), x=shape)
         exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
         for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-            arr1[:] = np.random.normal(size=arr1.shape)
+            arr1[:] = np.float32(np.random.normal(size=arr1.shape))
             arr2[:] = arr1
         exe1.forward(is_train=True)
         exe1.backward(exe1.outputs[0])
@@ -1617,10 +1613,9 @@ def test_convolution_grouping():
         exe2.backward(exe2.outputs[0])
 
         for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
@@ -1654,7 +1649,7 @@ def test_depthwise_convolution():
                             exe2 = y2.simple_bind(mx.cpu(), x=shape, w=(num_filter, shape[1]//num_group)+kernel,
                                     b=(num_filter,))
                             for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-                                arr1[:] = np.random.normal(size=arr1.shape)
+                                arr1[:] = np.float32(np.random.normal(size=arr1.shape))
                                 arr2[:] = arr1
                             exe1.forward(is_train=True)
                             exe1.backward(exe1.outputs[0])
@@ -1662,7 +1657,7 @@ def test_depthwise_convolution():
                             exe2.backward(exe2.outputs[0])
 
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
+                                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-2, atol=1e-3)
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -1844,7 +1839,6 @@ def test_binary_op():
         #c = a % b
         c = mx.sym.cast(a, dtype='float64') % mx.sym.cast(b, dtype='float64')
         # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
-        #check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
         check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data, rtol=0, atol=0)
         check_binary_op_backward(c,
             lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
@@ -1913,10 +1907,16 @@ def test_broadcast_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data, mx_nd_func=mx.nd.divide)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
-    def test_bmod(a, b):
+    def test_bmod(a_, b_):
+        # Python and numpy operate only in double so to avoid numerical errors we have to use
+        # doubles as well. This was a flaky test before when using float32. seed 1688524483, 1768433044
+        a = mx.sym.cast(a_, dtype='float64')
+        b = mx.sym.cast(b_, dtype='float64')
+        # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
         c = mx.sym.broadcast_mod(a, b)
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1, mx_nd_func=mx.nd.modulo)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data, atol=1)
+        check_binary_op_backward(c,
+                                 lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.broadcast_mod(mx.sym.cast(a, dtype='int32'), mx.sym.cast(b, dtype='int32'))
@@ -1974,13 +1974,7 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
-    '''
-    Flaky Test Disabled due to master build failure:
-    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline
-    Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
-
     test_bmod(a, b)
-    '''
     test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
@@ -4535,6 +4529,27 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), False)
     test_invalid_shape()
     test_1d_cond()
+
+
+@with_seed()
+def test_softmin():
+    for ndim in range(1, 5):
+        for dtype in [np.float16, np.float32, np.float64]:
+            rtol, atol = (1e-2, 5e-3) if dtype is np.float16 else (1e-3, 1e-3)
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(-ndim, ndim)
+            data = np.random.uniform(-2, 2, size=shape).astype(dtype)
+            data = data / 10 if dtype is np.float16 else data
+            sym = mx.sym.softmin(axis=axis)
+            expected_fwd = np_softmax(-data, axis=axis)
+            expected_bwd = np.zeros(shape)
+            check_symbolic_forward(sym, [data], [expected_fwd], atol=atol, dtype=dtype)
+            for req in ['null', 'add', 'write']:
+                check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                        rtol=rtol, atol=atol, grad_req=req, dtype=dtype)
+            if dtype is not np.float16:
+                check_numeric_gradient(sym, [data], rtol=rtol, atol=atol, dtype=dtype)
+
 
 @with_seed()
 def test_new_softmax():

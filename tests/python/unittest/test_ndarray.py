@@ -56,9 +56,9 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         if isinstance(out1, mx.nd.NDArray):
             out1 = out1.asnumpy()
         if dtype == np.float16:
-            assert_almost_equal(out1, out2, rtol=2e-3)
+            assert_almost_equal(out1, out2, rtol=2e-3, atol=1e-5)
         else:
-            assert_almost_equal(out1, out2)
+            assert_almost_equal(out1, out2, atol=1e-5)
 
 def random_ndarray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
@@ -639,6 +639,7 @@ def test_arange():
     assert_almost_equal(pred, gt)
 
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12310")
 def test_order():
     ctx = default_context()
     dat_size = 5

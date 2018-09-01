@@ -41,6 +41,7 @@ NOTEBOOKS_WHITELIST = [
     'chapter07_distributed-learning/multiple-gpus-scratch',
     'chapter07_distributed-learning/multiple-gpus-gluon',
     'chapter07_distributed-learning/training-with-multiple-machines',
+    'chapter08_computer-vision/visual-question-answer', # > 10 mins.
     'chapter11_recommender-systems/intro-recommender-systems',  # Early draft, non-working.
     'chapter12_time-series/intro-forecasting-gluon',
     'chapter12_time-series/intro-forecasting-2-gluon',
@@ -225,9 +226,6 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     def test_fine_tuning(self):
         assert _test_notebook('chapter08_computer-vision/fine-tuning')
-
-    def test_visual_question_answer(self):
-        assert _test_notebook('chapter08_computer-vision/visual-question-answer')
 
     # Chapter 9
 
