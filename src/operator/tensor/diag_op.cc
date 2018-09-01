@@ -21,7 +21,7 @@
 * Copyright (c) 2015 by Contributors
 * \file diag_op.cc
 * \brief
-* \author Istvan Fehervari
+* \author Istvan Fehervari, Zhijingcheng Yu
 */
 
 #include "./diag_op-inl.h"

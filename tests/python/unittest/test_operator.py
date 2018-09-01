@@ -6911,9 +6911,6 @@ def test_diag():
 
     # k = 0, axis1=0, axis2=1
     r = mx.nd.diag(data=a, k=0, axis1=0, axis2=1)
-    print(a_np.shape)
-    print(r.shape)
-    print(np.diagonal(a_np, offset=0, axis1=0, axis2=1).shape)
     assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=0, axis1=0, axis2=1))
 
     # k = 1, axis1=1, axis2=0
