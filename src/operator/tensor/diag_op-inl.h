@@ -30,6 +30,7 @@
 #include <dmlc/parameter.h>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
@@ -51,14 +52,16 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
               "If input has shape (S0 S1) k must be between -S0 and S1");
     DMLC_DECLARE_FIELD(axis1)
     .set_default(dmlc::optional<int>(0))
-    .describe("The first axis of the submatrix in question. Ignored when the input is a 1-D array.");
+    .describe("The first axis of the sub-arrays of interest. "
+              "Ignored when the input is a 1-D array.");
     DMLC_DECLARE_FIELD(axis2)
     .set_default(dmlc::optional<int>(1))
-    .describe("The second axis of the submatrix in question. Ignored when the input is a 1-D array.");
+    .describe("The second axis of the sub-arrays of interest. "
+              "Ignored when the input is a 1-D array.");
   }
 };
 
-inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k, 
+inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
                             const nnvm::dim_t axis1, const nnvm::dim_t axis2) {
   if (ishape.ndim() == 1) {
     auto s = ishape[0] + std::abs(k);
@@ -94,10 +97,10 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
   // remove axis1 and axis2 and append the new axis to the end
   for (int i = 0; i < x1; i ++)
     oshape[i] = ishape[i];
-  for (int i = x1; i < x2; i ++)
-    oshape[i] = ishape[i + 1];
-  for (int i = x2; i < n_dim; i ++)
-    oshape[i] = ishape[i + 2];
+  for (int i = x1 + 1; i < x2; i ++)
+    oshape[i - 1] = ishape[i];
+  for (int i = x2 + 1; i <= n_dim; i ++)
+    oshape[i - 2] = ishape[i];
   oshape[n_dim - 1] = s;
 
   return oshape;
@@ -115,7 +118,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
     TShape oshape = DiagShapeImpl(ishape,
-                                  param.k.value(), 
+                                  param.k.value(),
                                   param.axis1.value(),
                                   param.axis2.value());
     if (shape_is_none(oshape)) {
@@ -148,9 +151,9 @@ struct diag {
     using namespace mxnet_op;
     int idx = i / base;
     int j = ravel(unravel(idx, oshape), ishape) + offset + stride * (i - idx * base);
-    if (back){
+    if (back) {
       KERNEL_ASSIGN(out[j], req, a[i]);
-    } else{
+    } else {
       KERNEL_ASSIGN(out[i], req, a[j]);
     }
   }
@@ -166,9 +169,9 @@ struct diag_gen {
     auto j = unravel(i, oshape);
     if (j[1] == (j[0] + k)) {
       auto l = j[0] < j[1] ? j[0] : j[1];
-      if (back){
+      if (back) {
         KERNEL_ASSIGN(out[l], req, a[i]);
-      } else{
+      } else {
         KERNEL_ASSIGN(out[i], req, a[l]);
       }
     } else if (!back) {
@@ -178,14 +181,14 @@ struct diag_gen {
 };
 
 template<typename xpu, bool back>
-void DiagOpProcess(const TBlob& in_data, 
+void DiagOpProcess(const TBlob& in_data,
                    const TBlob& out_data,
                    const TShape& ishape,
                    const TShape& oshape,
                    int dsize,
                    const DiagParam& param,
                    mxnet_op::Stream<xpu> *s,
-                   const std::vector<OpReqType>& req){
+                   const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
   if (ishape.ndim() > 1) {
@@ -208,19 +211,20 @@ void DiagOpProcess(const TBlob& in_data,
       otrailing *= ishape[i];
 
 
-    int ileading = oleading, 
+    int ileading = oleading,
         ibody = obody * ishape[minx],
         itrailing = otrailing * ishape[maxx];
-    
+
     int stride1 = itrailing * obody,
         stride2 = otrailing;
 
-    if (x1 == maxx)
+    if (x1 == maxx) {
       std::swap(stride1, stride2);
+    }
     int offset, k = param.k.value();
     if (k > 0) {
       offset = stride2 * k;
-    } else if(k < 0) {
+    } else if (k < 0) {
       offset = stride1 * -k;
     } else {
       offset = 0;
@@ -228,12 +232,13 @@ void DiagOpProcess(const TBlob& in_data,
 
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        if(ileading == 1){
+        if (back && req[0] != kAddTo && req[0] != kNullOp) out_data.FlatTo1D<xpu, DType>(s) = 0;
+        if (ileading == 1) {
           Kernel<diag<2, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
                               in_data.dptr<DType>(), Shape2(obody, otrailing),
                               Shape2(ibody, itrailing),
                               stride1 + stride2, offset, oshape[odim - 1]);
-        } else{
+        } else {
           Kernel<diag<3, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
                               in_data.dptr<DType>(), Shape3(oleading, obody, otrailing),
                               Shape3(ileading, ibody, itrailing),
@@ -245,7 +250,7 @@ void DiagOpProcess(const TBlob& in_data,
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
-                            in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]), 
+                            in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]),
                             param.k.value());
       });
     });
@@ -297,7 +302,7 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
 }
 
 
-} // namespace op
+}  // namespace op
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_TENSOR_DIAG_OP_INL_H_

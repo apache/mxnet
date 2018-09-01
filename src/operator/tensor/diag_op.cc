@@ -36,9 +36,13 @@ NNVM_REGISTER_OP(diag)
 
 ``diag``'s behavior depends on the input array dimensions:
 
-- 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero
-- 2-D arrays: returns elements in the diagonal as a new 1-D array
-- N-D arrays: not supported yet
+- 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero.
+- N-D arrays: extracts the diagonals of the sub-arrays with axes specified by ``axis1`` and ``axis2``.
+  The output shape would be decided by removing the axes numbered ``axis1`` and ``axis2`` from the
+  input shape and appending to the result a new axis with the size of the diagonals in question.
+
+  For example, when the input shape is `(2, 3, 4, 5)`, ``axis1`` and ``axis2`` are 0 and 2
+  respectively and ``k`` is 0, the resulting shape would be `(3, 5, 2)`.
 
 Examples::
 
