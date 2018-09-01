@@ -226,7 +226,7 @@ def test_symbol_block_fp16():
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
     net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
-    assert (net_fp16.params[list(net_fp16.params.keys())[0]].dtype is np.float16)
+    assert np.dtype(net_fp16.params['resnetv20_conv0_weight'].dtype) == np.dtype(np.float16)
 
 if __name__ == '__main__':
     import nose
