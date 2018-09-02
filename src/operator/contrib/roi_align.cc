@@ -422,7 +422,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_data.size(), expected_out);
   CHECK_EQ(out_data[roialign::kOut].shape_[0], in_data[roialign::kBox].shape_[0]);
 
-  const ROIAlignParam param = nnvm::get<ROIAlignParam>(attrs.parsed);
+  const ROIAlignParam& param = nnvm::get<ROIAlignParam>(attrs.parsed);
 
   const int count = out_data[roialign::kOut].Size();
   // const int num_rois = in_data[roialign::kBox].size(0);
@@ -466,7 +466,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
   CHECK_NE(req[1], kWriteInplace) <<
     "ROIAlign: Backward doesn't support kWriteInplace.";
 
-  const ROIAlignParam param = nnvm::get<ROIAlignParam>(attrs.parsed);
+  const ROIAlignParam& param = nnvm::get<ROIAlignParam>(attrs.parsed);
 
   const int count = out_grad[0].Size();
   const int num_rois = in_data[0].size(0);
@@ -534,7 +534,7 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
 .set_attr<nnvm::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
       std::vector<TShape> *in_shape, std::vector<TShape> *out_shape){
   using namespace mshadow;
-  const ROIAlignParam param = nnvm::get<ROIAlignParam>(attrs.parsed);
+  const ROIAlignParam& param = nnvm::get<ROIAlignParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
   // data: [batch_size, c, h, w]
   TShape dshape = in_shape->at(roialign::kData);
