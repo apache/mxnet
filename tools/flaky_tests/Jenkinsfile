@@ -24,7 +24,7 @@ node('mxnetlinux-cpu') {
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node_labels(linux_gpu: 'mxnetlinux-gpu')
+utils.assign_node_labels(linux_gpu: 'mxnetlinux-gpu', linux_cpu: 'mxnetlinux-cpu')
 tests = false
 
 utils.main_wrapper(
@@ -46,7 +46,7 @@ core_logic: {
     }
     else {
         stage('Compilation') {
-            node(NODE_LINUX_GPU) {
+            node(NODE_LINUX_CPU) {
                 ws('workspace/fc-compilation') {
                     utils.init_git()
                     utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
