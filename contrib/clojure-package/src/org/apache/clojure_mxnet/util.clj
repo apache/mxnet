@@ -208,7 +208,10 @@
   "bindings => [name init ...]
   Similar to with-open. Evaluates body in a try expression with names bound to the values
   of the inits, and a finally clause that calls (.dispose name) on each
-  name in reverse order. Use for NDArrays, Symbols, Iterators, Executors and others that need to be disposed"
+  name in reverse order. Use for NDArrays, Symbols, Iterators, Executors and others that   need to be disposed. The resources in the binding vector will be auto-disposed.
+  Example: (util/with-resources [a (ndarray/ones [3])
+                                 b (ndarray/ones [3])]
+             (ndarray/+ a b))"
   [bindings & body]
   (cond
     (= (count bindings) 0) `(do ~@body)
@@ -218,4 +221,4 @@
                                 (finally
                                   (. ~(bindings 0) dispose))))
     :else (throw (IllegalArgumentException.
-                  "with-open only allows Symbols in bindings"))))
+                  "with-resources only allows Symbols in bindings"))))
