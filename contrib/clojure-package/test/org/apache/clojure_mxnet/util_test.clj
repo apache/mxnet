@@ -17,6 +17,8 @@
 
 (ns org.apache.clojure-mxnet.util-test
   (:require [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.context :as context]
+            [org.apache.clojure-mxnet.executor :as executor]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -207,11 +209,31 @@
      (is (false? (.isDisposed a)))
      (is (false? (.isDisposed (:result result-map))))))
 
-    (testing "with nested ndarrays"
+  (testing "with nested ndarrays"
       (let [result-map2 (util/with-resources [a (ndarray/ones [3 3])]
                           (let [result-map1 (util/with-resources
                                               [b (ndarray/zeros [1 1])]
                                               {:b b})]
                             (is (true? (.isDisposed (:b result-map1)))))
                           {:a a})]
-        (is (true? (.isDisposed (:a result-map2)))))))
+        (is (true? (.isDisposed (:a result-map2))))))
+
+  (testing "with symbols and executor"
+    (let [result-map
+          (util/with-resources [a (sym/ones [3])
+                                b (sym/ones [3])
+                                c (sym/+ a b)
+                                ex (sym/simple-bind c (context/default-context))]
+            {:a a
+             :b b
+             :c c
+             :ex ex
+             :result (-> (executor/forward ex)
+                         (executor/outputs)
+                         (first)
+                         (ndarray/->vec))})]
+      (is (= [2.0 2.0 2.0] (:result result-map)))
+      (is (.isDisposed (:a result-map)))
+      (is (.isDisposed (:b result-map)))
+      (is (.isDisposed (:c result-map)))
+      (is (.isDisposed (:ex result-map))))))
