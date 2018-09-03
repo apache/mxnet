@@ -45,6 +45,12 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_abs',
     'test_sum',
     'test_tanh',
+    'test_cos',
+    'test_sin',
+    'test_tan',
+    'test_acos',
+    'test_asin',
+    'test_atan'
     'test_ceil',
     'test_floor',
     'test_concat',

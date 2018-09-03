@@ -8,6 +8,18 @@ For example, you can set these environment variables in Linux or macOS as follow
 export MXNET_GPU_WORKER_NTHREADS=3
 ```
 
+Or in powershell:
+```
+$env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+```
+
+## Variables controlling the execution environment
+
+* MXNET_LIBRARY_PATH
+    Absolute path indicating where the mxnet dynamic library is to be located, this would be the absolute
+    path to `libmxnet.so` or `libmxnet.dll` depending on the platform. The logic for loading the
+    library is in `python/mxnet/libinfo.py`
+
 ## Set the Number of Threads
 
 * MXNET_GPU_WORKER_NTHREADS
@@ -171,6 +183,11 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_HOME
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
+  
+* MXNET_MKLDNN_ENABLED
+  - Values: 0, 1 ```(default=1)```
+  - Flag to enable or disable MKLDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
 
 Settings for Minimum Memory Usage
 ---------------------------------

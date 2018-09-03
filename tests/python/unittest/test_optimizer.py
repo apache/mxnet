@@ -943,7 +943,7 @@ def test_ftrl():
         compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
-@with_seed(1234)
+@with_seed()
 def test_nadam():
 
     def get_net(num_hidden, flatten=True):
@@ -965,10 +965,10 @@ def test_nadam():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.0005, 'wd': 0.0005},
+    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.001, 'wd': 0.0005},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='nadam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.11
 
 # AdaGrad
 class PyAdaGrad(mx.optimizer.Optimizer):
@@ -1040,6 +1040,58 @@ def test_adagrad():
                                               g_stype='row_sparse')
 
 
+def test_factor_scheduler():
+    base_lr = 1
+    step = 100
+    factor = 0.1
+    sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
+                                        warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
+
+    assert (sched(0) == 0.1)
+    np.testing.assert_almost_equal(sched(10), 0.1)
+    assert (sched(21) == base_lr), sched(21)
+    np.testing.assert_almost_equal(sched(101), base_lr * factor)
+    np.testing.assert_almost_equal(sched(201), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(1000), 1e-4)
+
+def test_multifactor_scheduler():
+    base_lr = 0.1
+    steps = [15, 25]
+    factor = 0.1
+    sched = mx.lr_scheduler.MultiFactorScheduler(steps, factor, base_lr=base_lr,
+                                        warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
+
+    assert sched(0) == 0.05
+    np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05)/2)
+    np.testing.assert_almost_equal(sched(15), base_lr)
+    np.testing.assert_almost_equal(sched(16), base_lr * factor)
+    np.testing.assert_almost_equal(sched(20), base_lr * factor)
+    np.testing.assert_almost_equal(sched(26), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(100), base_lr * factor * factor)
+
+def test_poly_scheduler():
+    base_lr = 3
+    final_lr = 0
+    steps = 1000
+    poly_sched = mx.lr_scheduler.PolyScheduler(steps, base_lr=base_lr, pwr=2, final_lr=final_lr,
+                                    warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
+
+    np.testing.assert_almost_equal(poly_sched(0), 0)
+    np.testing.assert_almost_equal(poly_sched(50), float(base_lr)/2)
+    np.testing.assert_almost_equal(poly_sched(100), base_lr)
+    assert (poly_sched(101) <  poly_sched(100))
+    assert (poly_sched(500) < 1.6)
+    np.testing.assert_almost_equal(poly_sched(steps), final_lr)
+
+def test_cosine_scheduler():
+    # also tests case without warmup
+    base_lr = 3
+    final_lr = 0.1
+    steps = 1000
+    cosine_sched = mx.lr_scheduler.CosineScheduler(steps, base_lr=base_lr, final_lr=final_lr)
+    np.testing.assert_almost_equal(cosine_sched(0), base_lr)
+    np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
+    assert (cosine_sched(500) > 1.5)
 
 if __name__ == '__main__':
     import nose

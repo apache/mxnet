@@ -32,6 +32,7 @@ mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 // timeout in minutes
 max_time = 120
 
@@ -186,12 +187,22 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5': {
+    'CPU: Clang 6': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang50') {
+        ws('workspace/build-cpu-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
+          }
+        }
+      }
+    },
+    'CPU: Clang Tidy': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang60_tidy') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
           }
         }
       }
@@ -207,13 +218,13 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5 MKLDNN': {
+    'CPU: Clang 6 MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang50') {
+        ws('workspace/build-cpu-mkldnn-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
+            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
           }
         }
       }
@@ -311,6 +322,17 @@ core_logic: {
             utils.init_git()
             utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
             utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
+          }
+        }
+      }
+    },
+    'TensorRT': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.pack_lib('tensorrt', mx_tensorrt_lib)
           }
         }
       }
@@ -630,6 +652,22 @@ core_logic: {
         }
       }
     },
+    'Python3: TensorRT GPU': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.init_git()
+              utils.unpack_lib('tensorrt', mx_tensorrt_lib)
+              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+            }
+          }
+        }
+      }
+    },
     'Scala: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-cpu') {
@@ -912,7 +950,7 @@ core_logic: {
         timeout(time: max_time, unit: 'MINUTES') {
           utils.init_git()
           utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-          sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
         }
       }
     }
