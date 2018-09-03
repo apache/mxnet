@@ -176,6 +176,14 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
 
 using namespace mshadow;
 
+
+struct fill_ind_to_one {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const int* indices, DType* out) {
+    out[indices[i]] = static_cast<DType>(1);
+  }
+};
+
 template<typename DType>
 MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
                                    const Tensor<cpu, 1, int>& ind,
@@ -364,7 +372,6 @@ void TopKImpl(const RunContext &ctx,
   Tensor<xpu, 1, char> temp_workspace;
   Tensor<xpu, 1, DType> sorted_dat;
   Tensor<xpu, 1, int> indices, sel_indices;
-  Tensor<xpu, 2, DType> mask_val;
   int batch_size, element_num;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
@@ -389,7 +396,7 @@ void TopKImpl(const RunContext &ctx,
   temp_size = std::max(temp_size, sizeof(DType) * src.Size());
   size_t workspace_size = temp_size + sizeof(DType) * src.Size() + sizeof(int) * src.Size();
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += sizeof(int) * batch_size * k + sizeof(DType) * batch_size * k;
+    workspace_size += sizeof(int) * batch_size * k;
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
@@ -404,12 +411,7 @@ void TopKImpl(const RunContext &ctx,
     sel_indices = Tensor<xpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
                                       Shape1(batch_size * k), s);
     workspace_curr_ptr += sizeof(int) * batch_size * k;
-    mask_val = Tensor<xpu, 2, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
-                                      Shape2(batch_size * k, 1), s);
-    workspace_curr_ptr += sizeof(DType) * batch_size * k;
-    mask_val = scalar<DType>(1);
     CHECK_EQ(sel_indices.CheckContiguous(), true);
-    CHECK_EQ(mask_val.CheckContiguous(), true);
   }
 
   if (std::is_same<xpu, cpu>::value) {
@@ -455,8 +457,7 @@ void TopKImpl(const RunContext &ctx,
   // Cast `ret_indices` from int to real_t could introduce conversion error when the element_num
   // is large enough.
   if (param.ret_typ == topk_enum::kReturnMask) {
-    Tensor<xpu, 2, DType> ret_mask =
-      ret[0].get_with_shape<xpu, 2, DType>(Shape2(ret[0].Size(), 1), s);
+    Tensor<xpu, 1, DType> ret_mask = ret[0].FlatTo1D<xpu, DType>(s);
     ret_mask = scalar<DType>(0);
     sel_indices = reshape(slice<1>(
                               inplace_reshape(indices,
@@ -472,7 +473,8 @@ void TopKImpl(const RunContext &ctx,
     if (req[0] == kNullOp) {
       return;
     } else if (req[0] == kWriteTo) {
-      IndexFill(ret_mask, sel_indices, mask_val);
+      mxnet_op::Kernel<fill_ind_to_one, xpu>::Launch(s, batch_size * k,
+                                                     sel_indices.dptr_, ret_mask.dptr_);
     } else {
       LOG(FATAL) << "req=" << req[0] << " is not supported yet.";
     }
