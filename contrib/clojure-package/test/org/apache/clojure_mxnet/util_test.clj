@@ -204,20 +204,14 @@
      (is (= [-1.0 0.0 2.0] (ndarray/->vec (:result result-map))))
      (is (true? (.isDisposed (:b result-map))))
      (is (true? (.isDisposed (:c result-map))))
-     (is (false? (.isDisposed a)))))
+     (is (false? (.isDisposed a)))
+     (is (false? (.isDisposed (:result result-map))))))
 
     (testing "with nested ndarrays"
-      (let [result-map1 (util/with-resources
-                          [a (ndarray/array [-1 0 1 2 3 4] [2 3])]
-                          (let [result-map2 (util/with-resources
-                                             [b (ndarray/relu a)
-                                              c (ndarray/+ a b)]
-                                             {:result (ndarray/slice c 0 1)
-                                              :b b
-                                              :c c})]
-                            (is (= [-1.0 0.0 2.0] (ndarray/->vec (:result result-map2))))
-                            (is (true? (.isDisposed (:b result-map2))))
-                            (is (true? (.isDisposed (:c result-map2))))
-                            (is (false? (.isDisposed a))))
+      (let [result-map2 (util/with-resources [a (ndarray/ones [3 3])]
+                          (let [result-map1 (util/with-resources
+                                              [b (ndarray/zeros [1 1])]
+                                              {:b b})]
+                            (is (true? (.isDisposed (:b result-map1)))))
                           {:a a})]
-        (is (true? (.isDisposed (:a result-map1)))))))
+        (is (true? (.isDisposed (:a result-map2)))))))
