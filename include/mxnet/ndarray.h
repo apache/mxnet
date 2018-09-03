@@ -340,10 +340,6 @@ class NDArray {
   inline size_t byte_offset() const {
     return byte_offset_;
   }
-  /*! \brief return var version of the NDArray*/
-  inline size_t version() const {
-    return var()->version();
-  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
