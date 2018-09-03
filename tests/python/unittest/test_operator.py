@@ -3115,11 +3115,9 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     # compare numpy + mxnet
     assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
     # check gradient
-    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=5e-3)
 
 
-# @haojin2: getting rid of the fixed seed as the flakiness could not be reproduced.
-# tracked at: https://github.com/apache/incubator-mxnet/issues/11717
 @with_seed()
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
