@@ -117,8 +117,6 @@ class GraphExecutor : public Executor {
                     std::vector<NDArray>* arg_grads,
                     std::vector<NDArray>* aux_states) override;
 
-  const std::string& subgraph_property() const { return subgraph_property_; }
-
  protected:
   friend class mxnet::Imperative;
   // Information about operational node
@@ -258,8 +256,6 @@ class GraphExecutor : public Executor {
   std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
-  // subgraph property name
-  std::string subgraph_property_;
 };
 
 }  // namespace exec
