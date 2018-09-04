@@ -45,6 +45,7 @@ OUTPUT_DIR = './data'  # output directory
 MANUAL_SEED = random.randint(1, 10000)  # manual seed
 CTX = mx.gpu()  # change to gpu if you have gpu
 POWER_ITERATION = 1
+CLIP_GRADIENT = 10
 
 class SNConv2D(Block):
     """ Customized Conv2D to feed the conv with the weight that we apply spectral normalization """
@@ -82,6 +83,8 @@ class SNConv2D(Block):
             _u = nd.L2Normalization(nd.dot(_v, w_mat.T))
 
         sigma = nd.sum(nd.dot(_u, w_mat) * _v)
+        if sigma == 0.:
+            sigma = 0.00000001
 
         self.params.setattr('u', _u)
 
@@ -199,9 +202,9 @@ loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 g_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
 d_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
 g_trainer = gluon.Trainer(
-    g_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA})
+    g_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA, 'clip_gradient': CLIP_GRADIENT})
 d_trainer = gluon.Trainer(
-    d_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA})
+    d_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA, 'clip_gradient': CLIP_GRADIENT})
 
 g_net.collect_params().zero_grad()
 d_net.collect_params().zero_grad()
