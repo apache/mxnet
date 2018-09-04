@@ -52,7 +52,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
 
   override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxExecutorFree
 
-  override val phantomRef: NativeResourcePhantomRef = super.register(this)
+  override val phantomRef: NativeResourceRef = super.register(this)
 
   override def bytesAllocated: Long = 0
 

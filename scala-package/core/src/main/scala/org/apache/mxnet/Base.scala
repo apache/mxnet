@@ -78,7 +78,7 @@ private[mxnet] object Base {
   val _LIB = new LibInfo
   checkCall(_LIB.nativeLibInit())
 
-  val resourceManager = NativeResourceManager.createPeriodicGCExecutor()
+  val resourceManager = PeriodicGCDeAllocator.createPeriodicGCExecutor()
 
   // TODO: shutdown hook won't work on Windows
   Runtime.getRuntime.addShutdownHook(new Thread() {

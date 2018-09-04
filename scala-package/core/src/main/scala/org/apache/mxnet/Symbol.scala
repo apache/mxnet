@@ -36,7 +36,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle)
 
   override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxSymbolFree
 
-  override val phantomRef: NativeResourcePhantomRef = super.register(this)
+  override val phantomRef: NativeResourceRef = super.register(this)
 
   override def bytesAllocated: Long = 0
 
