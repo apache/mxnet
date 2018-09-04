@@ -41,6 +41,8 @@ parser.add_argument('--momentum', type=float, default=0.9,
                     help='SGD momentum (default: 0.9)')
 parser.add_argument('--cuda', action='store_true', default=False,
                     help='Train on GPU with CUDA')
+parser.add_argument('--hybridize', action='store_true', default=False,
+                    help='Train in symbolic mode')
 parser.add_argument('--bits', type=int, default=1,
                     help='Number of bits for binarization/quantization')
 parser.add_argument('--log-interval', type=int, default=100, metavar='N',
@@ -94,7 +96,6 @@ with net.name_scope():
         net.add(gluon.nn.Activation(activation=act))
 
         net.add(gluon.nn.Dense(num_outputs))
-net.hybridize()
 
 
 # data
@@ -110,8 +111,12 @@ val_data = gluon.data.DataLoader(
     gluon.data.vision.MNIST('./data', train=False, transform=transform),
     batch_size=opt.batch_size, shuffle=False)
 
-# train
 
+def dummy_data(ctx):
+    return [mx.nd.array(np.zeros(shape), ctx=ctx) for shape in ([opt.batch_size, 1, 28, 28], [100])]
+
+
+# train
 def test(ctx):
     metric = mx.metric.Accuracy()
     for data, label in val_data:
@@ -130,6 +135,15 @@ def train(epochs, ctx):
     trainer = gluon.Trainer(net.collect_params(), 'adam')
     metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
+
+    # do forward pass with dummy data without backwards pass to initialize binary layers
+    with autograd.record():
+        data, label = dummy_data(ctx)
+        output = net(data)
+        L = loss(output, label)
+
+    if opt.hybridize:
+        net.hybridize()
 
     for epoch in range(epochs):
         # reset data iterator and metric at begining of epoch.
@@ -159,7 +173,13 @@ def train(epochs, ctx):
         name, val_acc = test(ctx)
         print('[Epoch %d] Validation: %s=%f'%(epoch, name, val_acc))
 
-    net.export("mnist-lenet-{}-bit".format(opt.bits), epoch=1)
+    if not opt.hybridize:
+        net.hybridize()
+        with autograd.record():
+            data, label = dummy_data(ctx)
+            output = net(data)
+            L = loss(output, label)
+    net.export("mnist-lenet-{}-{}-bit".format("symbolic" if opt.hybridize else "gluon", opt.bits), epoch=1)
 
 
 if __name__ == '__main__':
