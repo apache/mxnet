@@ -1360,12 +1360,12 @@ NNVM_REGISTER_OP(_CachedOp)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return DefaultSubgraphOpMutableInputs1(op->GetForwardSym());
+    return op::DefaultSubgraphOpMutableInputs1(op->GetForwardSym());
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return DefaultSubgraphOpResourceRequest1(op->GetForwardSym());
+    return op::DefaultSubgraphOpResourceRequest1(op->GetForwardSym());
   })
 .set_attr<FExecType>("FExecType",
   [](const nnvm::NodeAttrs& attrs) {
