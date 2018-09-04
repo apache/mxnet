@@ -24,10 +24,10 @@ try:
 except ImportError:
     h5py = None
 
-from .ndarray.sparse import CSRNDArray
-from .ndarray.sparse import array as sparse_array
-from .ndarray import NDArray
-from .ndarray import array
+from ..ndarray.sparse import CSRNDArray
+from ..ndarray.sparse import array as sparse_array
+from ..ndarray import NDArray
+from ..ndarray import array
 
 def init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
