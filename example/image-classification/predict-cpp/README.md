@@ -1,10 +1,9 @@
-# Image Classification Example of C++
-This is a simple predictor which shows how to use the MXNet C++ API for image classification with a pre-trained ImageNet model.
+# Image Classification Example Using the C Predict API
+This is a simple predictor which shows how to use the MXNet C Predict API for image classification with a pre-trained ImageNet model.
 
 ## Prerequisites
 
 * OpenCV for image processing: `USE_OPENCV` is set to true by default when [building from source](https://mxnet.incubator.apache.org/install/build_from_source.html)
-* MXNet's [C++ language binding](https://github.com/apache/incubator-mxnet/tree/master/cpp-package): `USE_CPP_PACKAGE` flag needs to be used when [building from source](https://mxnet.incubator.apache.org/install/build_from_source.html)
 
 ## How to Use this Example
 
@@ -18,7 +17,7 @@ This is a simple predictor which shows how to use the MXNet C++ API for image cl
 
 ### Build
 1. If using a different location for the model artifacts, edit `image-classification-predict.cc` file, and change the following lines to your artifacts' paths:
-  ```c++
+  ```c
     // Models path for your model, you have to modify it
     std::string json_file = "model/Inception/Inception-BN-symbol.json";
     std::string param_file = "model/Inception/Inception-BN-0126.params";
@@ -27,7 +26,7 @@ This is a simple predictor which shows how to use the MXNet C++ API for image cl
   ```
 
 2. You may also want to change the image size and channels:
-  ```c++
+  ```c
     // Image size and channels
     int width = 224;
     int height = 224;
