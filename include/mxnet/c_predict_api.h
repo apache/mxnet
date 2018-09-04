@@ -119,6 +119,18 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
                                      mx_uint num_output_nodes,
                                      const char** output_keys,
                                      PredictorHandle* out);
+
+int MXPredCreateMultithread(const char* symbol_json_str,
+                            const void* param_bytes,
+							int param_size,
+							int dev_type, int dev_id,
+							mx_uint num_input_nodes,
+							const char** input_keys,
+							const mx_uint* input_shape_indptr,
+							const mx_uint* input_shape_data,
+							int num_threads,
+							PredictorHandle* out);
+
 /*!
  * \brief Change the input shape of an existing predictor.
  * \param num_input_nodes Number of input nodes to the net,
