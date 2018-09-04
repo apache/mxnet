@@ -1974,6 +1974,14 @@ class Symbol(SymbolBase):
         """
         return op.sign(self, *args, **kwargs)
 
+    def det_sign(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`det_sign`.
+
+        The arguments are the same as for :py:func:`det_sign`, with
+        this array as data.
+        """
+        return op.det_sign(self, *args, **kwargs)
+
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
 

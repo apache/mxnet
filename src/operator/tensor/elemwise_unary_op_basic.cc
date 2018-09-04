@@ -687,6 +687,25 @@ The storage type of ``sign`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow_op::sign_grad>);
 
+// det_sign
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(det_sign, cpu, mshadow_op::det_sign)
+MXNET_ADD_SPARSE_OP_ALIAS(det_sign)
+.describe(R"code(Returns element-wise sign of the input (but with +1 for 0 values and Straigth Through Estimator).
+
+Example::
+
+   det_sign([-2, 0, 3]) = [-1, 1, 1]
+
+The storage type of ``det_sign`` output depends upon the input storage type:
+
+   - det_sign(default) = default
+   - det_sign(row_sparse) = row_sparse
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_det_sign"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_det_sign, unary_bwd<mshadow_op::identity_grad>);
+
 // round
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.

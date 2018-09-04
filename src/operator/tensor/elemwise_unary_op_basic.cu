@@ -159,6 +159,15 @@ NNVM_REGISTER_OP(_backward_sign)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::sign_grad> >);
 
+// det_sign
+NNVM_REGISTER_OP(det_sign)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::det_sign>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::ComputeEx<gpu, mshadow_op::det_sign>);
+
+NNVM_REGISTER_OP(_backward_det_sign)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::identity_grad> >);
+
 // round
 NNVM_REGISTER_OP(round)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::round>)
