@@ -36,7 +36,7 @@ from ..ndarray import _ndarray_cls
 from ..ndarray import array
 from ..ndarray import concat
 
-from .io_utils import init_data, has_instance, getdata_by_idx
+from .utils import init_data, has_instance, getdata_by_idx
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout

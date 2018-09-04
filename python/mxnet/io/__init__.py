@@ -24,5 +24,5 @@ from __future__ import absolute_import
 from . import io
 from .io import *
 
-from . import io_utils
-from .io_utils import *
+from . import utils
+from .utils import *
