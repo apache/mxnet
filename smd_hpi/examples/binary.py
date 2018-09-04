@@ -3,12 +3,16 @@ from mxnet.gluon.nn.conv_layers import _Conv
 from mxnet.base import numeric_types
 
 
+def check_params(use_bias, activation):
+    if use_bias:
+        raise RuntimeError("Bias is not supported for a binary layer.")
+    if activation is not None:
+        raise RuntimeError("Activation is not supported for a binary layer.")
+
+
 class BDense(Dense):
     def __init__(self, *args, activation=None, use_bias=False, **kwargs):
-        if use_bias:
-            raise RuntimeError("Bias is not supported for a binary Dense block.")
-        if activation is not None:
-            raise RuntimeError("Activation is not supported for a binary Dense block.")
+        check_params(use_bias, activation)
         super(BDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._pre_bn = BatchNorm()
 
@@ -42,10 +46,7 @@ class BConv1D(_BConv):
                  groups=1, layout='NCW', activation=None, use_bias=False,
                  weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        if use_bias:
-            raise RuntimeError("Bias is not supported for a binary Dense block.")
-        if activation is not None:
-            raise RuntimeError("Activation is not supported for a binary Dense block.")
+        check_params(use_bias, activation)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
@@ -59,10 +60,7 @@ class BConv2D(_BConv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=False, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        if use_bias:
-            raise RuntimeError("Bias is not supported for a binary Dense block.")
-        if activation is not None:
-            raise RuntimeError("Activation is not supported for a binary Dense block.")
+        check_params(use_bias, activation)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
@@ -76,10 +74,7 @@ class BConv3D(_BConv):
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=False, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        if use_bias:
-            raise RuntimeError("Bias is not supported for a binary Dense block.")
-        if activation is not None:
-            raise RuntimeError("Activation is not supported for a binary Dense block.")
+        check_params(use_bias, activation)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
