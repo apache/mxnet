@@ -149,6 +149,16 @@ Code examples are placed throughout the API documentation and these can be run a
    rtc/rtc.md
 ```
 
+## Tools
+
+```eval_rst
+.. toctree::
+    :maxdepth: 1
+
+    tools/test_utils.md
+    tools/viz.md
+```
+
 ## Contrib Package
 
 ```eval_rst
