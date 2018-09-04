@@ -18,6 +18,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=wildcard-import
 """ Data iterators for common data formats and utility functions."""
 from __future__ import absolute_import
 
