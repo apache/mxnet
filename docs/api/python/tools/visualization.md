@@ -1,16 +1,16 @@
-# Viz
+# Visualization
 
-Viz is short for visualization. This module contains visualization features.
+This module contains visualization features.
 
 ```eval_rst
-    .. currentmodule:: mxnet.viz
+    .. currentmodule:: mxnet.visualization
 ```
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
-    viz
+    mxnet.visualization
 ```
 
 ## API Reference
@@ -19,7 +19,7 @@ Viz is short for visualization. This module contains visualization features.
 
 ```eval_rst
 
-.. automodule:: mxnet.viz
+.. automodule:: mxnet.visualization
     :members:
 
 ```

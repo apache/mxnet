@@ -10,7 +10,7 @@ This module has a variety of tools that help using and testing MXNet.
 .. autosummary::
     :nosignatures:
 
-    test_utils
+    mxnet.test_utils
 ```
 
 ## API Reference
