@@ -46,6 +46,7 @@ MANUAL_SEED = random.randint(1, 10000)  # manual seed
 CTX = mx.gpu()  # change to gpu if you have gpu
 POWER_ITERATION = 1
 CLIP_GRADIENT = 10
+EPSILON = 1e-08
 
 class SNConv2D(Block):
     """ Customized Conv2D to feed the conv with the weight that we apply spectral normalization """
@@ -84,7 +85,7 @@ class SNConv2D(Block):
 
         sigma = nd.sum(nd.dot(_u, w_mat) * _v)
         if sigma == 0.:
-            sigma = 0.00000001
+            sigma = EPSILON
 
         self.params.setattr('u', _u)
 
