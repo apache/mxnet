@@ -24,6 +24,6 @@ You can find C++ code examples in the `cpp-package/example` folder of the MXNet 
 
 * [MXNet C++ API Basics](https://mxnet.incubator.apache.org/tutorials/c++/basics.html)
 
-## Examples
+## Related Topics
 
-* [Image Classification using MXNet's C++ API](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp)
+* [Image Classification using MXNet's C Predict API](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp)
