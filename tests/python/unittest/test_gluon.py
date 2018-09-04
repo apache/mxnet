@@ -360,7 +360,12 @@ def test_symbol_block():
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
     net_fp64.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
-    assert np.dtype(net_fp64.params['resnetv20_stage1_conv2_weight'].dtype) == np.dtype(np.float64)
+    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp64.
+    for param_name in net_fp64.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
 
 @with_seed()
 @raises(AssertionError)

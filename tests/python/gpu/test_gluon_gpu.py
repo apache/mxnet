@@ -226,7 +226,12 @@ def test_symbol_block_fp16():
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
     net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
-    assert np.dtype(net_fp16.params['resnetv20_conv0_weight'].dtype) == np.dtype(np.float16)
+    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp16.
+    for param_name in net_fp16.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp16.params[param_name].dtype) == np.dtype(np.float16)
 
 if __name__ == '__main__':
     import nose
