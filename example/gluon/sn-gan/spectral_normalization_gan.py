@@ -44,7 +44,7 @@ BETA = 0.5  # beta1 for adam
 OUTPUT_DIR = './data'  # output directory
 MANUAL_SEED = random.randint(1, 10000)  # manual seed
 CTX = mx.gpu()  # change to gpu if you have gpu
-
+POWER_ITERATION = 1
 
 class SNConv2D(Block):
     """ Customized Conv2D to feed the conv with the weight that we apply spectral normalization """
@@ -77,7 +77,7 @@ class SNConv2D(Block):
         _u = self.u.data(CTX)
         _v = None
 
-        for _ in range(1):
+        for _ in range(POWER_ITERATION):
             _v = nd.L2Normalization(nd.dot(_u, w_mat))
             _u = nd.L2Normalization(nd.dot(_v, w_mat.T))
 
