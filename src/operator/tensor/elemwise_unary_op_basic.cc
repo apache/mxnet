@@ -723,6 +723,25 @@ The storage type of ``round`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+// round_ste
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(round_ste, cpu, mshadow_op::round)
+MXNET_ADD_SPARSE_OP_ALIAS(round_ste)
+.describe(R"code(Returns element-wise rounded value to the nearest integer of the input but with STE.
+
+Example::
+
+   round_ste([-1.5, 1.5, -1.9, 1.9, 2.1]) = [-2.,  2., -2.,  2.,  2.]
+
+The storage type of ``round_ste`` output depends upon the input storage type:
+
+  - round_ste(default) = default
+  - round_ste(row_sparse) = row_sparse
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_round_ste"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_round_ste, unary_bwd<mshadow_op::identity_grad>);
+
 // rint
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(rint, cpu, mshadow_op::rint)
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.

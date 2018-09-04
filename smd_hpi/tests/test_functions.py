@@ -15,3 +15,18 @@ def test_det_sign():
         assert_almost_equal(exp_y, y.asnumpy())
     y.backward()
     assert_almost_equal(exp_grad, x.grad.asnumpy())
+
+
+def test_round_ste():
+    npy = np.random.uniform(-10, 10, (2, 3, 4))
+
+    exp_y = np.round(npy)
+    exp_grad = np.ones_like(npy)
+
+    x = mx.nd.array(npy)
+    x.attach_grad()
+    with autograd.record():
+        y = x.round_ste()
+        assert_almost_equal(exp_y, y.asnumpy())
+    y.backward()
+    assert_almost_equal(exp_grad, x.grad.asnumpy())

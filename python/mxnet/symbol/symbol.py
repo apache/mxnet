@@ -2150,6 +2150,14 @@ class Symbol(SymbolBase):
         """
         return op.round(self, *args, **kwargs)
 
+    def round_ste(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`round_ste`.
+
+        The arguments are the same as for :py:func:`round_ste`, with
+        this array as data.
+        """
+        return op.round_ste(self, *args, **kwargs)
+
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
 
