@@ -50,6 +50,7 @@ class _RNNLayer(HybridBlock):
         self._h2h_weight_initializer = h2h_weight_initializer
         self._i2h_bias_initializer = i2h_bias_initializer
         self._h2h_bias_initializer = h2h_bias_initializer
+        self.fused_params = None
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
@@ -183,6 +184,16 @@ class _RNNLayer(HybridBlock):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
+    def fuse_weights(self, F):
+        if F is ndarray:
+            kwargs = {i: j.data() for i, j in self._reg_params.items()}
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                  for t in ['weight', 'bias']
+                  for l in range(self._num_layers)
+                  for d in ['l', 'r'][:self._dir]
+                  for g in ['i2h', 'h2h'])
+            self.fused_params = F.concat(*params, dim=0)
+
     def hybrid_forward(self, F, inputs, states=None, **kwargs):
         if F is ndarray:
             batch_size = inputs.shape[self._layout.find('N')]
@@ -209,12 +220,16 @@ class _RNNLayer(HybridBlock):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = F.swapaxes(inputs, dim1=0, dim2=1)
-        params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
-                  for t in ['weight', 'bias']
-                  for l in range(self._num_layers)
-                  for d in ['l', 'r'][:self._dir]
-                  for g in ['i2h', 'h2h'])
-        params = F._internal._rnn_param_concat(*params, dim=0)
+
+        if F is ndarray and self.fused_params is not None:
+            params = self.fused_params
+        else:
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                      for t in ['weight', 'bias']
+                      for l in range(self._num_layers)
+                      for d in ['l', 'r'][:self._dir]
+                      for g in ['i2h', 'h2h'])
+            params = F._internal._rnn_param_concat(*params, dim=0)
 
         rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
                     num_layers=self._num_layers, bidirectional=self._dir == 2,
