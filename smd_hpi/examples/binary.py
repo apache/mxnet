@@ -28,12 +28,17 @@ class BDense(Dense):
         self._pre_bn = BatchNorm()
         self._offset = 0
 
+    def _alias(self):
+        return 'bdense'
+
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = 1
             for dim_size in weight.shape[1:]:
                 self._offset *= dim_size
-        h = F.FullyConnected(binarize_inputs(F, x, self._pre_bn), binarize_weights(F, weight), bias, no_bias=True,
+        binary_x = binarize_inputs(F, x, self._pre_bn)
+        binary_weight = binarize_weights(F, weight)
+        h = F.FullyConnected(binary_x, binary_weight, bias, no_bias=True,
                              num_hidden=self._units, flatten=self._flatten, name='fwd')
         return (h + self._offset) / 2
 
@@ -50,6 +55,9 @@ class _BConv(_Conv):
         if isinstance(padding, numeric_types):
             padding = (padding,) * len(kernel_size)
         self._pre_padding = padding
+
+    def _alias(self):
+        return 'bconv'
 
     def _apply_pre_padding(self, F, x):
         if sum(self._pre_padding) > 0:
