@@ -1918,6 +1918,65 @@ def test_softmax_activation():
         assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
                 atol = 1e-3, rtol = 1e-3)
 
+
+@with_seed()
+def test_bilinear_sampler_versions():
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    sym1 = mx.sym.BilinearSampler(data=data, grid=grid)
+    sym2 = mx.sym.BilinearSampler(data=data, grid=grid, cudnn_off=True)
+    sym3 = mx.sym.BilinearSampler(data=data, grid=grid)
+
+    test_cases = [[(1,3,15,16),(1,2,10,10)],
+                 [(1,6,7,16),(1,2,10,4)],
+                 [(1,7,3,16),(1,2,8,11)],
+                 [(1,9,50,50),(1,2,50,50)]]
+
+    for item in test_cases:
+        data_shape, grid_shape = item
+        # kWriteTo
+        exe_cpu = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
+        exe_gpu = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cudnn = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_list = [exe_cpu, exe_gpu, exe_cudnn]
+        ref_idx = 0
+        test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
+        test_grid = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.forward(is_train=True)
+            assert_almost_equal(exe_list[0].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
+        for exe in exe_list:
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        data_grad = exe_list[ref_idx].grad_dict['data'].asnumpy()
+        grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
+
+        # kAddTo
+        exe_cpu_addto = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
+        exe_gpu_addto = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cudnn_addto = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
+        data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
+        grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.grad_dict['data'][:] = data_initial_grad
+            exe.grad_dict['grid'][:] = grid_initial_grad
+            exe.forward(is_train=True)
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['data'].asnumpy(), data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
+
+
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
