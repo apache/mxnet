@@ -452,6 +452,7 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
     << arr->shape();
   TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
+  mxnet::op::CheckSizeSame(arr->shape(), new_shape);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);

@@ -2109,6 +2109,10 @@ def test_reshape():
                 'Output Shape = %s' %(str(holdout_src_shape), str(shape_args), str(reverse),
                                       str(dst_shape), str(output_shape[0]))
 
+    def test_invalid_reshape():
+        data = mx.nd.arange(16).reshape((4, 4))
+        assert_exception(mx.nd.reshape, MXNetError, data, (1, -2))
+
     # Test new api (Using shape)
     test_cases = [
         [(2, 3, 5, 5),  (0, -1),          False, (2, 75)],
@@ -2156,6 +2160,9 @@ def test_reshape():
     assert_allclose(outputs, data_npy.reshape((5, 4 * 3 * 7)))
     exe.backward(out_grads=[mx.nd.array(out_grad_npy, ctx=default_context())])
     assert_allclose(exe.grad_arrays[0].asnumpy(), out_grad_npy.reshape((5, 4, 3, 7)))
+
+    # Test for invalid cases
+    test_invalid_reshape()
 
 
 @with_seed()
