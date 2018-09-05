@@ -213,7 +213,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
         else:
             fname = path
     assert retries >= 0, "Number of retries should be at least 0"
-    
+
     if not verify_ssl:
         warnings.warn(
             'Unverified HTTPS request is being made (verify_ssl=False). '
