@@ -181,7 +181,7 @@ void PrintOutputResult(const std::vector<float>& data, const std::vector<std::st
 }
 
 void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
-		NDListHandle nd_hnd, int i) {
+             NDListHandle nd_hnd, int i) {
   MXPredCreateNewExecutor(pred_hnd);
 
   std::string synset_file = "synset.txt";
@@ -273,7 +273,7 @@ int main(int argc, char* argv[]) {
                input_keys,
                input_shape_indptr,
                input_shape_data,
-			   pred_hnds.size(),
+               pred_hnds.size(),
                pred_hnds.data());
   for (auto hnd : pred_hnds)
     assert(hnd);
