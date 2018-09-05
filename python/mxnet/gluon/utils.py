@@ -213,6 +213,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
         else:
             fname = path
     assert retries >= 0, "Number of retries should be at least 0"
+    
     if not verify_ssl:
         warnings.warn(
             'Unverified HTTPS request is being made (verify_ssl=False). '
@@ -234,7 +235,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 random_uuid = str(uuid.uuid4())
                 with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
-                        if chunk:  # filter out keep-alive new chunks
+                        if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
                     # if the target file exists(created by other processes),
                     # delete the temporary file
