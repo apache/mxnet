@@ -20,7 +20,7 @@ import os
 import tempfile
 import warnings
 import glob
-import threading
+import multiprocessing as mp
 try:
     from unittest import mock
 except ImportError:
@@ -47,43 +47,38 @@ def test_download_retries():
 
 @mock.patch(
     'requests.get',
-    mock.Mock(side_effect=
-              lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
+    mock.Mock(side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
+def _download_successful(tmpfile):
+    mx.gluon.utils.download(
+        "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
+        path=tmpfile)
+
+
 def test_download_successful():
     tmp = tempfile.mkdtemp()
     tmpfile = os.path.join(tmp, 'README.md')
-    mx.gluon.utils.download(
-        "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
-        path=tmpfile)
+    _download_successful(tmpfile)
     assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
     # assert there is no mole.tmp
-    pattern = os.path.join(tmp, 'README.md-*.mole.tmp')
-    assert not glob.glob(pattern)
-
-
-@mock.patch(
-    'requests.get',
-    mock.Mock(side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
-def _multithreading_download_successful(tmpfile):
-    mx.gluon.utils.download(
-        "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
-        path=tmpfile)
+    pattern = os.path.join(tmp, 'README.md*')
+    assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
 
 
 def test_multithreading_download_successful():
-    tmp = tempfile.mkdtemp()
-    tmpfile = os.path.join(tmp, 'README.md')
-    thread_list = []
-    for i in range(3):
-        thread_list.append(threading.Thread(
-            target=_multithreading_download_successful, args=(tmpfile,)))
-        thread_list[i].start()
-    for i in range(3):
-        thread_list[i].join()
-    assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
-    # assert there is no mole.tmp
-    pattern = os.path.join(tmp, 'README.md-*.mole.tmp')
-    assert not glob.glob(pattern)
+    for _ in range(1000000):
+        tmp = tempfile.mkdtemp()
+        tmpfile = os.path.join(tmp, 'README.md')
+        process_list = []
+        for i in range(1):
+            process_list.append(mp.Process(
+                target=_download_successful, args=(tmpfile,)))
+            process_list[i].start()
+        for i in range(1):
+            process_list[i].join()
+        assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
+        # assert there is no mole.tmp
+        pattern = os.path.join(tmp, 'README.md*')
+        assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
 
 
 @mock.patch(
