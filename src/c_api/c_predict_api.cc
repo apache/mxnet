@@ -67,6 +67,21 @@ struct MXAPINDList {
   std::vector<mx_float> data;
 };
 
+void MXPredCreateNewExecutor(PredictorHandle pred_hnd) {
+	MXAPIPredictor *pred = (MXAPIPredictor *) pred_hnd;
+  auto sym = pred->sym;
+  auto ctx = pred->ctx;
+  auto key2arg = pred->key2arg;
+  auto arg_arrays = pred->arg_arrays;
+  auto aux_arrays = pred->aux_arrays;
+  std::map<std::string, Context> ctx_map;
+  std::vector<NDArray> grad_store(arg_arrays.size());
+  std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
+  pred->exec.reset(Executor::Bind(sym, ctx, ctx_map, arg_arrays,
+                                  grad_store, grad_req, aux_arrays));
+  pred->out_arrays = pred->exec->outputs();
+}
+
 int MXPredCreatePartialOut1(const char* symbol_json_str,
                            const void* param_bytes,
                            int param_size,
