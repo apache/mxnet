@@ -182,6 +182,8 @@ void PrintOutputResult(const std::vector<float>& data, const std::vector<std::st
 
 void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
 		NDListHandle nd_hnd, int i) {
+  MXPredCreateNewExecutor(pred_hnd);
+
   std::string synset_file = "synset.txt";
   auto image_size = image_data.size();
   // Set Input Image
@@ -274,7 +276,7 @@ int main(int argc, char* argv[]) {
 			   pred_hnds.size(),
                pred_hnds.data());
   for (auto hnd : pred_hnds)
-	  assert(hnd);
+    assert(hnd);
 
   auto image_size = static_cast<std::size_t>(width * height * channels);
 
@@ -318,6 +320,7 @@ int main(int argc, char* argv[]) {
   t5.join();
   t6.join();
   t7.join();
+  printf("run successfully\n");
 
   return EXIT_SUCCESS;
 }
