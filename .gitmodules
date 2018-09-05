@@ -29,3 +29,6 @@
 [submodule "3rdparty/onnx-tensorrt"]
 	path = 3rdparty/onnx-tensorrt
 	url = https://github.com/onnx/onnx-tensorrt.git
+[submodule "example/bmxnet-examples"]
+	path = example/bmxnet-examples
+	url = git@gitlab.hpi.de:joseph.bethge/bmxnet-examples.git
