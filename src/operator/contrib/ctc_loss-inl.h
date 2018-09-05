@@ -256,68 +256,69 @@ class CTCLossOp : public Operator {
     exceed_cudnn_limit = false;
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    Tensor<xpu, 3, real_t> data =
-        in_data[ctc_loss::kData].get<xpu, 3, real_t>(s);
-    Tensor<xpu, 2, real_t> labels =
-        in_data[ctc_loss::kLabel].get<xpu, 2, real_t>(s);
+	MSHADOW_TYPE_SWITCH(in_data[0].type_flag_, DType, {
+		Tensor<xpu, 3, DType> data =
+			in_data[ctc_loss::kData].get<xpu, 3, DType>(s);
+		Tensor<xpu, 2, DType> labels =
+			in_data[ctc_loss::kLabel].get<xpu, 2, DType>(s);
 
-    Tensor<xpu, 1, real_t> costs =
-        out_data[ctc_loss::kOut].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 3, real_t> grad =
-        out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
+		Tensor<xpu, 1, DType> costs =
+			out_data[ctc_loss::kOut].get<xpu, 1, DType>(s);
+		Tensor<xpu, 3, DType> grad =
+			out_data[ctc_loss::kGrad].get<xpu, 3, DType>(s);
 
-    int max_seq_len = data.size(0);
-    int batch_size = data.size(1);
-    int alphabet_size = data.size(2);
+		int max_seq_len = data.size(0);
+		int batch_size = data.size(1);
+		int alphabet_size = data.size(2);
 
-    // data_lengths
-    std::vector<int> data_lengths(batch_size, max_seq_len);
-    if (param_.use_data_lengths) {
-      int kInputLength = 2;
-      IndexTensorToVector(in_data[kInputLength].get<xpu, 1, real_t>(s), &data_lengths);
-    }
+		// data_lengths
+		std::vector<int> data_lengths(batch_size, max_seq_len);
+		if (param_.use_data_lengths) {
+			int kInputLength = 2;
+			IndexTensorToVector(in_data[kInputLength].get<xpu, 1, DType>(s), &data_lengths);
+		}
 
-    // label_lengths
-    std::vector<int> packed_labels;
-    std::vector<int> label_lengths(batch_size);
+		// label_lengths
+		std::vector<int> packed_labels;
+		std::vector<int> label_lengths(batch_size);
 
-    if (param_.use_label_lengths) {
-      int kLabelLength = 2+param_.use_data_lengths;
-      exceed_cudnn_limit = PackLabelByLength(labels, in_data[kLabelLength].get<xpu, 1, real_t>(s),
-                                             &packed_labels, &label_lengths);
-    } else {
-      exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label == 0?0:-1,
-                                                     &packed_labels, &label_lengths);
-    }
+		if (param_.use_label_lengths) {
+			int kLabelLength = 2 + param_.use_data_lengths;
+			exceed_cudnn_limit = PackLabelByLength(labels, in_data[kLabelLength].get<xpu, 1, DType>(s),
+													&packed_labels, &label_lengths);
+		} else {
+			exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label == 0?0:-1,
+				                                         &packed_labels, &label_lengths);
+		}
 
-// CUDNN is disabled due to lack of support for input lengths
-/* #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7 */
-/*     if (!exceed_cudnn_limit) { */
-/*       cudnn_forward(ctx, s, data, costs, grad, */
-/*                     &data_lengths, &label_lengths, &packed_labels, */
-/*                     max_seq_len, batch_size, alphabet_size, */
-/*                     req[ctc_loss::kGrad] != mxnet::kNullOp); */
-/*     } else { */
-/*       baidu_forward(ctx, s, data, costs, grad, */
-/*                     &data_lengths, &label_lengths, &packed_labels, */
-/*                     batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp); */
-/*     } */
-/* #else */
+		// CUDNN is disabled due to lack of support for input lengths
+		/* #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7 */
+		/*     if (!exceed_cudnn_limit) { */
+		/*       cudnn_forward(ctx, s, data, costs, grad, */
+		/*                     &data_lengths, &label_lengths, &packed_labels, */
+		/*                     max_seq_len, batch_size, alphabet_size, */
+		/*                     req[ctc_loss::kGrad] != mxnet::kNullOp); */
+		/*     } else { */
+		/*       baidu_forward(ctx, s, data, costs, grad, */
+		/*                     &data_lengths, &label_lengths, &packed_labels, */
+		/*                     batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp); */
+		/*     } */
+		/* #else */
 
-    baidu_forward(ctx, s, data, costs, grad,
-                  &data_lengths, &label_lengths, &packed_labels,
-                  batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp);
+		baidu_forward(ctx, s, data, costs, grad,
+			          &data_lengths, &label_lengths, &packed_labels,
+				      batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp);
 
-    if (param_.use_data_lengths) {
-      // baidu warp CTC implementation sometimes includes undefined gradients
-      // for data outside of length mask. Setting to 0 to make it consistent
-      // with CPU implementation.
-      int kInputLength = 2;
-      mxnet_op::SequenceMask(grad, in_data[kInputLength].get<xpu, 1, real_t>(s),
-                             static_cast<real_t>(0));
-    }
+		if (param_.use_data_lengths) {
+		// baidu warp CTC implementation sometimes includes undefined gradients
+		// for data outside of length mask. Setting to 0 to make it consistent
+		// with CPU implementation.
+			int kInputLength = 2;
+			mxnet_op::SequenceMask(grad, in_data[kInputLength].get<xpu, 1, real_t>(s),
+				                 static_cast<real_t>(0));
+		}
+	});
   }
-
   virtual void Backward(const OpContext &ctx,
                         const std::vector<TBlob> &out_grad,
                         const std::vector<TBlob> &in_data,
