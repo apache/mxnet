@@ -76,7 +76,7 @@ In the rest of this document, we list routines provided by the `gluon.data` pack
 ```
 
 Transforms can be used to augment input data during training. You
-can compose multiple transforms sequentially (taking note of which functions should be applied before and after `ToTensor`), for example:
+can compose multiple transforms sequentially (taking note of which functions should be applied before and after `ToTensor`).
 
 ```python
 from mxnet.gluon.data.vision import MNIST, transforms
