@@ -69,6 +69,13 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   }
 };
 
+inline void CheckSizeSame(const TShape& a, const TShape& b) {
+  CHECK_EQ(a.Size(), b.Size())
+    << "Target shape size is different to source. "
+    << "Target: " << b
+    << "\nSource: " << a;
+}
+
 template<typename IType>
 inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
                                 const TShape& dshape, bool reverse) {
@@ -208,10 +215,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
     return (*out_attrs)[0].ndim() && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
   ReverseReshapeInferShape(&dshape, oshape);
-  CHECK_EQ(oshape.Size(), dshape.Size())
-    << "Target shape size is different to source. "
-    << "Target: " << oshape
-    << "\nSource: " << dshape;
+  CheckSizeSame(dshape, oshape);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
 }
