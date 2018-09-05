@@ -23,6 +23,8 @@ from ..block import *
 
 from .basic_layers import *
 
+from .binary_layers import *
+
 from .conv_layers import *
 
 from .activations import *

@@ -1,7 +1,7 @@
-from mxnet.gluon.nn import Dense, BatchNorm
-from mxnet.gluon.nn.conv_layers import _Conv
-from mxnet.base import numeric_types
-from mxnet.symbol.symbol import Symbol
+from .basic_layers import Dense, BatchNorm
+from .conv_layers import _Conv
+from ...base import numeric_types
+from ...symbol import Symbol
 
 
 def check_params(use_bias, activation):
