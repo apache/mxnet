@@ -120,18 +120,18 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
                                      const char** output_keys,
                                      PredictorHandle* out);
 
-int MXPredCreateMultithread(const char* symbol_json_str,
-                            const void* param_bytes,
-							int param_size,
-							int dev_type, int dev_id,
-							mx_uint num_input_nodes,
-							const char** input_keys,
-							const mx_uint* input_shape_indptr,
-							const mx_uint* input_shape_data,
-							int num_threads,
-							PredictorHandle* out);
+MXNET_DLL int MXPredCreateMultithread(const char* symbol_json_str,
+                                      const void* param_bytes,
+                                      int param_size,
+                                      int dev_type, int dev_id,
+                                      mx_uint num_input_nodes,
+                                      const char** input_keys,
+                                      const mx_uint* input_shape_indptr,
+                                      const mx_uint* input_shape_data,
+                                      int num_threads,
+                                      PredictorHandle* out);
 
-void MXPredCreateNewExecutor(PredictorHandle pred_hnd);
+MXNET_DLL void MXPredCreateNewExecutor(PredictorHandle pred_hnd);
 
 /*!
  * \brief Change the input shape of an existing predictor.
