@@ -68,7 +68,7 @@ struct MXAPINDList {
 };
 
 void MXPredCreateNewExecutor(PredictorHandle pred_hnd) {
-	MXAPIPredictor *pred = (MXAPIPredictor *) pred_hnd;
+  MXAPIPredictor *pred = (MXAPIPredictor *) pred_hnd;
   auto sym = pred->sym;
   auto ctx = pred->ctx;
   auto key2arg = pred->key2arg;
@@ -83,18 +83,18 @@ void MXPredCreateNewExecutor(PredictorHandle pred_hnd) {
 }
 
 int MXPredCreatePartialOut1(const char* symbol_json_str,
-                           const void* param_bytes,
-                           int param_size,
-                           int dev_type, int dev_id,
-                           mx_uint num_input_nodes,
-                           const char** input_keys,
-                           const mx_uint* input_shape_indptr,
-                           const mx_uint* input_shape_data,
-                           mx_uint num_output_nodes,
-                           const char** output_keys,
-                           // This is used for paralle inference.
-                           int num_threads,
-                           PredictorHandle* out) {
+                            const void* param_bytes,
+                            int param_size,
+                            int dev_type, int dev_id,
+                            mx_uint num_input_nodes,
+                            const char** input_keys,
+                            const mx_uint* input_shape_indptr,
+                            const mx_uint* input_shape_data,
+                            mx_uint num_output_nodes,
+                            const char** output_keys,
+                            // This is used for paralle inference.
+                            int num_threads,
+                            PredictorHandle* out) {
   using nnvm::Symbol;
 
   API_BEGIN();
@@ -223,9 +223,9 @@ int MXPredCreatePartialOut1(const char* symbol_json_str,
   // bind
   for (int i = 0; i < num_threads; i++) {
     std::unique_ptr<MXAPIPredictor> ret(new MXAPIPredictor());
-	ret->sym = sym;
+    ret->sym = sym;
     ret->ctx = ctx;
-	ret->key2arg = key2arg;
+    ret->key2arg = key2arg;
     ret->arg_arrays = arg_arrays;
     ret->aux_arrays = aux_arrays;
 
@@ -259,18 +259,18 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
                            int num_threads,
                            PredictorHandle* out) {
   return MXPredCreatePartialOut1(
-		  symbol_json_str,
-		  param_bytes,
-		  param_size,
-		  dev_type, dev_id,
-		  num_input_nodes,
-		  input_keys,
-		  input_shape_indptr,
-		  input_shape_data,
-		  num_output_nodes,
-		  output_keys,
-		  1,
-		  out);
+      symbol_json_str,
+      param_bytes,
+      param_size,
+      dev_type, dev_id,
+      num_input_nodes,
+      input_keys,
+      input_shape_indptr,
+      input_shape_data,
+      num_output_nodes,
+      output_keys,
+      1,
+      out);
 }
 
 int MXPredCreate(const char* symbol_json_str,
@@ -321,7 +321,7 @@ int MXPredCreateMultithread(const char* symbol_json_str,
       input_shape_data,
       0,
       NULL,
-	  num_threads,
+      num_threads,
       out);
 }
 
