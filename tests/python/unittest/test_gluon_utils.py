@@ -20,6 +20,7 @@ import os
 import tempfile
 import warnings
 import glob
+import shutil
 import multiprocessing as mp
 try:
     from unittest import mock
@@ -48,10 +49,10 @@ def test_download_retries():
 @mock.patch(
     'requests.get',
     mock.Mock(side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
-def _download_successful(tmpfile):
+def _download_successful(tmp):
     mx.gluon.utils.download(
         "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
-        path=tmpfile)
+        path=tmp)
 
 
 def test_download_successful():
@@ -62,6 +63,9 @@ def test_download_successful():
     # assert there is no mole.tmp
     pattern = os.path.join(tmp, 'README.md*')
     assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
+    # delete temp dir
+    shutil.rmtree(tmp)
+
 
 
 def test_multithreading_download_successful():
@@ -69,16 +73,18 @@ def test_multithreading_download_successful():
         tmp = tempfile.mkdtemp()
         tmpfile = os.path.join(tmp, 'README.md')
         process_list = []
-        for i in range(1):
+        for i in range(1000):
             process_list.append(mp.Process(
                 target=_download_successful, args=(tmpfile,)))
             process_list[i].start()
-        for i in range(1):
+        for i in range(1000):
             process_list[i].join()
         assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
         # assert there is no mole.tmp
         pattern = os.path.join(tmp, 'README.md*')
         assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
+        # delete temp dir
+        shutil.rmtree(tmp)
 
 
 @mock.patch(
