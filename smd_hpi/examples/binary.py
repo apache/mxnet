@@ -39,17 +39,36 @@ class BDense(Dense):
 
 
 class _BConv(_Conv):
-    def __init__(self, *args, **kwargs):
-        super(_BConv, self).__init__(*args, **kwargs)
+    def __init__(self, channels, kernel_size, strides, padding, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs):
+        super(_BConv, self).__init__(
+            channels, kernel_size, strides, 0, dilation, groups, layout,
+            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+        check_params(use_bias, activation)
         self._pre_bn = BatchNorm()
         self._offset = 0
+        if isinstance(padding, numeric_types):
+            padding = (padding,) * len(kernel_size)
+        self._pre_padding = padding
+
+    def _apply_pre_padding(self, F, x):
+        if sum(self._pre_padding) > 0:
+            assert self._kwargs["layout"] == "NCHW", \
+                "Padding with binary layers is currently only supported on NCHW layout."
+            axis_padding = [0, 0, 0, 0]
+            for pad_width in self._pre_padding:
+                axis_padding.extend([pad_width, pad_width])
+            x = F.pad(x, mode="constant", pad_width=axis_padding, constant_value=-1)
+        return x
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = 1
             for dim_size in weight.shape[1:]:
                 self._offset *= dim_size
-        h = F.Convolution(binarize_inputs(F, x, self._pre_bn), binarize_weights(F, weight), name='fwd', **self._kwargs)
+        binary_x = binarize_inputs(F, self._apply_pre_padding(F, x), self._pre_bn)
+        binary_weight = binarize_weights(F, weight)
+        h = F.Convolution(binary_x, binary_weight, name='fwd', **self._kwargs)
         return (h + self._offset) / 2
 
 
@@ -58,7 +77,6 @@ class BConv1D(_BConv):
                  groups=1, layout='NCW', activation=None, use_bias=False,
                  weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        check_params(use_bias, activation)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
@@ -72,7 +90,6 @@ class BConv2D(_BConv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=False, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        check_params(use_bias, activation)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
@@ -86,7 +103,6 @@ class BConv3D(_BConv):
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=False, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        check_params(use_bias, activation, in_channels)
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
