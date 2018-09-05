@@ -19,7 +19,8 @@ import io
 import os
 import tempfile
 import warnings
-
+import glob
+import threading
 try:
     from unittest import mock
 except ImportError:
@@ -54,7 +55,35 @@ def test_download_successful():
     mx.gluon.utils.download(
         "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
         path=tmpfile)
-    assert os.path.getsize(tmpfile) > 100
+    assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
+    # assert there is no mole.tmp
+    pattern = os.path.join(tmp, 'README.md-*.mole.tmp')
+    assert not glob.glob(pattern)
+
+
+@mock.patch(
+    'requests.get',
+    mock.Mock(side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
+def _multithreading_download_successful(tmpfile):
+    mx.gluon.utils.download(
+        "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
+        path=tmpfile)
+
+
+def test_multithreading_download_successful():
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'README.md')
+    thread_list = []
+    for i in range(3):
+        thread_list.append(threading.Thread(
+            target=_multithreading_download_successful, args=(tmpfile,)))
+        thread_list[i].start()
+    for i in range(3):
+        thread_list[i].join()
+    assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
+    # assert there is no mole.tmp
+    pattern = os.path.join(tmp, 'README.md-*.mole.tmp')
+    assert not glob.glob(pattern)
 
 
 @mock.patch(
