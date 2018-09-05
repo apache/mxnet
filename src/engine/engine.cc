@@ -29,17 +29,6 @@
 
 namespace mxnet {
 namespace engine {
-
-inline bool IsNaiveEngine() {
-  const char *type = getenv("MXNET_ENGINE_TYPE");
-  if (type == nullptr) {
-    return false;
-  } else {
-    std::string stype = type;
-    return stype == "NaiveEngine";
-  }
-}
-
 inline Engine* CreateEngine() {
   const char *type = getenv("MXNET_ENGINE_TYPE");
   const bool default_engine = (type == nullptr);
@@ -70,18 +59,12 @@ inline Engine* CreateEngine() {
 }  // namespace engine
 
 std::shared_ptr<Engine> Engine::_GetSharedRef() {
-  static bool is_naive = engine::IsNaiveEngine();
-  if (is_naive) {
-    static thread_local std::shared_ptr<Engine> sptr(engine::CreateEngine());
-    return sptr;
-  } else {
-    static std::shared_ptr<Engine> sptr(engine::CreateEngine());
-    return sptr;
-  }
+  static std::shared_ptr<Engine> sptr(engine::CreateEngine());
+  return sptr;
 }
 
 Engine* Engine::Get() {
-  Engine *inst = _GetSharedRef().get();
+  static Engine *inst = _GetSharedRef().get();
   return inst;
 }
 }  // namespace mxnet
