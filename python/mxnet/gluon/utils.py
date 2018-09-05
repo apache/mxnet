@@ -180,31 +180,37 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def _atomic_cp(temp_file, fname):
-    """ Implement lock-free whack-a-mole algorithm to achieve atmoic cp 
-        Reference https://stackoverflow.com/questions/11614815/a-safe-atomic-file-copy-operation
-    """
-    if os.path.exists(fname):
-        return
-    random_uuid = uuid.uuid4()
-    mole_file = '{}-{}.mole.tmp'.format(fname, random_uuid)
-    shutil.copy(temp_file, mole_file)
-    other_mole_files = glob.glob('{}-*.mole.tmp'.format(fname))
-    for other_mole_file in other_mole_files:
-        file_uuid = re.search('{}-(.+?).mole.tmp'.format(fname), other_mole_file).group(1)
-        assert file_uuid is not None, 'mole.tmp filename is missing'
-        if file_uuid == str(random_uuid):
-            continue
-        elif uuid.UUID(file_uuid) > random_uuid:
-            os.remove(other_mole_file)
-        else:
-            os.remove(mole_file)
-            mole_file = other_mole_file
-            random_uuid = file_uuid
-    if os.path.exists(fname):
-        os.remove(mole_file)
-    else:
-        os.rename(mole_file, fname)
+# def _atomic_cp(temp_file, fname):
+#     """ Implement lock-free whack-a-mole algorithm to achieve atmoic cp 
+#         Reference https://stackoverflow.com/questions/11614815/a-safe-atomic-file-copy-operation
+#     """
+#     if os.path.exists(fname):
+#         return
+#     random_uuid = str(uuid.uuid4())
+#     print('generatate UUID {}'.format(random_uuid))
+#     shutil.copy(temp_file, '{}.{}.tmp'.format(fname, random_uuid))
+#     os.rename('{}.{}.tmp'.format(fname, random_uuid),
+#               '{}-{}.mole.tmp'.format(fname, random_uuid))
+#     other_mole_files = glob.glob('{}-*.mole.tmp'.format(fname))
+#     for other_mole_file in other_mole_files:
+#         file_uuid = re.search(r'{}-(.+?).mole.tmp'.format(fname), other_mole_file).group(1)
+#         print('~~~~~~~~~~~~~~~~~~~~~~~')
+#         print(other_mole_file)
+#         print(file_uuid)
+#         assert file_uuid is not None, 'mole.tmp filename is missing'
+#         if uuid.UUID(file_uuid) > uuid.UUID(random_uuid):
+#             print('remove other {}'.format(other_mole_file))
+#             os.remove(other_mole_file)
+#         if uuid.UUID(file_uuid) < uuid.UUID(random_uuid):
+#             print('remove my own {}-{}.mole.tmp'.format(fname, random_uuid))
+#             os.remove('{}-{}.mole.tmp'.format(fname, random_uuid))
+#             random_uuid = file_uuid
+#     if os.path.exists(fname):
+#         print('remove {}'.format(random_uuid))
+#         os.remove('{}-{}.mole.tmp'.format(fname, random_uuid))
+#     else:
+#         print('rename {}'.format())
+#         os.rename('{}-{}.mole.tmp'.format(fname, random_uuid), fname)
 
 
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
@@ -261,19 +267,23 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError("Failed downloading url %s"%url)
-                # create a tempfile
-                tmp = tempfile.NamedTemporaryFile()
-                with tempfile.NamedTemporaryFile() as tmp:
+                # create uuid
+                random_uuid = str(uuid.uuid4())
+                with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:  # filter out keep-alive new chunks
-                            tmp.write(chunk)
-                    tmp.flush()
-                    if sha1_hash and not check_sha1(tmp.name, sha1_hash):
+                            f.write(chunk)
+                    # if the target file exists(created by other process), delete the tmp file
+                    if os.path.exists(fname):
+                        os.remove('{}.{}'.format(fname, random_uuid))
+                    else:
+                        # atmoic operation in the same file system
+                        os.replace('{}.{}'.format(fname, random_uuid), fname)
+                    if sha1_hash and not check_sha1(fname, sha1_hash):
                         raise UserWarning('File {} is downloaded but the content hash does not match.'
                                         ' The repo may be outdated or download may be incomplete. '
                                         'If the "repo_url" is overridden, consider switching to '
                                         'the default repo.'.format(fname))
-                    _atomic_cp(tmp.name, fname)
                 break
             except Exception as e:
                 retries -= 1
