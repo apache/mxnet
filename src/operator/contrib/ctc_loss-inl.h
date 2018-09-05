@@ -255,17 +255,16 @@ class CTCLossOp : public Operator {
     exceed_cudnn_limit = false;
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    MSHADOW_REAL_TYPE_SWITCH(in_data[ctc_loss::kData].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(in_data[ctc_loss::kLabel].type_flag_, LType, {
-        Tensor<xpu, 3, DType> data =
-          in_data[ctc_loss::kData].get<xpu, 3, DType>(s);
+        Tensor<xpu, 3, real_t> data =
+          in_data[ctc_loss::kData].get<xpu, 3, real_t>(s);
         Tensor<xpu, 2, LType> labels =
           in_data[ctc_loss::kLabel].get<xpu, 2, LType>(s);
 
-        Tensor<xpu, 1, DType> costs =
-          out_data[ctc_loss::kOut].get<xpu, 1, DType>(s);
-        Tensor<xpu, 3, DType> grad =
-          out_data[ctc_loss::kGrad].get<xpu, 3, DType>(s);
+        Tensor<xpu, 1, real_t> costs =
+          out_data[ctc_loss::kOut].get<xpu, 1, real_t>(s);
+        Tensor<xpu, 3, real_t> grad =
+          out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
 
         int max_seq_len = data.size(0);
         int batch_size = data.size(1);
@@ -275,7 +274,7 @@ class CTCLossOp : public Operator {
         std::vector<int> data_lengths(batch_size, max_seq_len);
         if (param_.use_data_lengths) {
           int kInputLength = 2;
-          IndexTensorToVector(in_data[kInputLength].get<xpu, 1, DType>(s), &data_lengths);
+          IndexTensorToVector(in_data[kInputLength].get<xpu, 1, real_t>(s), &data_lengths);
         }
 
         // label_lengths
@@ -315,11 +314,10 @@ class CTCLossOp : public Operator {
           // for data outside of length mask. Setting to 0 to make it consistent
           // with CPU implementation.
           int kInputLength = 2;
-          mxnet_op::SequenceMask(grad, in_data[kInputLength].get<xpu, 1, DType>(s),
-                                static_cast<DType>(0));
+          mxnet_op::SequenceMask(grad, in_data[kInputLength].get<xpu, 1, real_t>(s),
+                                static_cast<real_t>(0));
         }
       });
-    });
   }
 
   virtual void Backward(const OpContext &ctx,
@@ -335,13 +333,13 @@ class CTCLossOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     MSHADOW_REAL_TYPE_SWITCH(in_data[ctc_loss::kData].type_flag_, DType, {
-      Tensor<xpu, 3, DType> data_grad =
-        in_grad[ctc_loss::kData].get<xpu, 3, DType>(s);
-      Tensor<xpu, 1, DType> output_grad =
-        out_grad[ctc_loss::kOut].get<xpu, 1, DType>(s);
+      Tensor<xpu, 3, real_t> data_grad =
+        in_grad[ctc_loss::kData].get<xpu, 3, real_t>(s);
+      Tensor<xpu, 1, real_t> output_grad =
+        out_grad[ctc_loss::kOut].get<xpu, 1, real_t>(s);
 
-      Tensor<xpu, 3, DType> data_grad_computed =
-        out_data[ctc_loss::kGrad].get<xpu, 3, DType>(s);
+      Tensor<xpu, 3, real_t> data_grad_computed =
+        out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
 
       Assign(data_grad, req[ctc_loss::kData],
             mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
@@ -439,12 +437,11 @@ class CTCLossOp : public Operator {
   }
 #endif  // __CUDACC__ && CUDNN
 
-  template<typename DType>
   inline void baidu_forward(const OpContext &ctx,
                             mshadow::Stream<xpu>* s,
-                            mshadow::Tensor<xpu, 3, DType> data,
-                            mshadow::Tensor<xpu, 1, DType> costs,
-                            mshadow::Tensor<xpu, 3, DType> grad,
+                            mshadow::Tensor<xpu, 3, real_t> data,
+                            mshadow::Tensor<xpu, 1, real_t> costs,
+                            mshadow::Tensor<xpu, 3, real_t> grad,
                             std::vector<int>* data_lengths,
                             std::vector<int>* label_lengths,
                             std::vector<int>* packed_labels,
@@ -455,13 +452,13 @@ class CTCLossOp : public Operator {
     // allocate temporary workspace
     size_t size_bytes;
     bool gpu = data.kDevCPU ? false : true;
-    get_workspace_size<DType>(label_lengths, data_lengths, alphabet_size,
+    get_workspace_size<real_t>(label_lengths, data_lengths, alphabet_size,
                                batch_size, gpu, &size_bytes);
 
     // round-up so there are enough elems in memory
-    int num_tmp_elems = (size_bytes + sizeof(DType) - 1) / sizeof(DType);
-    Tensor<xpu, 1, DType> workspace =
-        ctx.requested[ctc_loss::kTempSpace].get_space_typed<xpu, 1, DType>(
+    int num_tmp_elems = (size_bytes + sizeof(real_t) - 1) / sizeof(real_t);
+    Tensor<xpu, 1, real_t> workspace =
+        ctx.requested[ctc_loss::kTempSpace].get_space_typed<xpu, 1, real_t>(
             Shape1(num_tmp_elems), s);
 
     compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels->data(),
