@@ -221,13 +221,14 @@ void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 2) {
+  if (argc < 3) {
     std::cout << "No test image here." << std::endl
-              << "Usage: ./image-classification-predict apple.jpg" << std::endl;
+              << "Usage: ./image-classification-predict apple.jpg num_threads" << std::endl;
     return EXIT_FAILURE;
   }
 
   std::string test_file(argv[1]);
+  int num_threads = std::atoi(argv[2]);
 
   // Models path for your model, you have to modify it
   std::string json_file = "Inception-BN-symbol.json";
@@ -255,26 +256,10 @@ int main(int argc, char* argv[]) {
                                         static_cast<mx_uint>(channels),
                                         static_cast<mx_uint>(height),
                                         static_cast<mx_uint>(width) };
-  std::vector<PredictorHandle> pred_hnds(8, nullptr);
 
   if (json_data.GetLength() == 0 || param_data.GetLength() == 0) {
     return EXIT_FAILURE;
   }
-
-  // Create Predictor
-  MXPredCreateMultithread(static_cast<const char*>(json_data.GetBuffer()),
-               static_cast<const char*>(param_data.GetBuffer()),
-               static_cast<int>(param_data.GetLength()),
-               dev_type,
-               dev_id,
-               num_input_nodes,
-               input_keys,
-               input_shape_indptr,
-               input_shape_data,
-               pred_hnds.size(),
-               pred_hnds.data());
-  for (auto hnd : pred_hnds)
-    assert(hnd);
 
   auto image_size = static_cast<std::size_t>(width * height * channels);
 
@@ -302,22 +287,45 @@ int main(int argc, char* argv[]) {
 
   GetImageFile(test_file, image_data.data(), channels, cv::Size(width, height), nd_data);
 
-  std::thread t0(predict, pred_hnds[0], image_data, nd_hnd, 0);
-  std::thread t1(predict, pred_hnds[1], image_data, nd_hnd, 1);
-  std::thread t2(predict, pred_hnds[2], image_data, nd_hnd, 2);
-  std::thread t3(predict, pred_hnds[3], image_data, nd_hnd, 3);
-  std::thread t4(predict, pred_hnds[4], image_data, nd_hnd, 4);
-  std::thread t5(predict, pred_hnds[5], image_data, nd_hnd, 5);
-  std::thread t6(predict, pred_hnds[6], image_data, nd_hnd, 6);
-  std::thread t7(predict, pred_hnds[7], image_data, nd_hnd, 7);
-  t0.join();
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
-  t5.join();
-  t6.join();
-  t7.join();
+  if (num_threads == 1) {
+    // Create Predictor
+    PredictorHandle pred_hnd;
+    MXPredCreate(static_cast<const char*>(json_data.GetBuffer()),
+                 static_cast<const char*>(param_data.GetBuffer()),
+                 static_cast<int>(param_data.GetLength()),
+                 dev_type,
+                 dev_id,
+                 num_input_nodes,
+                 input_keys,
+                 input_shape_indptr,
+                 input_shape_data,
+                 &pred_hnd);
+    assert(pred_hnd);
+
+    predict(pred_hnd, image_data, nd_hnd, 0);
+  } else {
+    // Create Predictor
+    std::vector<PredictorHandle> pred_hnds(num_threads, nullptr);
+    MXPredCreateMultithread(static_cast<const char*>(json_data.GetBuffer()),
+                            static_cast<const char*>(param_data.GetBuffer()),
+                            static_cast<int>(param_data.GetLength()),
+                            dev_type,
+                            dev_id,
+                            num_input_nodes,
+                            input_keys,
+                            input_shape_indptr,
+                            input_shape_data,
+                            pred_hnds.size(),
+                            pred_hnds.data());
+    for (auto hnd : pred_hnds)
+      assert(hnd);
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < num_threads; i++)
+      threads.emplace_back(predict, pred_hnds[i], image_data, nd_hnd, i);
+    for (int i = 0; i < num_threads; i++)
+      threads[i].join();
+  }
   printf("run successfully\n");
 
   return EXIT_SUCCESS;
