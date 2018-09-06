@@ -67,19 +67,21 @@ struct MXAPINDList {
   std::vector<mx_float> data;
 };
 
-void MXPredCreateNewExecutor(PredictorHandle pred_hnd) {
+inline void _CreateExecutor(PredictorHandle pred_hnd) {
   MXAPIPredictor *pred = (MXAPIPredictor *) pred_hnd;
-  auto sym = pred->sym;
-  auto ctx = pred->ctx;
-  auto key2arg = pred->key2arg;
-  auto arg_arrays = pred->arg_arrays;
-  auto aux_arrays = pred->aux_arrays;
-  std::map<std::string, Context> ctx_map;
-  std::vector<NDArray> grad_store(arg_arrays.size());
-  std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-  pred->exec.reset(Executor::Bind(sym, ctx, ctx_map, arg_arrays,
-                                  grad_store, grad_req, aux_arrays));
-  pred->out_arrays = pred->exec->outputs();
+  if (pred->exec == nullptr) {
+    auto sym = pred->sym;
+    auto ctx = pred->ctx;
+    auto key2arg = pred->key2arg;
+    auto arg_arrays = pred->arg_arrays;
+    auto aux_arrays = pred->aux_arrays;
+    std::map<std::string, Context> ctx_map;
+    std::vector<NDArray> grad_store(arg_arrays.size());
+    std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
+    pred->exec.reset(Executor::Bind(sym, ctx, ctx_map, arg_arrays,
+                                    grad_store, grad_req, aux_arrays));
+    pred->out_arrays = pred->exec->outputs();
+  }
 }
 
 int MXPredCreatePartialOut1(const char* symbol_json_str,
@@ -94,6 +96,7 @@ int MXPredCreatePartialOut1(const char* symbol_json_str,
                             const char** output_keys,
                             // This is used for paralle inference.
                             int num_threads,
+                            bool lazy,
                             PredictorHandle* out) {
   using nnvm::Symbol;
 
@@ -228,18 +231,18 @@ int MXPredCreatePartialOut1(const char* symbol_json_str,
     ret->key2arg = key2arg;
     ret->arg_arrays = arg_arrays;
     ret->aux_arrays = aux_arrays;
-
-    std::map<std::string, Context> ctx_map;
-    std::vector<NDArray> grad_store(arg_arrays.size());
-    std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
-
-
-    ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
-                                   arg_arrays,
-                                   grad_store, grad_req,
-                                   aux_arrays));
     ret->out_shapes = out_shapes;
-    ret->out_arrays = ret->exec->outputs();
+
+    if (!lazy) {
+      std::map<std::string, Context> ctx_map;
+      std::vector<NDArray> grad_store(arg_arrays.size());
+      std::vector<OpReqType> grad_req(arg_arrays.size(), kNullOp);
+      ret->exec.reset(Executor::Bind(sym, ctx, ctx_map,
+                                     arg_arrays,
+                                     grad_store, grad_req,
+                                     aux_arrays));
+      ret->out_arrays = ret->exec->outputs();
+    }
     out[i] = ret.release();
   }
   API_END_HANDLE_ERROR();
@@ -270,6 +273,7 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
       num_output_nodes,
       output_keys,
       1,
+      false,
       out);
 }
 
@@ -295,6 +299,7 @@ int MXPredCreate(const char* symbol_json_str,
       0,
       NULL,
       1,
+      false,
       out);
 }
 
@@ -322,6 +327,7 @@ int MXPredCreateMultithread(const char* symbol_json_str,
       0,
       NULL,
       num_threads,
+      true,
       out);
 }
 
@@ -331,6 +337,7 @@ int MXPredReshape(mx_uint num_input_nodes,
                   const mx_uint* input_shape_data,
                   PredictorHandle handle,
                   PredictorHandle* out) {
+  _CreateExecutor(handle);
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   std::unique_ptr<MXAPIPredictor> ret(new MXAPIPredictor());
 
@@ -447,6 +454,7 @@ int MXPredSetInput(PredictorHandle handle,
 }
 
 int MXPredForward(PredictorHandle handle) {
+  _CreateExecutor(handle);
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   p->exec->Forward(false);
@@ -454,6 +462,7 @@ int MXPredForward(PredictorHandle handle) {
 }
 
 int MXPredPartialForward(PredictorHandle handle, int step, int* step_left) {
+  _CreateExecutor(handle);
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   p->exec->PartialForward(false, step, step_left);

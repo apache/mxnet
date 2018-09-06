@@ -131,8 +131,6 @@ MXNET_DLL int MXPredCreateMultithread(const char* symbol_json_str,
                                       int num_threads,
                                       PredictorHandle* out);
 
-MXNET_DLL void MXPredCreateNewExecutor(PredictorHandle pred_hnd);
-
 /*!
  * \brief Change the input shape of an existing predictor.
  * \param num_input_nodes Number of input nodes to the net,
