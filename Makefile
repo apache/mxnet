@@ -99,7 +99,9 @@ endif
 
 ifeq ($(USE_TENSORRT), 1)
 	CFLAGS +=  -I$(ROOTDIR) -I$(TPARTYDIR) -DONNX_NAMESPACE=$(ONNX_NAMESPACE) -DMXNET_USE_TENSORRT=1
-	LDFLAGS += -lprotobuf -pthread -lonnx -lonnx_proto -lnvonnxparser -lnvonnxparser_runtime -lnvinfer -lnvinfer_plugin
+	LDFLAGS +=  -lprotobuf -pthread -lonnx -l:libonnx_proto.a -l:libnvonnxparser_static.a \
+	-l:libnvonnxparser_runtime_static.a -l:libnvonnxparser_plugin.a  -lnvinfer -lnvinfer_plugin \
+	-l:libonnx_proto.a -l:libonnxtrt_proto.a
 endif
 # -L/usr/local/lib
 
