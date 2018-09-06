@@ -50,6 +50,7 @@
 
 namespace mxnet {
 namespace op {
+
 namespace ctc_loss {
 enum CTCLossOpInputs { kData, kLabel };
 enum CTCLossOpOutputs { kOut, kGrad };
@@ -228,6 +229,7 @@ class CTCLossOp : public Operator {
   explicit CTCLossOp(CTCLossParam p) {
     this->param_ = p;
     exceed_cudnn_limit = false;
+
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
     CUDNN_CALL(cudnnCreateCTCLossDescriptor(&ctc_desc_));
     CUDNN_CALL(cudnnSetCTCLossDescriptor(ctc_desc_, CUDNN_DATA_FLOAT));
