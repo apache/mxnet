@@ -6902,10 +6902,10 @@ def test_diag():
     check_numeric_gradient(diag_sym, [a_np])
 
     # Test 4d input
-    x1 = np.random.randint(2,9)
-    x2 = np.random.randint(2,9)
-    x3 = np.random.randint(2,9)
-    x4 = np.random.randint(2,9)
+    x1 = np.random.randint(3,9)
+    x2 = np.random.randint(3,9)
+    x3 = np.random.randint(3,9)
+    x4 = np.random.randint(3,9)
     a_np = np.random.random((x1, x2, x3, x4)).astype(np.float32)
     a = mx.nd.array(a_np).astype('float32')
 
@@ -6920,6 +6920,10 @@ def test_diag():
     # k = -1 axis1=1, axis3=3
     r = mx.nd.diag(data=a, k=-1, axis1=1, axis2=3)
     assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
+
+    # k = 2, axis1=-2, axis2=0
+    r = mx.nd.diag(data=a, k=2, axis1=-2, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
 
     # Test 4d backward, k=0, axis1=3, axis2=0
     data = mx.sym.Variable('data')
@@ -6936,7 +6940,10 @@ def test_diag():
     diag_sym = mx.sym.diag(data=data, k=-1, axis1=2, axis2=0)
     check_numeric_gradient(diag_sym, [a_np])
 
-
+    # Test 4d backward, k=-2, axis1=1, axis2=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-2, axis1=1, axis2=-1)
+    check_numeric_gradient(diag_sym, [a_np])
 
 @with_seed()
 def test_depthtospace():
