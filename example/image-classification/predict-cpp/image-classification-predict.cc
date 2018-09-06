@@ -231,10 +231,10 @@ int main(int argc, char* argv[]) {
   int num_threads = std::atoi(argv[2]);
 
   // Models path for your model, you have to modify it
-  std::string json_file = "Inception-BN-symbol.json";
-  std::string param_file = "Inception-BN-0126.params";
-  std::string synset_file = "synset.txt";
-  std::string nd_file = "mean_224.nd";
+  std::string json_file = "model/Inception/Inception-BN-symbol.json";
+  std::string param_file = "model/Inception/Inception-BN-0126.params";
+  std::string synset_file = "model/Inception/synset.txt";
+  std::string nd_file = "model/Inception/mean_224.nd";
 
   BufferFile json_data(json_file);
   BufferFile param_data(param_file);
