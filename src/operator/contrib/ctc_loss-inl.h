@@ -51,9 +51,9 @@
 namespace mxnet {
 namespace op {
 namespace ctc_loss {
-  enum CTCLossOpInputs { kData, kLabel };
-  enum CTCLossOpOutputs { kOut, kGrad };
-  enum CTCLossOpForwardResource { kTempSpace };
+enum CTCLossOpInputs { kData, kLabel };
+enum CTCLossOpOutputs { kOut, kGrad };
+enum CTCLossOpForwardResource { kTempSpace };
 }
 
 template <typename T>
@@ -287,7 +287,7 @@ class CTCLossOp : public Operator {
           PackLabelByLength(labels, in_data[kLabelLength].get<xpu, 1, DType>(s),
                            &packed_labels, &label_lengths);
       } else {
-        exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label == 0?0:-1,
+        exceed_cudnn_limit = LabelTensorToPackedVector(labels, param_.blank_label == 0 ? 0 : -1,
                                                       &packed_labels, &label_lengths);
       }
 
@@ -333,15 +333,15 @@ class CTCLossOp : public Operator {
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
     Tensor<xpu, 3, real_t> data_grad =
-      in_grad[ctc_loss::kData].get<xpu, 3, real_t>(s);
+        in_grad[ctc_loss::kData].get<xpu, 3, real_t>(s);
     Tensor<xpu, 1, real_t> output_grad =
-      out_grad[ctc_loss::kOut].get<xpu, 1, real_t>(s);
+        out_grad[ctc_loss::kOut].get<xpu, 1, real_t>(s);
 
     Tensor<xpu, 3, real_t> data_grad_computed =
-      out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
+        out_data[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
 
     Assign(data_grad, req[ctc_loss::kData],
-          mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
+           mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
   }
 
  private:
@@ -462,7 +462,7 @@ class CTCLossOp : public Operator {
     compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels->data(),
                      label_lengths->data(), data_lengths->data(),
                      workspace.dptr_, req_grad,
-                     param_.blank_label == 0?0:(alphabet_size-1));
+                     param_.blank_label == 0 ? 0 : (alphabet_size-1));
   }
 };  // class CTCLossOp
 
@@ -552,6 +552,7 @@ class CTCLossProp : public OperatorProperty {
     out_type->push_back(dtype);  // grad output
     return true;
   }
+
   OperatorProperty *Copy() const override {
     auto ptr = new CTCLossProp();
     ptr->param_ = param_;
