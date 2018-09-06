@@ -4523,8 +4523,9 @@ def test_ctc_loss():
 
 @with_seed(1)
 def test_ctc_loss_with_large_classes():
-    if not (default_context() == mx.gpu()):
+    if not (default_context().device_type == 'gpu'):
         return
+
     batch_size = 1024
     seq_len = 35
     label_len = 10
