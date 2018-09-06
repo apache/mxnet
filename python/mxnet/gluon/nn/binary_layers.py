@@ -74,9 +74,10 @@ class _BConv(_Conv):
             self._offset = 1
             for dim_size in weight.shape[1:]:
                 self._offset *= dim_size
-        binary_x = binarize_inputs(F, self._apply_pre_padding(F, x), self._pre_bn)
+        binary_x = binarize_inputs(F, x, self._pre_bn)
         binary_weight = binarize_weights(F, weight)
-        h = F.Convolution(binary_x, binary_weight, name='fwd', **self._kwargs)
+        binary_x_padded = self._apply_pre_padding(F, binary_x)
+        h = F.Convolution(binary_x_padded, binary_weight, name='fwd', **self._kwargs)
         return (h + self._offset) / 2
 
 
