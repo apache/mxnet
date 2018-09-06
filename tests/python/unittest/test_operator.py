@@ -4516,6 +4516,28 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
+    # Test 3: check use integer type as label
+    labels3 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.int32)
+    true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
+    check_ctc_loss(acts2, labels3, true_loss)
+
+@with_seed(1)
+def test_ctc_loss_with_large_classes():
+    if not (default_context() == mx.gpu()):
+        return
+    batch_size = 1024
+    seq_len = 35
+    label_len = 10
+    num_classes = 6000
+    x = np.random.uniform(size=(seq_len, batch_size, num_classes))
+    y = np.random.randint(0, num_classes, size=(batch_size, label_len))
+ 
+    data = mx.nd.array(x, ctx=mx.gpu(0))
+    label = mx.nd.array(y, ctx=mx.gpu(0))
+    loss = mx.nd.contrib.ctc_loss(data=data, label=label)
+    loss = mx.nd.make_loss(loss)
+    expected_output_sum = 282733.95318603516
+    assert np.isclose(sum(loss.asnumpy(), expected_output_sum))
 
 @with_seed()
 def test_ctc_loss_grad():

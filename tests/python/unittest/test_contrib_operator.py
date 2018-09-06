@@ -244,63 +244,6 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
-def test_ctc_loss_op():
-    batch_size = 10
-    seq_len = 5
-    label_len = 3 
-    num_classes = 6
-    np.random.seed(1)
-    x = np.random.uniform(size=(seq_len, batch_size, num_classes))
-    y = np.random.randint(0, num_classes, size=(batch_size, label_len))
-
-    def test_cpu(x, y):
-        data = mx.nd.array(x, ctx=mx.cpu(0))
-        label = mx.nd.array(y, ctx=mx.cpu(0))
-        loss = mx.nd.contrib.ctc_loss(data=data, label=label)
-        loss = mx.nd.make_loss(loss)
-        expected_output = [9.604521, 7.096151, 4.906869, 5.5237527, 5.9895644, 5.584548, 
-                           5.528411, 5.765914, 6.740701, 5.2625823]
-        assert np.isclose(loss.asnumpy(), expected_output).all()
-
-    def test_gpu(x, y):
-        data = mx.nd.array(x, ctx=mx.gpu(0))
-        label = mx.nd.array(y, ctx=mx.gpu(0))
-        loss = mx.nd.contrib.ctc_loss(data=data, label=label)
-        loss = mx.nd.make_loss(loss)
-        expected_output = [9.604521, 7.096151, 4.906869, 5.5237527, 5.9895644, 5.584548, 
-                           5.528411, 5.765914, 6.740701, 5.2625823]
-        assert np.isclose(loss.asnumpy(), expected_output).all() 
-
-    def test_integer_label(x, y):
-        data = mx.nd.array(x, ctx=mx.cpu(0))
-        label = mx.nd.array(y, ctx=mx.cpu(0), dtype=np.int32)
-        loss = mx.nd.contrib.ctc_loss(data=data, label=label)
-        loss = mx.nd.make_loss(loss)
-        expected_output = [9.604521, 7.096151, 4.906869, 5.5237527, 5.9895644, 5.584548, 
-                           5.528411, 5.765914, 6.740701, 5.2625823]
-        assert np.isclose(loss.asnumpy(), expected_output).all() 
-
-    def test_large_classes():
-        batch_size = 1024
-        seq_len = 35
-        label_len = 10
-        num_classes = 6000
-        x = np.random.uniform(size=(seq_len, batch_size, num_classes))
-        y = np.random.randint(0, num_classes, size=(batch_size, label_len))
- 
-        data = mx.nd.array(x, ctx=mx.gpu(0))
-        label = mx.nd.array(y, ctx=mx.gpu(0))
-        loss = mx.nd.contrib.ctc_loss(data=data, label=label)
-        loss = mx.nd.make_loss(loss)
-        expected_output_sum = 282733.95318603516
-        assert np.isclose(sum(loss.asnumpy(), expected_output_sum))
-
-    test_cpu(x, y)
-    test_integer_label(x, y)
-    if default_context().device_type == 'gpu':
-        test_gpu(x, y)
-        test_large_classes()
-
 
 if __name__ == '__main__':
     import nose
