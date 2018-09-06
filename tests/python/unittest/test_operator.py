@@ -4523,9 +4523,7 @@ def test_ctc_loss():
 
 @with_seed(1)
 def test_ctc_loss_with_large_classes():
-    if not (default_context().device_type == 'gpu'):
-        return
-
+    ctx = default_context()
     batch_size = 1024
     seq_len = 35
     label_len = 10
@@ -4533,12 +4531,12 @@ def test_ctc_loss_with_large_classes():
     x = np.random.uniform(size=(seq_len, batch_size, num_classes))
     y = np.random.randint(0, num_classes, size=(batch_size, label_len))
  
-    data = mx.nd.array(x, ctx=mx.gpu(0))
-    label = mx.nd.array(y, ctx=mx.gpu(0))
+    data = mx.nd.array(x, ctx=ctx)
+    label = mx.nd.array(y, ctx=ctx)
     loss = mx.nd.contrib.ctc_loss(data=data, label=label)
     loss = mx.nd.make_loss(loss)
     expected_output_sum = 282733.95318603516
-    assert np.isclose(sum(loss.asnumpy(), expected_output_sum))
+    assert np.isclose(sum(loss.asnumpy()), expected_output_sum)
 
 @with_seed()
 def test_ctc_loss_grad():
