@@ -68,8 +68,13 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
     return TShape({s, s});
   }
 
-  auto h = ishape[axis1];
-  auto w = ishape[axis2];
+  int x1 = CheckAxis(axis1, ishape.ndim());
+  int x2 = CheckAxis(axis2, ishape.ndim());
+
+  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
+
+  auto h = ishape[x1];
+  auto w = ishape[x2];
 
   if (k > 0) {
     w -= k;
@@ -82,11 +87,6 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
     s = 0;
   }
 
-  auto x1 = CheckAxis(axis1, ishape.ndim());
-  auto x2 = CheckAxis(axis2, ishape.ndim());
-
-  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer the the same axis " << x1;
-
   if (x1 > x2) {
     std::swap(x1, x2);
   }
@@ -95,12 +95,10 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
   TShape oshape(n_dim);
 
   // remove axis1 and axis2 and append the new axis to the end
-  for (int i = 0; i < x1; i ++)
-    oshape[i] = ishape[i];
-  for (int i = x1 + 1; i < x2; i ++)
-    oshape[i - 1] = ishape[i];
-  for (int i = x2 + 1; i <= n_dim; i ++)
-    oshape[i - 2] = ishape[i];
+  int idx = 0;
+  for (int i = 0; i <= n_dim; i ++)
+    if (i != x1 && i != x2)
+      oshape[idx ++] = ishape[i];
   oshape[n_dim - 1] = s;
 
   return oshape;
