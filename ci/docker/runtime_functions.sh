@@ -77,6 +77,8 @@ build_wheel() {
     export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
 
     cd ${PYTHON_DIR}
+
+    # If building for redistribution edit the name in this setup.py
     python setup.py bdist_wheel --universal
 
     # repackage
@@ -94,6 +96,8 @@ build_wheel() {
     rm -rf ${TMPDIR}
 
     popd
+
+    # If redistributing you may now run `twine upload -r pypi *.whl`
 }
 
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
@@ -484,7 +488,7 @@ build_ubuntu_gpu_tensorrt() {
     cd build
     cmake \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
+        -DBUILD_SHARED_LIBS=OFF ..\
         -G Ninja
     ninja -j 1 -v onnx/onnx.proto
     ninja -j 1 -v
@@ -500,16 +504,15 @@ build_ubuntu_gpu_tensorrt() {
     cmake ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    export LIBRARY_PATH=$LIBRARY_PATH:`pwd`/third_party/onnx/
+    mv third_party/onnx/libonnx_proto.a third_party/onnx/libonnxtrt_proto.a
     popd
 
     mkdir -p /work/mxnet/lib/
-    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
     rm -rf build
     make \
-        DEV=1                                               \
+        DEV=0                                               \
         USE_BLAS=openblas                                   \
         USE_CUDA=1                                          \
         USE_CUDA_PATH=/usr/local/cuda                       \
@@ -522,6 +525,8 @@ build_ubuntu_gpu_tensorrt() {
         ONNX_NAMESPACE=onnx                                 \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
         -j$(nproc)
+
+    build_wheel /work/mxnet/python /work/mxnet/lib
 }
 
 build_ubuntu_gpu_mkldnn() {
