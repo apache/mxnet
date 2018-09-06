@@ -68,7 +68,7 @@ struct MXAPINDList {
 };
 
 inline void _CreateExecutor(PredictorHandle pred_hnd) {
-  MXAPIPredictor *pred = (MXAPIPredictor *) pred_hnd;
+  MXAPIPredictor *pred = static_cast<MXAPIPredictor*>(pred_hnd);
   if (pred->exec == nullptr) {
     auto sym = pred->sym;
     auto ctx = pred->ctx;
