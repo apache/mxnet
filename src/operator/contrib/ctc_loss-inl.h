@@ -229,7 +229,6 @@ class CTCLossOp : public Operator {
   explicit CTCLossOp(CTCLossParam p) {
     this->param_ = p;
     exceed_cudnn_limit = false;
-
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
     CUDNN_CALL(cudnnCreateCTCLossDescriptor(&ctc_desc_));
     CUDNN_CALL(cudnnSetCTCLossDescriptor(ctc_desc_, CUDNN_DATA_FLOAT));
@@ -349,6 +348,7 @@ class CTCLossOp : public Operator {
  private:
   CTCLossParam param_;
   bool exceed_cudnn_limit;
+
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
   cudnnDataType_t dtype_;
   cudnnCTCLossDescriptor_t ctc_desc_;
