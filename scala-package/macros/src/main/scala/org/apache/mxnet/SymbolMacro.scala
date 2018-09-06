@@ -32,6 +32,11 @@ private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation 
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typeSafeAPIDefs
 }
 
+private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typedRandomAPIDefs
+}
+
+
 private[mxnet] object SymbolImplMacros {
   case class SymbolArg(argName: String, argType: String, isOptional : Boolean)
   case class SymbolFunction(name: String, listOfArgs: List[SymbolArg])
@@ -42,6 +47,9 @@ private[mxnet] object SymbolImplMacros {
   }
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     typedAPIImpl(c)(annottees: _*)
+  }
+  def typedRandomAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+    typedRandomAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
 
@@ -63,7 +71,6 @@ private[mxnet] object SymbolImplMacros {
       else symbolFunctions.filter(!_.name.startsWith("_"))
     }
 
-
     val functionDefs = newSymbolFunctions map { symbolfunction =>
         val funcName = symbolfunction.name
         val tName = TermName(funcName)
@@ -80,9 +87,22 @@ private[mxnet] object SymbolImplMacros {
   }
 
   /**
+    * Implementation for Dynamic typed API Symbol.random.<functioname>
+    */
+  private def typedRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
+
+    val rndFunctions =
+      symbolFunctions.filter(f => f.name.startsWith("sample") || f.name.startsWith("random"))
+
+    val functionDefs = rndFunctions.map(f => buildTypedFunction(c)(f))
+    structGeneration(c)(functionDefs, annottees: _*)
+  }
+
+  /**
     * Implementation for Dynamic typed API Symbol.api.<functioname>
     */
-  private def typedAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typedAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -97,34 +117,41 @@ private[mxnet] object SymbolImplMacros {
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else symbolFunctions.filter(!_.name.startsWith("_"))
+      else symbolFunctions.filter(f => !f.name.startsWith("_") &&
+        !f.name.startsWith("sample") && !f.name.startsWith("random"))
     }.filterNot(ele => notGenerated.contains(ele.name))
 
-    val functionDefs = newSymbolFunctions map { symbolfunction =>
+    val functionDefs = newSymbolFunctions.map(f => buildTypedFunction(c)(f))
+    structGeneration(c)(functionDefs, annottees : _*)
+  }
 
-      // Construct argument field
-      var argDef = ListBuffer[String]()
-      // Construct Implementation field
-      var impl = ListBuffer[String]()
-      impl += "val map = scala.collection.mutable.Map[String, Any]()"
-      impl += "var args = Seq[org.apache.mxnet.Symbol]()"
-      symbolfunction.listOfArgs.foreach({ symbolarg =>
-        // var is a special word used to define variable in Scala,
-        // need to changed to something else in order to make it work
-        val currArgName = symbolarg.argName match {
-          case "var" => "vari"
-          case "type" => "typeOf"
-          case default => symbolarg.argName
-        }
-        if (symbolarg.isOptional) {
-          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
-        }
-        else {
-          argDef += s"${currArgName} : ${symbolarg.argType}"
-        }
-        // Symbol arg implementation
-        val returnType = "org.apache.mxnet.Symbol"
-        val base =
+  private def buildTypedFunction(c: blackbox.Context)
+                                (symbolfunction: SymbolFunction): c.universe.DefDef = {
+    import c.universe._
+
+    // Construct argument field
+    var argDef = ListBuffer[String]()
+    // Construct Implementation field
+    var impl = ListBuffer[String]()
+    impl += "val map = scala.collection.mutable.Map[String, Any]()"
+    impl += "var args = Seq[org.apache.mxnet.Symbol]()"
+    symbolfunction.listOfArgs.foreach({ symbolarg =>
+      // var is a special word used to define variable in Scala,
+      // need to changed to something else in order to make it work
+      val currArgName = symbolarg.argName match {
+        case "var" => "vari"
+        case "type" => "typeOf"
+        case default => symbolarg.argName
+      }
+      if (symbolarg.isOptional) {
+        argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+      }
+      else {
+        argDef += s"${currArgName} : ${symbolarg.argType}"
+      }
+      // Symbol arg implementation
+      val returnType = "org.apache.mxnet.Symbol"
+      val base =
         if (symbolarg.argType.equals(s"Array[$returnType]")) {
           if (symbolarg.isOptional) s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
           else s"args = $currArgName.toSeq"
@@ -137,22 +164,20 @@ private[mxnet] object SymbolImplMacros {
           else "map(\"" + symbolarg.argName + "\"" + s") = $currArgName"
         }
 
-        impl += base
-      })
-      argDef += "name : String = null"
-      argDef += "attr : Map[String, String] = null"
-      // scalastyle:off
-      // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
-      impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, args, map.toMap)"
-      // scalastyle:on
-      // Combine and build the function string
-      val returnType = "org.apache.mxnet.Symbol"
-      var finalStr = s"def ${symbolfunction.name}"
-      finalStr += s" (${argDef.mkString(",")}) : $returnType"
-      finalStr += s" = {${impl.mkString("\n")}}"
-      c.parse(finalStr).asInstanceOf[DefDef]
-    }
-    structGeneration(c)(functionDefs, annottees : _*)
+      impl += base
+    })
+    argDef += "name : String = null"
+    argDef += "attr : Map[String, String] = null"
+    // scalastyle:off
+    // TODO: Seq() here allows user to place Symbols rather than normal arguments to run, need to fix if old API deprecated
+    impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, args, map.toMap)"
+    // scalastyle:on
+    // Combine and build the function string
+    val returnType = "org.apache.mxnet.Symbol"
+    var finalStr = s"def ${symbolfunction.name}"
+    finalStr += s" (${argDef.mkString(",")}) : $returnType"
+    finalStr += s" = {${impl.mkString("\n")}}"
+    c.parse(finalStr).asInstanceOf[DefDef]
   }
 
   /**

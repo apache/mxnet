@@ -40,6 +40,8 @@ private[mxnet] object APIDocGenerator{
     val hashCollector = ListBuffer[String]()
     hashCollector += absClassGen(FILE_PATH, true)
     hashCollector += absClassGen(FILE_PATH, false)
+    hashCollector += absRndClassGen(FILE_PATH, true)
+//    hashCollector += absClassGen(FILE_PATH, false) // TODO random NDArray
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     val finalHash = hashCollector.mkString("\n")
@@ -52,13 +54,39 @@ private[mxnet] object APIDocGenerator{
     org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
   }
 
+  def absRndClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
+    // scalastyle:off
+    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    // TODO: Add Filter to the same location in case of refactor
+    val absFuncs = absClassFunctions.filter(f => f.name.startsWith("sample") || f.name.startsWith("random"))
+      .map(absClassFunction => {
+        val scalaDoc = generateAPIDocFromBackend(absClassFunction)
+        val defBody = generateAPISignature(absClassFunction, isSymbol)
+        s"$scalaDoc\n$defBody"
+      })
+    val packageName = if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase"
+    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
+    val scalaStyle = "// scalastyle:off"
+    val packageDef = "package org.apache.mxnet"
+    val imports = "import org.apache.mxnet.annotation.Experimental"
+    val absClassDef = s"abstract class $packageName"
+    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
+    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
+    pw.write(finalStr)
+    pw.close()
+    MD5Generator(finalStr)
+  }
+
   def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     // Defines Operators that should not generated
     val notGenerated = Set("Custom")
     // TODO: Add Filter to the same location in case of refactor
-    val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
+    val absFuncs = absClassFunctions
+      .filterNot(_.name.startsWith("_"))
+      .filterNot(_.name.startsWith("sample"))
+      .filterNot(_.name.startsWith("random"))
       .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)

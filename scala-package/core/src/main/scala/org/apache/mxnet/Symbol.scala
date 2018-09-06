@@ -842,6 +842,8 @@ object Symbol extends SymbolBase {
 
   val api = SymbolAPI
 
+  val random = SymbolRandomAPI
+
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))
   }

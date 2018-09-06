@@ -32,3 +32,13 @@ object SymbolAPI extends SymbolAPIBase {
     Symbol.createSymbolGeneral("Custom", name, attr, Seq(), map.toMap)
   }
 }
+
+@AddSymbolRandomAPIs(false)
+/**
+  * typesafe Symbol API: Symbol.random._
+  * Main code will be generated during compile time through Macros
+  */
+object SymbolRandomAPI extends SymbolRandomAPIBase {
+
+}
+

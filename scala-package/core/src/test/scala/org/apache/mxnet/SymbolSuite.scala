@@ -20,6 +20,20 @@ package org.apache.mxnet
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class SymbolSuite extends FunSuite with BeforeAndAfterAll {
+
+  test("random module - normal") {
+    val loc = Symbol.Variable("loc")
+    val scale = Symbol.Variable("scale")
+    val rnd = Symbol.random.sample_normal(mu = Some(loc), sigma = Some(scale),
+      shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.random_normal(loc = Some(1f), scale = Some(2f),
+      shape = Some(Shape(2, 2)))
+    // scalastyle:off println
+    println(s"Symbol.random.normal Symbol args debug info: ${rnd.debugStr}")
+    println(s"Symbol.random.normal Symbol args debug info: ${rnd2.debugStr}")
+    // scalastyle:on println
+  }
+
   test("symbol compose") {
     val data = Symbol.Variable("data")
 
