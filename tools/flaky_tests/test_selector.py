@@ -55,8 +55,8 @@ def output_tests(tests):
         return 1
     
     with open(TESTS_FILE, "w+") as f:
-        for f, t in tests:
-            f.write("{}:{}\n".format(f, t))
+        for filename, testcase in tests:
+            f.write("{}:{}\n".format(filename, testcase))
     
     return 0
 
