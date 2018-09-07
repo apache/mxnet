@@ -45,7 +45,7 @@ echo "max-cache-ttl 14400" >> ~/.gnupg/gpg-agent.conf
 export GPG_TTY=$(tty)
 
 # Build the Scala MXNet backend
-sudo bash scala-package/dev/compile-mxnet-backend.sh $OS_TYPE ./
+bash scala-package/dev/compile-mxnet-backend.sh $OS_TYPE ./
 # Scala steps to deploy
 make scalapkg
 make scalaunittest
