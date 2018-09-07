@@ -124,10 +124,11 @@ Example::
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_smooth_l1)
   .set_attr_parser([](NodeAttrs *attrs) {
-  if (attrs->dict.find("scalar") != attrs->dict.end())
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  else
-    attrs->parsed = 1.0;
+      if (attrs->dict.find("scalar") != attrs->dict.end()) {
+        attrs->parsed = std::stod(attrs->dict["scalar"]);
+      } else {
+        attrs->parsed = 1.0;
+      }
 })
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::smooth_l1_gradient>);
