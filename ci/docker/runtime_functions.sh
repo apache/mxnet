@@ -715,7 +715,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_ubuntu_cpu_scala_publish() {
     set -ex
     cd /work/mxnet
-    bash scala-package/dev/build.sh
+    sudo bash scala-package/dev/build.sh
 }
 
 unittest_ubuntu_cpu_scala() {
