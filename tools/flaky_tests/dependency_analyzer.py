@@ -40,6 +40,7 @@ import logging
 import re
 import itertools
 import json
+import io
 
 DEFAULT_CONFIG_FILE = os.path.join(
     os.path.dirname(__file__), "test_dependencies.config")
@@ -97,7 +98,7 @@ def find_dependents_file(dependencies, filename):
         logger.debug("Skipping non-python file: %s", filename)
         return set()
 
-    with open(filename) as f:
+    with io.open(filename, encoding="utf-8") as f:
         tree = ast.parse(f.read())
     logger.debug("seaching: %s", filename)
 
