@@ -21,7 +21,6 @@ import mxnet as mx
 import numpy as np
 import unittest
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12473")
 def test_tvm_bridge():
     # only enable test if TVM is available
     try:
