@@ -29,8 +29,7 @@ class ResourceScope extends AutoCloseable {
   override def close(): Unit = {
     resourceQ.foreach(resource => if (resource != null) {
       logger.info("releasing resource:%x\n".format(resource.nativeAddress))
-      resource.dispose()
-      resource.deRegister(false)
+      resource.dispose(false)
     } else {logger.info("found resource which is null")}
     )
     ResourceScope.resourceScope.get().-=(this)

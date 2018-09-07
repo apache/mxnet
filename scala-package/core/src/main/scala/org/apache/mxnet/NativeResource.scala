@@ -85,7 +85,7 @@ private[mxnet] trait NativeResource
     * Removes this object from PhantomRef tracking and from ResourceScope
     * @param removeFromScope
     */
-  def deRegister(removeFromScope: Boolean = true): Unit = {
+  private def deRegister(removeFromScope: Boolean = true): Unit = {
     NativeResourceRef.deRegister(phantomRef)
     if (scope != null && removeFromScope) scope.deRegister(this)
   }
@@ -106,6 +106,16 @@ private[mxnet] trait NativeResource
       print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
       checkCall(nativeDeAllocator(this.nativeAddress))
       disposed = true
+      deRegister(true)
+    }
+  }
+
+  def dispose(removeFromScope: Boolean): Unit = {
+    if (!disposed) {
+      print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
+      checkCall(nativeDeAllocator(this.nativeAddress))
+      disposed = true
+      deRegister(removeFromScope)
     }
   }
 }
@@ -135,7 +145,7 @@ private[mxnet] object NativeResourceRef {
 
   def deRegister(resourceRef: NativeResourceRef): Unit = {
     val nativeDeAllocator = phantomRefMap.get(resourceRef)
-    if (nativeDeAllocator != null) {
+    if (nativeDeAllocator != 0L) { // since CPtrAddress is Scala Long, it cannot be null
       phantomRefMap.remove(resourceRef)
     }
   }
@@ -148,7 +158,7 @@ private[mxnet] object NativeResourceRef {
     // phantomRef will be removed from the map when NativeResource.close is called.
     val resource = phantomRefMap.get(ref)
 
-    if (resource != null)  {
+    if (resource != 0L)  { // since CPtrAddress is Scala Long, it cannot be null
       print("NativeResourceRef: got a reference for resource\n")
       ref.resourceDeAllocator(resource)
       phantomRefMap.remove(ref)
