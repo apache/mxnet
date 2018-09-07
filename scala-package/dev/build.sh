@@ -22,7 +22,7 @@
 
 # Setup Environment Variables
 # OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
-export OS_TYPE=linux-x86_64-gpu
+export OS_TYPE=linux-x86_64-cpu
 
 # This script is used to build the base dependencies of MXNet Scala Env
 # git clone --recursive https://github.com/apache/incubator-mxnet

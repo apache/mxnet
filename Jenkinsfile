@@ -119,18 +119,6 @@ core_logic: {
         }
       }
     },
-    'Scala: CPU Maven Publish': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_dist_lib)
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_scala_publish', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
     'CPU: CentOS 7 MKLDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-mkldnn') {
@@ -662,6 +650,18 @@ core_logic: {
             } finally {
               utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
             }
+          }
+        }
+      }
+    },
+    'Scala: CPU Maven Publish': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.unpack_lib('cpu', mx_dist_lib)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala_publish', false)
+            utils.publish_test_coverage()
           }
         }
       }
