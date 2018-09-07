@@ -18,6 +18,7 @@
 // under the License.
 
 err = null
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
@@ -50,7 +51,7 @@ core_logic: {
                 ws('workspace/fc-compilation') {
                     utils.init_git()
                     utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-                    utils.pack_lib('gpu', mx_dist_lib)
+                    utils.pack_lib('gpu', mx_lib)
                 }
             }
         }
