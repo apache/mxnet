@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.neuralstyle.end2end
 
 import java.io.File
 
-import org.apache.mxnet.{Context, Executor, NDArray, Shape, Symbol}
+import org.apache.mxnet.{Context, Executor, NDArray, NDArrayCollector, Shape, Symbol}
 import org.apache.mxnet.optimizer.SGD
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -56,117 +56,121 @@ object BoostTrain {
 
   def runTraining(dataPath : String, vggModelPath: String, ctx : Context,
                   styleImage : String, saveModelPath : String) : Unit = {
-    // params
-    val vggParams = NDArray.load2Map(vggModelPath)
-    val styleWeight = 1.2f
-    val contentWeight = 10f
-    val dShape = Shape(1, 3, 384, 384)
-    val clipNorm = 0.05f * dShape.product
-    val modelPrefix = "v3"
-    // init style
-    val styleNp = DataProcessing.preprocessStyleImage(styleImage, dShape, ctx)
-    var styleMod = Basic.getStyleModule("style", dShape, ctx, vggParams)
-    styleMod.forward(Array(styleNp))
-    val styleArray = styleMod.getOutputs().map(_.copyTo(Context.cpu()))
-    styleMod.dispose()
-    styleMod = null
+    NDArrayCollector.auto().withScope {
+      // params
+      val vggParams = NDArray.load2Map(vggModelPath)
+      val styleWeight = 1.2f
+      val contentWeight = 10f
+      val dShape = Shape(1, 3, 384, 384)
+      val clipNorm = 0.05f * dShape.product
+      val modelPrefix = "v3"
+      // init style
+      val styleNp = DataProcessing.preprocessStyleImage(styleImage, dShape, ctx)
+      var styleMod = Basic.getStyleModule("style", dShape, ctx, vggParams)
+      styleMod.forward(Array(styleNp))
+      val styleArray = styleMod.getOutputs().map(_.copyTo(Context.cpu()))
+      styleMod.dispose()
+      styleMod = null
 
-    // content
-    val contentMod = Basic.getContentModule("content", dShape, ctx, vggParams)
+      // content
+      val contentMod = Basic.getContentModule("content", dShape, ctx, vggParams)
 
-    // loss
-    val (loss, gScale) = Basic.getLossModule("loss", dShape, ctx, vggParams)
-    val extraArgs = (0 until styleArray.length)
-      .map( i => s"target_gram_$i" -> styleArray(i)).toMap
-    loss.setParams(extraArgs)
-    var gradArray = Array[NDArray]()
-    for (i <- 0 until styleArray.length) {
-      gradArray = gradArray :+ (NDArray.ones(Shape(1), ctx) * (styleWeight / gScale(i)))
-    }
-    gradArray = gradArray :+ (NDArray.ones(Shape(1), ctx) * contentWeight)
+      // loss
+      val (loss, gScale) = Basic.getLossModule("loss", dShape, ctx, vggParams)
+      val extraArgs = (0 until styleArray.length)
+        .map(i => s"target_gram_$i" -> styleArray(i)).toMap
+      loss.setParams(extraArgs)
+      var gradArray = Array[NDArray]()
+      for (i <- 0 until styleArray.length) {
+        gradArray = gradArray :+ (NDArray.ones(Shape(1), ctx) * (styleWeight / gScale(i)))
+      }
+      gradArray = gradArray :+ (NDArray.ones(Shape(1), ctx) * contentWeight)
 
-    // generator
-    val gens = Array(
-      GenV4.getModule("g0", dShape, ctx),
-      GenV3.getModule("g1", dShape, ctx),
-      GenV3.getModule("g2", dShape, ctx),
-      GenV4.getModule("g3", dShape, ctx)
-    )
-    gens.foreach { gen =>
-      val opt = new SGD(learningRate = 1e-4f,
-        momentum = 0.9f,
-        wd = 5e-3f,
-        clipGradient = 5f)
-      gen.initOptimizer(opt)
-    }
+      // generator
+      val gens = Array(
+        GenV4.getModule("g0", dShape, ctx),
+        GenV3.getModule("g1", dShape, ctx),
+        GenV3.getModule("g2", dShape, ctx),
+        GenV4.getModule("g3", dShape, ctx)
+      )
+      gens.foreach { gen =>
+        val opt = new SGD(learningRate = 1e-4f,
+          momentum = 0.9f,
+          wd = 5e-3f,
+          clipGradient = 5f)
+        gen.initOptimizer(opt)
+      }
 
-    var filelist = new File(dataPath).list().toList
-    val numImage = filelist.length
-    logger.info(s"Dataset size: $numImage")
+      var filelist = new File(dataPath).list().toList
+      val numImage = filelist.length
+      logger.info(s"Dataset size: $numImage")
 
-    val tvWeight = 1e-2f
+      val tvWeight = 1e-2f
 
-    val startEpoch = 0
-    val endEpoch = 3
+      val startEpoch = 0
+      val endEpoch = 3
 
-    for (k <- 0 until gens.length) {
-      val path = new File(s"${saveModelPath}/$k")
-      if (!path.exists()) path.mkdir()
-    }
+      for (k <- 0 until gens.length) {
+        val path = new File(s"${saveModelPath}/$k")
+        if (!path.exists()) path.mkdir()
+      }
 
-    // train
-    for (i <- startEpoch until endEpoch) {
-      filelist = Random.shuffle(filelist)
-      for (idx <- filelist.indices) {
-        var dataArray = Array[NDArray]()
-        var lossGradArray = Array[NDArray]()
-        val data =
-          DataProcessing.preprocessContentImage(s"${dataPath}/${filelist(idx)}", dShape, ctx)
-        dataArray = dataArray :+ data
-        // get content
-        contentMod.forward(Array(data))
-        // set target content
-        loss.setParams(Map("target_content" -> contentMod.getOutputs()(0)))
-        // gen_forward
-        for (k <- 0 until gens.length) {
-          gens(k).forward(dataArray.takeRight(1))
-          dataArray = dataArray :+ gens(k).getOutputs()(0)
-          // loss forward
-          loss.forward(dataArray.takeRight(1))
-          loss.backward(gradArray)
-          lossGradArray = lossGradArray :+ loss.getInputGrads()(0)
-        }
-        val grad = NDArray.zeros(data.shape, ctx)
-        for (k <- gens.length - 1 to 0 by -1) {
-          val tvGradExecutor = getTvGradExecutor(gens(k).getOutputs()(0), ctx, tvWeight)
-          tvGradExecutor.forward()
-          grad += lossGradArray(k) + tvGradExecutor.outputs(0)
-          val gNorm = NDArray.norm(grad)
-          if (gNorm.toScalar > clipNorm) {
-            grad *= clipNorm / gNorm.toScalar
+      // train
+      for (i <- startEpoch until endEpoch) {
+        NDArrayCollector.auto().withScope {
+          filelist = Random.shuffle(filelist)
+          for (idx <- filelist.indices) {
+            var dataArray = Array[NDArray]()
+            var lossGradArray = Array[NDArray]()
+            val data =
+              DataProcessing.preprocessContentImage(s"${dataPath}/${filelist(idx)}", dShape, ctx)
+            dataArray = dataArray :+ data
+            // get content
+            contentMod.forward(Array(data))
+            // set target content
+            loss.setParams(Map("target_content" -> contentMod.getOutputs()(0)))
+            // gen_forward
+            for (k <- 0 until gens.length) {
+              gens(k).forward(dataArray.takeRight(1))
+              dataArray = dataArray :+ gens(k).getOutputs()(0)
+              // loss forward
+              loss.forward(dataArray.takeRight(1))
+              loss.backward(gradArray)
+              lossGradArray = lossGradArray :+ loss.getInputGrads()(0)
+            }
+            val grad = NDArray.zeros(data.shape, ctx)
+            for (k <- gens.length - 1 to 0 by -1) {
+              val tvGradExecutor = getTvGradExecutor(gens(k).getOutputs()(0), ctx, tvWeight)
+              tvGradExecutor.forward()
+              grad += lossGradArray(k) + tvGradExecutor.outputs(0)
+              val gNorm = NDArray.norm(grad)
+              if (gNorm.toScalar > clipNorm) {
+                grad *= clipNorm / gNorm.toScalar
+              }
+              gens(k).backward(Array(grad))
+              gens(k).update()
+              gNorm.dispose()
+              tvGradExecutor.dispose()
+            }
+            grad.dispose()
+            if (idx % 20 == 0) {
+              logger.info(s"Epoch $i: Image $idx")
+              for (k <- 0 until gens.length) {
+                val n = NDArray.norm(gens(k).getInputGrads()(0))
+                logger.info(s"Data Norm : ${n.toScalar / dShape.product}")
+                n.dispose()
+              }
+            }
+            if (idx % 1000 == 0) {
+              for (k <- 0 until gens.length) {
+                gens(k).saveParams(
+                  s"${saveModelPath}/$k/${modelPrefix}_" +
+                    s"${"%04d".format(i)}-${"%07d".format(idx)}.params")
+              }
+            }
+            data.dispose()
           }
-          gens(k).backward(Array(grad))
-          gens(k).update()
-          gNorm.dispose()
-          tvGradExecutor.dispose()
         }
-        grad.dispose()
-        if (idx % 20 == 0) {
-          logger.info(s"Epoch $i: Image $idx")
-          for (k <- 0 until gens.length) {
-            val n = NDArray.norm(gens(k).getInputGrads()(0))
-            logger.info(s"Data Norm : ${n.toScalar / dShape.product}")
-            n.dispose()
-          }
-        }
-        if (idx % 1000 == 0) {
-          for (k <- 0 until gens.length) {
-            gens(k).saveParams(
-              s"${saveModelPath}/$k/${modelPrefix}_" +
-                s"${"%04d".format(i)}-${"%07d".format(idx)}.params")
-          }
-        }
-        data.dispose()
       }
     }
   }

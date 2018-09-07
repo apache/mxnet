@@ -193,6 +193,11 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
   }
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+#endif
+
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
@@ -223,6 +228,10 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet())
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+#endif
   return dispatched;
 }
 
@@ -250,9 +259,15 @@ The learnable parameters include both ``weight`` and ``bias``.
 
 If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 
-Note that the operator also supports forward computation with `row_sparse` weight and bias,
-where the length of `weight.indices` and `bias.indices` must be equal to `num_hidden`.
-This could be used for model inference with `row_sparse` weights trained with `SparseEmbedding`.
+.. Note::
+
+    The sparse support for FullyConnected is limited to forward evaluation with `row_sparse`
+    weight and bias, where the length of `weight.indices` and `bias.indices` must be equal
+    to `num_hidden`. This could be useful for model inference with `row_sparse` weights
+    trained with importance sampling or noise contrastive estimation.
+
+    To compute linear transformation with 'csr' sparse data, sparse.dot is recommended instead
+    of sparse.FullyConnected.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -275,6 +290,7 @@ This could be used for model inference with `row_sparse` weights trained with `S
     return std::vector<std::string>{"output"};
 })
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -307,6 +323,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);

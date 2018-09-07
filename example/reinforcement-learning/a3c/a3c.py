@@ -203,7 +203,7 @@ def test():
         mx.gpu(int(i)) for i in args.gpus.split(',')]
 
     # module
-    dataiter = robo_data.RobosimsDataIter('scenes', args.batch_size, args.input_length, web_viz=True)
+    dataiter = rl_data.GymDataIter('scenes', args.batch_size, args.input_length, web_viz=True)
     print(dataiter.provide_data)
     net = sym.get_symbol_thor(dataiter.act_dim)
     module = mx.mod.Module(net, data_names=[d[0] for d in dataiter.provide_data], label_names=('policy_label', 'value_label'), context=devs)

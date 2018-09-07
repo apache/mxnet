@@ -299,7 +299,11 @@ class UnaryOp : public OpBase {
         }
         break;
       case kWriteInplace:
+// cannot check if ptrs are the same for MKLDNN because we may have
+// created copies of input when reordering. WriteInPlace will still write to original array
+#if MXNET_USE_MKLDNN == 0
         CHECK_EQ(inputs[0].dptr_, outputs[0].dptr_);
+#endif
         break;
       case kNullOp:
         break;
@@ -475,6 +479,34 @@ void HardSigmoidBackward(const nnvm::NodeAttrs& attrs,
     });
   });
 }
+
+struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
+  dmlc::optional<int> lhs_begin, rhs_begin, lhs_end, rhs_end;
+  DMLC_DECLARE_PARAMETER(ReshapeLikeParam) {
+    DMLC_DECLARE_FIELD(lhs_begin)
+        .set_default(dmlc::optional<int>())
+        .describe(
+            "Defaults to 0. "
+            "The beginning index along which the lhs dimensions are to be "
+            "reshaped. Supports negative indices.");
+    DMLC_DECLARE_FIELD(lhs_end)
+        .set_default(dmlc::optional<int>())
+        .describe("Defaults to None. "
+                  "The ending index along which the lhs dimensions are to be "
+                  "used for reshaping. Supports negative indices.");
+    DMLC_DECLARE_FIELD(rhs_begin)
+        .set_default(dmlc::optional<int>())
+        .describe("Defaults to 0. "
+                  "The beginning index along which the rhs dimensions are to "
+                  "be used for "
+                  "reshaping. Supports negative indices.");
+    DMLC_DECLARE_FIELD(rhs_end)
+        .set_default(dmlc::optional<int>())
+        .describe("Defaults to None. "
+                  "The ending index along which the rhs dimensions are to be "
+                  "used for reshaping. Supports negative indices.");
+  }
+};
 
 /*! \brief Unary compute */
 #define MXNET_OPERATOR_REGISTER_UNARY(__name$)                      \

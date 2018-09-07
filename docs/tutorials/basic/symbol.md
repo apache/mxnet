@@ -1,4 +1,4 @@
-# Symbol - Neural network graphs and auto-differentiation
+# Symbol - Neural network graphs
 
 In a [previous tutorial](http://mxnet.io/tutorials/basic/ndarray.html), we introduced `NDArray`,
 the basic data structure for manipulating data in MXNet.
@@ -94,7 +94,7 @@ mx.viz.plot_network(symbol=g)
 
 The computations declared in the above examples can be bound to the input data
 for evaluation by using `bind` method. We discuss this further in the
-[symbol manipulation](#Symbol Manipulation) section.
+[Symbol Manipulation](#symbol-manipulation) section.
 
 ### Basic Neural Networks
 
