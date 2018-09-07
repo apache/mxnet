@@ -931,6 +931,7 @@ flaky_check_select_tests(){
 }
 flaky_check_run_flakiness_checker(){
     set -ex
+    export PYTHONPATH=./python/
     tools/flaky_tests/check_tests.py
 }
 
