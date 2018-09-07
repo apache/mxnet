@@ -268,6 +268,11 @@ build_amzn_linux_cpu() {
     ninja -v
 }
 
+build_ubuntu_cpu_scala_publish() {
+    set -ex
+    cd /work/mxnet
+    bash scala-package/dev/build.sh
+}
 
 build_centos7_mkldnn() {
     set -ex
