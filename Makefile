@@ -15,6 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# To assist with Makefile debugging.  Print any Make variable's value using
+# make ... print-VARNAME
+#
+# For example: "make print-NNVM_PATH"
+print-%:
+	@echo '$*=$($*)'
+
+.DEFAULT_GOAL := all
+
 ROOTDIR = $(CURDIR)
 TPARTYDIR = $(ROOTDIR)/3rdparty
 
@@ -71,11 +80,14 @@ ifeq ($(USE_MKLDNN), 1)
 	export USE_MKLML = 1
 endif
 
+
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
+include 3rdparty/ngraph-mxnet-bridge/ngraph.mk
+
 # all tge possible warning tread
-WARNFLAGS= -Wall -Wsign-compare
+WARNFLAGS= -Wall -Wsign-compare -Wno-comment
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
@@ -90,14 +102,19 @@ else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+LDFLAGS =
+
+ifeq ($(USE_NGRAPH),1)
+    CFLAGS += $(NGRAPH_CFLAGS)
+endif
+
+LDFLAGS += -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(USE_TENSORRT), 1)
 	CFLAGS +=  -I$(ROOTDIR) -I$(TPARTYDIR) -DONNX_NAMESPACE=$(ONNX_NAMESPACE) -DMXNET_USE_TENSORRT=1
 	LDFLAGS += -lprotobuf -pthread -lonnx -lonnx_proto -lnvonnxparser -lnvonnxparser_runtime -lnvinfer -lnvinfer_plugin
 endif
-# -L/usr/local/lib
 
 ifeq ($(DEBUG), 1)
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
@@ -290,6 +307,11 @@ ifeq ($(USE_THREADED_ENGINE), 1)
 	CFLAGS += -DMXNET_USE_THREADED_ENGINE
 endif
 
+ifeq ($(USE_ASAN), 1)
+  CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+  LDFLAGS += -lasan
+endif
+
 ifneq ($(ADD_CFLAGS), NONE)
 	CFLAGS += $(ADD_CFLAGS)
 endif
@@ -382,6 +404,10 @@ else
 	EXTRA_CUOBJ =
 endif
 
+ifeq ($(USE_NGRAPH), 1)
+	EXTRA_OBJ += $(NGRAPH_BRIDGE_OBJ)
+endif
+
 # plugin
 PLUGIN_OBJ =
 PLUGIN_CUOBJ =
@@ -447,23 +473,23 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc | mkldnn
+build/src/%.o: src/%.cc | mkldnn ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-build/src/%_gpu.o: src/%.cu | mkldnn
+build/src/%_gpu.o: src/%.cu | mkldnn ngraph
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 # A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
 # Use CXX to generate dependency instead.
-build/plugin/%_gpu.o: plugin/%.cu
+build/plugin/%_gpu.o: plugin/%.cu | ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -484,7 +510,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) \
+	  $(NGRAPH_LDFLAGS_FOR_SHARED_LIBS) \
+	  $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
@@ -511,9 +539,13 @@ $(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
 
 bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
+MXNET_RELATIVE_PATH_TO_RUNTIME_LIB_DIR := "../lib"
+
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) \
+	  $(LDFLAGS) \
+	  $(NGRAPH_LDFLAGS_FOR_PROGS_IN_BIN)
 
 # CPP Package
 ifeq ($(USE_CPP_PACKAGE), 1)
@@ -535,6 +567,10 @@ cpplint:
 
 pylint:
 	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+
+python_clean:
+	$(RM) -r python/build
+	$(RM) -r python/dist
 
 doc: docs
 
@@ -660,7 +696,7 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: ngraph_clean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
