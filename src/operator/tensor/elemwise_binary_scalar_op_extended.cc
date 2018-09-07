@@ -105,10 +105,11 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    if (attrs->dict.find("scalar") != attrs->dict.end())
+    if (attrs->dict.find("scalar") != attrs->dict.end()) {
       attrs->parsed = std::stod(attrs->dict["scalar"]);
-    else
+    } else {
       attrs->parsed = 1.0;
+    }
   })
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
