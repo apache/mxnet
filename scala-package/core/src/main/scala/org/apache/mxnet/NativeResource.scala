@@ -18,180 +18,101 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.Base.CPtrAddress
-import java.lang.ref.{WeakReference, PhantomReference, ReferenceQueue}
+import java.lang.ref.{PhantomReference, ReferenceQueue, WeakReference}
 import java.util.concurrent._
 
 import org.apache.mxnet.Base.checkCall
 import java.lang.{AutoCloseable, ThreadLocal}
-
+import java.util.concurrent.atomic.AtomicLong
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.collection.mutable.{ArrayBuffer, ArrayStack}
-import scala.util.Try
+/**
+  * NativeResource trait is used to manage MXNet Objects
+  * such as NDArray, Symbol, Executor, etc.,
+  * The MXNet Object calls {@link NativeResource.register}
+  * and assign the returned NativeResourceRef to {@link phantomRef}
+  * NativeResource also implements AutoCloseable so MXNetObjects
+  * can be used like Resources in try-with-resources paradigm
+  */
+private[mxnet] trait NativeResource
+  extends AutoCloseable with WarnIfNotDisposed {
 
-private[mxnet] class PeriodicGCDeAllocator {
-
-}
-
-private[mxnet] object PeriodicGCDeAllocator {
-
-  private val logger = LoggerFactory.getLogger(classOf[PeriodicGCDeAllocator])
-
-  private val gcFrequencyInSecProp = "mxnet.gcFrequencyInSeconds"
-  private val gcAfterOffHeapBytesProp = "mxnet.gcAfterOffHeapBytes"
-  private val maxPhysicalBytesProp = "mxnet.maxPhysicalBytes"
-  private var _scheduledExecutor: ScheduledExecutorService = null
-
-  // set this to None at the end, so we don't run GC periodically by default
-  private val defaultGCFrequency = 5
-
-  private val periodicGCFrequency = Try(System.getProperty(
-    gcFrequencyInSecProp).toInt).getOrElse(defaultGCFrequency)
-
-  def createPeriodicGCExecutor(): Unit = {
-    if (periodicGCFrequency != null && _scheduledExecutor == null) {
-      val scheduledExecutor: ScheduledExecutorService =
-        Executors.newSingleThreadScheduledExecutor(new ThreadFactory {
-          override def newThread(r: Runnable): Thread = new Thread(r) {
-            setName(classOf[ResourceScope].getCanonicalName)
-            setDaemon(true)
-          }
-        })
-      scheduledExecutor.scheduleAtFixedRate(new Runnable {
-        override def run(): Unit = {
-          logger.info("Calling System.gc")
-          System.gc()
-          logger.info("Done Calling System.gc")
-        }
-      },
-        periodicGCFrequency,
-        periodicGCFrequency,
-        TimeUnit.SECONDS
-      )
-      _scheduledExecutor = scheduledExecutor
-    }
-  }
-}
-
-class ResourceScope extends AutoCloseable {
-  import ResourceScope.{logger, resourceScope}
-
-  private val resourceQ = new  ArrayBuffer[NativeResource]()
-  resourceScope.get().+=(this)
-
-  override def close(): Unit = {
-    resourceQ.foreach(resource => if (resource != null) {
-      logger.info("releasing resource:%x\n".format(resource.nativeAddress))
-      resource.dispose()
-      resource.deRegister(false)
-    } else {logger.info("found resource which is null")}
-    )
-    ResourceScope.resourceScope.get().-=(this)
-  }
-
-   private[mxnet] def register(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: Registering Resource %x".format(resource.nativeAddress))
-    resourceQ.+=(resource)
-  }
-
-  // TODO(@nswamy): this is linear in time, find better data structure
-  private[mxnet] def deRegister(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeAddress))
-    resourceQ.-=(resource)
-  }
-}
-
- object ResourceScope {
-
-   private val logger = LoggerFactory.getLogger(classOf[ResourceScope])
-
-   // inspired from slide 21 of
-  def using[T](resource: ResourceScope)(block: => T): T = {
-    require(resource != null)
-    try {
-      val ret = block
-      ret match {
-        case nRes: NativeResource =>
-          resource.deRegister(nRes.asInstanceOf[NativeResource])
-        case _ => // do nothing
-      }
-      ret
-    } finally {
-      // TODO(nswamy@): handle exceptions
-      resource.close
-    }
-  }
-
-   private[mxnet] val resourceScope = new ThreadLocal[ArrayBuffer[ResourceScope]] {
-    override def initialValue(): ArrayBuffer[ResourceScope] =
-      new ArrayBuffer[ResourceScope]()
-  }
-
-   private[mxnet] def getScope(): ResourceScope = {
-     try {
-       resourceScope.get().last
-     } catch {
-       case _: ArrayIndexOutOfBoundsException => null
-       case _: NoSuchElementException => null
-       case e: Exception => throw e
-     }
-  }
-}
-
-private[mxnet] trait NativeResource extends AutoCloseable {
-
+  /**
+    * native Address associated with this object
+    * @return
+    */
   def nativeAddress: CPtrAddress
 
-  def nativeDeAllocAddress: (CPtrAddress => Int)
+  /**
+    * Function Pointer to the NativeDeAllocator of {@link nativeAddress}
+    * @return
+    */
+  def nativeDeAllocator: (CPtrAddress => Int)
 
-  /** Call {@link NativeResource.register} to get NativeResourcePhantomRef
-    *
-     */
+  /** Call {@link NativeResource.register} to get {@link NativeResourceRef}
+    */
   val phantomRef: NativeResourceRef
 
+  /**
+    * Off-Heap Bytes Allocated for this object
+    * @return
+    */
   def bytesAllocated: Long
-
-  var isDisposed: Boolean = false
 
   private var scope: ResourceScope = null
 
-  def register(referent: NativeResource): NativeResourceRef = {
+  @volatile var disposed = false
+
+  override def isDisposed: Boolean = disposed
+  /**
+    * Register this object for PhantomReference tracking and within
+    * ResourceScope if used inside ResourceScope.
+    * @return NativeResourceRef that tracks reachability of this object
+    *         using PhantomReference
+    */
+  def register(): NativeResourceRef = {
+
     scope = ResourceScope.getScope()
     if (scope != null)   {
       scope.register(this)
     }
     // register with PhantomRef tracking to release incase the objects go
     // out of reference within scope but are held for long time
-    NativeResourceRef.register(this, nativeDeAllocAddress)
+    NativeResourceRef.register(this, nativeDeAllocator)
  }
 
   /**
-    * remove from PhantomRef tracking and
-    * ResourceScope tracking
+    * Removes this object from PhantomRef tracking and from ResourceScope
+    * @param removeFromScope
     */
   def deRegister(removeFromScope: Boolean = true): Unit = {
     NativeResourceRef.deRegister(phantomRef)
     if (scope != null && removeFromScope) scope.deRegister(this)
   }
 
+  /**
+    * Implements {@link AutoCloseable.close}
+    */
   override def close(): Unit = {
     dispose()
     deRegister(true)
   }
 
-  /* call {@link deAllocFn} if !{@link isDispose} */
-  final def dispose(): Unit = {
-    if (!isDisposed) {
+  /**
+    * Implements {@link WarnIfNotDisposed.dispose}
+    */
+  def dispose(): Unit = {
+    if (!disposed) {
       print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
-      checkCall(nativeDeAllocAddress(this.nativeAddress))
-      isDisposed = true
+      checkCall(nativeDeAllocator(this.nativeAddress))
+      disposed = true
     }
   }
 }
 
 // do not make nativeRes a member, this will hold reference and GC will not clear the object.
 private[mxnet] class NativeResourceRef(resource: NativeResource,
-                                       val resDeAllocAddr: CPtrAddress => Int)
+                                       val resourceDeAllocator: CPtrAddress => Int)
         extends PhantomReference[NativeResource](resource, NativeResourceRef.referenceQueue) {
 }
 
@@ -205,16 +126,16 @@ private[mxnet] object NativeResourceRef {
 
   cleanupThread.start()
 
-  def register(resource: NativeResource, resDeAllocAddr: CPtrAddress => Int):
+  def register(resource: NativeResource, nativeDeAllocator: (CPtrAddress => Int)):
   NativeResourceRef = {
-    val resourceRef = new NativeResourceRef(resource, resDeAllocAddr)
+    val resourceRef = new NativeResourceRef(resource, nativeDeAllocator)
     phantomRefMap.put(resourceRef, resource.nativeAddress)
     resourceRef
   }
 
   def deRegister(resourceRef: NativeResourceRef): Unit = {
-    val resDeAllocAddr = phantomRefMap.get(resourceRef)
-    if (resDeAllocAddr != null) {
+    val nativeDeAllocator = phantomRefMap.get(resourceRef)
+    if (nativeDeAllocator != null) {
       phantomRefMap.remove(resourceRef)
     }
   }
@@ -229,7 +150,7 @@ private[mxnet] object NativeResourceRef {
 
     if (resource != null)  {
       print("NativeResourceRef: got a reference for resource\n")
-      ref.resDeAllocAddr(resource)
+      ref.resourceDeAllocator(resource)
       phantomRefMap.remove(ref)
     }
   }
@@ -250,5 +171,4 @@ private[mxnet] object NativeResourceRef {
       }
     }
   }
-
 }

@@ -45,17 +45,7 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol)
-  extends WarnIfNotDisposed with NativeResource {
-
-  override def nativeAddress: CPtrAddress = handle
-
-  override def nativeDeAllocAddress: CPtrAddress => Int = _LIB.mxExecutorFree
-
-  override val phantomRef: NativeResourceRef = super.register(this)
-
-  override def bytesAllocated: Long = 0
-
+                              private[mxnet] val symbol: Symbol) extends NativeResource {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -69,17 +59,11 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  private var disposed = false
-//  protected def isDisposed = disposed
-/*
-  def dispose(): Unit = {
-    if (!disposed) {
-      outputs.foreach(_.dispose())
-      _LIB.mxExecutorFree(handle)
-      disposed = true
-    }
-  }
-*/
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
+  // cannot determine the off-heap size of this object
+  override def bytesAllocated: Long = 0
+  override val phantomRef: NativeResourceRef = super.register()
 
   /**
    * Return a new executor with the same symbol and shared memory,
@@ -316,4 +300,5 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     checkCall(_LIB.mxExecutorPrint(handle, str))
     str.value
   }
+
 }
