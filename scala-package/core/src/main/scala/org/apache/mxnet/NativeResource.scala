@@ -34,6 +34,7 @@ import org.slf4j.{Logger, LoggerFactory}
   * NativeResource also implements AutoCloseable so MXNetObjects
   * can be used like Resources in try-with-resources paradigm
   */
+// scalastyle:off finalize
 private[mxnet] trait NativeResource
   extends AutoCloseable with WarnIfNotDisposed {
 
@@ -118,7 +119,15 @@ private[mxnet] trait NativeResource
       deRegister(removeFromScope)
     }
   }
+
+  override protected def finalize(): Unit = {
+    if (!isDisposed) {
+      print("LEAK: %x\n".format(this.nativeAddress))
+      super.finalize()
+    }
+  }
 }
+// scalastyle:on finalize
 
 // do not make nativeRes a member, this will hold reference and GC will not clear the object.
 private[mxnet] class NativeResourceRef(resource: NativeResource,
