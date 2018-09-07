@@ -103,20 +103,15 @@ private[mxnet] trait NativeResource
     * Implements {@link WarnIfNotDisposed.dispose}
     */
   def dispose(): Unit = {
-    if (!disposed) {
-      print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
-      checkCall(nativeDeAllocator(this.nativeAddress))
-      disposed = true
-      deRegister(true)
-    }
+    dispose(true)
   }
 
   def dispose(removeFromScope: Boolean): Unit = {
     if (!disposed) {
       print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
       checkCall(nativeDeAllocator(this.nativeAddress))
-      disposed = true
       deRegister(removeFromScope)
+      disposed = true
     }
   }
 
