@@ -84,20 +84,20 @@ inline void _CreateExecutor(PredictorHandle pred_hnd) {
   }
 }
 
-int MXPredCreatePartialOut1(const char* symbol_json_str,
-                            const void* param_bytes,
-                            int param_size,
-                            int dev_type, int dev_id,
-                            mx_uint num_input_nodes,
-                            const char** input_keys,
-                            const mx_uint* input_shape_indptr,
-                            const mx_uint* input_shape_data,
-                            mx_uint num_output_nodes,
-                            const char** output_keys,
-                            // This is used for paralle inference.
-                            int num_threads,
-                            bool lazy,
-                            PredictorHandle* out) {
+int _CreatePartialOut(const char* symbol_json_str,
+                      const void* param_bytes,
+                      int param_size,
+                      int dev_type, int dev_id,
+                      mx_uint num_input_nodes,
+                      const char** input_keys,
+                      const mx_uint* input_shape_indptr,
+                      const mx_uint* input_shape_data,
+                      mx_uint num_output_nodes,
+                      const char** output_keys,
+                      // This is used for paralle inference.
+                      int num_threads,
+                      bool lazy,
+                      PredictorHandle* out) {
   using nnvm::Symbol;
 
   API_BEGIN();
@@ -258,10 +258,8 @@ int MXPredCreatePartialOut(const char* symbol_json_str,
                            const mx_uint* input_shape_data,
                            mx_uint num_output_nodes,
                            const char** output_keys,
-                           // This is used for paralle inference.
-                           int num_threads,
                            PredictorHandle* out) {
-  return MXPredCreatePartialOut1(
+  return _CreatePartialOut(
       symbol_json_str,
       param_bytes,
       param_size,
@@ -286,7 +284,7 @@ int MXPredCreate(const char* symbol_json_str,
                  const mx_uint* input_shape_indptr,
                  const mx_uint* input_shape_data,
                  PredictorHandle* out) {
-  return MXPredCreatePartialOut1(
+  return _CreatePartialOut(
       symbol_json_str,
       param_bytes,
       param_size,
@@ -314,7 +312,7 @@ int MXPredCreateMultithread(const char* symbol_json_str,
                             // This is used for paralle inference.
                             int num_threads,
                             PredictorHandle* out) {
-  return MXPredCreatePartialOut1(
+  return _CreatePartialOut(
       symbol_json_str,
       param_bytes,
       param_size,
