@@ -28,15 +28,15 @@ export OS_TYPE=linux-x86_64-cpu
 # git clone --recursive https://github.com/apache/incubator-mxnet
 # cd incubator-mxnet/
 git checkout origin/master -b maven
-sudo apt-get install libssl-dev
+apt-get install libssl-dev
 
 # This part is used to build the gpg dependencies:
-sudo apt-get install -y maven gnupg gnupg2 gnupg-agent
-sudo mv /usr/bin/gpg /usr/bin/gpg1
-sudo ln -s /usr/bin/gpg2 /usr/bin/gpg
+apt-get install -y maven gnupg gnupg2 gnupg-agent
+mv /usr/bin/gpg /usr/bin/gpg1
+ln -s /usr/bin/gpg2 /usr/bin/gpg
 
 # Run python to configure keys
-python3 scala-package/dev/buildkey.py
+python3 $PWD/scala-package/dev/buildkey.py
 
 # Updating cache
 mkdir -p ~/.gnupg
