@@ -155,6 +155,7 @@ The following activation functions are supported:
 })
 .set_attr<FCompute>("FCompute<cpu>", ActivationCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ActivationGrad{"_backward_Activation"})
@@ -184,6 +185,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 #endif
 .set_attr_parser(ParamParser<ActivationParam>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ActivationGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ActivationGradCompute<cpu>);

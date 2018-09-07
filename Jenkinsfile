@@ -900,6 +900,10 @@ core_logic: {
         }
       }
     },
+    /*  Disabled due to master build failure:
+     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
+     *  https://github.com/apache/incubator-mxnet/issues/11801
+
     'dist-kvstore tests CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-dist-kvstore') {
@@ -911,7 +915,7 @@ core_logic: {
           }
         }
       }
-    },
+    }, */
     'Scala: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-scala-gpu') {

@@ -484,6 +484,7 @@ There are other options to tune the performance.
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ConvolutionGrad{"_backward_Convolution"})
@@ -509,6 +510,7 @@ NNVM_REGISTER_OP(_backward_Convolution)
 })
 .set_attr_parser(ConvolutionParamParser)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConvolutionGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConvolutionGradCompute<cpu>);

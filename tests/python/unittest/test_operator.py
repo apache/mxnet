@@ -267,11 +267,8 @@ def test_rnnrelu_dropout():
     out[0].wait_to_read()
 
 def np_softmax(x, axis=-1, temperature=1.0):
-    # fix for old numpy on Travis not supporting keepdims
-    # x = x - np.max(x, axis=-1, keepdims=True)
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
-    # x /= np.sum(x, axis=-1, keepdims=True)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
 
@@ -1586,7 +1583,6 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12219")
 @with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
@@ -1609,7 +1605,7 @@ def test_convolution_grouping():
         exe1 = y1.simple_bind(default_context(), x=shape)
         exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
         for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-            arr1[:] = np.random.normal(size=arr1.shape)
+            arr1[:] = np.float32(np.random.normal(size=arr1.shape))
             arr2[:] = arr1
         exe1.forward(is_train=True)
         exe1.backward(exe1.outputs[0])
@@ -1617,7 +1613,7 @@ def test_convolution_grouping():
         exe2.backward(exe2.outputs[0])
 
         for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
@@ -3120,11 +3116,9 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     # compare numpy + mxnet
     assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
     # check gradient
-    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=5e-3)
 
 
-# @haojin2: getting rid of the fixed seed as the flakiness could not be reproduced.
-# tracked at: https://github.com/apache/incubator-mxnet/issues/11717
 @with_seed()
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
@@ -3951,166 +3945,6 @@ def test_grid_generator():
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12248")
-def test_bilinear_sampler():
-    from math import floor
-
-    def between(x, lowerbound, upperbound):
-        return x>=lowerbound and x<=upperbound
-
-    def bilinear_forward_numpy(data, grid):
-
-        batchsize = data.shape[0]
-        input_height = data.shape[2]
-        input_width = data.shape[3]
-        num_channel = data.shape[1]
-
-        output_height = grid.shape[2]
-        output_width = grid.shape[3]
-        out = np.zeros(data.shape[:2] + grid.shape[2:], dtype=np.float32)
-
-        for i in range(batchsize):
-            for yout in range(output_height):
-                for xout in range(output_width):
-
-                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
-                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
-
-                    xInTopLeft = int(floor(xcoord))
-                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-
-                    yInTopLeft = int(floor(ycoord))
-                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
-
-                    # interpolation
-                    for channel in range(num_channel):
-
-                        inTopLeft = data[i,channel,yInTopLeft, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
-                        inTopRight = data[i,channel,yInTopLeft, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
-                        inBottomLeft = data[i,channel,yInTopLeft+1, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
-                        inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
-
-                        out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
-                                +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
-                                +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
-                            +(1-xWeightTopLeft) * (1-yWeightTopLeft) * inBottomRight
-        return out
-
-    def bilinear_backward_numpy(out_grad, data, grid):
-
-        data_grad = np.zeros(data.shape, dtype=np.float32)
-        grid_grad = np.zeros(grid.shape, dtype=np.float32)
-
-        batchsize = data.shape[0]
-        input_height = data.shape[2]
-        input_width = data.shape[3]
-        num_channel = data.shape[1]
-        output_height = grid.shape[2]
-        output_width = grid.shape[3]
-
-        for i in range(batchsize):
-            for yout in range(output_height):
-                for xout in range(output_width):
-
-                    top_left_y_gw = np.float32(0.0);
-                    top_left_x_gw = np.float32(0.0);
-
-                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
-                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
-
-                    xInTopLeft = int(floor(xcoord))
-                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-
-                    yInTopLeft = int(floor(ycoord))
-                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
-
-                    topLeftDotProduct = np.float32(0)
-                    topRightDotProduct = np.float32(0)
-                    bottomLeftDotProduct = np.float32(0)
-                    bottomRightDotProduct = np.float32(0)
-
-                    for channel in range(num_channel):
-                        # left top
-                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                            topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
-                                yWeightTopLeft * out_grad[i,channel,yout,xout]
-                        # right top
-                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                            topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
-                                out_grad[i, channel, yout,xout]
-                            data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
-                                yWeightTopLeft * out_grad[i,channel,yout,xout]
-                        # left bottom
-                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                            bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
-                                (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
-                        # right bottom
-                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                            bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
-                                (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
-
-                    yf = np.float32(-xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
-                        (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct)
-                    xf = np.float32(-yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
-                        (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct)
-
-                    grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
-                    grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
-
-        return data_grad, grid_grad
-
-    data = mx.sym.Variable('data')
-    grid = mx.sym.Variable('grid')
-    net = mx.sym.BilinearSampler(data=data,grid=grid)
-
-    test_case = [[(1,3,15,16),(1,2,10,10)],
-                 [(1,6,7,16),(1,2,10,4)],
-                 [(1,7,3,16),(1,2,8,11)],
-                 [(1,9,50,50),(1,2,50,50)]]
-
-    for ctx in [default_context()]:
-        for item in test_case:
-            data_shape, grid_shape = item
-            exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
-            # check forward
-            exe.arg_dict['data'][:] = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
-            exe.arg_dict['grid'][:] = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
-            exe.forward(is_train=True)
-            out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
-            assert_almost_equal(exe.outputs[0].asnumpy(), out, rtol=1e-3,atol=1e-5)
-
-            # check backward
-            out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
-            exe.backward(mx.nd.array(out_grad))
-            data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(),
-                                                       exe.arg_dict['grid'].asnumpy())
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), data_grad, rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), grid_grad, rtol=1e-3, atol=1e-5)
-
-            # check kAddTo
-            exe_addto = net.simple_bind(data=data_shape, grid=grid_shape, ctx=ctx, grad_req='add')
-            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape).astype(np.float32)
-            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape).astype(np.float32)
-            exe_addto.arg_dict['data'][:] = exe.arg_dict['data'][:]
-            exe_addto.arg_dict['grid'][:] = exe.arg_dict['grid'][:]
-            exe_addto.grad_dict['data'][:] = data_initial_grid
-            exe_addto.grad_dict['grid'][:] = grid_initial_grid
-            exe_addto.forward(is_train=True)
-            exe_addto.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
-            assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
-
-
 @with_seed()
 def test_index2d():
     for _ in range(30):
@@ -4534,6 +4368,27 @@ def test_where():
     test_where_numeric_gradient((5, 7, 9), False)
     test_invalid_shape()
     test_1d_cond()
+
+
+@with_seed()
+def test_softmin():
+    for ndim in range(1, 5):
+        for dtype in [np.float16, np.float32, np.float64]:
+            rtol, atol = (1e-2, 5e-3) if dtype is np.float16 else (1e-3, 1e-3)
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(-ndim, ndim)
+            data = np.random.uniform(-2, 2, size=shape).astype(dtype)
+            data = data / 10 if dtype is np.float16 else data
+            sym = mx.sym.softmin(axis=axis)
+            expected_fwd = np_softmax(-data, axis=axis)
+            expected_bwd = np.zeros(shape)
+            check_symbolic_forward(sym, [data], [expected_fwd], atol=atol, dtype=dtype)
+            for req in ['null', 'add', 'write']:
+                check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                        rtol=rtol, atol=atol, grad_req=req, dtype=dtype)
+            if dtype is not np.float16:
+                check_numeric_gradient(sym, [data], rtol=rtol, atol=atol, dtype=dtype)
+
 
 @with_seed()
 def test_new_softmax():

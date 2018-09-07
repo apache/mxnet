@@ -114,7 +114,7 @@ function checkout () {
   # Overriding configs later will cause a conflict here, so stashing...
   git stash
   # Fails to checkout if not available locally, so try upstream
-  git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder"
+  git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder" && git checkout "$repo_folder" || exit 1
   if [ $tag == 'master' ]; then
     git pull
   fi
@@ -174,4 +174,4 @@ done
 
 echo "Now you may want to run update_all_version.sh to create the production layout with the versions dropdown and other per-version corrections."
 echo "The following pattern is recommended (tags, default tag, url base):"
-echo "./update_all_version.sh "$tags_to_display " master http://mxnet.incubator.apache.org/"
+echo "./update_all_version.sh \"$2\" master http://mxnet.incubator.apache.org/"
