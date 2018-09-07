@@ -96,12 +96,12 @@ class PolyScheduler : public LRScheduler {
     explicit PolyScheduler(unsigned warmup_steps, unsigned max_update, float power = 2.f,
         float final_lr = 0)
             : LRScheduler(), warmup_steps_(warmup_steps), max_update_(max_update),
-            max_iter_(static_cast<float>(max_iter)), power_(power), final_lr_(final_lr) {}
+            max_udpate_(static_cast<float>(max_update)), power_(power), final_lr_(final_lr) {}
 
     float GetLR(unsigned num_update) override {
       if (num_update <= max_update_) {
-        currrent_lr_ = final_lr_ + (base_lr_ - final_lr_) *
-          powf((1.f - static_cast<float>(num_update - warmup_steps_)/max_iter_), power_);
+        current_lr_ = final_lr_ + (base_lr_ - final_lr_) *
+          powf((1.f - static_cast<float>(num_update - warmup_steps_)/max_update_), power_);
         LG << "Update[" << num_update << "]: Learning rate has arrived at "
          << final_lr_ << "\n";
       }
@@ -111,10 +111,10 @@ class PolyScheduler : public LRScheduler {
  private:
   unsigned warmup_steps_;
   unsigned max_update_;
-  float max_iter_;
+  float max_udpate_;
   float power_;
   float final_lr_;
-  float current_lr_
+  float current_lr_;
 };
 
 }  // namespace cpp
