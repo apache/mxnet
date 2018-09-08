@@ -4524,17 +4524,22 @@ def test_ctc_loss():
 @with_seed()
 def test_ctc_loss_with_large_classes():
     ctx = default_context()
-    m = 1024
-    n = 35
-    l = 10
     num_classes = 6000
-    x = np.random.uniform(size=(n, m, num_classes))
-    y = np.random.randint(0, num_classes, size=(m, l))
- 
-    data = mx.nd.array(x, ctx=ctx)
-    label = mx.nd.array(y, ctx=ctx)
-    loss = mx.nd.contrib.ctc_loss(data=data, label=label)
-    assert loss.asnumpy().shape[0] == m
+    seq_len = 8
+    batch_size = 2
+    data = np.empty((num_classes, 0))
+    for i in range(seq_len * batch_size) :
+        row = np.roll(np.arange(num_classes), i).reshape(num_classes, 1)
+        data = np.append(data, row/13, axis=1)
+    data = data.reshape(seq_len, batch_size, num_classes)
+    label = np.array([
+        [100, 200, 300, 400, 500, 0, 0, 0],
+        [1000, 2000, 3000, 4000, 0, 5000, 0, 0]], dtype=np.int32)
+    nd_data = mx.nd.array(data)
+    nd_label = mx.nd.array(label)
+    loss = mx.nd.contrib.ctc_loss(data=nd_data, label=nd_label)
+    expected_loss = np.array([688.02826, 145.34462])
+    assert_almost_equal(loss.asnumpy(), expected_loss)
 
 @with_seed()
 def test_ctc_loss_grad():
