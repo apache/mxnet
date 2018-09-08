@@ -301,7 +301,7 @@ int MXPredCreate(const char* symbol_json_str,
       out);
 }
 
-int MXPredCreateMultithread(const char* symbol_json_str,
+int MXPredCreateMultiThread(const char* symbol_json_str,
                             const void* param_bytes,
                             int param_size,
                             int dev_type, int dev_id,

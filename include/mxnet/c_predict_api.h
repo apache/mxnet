@@ -141,7 +141,7 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
  *   enough to keep `num_threads` predictors.
  * \return 0 when success, -1 when failure.
  */
-MXNET_DLL int MXPredCreateMultithread(const char* symbol_json_str,
+MXNET_DLL int MXPredCreateMultiThread(const char* symbol_json_str,
                                       const void* param_bytes,
                                       int param_size,
                                       int dev_type, int dev_id,

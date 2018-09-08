@@ -307,7 +307,7 @@ int main(int argc, char* argv[]) {
   } else {
     // Create Predictor
     std::vector<PredictorHandle> pred_hnds(num_threads, nullptr);
-    MXPredCreateMultithread(static_cast<const char*>(json_data.GetBuffer()),
+    MXPredCreateMultiThread(static_cast<const char*>(json_data.GetBuffer()),
                             static_cast<const char*>(param_data.GetBuffer()),
                             static_cast<int>(param_data.GetLength()),
                             dev_type,
