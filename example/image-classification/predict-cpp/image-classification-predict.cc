@@ -181,8 +181,7 @@ void PrintOutputResult(const std::vector<float>& data, const std::vector<std::st
 }
 
 void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
-             NDListHandle nd_hnd, int i) {
-  std::string synset_file = "synset.txt";
+             NDListHandle nd_hnd, const std::string &synset_file, int i) {
   auto image_size = image_data.size();
   // Set Input Image
   MXPredSetInput(pred_hnd, "data", image_data.data(), static_cast<mx_uint>(image_size));
@@ -221,14 +220,16 @@ void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
 }
 
 int main(int argc, char* argv[]) {
-  if (argc < 3) {
+  if (argc < 2) {
     std::cout << "No test image here." << std::endl
-              << "Usage: ./image-classification-predict apple.jpg num_threads" << std::endl;
+              << "Usage: ./image-classification-predict apple.jpg [num_threads]" << std::endl;
     return EXIT_FAILURE;
   }
 
   std::string test_file(argv[1]);
-  int num_threads = std::atoi(argv[2]);
+  int num_threads = 1;
+  if (argc == 3)
+    num_threads = std::atoi(argv[2]);
 
   // Models path for your model, you have to modify it
   std::string json_file = "model/Inception/Inception-BN-symbol.json";
@@ -302,7 +303,7 @@ int main(int argc, char* argv[]) {
                  &pred_hnd);
     assert(pred_hnd);
 
-    predict(pred_hnd, image_data, nd_hnd, 0);
+    predict(pred_hnd, image_data, nd_hnd, synset_file, 0);
   } else {
     // Create Predictor
     std::vector<PredictorHandle> pred_hnds(num_threads, nullptr);
@@ -322,7 +323,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::thread> threads;
     for (int i = 0; i < num_threads; i++)
-      threads.emplace_back(predict, pred_hnds[i], image_data, nd_hnd, i);
+      threads.emplace_back(predict, pred_hnds[i], image_data, nd_hnd, synset_file, i);
     for (int i = 0; i < num_threads; i++)
       threads[i].join();
   }
