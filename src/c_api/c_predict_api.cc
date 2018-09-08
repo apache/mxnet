@@ -312,6 +312,13 @@ int MXPredCreateMultithread(const char* symbol_json_str,
                             // This is used for paralle inference.
                             int num_threads,
                             PredictorHandle* out) {
+  const char *type = getenv("MXNET_ENGINE_TYPE");
+  std::string stype;
+  if (type)
+    stype = type;
+  CHECK(type == "NaiveEngine") << "Multithread inference only works with NaiveEngine.\n"
+                              << "Please set MXNET_ENGINE_TYPE to NaiveEngine"
+                              << std::endl;
   return _CreatePartialOut(
       symbol_json_str,
       param_bytes,
