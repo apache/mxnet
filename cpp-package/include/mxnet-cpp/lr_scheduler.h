@@ -103,7 +103,7 @@ class PolyScheduler : public LRScheduler {
         current_lr_ = final_lr_ + (base_lr_ - final_lr_) *
           powf((1.f - static_cast<float>(num_update - warmup_steps_)/max_update_), power_);
         LG << "Update[" << num_update << "]: Learning rate has arrived at "
-         << final_lr_ << "\n";
+         << current_lr_ << "\n";
       }
       return current_lr_;
     }
