@@ -1,6 +1,6 @@
 # Survey of Existing Interfaces and Implementations
 
-Commonly used deep learning libraries with good RNN/LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html); and various implementations in Torch, such as [this well-known character-level language model tutorial](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn).
+Commonly used deep learning libraries with good RNN/LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/tutorials/sequences/recurrent); and various implementations in Torch, such as [this well-known character-level language model tutorial](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn).
 
 In this document, we present a comparative analysis of the approaches taken by these libraries.
 
@@ -93,7 +93,7 @@ The low-level API for recurrent connection seem to be a *delay node*. But I'm no
 
 ## TensorFlow
 
-The [current example of RNNLM](https://www.tensorflow.org/versions/master/tutorials/recurrent/index.html#recurrent-neural-networks) in TensorFlow uses explicit unrolling for a predefined number of time steps. The white-paper mentions that an advanced control flow API (Theano's scan-like) is planned.
+The [current example of RNNLM](https://www.tensorflow.org/tutorials/sequences/recurrent#recurrent-neural-networks) in TensorFlow uses explicit unrolling for a predefined number of time steps. The white-paper mentions that an advanced control flow API (Theano's scan-like) is planned.
 
 ## Next Steps
 
