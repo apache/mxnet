@@ -1339,7 +1339,7 @@ NNVM_REGISTER_OP(_CachedOp)
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op::DefaultSubgraphOpResourceRequest1(op->GetForwardSym());
   })
-.set_attr<FExecType>("FExecType", DefaultSubgraphOpExecType)
+.set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
 .add_argument("data", "NDArray-or-Symbol[]", "input data list");
 
 NNVM_REGISTER_OP(_backward_CachedOp)
@@ -1361,7 +1361,7 @@ NNVM_REGISTER_OP(_backward_CachedOp)
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpBackward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpBackward)
-.set_attr<FExecType>("FExecType", DefaultSubgraphOpExecType)
+.set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
 
