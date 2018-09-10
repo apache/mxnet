@@ -126,8 +126,8 @@ class NDArray {
    * \param deleter the function pointer of custom deleter
    */
   NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
-      : ptr_(std::shared_ptr<Chunk>(new Chunk(data, dev_id),
-        [](Chunk *p) {
+      : ptr_(new Chunk(data, dev_id),
+        [deleter](Chunk *p) {
           deleter(); // call custom deleter
           delete p;  // delete Chunk object
         }),
