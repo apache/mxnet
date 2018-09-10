@@ -650,4 +650,4 @@ We welcome your contributions to MXNet.
 [quadratic_op.cc](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cc),
 [quadratic_op.cu](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
 and
-[test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L4734).
+[test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
