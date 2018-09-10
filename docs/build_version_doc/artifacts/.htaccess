@@ -10,8 +10,4 @@ RewriteRule ^versions/1.0.0/api/clojure/.*$ /error/api.html [R=301,L]
 RewriteRule ^versions/1.1.0/api/clojure/.*$ /error/api.html [R=301,L]
 RewriteRule ^versions/1.2.1/api/clojure/.*$ /error/api.html [R=301,L]
 
-ErrorDocument 404 /error/404.html
-
-# Rewrite error redirect URL
-RewriteCond %{REQUEST_URI} ^/404/$
-RewriteRule ^(.*)$ /error/404.html [L]
+ErrorDocument 404 https://mxnet.incubator.apache.org/error/404.html
