@@ -50,6 +50,7 @@
 import os
 import numpy as np
 import mxnet as mx
+import argparse
 
 from bucket_io import BucketSentenceIter, default_build_vocab
 
@@ -79,7 +80,15 @@ def Perplexity(label, pred):
 
 
 if __name__ == '__main__':
-    batch_size = 128
+
+    parser = argparse.ArgumentParser(
+        description="This example demonstrates an RNN implementation with Time-major layout. This implementation shows 1.5x-2x speedups compared to Batch-major RNN.")
+    parser.add_argument("--batch_size", type=int, default=128, help="Batch size parameter")
+    parser.add_argument('--cuda', action='store_true', dest='cuda', help='train on GPU with CUDA')
+    parser.add_argument('--no-cuda', action='store_false', dest='cuda', help='train on CPU')
+    parser.add_argument('--device-id', type=str, default='0', help='Update count per available GPUs')
+    args = parser.parse_args()
+    batch_size = args.batch_size
     buckets = [10, 20, 30, 40, 50, 60]
     num_hidden = 200
     num_embed = 200
@@ -90,8 +99,7 @@ if __name__ == '__main__':
     momentum = 0.0
 
     # Update count per available GPUs
-    gpu_count = 1
-    contexts = [mx.context.gpu(i) for i in range(gpu_count)]
+    contexts = [mx.context.gpu(int(i)) for i in args.device-id.split(',')] if args.cuda else [mx.context.cpu()]
 
     vocab = default_build_vocab(os.path.join(data_dir, 'sherlockholmes.train.txt'))
 

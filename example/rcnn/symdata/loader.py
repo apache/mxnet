@@ -129,7 +129,7 @@ class TestLoader(mx.io.DataIter):
 
 class AnchorLoader(mx.io.DataIter):
     def __init__(self, roidb, batch_size, short, max_size, mean, std,
-                 feat_sym, anchor_generator: AnchorGenerator, anchor_sampler: AnchorSampler,
+                 feat_sym, anchor_generator=AnchorGenerator, anchor_sampler=AnchorSampler,
                  shuffle=False):
         super(AnchorLoader, self).__init__()
 

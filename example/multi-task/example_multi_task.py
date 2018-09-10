@@ -21,8 +21,10 @@ from mxnet.test_utils import get_mnist_iterator
 import numpy as np
 import logging
 import time
+import argparse
 
 logging.basicConfig(level=logging.DEBUG)
+
 
 def build_network():
     data = mx.symbol.Variable('data')
@@ -131,29 +133,37 @@ class Multi_Accuracy(mx.metric.EvalMetric):
         name, value = self.get()
         return list(zip(name, value))
 
+if __name__ == '__main__':
+    np.random.seed(100)
+    mx.random.seed(100)
+    parser = argparse.ArgumentParser(description="This is a simple example to show how to use mxnet for multi-task learning. It uses MNIST as an example and mocks up the multi-label task")
+    parser.add_argument("--batch_size", type=int, default=100, help="Batch_size paramater")
+    parser.add_argument("--num_epochs", type=int, default=100, help="number of epoches")
+    parser.add_argument("--gpu", type=int, default=0, help="positive and zero for gpu, else for cpu")
+    parser.add_argument("--lr", type=float, default=0.01, help="learning rate parameter")
 
-batch_size=100
-num_epochs=100
-device = mx.gpu(0)
-lr = 0.01
+    args = parser.parse_args()
+    batch_size = args.batch_size
+    num_epochs = args.num_epochs
+    lr = args.lr
+    device = mx.gpu(0) if args.gpu >=0 else mx.cpu()
 
-network = build_network()
-train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
-train = Multi_mnist_iterator(train)
-val = Multi_mnist_iterator(val)
+    network = build_network()
+    train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
+    train = Multi_mnist_iterator(train)
+    val = Multi_mnist_iterator(val)
 
 
-model = mx.mod.Module(
-    context            = device,
-    symbol             = network,
-    label_names        = ('softmax1_label', 'softmax2_label'))
+    model = mx.mod.Module(
+        context            = device,
+        symbol             = network,
+        label_names        = ('softmax1_label', 'softmax2_label'))
 
-model.fit(
-    train_data         = train,
-    eval_data          = val,
-    eval_metric        = Multi_Accuracy(num=2),
-    num_epoch          = num_epochs,
-    optimizer_params   = (('learning_rate', lr), ('momentum', 0.9), ('wd', 0.00001)),
-    initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
-    batch_end_callback = mx.callback.Speedometer(batch_size, 50))
-
+    model.fit(
+        train_data         = train,
+        eval_data          = val,
+        eval_metric        = Multi_Accuracy(num=2),
+        num_epoch          = num_epochs,
+        optimizer_params   = (('learning_rate', lr), ('momentum', 0.9), ('wd', 0.00001)),
+        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        batch_end_callback = mx.callback.Speedometer(batch_size, 50))
