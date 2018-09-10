@@ -1057,6 +1057,30 @@ def convert_flatten(node, **kwargs):
     )
     return [flatten_node]
 
+@mx_op.register("clip")
+def convert_clip(node, **kwargs):
+    """Map MXNet's Clip operator attributes to onnx's Clip operator
+    and return the created node.
+    """
+    helper, _, _ = import_onnx_modules()
+    name = node["name"]
+    input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
+    proc_nodes = kwargs["proc_nodes"]
+    input_node = proc_nodes[input_idx].name
+    attrs = node["attrs"]
+    a_min = np.float(attrs.get('a_min', -np.inf))
+    a_max = np.float(attrs.get('a_max', np.inf))
+
+    clip_node = helper.make_node(
+        "Clip",
+        [input_node],
+        [name],
+        name=name,
+        min=a_min,
+        max=a_max
+    )
+    return [clip_node]
+
 
 def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""

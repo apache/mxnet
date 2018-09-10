@@ -14,8 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""SVRGModule, SVRGOptimization import.
+"""
 
-fnames <- list.files("R-package/vignettes/", pattern="*.Rmd")
-sapply(fnames, function(x){
-	knitr::purl(paste0("R-package/vignettes/", x))
-	})
+
+from . import svrg_module
+from . import svrg_optimizer
