@@ -52,6 +52,7 @@ Code examples are placed throughout the API documentation and these can be run a
    contrib/contrib.md
    contrib/text.md
    contrib/onnx.md
+   contrib/svrg_optimization.md
 ```
 
 ## Gluon API
