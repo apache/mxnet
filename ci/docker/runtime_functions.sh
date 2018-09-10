@@ -184,7 +184,7 @@ build_armv8() {
         -DUSE_CUDA=OFF\
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
+        -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
@@ -349,11 +349,11 @@ build_ubuntu_cpu_clang39() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang50() {
+build_ubuntu_cpu_clang60() {
     set -ex
 
-    export CXX=clang++-5.0
-    export CC=clang-5.0
+    export CXX=clang++-6.0
+    export CC=clang-6.0
 
     build_ccache_wrappers
 
@@ -363,6 +363,32 @@ build_ubuntu_cpu_clang50() {
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+}
+
+build_ubuntu_cpu_clang_tidy() {
+    set -ex
+
+    export CXX=clang++-6.0
+    export CC=clang-6.0
+    export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        /work/mxnet
+
+    ninja -v
+    cd /work/mxnet
+    $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
+    popd
 }
 
 build_ubuntu_cpu_clang39_mkldnn() {
@@ -381,11 +407,11 @@ build_ubuntu_cpu_clang39_mkldnn() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang50_mkldnn() {
+build_ubuntu_cpu_clang60_mkldnn() {
     set -ex
 
-    export CXX=clang++-5.0
-    export CC=clang-5.0
+    export CXX=clang++-6.0
+    export CC=clang-6.0
 
     build_ccache_wrappers
 
@@ -431,7 +457,8 @@ build_ubuntu_gpu_tensorrt() {
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
-    ninja -v
+    ninja -j 1 -v onnx/onnx.proto
+    ninja -j 1 -v
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     popd
@@ -566,6 +593,9 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_blc() {
+    echo "pass"
+}
 
 # Testing
 
@@ -581,9 +611,7 @@ sanity_check() {
 unittest_ubuntu_python2_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -593,9 +621,7 @@ unittest_ubuntu_python2_cpu() {
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -604,9 +630,7 @@ unittest_ubuntu_python3_cpu() {
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
@@ -615,9 +639,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -649,9 +671,7 @@ tutorialtest_ubuntu_python2_gpu() {
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -678,9 +698,7 @@ unittest_ubuntu_tensorrt_gpu() {
 unittest_ubuntu_python2_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
@@ -690,9 +708,7 @@ unittest_ubuntu_python2_quantization_gpu() {
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    # MXNET_MKLDNN_DEBUG is buggy and produces false positives
-    # https://github.com/apache/incubator-mxnet/issues/10026
-    #export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
@@ -851,11 +867,14 @@ build_docs() {
     pushd .
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
-    # $1 is the list of branches to build; $2 is the list of tags to display
+    # $1: the list of branches/tags to build
+    # $2: the list of tags to display
     # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
-    ./build_all_version.sh $1 $2
-    # $3 is the default version tag for the website; $4 is the base URL
-    ./update_all_version.sh $2 $3 $4
+    # $3: the fork URL
+    ./build_all_version.sh $1 $2 $3
+    # $4: the default version tag for the website
+    # $5: the base URL
+    ./update_all_version.sh $2 $4 $5
     cd VersionedWeb
     tar -zcvf ../artifacts.tgz .
     popd
@@ -869,7 +888,7 @@ nightly_test_rat_check() {
     set -e
     pushd .
 
-    cd /work/deps/trunk/apache-rat/target
+    cd /work/deps/0.12-release/apache-rat/target
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
@@ -1004,7 +1023,6 @@ broken_link_checker() {
     set -ex
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
-
 
 ##############################################################
 # MAIN

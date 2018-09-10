@@ -34,9 +34,15 @@ NOTEBOOKS_WHITELIST = [
     'chapter01_crashcourse/chapter-one-problem-set',
     'chapter02_supervised-learning/environment',
     'chapter03_deep-neural-networks/kaggle-gluon-kfold',
+    'chapter04_convolutional-neural-networks/deep-cnns-alexnet',  # > 10 mins.
+    'chapter05_recurrent-neural-networks/rnns-gluon', # > 10 mins.
+    'chapter06_optimization/gd-sgd-scratch',  # Overflow warning is intended.
+    'chapter06_optimization/gd-sgd-gluon',  # Overflow warning is intended.
     'chapter07_distributed-learning/multiple-gpus-scratch',
     'chapter07_distributed-learning/multiple-gpus-gluon',
     'chapter07_distributed-learning/training-with-multiple-machines',
+    'chapter08_computer-vision/visual-question-answer', # > 10 mins.
+    'chapter11_recommender-systems/intro-recommender-systems',  # Early draft, non-working.
     'chapter12_time-series/intro-forecasting-gluon',
     'chapter12_time-series/intro-forecasting-2-gluon',
     'chapter13_unsupervised-learning/vae-gluon',
@@ -45,6 +51,8 @@ NOTEBOOKS_WHITELIST = [
     'chapter17_deep-reinforcement-learning/DDQN',
     'chapter19_graph-neural-networks/Graph-Neural-Networks',
     'chapter16_tensor_methods/tensor_basics',
+    'chapter18_variational-methods-and-uncertainty/bayes-by-backprop',  # > 10 mins.
+    'chapter18_variational-methods-and-uncertainty/bayes-by-backprop-gluon',  # > 10 mins.
     'cheatsheets/kaggle-gluon-kfold'
 ]
 
@@ -139,9 +147,8 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_custom_layer(self):
         assert _test_notebook('chapter03_deep-neural-networks/custom-layer')
 
-    # TODO(vishaalk): Load params and Save params are deprecated warning.
-    #def test_serialization(self):
-    #    assert _test_notebook('chapter03_deep-neural-networks/serialization')
+    def test_serialization(self):
+        assert _test_notebook('chapter03_deep-neural-networks/serialization')
 
     # Chapter 4
 
@@ -150,10 +157,6 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     def test_cnn_gluon(self):
         assert _test_notebook('chapter04_convolutional-neural-networks/cnn-gluon')
-
-    # TODO(vishaalk): Load params and Save params are deprecated warning.
-    #def test_deep_cnns_alexnet(self):
-    #    assert _test_notebook('chapter04_convolutional-neural-networks/deep-cnns-alexnet')
 
     def test_very_deep_nets_vgg(self):
         assert _test_notebook('chapter04_convolutional-neural-networks/very-deep-nets-vgg')
@@ -175,21 +178,10 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_gru_scratch(self):
         assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
 
-    #def test_rnns_gluon(self):
-    #    assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
-
     # Chapter 6
 
     def test_optimization_intro(self):
         assert _test_notebook('chapter06_optimization/optimization-intro')
-
-    # TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
-    #def test_gd_sgd_scratch(self):
-    #    assert _test_notebook('chapter06_optimization/gd-sgd-scratch')
-
-    # TODO(vishaalk): RuntimeWarning: Overflow encountered in reduce.
-    #def test_gd_sgd_gluon(self):
-    #    assert _test_notebook('chapter06_optimization/gd-sgd-gluon')
 
     def test_momentum_scratch(self):
         assert _test_notebook('chapter06_optimization/momentum-scratch')
@@ -229,28 +221,16 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     # Chapter 8
 
-    # TODO(vishaalk): Load params and Save params are deprecated warning.
-    #def test_object_detection(self):
-    #    assert _test_notebook('chapter08_computer-vision/object-detection')
+    def test_object_detection(self):
+        assert _test_notebook('chapter08_computer-vision/object-detection')
 
-    # TODO(vishaalk): Module skimage needs to be added to docker image.
-    #def test_fine_tuning(self):
-    #    assert _test_notebook('chapter08_computer-vision/fine-tuning')
-
-    # TODO(vishaalk):
-    #def test_visual_question_answer(self):
-    #    assert _test_notebook('chapter08_computer-vision/visual-question-answer')
+    def test_fine_tuning(self):
+        assert _test_notebook('chapter08_computer-vision/fine-tuning')
 
     # Chapter 9
 
     def test_tree_lstm(self):
         assert _test_notebook('chapter09_natural-language-processing/tree-lstm')
-
-    # Chapter 11
-
-    # TODO(vishaalk): Deferred initialization failed because shape cannot be inferred.
-    #def test_intro_recommender_systems(self):
-    #    assert _test_notebook('chapter11_recommender-systems/intro-recommender-systems')
 
     # Chapter 12
 
@@ -271,14 +251,5 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_generative_adversarial_networks(self):
         assert _test_notebook('chapter14_generative-adversarial-networks/conditional')
 
-    # TODO(vishaalk): Investigate.
-    #def test_pixel2pixel(self):
-    #    assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')
-
-    # Chapter 18
-
-    #def test_bayes_by_backprop(self):
-    #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop')
-
-    #def test_bayes_by_backprop_gluon(self):
-    #    assert _test_notebook('chapter18_variational-methods-and-uncertainty/bayes-by-backprop-gluon')
+    def test_pixel2pixel(self):
+        assert _test_notebook('chapter14_generative-adversarial-networks/pixel2pixel')

@@ -17,50 +17,13 @@ Code examples are placed throughout the API documentation and these can be run a
 ```eval_rst
 
 .. note:: A convenient way to execute code examples is using the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting multi-line examples containing
-    ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
-    for more details.
+   Jupyter notebook, which allows for pasting multi-line examples containing
+   ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
+   for more details.
 
 ```
 
 \* Some old references to Model API may exist, but this API has been deprecated.
-
-## NDArray API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   ndarray/ndarray.md
-   ndarray/random.md
-   ndarray/linalg.md
-   ndarray/sparse.md
-   ndarray/contrib.md
-```
-
-## Symbol API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   symbol/symbol.md
-   symbol/random.md
-   symbol/linalg.md
-   symbol/sparse.md
-   symbol/contrib.md
-   symbol/rnn.md
-```
-
-## Module API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   module/module.md
-   executor/executor.md
-```
 
 ## Autograd API
 
@@ -69,6 +32,26 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    autograd/autograd.md
+```
+
+## Callback API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   callback/callback.md
+```
+
+## Contrib Package
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   contrib/contrib.md
+   contrib/text.md
+   contrib/onnx.md
 ```
 
 ## Gluon API
@@ -86,15 +69,6 @@ Code examples are placed throughout the API documentation and these can be run a
    gluon/contrib.md
 ```
 
-## IO API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   io/io.md
-```
-
 ## Image API
 
 ```eval_rst
@@ -104,22 +78,22 @@ Code examples are placed throughout the API documentation and these can be run a
    image/image.md
 ```
 
-## Optimization API
+## IO API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   optimization/optimization.md
+   io/io.md
 ```
 
-## Callback API
+## KV Store API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   callback/callback.md
+   kvstore/kvstore.md
 ```
 
 ## Metric API
@@ -129,6 +103,38 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    metric/metric.md
+```
+
+## Module API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   module/module.md
+   executor/executor.md
+```
+
+## NDArray API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   ndarray/ndarray.md
+   ndarray/random.md
+   ndarray/linalg.md
+   ndarray/sparse.md
+   ndarray/contrib.md
+```
+
+## Optimization API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   optimization/optimization.md
 ```
 
 ## Profiler API
@@ -144,18 +150,30 @@ Code examples are placed throughout the API documentation and these can be run a
 
 ```eval_rst
 .. toctree::
-   :maxdepth 1
+   :maxdepth: 1
 
    rtc/rtc.md
 ```
 
-## Contrib Package
+## Symbol API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   contrib/contrib.md
-   contrib/text.md
-   contrib/onnx.md
+   symbol/symbol.md
+   symbol/random.md
+   symbol/linalg.md
+   symbol/sparse.md
+   symbol/contrib.md
+   symbol/rnn.md
+```
+
+## Symbol in Pictures API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   symbol_in_pictures/symbol_in_pictures.md
 ```

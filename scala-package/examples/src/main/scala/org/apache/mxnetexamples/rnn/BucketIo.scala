@@ -18,24 +18,23 @@
 
 package org.apache.mxnetexamples.rnn
 
-import org.apache.mxnet.{DataBatch, DataIter, NDArray, Shape}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.slf4j.LoggerFactory
+
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 import scala.util.Random
 import scala.collection.mutable
 
-/**
- * @author Depeng Liang
- */
 object BucketIo {
 
   type Text2Id = (String, Map[String, Int]) => Array[Int]
   type ReadContent = String => String
 
   def defaultReadContent(path: String): String = {
-    Source.fromFile(path).mkString.replaceAll("\\. |\n", " <eos> ")
+    Source.fromFile(path, "UTF-8").mkString.replaceAll("\\. |\n", " <eos> ")
   }
 
   def defaultBuildVocab(path: String): Map[String, Int] = {
@@ -57,7 +56,7 @@ object BucketIo {
       val tmp = sentence.split(" ").filter(_.length() > 0)
       for (w <- tmp) yield theVocab(w)
     }
-    words.toArray
+    words
   }
 
   def defaultGenBuckets(sentences: Array[String], batchSize: Int,
@@ -92,11 +91,14 @@ object BucketIo {
   }
 
   class BucketSentenceIter(
-      path: String, vocab: Map[String, Int], var buckets: IndexedSeq[Int],
-      _batchSize: Int, private val initStates: IndexedSeq[(String, (Int, Int))],
-      seperateChar: String = " <eos> ", text2Id: Text2Id = defaultText2Id,
+      path: String,
+      vocab: Map[String, Int],
+      var buckets: IndexedSeq[Int],
+      _batchSize: Int,
+      private val initStates: IndexedSeq[(String, (Int, Int))],
+      seperateChar: String = " <eos> ",
+      text2Id: Text2Id = defaultText2Id,
       readContent: ReadContent = defaultReadContent) extends DataIter {
-
     private val logger = LoggerFactory.getLogger(classOf[BucketSentenceIter])
 
     private val content = readContent(path)
@@ -160,12 +162,24 @@ object BucketIo {
       labelBuffer.append(NDArray.zeros(_batchSize, buckets(iBucket)))
     }
 
-    private val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
-
     private val _provideData = { val tmp = ListMap("data" -> Shape(_batchSize, _defaultBucketKey))
       tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
     }
+
     private val _provideLabel = ListMap("softmax_label" -> Shape(_batchSize, _defaultBucketKey))
+
+    private val _provideDataDesc = {
+      // TODO: need to allow user to specify DType and Layout
+      val tmp = IndexedSeq(new DataDesc("data",
+        Shape(_batchSize, _defaultBucketKey), DType.Float32, Layout.UNDEFINED))
+      tmp ++ initStates.map(x => new DataDesc(x._1, Shape(x._2._1, x._2._2),
+        DType.Float32, Layout.UNDEFINED))
+    }
+
+    private val _provideLabelDesc = IndexedSeq(
+      // TODO: need to allow user to specify DType and Layout
+      new DataDesc("softmax_label",
+      Shape(_batchSize, _defaultBucketKey), DType.Float32, Layout.UNDEFINED))
 
     private var iBucket = 0
 
@@ -192,12 +206,13 @@ object BucketIo {
         tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
       }
       val batchProvideLabel = ListMap("softmax_label" -> labelBuf.shape)
-      new DataBatch(IndexedSeq(dataBuf) ++ initStateArrays,
-                    IndexedSeq(labelBuf),
-                    getIndex(),
-                    getPad(),
-                    this.buckets(bucketIdx).asInstanceOf[AnyRef],
-                    batchProvideData, batchProvideLabel)
+      val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
+      new DataBatch(IndexedSeq(dataBuf.copy()) ++ initStateArrays,
+        IndexedSeq(labelBuf.copy()),
+        getIndex(),
+        getPad(),
+        this.buckets(bucketIdx).asInstanceOf[AnyRef],
+        batchProvideData, batchProvideLabel)
     }
 
     /**
@@ -228,18 +243,26 @@ object BucketIo {
      */
     override def getIndex(): IndexedSeq[Long] = IndexedSeq[Long]()
 
-    // The name and shape of label provided by this iterator
-    override def provideLabel: ListMap[String, Shape] = this._provideLabel
-
     /**
-     * get the number of padding examples
-     * in current batch
-     * @return number of padding examples in current batch
-     */
+      * get the number of padding examples
+      * in current batch
+      * @return number of padding examples in current batch
+      */
     override def getPad(): Int = 0
 
+    // The name and shape of label provided by this iterator
+    @deprecated
+    override def provideLabel: ListMap[String, Shape] = this._provideLabel
+
     // The name and shape of data provided by this iterator
+    @deprecated
     override def provideData: ListMap[String, Shape] = this._provideData
+
+    // Provide type:DataDesc of the data
+    override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
+
+    // Provide type:DataDesc of the label
+    override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
 
     override def hasNext: Boolean = {
       iBucket < bucketPlan.length

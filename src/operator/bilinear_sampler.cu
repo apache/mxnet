@@ -212,7 +212,11 @@ Operator* CreateOp<gpu>(BilinearSamplerParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new CuDNNBilinearSamplerOp<DType>(param);
+    if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
+      op = new BilinearSamplerOp<gpu, DType>(param);
+    } else {
+      op = new CuDNNBilinearSamplerOp<DType>(param);
+    }
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

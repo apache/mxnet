@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM dockcross/base:latest
+FROM mxnetci/dockcross-linux-base:08212018
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
 # The cross-compiling emulator

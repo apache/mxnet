@@ -173,12 +173,22 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5': {
+    'CPU: Clang 6': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang50') {
+        ws('workspace/build-cpu-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
+          }
+        }
+      }
+    },
+    'CPU: Clang Tidy': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang60_tidy') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
           }
         }
       }
@@ -194,13 +204,13 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang 5 MKLDNN': {
+    'CPU: Clang 6 MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang50') {
+        ws('workspace/build-cpu-mkldnn-clang60') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang50_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang5', mx_mkldnn_lib)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
+            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
           }
         }
       }
@@ -926,7 +936,7 @@ core_logic: {
         timeout(time: max_time, unit: 'MINUTES') {
           utils.init_git()
           utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-          sh "tests/ci_build/deploy/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
         }
       }
     }

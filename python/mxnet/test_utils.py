@@ -639,7 +639,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -698,7 +698,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -745,7 +745,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -827,7 +827,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -970,7 +970,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1055,7 +1055,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
