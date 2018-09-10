@@ -52,7 +52,7 @@ class ContainOpSelector: public SubgraphSelector {
 
 /*
  * This subgraph property finds a subgraph whose nodes have only operators
- * within a set. The operators in the subgraph will be executed by _default_subgraph_op.
+ * within a set. The operators in the subgraph will be executed by _CachedOp.
  */
 class DefaultSubgraphProperty: public SubgraphProperty {
  public:
