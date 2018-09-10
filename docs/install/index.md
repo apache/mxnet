@@ -3,10 +3,11 @@
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
-  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.2.1
+  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.3.0
   <span class="caret"></span></button>
   <ul class="dropdown-menu opt-group">
-    <li class="opt active versions"><a href="#">v1.2.1</a></li>
+    <li class="opt active versions"><a href="#">v1.3.0</a></li>
+    <li class="opt versions"><a href="#">v1.2.1</a></li>
     <li class="opt versions"><a href="#">v1.1.0</a></li>
     <li class="opt versions"><a href="#">v1.0.0</a></li>
     <li class="opt versions"><a href="#">v0.12.1</a></li>
@@ -78,10 +79,17 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-2-1">
+<div class="v1-3-0">
 
 ```
 $ pip install mxnet
+```
+
+</div> <!-- End of v1-3-0 -->
+<div class="v1-2-1">
+
+```
+$ pip install mxnet==1.2.1
 ```
 
 </div> <!-- End of v1-2-1 -->
@@ -189,10 +197,17 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-2-1">
+<div class="v1-3-0">
 
 ```
 $ pip install mxnet-cu92
+```
+
+</div> <!-- End of v1-3-0-->
+<div class="v1-2-1">
+
+```
+$ pip install mxnet-cu92==1.2.1
 ```
 
 </div> <!-- End of v1-2-1-->
@@ -405,10 +420,17 @@ For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ub
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-2-1">
+<div class="v1-3-0">
 
 ```
 $ pip install mxnet
+```
+
+</div> <!-- End of v1-3-0 -->
+<div class="v1-2-1">
+
+```
+$ pip install mxnet==1.2.1
 ```
 
 </div> <!-- End of v1-2-1 -->
@@ -609,13 +631,20 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-2-1">
+<div class="v1-3-0">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-2-1-->
+</div> <!-- End of v1-3-0 -->
+<div class="v1-2-1">
+
+```
+$ pip install mxnet==1.2.1
+```
+
+</div> <!-- End of v1-2-1 -->
 
 <div class="v1-1-0">
 
@@ -678,13 +707,20 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-2-1">
+<div class="v1-3-0">
 
 ```
 $ pip install mxnet-cu92
 ```
 
-</div> <!-- End of v1-2-1-->
+</div> <!-- End of v1-3-0 -->
+<div class="v1-2-1">
+
+```
+$ pip install mxnet-cu92==1.2.1
+```
+
+</div> <!-- End of v1-2-1 -->
 
 <div class="v1-1-0">
 
