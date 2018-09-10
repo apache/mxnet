@@ -41,7 +41,7 @@ GIT_PATH = '/usr/bin/git'
 GIT_REPO = 'https://github.com/zackchase/mxnet-the-straight-dope'
 KERNEL = os.getenv('MXNET_TEST_KERNEL', None)
 NOTEBOOKS_DIR = os.path.join(os.path.dirname(__file__), 'tmp_notebook')
-RELATIVE_DATA_PATH_REGEX = r'\.\.\/data\/'  # Regular expression to match the relative data path.
+RELATIVE_PATH_REGEX = r'\.\.(?=\/(data|img)\/)'  # Regular expression to match the relative data path.
 
 def _test_notebook(notebook, override_epochs=True):
     """Run Jupyter notebook to catch any execution error.
@@ -55,8 +55,9 @@ def _test_notebook(notebook, override_epochs=True):
     Returns:
         True if the notebook runs without warning or error.
     """
-    # Some notebooks will fail to run without error if we do not override the data path.
-    _override_data_path(notebook)
+    # Some notebooks will fail to run without error if we do not override
+    # relative paths to the data and image directories.
+    _override_relative_paths(notebook)
 
     if override_epochs:
         _override_epochs(notebook)
@@ -85,9 +86,10 @@ def _override_epochs(notebook):
         f.write(modified_notebook)
 
 
-def _override_data_path(notebook):
-    """Overrides the relative path for the data directory to point to the right place. This is
-    required as we run the notebooks in a different directory hierarchy more suitable for testing.
+def _override_relative_paths(notebook):
+    """Overrides the relative path for the data and image directories to point
+    to the right places. This is required as we run the notebooks in a different
+    directory hierarchy more suitable for testing.
 
     Args:
         notebook : string
@@ -100,7 +102,7 @@ def _override_data_path(notebook):
         notebook = f.read()
 
     # Update the location for the data directory.
-    modified_notebook = re.sub(RELATIVE_DATA_PATH_REGEX, NOTEBOOKS_DIR + '/data/', notebook)
+    modified_notebook = re.sub(RELATIVE_PATH_REGEX, NOTEBOOKS_DIR, notebook)
 
     # Replace the original notebook with the modified one.
     with io.open(notebook_path, 'w', encoding='utf-8') as f:

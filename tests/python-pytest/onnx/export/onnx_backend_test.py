@@ -45,6 +45,12 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_abs',
     'test_sum',
     'test_tanh',
+    'test_cos',
+    'test_sin',
+    'test_tan',
+    'test_acos',
+    'test_asin',
+    'test_atan'
     'test_ceil',
     'test_floor',
     'test_concat',
@@ -83,7 +89,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_exp',
     'test_operator_maxpool',
     'test_operator_params',
-    'test_operator_permute2'
+    'test_operator_permute2',
+    'test_clip'
     ]
 
 BASIC_MODEL_TESTS = [
