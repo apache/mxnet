@@ -40,6 +40,8 @@ object NDArray extends NDArrayBase {
 
   val api = NDArrayAPI
 
+  val random = NDArrayRandomAPI
+
   private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
     froms.foreach { from =>
       val weakRef = new WeakReference(from)

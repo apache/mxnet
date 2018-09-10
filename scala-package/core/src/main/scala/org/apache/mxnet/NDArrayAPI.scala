@@ -23,3 +23,13 @@ package org.apache.mxnet
 object NDArrayAPI extends NDArrayAPIBase {
   // TODO: Implement CustomOp for NDArray
 }
+
+@AddNDArrayRandomAPIs(false)
+/**
+  * typesafe NDArray random module: NDArray.random._
+  * Main code will be generated during compile time through Macros
+  */
+object NDArrayRandomAPI extends NDArrayRandomAPIBase {
+
+}
+

@@ -41,7 +41,7 @@ private[mxnet] object APIDocGenerator{
     hashCollector += absClassGen(FILE_PATH, true)
     hashCollector += absClassGen(FILE_PATH, false)
     hashCollector += absRndClassGen(FILE_PATH, true)
-//    hashCollector += absClassGen(FILE_PATH, false) // TODO random NDArray
+    hashCollector += absRndClassGen(FILE_PATH, false)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     val finalHash = hashCollector.mkString("\n")
@@ -58,7 +58,8 @@ private[mxnet] object APIDocGenerator{
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     // TODO: Add Filter to the same location in case of refactor
-    val absFuncs = absClassFunctions.filter(f => f.name.startsWith("sample") || f.name.startsWith("random"))
+
+    val absFuncs = absClassFunctions.filter(f => f.name.startsWith("sample_") || f.name.startsWith("random_"))
       .map(absClassFunction => {
         val scalaDoc = generateAPIDocFromBackend(absClassFunction)
         val defBody = generateAPISignature(absClassFunction, isSymbol)
@@ -85,8 +86,8 @@ private[mxnet] object APIDocGenerator{
     // TODO: Add Filter to the same location in case of refactor
     val absFuncs = absClassFunctions
       .filterNot(_.name.startsWith("_"))
-      .filterNot(_.name.startsWith("sample"))
-      .filterNot(_.name.startsWith("random"))
+      .filterNot(_.name.startsWith("random_"))
+      .filterNot(_.name.startsWith("sample_"))
       .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction)

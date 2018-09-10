@@ -35,7 +35,7 @@ object SymbolAPI extends SymbolAPIBase {
 
 @AddSymbolRandomAPIs(false)
 /**
-  * typesafe Symbol API: Symbol.random._
+  * typesafe Symbol random module: Symbol.random._
   * Main code will be generated during compile time through Macros
   */
 object SymbolRandomAPI extends SymbolRandomAPIBase {
