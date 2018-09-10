@@ -110,13 +110,6 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
-  // forward storage type inference
-  bool ForwardStorageType(
-      const nnvm::NodeAttrs& attrs,
-      const int dev_mask,
-      DispatchMode* dispatch_mode,
-      std::vector<int> *in_attrs,
-      std::vector<int> *out_attrs);
   // backward storage type inference
   bool BackwardStorageType(
       const nnvm::NodeAttrs& attrs,

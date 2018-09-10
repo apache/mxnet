@@ -1203,36 +1203,6 @@ OpStatePtr CreateCachedOpState(const NodeAttrs& attrs,
   return OpStatePtr::Create<CachedOpActualState>(op);
 }
 
-bool CachedOp::ForwardStorageType(const nnvm::NodeAttrs& attrs,
-                                  const int dev_mask,
-                                  DispatchMode* dispatch_mode,
-                                  std::vector<int> *in_attrs,
-                                  std::vector<int> *out_attrs) {
-  using namespace imperative;
-  nnvm::Graph g(fwd_graph_);
-  const auto& idx = g.indexed_graph();
-  const auto &outputs = idx.outputs();
-
-  // Prepare stypes and contexts based on inputs
-  StorageTypeVector storage_type_inputs;
-  storage_type_inputs.reserve(in_attrs->size());
-  for (size_t i = 0; i < in_attrs->size(); ++i) {
-    storage_type_inputs.emplace_back(in_attrs->at(i));
-  }
-  exec::DevMaskVector dev_masks(idx.num_nodes(), dev_mask);
-
-  // Forward graph storage type inference
-  CheckAndInferStorageType(&g, std::move(dev_masks), std::move(storage_type_inputs), true);
-  // Retrieve result and set outputs
-  const auto& inferred_stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    const auto eid = idx.entry_id(outputs[i]);
-    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, inferred_stypes[eid]);
-  }
-  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-  return true;
-}
-
 bool CachedOp::BackwardStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
@@ -1353,7 +1323,9 @@ NNVM_REGISTER_OP(_CachedOp)
      std::vector<int>* in_stypes,
      std::vector<int>* out_stypes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->ForwardStorageType(attrs, dev_mask, dispatch_mode, in_stypes, out_stypes);
+    return op::DefaultSubgraphOpStorageType1(op->GetForwardSym(),
+                                             dev_mask, dispatch_mode,
+                                             in_stypes, out_stypes);
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpForward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpForward)
