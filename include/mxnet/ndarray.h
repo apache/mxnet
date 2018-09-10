@@ -128,8 +128,8 @@ class NDArray {
   NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
       : ptr_(new Chunk(data, dev_id),
         [deleter](Chunk *p) {
-          deleter(); // call custom deleter
-          delete p;  // delete Chunk object
+          deleter();    // call custom deleter
+          delete p;     // delete Chunk object
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
