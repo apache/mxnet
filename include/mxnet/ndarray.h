@@ -116,6 +116,26 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
         entry_({nullptr, 0, 0}) {
   }
+
+  /*!
+   * \brief constructing a static NDArray that shares data with TBlob which is with deleter
+   *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
+   *  make sure the memory region is available through out the life of NDArray
+   * \param data the memory content of static data
+   * \param dev_id the device id this tensor sits at
+   * \param deleter the function pointer of custom deleter
+   */
+  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
+      : ptr_(std::shared_ptr<Chunk>(new Chunk(data, dev_id),
+        [](Chunk *p) {
+          deleter(); // call custom deleter
+          delete p;  // delete Chunk object
+        }),
+        shape_(data.shape_),
+        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
+  }
+
   /*! \brief create ndarray from shared memory */
   NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
       : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
@@ -785,15 +805,13 @@ class NDArray {
     // The shape of aux data. The default value for the shape depends on the type of storage.
     // If aux_shapes[i].Size() is zero, aux data i is empty.
     std::vector<TShape> aux_shapes;
-    // The pointer to the deleter function
-    std::function<void()> deleter_;
 
     /*! \brief default cosntructor */
-    Chunk() : static_data(true), delay_alloc(false), deleter_(nullptr) {}
+    Chunk() : static_data(true), delay_alloc(false) {}
 
     /*! \brief construct a new chunk */
     Chunk(TShape shape, Context ctx_, bool delay_alloc_, int dtype)
-        : static_data(false), delay_alloc(true), ctx(ctx_), deleter_(nullptr) {
+        : static_data(false), delay_alloc(true), ctx(ctx_) {
       auto size = shape.Size();
       storage_shape = shape;
       var = Engine::Get()->NewVariable();
@@ -817,11 +835,10 @@ class NDArray {
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
-      deleter_ = data.deleter_;
     }
 
     Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
-        : static_data(false), delay_alloc(false), deleter_(nullptr) {
+        : static_data(false), delay_alloc(false) {
       var = Engine::Get()->NewVariable();
       ctx = Context::CPUShared(0);
       shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
@@ -837,8 +854,7 @@ class NDArray {
           const std::vector<TShape> &aux_shapes_)
         : static_data(false), delay_alloc(delay_alloc_), storage_type(storage_type_),
           aux_types(aux_types_), ctx(ctx_), storage_shape(storage_shape_),
-          aux_shapes(aux_shapes_),
-          deleter_(nullptr) {
+          aux_shapes(aux_shapes_) {
       shandle.ctx = ctx;
       var = Engine::Get()->NewVariable();
       // aux_handles always reflect the correct number of aux data
@@ -855,7 +871,7 @@ class NDArray {
 
     Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
           const std::vector<TBlob> &aux_data, int dev_id)
-        : static_data(true), delay_alloc(false), storage_type(storage_type_), deleter_(nullptr) {
+        : static_data(true), delay_alloc(false), storage_type(storage_type_) {
       using namespace mshadow;
       CHECK_NE(storage_type, kDefaultStorage);
       // init var

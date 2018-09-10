@@ -339,7 +339,7 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
       tensor->deleter(const_cast<DLManagedTensor*>(tensor));
     }
   };
-  return NDArray(TBlob(dl_tensor, deleter), dl_tensor.ctx.device_id);
+  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
 }
 
 bool NDArray::fresh_out_grad() const {
