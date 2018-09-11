@@ -4529,7 +4529,7 @@ def test_ctc_loss_with_large_classes():
     batch_size = 2
     data = np.empty((num_classes, 0))
     for i in range(seq_len * batch_size) :
-        row = np.roll(np.arange(num_classes), i).reshape(num_classes, 1)
+        row = np.roll(np.arange(num_classes, dtype=np.float32), i).reshape(num_classes, 1)
         data = np.append(data, row/13, axis=1)
     data = data.reshape(seq_len, batch_size, num_classes)
     label = np.array([
