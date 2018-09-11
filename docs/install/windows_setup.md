@@ -55,7 +55,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
 - Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
 **Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
-- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.continuum.io/downloads)
+- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.anaconda.com/download/)
 **Note** Do not install Anaconda for Python 3.5. MXNet has few compatibility issue with Python 3.5.
 
 &nbsp;
@@ -69,7 +69,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 ## Install MXNet for Python
 
 1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
-2. Install ```Numpy``` using windows installer available [here](http://scipy.org/install.html).
+2. Install ```Numpy``` using windows installer available [here](https://scipy.org/index.html).
 3. Next, we install Python package interface for MXNet. You can find the Python interface package for [MXNet on GitHub](https://github.com/dmlc/mxnet/tree/master/python/mxnet).
 
 ```bash
