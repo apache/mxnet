@@ -55,9 +55,7 @@ class SNConv2D(Block):
     def _spectral_norm(self):
         """ spectral normalization """
         w = self.params.get('weight').data(self.ctx)
-        # the w preserve the original weight value to be used in line 75
-        w_mat = w
-        w_mat = nd.reshape(w_mat, [w_mat.shape[0], -1])
+        w_mat = nd.reshape(w, [w.shape[0], -1])
 
         _u = self.u.data(self.ctx)
         _v = None

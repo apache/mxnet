@@ -24,7 +24,7 @@ optional arguments:
   --epochs EPOCHS       number of training epochs. default is 100.
   --lr LR               learning rate. default is 0.0001.
   --lr-beta LR_BETA     learning rate for the beta in margin based loss.
-                        default is 0.5s.
+                        default is 0.5.
   --use-gpu             use gpu for training.
   --clip_gr CLIP_GR     Clip the gradient by projecting onto the box. default
                         is 10.0.
