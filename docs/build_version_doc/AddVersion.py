@@ -75,7 +75,7 @@ if __name__ == '__main__':
                 navbar.append(version_str)
                 navbar_mobile.append(version_str_mobile)
                 # The following causes rendering errors in code blocks; refer to #12168
-                #outstr = str(content).replace('&lt;', '<').replace('&gt;', '>')
+                outstr = str(content).replace('&lt;', '<').replace('&gt;', '>')
             # Fix link
             if args.current_version == tag_list[0]:
                 print("Fixing " + os.path.join(path, name))
@@ -114,4 +114,3 @@ if __name__ == '__main__':
 
             with open(os.path.join(path, name), "w") as outf:
                 outf.write(outstr)
-
