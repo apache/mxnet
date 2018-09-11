@@ -117,6 +117,7 @@ If your tutorial depends on specific packages, simply add them to this provision
     * [DDPG](reinforcement-learning/ddpg) - example of training DDPG for CartPole
     * [DQN](reinforcement-learning/dqn) - examples of training DQN and Double DQN to play Atari Games
     * [Parallel Advantage-Actor Critic](reinforcement-learning/parallel_actor_critic)
+* [Restricted Boltzmann Machine](restricted-boltzmann-machine) - an example of the binary restricted Boltzmann machine learning MNIST
 * [RNN Time Major](rnn-time-major) - RNN implementation with Time-major layout
 * [Recurrent Neural Net](rnn) - creating recurrent neural networks models using high level `mxnet.rnn` interface
 * [Sparse](sparse) - a variety of sparse examples

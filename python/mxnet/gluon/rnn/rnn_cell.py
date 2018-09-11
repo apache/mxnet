@@ -252,14 +252,12 @@ class RecurrentCell(Block):
     #pylint: disable=no-self-use
     def _get_activation(self, F, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
-        if activation == 'tanh':
-            return F.tanh(inputs, **kwargs)
-        elif activation == 'sigmoid':
-            return F.sigmoid(inputs, **kwargs)
-        elif activation == 'relu':
-            return F.relu(inputs, **kwargs)
-        elif activation == 'softsign':
-            return F.softsign(inputs, **kwargs)
+        func = {'tanh': F.tanh,
+                'relu': F.relu,
+                'sigmoid': F.sigmoid,
+                'softsign': F.softsign}.get(activation)
+        if func:
+            return func(inputs, **kwargs)
         elif isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):

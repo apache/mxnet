@@ -25,11 +25,9 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
-
-import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, NDArray, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
-import org.apache.mxnet.Executor
 import org.apache.mxnetexamples.Util
 
 import scala.collection.immutable.ListMap
@@ -223,120 +221,123 @@ object ExampleMultiTask {
 
   def train(batchSize: Int, numEpoch: Int, ctx: Context, modelDirPath: String):
   (Executor, MultiAccuracy) = {
-    val lr = 0.001f
-    val network = ExampleMultiTask.buildNetwork()
-    val (trainIter, valIter) =
-      Data.mnistIterator(modelDirPath, batchSize = batchSize, inputShape = Shape(784))
-    val trainMultiIt = new MultiMnistIterator(trainIter)
-    val valMultiIter = new MultiMnistIterator(valIter)
+    NDArrayCollector.auto().withScope {
+      val lr = 0.001f
+      val network = ExampleMultiTask.buildNetwork()
+      val (trainIter, valIter) =
+        Data.mnistIterator(modelDirPath, batchSize = batchSize, inputShape = Shape(784))
+      val trainMultiIt = new MultiMnistIterator(trainIter)
+      val valMultiIter = new MultiMnistIterator(valIter)
 
-    val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
+      val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
 
-    val (argShapes, outputShapes, auxShapes) = network.inferShape(trainMultiIt.provideData("data"))
-    val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
+      val (argShapes, outputShapes, auxShapes)
+      = network.inferShape(trainMultiIt.provideData("data"))
+      val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
-    val argNames = network.listArguments
-    val argDict = argNames.zip(argShapes.map(NDArray.empty(_, ctx))).toMap
+      val argNames = network.listArguments
+      val argDict = argNames.zip(argShapes.map(NDArray.empty(_, ctx))).toMap
 
-    val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
-      !datasAndLabels.contains(name)
-    }.map(x => x._1 -> NDArray.empty(x._2, ctx)).toMap
+      val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
+        !datasAndLabels.contains(name)
+      }.map(x => x._1 -> NDArray.empty(x._2, ctx)).toMap
 
-    argDict.foreach { case (name, ndArray) =>
-      if (!datasAndLabels.contains(name)) {
-        initializer.initWeight(name, ndArray)
+      argDict.foreach { case (name, ndArray) =>
+        if (!datasAndLabels.contains(name)) {
+          initializer.initWeight(name, ndArray)
+        }
       }
-    }
 
-    val data = argDict("data")
-    val label1 = argDict("softmaxoutput0_label")
-    val label2 = argDict("softmaxoutput1_label")
-    val maxGradNorm = 0.5f
-    val executor = network.bind(ctx, argDict, gradDict)
+      val data = argDict("data")
+      val label1 = argDict("softmaxoutput0_label")
+      val label2 = argDict("softmaxoutput1_label")
+      val maxGradNorm = 0.5f
+      val executor = network.bind(ctx, argDict, gradDict)
 
-    val opt = new RMSProp(learningRate = lr, wd = 0.00001f)
+      val opt = new RMSProp(learningRate = lr, wd = 0.00001f)
 
-    val paramsGrads = gradDict.toList.zipWithIndex.map { case ((name, grad), idx) =>
-      (idx, name, grad, opt.createState(idx, argDict(name)))
-    }
+      val paramsGrads = gradDict.toList.zipWithIndex.map { case ((name, grad), idx) =>
+        (idx, name, grad, opt.createState(idx, argDict(name)))
+      }
 
-    val evalMetric = new ExampleMultiTask.MultiAccuracy(num = 2, name = "multi_accuracy")
-    val batchEndCallback = new ExampleMultiTask.Speedometer(batchSize, 50)
+      val evalMetric = new ExampleMultiTask.MultiAccuracy(num = 2, name = "multi_accuracy")
+      val batchEndCallback = new ExampleMultiTask.Speedometer(batchSize, 50)
 
-    for (epoch <- 0 until numEpoch) {
-      // Training phase
-      val tic = System.currentTimeMillis
-      evalMetric.reset()
-      var nBatch = 0
-      var epochDone = false
-      // Iterate over training data.
-      trainMultiIt.reset()
+      for (epoch <- 0 until numEpoch) {
+        // Training phase
+        val tic = System.currentTimeMillis
+        evalMetric.reset()
+        var nBatch = 0
+        var epochDone = false
+        // Iterate over training data.
+        trainMultiIt.reset()
 
-      while (!epochDone) {
-        var doReset = true
-        while (doReset && trainMultiIt.hasNext) {
-          val dataBatch = trainMultiIt.next()
+        while (!epochDone) {
+          var doReset = true
+          while (doReset && trainMultiIt.hasNext) {
+            val dataBatch = trainMultiIt.next()
 
-          data.set(dataBatch.data(0))
-          label1.set(dataBatch.label(0))
-          label2.set(dataBatch.label(1))
+            data.set(dataBatch.data(0))
+            label1.set(dataBatch.label(0))
+            label2.set(dataBatch.label(1))
+
+            executor.forward(isTrain = true)
+            executor.backward()
+
+            val norm = Math.sqrt(paramsGrads.map { case (idx, name, grad, optimState) =>
+              val l2Norm = NDArray.api.norm(data = (grad / batchSize)).toScalar
+              l2Norm * l2Norm
+            }.sum).toFloat
+
+            paramsGrads.foreach { case (idx, name, grad, optimState) =>
+              if (norm > maxGradNorm) {
+                grad.set(grad.toArray.map(_ * (maxGradNorm / norm)))
+                opt.update(idx, argDict(name), grad, optimState)
+              } else opt.update(idx, argDict(name), grad, optimState)
+            }
+
+            // evaluate at end, so out_cpu_array can lazy copy
+            evalMetric.update(dataBatch.label, executor.outputs)
+
+            nBatch += 1
+            batchEndCallback.invoke(epoch, nBatch, evalMetric)
+          }
+          if (doReset) {
+            trainMultiIt.reset()
+          }
+          // this epoch is done
+          epochDone = true
+        }
+        var nameVals = evalMetric.get
+        nameVals.foreach { case (name, value) =>
+          logger.info(s"Epoch[$epoch] Train-$name=$value")
+        }
+        val toc = System.currentTimeMillis
+        logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
+
+        evalMetric.reset()
+        valMultiIter.reset()
+        while (valMultiIter.hasNext) {
+          val evalBatch = valMultiIter.next()
+
+          data.set(evalBatch.data(0))
+          label1.set(evalBatch.label(0))
+          label2.set(evalBatch.label(1))
 
           executor.forward(isTrain = true)
-          executor.backward()
 
-          val norm = Math.sqrt(paramsGrads.map { case (idx, name, grad, optimState) =>
-            val l2Norm = NDArray.api.norm(data = (grad / batchSize)).toScalar
-            l2Norm * l2Norm
-          }.sum).toFloat
-
-          paramsGrads.foreach { case (idx, name, grad, optimState) =>
-            if (norm > maxGradNorm) {
-              grad.set(grad.toArray.map(_ * (maxGradNorm / norm)))
-              opt.update(idx, argDict(name), grad, optimState)
-            } else opt.update(idx, argDict(name), grad, optimState)
-          }
-
-          // evaluate at end, so out_cpu_array can lazy copy
-          evalMetric.update(dataBatch.label, executor.outputs)
-
-          nBatch += 1
-          batchEndCallback.invoke(epoch, nBatch, evalMetric)
+          evalMetric.update(evalBatch.label, executor.outputs)
+          evalBatch.dispose()
         }
-        if (doReset) {
-          trainMultiIt.reset()
+
+        nameVals = evalMetric.get
+        nameVals.foreach { case (name, value) =>
+          logger.info(s"Epoch[$epoch] Validation-$name=$value")
         }
-        // this epoch is done
-        epochDone = true
-      }
-      var nameVals = evalMetric.get
-      nameVals.foreach { case (name, value) =>
-        logger.info(s"Epoch[$epoch] Train-$name=$value")
-      }
-      val toc = System.currentTimeMillis
-      logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
-
-      evalMetric.reset()
-      valMultiIter.reset()
-      while (valMultiIter.hasNext) {
-        val evalBatch = valMultiIter.next()
-
-        data.set(evalBatch.data(0))
-        label1.set(evalBatch.label(0))
-        label2.set(evalBatch.label(1))
-
-        executor.forward(isTrain = true)
-
-        evalMetric.update(evalBatch.label, executor.outputs)
-        evalBatch.dispose()
       }
 
-      nameVals = evalMetric.get
-      nameVals.foreach { case (name, value) =>
-        logger.info(s"Epoch[$epoch] Validation-$name=$value")
-      }
+      (executor, evalMetric)
     }
-
-    (executor, evalMetric)
   }
 
   def main(args: Array[String]): Unit = {

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,10 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# coding: utf-8
+# pylint: disable=wildcard-import
+""" Data iterators for common data formats and utility functions."""
+from __future__ import absolute_import
 
-if [ ${TASK} == "r_test" ]; then
-    echo "Print the install log..."
-    cat mxnet.Rcheck/*.out
-    echo "Print the check log..."
-    cat mxnet.Rcheck/*.log
-fi
+from . import io
+from .io import *
+
+from . import utils
+from .utils import *

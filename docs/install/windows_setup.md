@@ -91,7 +91,7 @@ Done! We have installed MXNet with Python interface. Run below commands to verif
 ```
 We actually did a small tensor computation using MXNet! You are all set with MXNet on your Windows machine.
 
-## Install MXNet Package for R
+## Install the MXNet Package for R
 MXNet for R is available for both CPUs and GPUs.
 
 ### Installing MXNet on a Computer with a CPU Processor
@@ -151,8 +151,8 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     ├── dmlc
     ├── mxnet
     ├── mshadow
-    └── nnvm 
-    
+    └── nnvm
+
 ```
 6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
@@ -200,7 +200,7 @@ To install MXNet on a computer with a GPU processor, choose from two options:
 * Build the library from source code
 
 However, a few dependencies remain for both options.  You will need the following:
-* Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended. 
+* Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended.
 
 * Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (VS2015 or VS2017 is required by CUDA)
 
@@ -224,7 +224,7 @@ For GPU package:
 ```
 Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 #### Building MXNet from Source Code(GPU)
-After you have installed above software, continue with the following steps to build MXNet-R: 
+After you have installed above software, continue with the following steps to build MXNet-R:
 1. Clone the MXNet github repo.
 
 ```sh
@@ -261,8 +261,8 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     ├── dmlc
     ├── mxnet
     ├── mshadow
-    └── nnvm 
-    
+    └── nnvm
+
 ```
 6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
