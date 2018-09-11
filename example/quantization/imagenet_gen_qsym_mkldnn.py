@@ -21,6 +21,8 @@ import logging
 from common import modelzoo
 import mxnet as mx
 from mxnet.contrib.quantization import *
+from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array
+import ctypes
 
 
 def download_calib_dataset(dataset_url, calib_dataset, logger=None):
@@ -52,10 +54,11 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model')
-    parser.add_argument('--ctx', type=str, default='gpu')
-    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
-                        help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
+    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with mkldnn support')
+    parser.add_argument('--ctx', type=str, default='cpu')
+    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'ssd', 'imagenet1k-resnet-50', 'imagenet1k-resnet-50-v1',
+                                                      'imagenet1k-inception-v3', 'imagenet1k-inception-bn', 'imagenet1k-vgg-16'],
+                        help='currently only supports imagenet1k-resnet-152, imagenet1k-inception-bn or imagenet1k-vgg-16')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--calib-dataset', type=str, default='data/val_256_q90.rec',
@@ -92,9 +95,19 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
-    parser.add_argument('--quantized-dtype', type=str, default='int8',
+    parser.add_argument('--quantized-dtype', type=str, default='uint8',
                         choices=['int8', 'uint8'],
                         help='quantization destination data type for input data')
+    parser.add_argument('--disable-requantize', type=bool, default=True,
+                        help='If disable requantize, the OP needed requantize'
+                             ' will output int8 directly and hence requantize '
+                             'OP is not needed during quantization. Note: '
+                             'calibration mode need to be used if requantize '
+                             'is disabled.')
+    parser.add_argument('--enable-calib-quantize', type=bool, default=True,
+                        help='If enabled, the quantize op will '
+                             'be calibrated offline if calibration mode is '
+                             'enabled')
     args = parser.parse_args()
 
     if args.ctx == 'gpu':
@@ -117,9 +130,14 @@ if __name__ == '__main__':
     if calib_mode != 'none':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
-    # download model
-    prefix, epoch = download_model(model_name=args.model, logger=logger)
-    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+        # download model
+        prefix, epoch = download_model(model_name=args.model, logger=logger)
+        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+
+    out = SymbolHandle()
+    backend = "MKLDNN"
+    check_call(_LIB.MXGenBackendSubgraph(c_str(backend), sym.handle, ctypes.byref(out)))
+    sym = Symbol(out)
 
     # get batch size
     batch_size = args.batch_size
@@ -145,11 +163,10 @@ if __name__ == '__main__':
                                                                      or name.find('sc') != -1
                                                                      or name.find('fc') != -1)
         else:
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('sc') != -1)
+            calib_layer = lambda name: name.endswith('_output')
             excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
-            excluded_sym_names += ['conv0']
+            excluded_sym_names += ['sg_mkldnn_conv_bn_relu_0', 'pooling0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
         if args.ctx == 'gpu':
@@ -178,6 +195,7 @@ if __name__ == '__main__':
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                        calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+                                                       disable_requantize=args.disable_requantize,
                                                        logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
         save_symbol(sym_name, qsym, logger)
@@ -201,6 +219,8 @@ if __name__ == '__main__':
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                        disable_requantize=args.disable_requantize,
+                                                        label_names=(label_name,),
                                                         logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

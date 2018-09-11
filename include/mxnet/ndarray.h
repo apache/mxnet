@@ -702,6 +702,11 @@ class NDArray {
    * It's used by FullyConnected right now.
    */
   NDArray MKLDNNDataReshape(const TShape &shape) const;
+
+   /*!
+   * \ Fix mkldnn memory descriptor mismatch from NDArray.
+   */
+  void UpdateMKLDNNMemDesc();
 #endif
 
   /*!

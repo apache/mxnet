@@ -1502,22 +1502,23 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 int *complete);
 
 /*!
- * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
- * \param sym_handle symbol to be converted
- * \param ret_sym_handle quantized symbol result
- * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols array of symbols to be excluded from being quantized
- * \param num_offline number of parameters that are quantized offline
- * \param offline_params array of c strings representing the names of params quantized offline
- * \param quantized_dtype the quantized destination type for input data.
- */
-MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
-                               SymbolHandle *ret_sym_handle,
-                               const mx_uint num_excluded_symbols,
-                               const SymbolHandle *excluded_symbols,
-                               const mx_uint num_offline,
-                               const char **offline_params,
-                               const char *quantized_dtype);
+* \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
+* \param sym_handle symbol to be converted
+* \param ret_sym_handle quantized symbol result
+* \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
+* \param excluded_symbols array of symbols to be excluded from being quantized
+* \param num_offline number of parameters that are quantized offline
+* \param offline_params array of c strings representing the names of params quantized offline
+* \param quantized_dtype the quantized destination type for input data.
+* \param disable_requantize whether disable requantize OP during quantization
+* \param calib_quantize whether calibrate quantize op with offline calibration data.
+*/
+int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
+                     const mx_uint num_excluded_symbols,
+                     const SymbolHandle *excluded_symbols,
+                     const mx_uint num_offline, const char **offline_params,
+                     const char *quantized_dtype, const bool disable_requantize,
+                     bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1527,13 +1528,18 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
  * \param low_quantiles low quantiles of layers stored in the calibration table
  * \param high_quantiles high quantiles of layers stored in the calibration table
  * \param ret_sym_handle returned symbol
+ * \param disable_requantize whether disable requantize OP during quantization
  */
 MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                                const mx_uint num_layers,
                                                const char** layer_names,
                                                const float* low_quantiles,
                                                const float* high_quantiles,
-                                               SymbolHandle* ret_sym_handle);
+                                               SymbolHandle* ret_sym_handle,
+                                               const bool disable_requantize);
+
+MXNET_DLL int MXGenBackendSubgraph(const char *backend, SymbolHandle sym_handle,
+                                   SymbolHandle *ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

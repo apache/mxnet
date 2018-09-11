@@ -328,6 +328,24 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
+ * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * the given one. operator== can't guarantee that. == can return true even if
+ * the formats are different. I need to double check its format.
+ */
+static inline mkldnn::memory *GetMKLDNNExact(
+    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
+  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
+  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
+    return const_cast<mkldnn::memory *>(mem);
+  } else {
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
+            desc, mem->get_data_handle()));
+    MKLDNNStream::Get()->RegisterMem(ret);
+    return ret.get();
+  }
+}
+
+/*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.
  * The difference is that the first function can create MKLDNN memory with
  * special layouts in an NDArray, while the second one can only create MKLDNN

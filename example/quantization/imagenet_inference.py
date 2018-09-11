@@ -129,7 +129,7 @@ if __name__ == '__main__':
         ctx = mx.cpu(0)
     else:
         raise ValueError('ctx %s is not supported in this script' % args.ctx)
-    
+
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)

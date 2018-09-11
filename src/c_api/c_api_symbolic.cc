@@ -31,6 +31,7 @@
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
+#include "../operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
 namespace op {
@@ -649,7 +650,9 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const SymbolHandle *excluded_symbols,
                      const mx_uint num_offline,
                      const char **offline_params,
-                     const char *quantized_dtype) {
+                     const char *quantized_dtype,
+                     const bool disable_requantize,
+                     bool calib_quantize) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -669,6 +672,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   std::string quantized_type(quantized_dtype);
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
+  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
@@ -680,7 +684,8 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                      const char** layer_names,
                                      const float* min_ranges,
                                      const float* max_ranges,
-                                     SymbolHandle* ret_qsym_handle) {
+                                     SymbolHandle* ret_qsym_handle,
+                                     const bool disable_requantize) {
   nnvm::Symbol* s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(qsym_handle);
@@ -691,8 +696,27 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
     calib_table.emplace(prefix+layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
   }
   g.attrs["calib_table"] = std::make_shared<nnvm::any>(std::move(calib_table));
+  g.attrs["disable_requantize"] = std::make_shared<nnvm::any>(disable_requantize);
   g = ApplyPass(std::move(g), "SetCalibTableToQuantizedGraph");
   s->outputs = g.outputs;
   *ret_qsym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXGenBackendSubgraph(const char *backend, SymbolHandle sym_handle,
+                         SymbolHandle *ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  mxnet::op::SubgraphPropertyPtr property =
+      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(
+          backend);
+  g.attrs["subgraph_property"] =
+      std::make_shared<nnvm::any>(std::move(property));
+  g = ApplyPass(std::move(g), "PartitionGraph");
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

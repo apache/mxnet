@@ -75,6 +75,11 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   auto i_mpd = i_mem->get_primitive_desc();
   auto i_desc = i_mpd.desc();
   mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
+  if (i_fmt == mkldnn::memory::format::nchw ||
+      i_fmt == mkldnn::memory::format::nChw8c ||
+      i_fmt == mkldnn_nChw16c) {
+    i_fmt = mkldnn::memory::format::nhwc;
+  }
   size_t i_ndim = in_buffer.shape().ndim();
   mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
   for (size_t i = 0; i < i_ndim; i++) {

@@ -449,24 +449,6 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   mkl_mem_.reset(new MKLDNNMemory(pd, shandle.dptr));
 }
 
-/*
- * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
- * the given one. operator== can't guarantee that. == can return true even if
- * the formats are different. I need to double check its format.
- */
-static inline mkldnn::memory *GetMKLDNNExact(
-    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
-  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
-  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
-    return const_cast<mkldnn::memory *>(mem);
-  } else {
-    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
-            desc, mem->get_data_handle()));
-    MKLDNNStream::Get()->RegisterMem(ret);
-    return ret.get();
-  }
-}
-
 const mkldnn::memory *NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
@@ -693,6 +675,21 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   ptr_->mkl_mem_.reset(new MKLDNNMemory(desc, ptr_->shandle.dptr));
   MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
   return ptr_->mkl_mem_->GetRaw();
+}
+
+void NDArray::UpdateMKLDNNMemDesc() {
+  const mkldnn::memory *mem = GetMKLDNNData();
+  auto mem_desc = mem->get_primitive_desc().desc();
+  auto this_dtype = get_mkldnn_type(dtype());
+  if (this_dtype != mem_desc.data.data_type) {
+    mkldnn::memory::desc data_md(
+        mkldnn::memory::dims(mem_desc.data.dims,
+                             mem_desc.data.dims + mem_desc.data.ndims),
+        this_dtype, static_cast<mkldnn::memory::format>(mem_desc.data.format));
+    mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
+    ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+  }
 }
 #endif
 
