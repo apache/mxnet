@@ -459,6 +459,7 @@ class CommDevice : public Comm {
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.emplace_back(key, shape, dtype);
+    inited_ = false;
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
@@ -701,8 +702,10 @@ class CommDevice : public Comm {
       }
       // Delayed allocation - as the dense merged buffer might not be used at all if push()
       // only sees sparse arrays
-      bool delay_alloc = true;
-      buf.merged = NDArray(shape, ctx, delay_alloc, type);
+      if (buf.merged.is_none()) {
+        bool delay_alloc = true;
+        buf.merged = NDArray(shape, ctx, delay_alloc, type);
+      }
       ctx_info[ctx.dev_id].second += shape.Size();
     }
     inited_ = true;
