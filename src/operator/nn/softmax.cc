@@ -25,8 +25,11 @@
 #include "./softmax-inl.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
+#include "../operator_common.h"
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn/mkldnn_base-inl.h"
 #include "mkldnn/mkldnn_ops-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -38,10 +41,9 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   // It seems MKLDNN softmax doesn't support training.
-  // and it only supports non-negative axis.
-  if (SupportMKLDNN(inputs[0]) && !ctx.is_train && param.axis >= 0) {
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmax(param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNSoftmaxForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     auto fn = SoftmaxCompute<cpu, mxnet_op::softmax_fwd>;
@@ -51,7 +53,6 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::softmax_fwd>, attrs, ctx,
                   inputs, req, outputs);
 }
-#endif
 
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
@@ -61,17 +62,10 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
 
-  DispatchMode wanted_mode;
-#if MXNET_USE_MKLDNN == 1
-  // We only run MKLDNN op if it runs on CPU.
-  if (dev_mask == mshadow::cpu::kDevMask)
-    wanted_mode = DispatchMode::kFComputeEx;
-  else
-#endif
-    wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, static_cast<NDArrayStorageType>((*in_attrs)[0]),
-                             dispatch_mode, wanted_mode);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
+#endif
 
 MXNET_OPERATOR_REGISTER_UNARY(softmax)
 .describe(R"code(Applies the softmax function.
@@ -79,9 +73,11 @@ MXNET_OPERATOR_REGISTER_UNARY(softmax)
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
 
 .. math::
-   softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
+   softmax(\mathbf{z/t})_j = \frac{e^{z_j/t}}{\sum_{k=1}^K e^{z_k/t}}
 
 for :math:`j = 1, ..., K`
+
+t is the temperature parameter in softmax function. By default, t equals 1.0
 
 Example::
 
@@ -102,9 +98,10 @@ Example::
 })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
-#endif
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmax"})
 .add_arguments(SoftmaxParam::__FIELDS__());
 
@@ -112,6 +109,45 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_softmax)
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
+
+MXNET_OPERATOR_REGISTER_UNARY(softmin)
+.describe(R"code(Applies the softmin function.
+
+The resulting array contains elements in the range (0,1) and the elements along the given axis sum
+up to 1.
+
+.. math::
+   softmin(\mathbf{z/t})_j = \frac{e^{-z_j/t}}{\sum_{k=1}^K e^{-z_k/t}}
+
+for :math:`j = 1, ..., K`
+
+t is the temperature parameter in softmax function. By default, t equals 1.0
+
+Example::
+
+  x = [[ 1.  2.  3.]
+       [ 3.  2.  1.]]
+
+  softmin(x,axis=0) = [[ 0.88079703,  0.5,  0.11920292],
+                       [ 0.11920292,  0.5,  0.88079703]]
+
+  softmin(x,axis=1) = [[ 0.66524094,  0.24472848,  0.09003057],
+                       [ 0.09003057,  0.24472848,  0.66524094]]
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd, true>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmin"})
+.add_arguments(SoftmaxParam::__FIELDS__());
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_softmin)
+.set_attr_parser(ParamParser<SoftmaxParam>)
+.set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
+                                                        mxnet_op::softmax_bwd, true>);
 
 MXNET_OPERATOR_REGISTER_UNARY(log_softmax)
 .describe(R"code(Computes the log softmax of the input.

@@ -43,8 +43,12 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
+#include <limits>
 
 #include "../operator/mxnet_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#endif
 
 namespace mxnet {
 namespace common {
@@ -318,6 +322,36 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   return false;
 }
 
+/*! \brief returns true if storage type of any array in `ndarrays`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype) {
+  if (!ndarrays.empty()) {
+    for (const auto& nd : ndarrays) {
+      if (nd.storage_type() == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/*! \brief returns true if any storage type `ndstype` in `ndstypes`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<int>& ndstypes,
+                                const NDArrayStorageType stype) {
+  if (!ndstypes.empty()) {
+    for (const auto& ndstype : ndstypes) {
+      if (ndstype == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {
   switch (x) {
@@ -437,6 +471,10 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+#endif
 }
 
 // heuristic to dermine number of threads per GPU
@@ -614,6 +652,64 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
   } else {
     LOG(FATAL) << "Unknown device mask";
     return nullptr;
+  }
+}
+
+/*!
+ * \brief Return the max integer value representable in the type `T` without loss of precision.
+ */
+template <typename T>
+constexpr size_t MaxIntegerValue() {
+  return std::is_integral<T>::value ?
+    std::numeric_limits<T>::max():
+    size_t(2) << (std::numeric_limits<T>::digits - 1);
+}
+
+template <>
+constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
+  return size_t(2) << 10;
+}
+
+MSHADOW_XINLINE int ilog2ul(size_t a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
+}
+
+MSHADOW_XINLINE int ilog2ui(unsigned int a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
+}
+
+/*!
+ * \brief Return an NDArray of all zeros.
+ */
+inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+                         const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+/*!
+ * \brief Helper to add a NDArray of zeros to a std::vector.
+ */
+inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
   }
 }
 

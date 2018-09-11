@@ -22,6 +22,11 @@ package AI::MXNet::CachedOp;
     AI::MXNet::CachedOp - A wrapper around CachedOpHandle
 =cut
 
+=head1 DESCRIPTION
+
+    Internal module, used as a part of AI::MXNet::Gluon::HybridBlock.
+=cut
+
 use strict;
 use warnings;
 use AI::MXNet::Base;
@@ -32,10 +37,17 @@ has 'handle'   => (is => 'ro', isa => 'CachedOpHandle', required => 1);
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
-    my ($sym) = @_;
+    my ($sym, $flags) = @_;
+    for my $key (keys %$flags)
+    {
+        $flags->{ $key } = "(" .join(", ", map { defined($_) ? $_ : 'None' } @{ $flags->{ $key } }) .")"
+                if ref $flags->{ $key } eq 'ARRAY';
+    }
     my $handle = check_call(
-        AI::MXNetCAPI::CreateCachedOp(
-            $sym->handle
+        AI::MXNetCAPI::CreateCachedOpEx(
+            $sym->handle,
+            scalar(keys %{ $flags//{} }),
+            $flags//{},
         )
     );
     return $class->$orig(handle => $handle);
@@ -84,8 +96,8 @@ sub call
     {
         $out = [];
     }
-    my $output = check_call(
-        AI::MXNetCAPI::InvokeCachedOp(
+    my ($output, $stypes) = check_call(
+        AI::MXNetCAPI::InvokeCachedOpEx(
             $self->handle,
             scalar(@args),
             [map { $_->handle } @args],
@@ -95,11 +107,12 @@ sub call
     return $original_output if defined $original_output;
     if(@$output == 1)
     {
-        return AI::MXNet::NDArray->_ndarray_cls($output->[0]);
+        return AI::MXNet::NDArray->_ndarray_cls($output->[0], 1, $stypes->[0]);
     }
     else
     {
-        return [map { AI::MXNet::NDArray->_ndarray_cls($_) } @$output];
+        my $i = 0;
+        return [map { AI::MXNet::NDArray->_ndarray_cls($_, 1, $stypes->[$i++]) } @$output];
     }
 }
 

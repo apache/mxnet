@@ -22,42 +22,50 @@
 
 FROM nvidia/cuda:9.0-cudnn7-devel as cudabuilder
 
-# Temporary fix due to https://github.com/apache/incubator-mxnet/issues/10837
-# FROM dockcross/linux-arm64
 FROM mxnetci/dockcross-linux-arm64:05082018
 
 ENV ARCH aarch64
-ENV FC /usr/bin/${CROSS_TRIPLE}-gfortran
 ENV HOSTCC gcc
 ENV TARGET ARMV8
 
-WORKDIR /work
+# gh issue #11567 https://github.com/apache/incubator-mxnet/issues/11567
+RUN sed -i '\#deb http://cdn-fastly.deb.debian.org/debian-security jessie/updates main#d' /etc/apt/sources.list
+RUN sed -i 's/cdn-fastly.//' /etc/apt/sources.list
 
-# Build OpenBLAS
-RUN git clone --recursive -b v0.2.20 https://github.com/xianyi/OpenBLAS.git && \
-    cd OpenBLAS && \
-    make -j$(nproc) && \
-    PREFIX=${CROSS_ROOT} make install
+
+WORKDIR /work/deps
+
+COPY install/ubuntu_arm.sh /work/
+RUN /work/ubuntu_arm.sh
+
+COPY install/arm_openblas.sh /work/
+RUN /work/arm_openblas.sh
+
+ENV OpenBLAS_HOME=${CROSS_ROOT}
+ENV OpenBLAS_DIR=${CROSS_ROOT}
+
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
 
 # Setup CUDA build env (including configuring and copying nvcc)
 COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
 ENV TARGET_ARCH aarch64
 ENV TARGET_OS linux
 
-# Install ARM depedencies based on Jetpack 3.2
-RUN JETPACK_DOWNLOAD_PREFIX=http://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/3.2GA/m892ki/JetPackL4T_32_b196/ && \
+# Install ARM depedencies based on Jetpack 3.2.1
+RUN JETPACK_DOWNLOAD_PREFIX=https://developer.download.nvidia.com/devzone/devcenter/mobile/jetpack_l4t/3.2.1/m8u2ki/JetPackL4T_321_b23 && \
     ARM_CUDA_INSTALLER_PACKAGE=cuda-repo-l4t-9-0-local_9.0.252-1_arm64.deb && \
-    ARM_CUDNN_INSTALLER_PACKAGE=libcudnn7_7.0.5.13-1+cuda9.0_arm64.deb && \
-    ARM_CUDNN_DEV_INSTALLER_PACKAGE=libcudnn7-dev_7.0.5.13-1+cuda9.0_arm64.deb && \
+    ARM_CUDNN_INSTALLER_PACKAGE=libcudnn7_7.0.5.15-1+cuda9.0_arm64.deb && \
+    ARM_CUDNN_DEV_INSTALLER_PACKAGE=libcudnn7-dev_7.0.5.15-1+cuda9.0_arm64.deb && \
+    dpkg --add-architecture arm64 && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDA_INSTALLER_PACKAGE && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_INSTALLER_PACKAGE && \
     wget -nv $JETPACK_DOWNLOAD_PREFIX/$ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
-    dpkg -i $ARM_CUDA_INSTALLER_PACKAGE && \
+    dpkg -i --force-architecture  $ARM_CUDA_INSTALLER_PACKAGE && \
     apt-key add /var/cuda-repo-9-0-local/7fa2af80.pub && \
-    dpkg -i $ARM_CUDNN_INSTALLER_PACKAGE && \
-    dpkg -i $ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
-    apt update -y && apt install -y unzip cuda-libraries-dev-9-0 libcudnn7-dev
-
+    dpkg -i --force-architecture  $ARM_CUDNN_INSTALLER_PACKAGE && \
+    dpkg -i --force-architecture  $ARM_CUDNN_DEV_INSTALLER_PACKAGE && \
+    apt update -y || true && apt install -y cuda-libraries-dev-9-0 libcudnn7-dev
 ENV PATH $PATH:/usr/local/cuda/bin
 ENV NVCCFLAGS "-m64"
 ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"

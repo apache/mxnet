@@ -18,7 +18,7 @@
 import mxnet as mx
 from metric import *
 from mxnet.test_utils import *
-from model import *
+from model import factorization_machine_model
 import argparse, os
 
 parser = argparse.ArgumentParser(description="Run factorization machine with criteo dataset",
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     mod.init_optimizer(optimizer='adam', kvstore=kv, optimizer_params=optimizer_params)
 
     # metrics
-    metric = mx.metric.create(['log_loss'])
+    metric = mx.metric.create(['log_loss', 'auc'])
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     logging.info('Training started ...')
@@ -120,18 +120,21 @@ if __name__ == '__main__':
         nbatch = 0
         metric.reset()
         for batch in train_iter:
-            nbatch += 1
-            # manually pull sparse weights from kvstore so that _square_sum
-            # only computes the rows necessary
-            mod.prepare(batch, sparse_row_id_fn=batch_row_ids)
-            mod.forward_backward(batch)
-            # update all parameters (including the weight parameter)
-            mod.update()
-            # update training metric
-            mod.update_metric(metric, batch.label)
-            speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
-                                                       eval_metric=metric, locals=locals())
-            speedometer(speedometer_param)
+            try:
+                nbatch += 1
+                # manually pull sparse weights from kvstore so that _square_sum
+                # only computes the rows necessary
+                mod.prepare(batch, sparse_row_id_fn=batch_row_ids)
+                mod.forward_backward(batch)
+                # update all parameters (including the weight parameter)
+                mod.update()
+                # update training metric
+                mod.update_metric(metric, batch.label)
+                speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
+                                                            eval_metric=metric, locals=locals())
+                speedometer(speedometer_param)
+            except:
+                continue
 
         # pull all updated rows before validation
         mod.prepare(None, all_row_ids)

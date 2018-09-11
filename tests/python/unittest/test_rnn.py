@@ -92,15 +92,19 @@ def test_rnn():
 
 
 def test_lstm():
-    cell = mx.rnn.LSTMCell(100, prefix='rnn_', forget_bias=1.0)
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
-    outputs, _ = cell.unroll(3, inputs)
-    outputs = mx.sym.Group(outputs)
-    assert sorted(cell.params._params.keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
-    assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+    for activation_type in ['', 'relu', 'sigmoid', 'softrelu', 'tanh', 'softsign']:
+        if activation_type == '':
+            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_')
+        else:
+            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_', activation=activation_type, recurrent_activation=activation_type)
+        inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
+        outputs, _ = cell.unroll(3, inputs)
+        outputs = mx.sym.Group(outputs)
+        assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
+        assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
 
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
-    assert outs == [(10, 100), (10, 100), (10, 100)]
+        args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
+        assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
 def test_lstm_forget_bias():
@@ -296,7 +300,15 @@ def test_convgru():
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(1, 3, 16, 10), rnn_t1_data=(1, 3, 16, 10), rnn_t2_data=(1, 3, 16, 10))
     assert outs == [(1, 10, 16, 10), (1, 10, 16, 10), (1, 10, 16, 10)]
 
+def test_encode_sentences():
+    sentences = [['a','b','c'],['b','c','d']]
+    dict = {'a':1, 'b':2, 'c':3}
+    result, vocab = mx.rnn.io.encode_sentences(sentences, vocab=dict, invalid_label=-1, invalid_key='\n',
+                         start_label=0, unknown_token='UNK')
+    print(result, vocab)
+    assert vocab == {'a': 1, 'b': 2, 'c': 3, 'UNK': 0}
+    assert result == [[1,2,3],[2,3,0]]
+    
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-

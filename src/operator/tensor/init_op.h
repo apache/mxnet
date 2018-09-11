@@ -123,6 +123,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   dmlc::optional<double> stop;
   double step;
   int repeat;
+  bool infer_range;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(RangeParam) {
@@ -140,6 +141,10 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default(1)
     .describe("The repeating time of all elements."
               " E.g repeat=3, the element a will be repeated three times --> a, a, a.");
+    DMLC_DECLARE_FIELD(infer_range)
+    .set_default(false)
+    .describe("Whether to infer the stop position from the start, step, repeat, and output tensor"
+              "size.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
@@ -176,7 +181,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
 inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   RangeParam param;
   param.Init(attrs->dict);
-  if (!static_cast<bool>(param.stop)) {
+  if (!static_cast<bool>(param.infer_range) && !static_cast<bool>(param.stop)) {
     param.stop = param.start;
     param.start = 0;
   }
@@ -344,6 +349,7 @@ inline void FillDnsZerosRspImpl(mshadow::Stream<xpu> *s, NDArray *dst) {
  */
 template<typename xpu>
 void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
+  CHECK_EQ(dst.storage_type(), kRowSparseStorage) << "dst should be an RSP NDArray";
   if (dst.storage_initialized()) {
     // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
     dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
@@ -356,6 +362,7 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
  * \param dst - NDArray which is to be set to "all zeroes"
  */
 inline void FillZerosCsrImpl(mshadow::Stream<mshadow::cpu> *s, const NDArray& dst) {
+  CHECK_EQ(dst.storage_type(), kCSRStorage) << "dst is not a CSR NDArray";
   dst.set_aux_shape(csr::kIdx, mshadow::Shape1(0));
   dst.CheckAndAllocAuxData(csr::kIndPtr, mshadow::Shape1(dst.shape()[0] + 1));
   TBlob indptr_data = dst.aux_data(csr::kIndPtr);
@@ -469,6 +476,9 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
     << "Range does not support step=0, received " << param.step;
   CHECK(param.repeat > 0)
     << "Range only supports repeat > 0, received " << param.repeat;
+  if (param.infer_range && !param.stop.has_value()) {
+    return false;
+  }
   if (param.step > 0) {
     CHECK(param.start < param.stop.value())
       << "Invalid range (start, stop, step) = "

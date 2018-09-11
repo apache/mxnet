@@ -22,13 +22,15 @@ import mxnet as mx
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 from mxnet.gluon import utils
+import tarfile
 
 def _get_model():
     if not os.path.exists('model/Inception-7-symbol.json'):
-        download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz', dirname='model')
-        os.system("cd model; tar -xf inception-v3.tar.gz --strip-components 1")
+        download('http://data.mxnet.io/models/imagenet/inception-v3.tar.gz')
+        with tarfile.open(name="inception-v3.tar.gz", mode="r:gz") as tf:
+            tf.extractall()
 
 def _dump_images(shape):
     import skimage.io

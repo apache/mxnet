@@ -162,7 +162,7 @@ method resize_short(AI::MXNet::NDArray $src, Int $size, Int $interp=2)
     {
         ($new_h, $new_w) = ($size, $size*$w/$h);
     }
-    return AI::MXNet::NDArray->_cvimresize($src, $new_w, $new_h, { interp=>$interp });
+    return AI::MXNet::NDArray->_cvimresize($src, int $new_w, int $new_h, { interp=>$interp });
 }
 
 =head2 fixed_crop
@@ -189,7 +189,7 @@ method fixed_crop(AI::MXNet::NDArray $src, Int $x0, Int $y0, Int $w, Int $h, May
     my $out = AI::MXNet::NDArray->crop($src, { begin=>[$y0, $x0, 0], end=>[$y0+$h, $x0+$w, $src->shape->[2]] });
     if(defined $size and join(',', $w, $h) ne join(',', @{ $size }))
     {
-        $out = AI::MXNet::NDArray->_cvimresize($out, @{ $size }, { interp=>$interp });
+        $out = AI::MXNet::NDArray->_cvimresize($out, (map { int } @{ $size }), { interp=>$interp });
     }
     return $out;
 }
@@ -622,18 +622,18 @@ method CastAug()
 =cut
 
 method CreateAugmenter(
-Shape          :$data_shape,
-Bool           :$resize=0,
-Bool           :$rand_crop=0,
-Bool           :$rand_resize=0,
-Bool           :$rand_mirror=0,
-Maybe[Num|PDL] :$mean=,
-Maybe[Num|PDL] :$std=,
-Num            :$brightness=0,
-Num            :$contrast=0,
-Num            :$saturation=0,
-Num            :$pca_noise=0,
-Int            :$inter_method=2
+    Shape          :$data_shape,
+    Bool           :$resize=0,
+    Bool           :$rand_crop=0,
+    Bool           :$rand_resize=0,
+    Bool           :$rand_mirror=0,
+    Maybe[Num|PDL] :$mean=,
+    Maybe[Num|PDL] :$std=,
+    Num            :$brightness=0,
+    Num            :$contrast=0,
+    Num            :$saturation=0,
+    Num            :$pca_noise=0,
+    Int            :$inter_method=2
 )
 {
     my @auglist;
@@ -696,7 +696,7 @@ Int            :$inter_method=2
 
 method imresize(AI::MXNet::NDArray $src, Int $w, Int $h, Int $interp=2)
 {
-    return AI::MXNet::NDArray->_cvimresize($src, $w, $h, { interp=>$interp });
+    return AI::MXNet::NDArray->_cvimresize($src, int $w, int $h, { interp=>$interp });
 }
 
 method ImageIter(@args) { AI::MXNet::ImageIter->new(@args) }

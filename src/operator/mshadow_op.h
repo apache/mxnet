@@ -42,8 +42,12 @@ namespace mshadow_op {
 
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
+__constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
+__constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 #else
 const float PI = 3.14159265358979323846;
+const float SELU_ALPHA = 1.6732632423543772848170429916717;
+const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 using std::isnan;
 #endif
 using std::enable_if;
@@ -125,6 +129,14 @@ MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
 
 MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
+
+MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
+                         (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
+
+MXNET_UNARY_MATH_OP_NC(selu_grad,
+                       DType(SELU_LAMBDA) * (a > DType(0) ? DType(1) : DType(SELU_ALPHA + a)));
+
+MXNET_BINARY_MATH_OP_NC(prelu_grad, a > DType(0) ? DType(0) : a);
 
 MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
                         DType(static_cast<float>(a) * static_cast<float>(b)));
@@ -263,6 +275,7 @@ MXNET_UNARY_MATH_OP(square_grad, 2.0f * math::id(a));
 
 /*! \brief used for generate Bernoulli mask */
 MXNET_BINARY_MATH_OP_NC(threshold, a < b ? DType(1) : DType(0));
+MXNET_BINARY_MATH_OP_NC(threshold_eq, a <= b ? DType(1) : DType(0));
 
 /*! \brief used for generate element of abs */
 MXNET_UNARY_MATH_OP(abs, math::fabs(a)); // NOLINT(*)
@@ -599,6 +612,15 @@ struct clip : public mxnet_op::tunable {
       return x;
     }
   }
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType x, DType lower_bound, DType upper_bound) {
+    if (x > upper_bound) {
+      return upper_bound;
+    } else if (x < lower_bound) {
+      return lower_bound;
+    }
+    return x;
+  }
 };
 
 /***** gamma ******/
@@ -695,6 +717,22 @@ struct product {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief calculate gradient of redres with respect to redsrc,
   * redres: reduced result, redsrc: one of reduction element
@@ -760,6 +798,26 @@ struct nansum {
     residual = (t - dst) - y;
     dst = t;
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - src_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -797,6 +855,22 @@ struct nanprod {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -804,12 +878,83 @@ struct nanprod {
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
     initv = 1;
   }
+
   /*!
   *\brief set the initial value during reduction
   */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
     SetInitValue(initv);
+  }
+};
+
+/*! \brief compute l2 norm */
+struct nrm2 {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares, volatile DType src) { // NOLINT(*)
+    sum_of_squares += src * src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+    if (src != 0) {
+      DType abs = mshadow_op::abs::Map(src);
+      if (scale < abs) {
+        sum_of_squares = 1 + sum_of_squares * (scale / abs) * (scale / abs);
+        scale = abs;
+      } else {
+        sum_of_squares = sum_of_squares + (abs / scale) * (abs / scale);
+      }
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    dst_val += src_val;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq, volatile DType& dst_scale, volatile DType& src_ssq, volatile DType& src_scale) { // NOLINT(*)
+    if (dst_scale != 0 && dst_scale >= src_scale) {
+      dst_ssq = dst_ssq + src_ssq * (src_scale / dst_scale) * (src_scale / dst_scale);
+    } else if (src_scale != 0 && dst_scale < src_scale) {
+      dst_ssq = src_ssq + dst_ssq * (dst_scale / src_scale) * (dst_scale / src_scale);
+      dst_scale = src_scale;
+    }
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares) { // NOLINT(*)
+    sum_of_squares = math::sqrt(sum_of_squares);
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares, volatile DType& scale) { // NOLINT(*)
+    sum_of_squares = scale * math::sqrt(sum_of_squares);
+  }
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return redsrc / redres;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares) { // NOLINT(*)
+    sum_of_squares = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
+    SetInitValue(sum_of_squares);
+    scale = 0;
   }
 };
 

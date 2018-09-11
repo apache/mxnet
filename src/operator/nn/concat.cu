@@ -29,8 +29,30 @@
 namespace mxnet {
 namespace op {
 
+static void ConcatComputeExGPU(const nnvm::NodeAttrs& attrs,
+                               const OpContext& op_ctx,
+                               const std::vector<NDArray>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<NDArray>& outputs) {
+  CHECK(!inputs.empty());
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  if (req[0] == kNullOp) return;
+  if (common::ContainsOnlyStorage(inputs, kCSRStorage) &&
+      outputs[0].storage_type() == kCSRStorage) {
+    ConcatCSRImpl<gpu>(attrs, op_ctx, inputs, req, outputs);
+  } else {
+    LogUnimplementedOp(attrs, op_ctx, inputs, req, outputs);
+  }
+}
+
 NNVM_REGISTER_OP(Concat)
-.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
+
+NNVM_REGISTER_OP(_rnn_param_concat)
+.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", ConcatComputeExGPU);
 
 NNVM_REGISTER_OP(_backward_Concat)
 .set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);

@@ -24,7 +24,7 @@ import org.apache.mxnet.io._
 
 class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   test ("model dtype") {
-    val dType = DType.Float16
+    val dType = DType.Float32
     val dShape = Shape(3, 8, 7)
 
     var sym = Symbol.Variable("data")
@@ -157,7 +157,19 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     assert(mod.getOutputsMerged()(0).shape == dShape)
     assert(mod.getParams._1("fc_bias").toArray.forall(_ == -1f))
 
+    // reshape module
     dShape = Shape(14, 20)
+    mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
+    mod.forward(new DataBatch(
+      data = IndexedSeq(NDArray.ones(dShape)),
+      label = null, index = null, pad = 0))
+    mod.backward(Array(NDArray.ones(dShape)))
+    mod.update()
+    assert(mod.getOutputsMerged()(0).shape == dShape)
+    assert(mod.getParams._1("fc_bias").toArray.forall(x => (x - -3f) < 1e-3))
+
+    // return to original binded shape
+    dShape = Shape(7, 20)
     mod.reshape(IndexedSeq(DataDesc("data", dShape, layout = "NT")))
     mod.forward(new DataBatch(
       data = IndexedSeq(NDArray.ones(dShape)),
@@ -184,8 +196,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     // create module
     val mod = new Module(x, contexts = Array(Context.cpu()))
-    mod.bind(dataShapes = trainData.provideData,
-      Option(trainData.provideLabel))
+    mod.bind(dataShapes = trainData.provideDataDesc,
+      Option(trainData.provideLabelDesc))
     val argParamsCorrect = Map(
       "fc_0_weight" -> NDArray.array(Array(0.15f, 0.2f, 0.25f, 0.3f), Shape(2, 2)),
       "fc_0_bias" -> NDArray.array(Array(0.35f, 0.35f), Shape(2)),

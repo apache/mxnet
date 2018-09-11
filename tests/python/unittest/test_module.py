@@ -21,7 +21,7 @@ from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, teardown
 from collections import namedtuple
 
 
@@ -42,6 +42,18 @@ def test_module_dtype():
 
     for x in mod.get_outputs():
       assert x.dtype == dtype
+
+
+def test_module_bind():
+    sym = mx.sym.Variable('data')
+    sym = mx.sym.Activation(data=sym, act_type='relu', __layout__='TNC')
+
+    mod = mx.mod.Module(sym, ('data',), None, context=[mx.cpu(0), mx.cpu(1)])
+    assertRaises(TypeError, mod.bind, data_shapes=[('data', mx.nd.array([10,10]))])
+    assert mod.binded == False
+
+    mod.bind(data_shapes=[('data', (10,10))])
+    assert mod.binded == True
 
 
 @with_seed()
@@ -317,8 +329,9 @@ def test_module_switch_bucket():
     assert total_bytes_after == total_bytes_before
 
 
-
-@with_seed(11)
+# roywei: Getting rid of fixed seed as flakiness could not be reproduced,
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11705
+@with_seed()
 def test_module_set_params():
     # data iter
     data = mx.nd.array([[0.05, .10]]);
@@ -381,7 +394,7 @@ def test_module_set_params():
                  aux_params={}, allow_missing=True, allow_extra=False)
 
 
-@with_seed(11)
+@with_seed()
 def test_monitor():
     # data iter
     data = mx.nd.array([[0.05, .10]]);
@@ -557,11 +570,12 @@ def test_executor_group():
     for opt in sparse_embedding_opt:
         check_shared_exec_group(opt)
 
-@with_seed(11)
-def test_factorization_machine_module(verbose=False):
+@with_seed()
+def test_factorization_machine_module():
     """ Test factorization machine model with sparse operators """
-    def check_factorization_machine_module(optimizer=None, num_epochs=None):
-        print("check_factorization_machine_module( {} )".format(optimizer))
+    # this unit test is to test the flow, training accuracy is tested in another test
+    def check_factorization_machine_module(num_epochs=None):
+        print("check_factorization_machine_module")
 
         def fm(factor_size, feature_dim, init):
             x = mx.symbol.Variable("data", stype='csr')
@@ -613,33 +627,16 @@ def test_factorization_machine_module(verbose=False):
         mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
         # initialize parameters by uniform random numbers
         mod.init_params(initializer=init)
-        if optimizer == 'sgd':
-            # use Sparse SGD with learning rate 0.1 to train
-            sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
-                                   rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=sgd)
-            if num_epochs is None:
-                num_epochs = 10
-            expected_accuracy = 0.02
-        elif optimizer == 'adam':
-            # use Sparse Adam to train
-            adam = mx.optimizer.Adam(clip_gradient=5.0, learning_rate=0.0005,
-                                     rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=adam)
-            if num_epochs is None:
-                num_epochs = 10
-            expected_accuracy = 0.05
-        elif optimizer == 'adagrad':
-            # use Sparse AdaGrad with learning rate 0.1 to train
-            adagrad = mx.optimizer.AdaGrad(clip_gradient=5.0, learning_rate=0.01,
-                                           rescale_grad=1.0/batch_size)
-            mod.init_optimizer(optimizer=adagrad)
-            if num_epochs is None:
-                num_epochs = 20
-            expected_accuracy = 0.09
-        else:
-            raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
-        # use accuracy as the metric
+
+        # use Sparse SGD with learning rate 0.1 to train
+        sgd = mx.optimizer.SGD(momentum=0.1, clip_gradient=5.0, learning_rate=0.01,
+                               rescale_grad=1.0/batch_size)
+        mod.init_optimizer(optimizer=sgd)
+        if num_epochs is None:
+            num_epochs = 50
+        expected_accuracy = 0.02
+
+	# use accuracy as the metric
         metric = mx.metric.create('MSE')
         # train 'num_epochs' epoch
         for epoch in range(num_epochs):
@@ -654,23 +651,7 @@ def test_factorization_machine_module(verbose=False):
         if num_epochs > 1:
             assert(metric.get()[1] < expected_accuracy)
 
-    if verbose is True:
-        print("============ SGD ==========================")
-        start = time.clock()
-    check_factorization_machine_module('sgd')
-    if verbose is True:
-        print("Duration: {}".format(time.clock() - start))
-        print("============ ADAM ==========================")
-        start = time.clock()
-    check_factorization_machine_module('adam')
-    if verbose is True:
-        print("Duration: {}".format(time.clock() - start))
-        print("============ ADAGRAD ==========================")
-        start = time.clock()
-    check_factorization_machine_module('adagrad')
-    if verbose is True:
-        print("Duration: {}".format(time.clock() - start))
-
+    check_factorization_machine_module()
 
 @with_seed()
 def test_module_initializer():
@@ -803,6 +784,8 @@ def test_forward_reshape():
              for_training=False, force_rebind=True)
     assert mod.predict(pred_dataiter).shape == tuple([10, num_class])
 
+@with_seed()
+def test_forward_types():
     #Test forward with other data batch API
     Batch = namedtuple('Batch', ['data'])
     data = mx.sym.Variable('data')
@@ -816,6 +799,18 @@ def test_forward_reshape():
     data2 = [mx.nd.ones((3, 5))]
     mod.forward(Batch(data2))
     assert mod.get_outputs()[0].shape == (3, 5)
+
+    #Test forward with other NDArray and np.ndarray inputs
+    data = mx.sym.Variable('data')
+    out = data * 2
+    mod = mx.mod.Module(symbol=out, label_names=None)
+    mod.bind(data_shapes=[('data', (1, 10))])
+    mod.init_params()
+    data1 = mx.nd.ones((1, 10))
+    assert mod.predict(data1).shape == (1, 10)
+    data2 = np.ones((1, 10))
+    assert mod.predict(data1).shape == (1, 10)
+
 
 
 if __name__ == '__main__':

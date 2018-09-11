@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
-from common import assertRaises
+from common import assertRaises, with_seed
 import shutil
 import tempfile
 import unittest
@@ -80,7 +80,6 @@ class TestImage(unittest.TestCase):
                 image_read = mx.img.image.imread(img)
                 same(image.asnumpy(), image_read.asnumpy())
 
-
     def test_imdecode(self):
         try:
             import cv2
@@ -130,31 +129,101 @@ class TestImage(unittest.TestCase):
                 mx.nd.array(mean), mx.nd.array(std))
             assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
-
     def test_imageiter(self):
-        im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
-        test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
-            path_root='')
-        for _ in range(3):
-            for batch in test_iter:
-                pass
-            test_iter.reset()
+        def check_imageiter(dtype='float32'):
+            im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
+            fname = './data/test_imageiter.lst'
+            file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
+                         for k, x in enumerate(TestImage.IMAGES)]
+            with open(fname, 'w') as f:
+                for line in file_list:
+                    f.write(line + '\n')
+            
+            test_list = ['imglist', 'path_imglist']
 
-        # test with list file
-        fname = './data/test_imageiter.lst'
-        file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x]) \
-            for k, x in enumerate(TestImage.IMAGES)]
-        with open(fname, 'w') as f:
-            for line in file_list:
-                f.write(line + '\n')
+            for test in test_list:
+                imglist = im_list if test == 'imglist' else None
+                path_imglist = fname if test == 'path_imglist' else None
+                
+                test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist, 
+                    path_imglist=path_imglist, path_root='', dtype=dtype)
+                # test batch data shape
+                for _ in range(3):
+                    for batch in test_iter:
+                        assert batch.data[0].shape == (2, 3, 224, 224)
+                    test_iter.reset()
+                # test last batch handle(discard)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard')
+                i = 0
+                for batch in test_iter:
+                    i += 1
+                assert i == 5
+                # test last_batch_handle(pad)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                i = 0
+                for batch in test_iter:
+                    if i == 0:
+                        first_three_data = batch.data[0][:2]
+                    if i == 5:
+                        last_three_data = batch.data[0][1:]
+                    i += 1
+                assert i == 6
+                assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
+                # test last_batch_handle(roll_over)
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over')
+                i = 0
+                for batch in test_iter:
+                    if i == 0:
+                        first_image = batch.data[0][0]
+                    i += 1
+                assert i == 5
+                test_iter.reset()
+                first_batch_roll_over = test_iter.next()
+                assert np.array_equal(
+                    first_batch_roll_over.data[0][1].asnumpy(), first_image.asnumpy())
+                assert first_batch_roll_over.pad == 2
+                # test iteratopr work properly after calling reset several times when last_batch_handle is roll_over
+                for _ in test_iter:
+                    pass
+                test_iter.reset()
+                first_batch_roll_over_twice = test_iter.next()
+                assert np.array_equal(
+                    first_batch_roll_over_twice.data[0][2].asnumpy(), first_image.asnumpy())
+                assert first_batch_roll_over_twice.pad == 1
+                # we've called next once
+                i = 1
+                for _ in test_iter:
+                    i += 1
+                # test the third epoch with size 6
+                assert i == 6
+                # test shuffle option for sanity test
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
+                                               path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                for _ in test_iter:
+                    pass
 
-        test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, path_imglist=fname,
-            path_root='')
-        for batch in test_iter:
-            pass
+        for dtype in ['int32', 'float32', 'int64', 'float64']:
+            check_imageiter(dtype)
 
+        # test with default dtype
+        check_imageiter()
 
+    @with_seed()
     def test_augmenters(self):
+        # ColorNormalizeAug
+        mean = np.random.rand(3) * 255
+        std = np.random.rand(3) + 1
+        width = np.random.randint(100, 500)
+        height = np.random.randint(100, 500)
+        src = np.random.rand(height, width, 3) * 255.
+        # We test numpy and mxnet NDArray inputs
+        color_norm_aug = mx.image.ColorNormalizeAug(mean=mx.nd.array(mean), std=std)
+        out_image = color_norm_aug(mx.nd.array(src))
+        assert_almost_equal(out_image.asnumpy(), (src - mean) / std, atol=1e-3)
+
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [[0, x] for x in TestImage.IMAGES]
@@ -164,7 +233,6 @@ class TestImage(unittest.TestCase):
             hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root='', shuffle=True)
         for batch in test_iter:
             pass
-
 
     def test_image_detiter(self):
         im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]

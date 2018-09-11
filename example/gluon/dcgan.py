@@ -229,8 +229,8 @@ for epoch in range(opt.nepoch):
     logging.info('time: %f' % (time.time() - tic))
 
     if check_point:
-        netG.save_params(os.path.join(outf,'generator_epoch_%d.params' %epoch))
-        netD.save_params(os.path.join(outf,'discriminator_epoch_%d.params' % epoch))
+        netG.save_parameters(os.path.join(outf,'generator_epoch_%d.params' %epoch))
+        netD.save_parameters(os.path.join(outf,'discriminator_epoch_%d.params' % epoch))
 
-netG.save_params(os.path.join(outf, 'generator.params'))
-netD.save_params(os.path.join(outf, 'discriminator.params'))
+netG.save_parameters(os.path.join(outf, 'generator.params'))
+netD.save_parameters(os.path.join(outf, 'discriminator.params'))

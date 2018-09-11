@@ -1,5 +1,13 @@
 # MXNet FAQ
 
+```eval_rst
+.. toctree::
+   :hidden:
+   :glob:
+
+   *
+```
+
 This section addresses common questions about how to use _MXNet_. These include performance issues, e.g., how to train with multiple GPUs.
 They also include workflow questions, e.g., how to visualize a neural network computation graph.
 These answers are fairly focused. For more didactic, self-contained introductions to neural networks
@@ -32,6 +40,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [What are the best setup and data-handling tips and tricks for improving speed?](http://mxnet.io/faq/perf.html)
 
+* [How do I use mixed precision with MXNet or Gluon?](http://mxnet.io/faq/float16.html)
 
 ## Deployment Environments
 * [Can I run MXNet on smart or mobile devices?](http://mxnet.io/faq/smart_device.html)
@@ -44,7 +53,7 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How do I run MXNet on a Raspberry Pi for computer vision?](http://mxnet.io/tutorials/embedded/wine_detector.html)
 
-* [How do I run Keras 1.2.2 with mxnet backend?](https://github.com/dmlc/keras/wiki/Installation)
+* [How do I run Keras 2 with MXNet backend?](https://github.com/awslabs/keras-apache-mxnet/blob/master/docs/mxnet_backend/installation.md)
 
 * [How to convert MXNet models to Apple CoreML format?](https://github.com/apache/incubator-mxnet/tree/master/tools/coreml)
 

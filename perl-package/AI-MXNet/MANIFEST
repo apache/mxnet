@@ -2,9 +2,14 @@ Changes
 examples/calculator.pl
 examples/char_lstm.pl
 examples/cudnn_lstm_bucketing.pl
-examples/get_ptb_data.sh
+examples/get_sherlockholmes_data.sh
 examples/gluon/dcgan.pl
 examples/gluon/mnist.pl
+examples/gluon/style_transfer/get_data.sh
+examples/gluon/style_transfer/net.pl
+examples/gluon/style_transfer/README.md
+examples/gluon/style_transfer/style_transfer.pl
+examples/gluon/style_transfer/utils.pl
 examples/lstm_bucketing.pl
 examples/mnist.pl
 examples/plot_network.pl
@@ -25,6 +30,7 @@ lib/AI/MXNet/Contrib.pm
 lib/AI/MXNet/Contrib/NDArray.pm
 lib/AI/MXNet/Contrib/Symbol.pm
 lib/AI/MXNet/CudaModule.pm
+lib/AI/MXNet/Engine.pm
 lib/AI/MXNet/Executor.pm
 lib/AI/MXNet/Executor/Group.pm
 lib/AI/MXNet/Function/Parameters.pm
@@ -38,6 +44,7 @@ lib/AI/MXNet/Gluon/Data/Vision.pm
 lib/AI/MXNet/Gluon/Loss.pm
 lib/AI/MXNet/Gluon/Mouse.pm
 lib/AI/MXNet/Gluon/NN.pm
+lib/AI/MXNet/Gluon/NN/Activation.pm
 lib/AI/MXNet/Gluon/NN/BasicLayers.pm
 lib/AI/MXNet/Gluon/NN/ConvLayers.pm
 lib/AI/MXNet/Gluon/Parameter.pm
@@ -97,10 +104,12 @@ t/test_autograd.t
 t/test_base.t
 t/test_conv.t
 t/test_cuda_module.t
+t/test_engine.t
 t/test_executor.t
 t/test_gluon.t
 t/test_gluon_data.t
 t/test_gluon_rnn.t
+t/test_gluon_trainer.t
 t/test_infer_shape.t
 t/test_init.t
 t/test_io.t

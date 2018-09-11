@@ -17,10 +17,9 @@
 
 package org.apache.mxnetexamples.infer.imageclassifier
 
-import org.apache.mxnet.Shape
+import org.apache.mxnet._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
-import org.apache.mxnet.{DType, DataDesc, Context}
 import org.apache.mxnet.infer.ImageClassifier
 
 import scala.collection.JavaConverters._
@@ -28,13 +27,13 @@ import java.io.File
 
 import scala.collection.mutable.ListBuffer
 
+// scalastyle:off
 /**
   * <p>
   * Example inference showing usage of the Infer package on a resnet-152 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet/tree/m\
-  * aster/scala-package/examples/src/main/scala/org/apache/mxnetexamples/in\
-  * fer/imageclassifier" target="_blank">Instructions to run this example</a>
+  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier" target="_blank">Instructions to run this example</a>
   */
+// scalastyle:on
 object ImageClassifierExample {
 
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExample])
@@ -43,47 +42,50 @@ object ImageClassifierExample {
   def runInferenceOnSingleImage(modelPathPrefix: String, inputImagePath: String,
                                 context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
-    val dType = DType.Float32
-    val inputShape = Shape(1, 3, 224, 224)
+    NDArrayCollector.auto().withScope {
+      val dType = DType.Float32
+      val inputShape = Shape(1, 3, 224, 224)
 
-    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+      val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 
-    // Create object of ImageClassifier class
-    val imgClassifier: ImageClassifier = new
-        ImageClassifier(modelPathPrefix, inputDescriptor, context)
+      // Create object of ImageClassifier class
+      val imgClassifier: ImageClassifier = new
+          ImageClassifier(modelPathPrefix, inputDescriptor, context)
 
-    // Loading single image from file and getting BufferedImage
-    val img = ImageClassifier.loadImageFromFile(inputImagePath)
+      // Loading single image from file and getting BufferedImage
+      val img = ImageClassifier.loadImageFromFile(inputImagePath)
 
-    // Running inference on single image
-    val output = imgClassifier.classifyImage(img, Some(5))
-
-    output
+      // Running inference on single image
+      val output = imgClassifier.classifyImage(img, Some(5))
+      output
+    }
   }
 
   def runInferenceOnBatchOfImage(modelPathPrefix: String, inputImageDir: String,
                                  context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
-    val dType = DType.Float32
-    val inputShape = Shape(1, 3, 224, 224)
+    NDArrayCollector.auto().withScope {
+      val dType = DType.Float32
+      val inputShape = Shape(1, 3, 224, 224)
 
-    val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+      val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 
-    // Create object of ImageClassifier class
-    val imgClassifier: ImageClassifier = new
-        ImageClassifier(modelPathPrefix, inputDescriptor, context)
+      // Create object of ImageClassifier class
+      val imgClassifier: ImageClassifier = new
+          ImageClassifier(modelPathPrefix, inputDescriptor, context)
 
-    // Loading batch of images from the directory path
-    val batchFiles = generateBatches(inputImageDir, 20)
-    var outputList = IndexedSeq[IndexedSeq[(String, Float)]]()
+      // Loading batch of images from the directory path
+      val batchFiles = generateBatches(inputImageDir, 20)
+      var outputList = IndexedSeq[IndexedSeq[(String, Float)]]()
 
-    for (batchFile <- batchFiles) {
-      val imgList = ImageClassifier.loadInputBatch(batchFile)
-      // Running inference on batch of images loaded in previous step
-      outputList ++= imgClassifier.classifyImageBatch(imgList, Some(5))
+      for (batchFile <- batchFiles) {
+        val imgList = ImageClassifier.loadInputBatch(batchFile)
+        // Running inference on batch of images loaded in previous step
+        outputList ++= imgClassifier.classifyImageBatch(imgList, Some(5))
+      }
+
+      outputList
     }
-
-    outputList
   }
 
   def generateBatches(inputImageDirPath: String, batchSize: Int = 100): List[List[String]] = {
@@ -99,7 +101,9 @@ object ImageClassifierExample {
         batch = ListBuffer[String]()
       }
     }
-    output += batch.toList
+    if (batch.length > 0) {
+      output += batch.toList
+    }
     output.toList
   }
 
@@ -117,13 +121,13 @@ object ImageClassifierExample {
       parser.parseArgument(args.toList.asJava)
 
 
-      val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_DATA_DIR")
+      val modelPathPrefix = if (inst.modelPathPrefix == null) System.getenv("MXNET_HOME")
       else inst.modelPathPrefix
 
-      val inputImagePath = if (inst.inputImagePath == null) System.getenv("MXNET_DATA_DIR")
+      val inputImagePath = if (inst.inputImagePath == null) System.getenv("MXNET_HOME")
       else inst.inputImagePath
 
-      val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_DATA_DIR")
+      val inputImageDir = if (inst.inputImageDir == null) System.getenv("MXNET_HOME")
       else inst.inputImageDir
 
       val singleOutput = runInferenceOnSingleImage(modelPathPrefix, inputImagePath, context)

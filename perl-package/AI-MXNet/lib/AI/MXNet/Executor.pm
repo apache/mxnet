@@ -32,7 +32,6 @@ has '_symbol'           => (is => 'rw', init_arg => 'symbol',    isa => 'AI::MXN
 has '_ctx'              => (is => 'rw', init_arg => 'ctx',       isa => 'AI::MXNet::Context' );
 has '_grad_req'         => (is => 'rw', init_arg => 'grad_req',  isa => 'Maybe[Str|ArrayRef[Str]|HashRef[Str]]');
 has '_group2ctx'        => (is => 'rw', init_arg => 'group2ctx', isa => 'Maybe[HashRef[AI::MXNet::Context]]');
-has '_monitor_callback' => (is => 'rw', isa => 'CodeRef');
 has [qw/_arg_dict
         _grad_dict
         _aux_dict
@@ -42,6 +41,18 @@ has [qw/_arg_dict
 =head1 NAME
 
     AI::MXNet::Executor - The actual executing object of MXNet.
+=cut
+
+=head1 SYNOPSIS
+
+    my $executor = $sym->bind(
+        ctx       => mx->Context('cpu'),
+        args      => [$lhs_arr, $rhs_arr],
+        args_grad => [$lhs_grad, $rhs_grad]
+    );
+    $executor->forward(1);
+    print $executor->outputs->[0]->aspdl;
+=cut
 
 =head2 new
 
@@ -138,7 +149,7 @@ method _get_outputs()
 
     Parameters
     ----------
-    $is_train=0: bool, optional
+    $is_train=0: Bool, optional
         whether this forward is for evaluation purpose. If True,
         a backward call is expected to follow. Otherwise following
         backward is invalid.
@@ -200,12 +211,12 @@ method forward(Int $is_train=0, %kwargs)
 
     Parameters
     ----------
-    out_grads : NDArray or an array ref of NDArrays or hash ref of NDArrays, optional.
+    $out_grads : NDArray or an array ref of NDArrays or hash ref of NDArrays, optional.
         The gradient on the outputs to be propagated back.
         This parameter is only needed when bind is called
         on outputs that are not a loss function.
 
-    is_train : bool, default 1
+    $is_train : Bool, default 1
         Whether this backward is for training or inference. Note that in rare
         cases you want to call backward with is_train=0 to get gradient
         during inference.
@@ -241,17 +252,16 @@ method backward(
 
     Parameters
     ----------
-    callback : subref
+    $callback : CodeRef
         Takes a string and an NDArrayHandle.
 =cut
 
 method set_monitor_callback(CodeRef $callback)
 {
-    $self->_monitor_callback($callback);
     check_call(
         AI::MXNetCAPI::ExecutorSetMonitorCallback(
             $self->handle,
-            $self->_monitor_callback
+            $callback
         )
     );
 }
@@ -262,7 +272,7 @@ method set_monitor_callback(CodeRef $callback)
 
     Returns
     -------
-    arg_dict : HashRef[AI::MXNet::NDArray]
+    $arg_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the arguments to the NDArrays.
 =cut
 
@@ -285,7 +295,7 @@ method arg_dict()
 
     Returns
     -------
-    grad_dict : HashRef[AI::MXNet::NDArray]
+    $grad_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the arguments to the gradient NDArrays.
 =cut
 
@@ -308,7 +318,7 @@ method grad_dict()
 
     Returns
     -------
-    aux_dict : HashRef[AI::MXNet::NDArray]
+    $aux_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the auxiliary states to the NDArrays.
 =cut
 
@@ -331,7 +341,7 @@ method aux_dict()
 
     Returns
     -------
-    output_dict : HashRef[AI::MXNet::NDArray]
+    $output_dict : HashRef[AI::MXNet::NDArray]
         The map that maps a name of the outputs to the NDArrays.
 =cut
 
@@ -354,13 +364,13 @@ method output_dict()
 
     Parameters
     ----------
-    arg_params : HashRef[AI::MXNet::NDArray]
+    $arg_params : HashRef[AI::MXNet::NDArray]
         Parameters, hash ref of name to NDArray of arguments
 
-    aux_params : Maybe[HashRef[AI::MXNet::NDArray]], optional
+    $aux_params= : Maybe[HashRef[AI::MXNet::NDArray]], optional
         Parameters, hash ref of name to NDArray of auxiliary states.
 
-    allow_extra_params : boolean, optional
+    $allow_extra_params= : Bool, optional
         Whether to allow extra parameters that are not needed by symbol
         If this is True, no error will be thrown when arg_params or aux_params
         contain extra parameters that is not needed by the executor.
@@ -415,9 +425,9 @@ method copy_params_from(
     ----------
     $kwargs : HashRef[Shape]
         new shape for arguments.
-    :$partial_shaping : bool
+    :$partial_shaping : Bool
         Whether to allow changing the shape of unspecified arguments.
-    :$allow_up_sizing : bool
+    :$allow_up_sizing : Bool
         Whether to allow allocating new ndarrays that's larger than the original.
 
     Returns
@@ -429,120 +439,70 @@ method copy_params_from(
 
 method reshape(HashRef[Shape] $kwargs, Int :$partial_shaping=0, Int :$allow_up_sizing=0)
 {
-    my ($arg_shapes, undef, $aux_shapes) = $self->_symbol->infer_shape(%{ $kwargs });
-    confess("Insufficient argument shapes provided.")
-        unless defined $arg_shapes;
-    my %new_arg_dict;
-    my %new_grad_dict;
-    my $i = 0;
-    for my $name (@{ $self->_symbol->list_arguments() })
+    my @provided_arg_shape_data;
+    # argument shape index in sdata,
+    # e.g. [sdata[indptr[0]], sdata[indptr[1]]) is the shape of the first arg
+    my @provided_arg_shape_idx = (0);
+    my @provided_arg_shape_names = ();  # provided argument names
+    while(my ($k, $v) = each %{ $kwargs })
     {
-        my $new_shape = $arg_shapes->[$i];
-        my $arr       = $self->arg_arrays->[$i];
-        my $darr;
-        if(@{ $self->grad_arrays })
+        if(ref $v eq 'ARRAY')
         {
-            $darr = $self->grad_arrays->[$i];
+            push @provided_arg_shape_names, $k;
+            push @provided_arg_shape_data, @{ $v };
+            push @provided_arg_shape_idx, scalar(@provided_arg_shape_data);
         }
-        if(
-            $partial_shaping
-                or
-            exists $kwargs->{ $name }
-                or
-            join(',', @{ $new_shape }) eq join(',', @{ $arr->shape })
+    }
+
+    my @ctx_map_keys;
+    my @ctx_map_dev_types;
+    my @ctx_map_dev_ids;
+
+    if(ref $self->_group2ctx eq 'HASH')
+    {
+        while(my ($k, $v) = each %{ $self->_group2ctx })
+        {
+            push @ctx_map_keys, $k;
+            push @ctx_map_dev_types, $v->device_type_id;
+            push @ctx_map_dev_ids, $v->device_id;
+        }
+    }
+
+    my $shared_handle = $self->handle;
+
+    my ($in_args_and_grad_handles, $aux_state_handles, $handle) = check_call(
+        AI::MXNetCAPI::ExecutorReshape(
+            $partial_shaping,
+            $allow_up_sizing,
+            $self->_ctx->device_type_id,
+            $self->_ctx->device_id,
+            scalar(@ctx_map_keys),
+            \@ctx_map_keys,
+            \@ctx_map_dev_types,
+            \@ctx_map_dev_ids,
+            scalar(@provided_arg_shape_names),
+            \@provided_arg_shape_names,
+            \@provided_arg_shape_data,
+            \@provided_arg_shape_idx,
+            $shared_handle
         )
-        {
-            if(AI::MXNet::NDArray->size($new_shape) > $arr->size)
-            {
-                confess(
-                    "New shape of arg:$name larger than original. "
-                    ."First making a big executor and then down sizing it "
-                    ."is more efficient than the reverse."
-                    ."If you really want to up size, set \$allow_up_sizing=1 "
-                    ."to enable allocation of new arrays."
-                ) unless $allow_up_sizing;
-                $new_arg_dict{ $name }  = AI::MXNet::NDArray->empty(
-                    $new_shape,
-                    ctx => $arr->context,
-                    dtype => $arr->dtype
-                );
-                if(defined $darr)
-                {
-                    $new_grad_dict{ $name } = AI::MXNet::NDArray->empty(
-                        $new_shape,
-                        ctx => $darr->context,
-                        dtype => $arr->dtype
-                    );
-                }
-            }
-            else
-            {
-                $new_arg_dict{ $name } = $arr->reshape($new_shape);
-                if(defined $darr)
-                {
-                    $new_grad_dict{ $name } = $darr->reshape($new_shape);
-                }
-            }
-        }
-        else
-        {
-            confess(
-                    "Shape of unspecified array arg:$name changed. "
-                    ."This can cause the new executor to not share parameters "
-                    ."with the old one. Please check for error in network."
-                    ."If this is intended, set partial_shaping=True to suppress this warning."
-            );
-        }
-        $i++;
-    }
-    my %new_aux_dict;
-    $i = 0;
-    for my $name (@{ $self->_symbol->list_auxiliary_states() })
-    {
-        my $new_shape = $aux_shapes->[$i];
-        my $arr = $self->aux_arrays->[$i];
-        if($partial_shaping or join(',', @{ $new_shape }) eq join (',', @{ $arr->shape }))
-        {
-            if(AI::MXNet::NDArray->size($new_shape) > $arr->size)
-            {
-                confess(
-                    "New shape of arg:$name larger than original. "
-                    ."First making a big executor and then down sizing it "
-                    ."is more efficient than the reverse."
-                    ."If you really want to up size, set \$allow_up_sizing=1 "
-                    ."to enable allocation of new arrays."
-                ) unless $allow_up_sizing;
-                $new_aux_dict{ $name }  = AI::MXNet::NDArray->empty(
-                    $new_shape,
-                    ctx => $arr->context,
-                    dtype => $arr->dtype
-                );
-            }
-            else
-            {
-                $new_aux_dict{ $name } = $arr->reshape($new_shape);
-            }
-        }
-        else
-        {
-            confess(
-                "Shape of unspecified array aux:$name changed. "
-                ."This can cause the new executor to not share parameters "
-                ."with the old one. Please check for error in network."
-                ."If this is intended, set partial_shaping=True to suppress this warning."
-            );
-        }
-        $i++;
-    }
-    return $self->_symbol->bind(
-                ctx         => $self->_ctx,
-                args        => \%new_arg_dict,
-                args_grad   => \%new_grad_dict,
-                grad_req    => $self->_grad_req,
-                aux_states  => \%new_aux_dict,
-                group2ctx   => $self->_group2ctx,
-                shared_exec => $self
     );
+    my ($in_args_handles, $arg_grad_handles) = @{ $in_args_and_grad_handles };
+    my @arg_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $in_args_handles };
+    my @grad_arrays = map { defined($_) ? AI::MXNet::NDArray->_ndarray_cls($_) : undef } @{ $arg_grad_handles };
+    my @aux_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $aux_state_handles };
+
+    my $executor = __PACKAGE__->new(
+        handle     => $handle,
+        symbol    => $self->_symbol,
+        ctx       => $self->_ctx,
+        grad_req  => $self->_grad_req,
+        group2ctx => $self->_group2ctx
+    );
+    $executor->arg_arrays(\@arg_arrays);
+    $executor->grad_arrays(\@grad_arrays);
+    $executor->aux_arrays(\@aux_arrays);
+    return $executor;
 }
 
 =head2 debug_str
@@ -551,7 +511,7 @@ method reshape(HashRef[Shape] $kwargs, Int :$partial_shaping=0, Int :$allow_up_s
 
     Returns
     -------
-    debug_str : string
+    $debug_str : Str
         Debug string of the executor.
 =cut
 

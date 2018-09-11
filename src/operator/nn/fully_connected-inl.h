@@ -35,6 +35,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../linalg.h"
+#include "../../common/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -59,6 +60,11 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(flatten).set_default(true)
     .describe("Whether to collapse all but the first axis of the input data tensor.");
+  }
+  bool operator==(const FullyConnectedParam& other) const {
+    return this->num_hidden == other.num_hidden &&
+           this->no_bias == other.no_bias &&
+           this->flatten == other.flatten;
   }
 };
 
@@ -227,4 +233,16 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+namespace std {
+template<>
+struct hash<mxnet::op::FullyConnectedParam> {
+  size_t operator()(const mxnet::op::FullyConnectedParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.num_hidden);
+    ret = dmlc::HashCombine(ret, val.no_bias);
+    ret = dmlc::HashCombine(ret, val.flatten);
+    return ret;
+  }
+};
+}  // namespace std
 #endif  // MXNET_OPERATOR_NN_FULLY_CONNECTED_INL_H_

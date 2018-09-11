@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 import unittest
 
 
@@ -64,7 +64,8 @@ def get_net(num_hidden, flatten=True):
     fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
     return fc3
 
-@with_seed(1234)
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11692
+@with_seed()
 def test_ce_loss():
     nclass = 10
     N = 20
@@ -78,11 +79,12 @@ def test_ce_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
+            eval_metric=mx.metric.Loss(), optimizer='adam',
+            initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
-@with_seed(1234)
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11691
+@with_seed()
 def test_bce_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20))
@@ -105,7 +107,7 @@ def test_bce_loss():
     prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
     label_npy = label.asnumpy()
     npy_bce_loss = - label_npy * np.log(prob_npy) - (1 - label_npy) * np.log(1 - prob_npy)
-    assert_almost_equal(mx_bce_loss, npy_bce_loss)
+    assert_almost_equal(mx_bce_loss, npy_bce_loss, rtol=1e-4, atol=1e-5)
 
 @with_seed()
 def test_bce_equal_ce2():
@@ -127,7 +129,7 @@ def test_logistic_loss_equal_bce():
     assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
     assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
 
-@with_seed(1234)
+@with_seed()
 def test_kl_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -144,7 +146,7 @@ def test_kl_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_l2_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -162,7 +164,7 @@ def test_l2_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_l1_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -180,8 +182,7 @@ def test_l1_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
-@unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
-@with_seed()
+@with_seed(1234)
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
@@ -207,8 +208,8 @@ def test_ctc_loss():
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
-@unittest.skip("flaky test. https://github.com/apache/incubator-mxnet/issues/8892")
-@with_seed(1234)
+
+@with_seed()
 def test_ctc_loss_train():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
@@ -220,13 +221,13 @@ def test_ctc_loss_train():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 1.},
+    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
-@with_seed(1234)
+@with_seed()
 def test_sample_weight_loss():
     nclass = 10
     N = 20
@@ -273,7 +274,7 @@ def test_saveload():
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-@with_seed(1234)
+@with_seed()
 def test_huber_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -291,7 +292,7 @@ def test_huber_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_hinge_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -306,10 +307,10 @@ def test_hinge_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.06
 
 
-@with_seed(1234)
+@with_seed()
 def test_squared_hinge_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -327,7 +328,7 @@ def test_squared_hinge_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_triplet_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))

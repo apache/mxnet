@@ -24,7 +24,7 @@ import scala.sys.process._
 
 class IOSuite extends FunSuite with BeforeAndAfterAll {
 
-  private var tu = new TestUtil
+  private val tu = new TestUtil
 
   test("test MNISTIter & MNISTPack") {
     // get data
@@ -243,7 +243,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val batchLabel = NDArray.ones(Shape(Array(128, 1)))
 
     // test pad
-    val dataIter0 = new NDArrayIter(data, label, 128, false, "pad")
+    val dataIter0 = new NDArrayIter(data, label, 128, false, "pad",
+      dataName = "data", labelName = "label")
     var batchCount = 0
     val nBatch0 = 8
     while(dataIter0.hasNext) {
@@ -258,7 +259,11 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch0)
 
     // test discard
-    val dataIter1 = new NDArrayIter(data, label, 128, false, "discard")
+    val dataIter1 = new NDArrayIter.Builder()
+      .addData("data0", data(0)).addData("data1", data(1))
+      .addLabel("label", label(0))
+      .setBatchSize(128)
+      .setLastBatchHandle("discard").build()
     val nBatch1 = 7
     batchCount = 0
     while(dataIter1.hasNext) {
@@ -273,7 +278,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(batchCount === nBatch1)
 
     // test empty label (for prediction)
-    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, lastBatchHandle = "discard")
+    val dataIter2 = new NDArrayIter(data = data, dataBatchSize = 128, shuffle = false,
+      lastBatchHandle = "discard")
     batchCount = 0
     while(dataIter2.hasNext) {
       val tBatch = dataIter2.next()
@@ -285,5 +291,17 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
 
     assert(batchCount === nBatch1)
     assert(dataIter2.initLabel == IndexedSeq.empty)
+
+    // test implementation with DataDesc
+    val dataIter3 = new NDArrayIter(
+      IO.initDataDesc(data, false, "data", DType.Float32, Layout.NTC),
+      IO.initDataDesc(label, false, "label", DType.Int32, Layout.NT),
+      128, false, "pad")
+    val dataDesc = dataIter3.provideDataDesc
+    val labelDesc = dataIter3.provideLabelDesc
+    assert(dataDesc(0).dtype == DType.Float32)
+    assert(dataDesc(0).layout == Layout.NTC)
+    assert(labelDesc(0).dtype == DType.Int32)
+    assert(labelDesc(0).layout == Layout.NT)
   }
 }

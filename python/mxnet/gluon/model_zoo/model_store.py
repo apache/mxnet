@@ -21,8 +21,10 @@ from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
+import logging
 
 from ..utils import download, check_sha1
+from ... import base, util
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -39,26 +41,26 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('e2be7b72a79fe4a750d1dd415afedf01c3ea818d', 'mobilenetv2_0.75'),
     ('aabd26cd335379fcb72ae6c8fac45a70eab11785', 'mobilenetv2_0.5'),
     ('ae8f9392789b04822cbb1d98c27283fc5f8aa0a7', 'mobilenetv2_0.25'),
-    ('e54b379f50fa4b10bbd2506237e3bd74e6164778', 'resnet18_v1'),
-    ('c1dc0967a3d25ee9127e03bc1046a5d44d92e2ba', 'resnet34_v1'),
-    ('c940b1a062b32e3a5762f397c9d1e178b5abd007', 'resnet50_v1'),
-    ('d992389084bc5475c370e9b52c3561706e755799', 'resnet101_v1'),
-    ('48ce7775d375987d019ec9aa96bc43b98165dfcb', 'resnet152_v1'),
-    ('84f666402577b5b79cd59eba5d3ba0bc1edf2152', 'resnet18_v2'),
-    ('5da34c2772893e9d680d5fa0bd6d432eba8689c9', 'resnet34_v2'),
-    ('81a4e66af7859a5aa904e2b4051aa0d3bc472b2f', 'resnet50_v2'),
-    ('7eb2b3cde097883c11941b927048a705ed334294', 'resnet101_v2'),
-    ('64c75ac8c292f6ac54f873f9ef62e0531105878b', 'resnet152_v2'),
+    ('a0666292f0a30ff61f857b0b66efc0228eb6a54b', 'resnet18_v1'),
+    ('48216ba99a8b1005d75c0f3a0c422301a0473233', 'resnet34_v1'),
+    ('0aee57f96768c0a2d5b23a6ec91eb08dfb0a45ce', 'resnet50_v1'),
+    ('d988c13d6159779e907140a638c56f229634cb02', 'resnet101_v1'),
+    ('671c637a14387ab9e2654eafd0d493d86b1c8579', 'resnet152_v1'),
+    ('a81db45fd7b7a2d12ab97cd88ef0a5ac48b8f657', 'resnet18_v2'),
+    ('9d6b80bbc35169de6b6edecffdd6047c56fdd322', 'resnet34_v2'),
+    ('ecdde35339c1aadbec4f547857078e734a76fb49', 'resnet50_v2'),
+    ('18e93e4f48947e002547f50eabbcc9c83e516aa6', 'resnet101_v2'),
+    ('f2695542de38cf7e71ed58f02893d82bb409415e', 'resnet152_v2'),
     ('264ba4970a0cc87a4f15c96e25246a1307caf523', 'squeezenet1.0'),
     ('33ba0f93753c83d86e1eb397f38a667eaf2e9376', 'squeezenet1.1'),
     ('dd221b160977f36a53f464cb54648d227c707a05', 'vgg11'),
     ('ee79a8098a91fbe05b7a973fed2017a6117723a8', 'vgg11_bn'),
     ('6bc5de58a05a5e2e7f493e2d75a580d83efde38c', 'vgg13'),
     ('7d97a06c3c7a1aecc88b6e7385c2b373a249e95e', 'vgg13_bn'),
-    ('649467530119c0f78c4859999e264e7bf14471a9', 'vgg16'),
-    ('6b9dbe6194e5bfed30fd7a7c9a71f7e5a276cb14', 'vgg16_bn'),
-    ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
-    ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
+    ('e660d4569ccb679ec68f1fd3cce07a387252a90a', 'vgg16'),
+    ('7f01cf050d357127a73826045c245041b0df7363', 'vgg16_bn'),
+    ('ad2f660d101905472b83590b59708b71ea22b2e5', 'vgg19'),
+    ('f360b758e856f1074a85abd5fd873ed1d98297c3', 'vgg19_bn')]}
 
 apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 _url_format = '{repo_url}gluon/models/{file_name}.zip'
@@ -68,7 +70,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
+def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -78,7 +80,7 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     ----------
     name : str
         Name of the model.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
 
     Returns
@@ -95,12 +97,11 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
         if check_sha1(file_path, sha1_hash):
             return file_path
         else:
-            print('Mismatch in the content of model file detected. Downloading again.')
+            logging.warning('Mismatch in the content of model file detected. Downloading again.')
     else:
-        print('Model file is not found. Downloading.')
+        logging.info('Model file not found. Downloading to %s.', file_path)
 
-    if not os.path.exists(root):
-        os.makedirs(root)
+    util.makedirs(root)
 
     zip_file_path = os.path.join(root, file_name+'.zip')
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
@@ -118,12 +119,12 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
 
-def purge(root=os.path.join('~', '.mxnet', 'models')):
+def purge(root=os.path.join(base.data_dir(), 'models')):
     r"""Purge all pretrained model files in local file store.
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     root = os.path.expanduser(root)

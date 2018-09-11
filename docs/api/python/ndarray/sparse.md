@@ -16,7 +16,7 @@ This document lists the routines of the *n*-dimensional sparse array package:
 ```
 
 The `CSRNDArray` and `RowSparseNDArray` API, defined in the `ndarray.sparse` package, provides
-imperative sparse tensor operations on **CPU**.
+imperative sparse tensor operations.
 
 An `CSRNDArray` inherits from `NDArray`, and represents a two-dimensional, fixed-size array in compressed sparse row format.
 
@@ -63,16 +63,13 @@ A detailed tutorial is available at
 
 ```eval_rst
 
-.. note:: ``mxnet.ndarray.sparse.RowSparseNDArray`` and ``mxnet.ndarray.sparse.CSRNDArray`` DO NOT support the ``mxnet.gluon`` high-level interface yet.
-
 .. note:: ``mxnet.ndarray.sparse`` is similar to ``mxnet.ndarray`` in some aspects. But the differences are not negligible. For instance:
 
-   - Only a subset of operators in ``mxnet.ndarray`` have specialized implementations in ``mxnet.ndarray.sparse``.
-     Operators such as Convolution and broadcasting do not have sparse implementations yet.
+   - Only a subset of operators in ``mxnet.ndarray`` have efficient sparse implementations in ``mxnet.ndarray.sparse``.
+   - If an operator do not occur in the ``mxnet.ndarray.sparse`` namespace, that means the operator does not have an efficient sparse implementation yet. If sparse inputs are passed to such an operator, it will convert inputs to the dense format and fallback to the already available dense implementation.
    - The storage types (``stype``) of sparse operators' outputs depend on the storage types of inputs.
      By default the operators not available in ``mxnet.ndarray.sparse`` infer "default" (dense) storage type for outputs.
      Please refer to the [API Reference](#api-reference) section for further details on specific operators.
-   - GPU support for ``mxnet.ndarray.sparse`` is experimental. Only a few sparse operators are supported on GPU such as ``sparse.dot``.
 
 .. note:: ``mxnet.ndarray.sparse.CSRNDArray`` is similar to ``scipy.sparse.csr_matrix`` in some aspects. But they differ in a few aspects:
 
@@ -160,13 +157,73 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.norm
 ```
 
+### Array rounding
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.round
+    CSRNDArray.rint
+    CSRNDArray.fix
+    CSRNDArray.floor
+    CSRNDArray.ceil
+    CSRNDArray.trunc
+```
+
+### Trigonometric functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.sin
+    CSRNDArray.tan
+    CSRNDArray.arcsin
+    CSRNDArray.arctan
+    CSRNDArray.degrees
+    CSRNDArray.radians
+```
+
+### Hyperbolic functions
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.sinh
+    CSRNDArray.tanh
+    CSRNDArray.arcsinh
+    CSRNDArray.arctanh
+```
+
+### Exponents and logarithms
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.expm1
+    CSRNDArray.log1p
+```
+
 ### Powers
 
 ```eval_rst
 .. autosummary::
     :nosignatures:
 
+    CSRNDArray.sqrt
     CSRNDArray.square
+```
+
+### Joining arrays
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    concat
 ```
 
 ### Indexing
@@ -178,6 +235,17 @@ We summarize the interface for each class in the following sections.
     CSRNDArray.__getitem__
     CSRNDArray.__setitem__
     CSRNDArray.slice
+```
+
+### Miscellaneous
+
+```eval_rst
+.. autosummary::
+    :nosignatures:
+
+    CSRNDArray.abs
+    CSRNDArray.clip
+    CSRNDArray.sign
 ```
 
 ### Lazy evaluation
@@ -333,6 +401,7 @@ We summarize the interface for each class in the following sections.
 .. autosummary::
     :nosignatures:
 
+    RowSparseNDArray.abs
     RowSparseNDArray.clip
     RowSparseNDArray.sign
 ```
@@ -487,7 +556,6 @@ We summarize the interface for each class in the following sections.
     sgd_update
     sgd_mom_update
     adam_update
-    ftrl_update
     adagrad_update
 ```
 
@@ -511,10 +579,10 @@ We summarize the interface for each class in the following sections.
 ```eval_rst
 
 .. autoclass:: mxnet.ndarray.sparse.CSRNDArray
-    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, __neg__, sum, mean, norm, square, __getitem__, __setitem__, check_format
+    :members: shape, context, dtype, stype, data, indices, indptr, copy, copyto, as_in_context, asscipy, asnumpy, asscalar, astype, tostype, slice, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __neg__, sum, mean, norm, square, __getitem__, __setitem__, check_format, abs, clip, sign
 
 .. autoclass:: mxnet.ndarray.sparse.RowSparseNDArray
-    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, norm, __getitem__, __setitem__, check_format, retain, clip, sign
+    :members: shape, context, dtype, stype, data, indices, copy, copyto, as_in_context, asnumpy, asscalar, astype, tostype, wait_to_read, zeros_like, round, rint, fix, floor, ceil, trunc, sin, tan, arcsin, arctan, degrees, radians, sinh, tanh, arcsinh, arctanh, expm1, log1p, sqrt, square, __negative__, norm, __getitem__, __setitem__, check_format, retain, abs, clip, sign
 
 .. automodule:: mxnet.ndarray.sparse
     :members:

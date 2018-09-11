@@ -20,6 +20,8 @@
 from __future__ import absolute_import
 import os
 import sys
+
+from setuptools import find_packages
 # need to use distutils.core for correct placement of cython dll
 kwargs = {}
 if "--inplace" in sys.argv:
@@ -29,7 +31,6 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
     kwargs = {'install_requires': ['numpy<=1.15.0,>=1.8.2', 'requests<2.19.0,>=2.18.4', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
-from setuptools import find_packages
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -89,7 +90,7 @@ def config_cython():
             ret.append(Extension(
                 "mxnet/%s/.%s" % (subdir, fn[:-4]),
                 ["mxnet/cython/%s" % fn],
-                include_dirs=["../include/", "../3rdparty/nnvm/include"],
+                include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
                 language="c++"))
@@ -106,4 +107,28 @@ setup(name='mxnet',
       data_files=[('mxnet', [LIB_PATH[0]])],
       url='https://github.com/apache/incubator-mxnet',
       ext_modules=config_cython(),
+      classifiers=[
+          # https://pypi.org/pypi?%3Aaction=list_classifiers
+          'Development Status :: 5 - Production/Stable',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Education',
+          'Intended Audience :: Science/Research',
+          'License :: OSI Approved :: Apache Software License',
+          'Programming Language :: C++',
+          'Programming Language :: Cython',
+          'Programming Language :: Other',  # R, Scala
+          'Programming Language :: Perl',
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: Implementation :: CPython',
+          'Topic :: Scientific/Engineering',
+          'Topic :: Scientific/Engineering :: Artificial Intelligence',
+          'Topic :: Scientific/Engineering :: Mathematics',
+          'Topic :: Software Development',
+          'Topic :: Software Development :: Libraries',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+      ],
       **kwargs)

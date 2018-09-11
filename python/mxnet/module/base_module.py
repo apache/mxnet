@@ -22,6 +22,7 @@
 import time
 import logging
 import warnings
+import numpy as np
 
 from .. import metric
 from .. import ndarray
@@ -29,7 +30,7 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
-from ..io import DataDesc
+from ..io import DataDesc, DataIter, DataBatch
 from ..base import _as_list
 
 
@@ -146,7 +147,8 @@ class BaseModule(object):
         - `get_outputs()`: get outputs of the previous forward operation.
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
-        - `update_metric(metric, labels)`: update performance metric for the previous forward
+        - `update_metric(metric, labels, pre_sliced=False)`: update performance metric
+          for the previous forward
           computed results.
 
     - other properties (mostly for backward compatibility)
@@ -249,7 +251,10 @@ class BaseModule(object):
                 break
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
-            self.update_metric(eval_metric, eval_batch.label)
+            if isinstance(eval_batch, list):
+                self.update_metric(eval_metric, [eb.label for eb in eval_batch], pre_sliced=True)
+            else:
+                self.update_metric(eval_metric, eval_batch.label)
 
             if batch_end_callback is not None:
                 batch_end_params = BatchEndParam(epoch=epoch,
@@ -329,7 +334,7 @@ class BaseModule(object):
 
         Parameters
         ----------
-        eval_data : DataIter
+        eval_data : DataIter or NDArray or numpy array
             Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
@@ -358,6 +363,15 @@ class BaseModule(object):
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
+
+        if isinstance(eval_data, (ndarray.NDArray, np.ndarray)):
+            if isinstance(eval_data, np.ndarray):
+                eval_data = ndarray.array(eval_data)
+            self.forward(DataBatch([eval_data]))
+            return self.get_outputs()[0]
+
+        if not isinstance(eval_data, DataIter):
+            raise ValueError('eval_data must be of type NDArray or DataIter')
 
         if reset:
             eval_data.reset()
@@ -510,14 +524,20 @@ class BaseModule(object):
                     monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
+
+                if isinstance(data_batch, list):
+                    self.update_metric(eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
+                else:
+                    self.update_metric(eval_metric, data_batch.label)
+
                 try:
                     # pre fetch next batch
                     next_data_batch = next(data_iter)
                     self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
                 except StopIteration:
                     end_of_batch = True
-
-                self.update_metric(eval_metric, data_batch.label)
 
                 if monitor is not None:
                     monitor.toc_print()
@@ -943,7 +963,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward
         computation.
 
@@ -951,8 +971,10 @@ class BaseModule(object):
         ----------
         eval_metric : EvalMetric
             Evaluation metric to use.
-        labels : list of NDArray
-            Typically `data_batch.label`.
+        labels : list of NDArray if `pre_sliced` parameter is set to `False`,
+            list of lists of NDArray otherwise. Typically `data_batch.label`.
+        pre_sliced: bool
+            Whether the labels are already sliced per device (default: False).
 
         Examples
         --------

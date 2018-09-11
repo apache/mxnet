@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use Test::More tests => 3;
-my $gpu_present = (`perl -e 'use AI::MXNet qw(mx); print mx->nd->ones([1], ctx => mx->gpu(0))->asscalar' 2>/dev/null` eq '1');
+my $gpu_present = mx->context->num_gpus;
 
 sub test_cuda_rtc
 {

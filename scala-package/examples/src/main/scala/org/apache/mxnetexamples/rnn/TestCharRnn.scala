@@ -25,19 +25,13 @@ import scala.collection.JavaConverters._
 /**
  * Follows the demo, to test the char rnn:
  * https://github.com/dmlc/mxnet/blob/master/example/rnn/char-rnn.ipynb
- * @author Depeng Liang
  */
 object TestCharRnn {
 
   private val logger = LoggerFactory.getLogger(classOf[TrainCharRnn])
 
-  def main(args: Array[String]): Unit = {
-    val stcr = new TestCharRnn
-    val parser: CmdLineParser = new CmdLineParser(stcr)
-    try {
-      parser.parseArgument(args.toList.asJava)
-      assert(stcr.dataPath != null && stcr.modelPrefix != null && stcr.starterSentence != null)
-
+  def runInferenceCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
+    NDArrayCollector.auto().withScope {
       // The batch size for training
       val batchSize = 32
       // We can support various length input
@@ -52,15 +46,15 @@ object TestCharRnn {
       val numLstmLayer = 3
 
       // build char vocabluary from input
-      val vocab = Utils.buildVocab(stcr.dataPath)
+      val vocab = Utils.buildVocab(dataPath)
 
       // load from check-point
-      val (_, argParams, _) = Model.loadCheckpoint(stcr.modelPrefix, 75)
+      val (_, argParams, _) = Model.loadCheckpoint(modelPrefix, 75)
 
       // build an inference model
       val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
-                           numHidden = numHidden, numEmbed = numEmbed,
-                           numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f)
+        numHidden = numHidden, numEmbed = numEmbed,
+        numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f)
 
       // generate a sequence of 1200 chars
       val seqLength = 1200
@@ -68,7 +62,7 @@ object TestCharRnn {
       val revertVocab = Utils.makeRevertVocab(vocab)
 
       // Feel free to change the starter sentence
-      var output = stcr.starterSentence
+      var output = starterSentence
       val randomSample = true
       var newSentence = true
       val ignoreLength = output.length()
@@ -85,6 +79,16 @@ object TestCharRnn {
 
       // Let's see what we can learned from char in Obama's speech.
       logger.info(output)
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val stcr = new TestCharRnn
+    val parser: CmdLineParser = new CmdLineParser(stcr)
+    try {
+      parser.parseArgument(args.toList.asJava)
+      assert(stcr.dataPath != null && stcr.modelPrefix != null && stcr.starterSentence != null)
+      runInferenceCharRNN(stcr.dataPath, stcr.modelPrefix, stcr.starterSentence)
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)

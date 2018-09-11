@@ -22,21 +22,21 @@
 # It assumes you have already run build_all_version.sh for
 # the tags you want to update.
 
-# Takes three arguments:
-# * tag list - space delimited list of Github tags; Example: "1.1.0 1.0.0 master"
-# * default tag - which version should the site default to; Example: 1.0.0
-# * root URL - for the versions dropdown to change to production or dev server; Example: http://mxnet.incubator.apache.org/
+# Takes three required arguments:
+# * tag list (required) - semicolon delimited list of tags to display on site
+#     Example: "1.1.0;1.0.0;master"
+# * default tag (required) - which version should the site default to
+#     Example: 1.0.0
+# * root URL (required) - for the versions dropdown to change to production or
+#     dev server.
+#     Example: http://mxnet.incubator.apache.org/
 
 # Example Usage:
-# ./update_all_version.sh "1.1.0 1.0.0 master" 1.0.0 http://mxnet.incubator.apache.org/
+# ./update_all_version.sh "1.2.1;1.1.0;1.0.0;master" master  \
+#   http://mxnet.incubator.apache.org/
 
 set -e
 set -x
-
-MASTER_SOURCE_DIR="../../docs"
-STATIC_FILES_DIR="_static"
-MXNET_THEME_DIR="_static/mxnet-theme"
-BUILD_HTML_DIR="_build/html"
 
 if [ -z "$1" ]
   then
@@ -65,7 +65,6 @@ if [ -z "$3" ]
     root_url=$3
 fi
 
-mxnet_folder="apache_mxnet"
 built="VersionedWeb"
 tag_file="tag_list.txt"
 
@@ -86,17 +85,12 @@ function update_mxnet_css {
   # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
   # copy <master folder location> <version folder location>
 
-  echo "Copying mxnet.css from master branch to all versions...."
-  cp "$MASTER_SOURCE_DIR/$STATIC_FILES_DIR/mxnet.css"  "$built/versions/$tag/_static"
+  echo "Copying mxnet.css from artifacts folder..."
+  cp "artifacts/mxnet.css"  "$built/versions/$tag/_static"
 
   echo "Update fixes complete.."
 }
 
-function update_install {
-    tag=$1
-    echo "Updating installation page for $1..."
-    cp "artifacts/$tag.index.html" "$built/versions/$tag/install/index.html"
-}
 
 
 # Update the specified tags with the Versions dropdown
@@ -114,7 +108,6 @@ for tag in $tag_list; do
         if [ -d $built/versions/$tag ]; then
             echo "The $tag is going to be updated with new css and install pages."
             update_mxnet_css $tag
-            update_install $tag
         fi
     fi
 
@@ -122,22 +115,16 @@ for tag in $tag_list; do
     if [ $tag == $tag_default ]
     then
         cp -a "$built/versions/$tag/." "$built"
-        echo "Updating default site's installation page."
-        cp "artifacts/$tag_default.index.html" "$built/install/index.html"
         echo "Copying .htaccess from default branch to root folder...."
         cp "artifacts/.htaccess"  "$built"
     else
         file_loc="$built/versions/$tag"
     fi
 
-    # Copy the latest README.md from master
+    # Copy the latest README.md; needs to come from local branch
     if [ $tag == 'master' ]; then
-        cd $mxnet_folder
-        git checkout master
-        cp README.md ../$built
-        cd ..
+        cp ../../README.md $built
     fi
 done
 
 echo "The output of this process can be found in the VersionedWeb folder."
-

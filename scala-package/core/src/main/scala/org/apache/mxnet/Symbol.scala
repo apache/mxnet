@@ -822,8 +822,12 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
   }
 }
 
+/**
+  * Symbol Object extends from SymbolBase for abstract function signatures
+  * Main code will be generated during compile time through Macros
+  */
 @AddSymbolFunctions(false)
-object Symbol {
+object Symbol extends SymbolBase {
   private type SymbolCreateNamedFunc = Map[String, Any] => Symbol
   private val logger = LoggerFactory.getLogger(classOf[Symbol])
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
@@ -951,9 +955,28 @@ object Symbol {
    * @return Symbol The created Symbol.
    */
   def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
-    repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
-    val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "dtype" -> dType.toString())
+             repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
+    arange(start, stop, step, repeat, infer_range = false, name, dType)
+  }
+
+  /**
+   * Returns evenly spaced values within a given interval.
+   * stop value can be infered from the output shape,
+   * which must be known from the rest of the net.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param infer_range Infer the stop value from output shape
+   * @param ctx Device context. Default context is the current default context.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return NDArray of evenly spaced values in the specified range.
+   */
+  def arange(start: Float, stop: Option[Float], step: Float,
+             repeat: Int, infer_range: Boolean, name: String,
+             dType: DType): Symbol = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
+      "infer_range" -> infer_range, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
   }

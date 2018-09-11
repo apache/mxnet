@@ -18,8 +18,11 @@
 package org.apache.mxnetexamples.infer.objectdetector
 
 import java.io.File
+import java.net.URL
 
-import org.apache.mxnet.Context
+import org.apache.commons.io.FileUtils
+import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
@@ -35,29 +38,21 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     logger.info("tempDirPath: %s".format(tempDirPath))
 
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
-    val synsetBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
-    Process("wget " + modelBase + "resnet50_ssd_model-symbol.json " + "-P " +
-      tempDirPath + "/resnetssd/ -q") !
-
-
-    Process("wget " + modelBase + "resnet50_ssd_model-0000.params " +
-      "-P " + tempDirPath + "/resnetssd/ -q") !
-
-
-    Process("wget  " + synsetBase + "synset.txt " + "-P" +
-      tempDirPath + "/resnetssd/ -q") !
-
-    Process("wget " +
-      imageBase + "dog-ssd.jpg " +
-      "-P " + tempDirPath + "/inputImages/") !
-
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-symbol.json",
+      tempDirPath + "/resnetssd/resnet50_ssd_model-symbol.json")
+    Util.downloadUrl(modelBase + "resnet50_ssd_model-0000.params",
+      tempDirPath + "/resnetssd/resnet50_ssd_model-0000.params")
+    Util.downloadUrl(modelBase + "synset.txt",
+      tempDirPath + "/resnetssd/synset.txt")
+    Util.downloadUrl(imageBase + "dog-ssd.jpg",
+      tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg")
 
     val modelDirPath = tempDirPath + File.separator + "resnetssd/"
     val inputImagePath = tempDirPath + File.separator +
-      "inputImages/dog-ssd.jpg"
-    val inputImageDir = tempDirPath + File.separator + "inputImages/"
+      "inputImages/resnetssd/dog-ssd.jpg"
+    val inputImageDir = tempDirPath + File.separator + "inputImages/resnetssd/"
 
     var context = Context.cpu()
     if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
@@ -66,16 +61,16 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     val output = SSDClassifierExample.runObjectDetectionSingle(modelDirPath + "resnet50_ssd_model",
-      inputImagePath, context)
-
-    assert(output(0)(0)._1 === "car")
+        inputImagePath, context)
 
     val outputList = SSDClassifierExample.runObjectDetectionBatch(
-      modelDirPath + "resnet50_ssd_model",
-      inputImageDir, context)
-
-    assert(output(0)(0)._1 === "car")
+        modelDirPath + "resnet50_ssd_model",
+        inputImageDir, context)
 
     Process("rm -rf " + modelDirPath + " " + inputImageDir) !
+
+    assert(output(0)(0)._1 === "car")
+    assert(output(0)(0)._1 === "car")
+
   }
 }

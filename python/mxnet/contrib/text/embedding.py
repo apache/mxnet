@@ -34,6 +34,7 @@ from . import _constants as C
 from . import vocab
 from ... import ndarray as nd
 from ... import registry
+from ... import base
 
 
 def register(embedding_cls):
@@ -496,7 +497,7 @@ class GloVe(_TokenEmbedding):
     ----------
     pretrained_file_name : str, default 'glove.840B.300d.txt'
         The name of the pre-trained token embedding file.
-    embedding_root : str, default os.path.join('~', '.mxnet', 'embeddings')
+    embedding_root : str, default $MXNET_HOME/embeddings
         The root directory for storing embedding-related files.
     init_unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown token.
@@ -541,7 +542,7 @@ class GloVe(_TokenEmbedding):
         return archive
 
     def __init__(self, pretrained_file_name='glove.840B.300d.txt',
-                 embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
+                 embedding_root=os.path.join(base.data_dir(), 'embeddings'),
                  init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         GloVe._check_pretrained_file_names(pretrained_file_name)
 
@@ -600,7 +601,7 @@ class FastText(_TokenEmbedding):
     ----------
     pretrained_file_name : str, default 'wiki.en.vec'
         The name of the pre-trained token embedding file.
-    embedding_root : str, default os.path.join('~', '.mxnet', 'embeddings')
+    embedding_root : str, default $MXNET_HOME/embeddings
         The root directory for storing embedding-related files.
     init_unknown_vec : callback
         The callback used to initialize the embedding vector for the unknown token.
@@ -642,7 +643,7 @@ class FastText(_TokenEmbedding):
         return '.'.join(pretrained_file_name.split('.')[:-1])+'.zip'
 
     def __init__(self, pretrained_file_name='wiki.simple.vec',
-                 embedding_root=os.path.join('~', '.mxnet', 'embeddings'),
+                 embedding_root=os.path.join(base.data_dir(), 'embeddings'),
                  init_unknown_vec=nd.zeros, vocabulary=None, **kwargs):
         FastText._check_pretrained_file_names(pretrained_file_name)
 

@@ -1,15 +1,15 @@
-Contents
---------
-These are used to generate the indexes for search functionality.
+# MXNet
 
-- [Python Documents](api/python/index.md)
-- [R Documents](api/r/index.md)
-- [Julia Documents](api/julia/index.md)
-- [C++ Documents](api/c++/index.md)
-- [Scala Documents](api/scala/index.md)
-- [Perl Documents](api/perl/index.md)
-- [HowTo Documents](faq/index.md)
-- [Get Started Documents](get_started/index.md)
-- [System Documents](architecture/index.md)
-- [Tutorials](tutorials/index.md)
-- [Community](community/index.md)
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   api/index.md
+   architecture/index.md
+   community/index.md
+   faq/index.md
+   gluon/index.md
+   install/index.md
+   model_zoo/index.md
+   tutorials/index.md
+```

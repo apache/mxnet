@@ -19,7 +19,7 @@ import pickle as pkl
 
 from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
-from common import setup_module, with_seed, random_seed
+from common import setup_module, with_seed, random_seed, teardown
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
@@ -153,6 +153,23 @@ def test_sparse_nd_slice():
 
     shape = (rnd.randint(2, 10), rnd.randint(1, 10))
     check_slice_nd_csr_fallback(shape)
+
+
+@with_seed()
+def test_sparse_nd_concat():
+    def check_concat(arrays):
+        ret = np.concatenate([arr.asnumpy() for arr in arrays], axis=0)
+        same(mx.nd.concat(*arrays, dim=0).asnumpy(), ret)
+    nds = []
+    zero_nds = []
+    ncols = rnd.randint(2, 10)
+    for i in range(3):
+        shape = (rnd.randint(2, 10), ncols)
+        A, _ = rand_sparse_ndarray(shape, 'csr')
+        nds.append(A)
+        zero_nds.append(mx.nd.zeros(shape).tostype('csr'))
+    check_concat(nds)
+    check_concat(zero_nds)
 
 
 @with_seed()
@@ -362,12 +379,11 @@ def test_sparse_nd_broadcast():
     sample_num = 1000
     # TODO(haibin) test with more than 2 dimensions
     def test_broadcast_to(stype):
-        for i in range(sample_num):
+        for _ in range(sample_num):
             ndim = 2
             target_shape = np.random.randint(1, 11, size=ndim)
             shape = target_shape.copy()
             axis_flags = np.random.randint(0, 2, size=ndim)
-            axes = []
             for (axis, flag) in enumerate(axis_flags):
                 if flag:
                     shape[axis] = 1
@@ -380,9 +396,31 @@ def test_sparse_nd_broadcast():
             assert (ndarray_ret.shape == target_shape).all()
             err = np.square(ndarray_ret - numpy_ret).mean()
             assert err < 1E-8
+
+    def test_broadcast_like(stype):
+        for _ in range(sample_num):
+            ndim = 2
+            target_shape = np.random.randint(1, 11, size=ndim)
+            target = mx.nd.ones(shape=tuple(target_shape))
+            shape = target_shape.copy()
+            axis_flags = np.random.randint(0, 2, size=ndim)
+            for (axis, flag) in enumerate(axis_flags):
+                if flag:
+                    shape[axis] = 1
+            dat = np.random.rand(*shape) - 0.5
+            numpy_ret = dat
+            ndarray = mx.nd.array(dat).tostype(stype)
+            ndarray_ret = ndarray.broadcast_like(target)
+            if type(ndarray_ret) is mx.ndarray.NDArray:
+                ndarray_ret = ndarray_ret.asnumpy()
+            assert (ndarray_ret.shape == target_shape).all()
+            err = np.square(ndarray_ret - numpy_ret).mean()
+            assert err < 1E-8
+
     stypes = ['csr', 'row_sparse']
     for stype in stypes:
         test_broadcast_to(stype)
+        test_broadcast_like(stype)
 
 
 @with_seed()
@@ -476,27 +514,27 @@ def test_sparse_nd_astype_copy():
         assert (id(x) == id(y))
 
 
-@with_seed(0)
+@with_seed()
 def test_sparse_nd_pickle():
-    repeat = 1
     dim0 = 40
     dim1 = 40
     stypes = ['row_sparse', 'csr']
     densities = [0, 0.5]
     stype_dict = {'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
-    for _ in range(repeat):
-        shape = rand_shape_2d(dim0, dim1)
-        for stype in stypes:
-            for density in densities:
-                a, _ = rand_sparse_ndarray(shape, stype, density)
-                assert isinstance(a, stype_dict[stype])
-                data = pkl.dumps(a)
-                b = pkl.loads(data)
-                assert isinstance(b, stype_dict[stype])
-                assert same(a.asnumpy(), b.asnumpy())
+    shape = rand_shape_2d(dim0, dim1)
+    for stype in stypes:
+        for density in densities:
+            a, _ = rand_sparse_ndarray(shape, stype, density)
+            assert isinstance(a, stype_dict[stype])
+            data = pkl.dumps(a)
+            b = pkl.loads(data)
+            assert isinstance(b, stype_dict[stype])
+            assert same(a.asnumpy(), b.asnumpy())
 
 
-@with_seed(0)
+# @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11741
+@with_seed()
 def test_sparse_nd_save_load():
     repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
@@ -839,17 +877,16 @@ def test_sparse_nd_fluent():
             else:
                 assert almost_equal(regular.asnumpy(), fluent.asnumpy(), equal_nan=equal_nan)
 
-    common_func = ['zeros_like', 'square']
-    rsp_func = ['round', 'rint', 'fix', 'floor', 'ceil', 'trunc',
-                'abs', 'sign', 'sin', 'degrees', 'radians', 'expm1']
-    for func in common_func:
+    all_funcs = ['zeros_like', 'square', 'round', 'rint', 'fix', 'floor', 'ceil', 'trunc',
+                 'abs', 'sign', 'sin', 'degrees', 'radians', 'expm1']
+    for func in all_funcs:
         check_fluent_regular('csr', func, {})
-    for func in common_func + rsp_func:
         check_fluent_regular('row_sparse', func, {})
 
-    rsp_func = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
+    all_funcs = ['arcsin', 'arctan', 'tan', 'sinh', 'tanh',
                 'arcsinh', 'arctanh', 'log1p', 'sqrt', 'relu']
-    for func in rsp_func:
+    for func in all_funcs:
+        check_fluent_regular('csr', func, {}, equal_nan=True)
         check_fluent_regular('row_sparse', func, {}, equal_nan=True)
 
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))

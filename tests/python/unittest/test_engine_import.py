@@ -16,28 +16,25 @@
 # under the License.
 
 import os
-import sys
+
+try:
+    reload         # Python 2
+except NameError:  # Python 3
+    from importlib import reload
+
 
 def test_engine_import():
     import mxnet
-    def test_import():
-        version = sys.version_info
-        if version >= (3, 4):
-            import importlib
-            importlib.reload(mxnet)
-        elif version >= (3, ):
-            import imp
-            imp.reload(mxnet)
-        else:
-            reload(mxnet)
+        
     engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
 
     for type in engine_types:
-        if not type:
-            os.environ.pop('MXNET_ENGINE_TYPE', None)
-        else:
+        if type:
             os.environ['MXNET_ENGINE_TYPE'] = type
-        test_import()
+        else:
+            os.environ.pop('MXNET_ENGINE_TYPE', None)
+        reload(mxnet)
+
 
 if __name__ == '__main__':
     import nose

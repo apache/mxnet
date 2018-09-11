@@ -341,6 +341,8 @@ class Module(symbolVar: Symbol,
     require(this.binded)
     val (tdataShapes, tlabelShapes) = this._parseDataDesc(
       this.dataNames, this.labelNames, dataShapes, labelShapes)
+    this.dataShapesVar = tdataShapes
+    this.labelShapesVar = tlabelShapes
     this.execGroup.reshape(tdataShapes, tlabelShapes)
   }
 

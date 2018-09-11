@@ -62,7 +62,9 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>(
                attrs, dev_mask, dispatch_mode, in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+  } else if (dev_mask == mshadow::cpu::kDevMask
       && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)
       && out_attrs->at(0) == kDefaultStorage) {
     *dispatch_mode = DispatchMode::kFComputeEx;
@@ -111,6 +113,11 @@ static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
     MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNNCopy(attrs, ctx, inputs[0], req[1], outputs[1]);
     return;
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    FallBackCompute(
+        ElemwiseBinaryOp::BackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>,
+            attrs, ctx, inputs, req, outputs);
+    return;
   }
 #endif
   ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>(
@@ -127,7 +134,9 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
   bool ret = ElemwiseStorageType<1, 2, true, true, true>(attrs, dev_mask, dispatch_mode,
                                                          in_attrs, out_attrs);
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask) {
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet()) {
+    *dispatch_mode = DispatchMode::kFComputeFallback;
+  } else if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
 #endif

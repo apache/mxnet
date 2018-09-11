@@ -68,7 +68,7 @@ class Parameter(object):
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
-    shape : tuple of int, default None
+    shape : int or tuple of int, default None
         Shape of this parameter. By default shape is not specified. Parameter with
         unknown shape can be used for :py:class:`Symbol` API, but ``init`` will throw an error
         when using :py:class:`NDArray` API.
@@ -81,6 +81,8 @@ class Parameter(object):
         Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+    stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter.
     grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
         The storage type of the parameter's gradient.
 
@@ -99,16 +101,19 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True, grad_stype='default'):
+                 differentiable=True, stype='default', grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
         self._ctx_list = None
         self._ctx_map = None
+        self._trainer = None
         self._deferred_init = ()
         self._differentiable = differentiable
         self._allow_deferred_init = allow_deferred_init
         self._grad_req = None
+        if isinstance(shape, int):
+            shape = (shape,)
         self._shape = shape
         self.name = name
         self.dtype = dtype
@@ -116,10 +121,14 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        assert grad_stype in ['default', 'row_sparse', 'csr'], \
-            "grad_stype for Parameter '%s' must be one of 'default', 'row_sparse', or 'csr'," \
-            " but got '%s'" % (name, grad_stype)
+        # sparse related storage type information
+        valid_stypes = ['default', 'row_sparse', 'csr']
+        assert grad_stype in valid_stypes, "grad_stype for Parameter '%s' must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, grad_stype)
+        assert stype in valid_stypes, "stype for Parameter '%s' must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
+        self._stype = stype
 
 
     def __repr__(self):
@@ -156,11 +165,21 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
+            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
                 str(new_shape), str(self._shape))
 
         self._shape = new_shape
+
+    def _set_trainer(self, trainer):
+        """ Set the trainer this parameter is associated with. """
+        # trainer cannot be replaced for sparse params
+        if self._stype != 'default' and self._trainer and trainer and self._trainer is not trainer:
+            raise RuntimeError(
+                "Failed to set the trainer for Parameter '%s' because it was already set. " \
+                "More than one trainers for a %s Parameter is not supported." \
+                %(self.name, self._stype))
+        self._trainer = trainer
 
     def _check_and_get(self, arr_list, ctx):
         if arr_list is not None:
@@ -194,11 +213,25 @@ class Parameter(object):
             "because the later does not include Parameters of " \
             "nested child Blocks"%(self.name))
 
+    def _get_row_sparse(self, arr_list, ctx, row_id):
+        """ Get row_sparse data from row_sparse parameters based on row_id. """
+        # get row sparse params based on row ids
+        if not isinstance(row_id, ndarray.NDArray):
+            raise TypeError("row_id must have NDArray type, but %s is given"%(type(row_id)))
+        if not self._trainer:
+            raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
+                               "Trainer is created with it."%self.name)
+        results = self._check_and_get(arr_list, ctx)
+
+        # fetch row sparse params from the trainer
+        self._trainer._row_sparse_pull(self, results, row_id)
+        return results
+
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim == 0 or self_dim == data_dim, \
+                assert self_dim in (0, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
@@ -208,6 +241,8 @@ class Parameter(object):
                 "Failed loading Parameter '%s' from saved params: " \
                 "dtype incompatible expected %s vs saved %s"%(
                     self.name, str(self.dtype), str(data.dtype))
+        if self._stype != data.stype:
+            data = data.tostype(self._stype)
         if isinstance(ctx, Context):
             ctx = [ctx]
         if self._data is None:
@@ -243,7 +278,7 @@ class Parameter(object):
         with autograd.pause():
             if data is None:
                 data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                     ctx=context.cpu())
+                                     ctx=context.cpu(), stype=self._stype)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
 
@@ -271,12 +306,20 @@ class Parameter(object):
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                     stype=self._grad_stype) for i in self._data]
 
-        autograd.mark_variables(self.list_data(), self.list_grad(), self.grad_req)
+        autograd.mark_variables(self._check_and_get(self._data, list),
+                                self._grad, self.grad_req)
 
     def _reduce(self):
-        """Reduce data from multiple context."""
-        block = self.list_data()
-        data = ndarray.add_n(*(w.copyto(context.cpu()) for w in block)) / len(block)
+        """Reduce data from multiple context to cpu."""
+        ctx = context.cpu()
+        if self._stype == 'default':
+            block = self.list_data()
+            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+        else:
+            # fetch all rows for 'row_sparse' param
+            all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
+            data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
+            self._trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -350,6 +393,8 @@ class Parameter(object):
     def reset_ctx(self, ctx):
         """Re-assign Parameter to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default ``context.current_context()``.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -380,12 +425,58 @@ class Parameter(object):
             self._deferred_init = self._deferred_init[:3] + (data,)
             return
 
-        for arr in self.list_data():
+        # if update_on_kvstore, we need to make sure the copy stored in kvstore is in sync
+        if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
+            if self not in self._trainer._params_to_init:
+                self._trainer._reset_kvstore()
+
+        for arr in self._check_and_get(self._data, list):
             arr[:] = data
+
+    def row_sparse_data(self, row_id):
+        """Returns a copy of the 'row_sparse' parameter on the same context as row_id's.
+        The copy only retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized on this context before.
+
+        Parameters
+        ----------
+        row_id: NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        NDArray on row_id's context
+        """
+        if self._stype != 'row_sparse':
+            raise RuntimeError("Cannot return a copy of Parameter %s via row_sparse_data() " \
+                               "because its storage type is %s. Please use data() instead." \
+                               %(self.name, self._stype))
+        return self._get_row_sparse(self._data, row_id.context, row_id)
+
+    def list_row_sparse_data(self, row_id):
+        """Returns copies of the 'row_sparse' parameter on all contexts, in the same order
+        as creation. The copy only retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized before.
+
+        Parameters
+        ----------
+        row_id: NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        list of NDArrays
+        """
+        if self._stype != 'row_sparse':
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+                               "list_row_sparse_data() because its storage type is %s. Please " \
+                               "use data() instead." % (self.name, self._stype))
+        return self._get_row_sparse(self._data, list, row_id)
 
     def data(self, ctx=None):
         """Returns a copy of this parameter on one context. Must have been
-        initialized on this context before.
+        initialized on this context before. For sparse parameters, use
+        :py:meth:`Parameter.row_sparse_data` instead.
 
         Parameters
         ----------
@@ -396,11 +487,25 @@ class Parameter(object):
         -------
         NDArray on ctx
         """
+        if self._stype != 'default':
+            raise RuntimeError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
+                               "because its storage type is %s. Please use row_sparse_data() " \
+                               "instead." % (self.name, str(ctx), self._stype))
         return self._check_and_get(self._data, ctx)
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order
-        as creation."""
+        as creation. For sparse parameters, use :py:meth:`Parameter.list_row_sparse_data`
+        instead.
+
+        Returns
+        -------
+        list of NDArrays
+        """
+        if self._stype != 'default':
+            raise RuntimeError("Cannot return copies of Parameter '%s' on all contexts via " \
+                               "list_data() because its storage type is %s. Please use " \
+                               "row_sparse_data() instead." % (self.name, self._stype))
         return self._check_and_get(self._data, list)
 
     def grad(self, ctx=None):
@@ -447,7 +552,7 @@ class Parameter(object):
         if self._var is None:
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
-                                   init=self.init)
+                                   init=self.init, stype=self._stype)
         return self._var
 
     def cast(self, dtype):
@@ -486,8 +591,8 @@ class Constant(Parameter):
                 super(Block, self).__init__(**kwargs)
                 self.const = self.params.get_constant('const', [[1,2],[3,4]])
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     name : str
         Name of the parameter.
     value : array-like
@@ -638,7 +743,7 @@ class ParameterDict(object):
         found, :py:func:`get` will create a new :py:class:`Constant` with key-word
         arguments and insert it to self.
 
-        Constants
+        Parameters
         ----------
         name : str
             Name of the desired Constant. It will be prepended with this dictionary's
@@ -713,6 +818,8 @@ class ParameterDict(object):
     def reset_ctx(self, ctx):
         """Re-assign all Parameters to other contexts.
 
+        Parameters
+        ----------
         ctx : Context or list of Context, default :py:meth:`context.current_context()`.
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
@@ -745,6 +852,8 @@ class ParameterDict(object):
     def save(self, filename, strip_prefix=''):
         """Save parameters to file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         strip_prefix : str, default ''
@@ -769,6 +878,8 @@ class ParameterDict(object):
              ignore_extra=False, restore_prefix=''):
         """Load parameters from file.
 
+        Parameters
+        ----------
         filename : str
             Path to parameter file.
         ctx : Context or list of Context

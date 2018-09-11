@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=ungrouped-imports
 """Dataset generator."""
 __all__ = ['DataLoader']
 
@@ -26,6 +26,7 @@ import sys
 import multiprocessing
 import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
+import threading
 import numpy as np
 
 try:
@@ -57,6 +58,8 @@ else:
 
     def reduce_ndarray(data):
         """Reduce ndarray to shared memory handle"""
+        # keep a local ref before duplicating fd
+        data = data.as_in_context(context.Context('cpu_shared', 0))
         pid, fd, shape, dtype = data._to_shared_mem()
         if sys.version_info[0] == 2:
             fd = multiprocessing.reduction.reduce_handle(fd)
@@ -147,8 +150,18 @@ def default_mp_batchify_fn(data):
                         ctx=context.Context('cpu_shared', 0))
 
 
+def _as_in_context(data, ctx):
+    """Move data into new context."""
+    if isinstance(data, nd.NDArray):
+        return data.as_in_context(ctx)
+    elif isinstance(data, (list, tuple)):
+        return [_as_in_context(d, ctx) for d in data]
+    return data
+
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
+    if hasattr(dataset, '_fork') and callable(dataset._fork):
+        dataset._fork()
     while True:
         idx, samples = key_queue.get()
         if idx is None:
@@ -156,9 +169,22 @@ def worker_loop(dataset, key_queue, data_queue, batchify_fn):
         batch = batchify_fn([dataset[i] for i in samples])
         data_queue.put((idx, batch))
 
+def fetcher_loop(data_queue, data_buffer, pin_memory=False):
+    """Fetcher loop for fetching data from queue and put in reorder dict."""
+    while True:
+        idx, batch = data_queue.get()
+        if idx is None:
+            break
+        if pin_memory:
+            batch = _as_in_context(batch, context.cpu_pinned())
+        else:
+            batch = _as_in_context(batch, context.cpu())
+        data_buffer[idx] = batch
+
 class _MultiWorkerIter(object):
     """Interal multi-worker iterator for DataLoader."""
-    def __init__(self, num_workers, dataset, batchify_fn, batch_sampler):
+    def __init__(self, num_workers, dataset, batchify_fn, batch_sampler, pin_memory=False,
+                 worker_fn=worker_loop):
         assert num_workers > 0, "_MultiWorkerIter is not for {} workers".format(num_workers)
         self._num_workers = num_workers
         self._dataset = dataset
@@ -175,11 +201,17 @@ class _MultiWorkerIter(object):
         workers = []
         for _ in range(self._num_workers):
             worker = multiprocessing.Process(
-                target=worker_loop,
+                target=worker_fn,
                 args=(self._dataset, self._key_queue, self._data_queue, self._batchify_fn))
             worker.daemon = True
             worker.start()
             workers.append(worker)
+
+        self._fetcher = threading.Thread(
+            target=fetcher_loop,
+            args=(self._data_queue, self._data_buffer, pin_memory))
+        self._fetcher.daemon = True
+        self._fetcher.start()
 
         # pre-fetch
         for _ in range(2 * self._num_workers):
@@ -207,13 +239,11 @@ class _MultiWorkerIter(object):
             raise StopIteration
 
         while True:
-            self._push_next()
             if self._rcvd_idx in self._data_buffer:
                 batch = self._data_buffer.pop(self._rcvd_idx)
                 self._rcvd_idx += 1
+                self._push_next()
                 return batch
-            idx, batch = self._data_queue.get()
-            self._data_buffer[idx] = batch
 
     def next(self):
         return self.__next__()
@@ -226,11 +256,7 @@ class _MultiWorkerIter(object):
         if not self._shutdown:
             for _ in range(self._num_workers):
                 self._key_queue.put((None, None))
-            try:
-                while not self._data_queue.empty():
-                    self._data_queue.get()
-            except IOError:
-                pass
+            self._data_queue.put((None, None))
             self._shutdown = True
 
 
@@ -274,12 +300,16 @@ class DataLoader(object):
 
     num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
-        `num_workers > 0` is not supported on Windows yet.
+    pin_memory : boolean, default False
+        If ``True``, the dataloader will copy NDArrays into pinned memory
+        before returning them. Copying from CPU pinned memory to GPU is faster
+        than from normal CPU memory.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
-                 num_workers=0):
+                 num_workers=0, pin_memory=False):
         self._dataset = dataset
+        self._pin_memory = pin_memory
 
         if batch_sampler is None:
             if batch_size is None:
@@ -312,13 +342,17 @@ class DataLoader(object):
 
     def __iter__(self):
         if self._num_workers == 0:
-            generator = lambda: [(yield self._batchify_fn([self._dataset[idx] for idx in batch]))
-                                 for batch in self._batch_sampler]
-            return generator()
+            def same_process_iter():
+                for batch in self._batch_sampler:
+                    ret = self._batchify_fn([self._dataset[idx] for idx in batch])
+                    if self._pin_memory:
+                        ret = _as_in_context(ret, context.cpu_pinned())
+                    yield ret
+            return same_process_iter()
 
         # multi-worker
         return _MultiWorkerIter(self._num_workers, self._dataset,
-                                self._batchify_fn, self._batch_sampler)
+                                self._batchify_fn, self._batch_sampler, self._pin_memory)
 
     def __len__(self):
         return len(self._batch_sampler)

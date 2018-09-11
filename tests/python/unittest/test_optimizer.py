@@ -23,7 +23,7 @@ import unittest
 from nose.tools import raises
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed
+from common import setup_module, with_seed, teardown
 
 @with_seed()
 def test_learning_rate():
@@ -230,7 +230,10 @@ def test_sgd():
                                     ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
                                 continue
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            if dtype == np.float16:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3)
+                            else:
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
                             # test operator fallback on cpu
                             if dtype != np.float16:
                                 compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape[:2],
@@ -420,7 +423,7 @@ class PyNAG(PySGD):
               grad += wd * weight
               mom[:] += grad
               grad[:] += self.momentum * mom
-              weight[:] += -lr * grad 
+              weight[:] += -lr * grad
         else:
             grad32 = array(grad, ctx=grad.context, dtype=np.float32)
             grad32 = grad32 * self.rescale_grad
@@ -439,7 +442,7 @@ class PyNAG(PySGD):
             tmp = weight32.astype(weight.dtype)
             tmp.copyto(weight)
 
-@with_seed(0)
+@with_seed()
 def test_nag():
     opt1 = PyNAG
     opt2 = mx.optimizer.NAG
@@ -509,7 +512,7 @@ class PyFTML(mx.optimizer.Optimizer):
         prev_v[:] = v_t
         prev_z[:] = z_t
 
-@with_seed(0)
+@with_seed()
 def test_ftml():
     opt1 = PyFTML
     opt2 = mx.optimizer.FTML
@@ -531,7 +534,7 @@ def test_ftml():
                             kwarg.update(cg_option)
                             kwarg.update(rg_option)
                             kwarg.update(wd_option)
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
 
 # ADAM
@@ -699,7 +702,7 @@ class PySignum(mx.optimizer.Optimizer):
         else:
             weight[:] = (1 - lr*(wd+self.wd_lh))*weight - lr*mx.nd.sign(grad)
 
-@with_seed(0)
+@with_seed()
 def test_signum():
     opt1 = PySignum
     opt2 = mx.optimizer.Signum
@@ -832,8 +835,7 @@ class PyRMSProp(mx.optimizer.Optimizer):
         if self.clip_weights:
              mx.ndarray.clip(weight, -self.clip_weights, self.clip_weights, out=weight)
 
-@unittest.skip("Test fails intermittently. Temporarily disabled until fixed. Tracked at https://github.com/apache/incubator-mxnet/issues/8230")
-@with_seed(0)
+@with_seed()
 def test_rms():
     opt1 = PyRMSProp
     opt2 = mx.optimizer.RMSProp
@@ -845,6 +847,9 @@ def test_rms():
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
     for dtype in [np.float16, np.float32]:
+        # Reduce foating point compare tolerance to avoid flaky test failure.
+        rtol, atol = (1e-1, 1e-1) if dtype is np.float16 else (1e-2, 1e-2)
+
         for cw_option in cw_options:
             for cg_option in cg_options:
                 for center_option in center_options:
@@ -862,9 +867,9 @@ def test_rms():
                                         ('multi_precision' not in kwarg or
                                             not kwarg['multi_precision'])):
                                     continue
-                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                                compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=rtol, atol=atol)
                                 if (default_context() == mx.cpu()):
-                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse')
+                                    compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, g_stype='row_sparse', rtol=rtol, atol=atol)
 
 class PyFtrl(mx.optimizer.Optimizer):
     """The Ftrl optimizer.
@@ -938,7 +943,7 @@ def test_ftrl():
         compare_optimizer(opt1(lazy_update=True, **kwarg), opt2(**kwarg), shape,
                           np.float32, w_stype='row_sparse', g_stype='row_sparse')
 
-@with_seed(1234)
+@with_seed()
 def test_nadam():
 
     def get_net(num_hidden, flatten=True):
@@ -960,10 +965,10 @@ def test_nadam():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.0005, 'wd': 0.0005},
+    mod.fit(data_iter, num_epoch=60, optimizer_params={'learning_rate': 0.001, 'wd': 0.0005},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='nadam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.11
 
 # AdaGrad
 class PyAdaGrad(mx.optimizer.Optimizer):
@@ -1031,8 +1036,62 @@ def test_adagrad():
                         if wd_option.get('wd', 0.0) == 0.0:
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               w_stype='row_sparse', g_stype='row_sparse')
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
+                                              g_stype='row_sparse')
 
 
+def test_factor_scheduler():
+    base_lr = 1
+    step = 100
+    factor = 0.1
+    sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
+                                        warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
+
+    assert (sched(0) == 0.1)
+    np.testing.assert_almost_equal(sched(10), 0.1)
+    assert (sched(21) == base_lr), sched(21)
+    np.testing.assert_almost_equal(sched(101), base_lr * factor)
+    np.testing.assert_almost_equal(sched(201), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(1000), 1e-4)
+
+def test_multifactor_scheduler():
+    base_lr = 0.1
+    steps = [15, 25]
+    factor = 0.1
+    sched = mx.lr_scheduler.MultiFactorScheduler(steps, factor, base_lr=base_lr,
+                                        warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
+
+    assert sched(0) == 0.05
+    np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05)/2)
+    np.testing.assert_almost_equal(sched(15), base_lr)
+    np.testing.assert_almost_equal(sched(16), base_lr * factor)
+    np.testing.assert_almost_equal(sched(20), base_lr * factor)
+    np.testing.assert_almost_equal(sched(26), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(100), base_lr * factor * factor)
+
+def test_poly_scheduler():
+    base_lr = 3
+    final_lr = 0
+    steps = 1000
+    poly_sched = mx.lr_scheduler.PolyScheduler(steps, base_lr=base_lr, pwr=2, final_lr=final_lr,
+                                    warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
+
+    np.testing.assert_almost_equal(poly_sched(0), 0)
+    np.testing.assert_almost_equal(poly_sched(50), float(base_lr)/2)
+    np.testing.assert_almost_equal(poly_sched(100), base_lr)
+    assert (poly_sched(101) <  poly_sched(100))
+    assert (poly_sched(500) < 1.6)
+    np.testing.assert_almost_equal(poly_sched(steps), final_lr)
+
+def test_cosine_scheduler():
+    # also tests case without warmup
+    base_lr = 3
+    final_lr = 0.1
+    steps = 1000
+    cosine_sched = mx.lr_scheduler.CosineScheduler(steps, base_lr=base_lr, final_lr=final_lr)
+    np.testing.assert_almost_equal(cosine_sched(0), base_lr)
+    np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
+    assert (cosine_sched(500) > 1.5)
 
 if __name__ == '__main__':
     import nose

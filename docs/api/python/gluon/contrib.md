@@ -35,6 +35,8 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     Concurrent
     HybridConcurrent
     Identity
+    SparseEmbedding
+    SyncBatchNorm
 ```
 
 ### Recurrent neural network
@@ -55,6 +57,7 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     Conv1DGRUCell
     Conv2DGRUCell
     Conv3DGRUCell
+    LSTMPCell
 ```
 
 ### Data

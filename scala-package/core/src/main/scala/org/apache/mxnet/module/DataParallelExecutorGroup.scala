@@ -266,8 +266,8 @@ class DataParallelExecutorGroup private[module](
     symbol: Symbol,
     contexts: Array[Context],
     workLoadList: IndexedSeq[Float],
-    dataShapes: IndexedSeq[DataDesc],
-    labelShapes: Option[IndexedSeq[DataDesc]] = None,
+    var dataShapes: IndexedSeq[DataDesc],
+    var labelShapes: Option[IndexedSeq[DataDesc]] = None,
     private[module] val paramNames: IndexedSeq[String],
     forTraining: Boolean,
     inputsNeedGrad: Boolean,
@@ -356,7 +356,7 @@ class DataParallelExecutorGroup private[module](
    * @param sharedGroup
    * @param reshape
    */
-  def bindExec(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]],
+  def bindExec(dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]],
                sharedGroup: Option[DataParallelExecutorGroup], reshape: Boolean = false): Unit = {
     this.batchSize = -1
     dataLayouts = decideSlices(dataShapes)
@@ -378,6 +378,9 @@ class DataParallelExecutorGroup private[module](
         bindIthExec(i, dataShapes, labelShapes, sharedGroup)
       ).toArray
     }
+
+    this.dataShapes = dataShapes
+    this.labelShapes = labelShapes
 
     // convenient data structures
     dataArrays = dataShapes.map(dataDesc =>
@@ -427,7 +430,7 @@ class DataParallelExecutorGroup private[module](
    * @param dataShapes
    * @param labelShapes
    */
-  def reshape(dataShapes: Seq[DataDesc], labelShapes: Option[Seq[DataDesc]]): Unit = {
+  def reshape(dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]]): Unit = {
     if (!(dataShapes == this.dataShapes && labelShapes == this.labelShapes)) {
       if (this._defaultExecs == null) {
         this._defaultExecs = this.execs.map(x => x)

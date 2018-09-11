@@ -87,7 +87,7 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       ctx, inputs[0], inputs[1], req[0], outputs[0]);
   } else if (param.act_type == activation::kSoftSign) {
     ActivationBackward<gpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
-      ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      ctx, inputs[0], inputs[2], req[0], outputs[0]);
   } else {
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       // XXX: for y = relu(x), y is passed as "in_data" to Backward()

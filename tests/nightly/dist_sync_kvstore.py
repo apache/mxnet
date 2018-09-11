@@ -24,7 +24,7 @@ import argparse
 import mxnet as mx
 import numpy as np
 import numpy.random as rnd
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, assert_exception
 from test_kvstore import compute_expected_2bit_quantization
 
 def check_diff(A, x, rank=None):
@@ -38,6 +38,7 @@ shape = (2, 3)
 irregular_shape = (1211,1211)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
+keys_invalid = [999]
 keys_shape = ['3', '5', '7']
 keys_big_shape = ['99']
 fp16_keys_shape = ['4', '6', '8']
@@ -350,20 +351,104 @@ def test_sync_init(gpu_tests=False):
         check_init(kv, init_test_keys_device_big, big_shape, device=True)
     print('worker ' + str(kv.rank) + ' is initialized')
 
+def test_invalid_operations():
+    def check_invalid_gluon_trainer_reset():
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
+        params.initialize(ctx=mx.cpu(0), init='zeros')
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        row_id = mx.nd.arange(0, 4)
+        w = x.row_sparse_data(row_id)
+        assert trainer._kv_initialized and trainer._update_on_kvstore
+        mx.nd.waitall()
+        # load would fail to reset kvstore since update_on_kvstore is True
+        assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        print('worker ' + str(my_rank) + ' passed check_invalid_gluon_trainer_reset')
+
+    def check_invalid_pull():
+        kv.init(keys_invalid[0], mx.nd.ones((2,2)).tostype('row_sparse'))
+        out = mx.nd.ones((2,2)).tostype('row_sparse')
+        assert_exception(kv.pull, mx.MXNetError, 'invalid_key', out=out, ignore_sparse=False)
+        print('worker ' + str(my_rank) + ' passed check_invalid_pull')
+
+    check_invalid_gluon_trainer_reset()
+    check_invalid_pull()
+
+def test_gluon_trainer_type():
+    def check_trainer_kv_type(stype, grad_stype, update_on_kv):
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        trainer._init_kvstore()
+        assert trainer._kv_initialized
+        assert trainer._update_on_kvstore is update_on_kv
+
+    check_trainer_kv_type('default', 'default', False)
+    check_trainer_kv_type('default', 'row_sparse', True)
+    check_trainer_kv_type('row_sparse', 'row_sparse', True)
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
+
+def test_gluon_trainer_step():
+    def check_trainer_step():
+        ctx = mx.cpu(0)
+        shape = (10, 1)
+        x = mx.gluon.Parameter('x', shape=shape)
+        x.initialize(ctx=ctx, init='ones')
+        trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'multi_precision': False}, kvstore=kv)
+        with mx.autograd.record():
+            w = x.data(ctx)
+            y = (my_rank + 1) * w
+            y.backward()
+        trainer.step(1)
+        expected = 1 - (1 + nworker) * nworker / 2
+        assert_almost_equal(x.data(ctx).asnumpy(), np.full(shape, expected))
+    check_trainer_step()
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_step')
+
+def test_gluon_trainer_sparse_step():
+    def check_trainer_sparse_step():
+        ctx = mx.cpu(0)
+        shape = (2, 10)
+        all_rows = mx.nd.arange(0, shape[0], ctx=ctx)
+        x = mx.gluon.Parameter('x', shape=shape, stype='row_sparse', grad_stype='row_sparse')
+        x.initialize(ctx=ctx, init='ones')
+        trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 1.0}, kvstore=kv)
+        with mx.autograd.record():
+            w = x.row_sparse_data(all_rows)
+            y = (my_rank + 1) * w
+            y.backward()
+        trainer.step(1)
+        expected = 1 - (1 + nworker) * nworker / 2
+        assert_almost_equal(x.row_sparse_data(all_rows).asnumpy(), np.full(shape, expected))
+    check_trainer_sparse_step()
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_sparse_step')
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test distributed kvstore in dist_sync mode')
     parser.add_argument('--nrepeat', type=int, default=7)
-    parser.add_argument('--type', type=str, default='all')
+    parser.add_argument('--type', type=str, default='default_cpu')
     parser.add_argument('--no-gpu', dest='gpu', action='store_false')
     parser.add_argument('--no-multiprecision', dest='multiprecision', action='store_false')
     opt = parser.parse_args()
-    if opt.type == 'all' or  opt.type == 'init':
+    if opt.type == 'gluon_type_cpu':
+        test_gluon_trainer_type()
+    elif opt.type == 'gluon_step_cpu':
+        test_gluon_trainer_step()
+    elif opt.type == 'gluon_sparse_step_cpu':
+        test_gluon_trainer_sparse_step()
+    elif opt.type == 'invalid_cpu':
+        test_invalid_operations()
+    elif opt.type == 'init_gpu':
         test_sync_init(opt.gpu)
-    kv = init_kv()
-    if opt.type == 'all' or  opt.type == 'default':
+    elif opt.type == 'default_cpu':
+        kv = init_kv()
         kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_push_pull(opt.nrepeat)
-    # dont run non compressed tests after this as kvstore compression will be set here
-    if opt.type == 'all' or  opt.type == 'compressed':
+    elif opt.type == 'compressed_cpu':
         kv, threshold = init_kv_compressed(kv)
+        kv = set_optimizer(use_multiprecision=opt.multiprecision)
         test_sync_2bit_compression(threshold, opt.nrepeat)
+    else:
+        raise RuntimeError("Unknown test type")

@@ -70,7 +70,7 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   bool keepdims;
   DMLC_DECLARE_PARAMETER(NormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
-      .describe("Order of the norm. Currently ord=2 is supported.");
+      .describe("Order of the norm. Currently ord=1 and ord=2 is supported.");
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<TShape>())
       .describe(R"code(The axis or axes along which to perform the reduction.
       The default, `axis=()`, will compute over all elements into a
@@ -99,6 +99,8 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   }
 };
 
+enum PickOpMode {kWrap, kClip};
+
 struct PickParam : public dmlc::Parameter<PickParam> {
   dmlc::optional<int> axis;
   int mode;
@@ -112,6 +114,14 @@ struct PickParam : public dmlc::Parameter<PickParam> {
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If true, the axis where we pick the elements is left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("wrap", kWrap)
+    .add_enum("clip", kClip)
+    .set_default(kClip)
+    .describe("Specify how out-of-bound indices behave. Default is \"clip\"."
+              " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
+              " they are replaced by the index that addresses the last element along an axis. "
+              " \"wrap\" means to wrap around.");
   }
 };
 
@@ -134,6 +144,17 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
                 " We can set the dim to zero if it's same as the original."
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "
                 "has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.");
+  }
+};
+
+struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
+  dmlc::optional<TShape> lhs_axes;
+  dmlc::optional<TShape> rhs_axes;
+  DMLC_DECLARE_PARAMETER(BroadcastLikeParam) {
+    DMLC_DECLARE_FIELD(lhs_axes).set_default(dmlc::optional<TShape>())
+      .describe("Axes to perform broadcast on in the first input array");
+    DMLC_DECLARE_FIELD(rhs_axes).set_default(dmlc::optional<TShape>())
+      .describe("Axes to copy from the second input array");
   }
 };
 
@@ -329,6 +350,71 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
       oshape[i] = ishape[i];
     }
   }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return true;
+}
+
+inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TShape& lhs_shape = (*in_attrs)[0];
+  TShape& rhs_shape = (*in_attrs)[1];
+
+  if ((lhs_shape.ndim() == 0) || (lhs_shape.ndim() == 0)) {
+    return false;
+  }
+
+  const BroadcastLikeParam& param = nnvm::get<BroadcastLikeParam>(attrs.parsed);
+  TShape oshape;
+
+  // lhs or rhs or both params were not specified
+  if (!param.lhs_axes.has_value() || !param.rhs_axes.has_value()) {
+    CHECK_EQ(lhs_shape.ndim(), rhs_shape.ndim())
+      << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
+
+    oshape = TShape(rhs_shape);
+    for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
+      if (rhs_shape[i] != 0) {
+        CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
+          << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
+      } else {
+        oshape[i] = lhs_shape[i];
+      }
+    }
+  } else {
+    auto lhs_axes = param.lhs_axes.value();
+    auto rhs_axes = param.rhs_axes.value();
+
+    CHECK(rhs_axes.ndim() == lhs_axes.ndim())
+      << "Input_axis and other_axis size does not match";
+
+    CHECK(lhs_axes.ndim() > 0)
+      << "Empty axes tuple is not allowed";
+
+    oshape = TShape(lhs_shape);
+    for (index_t i = 0; i < lhs_axes.ndim(); ++i) {
+      auto copyfrom = lhs_axes[i];
+      if (copyfrom < 0) {
+        copyfrom =  lhs_shape.ndim() + copyfrom;
+      }
+      CHECK(copyfrom >= 0 && copyfrom < oshape.ndim())
+        << "Invalid dimension specified in lhs_axes: " << lhs_axes[i];
+
+      auto copyto = rhs_axes[i];
+      if (copyto < 0) {
+        copyto =  rhs_shape.ndim() + copyto;
+      }
+      CHECK(copyto >= 0 && copyto < rhs_shape.ndim())
+        << "Invalid dimension specified in rhs_axes: " << rhs_axes[i];
+
+      CHECK(lhs_shape[copyfrom] == 1) << "Input axis " << lhs_axes[i]
+        << " at dimension " << i << " cannot be broadcasted to " << rhs_shape[copyto];
+      oshape[copyfrom] = rhs_shape[copyto];
+    }
+  }
+
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
@@ -869,7 +955,7 @@ struct ReduceGrad {
   }
 };
 
-inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
+inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
                               const int dev_mask,
                               DispatchMode* dispatch_mode,
                               std::vector<int>* in_attrs,
@@ -889,18 +975,20 @@ inline bool L2NormStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
                                      DispatchMode::kFCompute);
   }
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
-  if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
-      axis.ndim() == 0 && param.ord == 2) {
-    // l2 norm: rsp/csr, axis = () -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
-  }
-  if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
-      (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
-    // l2 norm: csr, axis = 0/1 -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     dispatch_ex);
+  if (param.ord == 2) {
+    const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+    if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
+        axis.ndim() == 0 && param.ord == 2) {
+      // l2 norm: rsp/csr, axis = () -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
+    if (!dispatched && in_stype == kCSRStorage && axis.ndim() == 1 && !param.keepdims &&
+        (axis[0] == 0 || axis[0] == 1) && param.ord == 2) {
+      // l2 norm: csr, axis = 0/1 -> dns
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       dispatch_ex);
+    }
   }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
@@ -984,13 +1072,13 @@ void SqRootForL2(const OpContext& ctx, OpReqType req, const TBlob &output) {
 }
 
 template<typename xpu>
-void L2NormCompute(const nnvm::NodeAttrs& attrs,
+void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  CHECK_EQ(param.ord, 2) << "norm only support ord=2";
+  CHECK(param.ord == 1 || param.ord == 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
 
   TShape small;
@@ -999,13 +1087,17 @@ void L2NormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::square>(
-      ctx, inputs, req, outputs, small);
-  SqRootForL2<xpu>(ctx, req[0], outputs[0]);
+  if (param.ord == 1) {
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::abs>(
+          ctx, inputs, req, outputs, small);
+  } else if (param.ord == 2) {
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
+        ctx, inputs, req, outputs, small);
+  }
 }
 
 template<typename xpu>
-void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
+void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
@@ -1021,8 +1113,36 @@ void L2NormGradCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(outputs[0].shape_, param.axis, true, false);
   }
-  ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
-                                                              req, outputs);
+  if (param.ord == 1) {
+    TShape src_shape, dst_shape;
+    BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      if (dst_shape.ndim() == 2) {
+        Tensor<xpu, 2, DType> ograd =
+          inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> igrad =
+          outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> data =
+          inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+        ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
+      } else {
+        const int ndim = MXNET_SPECIAL_MAX_NDIM;
+        Tensor<xpu, ndim, DType> igrad =
+          outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> ograd =
+          inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> data =
+          inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+        ASSIGN_DISPATCH(igrad, req[0],
+          broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
+      }
+    });
+  } else if (param.ord == 2) {
+    ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
+                                                                req, outputs);
+  }
 }
 
 template<typename xpu>
@@ -1049,7 +1169,7 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
                      const std::vector<NDArray>& outputs);
 
 /*! \brief index element from array along axes */
-template<int ndim>
+template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
@@ -1058,15 +1178,20 @@ struct pick {
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     int j = static_cast<int>(idx[i]);
-    if (j < 0) j = 0;
-    else if (j >= M) j = M-1;
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= M) j = M - 1;
+    } else {
+      j = j % M;
+      j += (j < 0) ? M : 0;
+    }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     out[i] = a[j];
   }
 };
 
 /*! \brief index element from array along axes */
-template<int ndim>
+template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
@@ -1075,8 +1200,13 @@ struct pick_grad {
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     int j = static_cast<int>(idx[i]);
-    if (j < 0) j = 0;
-    else if (j >= M) j = M-1;
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= M) j = M - 1;
+    } else {
+      j = j % M;
+      j += (j < 0) ? M : 0;
+    }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     igrad[j] += ograd[i];
   }
@@ -1136,15 +1266,28 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
-      if (trailing == 1) {
-        Kernel<pick<2>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      if (param.mode == kWrap) {
+        if (trailing == 1) {
+            Kernel<pick<2, false>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                    M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+            Kernel<pick<3, false>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                    inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                    M, trailing, Shape3(leading, M, trailing),
+                                    Shape3(leading, 1, trailing));
+        }
       } else {
-        Kernel<pick<3>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, trailing, Shape3(leading, M, trailing),
-                                     Shape3(leading, 1, trailing));
+        if (trailing == 1) {
+            Kernel<pick<2, true>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                   M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+            Kernel<pick<3, true>, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
+                                   inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                   M, trailing, Shape3(leading, M, trailing),
+                                   Shape3(leading, 1, trailing));
+        }
       }
     });
   });
@@ -1171,15 +1314,28 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output type
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index type
       if (req[0] != kAddTo) outputs[0].FlatTo1D<xpu, DType>(s) = 0;
-      if (trailing == 1) {
-        Kernel<pick_grad<2>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, 1, Shape2(leading, M), Shape2(leading, 1));
+      if (param.mode == kWrap) {
+        if (trailing == 1) {
+          Kernel<pick_grad<2, false>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+          Kernel<pick_grad<3, false>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, trailing, Shape3(leading, M, trailing),
+                                      Shape3(leading, 1, trailing));
+        }
       } else {
-        Kernel<pick_grad<3>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                                     inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
-                                     M, trailing, Shape3(leading, M, trailing),
-                                     Shape3(leading, 1, trailing));
+          if (trailing == 1) {
+          Kernel<pick_grad<2, true>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, 1, Shape2(leading, M), Shape2(leading, 1));
+        } else {
+          Kernel<pick_grad<3, true>, xpu>::Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                                      inputs[0].dptr<DType>(), inputs[1].dptr<IType>(),
+                                      M, trailing, Shape3(leading, M, trailing),
+                                      Shape3(leading, 1, trailing));
+        }
       }
     });
   });

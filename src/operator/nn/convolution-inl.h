@@ -103,7 +103,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
     .add_enum("NDHWC", mshadow::kNDHWC)
     .set_default(dmlc::optional<int>())
     .describe("Set layout for input, output and weight. Empty for\n    "
-              "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+              "default layout: NCW for 1d, NCHW for 2d and NCDHW for 3d."
+              "NHWC and NDHWC are only supported on GPU.");
   }
   // Adjusts kernel size for effects of dilation in the dimension `dim`.
   index_t DilatedKernelSize(int dim) const {
@@ -124,6 +125,8 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
            this->layout == other.layout;
   }
 };
+
+void ConvolutionParamParser(nnvm::NodeAttrs* attrs);
 
 typedef ParamOpSign<ConvolutionParam> ConvSignature;
 

@@ -26,20 +26,21 @@ from mxnet.test_utils import *
 import unittest
 
 def test_box_nms_op():
-    def test_box_nms_forward(data, expected, thresh=0.5, topk=-1, coord=2, score=1, cid=0,
+    def test_box_nms_forward(data, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1, cid=0,
                          force=False, in_format='corner', out_format='corner'):
-        data = mx.nd.array(data)
-        out = mx.contrib.nd.box_nms(data, overlap_thresh=thresh, topk=topk,
-                                coord_start=coord, score_index=score, id_index=cid,
-                                force_suppress=force, in_format=in_format, out_format=out_format)
-        assert_almost_equal(out.asnumpy(), expected)
+        for dtype in ['float16', 'float32', 'float64']:
+            data = mx.nd.array(data, dtype=dtype)
+            out = mx.contrib.nd.box_nms(data, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
+                                    coord_start=coord, score_index=score, id_index=cid,
+                                    force_suppress=force, in_format=in_format, out_format=out_format)
+            assert_almost_equal(out.asnumpy(), expected.astype(dtype), rtol=1e-3, atol=1e-3)
 
-    def test_box_nms_backward(data, grad, expected, thresh=0.5, topk=-1, coord=2, score=1,
+    def test_box_nms_backward(data, grad, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1,
                           cid=0, force=False, in_format='corner', out_format='corner'):
         in_var = mx.sym.Variable('data')
         arr_data = mx.nd.array(data)
         arr_grad = mx.nd.empty(arr_data.shape)
-        op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, topk=topk,
+        op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
                                 coord_start=coord, score_index=score, id_index=cid,
                                 force_suppress=force, in_format=in_format, out_format=out_format)
         exe = op.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
@@ -158,6 +159,23 @@ def test_box_nms_op():
     thresh = 0.5
     test_box_nms_forward(np.array(boxes), np.array(expected), force=force, thresh=thresh, cid=-1)
 
+    # case8: multi-batch thresh + topk
+    boxes8 = [[[1, 1, 0, 0, 10, 10], [1, 0.4, 0, 0, 10, 10], [1, 0.3, 0, 0, 10, 10]],
+              [[2, 1, 0, 0, 10, 10], [2, 0.4, 0, 0, 10, 10], [2, 0.3, 0, 0, 10, 10]],
+              [[3, 1, 0, 0, 10, 10], [3, 0.4, 0, 0, 10, 10], [3, 0.3, 0, 0, 10, 10]]]
+    expected8 = [[[1, 1, 0, 0, 10, 10], [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]],
+                 [[2, 1, 0, 0, 10, 10], [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]],
+                 [[3, 1, 0, 0, 10, 10], [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]]]
+    grad8 = np.random.rand(3, 3, 6)
+    expected_in_grad8 = np.zeros((3, 3, 6))
+    expected_in_grad8[(0, 1, 2), (0, 0, 0), :] = grad8[(0, 1, 2), (0, 0, 0), :]
+    force = False
+    thresh = 0.5
+    valid = 0.5
+    topk = 2
+    test_box_nms_forward(np.array(boxes8), np.array(expected8), force=force, thresh=thresh, valid=valid, topk=topk)
+    test_box_nms_backward(np.array(boxes8), grad8, expected_in_grad8, force=force, thresh=thresh, valid=valid, topk=topk)
+
 def test_box_iou_op():
     def numpy_box_iou(a, b, fmt='corner'):
         def area(left, top, right, bottom):
@@ -216,13 +234,13 @@ def test_box_iou_op():
 
 def test_bipartite_matching_op():
     def assert_match(inputs, x, y, threshold, is_ascend=False):
-        inputs = mx.nd.array(inputs)
-        x = np.array(x)
-        y = np.array(y)
-        a, b = mx.nd.contrib.bipartite_matching(inputs, threshold=threshold, is_ascend=is_ascend)
-        print(a, b)
-        assert_array_equal(a.asnumpy().astype('int64'), x.astype('int64'))
-        assert_array_equal(b.asnumpy().astype('int64'), y.astype('int64'))
+        for dtype in ['float16', 'float32', 'float64']:
+            inputs = mx.nd.array(inputs, dtype=dtype)
+            x = np.array(x, dtype=dtype)
+            y = np.array(y, dtype=dtype)
+            a, b = mx.nd.contrib.bipartite_matching(inputs, threshold=threshold, is_ascend=is_ascend)
+            assert_array_equal(a.asnumpy().astype('int64'), x.astype('int64'))
+            assert_array_equal(b.asnumpy().astype('int64'), y.astype('int64'))
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 

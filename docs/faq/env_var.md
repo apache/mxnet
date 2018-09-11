@@ -8,13 +8,25 @@ For example, you can set these environment variables in Linux or macOS as follow
 export MXNET_GPU_WORKER_NTHREADS=3
 ```
 
+Or in powershell:
+```
+$env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+```
+
+## Variables controlling the execution environment
+
+* MXNET_LIBRARY_PATH
+    Absolute path indicating where the mxnet dynamic library is to be located, this would be the absolute
+    path to `libmxnet.so` or `libmxnet.dll` depending on the platform. The logic for loading the
+    library is in `python/mxnet/libinfo.py`
+
 ## Set the Number of Threads
 
 * MXNET_GPU_WORKER_NTHREADS
   - Values: Int ```(default=2)```
   - The maximum number of threads to use on each GPU. This parameter is used to parallelize the computation within a single GPU card.
 * MXNET_GPU_COPY_NTHREADS
-  - Values: Int ```(default=1)```
+  - Values: Int ```(default=2)```
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS
   - Values: Int ```(default=1)```
@@ -83,6 +95,32 @@ export MXNET_GPU_WORKER_NTHREADS=3
   - The minimum size of a "big array".
   - When the array size is bigger than this threshold, MXNET_KVSTORE_REDUCTION_NTHREADS threads are used for reduction.
   - This parameter is also used as a load balancer in kvstore. It controls when to partition a single weight to all the servers. If the size of a single weight is less than MXNET_KVSTORE_BIGARRAY_BOUND then, it is sent to a single randomly picked server otherwise it is partitioned to all the servers.
+
+* MXNET_KVSTORE_USETREE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If true, MXNet tries to use tree reduction for Push and Pull communication.
+  - Otherwise, MXNet uses the default Push and Pull implementation.
+  - [Tree reduction technology](http://www.sysml.cc/doc/178.pdf) has been shown to be faster than the standard ```--kv-store device``` Push/Pull and ```--kv-store nccl``` Push/Pull for small batch sizes.
+
+* MXNET_KVSTORE_LOGTREE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If true and MXNET_KVSTORE_USETREE is set to 1, MXNet will log the reduction trees that have been generated.
+
+* MXNET_KVSTORE_TREE_ARRAY_BOUND
+  - Values: Int ```(default=10000000)```
+  - The minimum size of a "big array".
+  - When the array size is bigger than this threshold and MXNET_KVSTORE_USETREE is set to 1, multiple trees are used to load balance the big gradient being communicated in order to better saturate link bandwidth.
+  - Note: This environmental variable only takes effect if Tree KVStore is being used (MXNET_KVSTORE_USETREE=1).
+
+* MXNET_KVSTORE_TREE_BACKTRACK
+  - Values: 0(false) or 1(true) ```(default=0)
+  - If true and MXNET_KVSTORE_USETREE is set to 1, MXNet tries to use backtracking to generate the trees required for tree reduction.
+  - If false and MXNET_KVSTORE_USETREE is set to 1, MXNet tries to use Kernighan-Lin heuristic to generate the trees required for tree reduction.
+
+* MXNET_KVSTORE_TREE_LINK_USAGE_PENALTY
+  - Values: Float ```(default=0.7)```
+  - The multiplicative penalty term to a link being used once.
+
 * MXNET_ENABLE_GPU_P2P
   - Values: 0(false) or 1(true) ```(default=1)```
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
@@ -125,6 +163,15 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
   - The repository url to be used for Gluon datasets and pre-trained models.
+
+* MXNET_HOME
+  - Data directory in the filesystem for storage, for example when downloading gluon models.
+  - Default in *nix is .mxnet APPDATA/mxnet in windows.
+  
+* MXNET_MKLDNN_ENABLED
+  - Values: 0, 1 ```(default=1)```
+  - Flag to enable or disable MKLDNN accelerator. On by default.
+  - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
 
 Settings for Minimum Memory Usage
 ---------------------------------

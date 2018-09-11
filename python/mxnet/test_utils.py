@@ -479,10 +479,8 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-
     if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
         return
-
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b],
@@ -641,7 +639,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -700,7 +698,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -747,7 +745,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -829,7 +827,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -972,7 +970,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1057,7 +1055,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1203,10 +1201,10 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     else:
         raise ValueError('typ can only be "whole" or "forward".')
 
-
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None, equal_nan=False):
+                      raise_on_err=True, ground_truth=None, equal_nan=False,
+                      use_uniform=False, rand_type=np.float64):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1219,6 +1217,14 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Standard deviation of the inner normal distribution. Used in initialization.
     grad_req : str or list of str or dict of str to str
         Gradient requirement.
+    use_unifrom: bool
+        Optional, When flag set to true,
+        random input data generated follows uniform distribution,
+        not normal distribution
+    rand_type: np.dtype
+        casts the randomly generated data to this type
+        Optional, when input data is passed via arg_params,
+        defaults to np.float64 (numpy float default)
 
     Examples
     --------
@@ -1251,13 +1257,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                np.dtype(np.float32): 1e-3,
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
+               np.dtype(np.int32): 0,
+               np.dtype(np.int64): 0}
     elif isinstance(tol, numbers.Number):
         tol = {np.dtype(np.float16): tol,
                np.dtype(np.float32): tol,
                np.dtype(np.float64): tol,
                np.dtype(np.uint8): tol,
-               np.dtype(np.int32): tol}
+               np.dtype(np.int32): tol,
+               np.dtype(np.int64): tol}
 
     assert len(ctx_list) > 1
     if isinstance(sym, Symbol):
@@ -1277,7 +1285,12 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     aux_params = {} if aux_params is None else aux_params
     for n, arr in exe_list[0].arg_dict.items():
         if n not in arg_params:
-            arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
+            if use_uniform:
+                arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
+                                                  size=arr.shape).astype(rand_type)
+            else:
+                arg_params[n] = np.random.normal(size=arr.shape,
+                                                 scale=scale).astype(rand_type)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
@@ -1367,7 +1380,7 @@ def list_gpus():
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
-def download(url, fname=None, dirname=None, overwrite=False):
+def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     """Download an given URL
 
     Parameters
@@ -1385,12 +1398,17 @@ def download(url, fname=None, dirname=None, overwrite=False):
         Default is false, which means skipping download if the local file
         exists. If true, then download the url to overwrite the local file if
         exists.
+    retries : integer, default 5
+        The number of times to attempt the download in case of failure or non 200 return codes
 
     Returns
     -------
     str
         The filename of the downloaded file
     """
+
+    assert retries >= 0, "Number of retries should be at least 0"
+
     if fname is None:
         fname = url.split('/')[-1]
 
@@ -1411,12 +1429,24 @@ def download(url, fname=None, dirname=None, overwrite=False):
         logging.info("%s exists, skipping download", fname)
         return fname
 
-    r = requests.get(url, stream=True)
-    assert r.status_code == 200, "failed to open %s" % url
-    with open(fname, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
+    while retries+1 > 0:
+        # Disable pyling too broad Exception
+        # pylint: disable=W0703
+        try:
+            r = requests.get(url, stream=True)
+            assert r.status_code == 200, "failed to open %s" % url
+            with open(fname, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk: # filter out keep-alive new chunks
+                        f.write(chunk)
+                break
+        except Exception as e:
+            retries -= 1
+            if retries <= 0:
+                raise e
+            else:
+                print("download failed, retrying, {} attempt{} left"
+                      .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
@@ -1627,16 +1657,20 @@ def discard_stderr():
     with discard_stderr():
         ...
     """
+    with open(os.devnull, 'w') as bit_bucket:
+        try:
+            stderr_fileno = sys.stderr.fileno()
+            old_stderr = os.dup(stderr_fileno)
+            try:
+                os.dup2(bit_bucket.fileno(), stderr_fileno)
+                yield
+            finally:
+                os.dup2(old_stderr, stderr_fileno)
+        except AttributeError:
+            # On some systems is stderr not a file descriptor but actually a virtual pipeline
+            # that can not be copied
+            yield
 
-    try:
-        stderr_fileno = sys.stderr.fileno()
-        old_stderr = os.dup(stderr_fileno)
-        bit_bucket = open(os.devnull, 'w')
-        os.dup2(bit_bucket.fileno(), stderr_fileno)
-        yield
-    finally:
-        os.dup2(old_stderr, stderr_fileno)
-        bit_bucket.close()
 
 class DummyIter(mx.io.DataIter):
     """A dummy iterator that always returns the same batch of data

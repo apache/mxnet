@@ -66,13 +66,13 @@ class OpExecutor {
   virtual ~OpExecutor() {}
   /*!
    * \brief Setup the executor for given NDArray member
-   * this can be called multiple times if NDArray changed during reshape.
-   *  It is safe to call it via asynchronize engine lambda
+   *  This can be called multiple times if NDArray changed during reshape.
+   *  It is safe to call it via an asynchronous engine lambda.
    */
   virtual void Setup() = 0;
   /*!
    * \brief run the operator given runtime context on device.
-   *  This function call do not synchronize the stream.
+   *  This function call does not synchronize the stream.
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx, bool is_gpu) = 0;
@@ -82,6 +82,14 @@ class OpExecutor {
   virtual engine::VarHandle var() const {
     return nullptr;
   }
+  /*! \return return operator state */
+  virtual OpStatePtr state() const {
+    return OpStatePtr();
+  }
+
+  // TODO(alexzai): (MXNET-856) Remove instance member after subgraph feature added
+ protected:
+  std::vector<NDArray> in_array_fallback;
 };
 
 /*!
@@ -103,6 +111,14 @@ using ContextVector = std::vector<Context>;
 using DevMaskVector = std::vector<int>;
 
 /*!
+ * \brief create OpExecutor for a node in graph
+ *
+ * \param g input graph
+ * \param p_ret OpExecVector for input and output
+ * \param i the id of the node
+ */
+void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i);
+/*!
  * \brief Attach OpExecutor to the graph attributes.
  *
  * \param g input graph
@@ -115,12 +131,20 @@ Graph AttachOpExecs(Graph g);
  * \brief Attach Resource to the OpExecVector of the graph.
  *
  * \param g input graph need to contain op_exec attribute.
- *
- * \return graph with new attribute "op_exec" of type OpExecVector
- *  The fields on the OpExecVector are not yet been setup.
  */
-Graph AttachOpResources(Graph g);
-
+void AttachOpResources(const Graph& g);
+/*!
+ * \brief Attach Resource to the OpExecVector
+ *
+ * \param g input graph
+ * \param op_execs OpExecutor vector
+ * \param start_nid starting node id
+ * \param end_nid end node id
+ */
+void AttachOpResources(const Graph& g,
+                       const OpExecVector& op_execs,
+                       size_t start_nid,
+                       size_t end_nid);
 /*!
  * \brief Discover chance of inplace addto operators.
  *  i.e. z = plus(z, source_op), and encourage it to become z += source_op.
@@ -177,6 +201,18 @@ Graph InferType(Graph&& graph,
 Graph InferStorageType(Graph&& graph,
                        StorageTypeVector&& storage_type_inputs = StorageTypeVector(),
                        const std::string& storage_type_attr_key = "");
+
+#if MXNET_USE_TENSORRT
+/*!
+ * \brief Replace subgraphs by TRT (forward only)
+ */
+Graph ReplaceSubgraph(Graph&& g,
+                      const std::unordered_set<nnvm::Node*>& set_subgraph,
+                      std::unordered_map<std::string, NDArray>* const params_map);
+
+std::vector<std::unordered_set<nnvm::Node*>> GetTrtCompatibleSubsets(const Graph& g,
+    std::unordered_map<std::string, NDArray>* const params_map);
+#endif
 
 }  // namespace exec
 }  // namespace mxnet

@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, teardown
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
@@ -107,6 +107,23 @@ def test_init():
     check_init(mx.kv.create(), 'a')
 
 @with_seed()
+def test_pull():
+    """test pull"""
+    def check_pull(kv):
+        a = mx.nd.ones(shape)
+        b = mx.nd.zeros(shape)
+        kv.init('1', mx.nd.zeros(shape))
+        kv.push('1', [a,a,a,a])
+        kv.pull('1', b)
+        check_diff_to_scalar(b, 4)
+        kv.init('2', mx.nd.zeros(shape))
+        kv.pull('2', b)
+        check_diff_to_scalar(b, 0)
+
+    check_pull(mx.kv.create('device'))
+    check_pull(mx.kv.create())
+
+@with_seed()
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key, stype):
@@ -160,42 +177,51 @@ def test_aggregator():
 @with_seed()
 def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
+    def check_sparse_aggregator(sparse_pull):
+        stype = 'row_sparse'
+        kv = init_kv_with_str(stype)
 
-    stype = 'row_sparse'
-    kv = init_kv_with_str(stype)
+        # devices
+        num_devs = 4
+        devs = [mx.Context('cpu', i) for i in range(num_devs)]
 
-    # devices
-    num_devs = 4
-    devs = [mx.Context('cpu', i) for i in range(num_devs)]
+        # single
+        vals = [rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]
+        expected_sum = np.zeros(shape)
+        for v in vals:
+            expected_sum += v.asnumpy()
 
-    # single
-    vals = [rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]
-    expected_sum = np.zeros(shape)
-    for v in vals:
-        expected_sum += v.asnumpy()
-
-    # prepare row_ids
-    all_rows = mx.nd.array(np.arange(shape[0]))
-    kv.push('a', vals)
-    kv.row_sparse_pull('a', out=vals, row_ids=[all_rows] * len(vals))
-    result_sum = np.zeros(shape)
-    for v in vals:
-        result_sum += v.asnumpy()
-    assert_almost_equal(result_sum, expected_sum * num_devs)
-
-    # list
-    vals = [[rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]] * len(keys)
-    expected_sum = np.zeros(shape)
-    for v in vals[0]:
-        expected_sum += v.asnumpy()
-
-    kv.push(str_keys, vals)
-    kv.row_sparse_pull(str_keys, out=vals, row_ids=[[all_rows] * num_devs] * len(vals))
-    for vv in vals:
+        # prepare row_ids
+        kv.push('a', vals)
+        if sparse_pull:
+            all_rows = mx.nd.array(np.arange(shape[0]))
+            kv.row_sparse_pull('a', out=vals, row_ids=[all_rows] * len(vals))
+        else:
+            kv.pull('a', out=vals, ignore_sparse=False)
         result_sum = np.zeros(shape)
-        for v in vv:
+        for v in vals:
             result_sum += v.asnumpy()
         assert_almost_equal(result_sum, expected_sum * num_devs)
+
+        # list
+        vals = [[rand_ndarray(shape, stype).copyto(devs[i]) for i in range(num_devs)]] * len(keys)
+        expected_sum = np.zeros(shape)
+        for v in vals[0]:
+            expected_sum += v.asnumpy()
+
+        kv.push(str_keys, vals)
+        if sparse_pull:
+            kv.row_sparse_pull(str_keys, out=vals, row_ids=[[all_rows] * num_devs] * len(vals))
+        else:
+            kv.pull(str_keys, out=vals, ignore_sparse=False)
+        for vv in vals:
+            result_sum = np.zeros(shape)
+            for v in vv:
+                result_sum += v.asnumpy()
+            assert_almost_equal(result_sum, expected_sum * num_devs)
+
+    check_sparse_aggregator(False)
+    check_sparse_aggregator(True)
 
 def updater(key, recv, local):
     """use updater: += with int keys"""

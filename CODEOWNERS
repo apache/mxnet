@@ -12,13 +12,28 @@
 *			@apache/mxnet-committers
 
 # Language bindings
-/R-package/       @thirdwing
-/scala-package/   @yzhliu
-/perl-package/    @sergeykolychev
-/python/          @szha
+/R-package/                @thirdwing
+/scala-package/            @yzhliu @nswamy
+/perl-package/             @sergeykolychev
+/python/                   @szha
+/contrib/clojure-package/  @gigasquid
 
 # C++ base
-/src/kvstore/     @rahul003
+/src/kvstore/     @rahul003 @anirudh2290
+/include/         @anirudh2290
+/src/c_api/       @anirudh2290
+/src/common/      @anirudh2290
+/src/engine/      @anirudh2290
+/src/executor/    @anirudh2290
+/src/imperative/  @anirudh2290
+/src/io/          @anirudh2290
+/src/ndarray/     @anirudh2290
+/src/nnvm/        @anirudh2290
+/src/operator/    @anirudh2290
+/src/profiler/    @anirudh2290
+/src/storage/     @anirudh2290
+/tests/cpp/       @anirudh2290
+/cpp-package/ @nswamy
 
 # CMake
 CMakeLists.txt    @szha @rahul003

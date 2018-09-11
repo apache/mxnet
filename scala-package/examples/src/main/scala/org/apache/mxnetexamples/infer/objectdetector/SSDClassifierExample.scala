@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.infer.objectdetector
 
 import java.io.File
 
-import org.apache.mxnet.{Context, DType, DataDesc, Shape}
+import org.apache.mxnet._
 import org.apache.mxnet.infer._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -29,14 +29,14 @@ import java.nio.file.{Files, Paths}
 
 import scala.collection.mutable.ListBuffer
 
+// scalastyle:off
 /**
   * <p>
   * Example single shot detector (SSD) using the Infer package
   * on a ssd_resnet50_512 model.
-  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/sca\
-  * la-package/examples/src/main/scala/org/apache/mxnetexamples/infer/object\
-  * detector" target="_blank">Instructions to run this example</a>
+  * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector" target="_blank">Instructions to run this example</a>
   */
+// scalastyle:on
 class SSDClassifierExample {
   @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
   private val modelPathPrefix: String = "/model/ssd_resnet50_512"
@@ -54,37 +54,41 @@ object SSDClassifierExample {
   def runObjectDetectionSingle(modelPathPrefix: String, inputImagePath: String,
                                context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
-    val dType = DType.Float32
-    val inputShape = Shape(1, 3, 512, 512)
-    // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
-    val outputShape = Shape(1, 6132, 6)
-    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
-    val img = ImageClassifier.loadImageFromFile(inputImagePath)
-    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
-    val output = objDetector.imageObjectDetect(img, Some(3))
+    NDArrayCollector.auto().withScope {
+      val dType = DType.Float32
+      val inputShape = Shape(1, 3, 512, 512)
+      // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
+      val outputShape = Shape(1, 6132, 6)
+      val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+      val img = ImageClassifier.loadImageFromFile(inputImagePath)
+      val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
+      val output = objDetector.imageObjectDetect(img, Some(3))
 
-    output
+      output
+    }
   }
 
   def runObjectDetectionBatch(modelPathPrefix: String, inputImageDir: String,
                               context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
-    val dType = DType.Float32
-    val inputShape = Shape(1, 3, 512, 512)
-    // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
-    val outputShape = Shape(1, 6132, 6)
-    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
-    val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
-    // Loading batch of images from the directory path
-    val batchFiles = generateBatches(inputImageDir, 20)
-    var outputList = IndexedSeq[IndexedSeq[(String, Array[Float])]]()
+    NDArrayCollector.auto().withScope {
+      val dType = DType.Float32
+      val inputShape = Shape(1, 3, 512, 512)
+      // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
+      val outputShape = Shape(1, 6132, 6)
+      val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+      val objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context)
+      // Loading batch of images from the directory path
+      val batchFiles = generateBatches(inputImageDir, 20)
+      var outputList = IndexedSeq[IndexedSeq[(String, Array[Float])]]()
 
-    for (batchFile <- batchFiles) {
-      val imgList = ImageClassifier.loadInputBatch(batchFile)
-      // Running inference on batch of images loaded in previous step
-      outputList ++= objDetector.imageBatchObjectDetect(imgList, Some(5))
+      for (batchFile <- batchFiles) {
+        val imgList = ImageClassifier.loadInputBatch(batchFile)
+        // Running inference on batch of images loaded in previous step
+        outputList ++= objDetector.imageBatchObjectDetect(imgList, Some(5))
+      }
+      outputList
     }
-    outputList
   }
 
   def generateBatches(inputImageDirPath: String, batchSize: Int = 100): List[List[String]] = {
@@ -100,7 +104,9 @@ object SSDClassifierExample {
         batch = ListBuffer[String]()
       }
     }
-    output += batch.toList
+    if (batch.length > 0) {
+      output += batch.toList
+    }
     output.toList
   }
 

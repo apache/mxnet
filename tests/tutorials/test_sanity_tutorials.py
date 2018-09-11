@@ -24,8 +24,15 @@ import re
 # automated test suite.
 # Rules to be in the whitelist:
 # - not a python tutorial
-whitelist = ['c++/basics.md',
+whitelist = ['basic/index.md',
+             'c++/basics.md',
+             'c++/index.md',
+             'embedded/index.md',
              'embedded/wine_detector.md',
+             'gluon/index.md',
+             'nlp/index.md',
+             'onnx/index.md',
+             'python/index.md',
              'r/CallbackFunction.md',
              'r/charRnnModel.md',
              'r/classifyRealImageWithPretrainedModel.md',
@@ -38,8 +45,12 @@ whitelist = ['c++/basics.md',
              'r/symbol.md',
              'scala/char_lstm.md',
              'scala/mnist.md',
-             'scala/README.md',
-             'scala/mxnet_scala_on_intellij.md']
+             'scala/index.md',
+             'scala/mxnet_scala_on_intellij.md',
+             'sparse/index.md',
+             'speech_recognition/index.md',
+             'unsupervised_learning/index.md',
+             'vision/index.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():
@@ -79,5 +90,3 @@ def test_tutorial_tested():
         friendly_name = '/'.join(tutorial.split('/')[-2:]).split('.')[0]
         if friendly_name not in tested_tutorials and friendly_name+".md" not in whitelist_set:
             assert False, "{} has not been added to the tests/tutorials/test_tutorials.py test_suite".format(friendly_name)
-
-

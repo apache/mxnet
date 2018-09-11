@@ -1,4 +1,4 @@
-AI-MXNetCAPI version 1.2
+AI-MXNetCAPI version 1.32
 =====================
 
 Swig interface to MXNet c api.

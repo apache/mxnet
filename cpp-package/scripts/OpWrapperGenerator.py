@@ -77,6 +77,7 @@ class EnumType:
 
 class Arg:
     typeDict = {'boolean':'bool',\
+        'boolean or None':'dmlc::optional<bool>',\
         'Shape(tuple)':'Shape',\
         'Symbol':'Symbol',\
         'NDArray':'Symbol',\
@@ -94,6 +95,7 @@ class Arg:
         'int or None':'dmlc::optional<int>',\
         'long':'int64_t',\
         'double':'double',\
+        'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&'}
     name = ''

@@ -198,7 +198,7 @@ object ImageClassifier {
 
   /**
     * Loads a batch of images from a folder
-    * @param inputImageDirPath  Path to a folder of images
+    * @param inputImagePaths  Path to a folder of images
     * @return                   List of buffered images
     */
   def loadInputBatch(inputImagePaths: List[String]): Traversable[BufferedImage] = {

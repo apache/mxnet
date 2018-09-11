@@ -30,14 +30,13 @@ import org.apache.mxnet.module.BucketingModule
 import org.apache.mxnet.module.FitParams
 
 /**
- * Bucketing LSTM examples
- * @author Yizhi Liu
- */
+  * Bucketing LSTM examples
+  */
 class LstmBucketing {
   @Option(name = "--data-train", usage = "training set")
-  private val dataTrain: String = "example/rnn/ptb.train.txt"
+  private val dataTrain: String = "example/rnn/sherlockholmes.train.txt"
   @Option(name = "--data-val", usage = "validation set")
-  private val dataVal: String = "example/rnn/ptb.valid.txt"
+  private val dataVal: String = "example/rnn/sherlockholmes.valid.txt"
   @Option(name = "--num-epoch", usage = "the number of training epoch")
   private val numEpoch: Int = 5
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
@@ -61,16 +60,9 @@ object LstmBucketing {
     Math.exp(loss / labelArr.length).toFloat
   }
 
-  def main(args: Array[String]): Unit = {
-    val inst = new LstmBucketing
-    val parser: CmdLineParser = new CmdLineParser(inst)
-    try {
-      parser.parseArgument(args.toList.asJava)
-      val contexts =
-        if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
-        else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
-        else Array(Context.cpu(0))
-
+  def runTraining(trainData : String, validationData : String,
+                  ctx : Array[Context], numEpoch : Int): Unit = {
+    NDArrayCollector.auto().withScope {
       val batchSize = 32
       val buckets = Array(10, 20, 30, 40, 50, 60)
       val numHidden = 200
@@ -78,10 +70,10 @@ object LstmBucketing {
       val numLstmLayer = 2
 
       logger.info("Building vocab ...")
-      val vocab = BucketIo.defaultBuildVocab(inst.dataTrain)
+      val vocab = BucketIo.defaultBuildVocab(trainData)
 
       def BucketSymGen(key: AnyRef):
-        (Symbol, IndexedSeq[String], IndexedSeq[String]) = {
+      (Symbol, IndexedSeq[String], IndexedSeq[String]) = {
         val seqLen = key.asInstanceOf[Int]
         val sym = Lstm.lstmUnroll(numLstmLayer, seqLen, vocab.size,
           numHidden = numHidden, numEmbed = numEmbed, numLabel = vocab.size)
@@ -96,15 +88,15 @@ object LstmBucketing {
       )
       val initStates = initC ++ initH
 
-      val dataTrain = new BucketSentenceIter(inst.dataTrain, vocab,
+      val dataTrain = new BucketSentenceIter(trainData, vocab,
         buckets, batchSize, initStates)
-      val dataVal = new BucketSentenceIter(inst.dataVal, vocab,
+      val dataVal = new BucketSentenceIter(validationData, vocab,
         buckets, batchSize, initStates)
 
       val model = new BucketingModule(
         symGen = BucketSymGen,
         defaultBucketKey = dataTrain.defaultBucketKey,
-        contexts = contexts)
+        contexts = ctx)
 
       val fitParams = new FitParams()
       fitParams.setEvalMetric(
@@ -119,8 +111,22 @@ object LstmBucketing {
       model.fit(
         trainData = dataTrain,
         evalData = Some(dataVal),
-        numEpoch = inst.numEpoch, fitParams)
+        numEpoch = numEpoch, fitParams)
       logger.info("Finished training...")
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val inst = new LstmBucketing
+    val parser: CmdLineParser = new CmdLineParser(inst)
+    try {
+      parser.parseArgument(args.toList.asJava)
+      val contexts =
+        if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
+        else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
+        else Array(Context.cpu(0))
+
+      runTraining(inst.dataTrain, inst.dataVal, contexts, 5)
     } catch {
       case ex: Exception =>
         logger.error(ex.getMessage, ex)

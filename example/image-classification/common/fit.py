@@ -23,13 +23,13 @@ import re
 import math
 import mxnet as mx
 
+def get_epoch_size(args, kv):
+    return math.ceil(int(args.num_examples / kv.num_workers) / args.batch_size)
 
 def _get_lr_scheduler(args, kv):
     if 'lr_factor' not in args or args.lr_factor >= 1:
         return (args.lr, None)
-    epoch_size = args.num_examples / args.batch_size
-    if 'dist' in args.kv_store:
-        epoch_size /= kv.num_workers
+    epoch_size = get_epoch_size(args, kv)
     begin_epoch = args.load_epoch if args.load_epoch else 0
     if 'pow' in args.lr_step_epochs:
         lr = args.lr
@@ -48,8 +48,11 @@ def _get_lr_scheduler(args, kv):
 
     steps = [epoch_size * (x - begin_epoch)
              for x in step_epochs if x - begin_epoch > 0]
-    return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor))
-
+    if steps:
+        return (lr, mx.lr_scheduler.MultiFactorScheduler(step=steps, factor=args.lr_factor,
+                                                         base_lr=args.lr))
+    else:
+        return (lr, None)
 
 def _load_model(args, rank=0):
     if 'load_epoch' not in args or args.load_epoch is None:
@@ -133,6 +136,12 @@ def add_fit_args(parser):
                        help='the epochs to ramp-up lr to scaled large-batch value')
     train.add_argument('--warmup-strategy', type=str, default='linear',
                        help='the ramping-up strategy for large batch sgd')
+    train.add_argument('--profile-worker-suffix', type=str, default='',
+                       help='profile workers actions into this file. During distributed training\
+                             filename saved will be rank1_ followed by this suffix')
+    train.add_argument('--profile-server-suffix', type=str, default='',
+                       help='profile server actions into a file with name like rank1_ followed by this suffix \
+                             during distributed training')
     return train
 
 
@@ -148,24 +157,47 @@ def fit(args, network, data_loader, **kwargs):
     if args.gc_type != 'none':
         kv.set_gradient_compression({'type': args.gc_type,
                                      'threshold': args.gc_threshold})
+    if args.profile_server_suffix:
+        mx.profiler.set_config(filename=args.profile_server_suffix, profile_all=True, profile_process='server')
+        mx.profiler.set_state(state='run', profile_process='server')
+
+    if args.profile_worker_suffix:
+        if kv.num_workers > 1:
+            filename = 'rank' + str(kv.rank) + '_' + args.profile_worker_suffix
+        else:
+            filename = args.profile_worker_suffix
+        mx.profiler.set_config(filename=filename, profile_all=True, profile_process='worker')
+        mx.profiler.set_state(state='run', profile_process='worker')
 
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
     logging.info('start with arguments %s', args)
+    
+    epoch_size = get_epoch_size(args, kv)
 
     # data iterators
     (train, val) = data_loader(args, kv)
+    if 'dist' in args.kv_store and not 'async' in args.kv_store:
+        logging.info('Resizing training data to %d batches per machine', epoch_size)
+        # resize train iter to ensure each machine has same number of batches per epoch
+        # if not, dist_sync can hang at the end with one machine waiting for other machines
+        train = mx.io.ResizeIter(train, epoch_size)
+
     if args.test_io:
         tic = time.time()
         for i, batch in enumerate(train):
-            for j in batch.data:
-                j.wait_to_read()
+            if isinstance(batch, list):
+                for b in batch:
+                    for j in b.data:
+                        j.wait_to_read()
+            else:
+                for j in batch.data:
+                    j.wait_to_read()
             if (i + 1) % args.disp_batches == 0:
                 logging.info('Batch [%d]\tSpeed: %.2f samples/sec', i,
                              args.disp_batches * args.batch_size / (time.time() - tic))
                 tic = time.time()
-
         return
 
     # load model
@@ -201,7 +233,7 @@ def fit(args, network, data_loader, **kwargs):
         'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
-    has_momentum = {'sgd', 'dcasgd', 'nag'}
+    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum', 'lbsgd'}
     if args.optimizer in has_momentum:
         optimizer_params['momentum'] = args.mom
 
@@ -211,11 +243,7 @@ def fit(args, network, data_loader, **kwargs):
     # A limited number of optimizers have a warmup period
     has_warmup = {'lbsgd', 'lbnag'}
     if args.optimizer in has_warmup:
-        if 'dist' in args.kv_store:
-            nworkers = kv.num_workers
-        else:
-            nworkers = 1
-        epoch_size = args.num_examples / args.batch_size / nworkers
+        nworkers = kv.num_workers
         if epoch_size < 1:
             epoch_size = 1
         macrobatch_size = args.macrobatch_size
@@ -303,3 +331,8 @@ def fit(args, network, data_loader, **kwargs):
               epoch_end_callback=checkpoint,
               allow_missing=True,
               monitor=monitor)
+
+    if args.profile_server_suffix:
+        mx.profiler.set_state(state='run', profile_process='server')
+    if args.profile_worker_suffix:
+        mx.profiler.set_state(state='run', profile_process='worker')

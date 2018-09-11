@@ -612,7 +612,7 @@ extern "C" void KVStoreUpdaterCallbackFunc
 
   // find java NDArray constructor
   jclass ndObjClass = env->FindClass("org/apache/mxnet/NDArray");
-  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZ)V");
+  jmethodID ndObjConstructor = env->GetMethodID(ndObjClass, "<init>", "(JZZ)V");
 
   jobject ndRecv = env->NewObject(ndObjClass, ndObjConstructor,
                                   reinterpret_cast<jlong>(recv), true);
@@ -1898,9 +1898,6 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxRtcFree
 
 // store the user defined CustomOpProp object reference with its name
 std::unordered_map<std::string, jobject> globalOpPropMap;
-// store how many time of the delete function was called
-// for a specific CustomOpProp object
-std::unordered_map<std::string, int> globalOpPropCountMap;
 // store the user defined CustomOp object reference with its name
 std::unordered_map<std::string, jobject> globalOpMap;
 // used for thread safty when insert  elements into
@@ -1908,6 +1905,7 @@ std::unordered_map<std::string, jobject> globalOpMap;
 std::mutex mutex_opprop;
 std::mutex mutex_op;
 
+// Registers a custom operator when called
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
   (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
   const char *regName = env->GetStringUTFChars(jregName, 0);
@@ -1915,14 +1913,13 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
 
   std::unique_lock<std::mutex> lock(mutex_opprop);
   globalOpPropMap.insert({ key, env->NewGlobalRef(jopProp) });
-  globalOpPropCountMap.insert({ key, 0 });
   lock.unlock();
 
+  // lambda function to initialize the operator and create all callbacks
   auto creatorLambda = [](const char *opType, const int numKwargs,
     const char  **keys, const char **values, MXCallbackList *ret) {
     int success = true;
 
-    // set CustomOpProp.kwargs
     std::string opPropKey(opType);
     if (globalOpPropMap.find(opPropKey) == globalOpPropMap.end()) {
       LOG(WARNING) << "CustomOpProp: " << opPropKey << " not found";
@@ -1937,7 +1934,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
         LOG(WARNING) << "could not find CustomOpProp method init.";
         success = false;
       } else {
-        // call init
+        // call init and set CustomOpProp.kwargs
         jclass strCls = env->FindClass("Ljava/lang/String;");
         jobjectArray keysArr = env->NewObjectArray(numKwargs, strCls, NULL);
         jobjectArray valuesArr = env->NewObjectArray(numKwargs, strCls, NULL);
@@ -2419,39 +2416,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
 
     // del callback
     auto opPropDel = [](void *state) {
-      std::string key(reinterpret_cast<char *>(state));
-      std::unique_lock<std::mutex> lock(mutex_opprop);
-      int count_prop = globalOpPropCountMap.at(key);
-      if (count_prop < 2) {
-        globalOpPropCountMap[key] = ++count_prop;
-        return 1;
-      }
-      int success = true;
-      if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
-        LOG(WARNING) << "opProp: " << key << " not found";
-        success = false;
-      } else {
-        JNIEnv *env;
-        _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
-        env->DeleteGlobalRef(globalOpPropMap.at(key));
-        _jvm->DetachCurrentThread();
-        for (auto it = globalOpPropMap.begin(); it != globalOpPropMap.end(); ) {
-          if (it->first == key) {
-            it = globalOpPropMap.erase(it);
-          } else {
-            ++it;
-          }
-        }
-        for (auto it = globalOpPropCountMap.begin(); it != globalOpPropCountMap.end(); ) {
-          if (it->first == key) {
-            it = globalOpPropCountMap.erase(it);
-          } else {
-            ++it;
-          }
-        }
-      }
-      lock.unlock();
-      return success;
+      /*
+       * This method seems to be called by the engine to clean up after multiple calls were made
+       * to the creator lambda. The current creator function isn't allocating a new object but is
+       * instead reinitializing the object which was created when register was called. This means
+       * that there doesn't seem to be anything to clean up here (previous efforts were actually
+       * deregistering the operator).
+      */
+      return 1;
     };
 
     // TODO(eric): Memory leak. Missing infertype.
