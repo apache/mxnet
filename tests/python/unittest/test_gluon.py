@@ -581,9 +581,11 @@ def test_deferred_init():
     layer(x)
 
 
-def check_split_data(x, num_slice, batch_axis, **kwargs):
+def check_split_data(x, num_slice, batch_axis, slice_shapes, **kwargs):
     res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
-    assert len(res) == num_slice
+    assert len(res) == len(slice_shapes)
+    for res_slice, slice_shape in zip(res, slice_shapes):
+        assert res_slice.shape == slice_shape
     mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
                                       x.asnumpy())
 
@@ -592,15 +594,16 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
 def test_split_data():
     x = mx.nd.random.uniform(shape=(128, 33, 64))
 
-    check_split_data(x, 8, 0)
-    check_split_data(x, 3, 1)
-    check_split_data(x, 4, 1, even_split=False)
-    check_split_data(x, 15, 1, even_split=False)
+    check_split_data(x, 8, 0, ((16, 33, 64),)*8)
+    check_split_data(x, 3, 1, ((128, 11, 64),)*3)
+    check_split_data(x, 4, 1, ((128, 9, 64),) + ((128, 8, 64),)*3, even_split=False)
+    check_split_data(x, 15, 1, ((128, 3, 64),)*3 + ((128, 2, 64),)*12, even_split=False)
+    check_split_data(x, 70, 2, ((128, 33, 1),)*64, even_split=False)
     try:
-        check_split_data(x, 4, 1)
+        check_split_data(x, 4, 1, ((128, 9, 64),) + ((128, 8, 64),)*3)
     except ValueError:
         return
-    assert False, "Should have failed"
+    assert False, "Should have failed because even_split=True"
 
 
 @with_seed()

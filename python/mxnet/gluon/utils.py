@@ -58,13 +58,10 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
     Returns
     -------
     list of NDArray
-        Return value is a list even if `num_slice` is 1.
+        Return value is a list even if `num_slice` is 1. When `even_split`
+        is `False` this may be shorter than `num_slice`.
     """
     size = data.shape[batch_axis]
-    if size < num_slice:
-        raise ValueError(
-            "Too many slices for data with shape %s. Arguments are " \
-            "num_slice=%d and batch_axis=%d."%(str(data.shape), num_slice, batch_axis))
     if even_split and size % num_slice != 0:
         raise ValueError(
             "data with shape %s cannot be evenly split into %d slices along axis %d. " \
@@ -73,16 +70,19 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
                 str(data.shape), num_slice, batch_axis, num_slice))
 
     step = size // num_slice
-    if batch_axis == 0:
-        slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
-                  for i in range(num_slice)]
-    elif even_split:
+    rem = size % num_slice
+
+    if rem == 0:
         slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
     else:
-        slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                  if i < num_slice - 1 else
-                  ndarray.slice_axis(data, batch_axis, i*step, size)
-                  for i in range(num_slice)]
+        # First `rem` slices will have an extra sample
+        slices = [ndarray.slice_axis(data, batch_axis, i*(step+1), (i+1)*(step+1))
+                  for i in range(rem)]
+        offset = rem*(step+1)
+        # Create the remaining slices
+        if step > 0:
+            slices += [ndarray.slice_axis(data, batch_axis, offset+i*step, offset+(i+1)*step)
+                       for i in range(num_slice-rem)]
     return slices
 
 
