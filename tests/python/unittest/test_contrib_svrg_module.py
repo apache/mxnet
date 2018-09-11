@@ -20,7 +20,7 @@ import numpy as np
 from common import with_seed, assertRaises
 from mxnet.contrib.svrg_optimization.svrg_module import SVRGModule
 from mxnet.test_utils import *
-
+import unittest
 
 def setup():
     train_data = np.random.randint(1, 5, [1000, 2])
@@ -134,6 +134,7 @@ def test_module_save_load():
     assert mod3._symbol.tojson() == mod4._symbol.tojson()
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_svrgmodule_reshape():
     data = mx.sym.Variable("data")
@@ -289,6 +290,7 @@ def test_accumulate_kvstore():
     assert same(svrg_mod._param_dict[0]["fc1_weight"], b[0])
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_fit():
     di, mod = setup()
