@@ -94,6 +94,7 @@ def test_module_bind():
     assert mod._mod_aux.binded == True
 
 
+@unittest.skip("Flaky test https://gitsvrhub.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_module_save_load():
     import tempfile
@@ -162,6 +163,7 @@ def test_svrgmodule_reshape():
     assert mod.get_outputs()[0].shape == dshape
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_update_full_grad():
     def create_network():
@@ -204,6 +206,7 @@ def test_update_full_grad():
     assert same(full_grads_weights, svrg_mod._param_dict[0]['fc1_weight'])
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_svrg_with_sgd():
     def create_module_with_sgd():
@@ -267,6 +270,7 @@ def test_svrg_with_sgd():
     assert svrg_mse < sgd_mse
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
 def test_accumulate_kvstore():
     # Test KVStore behavior when push a list of values
