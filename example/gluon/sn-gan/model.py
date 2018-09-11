@@ -52,10 +52,9 @@ class SNConv2D(Block):
             self.u = self.params.get(
                 'u', init=mx.init.Normal(), shape=(1, num_filter))
 
-    def spectral_norm(self):
+    def _spectral_norm(self):
         """ spectral normalization """
-        w = self.params.get('weight').data(self.ctx)
-        w_mat = w
+        w_mat = self.params.get('weight').data(self.ctx)
         w_mat = nd.reshape(w_mat, [w_mat.shape[0], -1])
 
         _u = self.u.data(self.ctx)
@@ -77,7 +76,7 @@ class SNConv2D(Block):
         # x shape is batch_size x in_channels x height x width
         return nd.Convolution(
             data=x,
-            weight=self.spectral_norm(),
+            weight=self._spectral_norm(),
             kernel=(self.kernel_size, self.kernel_size),
             pad=(self.padding, self.padding),
             stride=(self.strides, self.strides),

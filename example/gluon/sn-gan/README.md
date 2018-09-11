@@ -31,6 +31,10 @@ optional arguments:
   --z-dim Z_DIM         dimension of the latent z vector. default is 100.
 ```
 
+## Result
+
+![SN-GAN](sn-gan_output.png)
+
 ## Learned Spectral Normalization
 
 ![alt text](https://github.com/taki0112/Spectral_Normalization-Tensorflow/blob/master/assests/sn.png)

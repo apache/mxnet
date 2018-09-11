@@ -45,7 +45,7 @@ parser.add_argument('--epochs', type=int, default=100,
 parser.add_argument('--lr', type=float, default=0.0001,
                     help='learning rate. default is 0.0001.')
 parser.add_argument('--lr-beta', type=float, default=0.5,
-                    help='learning rate for the beta in margin based loss. default is 0.5s.')
+                    help='learning rate for the beta in margin based loss. default is 0.5.')
 parser.add_argument('--use-gpu', action='store_true',
                     help='use gpu for training.')
 parser.add_argument('--clip_gr', type=float, default=10.0,
@@ -93,8 +93,8 @@ d_net = get_descriptor(CTX)
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 
 # initialization
-g_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
-d_net.collect_params().initialize(mx.init.Normal(0.02), ctx=CTX)
+g_net.collect_params().initialize(mx.init.Xavier(), ctx=CTX)
+d_net.collect_params().initialize(mx.init.Xavier(), ctx=CTX)
 g_trainer = gluon.Trainer(
     g_net.collect_params(), 'Adam', {'learning_rate': LEARNING_RATE, 'beta1': BETA, 'clip_gradient': CLIP_GRADIENT})
 d_trainer = gluon.Trainer(
