@@ -10,7 +10,8 @@ Example runs and the results:
 python train.py --use-gpu --data-path=data
 ```
 
-`Note that the program would download the CIFAR10 for you`
+* Note that the program would download the CIFAR10 for you
+
 `python train.py --help` gives the following arguments:
 
 ```bash
