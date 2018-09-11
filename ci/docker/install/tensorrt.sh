@@ -30,9 +30,12 @@ apt-get install -y automake libtool
 git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
 cd protobuf
 ./autogen.sh
-./configure
+./configure --disable-shared CXXFLAGS=-fPIC
 make -j$(nproc)
 make install
+rm -rf /usr/local/lib/libprotobuf-lite.so*
+rm -rf /usr/local/lib/libprotobuf.so*
+rm -rf /usr/local/lib/libprotoc.so*
 ldconfig
 popd
 

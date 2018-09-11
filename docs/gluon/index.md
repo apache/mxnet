@@ -1,9 +1,11 @@
-![](https://github.com/dmlc/web-data/blob/master/mxnet/image/image-gluon-logo.png?raw=true)
+# About Gluon
+
+![gluon logo](https://github.com/dmlc/web-data/blob/master/mxnet/image/image-gluon-logo.png?raw=true)
 
 Based on the [the Gluon API specification](https://github.com/gluon-api/gluon-api), the new Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed. Install the latest version of MXNet to get access to Gluon by either following these easy steps or using this simple command:
 
-```python
-    pip install mxnet --pre --user
+```bash
+    pip install mxnet
 ```
 <br/>
 <div class="boxed">
@@ -39,8 +41,8 @@ Use plug-and-play neural network building blocks, including predefined layers, o
 
 ```python
 net = gluon.nn.Sequential()
-# When instantiated, Sequential stores a chain of neural network layers. 
-# Once presented with data, Sequential executes each layer in turn, using 
+# When instantiated, Sequential stores a chain of neural network layers.
+# Once presented with data, Sequential executes each layer in turn, using
 # the output of one layer as the input for the next
 with net.name_scope():
     net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
@@ -81,7 +83,7 @@ def forward(self, F, inputs, tree):
 <br/>
 **__High Performance__**
 
-Easily cache the neural network to achieve high performance by defining your neural network with ``HybridSequential`` and calling the ``hybridize`` method: 
+Easily cache the neural network to achieve high performance by defining your neural network with ``HybridSequential`` and calling the ``hybridize`` method:
 
 ```python
 net = nn.HybridSequential()

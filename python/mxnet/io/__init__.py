@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-fnames <- list.files("R-package/vignettes/", pattern="*.Rmd")
-sapply(fnames, function(x){
-	knitr::purl(paste0("R-package/vignettes/", x))
-	})
+# coding: utf-8
+# pylint: disable=wildcard-import
+""" Data iterators for common data formats and utility functions."""
+from __future__ import absolute_import
+
+from . import io
+from .io import *
+
+from . import utils
+from .utils import *
