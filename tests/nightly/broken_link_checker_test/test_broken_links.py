@@ -32,6 +32,7 @@ def prepare_link_test_result(command_output):
     HTTP_403_REGEX = "(HTTP_403)"
     HTTP_401_REGEX = "(HTTP_401)"
     HTTP_409_REGEX = "(HTTP_409)"
+    HTTP_3XX_REGEX = "(HTTP_3"
     BLC_UNKNOWN_REGEX = "(BLC_UNKNOWN)"
     HTTP_UNDEFINED = "HTTP_undefined"
     FALSE_SCALA_API_DOC_LINK = "java$lang.html"
@@ -55,7 +56,7 @@ def prepare_link_test_result(command_output):
 
         if line.find(BROKEN_PAGE_START_REGEX) != -1:
             # Skip (401, 403, 409, unknown issues)
-            if HTTP_403_REGEX not in line and HTTP_401_REGEX not in line and HTTP_409_REGEX not in line and BLC_UNKNOWN_REGEX not in line and HTTP_UNDEFINED not in line and FALSE_SCALA_API_DOC_LINK not in line and FALSE_SCALA_API_DEPRECATED_LINK not in line and FALSE_PAPER_LINK not in line:
+            if HTTP_403_REGEX not in line and HTTP_401_REGEX not in line and HTTP_409_REGEX not in line and HTTP_3XX_REGEX not in line and BLC_UNKNOWN_REGEX not in line and HTTP_UNDEFINED not in line and FALSE_SCALA_API_DOC_LINK not in line and FALSE_SCALA_API_DEPRECATED_LINK not in line and FALSE_PAPER_LINK not in line:
                 current_page_broken = True
                 current_page_broken_links += line.split(BROKEN_PAGE_START_REGEX)[1] + "\n"
 
