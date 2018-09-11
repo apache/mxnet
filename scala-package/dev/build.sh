@@ -17,8 +17,8 @@
 #
 
 # Install Dependencies
-# sudo bash ci/docker/install/ubuntu_core.sh 
-# sudo bash ci/docker/install/ubuntu_scala.sh
+sudo bash ci/docker/install/ubuntu_core.sh
+sudo bash ci/docker/install/ubuntu_scala.sh
 
 # Setup Environment Variables
 # OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
@@ -27,13 +27,16 @@ export OS_TYPE=linux-x86_64-cpu
 # This script is used to build the base dependencies of MXNet Scala Env
 # git clone --recursive https://github.com/apache/incubator-mxnet
 # cd incubator-mxnet/
-git checkout origin/master -b maven
-apt-get install libssl-dev
+# git checkout origin/master -b maven
+sudo apt-get install -y libssl-dev
 
 # This part is used to build the gpg dependencies:
-apt-get install -y maven gnupg gnupg2 gnupg-agent
-mv /usr/bin/gpg /usr/bin/gpg1
-ln -s /usr/bin/gpg2 /usr/bin/gpg
+sudo apt-get install -y maven gnupg gnupg2 gnupg-agent
+# Mitigation for Ubuntu versions before 18.04
+if ! [gpg --version | grep -q "gpg (GnuPG) 2" ]; then
+    sudo mv /usr/bin/gpg /usr/bin/gpg1
+    sudo ln -s /usr/bin/gpg2 /usr/bin/gpg
+fi
 
 # Run python to configure keys
 python3 $PWD/scala-package/dev/buildkey.py
@@ -46,9 +49,10 @@ export GPG_TTY=$(tty)
 
 # Build the Scala MXNet backend
 bash scala-package/dev/compile-mxnet-backend.sh $OS_TYPE ./
+
 # Scala steps to deploy
 make scalapkg
 make scalaunittest
 make scalaintegrationtest
-make scalarelease-dryrun
+echo "\n\n\n" | make scalarelease-dryrun
 make scaladeploy
