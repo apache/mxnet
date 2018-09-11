@@ -1,15 +1,16 @@
 # Spectral Normalization GAN
 
-This example implements [Spectral Normalization for Generative Adversarial Networks](https://openreview.net/pdf?id=B1QRgziT-) based on [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.
+This example implements [Spectral Normalization for Generative Adversarial Networks](https://arxiv.org/abs/1802.05957) based on [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.
 
 ## Usage
 
 Example runs and the results:
 
 ```python
-python train.py --use-gpu --data-path=data/CIFAR10
+python train.py --use-gpu --data-path=data
 ```
 
+`Note that the program would download the CIFAR10 for you`
 `python train.py --help` gives the following arguments:
 
 ```bash

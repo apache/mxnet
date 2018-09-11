@@ -33,7 +33,7 @@ class SNConv2D(Block):
 
     def __init__(self, num_filter, kernel_size,
                  strides, padding, in_channels,
-                 ctx, iterations=1):
+                 ctx=mx.cpu(), iterations=1):
 
         super(SNConv2D, self).__init__()
 
@@ -91,23 +91,27 @@ def get_generator():
     g_net = gluon.nn.Sequential()
     with g_net.name_scope():
 
-        g_net.add(gluon.nn.Conv2DTranspose(512, 4, 1, 0, use_bias=False))
+        g_net.add(gluon.nn.Conv2DTranspose(
+            channels=512, kernel_size=4, strides=1, padding=0, use_bias=False))
         g_net.add(gluon.nn.BatchNorm())
         g_net.add(gluon.nn.LeakyReLU(0.2))
 
-        g_net.add(gluon.nn.Conv2DTranspose(256, 4, 2, 1, use_bias=False))
+        g_net.add(gluon.nn.Conv2DTranspose(
+            channels=256, kernel_size=4, strides=2, padding=1, use_bias=False))
         g_net.add(gluon.nn.BatchNorm())
         g_net.add(gluon.nn.LeakyReLU(0.2))
 
-        g_net.add(gluon.nn.Conv2DTranspose(128, 4, 2, 1, use_bias=False))
+        g_net.add(gluon.nn.Conv2DTranspose(
+            channels=128, kernel_size=4, strides=2, padding=1, use_bias=False))
         g_net.add(gluon.nn.BatchNorm())
         g_net.add(gluon.nn.LeakyReLU(0.2))
 
-        g_net.add(gluon.nn.Conv2DTranspose(64, 4, 2, 1, use_bias=False))
+        g_net.add(gluon.nn.Conv2DTranspose(
+            channels=64, kernel_size=4, strides=2, padding=1, use_bias=False))
         g_net.add(gluon.nn.BatchNorm())
         g_net.add(gluon.nn.LeakyReLU(0.2))
 
-        g_net.add(gluon.nn.Conv2DTranspose(3, 4, 2, 1, use_bias=False))
+        g_net.add(gluon.nn.Conv2DTranspose(channels=3, kernel_size=4, strides=2, padding=1, use_bias=False))
         g_net.add(gluon.nn.Activation('tanh'))
 
     return g_net
@@ -118,18 +122,18 @@ def get_descriptor(ctx):
     d_net = gluon.nn.Sequential()
     with d_net.name_scope():
 
-        d_net.add(SNConv2D(64, 4, 2, 1, 3, ctx))
+        d_net.add(SNConv2D(num_filter=64, kernel_size=4, strides=2, padding=1, in_channels=3, ctx=ctx))
         d_net.add(gluon.nn.LeakyReLU(0.2))
 
-        d_net.add(SNConv2D(128, 4, 2, 1, 64, ctx))
+        d_net.add(SNConv2D(num_filter=128, kernel_size=4, strides=2, padding=1, in_channels=64, ctx=ctx))
         d_net.add(gluon.nn.LeakyReLU(0.2))
 
-        d_net.add(SNConv2D(256, 4, 2, 1, 128, ctx))
+        d_net.add(SNConv2D(num_filter=256, kernel_size=4, strides=2, padding=1, in_channels=128, ctx=ctx))
         d_net.add(gluon.nn.LeakyReLU(0.2))
 
-        d_net.add(SNConv2D(512, 4, 2, 1, 256, ctx))
+        d_net.add(SNConv2D(num_filter=512, kernel_size=4, strides=2, padding=1, in_channels=256, ctx=ctx))
         d_net.add(gluon.nn.LeakyReLU(0.2))
 
-        d_net.add(SNConv2D(1, 4, 1, 0, 512, ctx))
+        d_net.add(SNConv2D(num_filter=1, kernel_size=4, strides=1, padding=0, in_channels=512, ctx=ctx))
 
     return d_net
