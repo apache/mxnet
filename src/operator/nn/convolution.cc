@@ -212,7 +212,6 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }
-
     const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
     const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
     const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
@@ -226,7 +225,6 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       << "incorrect stride size: " << param_.stride;
     CHECK_GT(param_.dilate.Size(), 0U) \
       << "incorrect dilate size: " << param_.dilate;
-    
     Shape<5> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
