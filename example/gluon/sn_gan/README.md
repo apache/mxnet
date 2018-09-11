@@ -33,7 +33,7 @@ optional arguments:
 
 ## Result
 
-![SN-GAN](sn-gan_output.png)
+![SN-GAN](sn_gan_output.png)
 
 ## Learned Spectral Normalization
 
