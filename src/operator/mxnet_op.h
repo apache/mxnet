@@ -111,6 +111,33 @@ inline int get_num_threads<cpu>(const int N) {
   }
 
 
+/*! \brief operator request type switch */
+#define MXNET_REQ_TYPE_SWITCH(req, ReqType, ...)  \
+  switch (req) {                                    \
+  case kNullOp:                                     \
+    {                                               \
+      const OpReqType ReqType = kNullOp;            \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kWriteInplace:                               \
+  case kWriteTo:                                    \
+    {                                               \
+      const OpReqType ReqType = kWriteTo;           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kAddTo:                                      \
+    {                                               \
+      const OpReqType ReqType = kAddTo;             \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    break;                                          \
+  }
+
+
 #define MXNET_NDIM_SWITCH(NDim, ndim, ...)         \
   if (NDim == 0) {                                 \
   } else if (NDim == 1) {                          \
