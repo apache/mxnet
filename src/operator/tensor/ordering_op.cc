@@ -35,6 +35,7 @@ DMLC_REGISTER_PARAMETER(ArgSortParam);
 
 NNVM_REGISTER_OP(topk)
 .describe(R"code(Returns the top *k* elements in an input array along the given axis.
+ The returned elements will be sorted.
 
 Examples::
 
@@ -128,7 +129,7 @@ Examples::
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<SortParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", SortShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+.set_attr<nnvm::FInferType>("FInferType", SortType)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) { return 1; })
 .set_attr<FCompute>("FCompute<cpu>", Sort<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -178,7 +179,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ArgSortParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ArgSortShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ArgSortType)
 .set_attr<FCompute>("FCompute<cpu>", ArgSort<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest",

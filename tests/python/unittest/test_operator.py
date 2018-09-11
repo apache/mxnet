@@ -267,11 +267,8 @@ def test_rnnrelu_dropout():
     out[0].wait_to_read()
 
 def np_softmax(x, axis=-1, temperature=1.0):
-    # fix for old numpy on Travis not supporting keepdims
-    # x = x - np.max(x, axis=-1, keepdims=True)
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
-    # x /= np.sum(x, axis=-1, keepdims=True)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
 
@@ -1586,7 +1583,6 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12219")
 @with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
@@ -1609,7 +1605,7 @@ def test_convolution_grouping():
         exe1 = y1.simple_bind(default_context(), x=shape)
         exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
         for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-            arr1[:] = np.random.normal(size=arr1.shape)
+            arr1[:] = np.float32(np.random.normal(size=arr1.shape))
             arr2[:] = arr1
         exe1.forward(is_train=True)
         exe1.backward(exe1.outputs[0])
@@ -1617,7 +1613,7 @@ def test_convolution_grouping():
         exe2.backward(exe2.outputs[0])
 
         for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-4)
+            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
@@ -1844,7 +1840,6 @@ def test_binary_op():
         #c = a % b
         c = mx.sym.cast(a, dtype='float64') % mx.sym.cast(b, dtype='float64')
         # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
-        #check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data)
         check_binary_op_forward(c, lambda a, b: np.float32(a) % np.float32(b), gen_binary_data, rtol=0, atol=0)
         check_binary_op_backward(c,
             lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
@@ -1913,10 +1908,16 @@ def test_broadcast_binary_op():
         check_binary_op_forward(c, lambda a, b: a / b, gen_broadcast_data, mx_nd_func=mx.nd.divide)
         check_binary_op_backward(c, lambda g_out, a, b: (g_out / b, - g_out * a / (b * b)), gen_broadcast_data)
 
-    def test_bmod(a, b):
+    def test_bmod(a_, b_):
+        # Python and numpy operate only in double so to avoid numerical errors we have to use
+        # doubles as well. This was a flaky test before when using float32. seed 1688524483, 1768433044
+        a = mx.sym.cast(a_, dtype='float64')
+        b = mx.sym.cast(b_, dtype='float64')
+        # '%' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
         c = mx.sym.broadcast_mod(a, b)
         check_binary_op_forward(c, lambda a, b: a % b, gen_broadcast_data, atol=1, mx_nd_func=mx.nd.modulo)
-        check_binary_op_backward(c, lambda g_out, a, b: (g_out, - g_out * (a // b)), gen_broadcast_data, atol=1)
+        check_binary_op_backward(c,
+                                 lambda g_out, a, b: (g_out, - g_out * (np.float32(a) // np.float32(b))), gen_binary_data)
 
     def test_bmod_int(a, b):
         c = mx.sym.broadcast_mod(mx.sym.cast(a, dtype='int32'), mx.sym.cast(b, dtype='int32'))
@@ -1974,13 +1975,7 @@ def test_broadcast_binary_op():
     test_bminus(a, b)
     test_bmul(a, b)
     test_bdiv(a, b)
-    '''
-    Flaky Test Disabled due to master build failure:
-    http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1248/pipeline
-    Github Issue: https://github.com/apache/incubator-mxnet/issues/11838
-
     test_bmod(a, b)
-    '''
     test_bmod_int(a, b)
     test_bpow(a, b)
     test_bequal(a, b)
@@ -3008,16 +3003,16 @@ def test_roipooling():
                            numeric_eps=1e-4, rtol=1e-1, atol=1E-4)
 
 
-def check_pad_with_shape(shape, xpu, pad_width, mode):
+def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
     # bind with label
-    X = mx.symbol.Variable('X')
+    X = mx.symbol.Variable('X', dtype=dtype)
     Y = mx.symbol.Pad(data=X, mode=mode, pad_width=pad_width)
-    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu()).copyto(xpu)
+    x = mx.random.uniform(-1, 1, shape, ctx=mx.cpu(), dtype=dtype).copyto(xpu)
     # numpy result
     pad_grouped = list(zip(*[iter(list(pad_width))] * 2))
     np_out = np.pad(x.asnumpy(), pad_grouped, mode)
     # mxnet result
-    grad = mx.nd.empty(shape, ctx = xpu)
+    grad = mx.nd.empty(shape, ctx = xpu, dtype=dtype)
     exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
     exec1.forward(is_train=True)
     out = exec1.outputs[0].asnumpy()
@@ -3029,16 +3024,20 @@ def check_pad_with_shape(shape, xpu, pad_width, mode):
 
 @with_seed()
 def test_pad():
+    ctx = default_context()
     shape1 = (2, 3, 3, 5)
     pad1 = (0, 0, 0, 0, 1, 2, 3, 4)
     shape2 = (2, 3, 3, 5, 4)
     pad2 = (0, 0, 0, 0, 1, 2, 3, 4, 3, 1)
-    check_pad_with_shape(shape1, default_context(), pad1, 'constant')
-    check_pad_with_shape(shape1, default_context(), pad1, 'edge')
-    check_pad_with_shape(shape2, default_context(), pad2, 'constant')
-    check_pad_with_shape(shape2, default_context(), pad2, 'edge')
-    check_pad_with_shape(shape1, default_context(), pad1, 'reflect')
-    check_pad_with_shape(shape2, default_context(), pad2, 'reflect')
+    # note: this op doesn't support ints yet. Add tests when supported
+    dtypes = ["float16", "float32", "float64"]
+    for dtype in dtypes:
+        check_pad_with_shape(shape1, ctx, pad1, 'constant', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'edge', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'constant', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'edge', dtype)
+        check_pad_with_shape(shape1, ctx, pad1, 'reflect', dtype)
+        check_pad_with_shape(shape2, ctx, pad2, 'reflect', dtype)
 
 
 def np_instance_norm(data, weight, bias, eps):
@@ -3117,11 +3116,9 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     # compare numpy + mxnet
     assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
     # check gradient
-    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=1e-3)
+    check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=5e-3)
 
 
-# @haojin2: getting rid of the fixed seed as the flakiness could not be reproduced.
-# tracked at: https://github.com/apache/incubator-mxnet/issues/11717
 @with_seed()
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
@@ -3642,10 +3639,18 @@ def test_init():
                 nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
                 assert_almost_equal(np_out, nd_out.asnumpy())
 
+    def test_arange_inferstop():
+        s = mx.sym.arange(start=0, stop=None, infer_range=True)
+        s = mx.sym.elemwise_add(s, mx.sym.zeros(shape=[5]))
+        exe = s.bind(ctx=mx.cpu(), args={})
+        exe.forward()
+        assert_almost_equal(exe.outputs[0].asnumpy(), np.array([0,1,2,3,4]))
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
     test_arange()
+    test_arange_inferstop()
 
 
 @with_seed()
@@ -3689,6 +3694,14 @@ def test_order():
     a_npy = a_npy.reshape(dshape)
     a = mx.sym.Variable('a')
 
+    def get_large_matrix():
+      data = np.array([np.arange(300096).astype(np.float32)])
+      data = np.repeat(data, 100, axis=0)
+      np.apply_along_axis(np.random.shuffle, 1, data)
+      return data
+
+    large_matrix_npy = get_large_matrix()
+
     for axis in [1, 3, None]:
         K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
         for k in K:
@@ -3707,6 +3720,15 @@ def test_order():
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
             check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
             check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
+
+    b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
+    check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
+                            out_grads=[np.random.normal(size=(100, 5))],
+                            expected=[np.zeros((100, 300096))])
+    check_symbolic_forward(b, location={'a': large_matrix_npy},
+                           expected=[gt_topk(dat=large_matrix_npy, axis=1,
+                                             ret_typ="indices", k=5,
+                                             is_ascend=is_ascend)])
 
     b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
     check_symbolic_backward(sym=b, location={'a': a_npy},
@@ -3921,167 +3943,6 @@ def test_grid_generator():
         exe_add.forward(is_train=True)
         exe_add.backward(mx.nd.array(out_grad))
         assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
-
-
-# Seed set because the test is not robust enough to operate on random data
-@with_seed(1234)
-def test_bilinear_sampler():
-    from math import floor
-
-    def between(x, lowerbound, upperbound):
-        return x>=lowerbound and x<=upperbound
-
-    def bilinear_forward_numpy(data, grid):
-
-        batchsize = data.shape[0]
-        input_height = data.shape[2]
-        input_width = data.shape[3]
-        num_channel = data.shape[1]
-
-        output_height = grid.shape[2]
-        output_width = grid.shape[3]
-        out = np.zeros(data.shape[:2] + grid.shape[2:], dtype=np.float32)
-
-        for i in range(batchsize):
-            for yout in range(output_height):
-                for xout in range(output_width):
-
-                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
-                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
-
-                    xInTopLeft = int(floor(xcoord))
-                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-
-                    yInTopLeft = int(floor(ycoord))
-                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
-
-                    # interpolation
-                    for channel in range(num_channel):
-
-                        inTopLeft = data[i,channel,yInTopLeft, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
-                        inTopRight = data[i,channel,yInTopLeft, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1) else 0.0
-                        inBottomLeft = data[i,channel,yInTopLeft+1, xInTopLeft] \
-                            if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
-                        inBottomRight = data[i,channel,yInTopLeft+1, xInTopLeft+1] \
-                            if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1) else 0.0
-
-                        out[i,channel,yout,xout] = xWeightTopLeft * yWeightTopLeft * inTopLeft\
-                                +  (1-xWeightTopLeft)*yWeightTopLeft * inTopRight\
-                                +  xWeightTopLeft * (1-yWeightTopLeft) * inBottomLeft\
-                            +(1-xWeightTopLeft) * (1-yWeightTopLeft) * inBottomRight
-        return out
-
-    def bilinear_backward_numpy(out_grad, data, grid):
-
-        data_grad = np.zeros(data.shape, dtype=np.float32)
-        grid_grad = np.zeros(grid.shape, dtype=np.float32)
-
-        batchsize = data.shape[0]
-        input_height = data.shape[2]
-        input_width = data.shape[3]
-        num_channel = data.shape[1]
-        output_height = grid.shape[2]
-        output_width = grid.shape[3]
-
-        for i in range(batchsize):
-            for yout in range(output_height):
-                for xout in range(output_width):
-
-                    top_left_y_gw = np.float32(0.0);
-                    top_left_x_gw = np.float32(0.0);
-
-                    xcoord = np.float32((grid[i, 0, yout, xout] + 1) * (input_width-1) / 2.0)
-                    ycoord = np.float32((grid[i, 1, yout, xout] + 1) * (input_height-1) / 2.0)
-
-                    xInTopLeft = int(floor(xcoord))
-                    xWeightTopLeft = np.float32(1-(xcoord - xInTopLeft))
-
-                    yInTopLeft = int(floor(ycoord))
-                    yWeightTopLeft = np.float32(1-(ycoord - yInTopLeft))
-
-                    topLeftDotProduct = np.float32(0)
-                    topRightDotProduct = np.float32(0)
-                    bottomLeftDotProduct = np.float32(0)
-                    bottomRightDotProduct = np.float32(0)
-
-                    for channel in range(num_channel):
-                        # left top
-                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                            topLeftDotProduct += data[i,channel,yInTopLeft, xInTopLeft] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i, channel, yInTopLeft, xInTopLeft] += xWeightTopLeft * \
-                                yWeightTopLeft * out_grad[i,channel,yout,xout]
-                        # right top
-                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft,0,input_height-1):
-                            topRightDotProduct += data[i, channel, yInTopLeft,xInTopLeft+1] * \
-                                out_grad[i, channel, yout,xout]
-                            data_grad[i, channel,yInTopLeft, xInTopLeft+1] += (1-xWeightTopLeft) * \
-                                yWeightTopLeft * out_grad[i,channel,yout,xout]
-                        # left bottom
-                        if between(xInTopLeft,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                            bottomLeftDotProduct += data[i, channel,yInTopLeft+1, xInTopLeft] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i,channel,yInTopLeft+1,xInTopLeft]+=xWeightTopLeft * \
-                                (1-yWeightTopLeft)* out_grad[i,channel,yout,xout]
-                        # right bottom
-                        if between(xInTopLeft+1,0,input_width-1) and between(yInTopLeft+1,0,input_height-1):
-                            bottomRightDotProduct += data[i,channel,yInTopLeft+1, xInTopLeft+1] * \
-                                out_grad[i,channel,yout,xout]
-                            data_grad[i,channel,yInTopLeft+1,xInTopLeft+1]+= (1-xWeightTopLeft) * \
-                                (1-yWeightTopLeft)*out_grad[i,channel,yout,xout]
-
-                    yf = np.float32(-xWeightTopLeft * topLeftDotProduct + xWeightTopLeft*bottomLeftDotProduct - \
-                        (1-xWeightTopLeft)* topRightDotProduct + (1-xWeightTopLeft)*bottomRightDotProduct)
-                    xf = np.float32(-yWeightTopLeft * topLeftDotProduct + yWeightTopLeft*topRightDotProduct - \
-                        (1-yWeightTopLeft)*bottomLeftDotProduct + (1-yWeightTopLeft)*bottomRightDotProduct)
-
-                    grid_grad[i,0,yout,xout] = xf * (input_width-1) / 2.0
-                    grid_grad[i,1,yout,xout] = yf * (input_height-1) / 2.0
-
-        return data_grad, grid_grad
-
-    data = mx.sym.Variable('data')
-    grid = mx.sym.Variable('grid')
-    net = mx.sym.BilinearSampler(data=data,grid=grid)
-
-    test_case = [[(1,3,15,16),(1,2,10,10)],
-                 [(1,6,7,16),(1,2,10,4)],
-                 [(1,7,3,16),(1,2,8,11)],
-                 [(1,9,50,50),(1,2,50,50)]]
-
-    for ctx in [default_context()]:
-        for item in test_case:
-            data_shape, grid_shape = item
-            exe = net.simple_bind(data=data_shape,grid=grid_shape,ctx=ctx,grad_req='write')
-            # check forward
-            exe.arg_dict['data'][:] = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
-            exe.arg_dict['grid'][:] = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
-            exe.forward(is_train=True)
-            out = bilinear_forward_numpy(exe.arg_dict['data'].asnumpy(), exe.arg_dict['grid'].asnumpy())
-            assert_almost_equal(exe.outputs[0].asnumpy(), out, rtol=1e-3,atol=1e-5)
-
-            # check backward
-            out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
-            exe.backward(mx.nd.array(out_grad))
-            data_grad, grid_grad = bilinear_backward_numpy(out_grad,exe.arg_dict['data'].asnumpy(),
-                                                       exe.arg_dict['grid'].asnumpy())
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), data_grad, rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), grid_grad, rtol=1e-3, atol=1e-5)
-
-            # check kAddTo
-            exe_addto = net.simple_bind(data=data_shape, grid=grid_shape, ctx=ctx, grad_req='add')
-            data_initial_grid = np.random.normal(size=exe_addto.grad_dict['data'].shape).astype(np.float32)
-            grid_initial_grid = np.random.normal(size=exe_addto.grad_dict['grid'].shape).astype(np.float32)
-            exe_addto.arg_dict['data'][:] = exe.arg_dict['data'][:]
-            exe_addto.arg_dict['grid'][:] = exe.arg_dict['grid'][:]
-            exe_addto.grad_dict['data'][:] = data_initial_grid
-            exe_addto.grad_dict['grid'][:] = grid_initial_grid
-            exe_addto.forward(is_train=True)
-            exe_addto.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe_addto.grad_dict['data'].asnumpy(), data_grad + data_initial_grid, rtol=1e-3,atol=1e-5)
-            assert_almost_equal(exe_addto.grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grid, rtol=1e-3,atol=1e-5)
 
 
 @with_seed()
@@ -4473,6 +4334,28 @@ def test_where():
             condition_np, x_np, y_np = get_forward_inputs_condition_vector(shape)
         check_numeric_gradient(where_sym, [condition_np, x_np, y_np], grad_nodes=['x', 'y'])
 
+    def test_invalid_shape():
+        condition = mx.sym.Variable('condition')
+        x = mx.sym.Variable('x')
+        y = mx.sym.Variable('y')
+        where_sym = mx.sym.where(condition, x, y)
+	
+        assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
+                                                y=mx.nd.array([[8,9],[10,11],[12,13]]),
+                                                condition=mx.nd.array([1,0])), MXNetError)
+
+        assert_exception(lambda: mx.nd.where(x=mx.nd.array([[2,3],[4,5],[6,7]]),
+                                             y=mx.nd.array([[8,9],[10,11],[12,13]]),
+                                             condition=mx.nd.array([1,0])), MXNetError)
+
+    def test_1d_cond():
+        cond = mx.nd.array([1, 0, 1])
+        x = mx.nd.array([[2, 3], [4, 5], [6, 7]])
+        y = mx.nd.array([[7, 8], [9, 10], [10, 11]])
+        expect_out = np.array([[2, 3], [9, 10], [6, 7]])
+        out = mx.nd.where(cond, x, y).asnumpy()
+        assert(expect_out.all() == out.all())
+
     test_where_helper((5, 9), True)
     test_where_helper((5, 9), False)
     test_where_helper((5, 7, 9), True)
@@ -4483,18 +4366,45 @@ def test_where():
     test_where_numeric_gradient((5, 9), False)
     test_where_numeric_gradient((5, 7, 9), True)
     test_where_numeric_gradient((5, 7, 9), False)
+    test_invalid_shape()
+    test_1d_cond()
+
+
+@with_seed()
+def test_softmin():
+    for ndim in range(1, 5):
+        for dtype in [np.float16, np.float32, np.float64]:
+            rtol, atol = (1e-2, 5e-3) if dtype is np.float16 else (1e-3, 1e-3)
+            shape = np.random.randint(1, 5, size=ndim)
+            axis = np.random.randint(-ndim, ndim)
+            data = np.random.uniform(-2, 2, size=shape).astype(dtype)
+            data = data / 10 if dtype is np.float16 else data
+            sym = mx.sym.softmin(axis=axis)
+            expected_fwd = np_softmax(-data, axis=axis)
+            expected_bwd = np.zeros(shape)
+            check_symbolic_forward(sym, [data], [expected_fwd], atol=atol, dtype=dtype)
+            for req in ['null', 'add', 'write']:
+                check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                        rtol=rtol, atol=atol, grad_req=req, dtype=dtype)
+            if dtype is not np.float16:
+                check_numeric_gradient(sym, [data], rtol=rtol, atol=atol, dtype=dtype)
 
 
 @with_seed()
 def test_new_softmax():
     for ndim in range(1, 5):
-        for _ in range(5):
-            shape = np.random.randint(1, 5, size=ndim)
-            axis = np.random.randint(-ndim, ndim)
-            data = np.random.uniform(-2, 2, size=shape)
-            sym = mx.sym.softmax(axis=axis)
-            check_symbolic_forward(sym, [data], [np_softmax(data, axis=axis)])
-            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+        shape = np.random.randint(1, 5, size=ndim)
+        axis = np.random.randint(-ndim, ndim)
+        data = np.random.uniform(-2, 2, size=shape)
+        sym = mx.sym.softmax(axis=axis)
+        expected_fwd = np_softmax(data, axis=axis)
+        expected_bwd = np.zeros(shape)
+        check_symbolic_forward(sym, [data], [expected_fwd])
+        for req in ['null', 'add', 'write']:
+            check_symbolic_backward(sym, [data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                    rtol=1e-2, atol=1e-3, grad_req=req)
+        check_numeric_gradient(sym, [data], rtol=1e-2, atol=1e-3)
+
 
 @with_seed()
 def test_softmax_with_temperature():
@@ -5077,6 +4987,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
 
     return output_offset
 
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
 @with_seed()
 def test_deformable_psroipooling():
     sample_per_part = 4
@@ -5687,8 +5598,8 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-# test fails with seed 990952066: 0 output seen with dropout ratio=0. See issue #9816
-@with_seed(1234)
+@with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12329")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -5740,6 +5651,7 @@ def test_dropout():
 
         exe.arg_arrays[0][:] = 1
         exe.forward(is_train=True)
+
         if not math.isnan(max_value):
             assert exe.outputs[0].asnumpy().max() > 0
         else:
@@ -6044,6 +5956,10 @@ def test_unary_math_operators():
                            lambda x: np_smooth_l1(x, 1.),
                            lambda x: np_smooth_l1_grad(x, 1.),
                            -2.0, 2.0],
+        'smooth_l1_sig_default': [lambda x: mx.sym.smooth_l1(x),
+                                  lambda x: np_smooth_l1(x, 1.),
+                                  lambda x: np_smooth_l1_grad(x, 1.),
+                                  -2.0, 2.0],
         'smooth_l1_sig2': [lambda x: mx.sym.smooth_l1(x, scalar=2.),
                            lambda x: np_smooth_l1(x, 2.),
                            lambda x: np_smooth_l1_grad(x, 2.),

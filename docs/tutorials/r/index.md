@@ -4,18 +4,9 @@ These tutorials introduce a few fundamental concepts in deep learning and how to
 
 ```eval_rst
 .. toctree::
-   :maxdepth: 1
+   :glob:
 
-   ndarray
-   symbol
-   fiveMinutesNeuralNetwork
-   classifyRealImageWithPretrainedModel
-   mnistCompetition
-   CatsDogsFinetune
-   CharRnnModel
-   CallbackFunction
-   CustomIterator
-   CustomLossFunction
+   *
 ```
 
 <br>
