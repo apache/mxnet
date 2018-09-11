@@ -1092,6 +1092,10 @@ class SymbolBlock(HybridBlock):
         super(SymbolBlock, self)._clear_cached_op()
         self._cached_graph = tmp
 
+    def cast(self, dtype):
+        self._clear_cached_op()
+        super(SymbolBlock, self).cast(dtype)
+
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
@@ -1126,12 +1130,12 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
 
     # Get Input symbol details. This will be used to infer types of
     # other parameters.
-    input_sym_name = in_params.name
+    input_sym_names = in_params.list_inputs()
     input_sym_arg_type = in_params.infer_type()[0]
 
     # Try to infer types of other parameters.
     if input_sym_arg_type and len(input_sym_arg_type) > 0:
-        params = {input_sym_name:input_sym_arg_type[0]}
+        params = {k:v for k, v in zip(input_sym_names, input_sym_arg_type)}
         arg_types, _, aux_types = out_params.infer_type(**params)
 
     if arg_types is None or len(arg_types) != len(arg_params):
