@@ -17,18 +17,24 @@ This is an implementation of the paper [A Structured Self-Attentive Sentence Emb
 ## Implemented
 
 1. **Attention mechanism proposed in the original paper.**
+
+
    $$
    A = softmax(W_{s2}tanh(W_{s1}H^T))
    $$
 
 2. **Punishment constraints to ensure diversity of attention.**
+
+
    $$
    P = ||(AA^T-I)||_F^2
    $$
 
 3. **Parameter pruning proposed in the appendix of the paper.**
 
-   ![prune weights](./images/prune weights.png)
+
+
+   ![prune weights](./images/prune_weights.png)
 
 4. **Gradient clip and learning rate decay.**
 

@@ -17,18 +17,24 @@
 ## 已实现的具体功能
 
 1. **论文提出的注意力机制**
+
+
    $$
    A = softmax(W_{s2}tanh(W_{s1}H^T))
    $$
 
 2. **惩罚项约束以保证注意力的多样性**
+
+
    $$
    P = ||(AA^T-I)||_F^2
    $$
 
 3. **论文附录中提出的参数修剪**
 
-   ![prune weights](./images/prune weights.png)
+
+
+   ![prune weights](./images/prune_weights.png)
 
    4. **梯度修剪和学习率衰减**
    5. **带类别权重的 SoftmaxCrossEntropy**
