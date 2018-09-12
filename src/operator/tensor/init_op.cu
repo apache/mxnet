@@ -44,7 +44,7 @@ void FillZerosCsrImpl(mshadow::Stream<mshadow::gpu> *s, const NDArray& dst) {
   });
 }
 
-NNVM_REGISTER_OP(_zeros_no_default)
+NNVM_REGISTER_OP(_zeros_without_dtype)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", FillComputeZerosEx<gpu>);
 
