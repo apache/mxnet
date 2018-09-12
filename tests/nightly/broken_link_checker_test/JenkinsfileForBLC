@@ -34,11 +34,7 @@ core_logic: {
           timeout(time: 60, unit: 'MINUTES') {
             try {
               utils.init_git()
-              sh 'aws s3 cp s3://mxnet-ci-prod-slave-data/url_list.txt  ./tests/nightly/broken_link_checker_test/url_list.txt'
               utils.docker_run('ubuntu_blc', 'broken_link_checker', false)
-            } finally {
-              sh "echo Storing the new url_list.txt to S3 bucket" 
-              sh 'aws s3 cp ./tests/nightly/broken_link_checker_test/url_list.txt s3://mxnet-ci-prod-slave-data/url_list.txt'
             }
           }
         }
