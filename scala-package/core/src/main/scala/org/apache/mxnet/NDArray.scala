@@ -567,6 +567,55 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArrayCollector.collect(this)
   }
 
+  /**
+    * Java Flavor creating new NDArray
+    * @param arr
+    * @param shape
+    * @param ctx
+    * @return
+    */
+  def this(arr : Array[Float], shape : Shape, ctx : Context) = {
+    this(NDArray.newAllocHandle(shape, ctx, delayAlloc = false, Base.MX_REAL_TYPE))
+    this.set(arr)
+  }
+
+  override def toString: String = {
+    val arr = this.toArray
+    val shape = this.shape.toArray
+    buildStringHelper(0, arr.length - 1, arr, shape, 0) + "\n"
+  }
+
+  /**
+    * Helper function to create formatted NDArray output
+    * @param start starting position
+    * @param end ending position
+    * @param arr Float array of NDArray
+    * @param shape shape of NDArray
+    * @param dim current Dimension level of NDArray
+    * @return String format of NDArray
+    */
+  private def buildStringHelper(start : Int, end : Int, arr : Array[Float],
+                                shape : Array[Int], dim : Int) : String = {
+    var result = ""
+    if (dim != shape.length - 1) {
+      val length = shape(dim)
+      val fragment = (end - start + 1) / length
+      for (num <- 0 to length - 1) {
+        val output = buildStringHelper(start + fragment * num, start + fragment * (num + 1) - 1,
+          arr, shape, dim + 1)
+        result += s"$output\n"
+      }
+      result = s"${" " * dim}[\n$result${" " * dim}]"
+    } else {
+      var temp = ArrayBuffer[String]()
+      for (i <- start to end) {
+        temp += arr(i).toString
+      }
+      result = s"${" " * dim}[${temp.mkString(",")}]"
+    }
+    result
+  }
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
