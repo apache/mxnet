@@ -130,7 +130,7 @@ It has following flavors:
   by the cmake script (see cmake/DownloadMKLML.cmake).-->
 
 * MKL-DNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
-  shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [mkl-dnn project](https://github.com/intel/mkl-dnn))
+  shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [MKL-DNN project](https://github.com/intel/mkl-dnn))
 
 Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
 however it needs to be downloaded and installed manually before doing `cmake` configuration.
