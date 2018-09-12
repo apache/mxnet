@@ -74,7 +74,7 @@ if __name__ == '__main__':
                     version_tag_mobile.extract()
                 navbar.append(version_str)
                 navbar_mobile.append(version_str_mobile)
-                # The following causes rendering errors in code blocks; refer to #12168
+                # The following causes rendering errors in code blocks; refer to #12168 and #12524
                 outstr = str(content).replace('&lt;', '<').replace('&gt;', '>')
             # Fix link
             if args.current_version == tag_list[0]:
