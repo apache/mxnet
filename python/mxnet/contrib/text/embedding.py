@@ -490,7 +490,7 @@ class GloVe(_TokenEmbedding):
 
     License for pre-trained embeddings:
 
-        https://opendatacommons.org/licenses/pddl/
+        https://fedoraproject.org/wiki/Licensing/PDDL
 
 
     Parameters
