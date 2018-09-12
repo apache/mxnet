@@ -367,6 +367,13 @@ def test_symbol_block():
             break
     assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
 
+    # Cast the symbol block to FP32 and try to forward a FP32 data.
+    # This will verify SymbolBlock.cast() functionality.
+    net_fp64.cast('float32')
+    fp32_data = mx.nd.zeros((1,3,224,224), dtype='float32', ctx=ctx)
+    prediction = net_fp64.forward(fp32_data)
+    assert np.dtype(prediction.dtype) == np.dtype(np.float32)
+
 @with_seed()
 @raises(AssertionError)
 def test_sparse_symbol_block():
