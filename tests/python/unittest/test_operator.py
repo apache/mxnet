@@ -4516,6 +4516,30 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
+    # Test 3: check use integer type as label
+    labels3 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.int32)
+    true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
+    check_ctc_loss(acts2, labels3, true_loss)
+
+@with_seed()
+def test_ctc_loss_with_large_classes():
+    ctx = default_context()
+    num_classes = 6000
+    seq_len = 8
+    batch_size = 2
+    data = np.empty((num_classes, 0))
+    for i in range(seq_len * batch_size) :
+        row = np.roll(np.arange(num_classes, dtype=np.float32), i).reshape(num_classes, 1)
+        data = np.append(data, row/13, axis=1)
+    data = data.reshape(seq_len, batch_size, num_classes)
+    label = np.array([
+        [100, 200, 300, 400, 500, 0, 0, 0],
+        [1000, 2000, 3000, 4000, 0, 5000, 0, 0]], dtype=np.int32)
+    nd_data = mx.nd.array(data)
+    nd_label = mx.nd.array(label)
+    loss = mx.nd.contrib.ctc_loss(data=nd_data, label=nd_label)
+    expected_loss = np.array([688.02826, 145.34462])
+    assert_almost_equal(loss.asnumpy(), expected_loss)
 
 @with_seed()
 def test_ctc_loss_grad():
@@ -5956,6 +5980,10 @@ def test_unary_math_operators():
                            lambda x: np_smooth_l1(x, 1.),
                            lambda x: np_smooth_l1_grad(x, 1.),
                            -2.0, 2.0],
+        'smooth_l1_sig_default': [lambda x: mx.sym.smooth_l1(x),
+                                  lambda x: np_smooth_l1(x, 1.),
+                                  lambda x: np_smooth_l1_grad(x, 1.),
+                                  -2.0, 2.0],
         'smooth_l1_sig2': [lambda x: mx.sym.smooth_l1(x, scalar=2.),
                            lambda x: np_smooth_l1(x, 2.),
                            lambda x: np_smooth_l1_grad(x, 2.),

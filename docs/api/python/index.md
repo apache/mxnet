@@ -52,6 +52,7 @@ Code examples are placed throughout the API documentation and these can be run a
    contrib/contrib.md
    contrib/text.md
    contrib/onnx.md
+   contrib/svrg_optimization.md
 ```
 
 ## Gluon API
@@ -176,4 +177,14 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    symbol_in_pictures/symbol_in_pictures.md
+```
+
+## Tools
+
+```eval_rst
+.. toctree::
+    :maxdepth: 1
+
+    tools/test_utils.md
+    tools/visualization.md
 ```
