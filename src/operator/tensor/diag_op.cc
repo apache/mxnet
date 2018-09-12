@@ -69,6 +69,21 @@ Examples::
                    [1, 0, 0],
                    [0, 2, 0]]
 
+  x = [[[1, 2],
+        [3, 4]],
+
+       [[5, 6],
+        [7, 8]]]
+
+  diag(x) = [[1, 7],
+             [2, 8]]
+
+  diag(x, k=1) = [[3],
+                  [4]]
+
+  diag(x, axis1=-2, axis2=-1) = [[1, 4],
+                                 [5, 8]]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DiagParam>)
 .set_num_inputs(1)
