@@ -281,6 +281,7 @@ def test_pooling():
         check_pooling_training(stype)
 
 
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/12377")
 @with_seed()
 def test_activation():
     def check_activation_training(stype):
@@ -291,7 +292,7 @@ def test_activation():
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             test = mx.symbol.Activation(data, act_type="relu")
-            check_numeric_gradient(test, in_location, numeric_eps=1e-6, rtol=0.16, atol=1e-4)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
 
     stypes = ['row_sparse', 'default']
     for stype in stypes:
