@@ -24,7 +24,7 @@ package AI::MXNet::Gluon::BlockScope;
 use AI::MXNet::Function::Parameters;
 my $_current;
 use Mouse;
-has '_block'      => (is => 'ro', init_arg => 'block');
+has '_block'      => (is => 'ro', init_arg => 'block', weak_ref => 1);
 has [qw/_counter _old_scope
     _name_scope/] => (is => 'rw', init_arg => undef);
 
@@ -700,12 +700,12 @@ method call(@args)
 {
     for my $hook ($self->_forward_pre_hooks->values)
     {
-        $hook->($self, @args);
+        $hook->($self, \@args);
     }
     my @out = $self->forward(@args);
     for my $hook ($self->_forward_hooks->values)
     {
-        $hook->($self, @args);
+        $hook->($self, \@args, \@out);
     }
     return wantarray ? @out : $out[0];
 }
@@ -733,6 +733,119 @@ method register(Str $container)
     *{$container.'_::'.$sub_name} = sub { shift; $self->new(@_) };
 }
 
+=head2 summary
+
+        Print the summary of the model's output and parameters.
+
+        The network must have been initialized, and must not have been hybridized.
+
+        Parameters
+        ----------
+        @inputs : objects
+            Any inputs that the model supports. For any tensor in the input, only
+            AI::MXNet::NDArray is supported.
+=cut
+
+method summary(@inputs)
+{
+    my $summary = Hash::Ordered->new;
+    my %seen;
+    my @hooks;
+    my $stringify;
+    $stringify = sub {
+        my $in = shift;
+        if(ref($in) eq 'ARRAY')
+        {
+            return '('.join(', ', map { $stringify->($_) } @$in).')';
+        }
+         else
+        {
+            return "$in";
+        }
+    };
+    my $_get_shape_str = sub { my ($args) = @_;
+        $args = $args->[0] if(ref $args eq 'ARRAY' and @$args == 1);
+        my ($flat_args, $fmts) = __PACKAGE__->_flatten($args);
+        my $flat_arg_shapes = [map { (blessed($_) and $_->isa('AI::MXNet::NDArray')) ? $_->shape : $_ } @$flat_args];
+        my $shapes = (__PACKAGE__->_regroup($flat_arg_shapes, $fmts))[0];
+        my $shape_str = $stringify->($shapes);
+        $shape_str =~ s/L//g;
+        return $shape_str;
+    };
+
+    my $_register_summary_hook = sub { my ($block) = @_;
+        unless(not $block->isa('AI::MXNet::Gluon:::HybridBlock') or not $block->_active)
+        {
+            confess("\"${\ $block->name }\" must not be hybridized to print summary.");
+        }
+        my $_summary_hook = sub { my ($block, undef, $outputs) = @_;
+            my $class_name = $block->_class_name;
+            my $block_idx = $summary->keys - 1;
+
+            my $m_key = sprintf('%s-%i', $class_name, $block_idx+1);
+            $summary->set($m_key, Hash::Ordered->new);
+            $summary->get($m_key)->set('output_shape', $_get_shape_str->($outputs));
+
+            my $params = 0;
+            $summary->get($m_key)->set('trainable', 0);
+            $summary->get($m_key)->set('shared', 0);
+            for my $p (values %{ $block->_reg_params })
+            {
+                $params += $p->data->size;
+                $summary->get($m_key)->set('trainable', $summary->get($m_key)->get('trainable') + ($p->grad_req eq 'null' ? 0 : $p->data->size));
+                if(exists $seen{$p})
+                {
+                    $summary->get($m_key)->set('shared', $summary->get($m_key)->get('shared') + $p->data->size);
+                }
+                else
+                {
+                    $seen{$p} = 1;
+                }
+            }
+            $summary->get($m_key)->set('n_params', $params);
+        };
+
+        if(not $block->isa('AI::MXNet::Gluon::NN::Sequential') and not $block->isa('AI::MXNet::Gluon::NN::HybridSequential'))
+        {
+            push @hooks, $block->register_forward_hook($_summary_hook);
+        }
+    };
+
+    my $input = Hash::Ordered->new;
+    $summary->set('Input', $input);
+    $input->set('output_shape', $_get_shape_str->(\@inputs));
+    $input->set('n_params', 0);
+    $input->set('trainable', 0);
+    $input->set('shared', 0);
+
+    eval {
+        $self->apply($_register_summary_hook);
+        $self->(@inputs);
+
+        my $line_format = "%20s  %42s %15s\n";
+        print (('-')x80, "\n");
+        printf($line_format, 'Layer (type)', 'Output Shape', 'Param #');
+        print (('=')x80, "\n");
+        my $total_params = 0;
+        my $trainable_params = 0;
+        my $shared_params = 0;
+        for my $layer ($summary->keys)
+        {
+            printf($line_format, $layer, $summary->get($layer)->get('output_shape'), $summary->get($layer)->get('n_params'));
+            $total_params += $summary->get($layer)->get('n_params');
+            $trainable_params += $summary->get($layer)->get('trainable');
+            $shared_params += $summary->get($layer)->get('shared');
+        }
+        print (('=')x80, "\n");
+        print "Total params: $total_params\n";
+        print "Trainable params: $trainable_params\n";
+        print "Non-trainable params: ", $total_params - $trainable_params, "\n";
+        print "Shared params: $shared_params\n";
+        print (('-')x80, "\n");
+    };
+    $_->detach for @hooks;
+}
+
 __PACKAGE__->register('AI::MXNet::Gluon');
 
 package AI::MXNet::Gluon::HybridBlock;
@@ -742,20 +855,20 @@ package AI::MXNet::Gluon::HybridBlock;
 
 =head2 DESCRIPTION
 
-    `HybridBlock` supports forwarding with both Symbol and NDArray.
+    HybridBlock supports forwarding with both Symbol and NDArray.
 
-    Forward computation in `HybridBlock` must be static to work with `Symbol`s,
-    i.e. you cannot call `.asnumpy()`, `.shape`, `.dtype`, etc on tensors.
+    Forward computation in HybridBlock must be static to work with Symbols,
+    i.e. you cannot call aspdl, shape, dtype, etc on tensors.
     Also, you cannot use branching or loop logic that bases on non-constant
     expressions like random numbers or intermediate results, since they change
     the graph structure for each iteration.
 
-    Before activating with `hybridize()`, `HybridBlock` works just like normal
-    `Block`. After activation, `HybridBlock` will create a symbolic graph
+    Before activating with hybridize(), HybridBlock works just like normal
+    Block. After activation, HybridBlock will create a symbolic graph
     representing the forward computation and cache it. On subsequent forwards,
-    the cached graph will be used instead of `hybrid_forward`.
+    the cached graph will be used instead of hybrid_forward.
 
-    Refer `Hybrid tutorial <http://mxnet.io/tutorials/gluon/hybrid.html>`_ to see
+    Refer Hybrid tutorial L<http://mxnet.io/tutorials/gluon/hybrid.html> to see
     the end-to-end usage.
 =cut
 
@@ -1028,7 +1141,7 @@ method _call_cached_op(@args)
 =head2 forward
 
         Defines the forward computation. Arguments can be either
-        `NDArray` or `Symbol`.
+        NDArray or Symbol
 =cut
 
 method forward($x, @args)
@@ -1112,12 +1225,12 @@ method hybrid_forward($F, $x, @args)
         or the C++ interface.
 
         When there are only one input, it will have name 'data'. When there
-        Are more than one inputs, they will be named as `data0`, `data1`, etc.
+        Are more than one inputs, they will be named as 'data0', 'data1', etc.
 
         Parameters
         ----------
         $path : str
-            Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
+            Path to save model. Two files 'path-symbol.json' and 'path-xxxx.params'
             will be created, where xxxx is the 4 digits epoch number.
         :$epoch=0 : Int
             Epoch number of saved model.
@@ -1185,20 +1298,20 @@ extends 'AI::MXNet::Gluon::HybridBlock';
 
     Examples
     --------
-    >>> # To extract the feature from fc1 and fc2 layers of AlexNet:
-    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
-                                                 prefix='model_')
-    >>> inputs = mx.sym.var('data')
-    >>> out = alexnet(inputs)
-    >>> internals = out.get_internals()
-    >>> print(internals.list_outputs())
+    >>> # To extract the feature from fc1 and fc2 layers of AlexNet
+    >>> $alexnet = gluon->model_zoo->vision->alexnet(pretrained=>1, ctx=>mx->cpu(),
+                                                 prefix=>'model_');
+    >>> $inputs = mx->sym->var('data');
+    >>> $out = $alexnet->($inputs);
+    >>> $internals = $out->get_internals()
+    >>> print($internals->list_outputs())
     ['data', ..., 'model_dense0_relu_fwd_output', ..., 'model_dense1_relu_fwd_output', ...]
-    >>> outputs = [internals['model_dense0_relu_fwd_output'],
-                   internals['model_dense1_relu_fwd_output']]
+    >>> $outputs = [$internals->slice('model_dense0_relu_fwd_output'),
+                   $internals->slice('model_dense1_relu_fwd_output')];
     >>> # Create SymbolBlock that shares parameters with alexnet
-    >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    >>> x = mx.nd.random_normal(shape=(16, 3, 224, 224))
-    >>> print(feat_model(x))
+    >>> $feat_model = gluon->SymbolBlock($outputs, $inputs, params=>$alexnet->collect_params());
+    >>> $x = mx->nd->random_normal(shape=>[16, 3, 224, 224]);
+    >>> print($feat_model->($x));
 =cut
 
 has [qw/outputs inputs/] => (is => 'rw', isa => 'AI::MXNet::Symbol|ArrayRef[AI::MXNet::Symbol]');

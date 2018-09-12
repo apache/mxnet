@@ -115,8 +115,23 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
-def clip_global_norm(arrays, max_norm):
+def clip_global_norm(arrays, max_norm, check_isfinite=True):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
+
+    Parameters
+    ----------
+    arrays : list of NDArray
+    max_norm : float
+    check_isfinite : bool, default True
+         If True, check that the total_norm is finite (not nan or inf). This
+         requires a blocking .asscalar() call.
+
+    Returns
+    -------
+    NDArray or float
+      Total norm. Return type is NDArray of shape (1,) if check_isfinite is
+      False. Otherwise a float is returned.
+
     """
     def _norm(array):
         if array.stype == 'default':
@@ -126,15 +141,20 @@ def clip_global_norm(arrays, max_norm):
     assert len(arrays) > 0
     ctx = arrays[0].context
     total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
-    total_norm = ndarray.sqrt(total_norm).asscalar()
-    if not np.isfinite(total_norm):
-        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
-                      stacklevel=2)
+    total_norm = ndarray.sqrt(total_norm)
+    if check_isfinite:
+        if not np.isfinite(total_norm.asscalar()):
+            warnings.warn(
+                UserWarning('nan or inf is detected. '
+                            'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    if scale < 1.0:
-        for arr in arrays:
-            arr *= scale
-    return total_norm
+    scale = ndarray.min(ndarray.concat(scale, ndarray.ones(1, ctx=ctx), dim=0))
+    for arr in arrays:
+        arr *= scale.as_in_context(arr.context)
+    if check_isfinite:
+        return total_norm.asscalar()
+    else:
+        return total_norm
 
 
 def _indent(s_, numSpaces):
@@ -175,7 +195,7 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download an given URL
 
     Parameters
@@ -192,6 +212,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         but doesn't match.
     retries : integer, default 5
         The number of times to attempt the download in case of failure or non 200 return codes
+    verify_ssl : bool, default True
+        Verify SSL certificates.
 
     Returns
     -------
@@ -200,6 +222,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
     """
     if path is None:
         fname = url.split('/')[-1]
+        # Empty filenames are invalid
+        assert fname, 'Can\'t construct file-name from this URL. ' \
+            'Please set the `path` option manually.'
     else:
         path = os.path.expanduser(path)
         if os.path.isdir(path):
@@ -207,6 +232,11 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
         else:
             fname = path
     assert retries >= 0, "Number of retries should be at least 0"
+
+    if not verify_ssl:
+        warnings.warn(
+            'Unverified HTTPS request is being made (verify_ssl=False). '
+            'Adding certificate verification is strongly advised.')
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
@@ -217,7 +247,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5):
             # pylint: disable=W0703
             try:
                 print('Downloading %s from %s...'%(fname, url))
-                r = requests.get(url, stream=True)
+                r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError("Failed downloading url %s"%url)
                 with open(fname, 'wb') as f:

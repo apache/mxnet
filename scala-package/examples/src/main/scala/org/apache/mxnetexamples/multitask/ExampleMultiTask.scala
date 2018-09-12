@@ -17,37 +17,37 @@
 
 package org.apache.mxnetexamples.multitask
 
+import java.io.File
+import java.net.URL
+
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
+
 import scala.collection.JavaConverters._
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.DataIter
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.EvalMetric
-import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
+import org.apache.commons.io.FileUtils
+import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
+import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
+import org.apache.mxnetexamples.Util
 
 import scala.collection.immutable.ListMap
+import scala.sys.process.Process
 
 /**
  * Example of multi-task
- * @author Depeng Liang
  */
 object ExampleMultiTask {
   private val logger = LoggerFactory.getLogger(classOf[ExampleMultiTask])
 
   def buildNetwork(): Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected("fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation("relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected("fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    val act2 = Symbol.Activation("relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected("fc3")()(Map("data" -> act2, "num_hidden" -> 10))
-    val sm1 = Symbol.SoftmaxOutput("softmax1")()(Map("data" -> fc3))
-    val sm2 = Symbol.SoftmaxOutput("softmax2")()(Map("data" -> fc3))
+    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128)
+    val act1 = Symbol.api.Activation(data = Some(fc1), act_type = "relu")
+    val fc2 = Symbol.api.FullyConnected(data = Some(act1), num_hidden = 64)
+    val act2 = Symbol.api.Activation(data = Some(fc2), act_type = "relu")
+    val fc3 = Symbol.api.FullyConnected(data = Some(act2), num_hidden = 10)
+    val sm1 = Symbol.api.SoftmaxOutput(data = Some(fc3))
+    val sm2 = Symbol.api.SoftmaxOutput(data = Some(fc3))
 
     val softmax = Symbol.Group(sm1, sm2)
 
@@ -63,9 +63,9 @@ object ExampleMultiTask {
         val batch = this.dataIter.next()
         val label = batch.label(0)
         new DataBatch(batch.data,
-                                     IndexedSeq(label, label),
-                                     batch.index,
-                                     batch.pad)
+          IndexedSeq(label, label),
+          batch.index,
+          batch.pad, null, null, null)
       } else {
         throw new NoSuchElementException
       }
@@ -100,11 +100,22 @@ object ExampleMultiTask {
     override def getIndex(): IndexedSeq[Long] = this.dataIter.getIndex()
 
     // The name and shape of label provided by this iterator
+    @deprecated
     override def provideLabel: ListMap[String, Shape] = {
       val provideLabel = this.dataIter.provideLabel.toArray
       // Different labels should be used here for actual application
       ListMap("softmax1_label" -> provideLabel(0)._2,
               "softmax2_label" -> provideLabel(0)._2)
+    }
+
+    // The name and shape of label provided by this iterator
+    override def provideLabelDesc: IndexedSeq[DataDesc] = {
+      val head = this.dataIter.provideLabelDesc(0)
+      // Different labels should be used here for actual application
+      IndexedSeq(
+        new DataDesc("softmax1_label", head.shape, head.dtype, head.layout),
+        new DataDesc("softmax2_label", head.shape, head.dtype, head.layout)
+      )
     }
 
     /**
@@ -115,7 +126,10 @@ object ExampleMultiTask {
     override def getPad(): Int = this.dataIter.getPad()
 
     // The name and shape of data provided by this iterator
+    @deprecated
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData
+
+    override def provideDataDesc: IndexedSeq[DataDesc] = this.dataIter.provideDataDesc
 
     override def hasNext: Boolean = this.dataIter.hasNext
   }
@@ -133,7 +147,7 @@ object ExampleMultiTask {
 
       for (i <- labels.indices) {
         val (pred, label) = (preds(i), labels(i))
-        val predLabel = NDArray.argmax_channel(pred)
+        val predLabel = NDArray.api.argmax_channel(data = pred)
         require(label.shape == predLabel.shape,
           s"label ${label.shape} and prediction ${predLabel.shape}" +
           s"should have the same length.")
@@ -191,36 +205,42 @@ object ExampleMultiTask {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    val lesk = new ExampleMultiTask
-    val parser: CmdLineParser = new CmdLineParser(lesk)
-    try {
-      parser.parseArgument(args.toList.asJava)
-      assert(lesk.dataPath != null)
+  def getTrainingData: String = {
+    val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    val modelDirPath = tempDirPath + File.separator + "multitask/"
+    Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
+      tempDirPath + "/multitask/mnist.zip")
 
-      val batchSize = 100
-      val numEpoch = 100
-      val ctx = if (lesk.gpu != -1) Context.gpu(lesk.gpu) else Context.cpu()
+    // TODO: Need to confirm with Windows
+    Process("unzip " + tempDirPath + "/multitask/mnist.zip -d "
+      + tempDirPath + "/multitask/") !
+
+    modelDirPath
+  }
+
+  def train(batchSize: Int, numEpoch: Int, ctx: Context, modelDirPath: String):
+  (Executor, MultiAccuracy) = {
+    NDArrayCollector.auto().withScope {
       val lr = 0.001f
-      val network = buildNetwork()
+      val network = ExampleMultiTask.buildNetwork()
       val (trainIter, valIter) =
-        Data.mnistIterator(lesk.dataPath, batchSize = batchSize, inputShape = Shape(784))
-      val trainMultiIter = new MultiMnistIterator(trainIter)
+        Data.mnistIterator(modelDirPath, batchSize = batchSize, inputShape = Shape(784))
+      val trainMultiIt = new MultiMnistIterator(trainIter)
       val valMultiIter = new MultiMnistIterator(valIter)
 
-      val datasAndLabels = trainMultiIter.provideData ++ trainMultiIter.provideLabel
-      val (argShapes, outputShapes, auxShapes) = network.inferShape(datasAndLabels)
+      val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
 
+      val (argShapes, outputShapes, auxShapes)
+      = network.inferShape(trainMultiIt.provideData("data"))
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
-      val argNames = network.listArguments()
+      val argNames = network.listArguments
       val argDict = argNames.zip(argShapes.map(NDArray.empty(_, ctx))).toMap
-      val auxNames = network.listAuxiliaryStates()
-      val auxDict = auxNames.zip(auxShapes.map(NDArray.empty(_, ctx))).toMap
 
       val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
         !datasAndLabels.contains(name)
-      }.map(x => x._1 -> NDArray.empty(x._2, ctx) ).toMap
+      }.map(x => x._1 -> NDArray.empty(x._2, ctx)).toMap
 
       argDict.foreach { case (name, ndArray) =>
         if (!datasAndLabels.contains(name)) {
@@ -229,9 +249,8 @@ object ExampleMultiTask {
       }
 
       val data = argDict("data")
-      val label1 = argDict("softmax1_label")
-      val label2 = argDict("softmax2_label")
-
+      val label1 = argDict("softmaxoutput0_label")
+      val label2 = argDict("softmaxoutput1_label")
       val maxGradNorm = 0.5f
       val executor = network.bind(ctx, argDict, gradDict)
 
@@ -241,8 +260,8 @@ object ExampleMultiTask {
         (idx, name, grad, opt.createState(idx, argDict(name)))
       }
 
-      val evalMetric = new MultiAccuracy(num = 2, name = "multi_accuracy")
-      val batchEndCallback = new Speedometer(batchSize, 50)
+      val evalMetric = new ExampleMultiTask.MultiAccuracy(num = 2, name = "multi_accuracy")
+      val batchEndCallback = new ExampleMultiTask.Speedometer(batchSize, 50)
 
       for (epoch <- 0 until numEpoch) {
         // Training phase
@@ -251,12 +270,12 @@ object ExampleMultiTask {
         var nBatch = 0
         var epochDone = false
         // Iterate over training data.
-        trainMultiIter.reset()
+        trainMultiIt.reset()
 
         while (!epochDone) {
           var doReset = true
-          while (doReset && trainMultiIter.hasNext) {
-            val dataBatch = trainMultiIter.next()
+          while (doReset && trainMultiIt.hasNext) {
+            val dataBatch = trainMultiIt.next()
 
             data.set(dataBatch.data(0))
             label1.set(dataBatch.label(0))
@@ -266,7 +285,7 @@ object ExampleMultiTask {
             executor.backward()
 
             val norm = Math.sqrt(paramsGrads.map { case (idx, name, grad, optimState) =>
-              val l2Norm = NDArray.norm(grad / batchSize).toScalar
+              val l2Norm = NDArray.api.norm(data = (grad / batchSize)).toScalar
               l2Norm * l2Norm
             }.sum).toFloat
 
@@ -284,7 +303,7 @@ object ExampleMultiTask {
             batchEndCallback.invoke(epoch, nBatch, evalMetric)
           }
           if (doReset) {
-            trainMultiIter.reset()
+            trainMultiIt.reset()
           }
           // this epoch is done
           epochDone = true
@@ -316,6 +335,24 @@ object ExampleMultiTask {
           logger.info(s"Epoch[$epoch] Validation-$name=$value")
         }
       }
+
+      (executor, evalMetric)
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    val lesk = new ExampleMultiTask
+    val parser: CmdLineParser = new CmdLineParser(lesk)
+    try {
+      parser.parseArgument(args.toList.asJava)
+
+      val batchSize = 100
+      val numEpoch = 5
+      val ctx = if (lesk.gpu != -1) Context.gpu(lesk.gpu) else Context.cpu()
+
+      val modelPath = if (lesk.dataPath == null) lesk.dataPath else getTrainingData
+
+      val (executor, evalMetric) = train(batchSize, numEpoch, ctx, modelPath)
       executor.dispose()
 
     } catch {

@@ -22,6 +22,7 @@
 import time
 import logging
 import warnings
+import numpy as np
 
 from .. import metric
 from .. import ndarray
@@ -29,7 +30,7 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
-from ..io import DataDesc
+from ..io import DataDesc, DataIter, DataBatch
 from ..base import _as_list
 
 
@@ -333,7 +334,7 @@ class BaseModule(object):
 
         Parameters
         ----------
-        eval_data : DataIter
+        eval_data : DataIter or NDArray or numpy array
             Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
@@ -362,6 +363,15 @@ class BaseModule(object):
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
+
+        if isinstance(eval_data, (ndarray.NDArray, np.ndarray)):
+            if isinstance(eval_data, np.ndarray):
+                eval_data = ndarray.array(eval_data)
+            self.forward(DataBatch([eval_data]))
+            return self.get_outputs()[0]
+
+        if not isinstance(eval_data, DataIter):
+            raise ValueError('eval_data must be of type NDArray or DataIter')
 
         if reset:
             eval_data.reset()
@@ -514,12 +524,6 @@ class BaseModule(object):
                     monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
-                try:
-                    # pre fetch next batch
-                    next_data_batch = next(data_iter)
-                    self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
-                except StopIteration:
-                    end_of_batch = True
 
                 if isinstance(data_batch, list):
                     self.update_metric(eval_metric,
@@ -527,6 +531,13 @@ class BaseModule(object):
                                        pre_sliced=True)
                 else:
                     self.update_metric(eval_metric, data_batch.label)
+
+                try:
+                    # pre fetch next batch
+                    next_data_batch = next(data_iter)
+                    self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
+                except StopIteration:
+                    end_of_batch = True
 
                 if monitor is not None:
                     monitor.toc_print()

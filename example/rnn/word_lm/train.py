@@ -20,7 +20,7 @@ import mxnet as mx, math
 import argparse, math
 import logging
 from data import Corpus, CorpusIter
-from model import *
+from model import rnn, softmax_ce_loss
 from module import *
 from mxnet.model import BatchEndParam
 

@@ -31,6 +31,7 @@ DMLC_REGISTER_PARAMETER(NormParam);
 DMLC_REGISTER_PARAMETER(ReduceAxisParam);
 DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
+DMLC_REGISTER_PARAMETER(BroadcastLikeParam);
 
 inline std::string get_reduce_axes_description(const std::string& op_name, int line) {
   std::string doc = R"code(Computes the __op__ of array elements over given axes.
@@ -273,6 +274,49 @@ NNVM_REGISTER_OP(_broadcast_backward)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   });
+
+NNVM_REGISTER_OP(broadcast_like)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+      return std::vector<std::string>{"lhs", "rhs"};
+    })
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds) {
+      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+      auto lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+                                 {{"keepdims", "true"}});
+      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n);
+      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      return lhs;
+    })
+.add_argument("lhs", "NDArray-or-Symbol", "First input.")
+.add_argument("rhs", "NDArray-or-Symbol", "Second input.")
+.describe(R"code(Broadcasts lhs to have the same shape as rhs.
+
+Broadcasting is a mechanism that allows NDArrays to perform arithmetic operations
+with arrays of different shapes efficiently without creating multiple copies of arrays.
+Also see, `Broadcasting <https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`_ for more explanation.
+
+Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
+`(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
+
+For example::
+
+   broadcast_like([[1,2,3]], [[5,6,7],[7,8,9]]) = [[ 1.,  2.,  3.],
+                                                   [ 1.,  2.,  3.]])
+
+   broadcast_like([9], [1,2,3,4,5], lhs_axes=(0,), rhs_axes=(-1,)) = [9,9,9,9,9]
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<BroadcastLikeParam>)
+.add_arguments(BroadcastLikeParam::__FIELDS__())
+.set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 NNVM_REGISTER_OP(norm)
 MXNET_ADD_SPARSE_OP_ALIAS(norm)

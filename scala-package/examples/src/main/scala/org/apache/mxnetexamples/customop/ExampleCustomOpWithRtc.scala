@@ -17,31 +17,19 @@
 
 package org.apache.mxnetexamples.customop
 
+import org.apache.mxnet.Callback.Speedometer
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet.{Accuracy, Context, CustomOp, CustomOpProp, NDArray, Operator, Rtc, Shape, Symbol, Xavier}
+import org.apache.mxnet.optimizer.RMSProp
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
+
 import scala.collection.JavaConverters._
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.DType.DType
-import org.apache.mxnet.DataIter
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.EvalMetric
-import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
-import org.apache.mxnet.optimizer.RMSProp
-import org.apache.mxnet.CustomOp
-import org.apache.mxnet.CustomOpProp
-import org.apache.mxnet.Operator
-import org.apache.mxnet.optimizer.SGD
-import org.apache.mxnet.Accuracy
-import org.apache.mxnet.Callback.Speedometer
-import org.apache.mxnet.Rtc
+import scala.collection.mutable
 
 /**
- * Example of CustomOp with Rtc
- * @author Depeng Liang
- */
+  * Example of CustomOp with Rtc
+  */
 object ExampleCustomOpWithRtc {
   private val logger = LoggerFactory.getLogger(classOf[ExampleCustomOpWithRtc])
 
@@ -79,8 +67,8 @@ object ExampleCustomOpWithRtc {
     }
 
     override def backward(req: Array[String], outGrad: Array[NDArray],
-      inData: Array[NDArray], outData: Array[NDArray],
-      inGrad: Array[NDArray], aux: Array[NDArray]): Unit = {
+                          inData: Array[NDArray], outData: Array[NDArray],
+                          inGrad: Array[NDArray], aux: Array[NDArray]): Unit = {
       val l = inData(1)
       val y = outData(0)
       val dx = inGrad(0)
@@ -108,7 +96,7 @@ object ExampleCustomOpWithRtc {
     override def listOutputs(): Array[String] = Array("output")
 
     override def inferShape(inShape: Array[Shape]):
-      (Array[Shape], Array[Shape], Array[Shape]) = {
+    (Array[Shape], Array[Shape], Array[Shape]) = {
       val dataShape = inShape(0)
       val labelShape = Shape(dataShape(0))
       val outputShape = dataShape
@@ -116,15 +104,110 @@ object ExampleCustomOpWithRtc {
     }
 
     override def inferType(inType: Array[DType]):
-      (Array[DType], Array[DType], Array[DType]) = {
+    (Array[DType], Array[DType], Array[DType]) = {
       (inType, inType.take(1), null)
     }
 
     override def createOperator(ctx: String, inShapes: Array[Array[Int]],
-      inDtypes: Array[Int]): CustomOp = new Softmax(this.kwargs)
+                                inDtypes: Array[Int]): CustomOp = new Softmax(this.kwargs)
   }
 
   Operator.register("softmax", new SoftmaxProp)
+
+  def test(dataPath : String, ctx : Context) : Float = {
+    val data = Symbol.Variable("data")
+    val label = Symbol.Variable("label")
+    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
+    val act2 = Symbol.api.Activation(data = Some(fc2), "relu", name = "relu2")
+    val fc3 = Symbol.api.FullyConnected(Some(act2), None, None, 10, name = "fc3")
+    val kwargs = mutable.Map[String, Any]("label" -> label, "data" -> fc3,
+      "forwardBlockDim" -> new Shape(1, 1, 1))
+    val mlp = Symbol.api.Custom(op_type = "softmax", name = "softmax", kwargs = kwargs)
+
+    val (trainIter, testIter) =
+      Data.mnistIterator(dataPath, batchSize = 100, inputShape = Shape(784))
+    val datasAndLabels = trainIter.provideData ++ trainIter.provideLabel
+    val (argShapes, outputShapes, auxShapes) = mlp.inferShape(datasAndLabels)
+
+    val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
+
+    val argNames = mlp.listArguments()
+    val argDict = argNames.zip(argShapes.map(s => NDArray.empty(s, ctx))).toMap
+    val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
+      !datasAndLabels.contains(name)
+    }.map(x => x._1 -> NDArray.empty(x._2, ctx) ).toMap
+    argDict.foreach { case (name, ndArray) =>
+      if (!datasAndLabels.contains(name)) {
+        initializer.initWeight(name, ndArray)
+      }
+    }
+
+    val executor = mlp.bind(ctx, argDict, gradDict)
+    val lr = 0.001f
+    val opt = new RMSProp(learningRate = lr, wd = 0.00001f)
+    val paramsGrads = gradDict.toList.zipWithIndex.map { case ((name, grad), idx) =>
+      (idx, name, grad, opt.createState(idx, argDict(name)))
+    }
+    val evalMetric = new Accuracy
+    val batchEndCallback = new Speedometer(100, 100)
+    val numEpoch = 10
+    var validationAcc = 0.0f
+
+    for (epoch <- 0 until numEpoch) {
+      val tic = System.currentTimeMillis
+      evalMetric.reset()
+      var nBatch = 0
+      var epochDone = false
+
+      trainIter.reset()
+      while (!epochDone) {
+        var doReset = true
+        while (doReset && trainIter.hasNext) {
+          val dataBatch = trainIter.next()
+          argDict("data").set(dataBatch.data(0))
+          argDict("label").set(dataBatch.label(0))
+          executor.forward(isTrain = true)
+          executor.backward()
+          paramsGrads.foreach { case (idx, name, grad, optimState) =>
+            opt.update(idx, argDict(name), grad, optimState)
+          }
+          evalMetric.update(dataBatch.label, executor.outputs)
+          nBatch += 1
+          batchEndCallback.invoke(epoch, nBatch, evalMetric)
+        }
+        if (doReset) {
+          trainIter.reset()
+        }
+        epochDone = true
+      }
+      val (name, value) = evalMetric.get
+      name.zip(value).foreach { case (n, v) =>
+        logger.info(s"Epoch[$epoch] Train-accuracy=$v")
+      }
+      val toc = System.currentTimeMillis
+      logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
+
+      evalMetric.reset()
+      testIter.reset()
+      while (testIter.hasNext) {
+        val evalBatch = testIter.next()
+        argDict("data").set(evalBatch.data(0))
+        argDict("label").set(evalBatch.label(0))
+        executor.forward(isTrain = true)
+        evalMetric.update(evalBatch.label, executor.outputs)
+        evalBatch.dispose()
+      }
+      val (names, values) = evalMetric.get
+      names.zip(values).foreach { case (n, v) =>
+        logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
+        validationAcc = Math.max(validationAcc, v)
+      }
+    }
+    executor.dispose()
+    validationAcc
+  }
 
   def main(args: Array[String]): Unit = {
     val leop = new ExampleCustomOpWithRtc
@@ -137,95 +220,8 @@ object ExampleCustomOpWithRtc {
 
       val dataName = Array("data")
       val labelName = Array("softmax_label")
+      test(leop.dataPath, ctx)
 
-      val data = Symbol.Variable("data")
-      val label = Symbol.Variable("label")
-      val fc1 = Symbol.FullyConnected("fc1")()(Map("data" -> data, "num_hidden" -> 128))
-      val act1 = Symbol.Activation("relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-      val fc2 = Symbol.FullyConnected("fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-      val act2 = Symbol.Activation("relu2")()(Map("data" -> fc2, "act_type" -> "relu"))
-      val fc3 = Symbol.FullyConnected("fc3")()(Map("data" -> act2, "num_hidden" -> 10))
-      val mlp = Symbol.Custom("softmax")()(Map("data" -> fc3,
-        "label" -> label, "op_type" -> "softmax", "forwardBlockDim" -> "(1,1,1)"))
-
-      val (trainIter, testIter) =
-        Data.mnistIterator(leop.dataPath, batchSize = 100, inputShape = Shape(784))
-      val datasAndLabels = trainIter.provideData ++ trainIter.provideLabel
-      val (argShapes, outputShapes, auxShapes) = mlp.inferShape(datasAndLabels)
-
-      val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
-
-      val argNames = mlp.listArguments()
-      val argDict = argNames.zip(argShapes.map(s => NDArray.empty(s, ctx))).toMap
-      val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
-        !datasAndLabels.contains(name)
-      }.map(x => x._1 -> NDArray.empty(x._2, ctx) ).toMap
-      argDict.foreach { case (name, ndArray) =>
-        if (!datasAndLabels.contains(name)) {
-          initializer.initWeight(name, ndArray)
-        }
-      }
-
-      val executor = mlp.bind(ctx, argDict, gradDict)
-      val lr = 0.001f
-      val opt = new RMSProp(learningRate = lr, wd = 0.00001f)
-      val paramsGrads = gradDict.toList.zipWithIndex.map { case ((name, grad), idx) =>
-        (idx, name, grad, opt.createState(idx, argDict(name)))
-      }
-      val evalMetric = new Accuracy
-      val batchEndCallback = new Speedometer(100, 100)
-      val numEpoch = 20
-
-      for (epoch <- 0 until numEpoch) {
-        val tic = System.currentTimeMillis
-        evalMetric.reset()
-        var nBatch = 0
-        var epochDone = false
-
-        trainIter.reset()
-        while (!epochDone) {
-          var doReset = true
-          while (doReset && trainIter.hasNext) {
-            val dataBatch = trainIter.next()
-            argDict("data").set(dataBatch.data(0))
-            argDict("label").set(dataBatch.label(0))
-            executor.forward(isTrain = true)
-            executor.backward()
-            paramsGrads.foreach { case (idx, name, grad, optimState) =>
-              opt.update(idx, argDict(name), grad, optimState)
-            }
-            evalMetric.update(dataBatch.label, executor.outputs)
-            nBatch += 1
-            batchEndCallback.invoke(epoch, nBatch, evalMetric)
-          }
-          if (doReset) {
-            trainIter.reset()
-          }
-          epochDone = true
-        }
-        val (name, value) = evalMetric.get
-        name.zip(value).foreach { case (n, v) =>
-          logger.info(s"Epoch[$epoch] Train-accuracy=$v")
-        }
-        val toc = System.currentTimeMillis
-        logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
-
-        evalMetric.reset()
-        testIter.reset()
-        while (testIter.hasNext) {
-          val evalBatch = testIter.next()
-          argDict("data").set(evalBatch.data(0))
-          argDict("label").set(evalBatch.label(0))
-          executor.forward(isTrain = true)
-          evalMetric.update(evalBatch.label, executor.outputs)
-          evalBatch.dispose()
-        }
-        val (names, values) = evalMetric.get
-        names.zip(values).foreach { case (n, v) =>
-          logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
-        }
-      }
-      executor.dispose()
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)

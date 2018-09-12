@@ -132,7 +132,7 @@ def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_nam
     size = len(valid_grad_arrays)
     start = 0
     # Use aggregation by default only with NCCL
-    default_batch = 16
+    default_batch = '16'
     batch = int(os.getenv('MXNET_UPDATE_AGGREGATION_SIZE', default_batch))
     while start < size:
         end = start + batch if start + batch < size else size
@@ -378,7 +378,6 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 _multiple_callbacks(eval_end_callback, eval_end_params)
             eval_data.reset()
     # end of all epochs
-    return
 
 
 def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):

@@ -111,7 +111,7 @@ class RecurrentCell(Block):
         Prefix for names of `Block`s
         (this prefix is also used for names of weights if `params` is `None`
         i.e. if `params` are being created and not reused)
-    params : Parameter or None, optional
+    params : Parameter or None, default None
         Container for weight sharing between cells.
         A new Parameter container is created if `params` is `None`.
     """
@@ -252,14 +252,12 @@ class RecurrentCell(Block):
     #pylint: disable=no-self-use
     def _get_activation(self, F, inputs, activation, **kwargs):
         """Get activation function. Convert if is string"""
-        if activation == 'tanh':
-            return F.tanh(inputs, **kwargs)
-        elif activation == 'sigmoid':
-            return F.sigmoid(inputs, **kwargs)
-        elif activation == 'relu':
-            return F.relu(inputs, **kwargs)
-        elif activation == 'softsign':
-            return F.softsign(inputs, **kwargs)
+        func = {'tanh': F.tanh,
+                'relu': F.relu,
+                'sigmoid': F.sigmoid,
+                'softsign': F.softsign}.get(activation)
+        if func:
+            return func(inputs, **kwargs)
         elif isinstance(activation, string_types):
             return F.Activation(inputs, act_type=activation, **kwargs)
         elif isinstance(activation, LeakyReLU):
@@ -331,9 +329,9 @@ class RNNCell(HybridRecurrentCell):
     h2h_weight_initializer : str or Initializer
         Initializer for the recurrent weights matrix, used for the linear
         transformation of the recurrent state.
-    i2h_bias_initializer : str or Initializer
+    i2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
-    h2h_bias_initializer : str or Initializer
+    h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
     prefix : str, default 'rnn_'
         Prefix for name of `Block`s
@@ -437,22 +435,20 @@ class LSTMCell(HybridRecurrentCell):
     h2h_weight_initializer : str or Initializer
         Initializer for the recurrent weights matrix, used for the linear
         transformation of the recurrent state.
-    i2h_bias_initializer : str or Initializer, default 'lstmbias'
-        Initializer for the bias vector. By default, bias for the forget
-        gate is initialized to 1 while all other biases are initialized
-        to zero.
-    h2h_bias_initializer : str or Initializer
+    i2h_bias_initializer : str or Initializer, default 'zeros'
+        Initializer for the bias vector.
+    h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
     prefix : str, default 'lstm_'
         Prefix for name of `Block`s
         (and name of weight if params is `None`).
-    params : Parameter or None
+    params : Parameter or None, default None
         Container for weight sharing between cells.
         Created if `None`.
-    activation : str
+    activation : str, default 'tanh'
         Activation type to use. See nd/symbol Activation
         for supported types.
-    recurrent_activation : str
+    recurrent_activation : str, default 'sigmoid'
         Activation type to use for the recurrent step. See nd/symbol Activation
         for supported types.
 
@@ -562,14 +558,14 @@ class GRUCell(HybridRecurrentCell):
     h2h_weight_initializer : str or Initializer
         Initializer for the recurrent weights matrix, used for the linear
         transformation of the recurrent state.
-    i2h_bias_initializer : str or Initializer
+    i2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
-    h2h_bias_initializer : str or Initializer
+    h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
     prefix : str, default 'gru_'
         prefix for name of `Block`s
         (and name of weight if params is `None`).
-    params : Parameter or None
+    params : Parameter or None, default None
         Container for weight sharing between cells.
         Created if `None`.
 

@@ -23,7 +23,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vector
 
 /**
- * Wrapper for [[org.apache.mxnet.Model]] which used in Spark application
+ * Wrapper for <pre>[[org.apache.mxnet.Model]]</pre> which used in Spark application
  * @author Yizhi Liu
  */
 class MXNetModel private[mxnet](
@@ -38,7 +38,7 @@ class MXNetModel private[mxnet](
   val serializedModel = model.serialize()
 
   /**
-   * Get inner model [[FeedForward]]
+   * Get inner model <pre>[[FeedForward]]</pre>
    * @return the underlying model used to train & predict
    */
   def innerModel: FeedForward = {

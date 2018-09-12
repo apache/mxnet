@@ -53,7 +53,7 @@ class LogLossMetric(mx.metric.EvalMetric):
     >>> labels   = [mx.nd.array([0, 1, 1])]
     >>> log_loss= mx.metric.NegativeLogLikelihood()
     >>> log_loss.update(labels, predicts)
-    >>> print log_loss.get()
+    >>> print(log_loss.get())
     ('log-loss', 0.57159948348999023)
     """
     def __init__(self, eps=1e-12, name='log-loss',
@@ -106,8 +106,10 @@ class AUCMetric(mx.metric.EvalMetric):
         tmp = sorted(tmp, key=itemgetter(1), reverse=True)
         label_sum = label_weight.sum()
         if label_sum == 0 or label_sum == label_weight.size:
-            raise Exception, "AUC with one class is undefined"
-            
+            raise Exception("AUC with one class is undefined")
+
+        label_one_num = np.count_nonzero(label_weight)
+        label_zero_num = len(label_weight) - label_one_num
         total_area = label_zero_num * label_one_num
         height = 0
         width = 0

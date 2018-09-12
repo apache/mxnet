@@ -17,13 +17,13 @@
         <profile>
             <id>unittest</id>
             <properties>
-                <skiptest>false</skiptest>
+                <skipTests>false</skipTests>
             </properties>
         </profile>
         <profile>
             <id>integrationtest</id>
             <properties>
-                <skiptest>true</skiptest>
+                <skipTests>true</skipTests>
             </properties>
         </profile>
         <profile>
@@ -50,6 +50,13 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <excludes>
@@ -67,7 +74,7 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <skipTests>${skiptest}</skipTests>
+                    <skipTests>${skipTests}</skipTests>
                     <argLine>
                         -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
                         -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
@@ -77,22 +84,6 @@
             <plugin>
                 <groupId>org.scalastyle</groupId>
                 <artifactId>scalastyle-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>net.alchim31.maven</groupId>
-                <artifactId>scala-maven-plugin</artifactId>
-                <version>3.3.2</version>
-                <configuration>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>doc-jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

@@ -26,7 +26,7 @@ service docker restart
 usermod -a -G docker $SUDO_USER
 ```
 
-For detailed instructions go to the docker documentation.
+For detailed instructions go to the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
 
 
 ## build.py
@@ -49,8 +49,29 @@ To build for armv7 for example:
 ./build.py -p armv7
 ```
 
-The artifacts are located in the build/ directory in the project root. In case
+
+To work inside a container with a shell you can do:
+
+```
+./build.py -p ubuntu_cpu -i
+```
+
+When building, the artifacts are located in the build/ directory in the project root. In case
 `build.py -a` is invoked, the artifacts are located in build.<platform>/
+
+# Docker container cleanup (Zombie containers)
+Docker has a client-server architecture, so when the program that is executing the docker client
+dies or receieves a signal, the container keeps running as it's started by the docker daemon.
+We implement signal handlers that catch sigterm and sigint and cleanup containers before exit. In
+Jenkins there's not enough time between sigterm and sigkill so we guarantee that containers are not
+left running by propagating environment variables used by the Jenkins process tree killer to
+identify which process to kill when the job is stopped. This has the effect of stopping the
+container given that the process inside the container is terminated.
+
+How to test this is working propperly: On the console you can hit ^C while a container is running
+(not just building) and see that the container is stopped by running `docker ps` on another
+terminal. In Jenkins this has been tested by stopping the job which has containers running and
+verifying that the container stops shortly afterwards by running docker ps.
 
 ## Add a platform
 

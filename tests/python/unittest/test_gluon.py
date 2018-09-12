@@ -20,7 +20,7 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises, teardown
+from common import setup_module, with_seed, assertRaises, teardown, assert_raises_cudnn_disabled
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -735,10 +735,10 @@ def test_sequential_warning():
 @with_seed()
 def test_global_norm_clip():
     stypes = ['default', 'row_sparse']
-    def check_global_norm_clip(stype):
+    def check_global_norm_clip(stype, check_isfinite):
         x1 = mx.nd.ones((3,3)).tostype(stype)
         x2 = mx.nd.ones((4,4)).tostype(stype)
-        norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
+        norm = gluon.utils.clip_global_norm([x1, x2], 1.0, check_isfinite=check_isfinite)
         assert norm == 5.0
         assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
         assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
@@ -746,11 +746,12 @@ def test_global_norm_clip():
         x3 = mx.nd.array([1.0, 2.0, float('nan')]).tostype(stype)
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            gluon.utils.clip_global_norm([x1, x3], 2.0)
-            assert len(w) == 1
+            gluon.utils.clip_global_norm([x1, x3], 2.0, check_isfinite=check_isfinite)
+            assert len(w) == check_isfinite
 
     for stype in stypes:
-        check_global_norm_clip(stype)
+        for check_isfinite in [True, False]:
+            check_global_norm_clip(stype, check_isfinite)
 
 @with_seed()
 def test_embedding():
@@ -1099,6 +1100,30 @@ def test_save_load():
 
     net.load_parameters('test_save_load.params')
 
+    class Network(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Network, self).__init__(**kwargs)
+            with self.name_scope():
+                self.encoders = gluon.nn.Sequential()
+                with self.encoders.name_scope():
+                    for _ in range(2):
+                        lstm = mx.gluon.rnn.LSTM(200, 1, bidirectional=True)
+                        self.encoders.add(lstm)
+
+        def forward(self, x):
+            for i in range(2):
+                x = self.encoders[i](x)
+            return x
+    net = Network()
+    net.initialize(mx.init.Xavier(), ctx=mx.cpu())
+    net.hybridize()
+    x = np.random.rand(32, 10, 10)
+    x = mx.nd.array(x).as_in_context(mx.cpu())
+    net(x)
+    net.save_parameters('tmp.params')
+    net2 = Network()
+    net2.load_parameters('tmp.params')
+
 @with_seed()
 def test_symbol_block_save_load():
     class Net(gluon.HybridBlock):
@@ -1259,6 +1284,7 @@ def test_apply():
 
 
 @with_seed()
+@assert_raises_cudnn_disabled()
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()

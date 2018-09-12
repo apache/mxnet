@@ -208,26 +208,27 @@ class Block(object):
         super(Block, self).__setattr__(name, value)
 
     def _check_container_with_block(self):
-        def _find_block_in_container(data):
+        children = set(self._children.values())
+        def _find_unregistered_block_in_container(data):
             # Find whether a nested container structure contains Blocks
             if isinstance(data, (list, tuple)):
                 for ele in data:
-                    if _find_block_in_container(ele):
+                    if _find_unregistered_block_in_container(ele):
                         return True
                 return False
             elif isinstance(data, dict):
                 for _, v in data.items():
-                    if _find_block_in_container(v):
+                    if _find_unregistered_block_in_container(v):
                         return True
                 return False
             elif isinstance(data, Block):
-                return True
+                return not data in children
             else:
                 return False
         for k, v in self.__dict__.items():
             if isinstance(v, (list, tuple, dict)) and not (k.startswith('__') or k == '_children'):
-                if _find_block_in_container(v):
-                    warnings.warn('"{name}" is a container with Blocks. '
+                if _find_unregistered_block_in_container(v):
+                    warnings.warn('"{name}" is an unregistered container with Blocks. '
                                   'Note that Blocks inside the list, tuple or dict will not be '
                                   'registered automatically. Make sure to register them using '
                                   'register_child() or switching to '
@@ -618,7 +619,7 @@ class Block(object):
                 params = 0
                 summary[m_key]['trainable'] = 0
                 summary[m_key]['shared'] = 0
-                for p in block._reg_params.values():
+                for p in block.params.values():
                     params += p.data().size
                     summary[m_key]['trainable'] += 0 if p.grad_req == 'null' else p.data().size
                     if p in seen:
@@ -656,10 +657,12 @@ class Block(object):
                 trainable_params += summary[layer]['trainable']
                 shared_params += summary[layer]['shared']
             print('='*80)
-            print('Total params: ' + str(total_params))
-            print('Trainable params: ' + str(trainable_params))
-            print('Non-trainable params: ' + str(total_params - trainable_params))
-            print('Shared params: ' + str(shared_params))
+            print('Parameters in forward computation graph, duplicate included')
+            print('   Total params: ' + str(total_params))
+            print('   Trainable params: ' + str(trainable_params))
+            print('   Non-trainable params: ' + str(total_params - trainable_params))
+            print('Shared params in forward computation graph: ' + str(shared_params))
+            print('Unique parameters in model: ' + str(total_params - shared_params))
             print('-'*80)
         finally:
             for h in hooks:

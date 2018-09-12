@@ -47,7 +47,7 @@ namespace op {
 namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
-enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
+enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU, kSELU};
 enum LeakyReLUOpResource {kRandom};
 }  // namespace leakyrelu
 
@@ -63,6 +63,7 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .add_enum("leaky", leakyrelu::kLeakyReLU)
     .add_enum("prelu", leakyrelu::kPReLU)
     .add_enum("elu", leakyrelu::kELU)
+    .add_enum("selu", leakyrelu::kSELU)
     .describe("Activation function to be applied.");
     DMLC_DECLARE_FIELD(slope).set_default(0.25f)
     .describe("Init slope for the activation. (For leaky and elu only)");
@@ -94,7 +95,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 3, DType> out;
     Tensor<xpu, 3, DType> mask;
     int n = in_data[leakyrelu::kData].shape_[0];
-    int k = in_data[leakyrelu::kData].shape_[1];
+    int k = (in_data[leakyrelu::kData].ndim() > 1) ? in_data[leakyrelu::kData].shape_[1] : 1;
     Shape<3> dshape = Shape3(n, k, in_data[leakyrelu::kData].Size()/n/k);
     data = in_data[leakyrelu::kData].get_with_shape<xpu, 3, DType>(dshape, s);
     out = out_data[leakyrelu::kOut].get_with_shape<xpu, 3, DType>(dshape, s);
@@ -182,6 +183,13 @@ class LeakyReLUOp : public Operator {
         });
         break;
       }
+      case leakyrelu::kSELU: {
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::selu, Req>, xpu>::Launch(
+            s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_);
+        });
+        break;
+      }
       default:
         LOG(FATAL) << "Not implmented";
     }
@@ -207,7 +215,7 @@ class LeakyReLUOp : public Operator {
     Tensor<xpu, 3, DType> grad;
     Tensor<xpu, 3, DType> mask;
     int n = out_grad[leakyrelu::kOut].shape_[0];
-    int k = out_grad[leakyrelu::kOut].shape_[1];
+    int k = (out_grad[leakyrelu::kOut].ndim() > 1) ? out_grad[leakyrelu::kOut].shape_[1] : 1;
     Shape<3> dshape = Shape3(n, k, out_grad[leakyrelu::kOut].Size()/n/k);
     grad = out_grad[leakyrelu::kOut].get_with_shape<xpu, 3, DType>(dshape, s);
     gdata = in_grad[leakyrelu::kData].get_with_shape<xpu, 3, DType>(dshape, s);
@@ -267,6 +275,15 @@ class LeakyReLUOp : public Operator {
             mxnet_op::backward_grad_tuned<mshadow_op::elu_grad>, Req>, xpu>::Launch(
               s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
               output.dptr_, DType(param_.slope));
+        });
+        break;
+      }
+      case leakyrelu::kSELU: {
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<
+            mxnet_op::backward_grad_tuned<mshadow_op::selu_grad>, Req>, xpu>::Launch(
+              s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
+              output.dptr_);
         });
         break;
       }

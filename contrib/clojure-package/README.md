@@ -107,7 +107,9 @@ The jars from maven with the needed MXNet native binaries in it. On startup, the
 
 ### Build from MXNET Source
 
-Checkout the latest sha from the main package
+First, ensure you have JDK 8 on your system. Later versions may produce cryptic build errors mentioning `scala.reflect.internal.MissingRequirementError`. 
+
+Checkout the latest SHA from the main package:
 
 `git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
 `cd ~/mxnet`
@@ -193,7 +195,7 @@ This command can be very handy too
 timestamp, name, utilization.gpu [%], utilization.memory [%], memory.total [MiB], memory.free [MiB], memory.used [MiB]`
 
 **Supported APIs**
-There are 3 high level apis supported in MxNet: (Model/FeedForward), Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory. The Model/FeedForward Api is deprected.
+There are 3 high level apis supported in MXNet: (Model/FeedForward), Module, and Gluon. The Module api is supported in the Clojure package because of the existing support for it in the Scala package. The Module api is very similar to the Gluon api and examples of the usage can be found in the examples directory. The Model/FeedForward Api is deprected.
 
 Gluon support will come later and may or may not be built on the Scala gluon api (when it lands there)
 

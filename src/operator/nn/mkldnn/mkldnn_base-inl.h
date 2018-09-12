@@ -137,6 +137,11 @@ static inline bool SupportMKLDNN(const NDArray &input) {
       && SupportStorageMKLDNN(input.storage_type());
 }
 
+static inline bool MKLDNNEnvSet() {
+  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_ENABLED", true);
+  return is_mkldnn_enabled;
+}
+
 /*
  * This is to align address to a certain alignment.
  */
@@ -146,9 +151,11 @@ namespace op {
 struct ActivationParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
+struct SoftmaxParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
+bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
 }
 
 static int GetTypeSize(int dtype) {
@@ -346,6 +353,18 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
     if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
       const_cast<NDArray &>(arrs[i]).InvalidateMKLDNNData();
     }
+  }
+}
+
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
+static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
+                                       std::vector<NDArray> *out_arrs) {
+  out_arrs->clear();
+  for (size_t i = 0; i < arrs.size(); ++i) {
+    if (arrs[i].IsMKLDNNData())
+      out_arrs->push_back(arrs[i].Reorder2Default());
+    else
+      out_arrs->push_back(arrs[i]);
   }
 }
 

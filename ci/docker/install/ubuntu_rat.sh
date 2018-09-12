@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -24,10 +24,11 @@ apt-get update
 apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
 
 echo "download RAT"
-svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/
+#svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/
+svn co http://svn.apache.org/repos/asf/creadur/rat/branches/0.12-release/
 
 echo "cd into directory"
-cd trunk
+cd 0.12-release
 
 echo "mvn install"
 mvn -Dmaven.test.skip=true install

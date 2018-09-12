@@ -94,7 +94,10 @@ Let's define a method that will run one training iteration given data and label.
 
 ```python
 # Use GPU if available
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+try:
+    mx.test_utils.list_gpus(); ctx = mx.gpu()
+except:
+    ctx = mx.cpu()
 
 # Initialize the parameters with random weights
 net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
@@ -144,7 +147,8 @@ profiler.set_state('run')
 
 run_training_iteration(*next(itr))
 
-# Ask the profiler to stop recording
+# Ask the profiler to stop recording after operations have completed
+mx.nd.waitall()
 profiler.set_state('stop')
 ```
 
