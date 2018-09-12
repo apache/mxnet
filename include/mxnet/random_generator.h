@@ -49,7 +49,7 @@ class RandGenerator<cpu, DType> {
   static const int kNumRandomStates;
 
   // implementation class for random number generator
-  // TODO (alexzai): move impl class to separate file - tracked in MXNET-948
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     typedef typename std::conditional<std::is_floating_point<DType>::value,
@@ -116,7 +116,7 @@ class RandGenerator<gpu, DType> {
   // by using 1.0-curand_uniform().
   // Needed as some samplers in sampler.h won't be able to deal with
   // one of the boundary cases.
-  // TODO (alexzai): move impl class to separate file - tracked in MXNET-948
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     Impl &operator=(const Impl &) = delete;
@@ -168,7 +168,7 @@ class RandGenerator<gpu, double> {
   // by using 1.0-curand_uniform().
   // Needed as some samplers in sampler.h won't be able to deal with
   // one of the boundary cases.
-  // TODO (alexzai): move impl class to separate file - tracked in MXNET-948
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     Impl &operator=(const Impl &) = delete;
