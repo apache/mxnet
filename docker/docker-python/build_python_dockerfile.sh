@@ -17,6 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -ex
+
+# Script to take two parameters
+echo "Building Docker Images for Apache MXNet (Incubating) v$1"
+test_dir="/Users/mbaijal/Documents/mxnet/mxnet_repo2/incubator-mxnet"
+#test_dir="${2}"
+
 # function to exit script if command fails
 runme() {
         cmd=$*
@@ -37,22 +44,18 @@ docker_build_image(){
 
 docker_tag_image(){
     docker tag mxnet/python:${1} ${2}
-
 }
 
 docker_test_image_cpu(){
-    test_dir="/Users/mbaijal/Documents/mxnet/mxnet_repo2/incubator-mxnet"
-    runme docker run -it -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py"
-    runme docker run -it -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python -c 'import mxnet'"
-
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py"
 }
 
 docker_test_image_gpu(){
-    test_dir="/Users/mbaijal/Documents/mxnet/mxnet_repo2/incubator-mxnet"
-    runme nvidia-docker run -it -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py --gpu"
-    runme nvidia-docker run -it -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python -c 'import mxnet'"
-
-
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py'"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py --gpu"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py"
 }
 
 docker_account_login(){
@@ -66,9 +69,6 @@ docker_account_logout(){
 docker_push_image(){
     runme docker push mxnet/python:${1}
 }
-
-# Script to take one parameter
-echo "Building Docker Images for Apache MXNet (Incubating) v$1"
 
 
 # Build and Test dockerfiles - CPU
@@ -104,5 +104,3 @@ docker_push_image "${1}_gpu_cu90"
 docker_push_image "${1}_gpu_cu90"
 
 docker_account_logout
-
-
