@@ -21,8 +21,7 @@ set -ex
 
 # Script to take two parameters
 echo "Building Docker Images for Apache MXNet (Incubating) v$1"
-test_dir="/Users/mbaijal/Documents/mxnet/mxnet_repo2/incubator-mxnet"
-#test_dir="${2}"
+test_dir="${2}"
 
 # function to exit script if command fails
 runme() {
