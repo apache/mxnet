@@ -30,9 +30,21 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(InitOpParam);
 DMLC_REGISTER_PARAMETER(InitOpWithScalarParam);
+DMLC_REGISTER_PARAMETER(InitOpNoDefaultParam);
 DMLC_REGISTER_PARAMETER(RangeParam);
 DMLC_REGISTER_PARAMETER(EyeParam);
 
+NNVM_REGISTER_OP(_zeros_no_default)
+.describe("fill target with zeros with no default type")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<InitOpNoDefaultParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", InitShape<InitOpNoDefaultParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpNoDefaultParam>)
+.set_attr<FInferStorageType>("FInferStorageType", InitStorageType<InitOpNoDefaultParam, true, true>)
+.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FillComputeZerosEx<cpu>)
+.add_arguments(InitOpNoDefaultParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_zeros)
 .describe("fill target with zeros")

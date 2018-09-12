@@ -61,6 +61,24 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   }
 };
 
+struct InitOpNoDefaultParam : public dmlc::Parameter<InitOpNoDefaultParam> {
+  TShape shape;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(InitOpNoDefaultParam) {
+    DMLC_DECLARE_FIELD(shape)
+    .set_default(TShape())
+    .describe("The shape of the output");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .describe("Target data type.");
+  }
+};
+
 struct EyeParam : public dmlc::Parameter<EyeParam> {
   nnvm::dim_t N;
   nnvm::dim_t M;

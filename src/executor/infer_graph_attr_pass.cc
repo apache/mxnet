@@ -254,8 +254,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         dispatch_mode = &dispatch_modes[nid];
         if (dispatch_modes[nid] == DispatchMode::kUndefined) forward_known = false;
       }
-      auto finfer = (inode.source->op() == Op::Get("_zeros")) ? fdefault :
-        finfer_shape.get(inode.source->op(), fdefault);
+      auto finfer = finfer_shape.get(inode.source->op(), fdefault);
       if (!forward_known) {
         if (finfer != nullptr) {
           // Call inference function of the operator.
