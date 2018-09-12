@@ -17,10 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
-if [ ${TASK} == "r_test" ]; then
-    echo "Print the install log..."
-    cat mxnet.Rcheck/*.out
-    echo "Print the check log..."
-    cat mxnet.Rcheck/*.log
+if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+    brew update
+    brew install opencv
+    brew install python3
+    brew install fftw
+    brew install libpng
+    brew install ImageMagick
+    brew install swig
+	python -m pip install --user nose numpy cython scipy requests
+	python3 -m pip install --user nose numpy cython scipy requests
 fi

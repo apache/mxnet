@@ -314,7 +314,6 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
   // For the shape of output data.
   size_t len = in_shape->at(0)[0];
-  CHECK_GT(len, 0);
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];

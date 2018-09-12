@@ -8,7 +8,7 @@ $(document).ready(function () {
     function label(lbl) {
         return lbl.replace(/[ .]/g, '-').toLowerCase();
     }
-   
+
     function urlSearchParams(searchString) {
         let urlDict = new Map();
         let searchParams = searchString.substring(1).split("&");
@@ -45,11 +45,11 @@ $(document).ready(function () {
         showContent();
         if (window.location.href.indexOf("/install/index.html") >= 0) {
             if (versionSelect.indexOf(defaultVersion) >= 0) {
-                history.pushState(null, null, '/install/index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, 'index.html?platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
             } else {
-                history.pushState(null, null, '/install/index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
+                history.pushState(null, null, 'index.html?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&processor=' + processorSelect);
             }
-        } 
+        }
     }
 
     function showContent() {
@@ -73,22 +73,22 @@ $(document).ready(function () {
             $('.current-version').html( $(this).text() + ' <span class="caret"></span></button>' );
             if ($(this).text().indexOf(defaultVersion) < 0) {
                 if (window.location.search.indexOf("version") < 0) {
-                    history.pushState(null, null, '/install/index.html' + window.location.search.concat( '&version=' + $(this).text() ));
+                    history.pushState(null, null, 'index.html' + window.location.search.concat( '&version=' + $(this).text() ));
                 } else {
-                    history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
+                    history.pushState(null, null, 'index.html' + window.location.search.replace( urlParams.get('version'), $(this).text() ));
                 }
             } else if (window.location.search.indexOf("version") >= 0) {
-                  history.pushState(null, null, '/install/index.html' + window.location.search.replace( 'version', 'prev' ));
+                  history.pushState(null, null, 'index.html' + window.location.search.replace( 'version', 'prev' ));
               }
         }
         else if ($(this).hasClass("platforms")) {
-            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('platform'), $(this).text() ));
+            history.pushState(null, null, 'index.html' + window.location.search.replace( urlParams.get('platform'), $(this).text() ));
         }
         else if ($(this).hasClass("languages")) {
-            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('language'), $(this).text() ));
+            history.pushState(null, null, 'index.html' + window.location.search.replace( urlParams.get('language'), $(this).text() ));
         }
         else if ($(this).hasClass("processors")) {
-            history.pushState(null, null, '/install/index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
+            history.pushState(null, null, 'index.html' + window.location.search.replace( urlParams.get('processor'), $(this).text() ));
         }
         showContent();
         //window.location.search = window.location.search.replace( urlParams.get('version'), $(this).text() );

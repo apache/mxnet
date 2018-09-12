@@ -55,7 +55,7 @@ These commands produce a library called ```mxnet.dll``` in the ```./build/Releas
 Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
 - Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
 **Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
-- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.continuum.io/downloads)
+- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.anaconda.com/download/)
 **Note** Do not install Anaconda for Python 3.5. MXNet has few compatibility issue with Python 3.5.
 
 &nbsp;
@@ -69,7 +69,7 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 ## Install MXNet for Python
 
 1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
-2. Install ```Numpy``` using windows installer available [here](http://scipy.org/install.html).
+2. Install ```Numpy``` using windows installer available [here](https://scipy.org/index.html).
 3. Next, we install Python package interface for MXNet. You can find the Python interface package for [MXNet on GitHub](https://github.com/dmlc/mxnet/tree/master/python/mxnet).
 
 ```bash
@@ -91,7 +91,7 @@ Done! We have installed MXNet with Python interface. Run below commands to verif
 ```
 We actually did a small tensor computation using MXNet! You are all set with MXNet on your Windows machine.
 
-## Install MXNet Package for R
+## Install the MXNet Package for R
 MXNet for R is available for both CPUs and GPUs.
 
 ### Installing MXNet on a Computer with a CPU Processor
@@ -151,8 +151,8 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     ├── dmlc
     ├── mxnet
     ├── mshadow
-    └── nnvm 
-    
+    └── nnvm
+
 ```
 6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
@@ -200,7 +200,7 @@ To install MXNet on a computer with a GPU processor, choose from two options:
 * Build the library from source code
 
 However, a few dependencies remain for both options.  You will need the following:
-* Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended. 
+* Install [Nvidia-drivers](http://www.nvidia.com/Download/index.aspx?lang=en-us) if not installed. Latest driver based on your system configuration is recommended.
 
 * Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (VS2015 or VS2017 is required by CUDA)
 
@@ -224,7 +224,7 @@ For GPU package:
 ```
 Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 #### Building MXNet from Source Code(GPU)
-After you have installed above software, continue with the following steps to build MXNet-R: 
+After you have installed above software, continue with the following steps to build MXNet-R:
 1. Clone the MXNet github repo.
 
 ```sh
@@ -261,8 +261,8 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     ├── dmlc
     ├── mxnet
     ├── mshadow
-    └── nnvm 
-    
+    └── nnvm
+
 ```
 6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
 7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
