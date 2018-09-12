@@ -90,7 +90,7 @@
       训练使用(参数可自定义配置)：
 
       ```python
-      python train_model.py --nlayers 1 --epochs 5 --attention-hops 2 -loss-name sce
+      python train_model.py --nlayers 1 --epochs 5 --attention-hops 2 --loss-name sce
       ```
 
    ## 引用参考

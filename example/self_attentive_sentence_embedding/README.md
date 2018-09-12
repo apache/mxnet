@@ -91,7 +91,7 @@ This is an implementation of the paper [A Structured Self-Attentive Sentence Emb
    Training usage (parameters can be customized):  
 
    ```python
-   python train_model.py --nlayers 1 --epochs 5 --attention-hops 2 -loss-name sce
+   python train_model.py --nlayers 1 --epochs 5 --attention-hops 2 --loss-name sce
    ```
 
 ## Reference
