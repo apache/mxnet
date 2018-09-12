@@ -54,7 +54,8 @@ inline int GetRnnParamSize(int num_layer,
                            int input_size,
                            int state_size,
                            int direction,
-                           int mode) {
+                           int mode,
+                           const dmlc::optional<int>& projection_size) {
   int size = state_size * direction;
   switch (mode) {
     case rnn_enum::kRnnRelu:
@@ -69,7 +70,15 @@ inline int GetRnnParamSize(int num_layer,
   }
   int size1 = (input_size + state_size + 2) * size;  // first layer size
   int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
+  if (projection_size.has_value()) {
+    int proj_size = projection_size.value();
+    size1 = (input_size + proj_size + 2) * size;
+    size2 = (proj_size * direction + proj_size + 2) * size;
+  }
   int param_size = size1 + (num_layer - 1) * size2;
+  if (projection_size.has_value()) {
+    param_size += projection_size.value() * state_size * num_layer * direction;
+  }
   return param_size;
 }
 
@@ -154,6 +163,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   float p, pkeep_;
   int seq_length_, batch_size_, input_size_;
   bool lstm_q_;  // whether type is lstm
+  dmlc::optional<int> projection_size;
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
     DMLC_DECLARE_FIELD(state_size)
@@ -178,6 +188,10 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");
+
+    DMLC_DECLARE_FIELD(projection_size)
+    .set_default(dmlc::optional<int>())
+    .describe("size of project size");
   }
 };
 
@@ -349,8 +363,11 @@ template<typename DType>
 class RNNOp : public Operator{
  public:
   explicit RNNOp(RNNParam p)
-    :param_(p), init_space_(false), reserve_space_size_(0)
-  {}
+    :param_(p), init_space_(false), reserve_space_size_(0) {
+    if (param_.projection_size.has_value()) {
+      LOG(FATAL) << "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
+    }
+  }
 
   ~RNNOp() {
     if (init_space_) {
@@ -646,9 +663,11 @@ class RNNProp : public OperatorProperty {
     int input_size = dshape[2];
     int numDirections = param_.bidirectional ? 2 : 1;
     int total_layers = numDirections * param_.num_layers;  // double for bidirectional
+    int layer_size = (param_.projection_size.has_value()) ?
+                     param_.projection_size.value() : param_.state_size;
     SHAPE_ASSIGN_CHECK(*in_shape,
                        rnn_enum::kState,
-                       Shape3(total_layers, batch_size, param_.state_size));
+                       Shape3(total_layers, batch_size, layer_size));
     if (param_.mode == rnn_enum::kLstm)
       SHAPE_ASSIGN_CHECK(*in_shape,
                         rnn_enum::kStateCell,
@@ -659,13 +678,18 @@ class RNNProp : public OperatorProperty {
                                     input_size,
                                     param_.state_size,
                                     numDirections,
-                                    param_.mode);
+                                    param_.mode,
+                                    param_.projection_size);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
 
     out_shape->clear();
     // output: [sequence len, batch, output size]
     TShape oshape = dshape;
-    oshape[2] = numDirections * param_.state_size;
+    if (param_.projection_size.has_value()) {
+      oshape[2] = numDirections * param_.projection_size.value();
+    } else {
+      oshape[2] = numDirections * param_.state_size;
+    }
     out_shape->push_back(oshape);
     if (!param_.state_outputs) {
       return true;
@@ -674,7 +698,11 @@ class RNNProp : public OperatorProperty {
       TShape outStateShape = dshape;
       outStateShape[0] = total_layers;
       outStateShape[1] = batch_size;
-      outStateShape[2] = param_.state_size;
+      if (param_.projection_size.has_value()) {
+        outStateShape[2] = param_.projection_size.value();
+      } else {
+        outStateShape[2] = param_.state_size;
+      }
       out_shape->push_back(outStateShape);
       // Deal with lstm cell state
       if (param_.mode == rnn_enum::kLstm)
