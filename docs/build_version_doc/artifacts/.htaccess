@@ -4,3 +4,12 @@ RewriteRule ^get_started.*$ /install/ [R=301,L]
 RewriteRule ^how_to.*$ /faq/ [R=301,L]
 RewriteRule ^api/python/symbol.html$ /api/python/symbol/symbol.html [R=301,L]
 RewriteRule ^community/index.html$ /community/contribute.html [R=301,L]
+
+# Navigation bar redirects to latest info
+RewriteRule ^versions/[^\/]+/architecture/.*$ /architecture/ [R=301,L]
+RewriteRule ^versions/[^\/]+/community/.*$ /community/ [R=301,L]
+RewriteRule ^versions/[^\/]+/faq/.*$ /faq/ [R=301,L]
+RewriteRule ^versions/[^\/]+/gluon/.*$ /gluon/ [R=301,L]
+RewriteRule ^versions/[^\/]+/install/.*$ /install/ [R=301,L]
+RewriteRule ^versions/[^\/]+/tutorials/.*$ /tutorials/ [R=301,L]
+RewriteRule ^versions/[^\/]+/api/python/contrib/onnx.html /api/python/contrib/onnx.html [R=301,L]
