@@ -223,6 +223,14 @@ struct Context {
    */
   inline static int32_t GetGPUCount();
   /*!
+   * \brief get the free and total available memory on a GPU
+   * \param dev the GPU number to query
+   * \param free_mem pointer to the integer holding free GPU memory
+   * \param total_mem pointer to the integer holding total GPU memory
+   * \return No return value
+   */
+  inline static void GetGPUMemoryInformation(int dev, int *free, int *total);
+  /*!
    * Create a pinned CPU context.
    * \param dev_id the device id for corresponding GPU.
    * \return Pinned CPU context. -1 for current GPU.
@@ -323,6 +331,35 @@ inline int32_t Context::GetGPUCount() {
   return count;
 #else
   return 0;
+#endif
+}
+
+inline void Context::GetGPUMemoryInformation(int dev, int *free_mem,
+                                             int *total_mem) {
+#if MXNET_USE_CUDA
+
+  size_t memF, memT;
+  cudaError_t e;
+
+  int curDevice;
+  e = cudaGetDevice(&curDevice);
+  CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
+
+  e = cudaSetDevice(dev);
+  CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
+
+  e = cudaMemGetInfo(&memF, &memT);
+  CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
+
+  e = cudaSetDevice(curDevice);
+  CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
+
+  *free_mem = static_cast<int>(memF);
+  *total_mem = static_cast<int>(memT);
+
+#else
+  LOG(FATAL)
+      << "This call is only supported for MXNet built with CUDA support.";
 #endif
 }
 

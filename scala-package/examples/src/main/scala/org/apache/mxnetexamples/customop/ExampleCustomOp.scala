@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.customop
 
 import org.apache.mxnet.Callback.Speedometer
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.{Accuracy, Context, CustomOp, CustomOpProp, NDArray, Operator, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Accuracy, Context, CustomOp, CustomOpProp, NDArray, NDArrayCollector, Operator, Shape, Symbol, Xavier}
 import org.apache.mxnet.optimizer.RMSProp
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -141,49 +141,50 @@ object ExampleCustomOp {
       evalMetric.reset()
       var nBatch = 0
       var epochDone = false
-
-      trainIter.reset()
-      while (!epochDone) {
-        var doReset = true
-        while (doReset && trainIter.hasNext) {
-          val dataBatch = trainIter.next()
-          argDict("data").set(dataBatch.data(0))
-          argDict("label").set(dataBatch.label(0))
-          executor.forward(isTrain = true)
-          executor.backward()
-          paramsGrads.foreach { case (idx, name, grad, optimState) =>
-            opt.update(idx, argDict(name), grad, optimState)
+      NDArrayCollector.auto().withScope {
+        trainIter.reset()
+        while (!epochDone) {
+          var doReset = true
+          while (doReset && trainIter.hasNext) {
+            val dataBatch = trainIter.next()
+            argDict("data").set(dataBatch.data(0))
+            argDict("label").set(dataBatch.label(0))
+            executor.forward(isTrain = true)
+            executor.backward()
+            paramsGrads.foreach { case (idx, name, grad, optimState) =>
+              opt.update(idx, argDict(name), grad, optimState)
+            }
+            evalMetric.update(dataBatch.label, executor.outputs)
+            nBatch += 1
+            batchEndCallback.invoke(epoch, nBatch, evalMetric)
           }
-          evalMetric.update(dataBatch.label, executor.outputs)
-          nBatch += 1
-          batchEndCallback.invoke(epoch, nBatch, evalMetric)
+          if (doReset) {
+            trainIter.reset()
+          }
+          epochDone = true
         }
-        if (doReset) {
-          trainIter.reset()
+        val (name, value) = evalMetric.get
+        name.zip(value).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Train-accuracy=$v")
         }
-        epochDone = true
-      }
-      val (name, value) = evalMetric.get
-      name.zip(value).foreach { case (n, v) =>
-        logger.info(s"Epoch[$epoch] Train-accuracy=$v")
-      }
-      val toc = System.currentTimeMillis
-      logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
+        val toc = System.currentTimeMillis
+        logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
-      evalMetric.reset()
-      testIter.reset()
-      while (testIter.hasNext) {
-        val evalBatch = testIter.next()
-        argDict("data").set(evalBatch.data(0))
-        argDict("label").set(evalBatch.label(0))
-        executor.forward(isTrain = true)
-        evalMetric.update(evalBatch.label, executor.outputs)
-        evalBatch.dispose()
-      }
-      val (names, values) = evalMetric.get
-      names.zip(values).foreach { case (n, v) =>
-        logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
-        validationAcc = Math.max(validationAcc, v)
+        evalMetric.reset()
+        testIter.reset()
+        while (testIter.hasNext) {
+          val evalBatch = testIter.next()
+          argDict("data").set(evalBatch.data(0))
+          argDict("label").set(evalBatch.label(0))
+          executor.forward(isTrain = true)
+          evalMetric.update(evalBatch.label, executor.outputs)
+          evalBatch.dispose()
+        }
+        val (names, values) = evalMetric.get
+        names.zip(values).foreach { case (n, v) =>
+          logger.info(s"Epoch[$epoch] Validation-accuracy=$v")
+          validationAcc = Math.max(validationAcc, v)
+        }
       }
     }
     executor.dispose()

@@ -107,7 +107,9 @@ The jars from maven with the needed MXNet native binaries in it. On startup, the
 
 ### Build from MXNET Source
 
-Checkout the latest sha from the main package
+First, ensure you have JDK 8 on your system. Later versions may produce cryptic build errors mentioning `scala.reflect.internal.MissingRequirementError`. 
+
+Checkout the latest SHA from the main package:
 
 `git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
 `cd ~/mxnet`

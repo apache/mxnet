@@ -45,12 +45,12 @@ Operator *RNNProp::CreateOperatorEx(Context ctx,
 DMLC_REGISTER_PARAMETER(RNNParam);
 
 MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
-.describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are 
+.describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 
 **Vanilla RNN**
 
-Applies a single-gate recurrent layer to input X. Two kinds of activation function are supported: 
+Applies a single-gate recurrent layer to input X. Two kinds of activation function are supported:
 ReLU and Tanh.
 
 With ReLU activation function:
@@ -63,7 +63,7 @@ With Tanh activtion function:
 .. math::
     h_t = \tanh(W_{ih} * x_t + b_{ih}  +  W_{hh} * h_{(t-1)} + b_{hh})
 
-Reference paper: Finding structure in time - Elman, 1988. 
+Reference paper: Finding structure in time - Elman, 1988.
 https://crl.ucsd.edu/~elman/Papers/fsit.pdf
 
 **LSTM**

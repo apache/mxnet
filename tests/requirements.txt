@@ -1,0 +1,3 @@
+# Requirements for tests, those are installed before running on the virtualenv
+mock
+nose

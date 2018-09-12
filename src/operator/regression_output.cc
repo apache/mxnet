@@ -142,7 +142,11 @@ The storage type of ``label`` can be ``default`` or ``csr``
 - LogisticRegressionOutput(default, default) = default
 - LogisticRegressionOutput(default, csr) = default
 
-By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
+The loss function used is the Binary Cross Entropy Loss:
+
+:math:`-{(y\log(p) + (1 - y)\log(1 - p))}`
+
+Where `y` is the ground truth probability of positive outcome for a given example, and `p` the probability predicted by the model. By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
