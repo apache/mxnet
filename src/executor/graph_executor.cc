@@ -141,8 +141,8 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   if (v.empty()) {
     nnvm::NodePtr ng = nnvm::Node::Create();
-    ng->attrs.op = Op::Get("_zeros_no_default");
-    ng->attrs.name = "zeros_no_default";
+    ng->attrs.op = Op::Get("_zeros_without_dtype");
+    ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
     return nnvm::NodeEntry{ng, 0, 0};
   }

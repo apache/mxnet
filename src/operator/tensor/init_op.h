@@ -61,11 +61,11 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   }
 };
 
-struct InitOpNoDefaultParam : public dmlc::Parameter<InitOpNoDefaultParam> {
+struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam> {
   TShape shape;
   std::string ctx;
   int dtype;
-  DMLC_DECLARE_PARAMETER(InitOpNoDefaultParam) {
+  DMLC_DECLARE_PARAMETER(InitOpWithoutDTypeParam) {
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
     .describe("The shape of the output");
