@@ -146,10 +146,11 @@ def windows_build(args):
     with remember_cwd():
         os.chdir(path)
         logging.info("Generating project with CMake")
-        check_call("cmake -G \"Visual Studio 14 2015 Win64\" {} {}".format(CMAKE_FLAGS[args.flavour], mxnet_root), shell=True)
+        check_call("cmake -G \"NMake Makefiles JOM\" {} {}".format(CMAKE_FLAGS[args.flavour], mxnet_root), shell=True)
         logging.info("Building with visual studio")
         t0 = int(time.time())
-        check_call(["msbuild", "mxnet.sln","/p:configuration=release;platform=x64", "/maxcpucount","/v:minimal"])
+        #check_call(["msbuild", "mxnet.sln","/p:configuration=release;platform=x64", "/maxcpucount","/v:minimal"])
+        check_call(["jom"])
         logging.info("Build flavour: %s complete in directory: \"%s\"", args.flavour, os.path.abspath(path))
         logging.info("Build took %s" , datetime.timedelta(seconds=int(time.time()-t0)))
     windows_package(args)
