@@ -55,10 +55,8 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with mkldnn support')
-    parser.add_argument('--ctx', type=str, default='cpu')
-    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'ssd', 'imagenet1k-resnet-50', 'imagenet1k-resnet-50-v1',
-                                                      'imagenet1k-inception-v3', 'imagenet1k-inception-bn', 'imagenet1k-vgg-16'],
-                        help='currently only supports imagenet1k-resnet-152, imagenet1k-inception-bn or imagenet1k-vgg-16')
+    parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
+                        help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--calib-dataset', type=str, default='data/val_256_q90.rec',
@@ -109,14 +107,7 @@ if __name__ == '__main__':
                              'be calibrated offline if calibration mode is '
                              'enabled')
     args = parser.parse_args()
-
-    if args.ctx == 'gpu':
-        ctx = mx.gpu(0)
-    elif args.ctx == 'cpu':
-        ctx = mx.cpu(0)
-    else:
-        raise ValueError('ctx %s is not supported in this script' % args.ctx)
-
+    ctx = mx.cpu(0)
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
@@ -158,23 +149,14 @@ if __name__ == '__main__':
     excluded_sym_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
-        if args.ctx == 'gpu':
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('sc') != -1
-                                                                     or name.find('fc') != -1)
-        else:
-            calib_layer = lambda name: name.endswith('_output')
-            excluded_sym_names += ['flatten0', 'fc1']
+        calib_layer = lambda name: name.endswith('_output')
+        excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['sg_mkldnn_conv_bn_relu_0', 'pooling0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
-        if args.ctx == 'gpu':
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
-                                                                     or name.find('fc') != -1)
-        else:
-            calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
-            excluded_sym_names += ['flatten', 'fc1']
+        calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
+        excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
     else:

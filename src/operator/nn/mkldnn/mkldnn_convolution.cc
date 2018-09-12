@@ -82,7 +82,6 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     float alpha = 0.0f;            // negative slope for mkldnn_eltwise_relu.
     float beta = 1.0f;             // ignored for mkldnn_eltwise_relu.
     ops.append_eltwise(scale, eltwise_relu, alpha, beta);
-
   }
   if (param.mkldnn_param.with_sum) {
     ops.append_sum(param.sum_scale);
@@ -284,7 +283,7 @@ MKLDNNConvForward &GetConvFwd(const MKLDNNConvFullParam &param,
 
 void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
                                          const OpContext &ctx,
-                                         MKLDNNConvForward &fwd,
+                                         MKLDNNConvForward *fwd,
                                          const std::vector<NDArray> &in_data,
                                          const std::vector<OpReqType> &req,
                                          const std::vector<NDArray> &out_data) {
@@ -292,7 +291,7 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
   NDArray weight = in_data[conv::kWeight];
   bool no_bias = param.conv_param.no_bias && !param.mkldnn_param.with_bn;
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(
-      fwd.fwd_pd.src_primitive_desc());
+      fwd->fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
@@ -301,20 +300,20 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
       // This asks the engine to change the layout of the weight array after
       // it's used.
       weight.Reorder2DefaultAsync();
-    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(),
+    weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
                             param.conv_param.num_group);
   } else {
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(),
+      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
                               param.conv_param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
-      weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_primitive_desc());
+      weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_primitive_desc());
     } else {
       weight_mem = weight.GetMKLDNNData();
-      CHECK(weight_mem->get_primitive_desc() == fwd.fwd_pd.weights_primitive_desc());
+      CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());
     }
   }
   mkldnn_output_t out_mem;
@@ -322,18 +321,18 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
     out_mem = mkldnn_output_t(
         OutDataOp::Noop,
         const_cast<mkldnn::memory *>(out_data[conv::kOut].GetMKLDNNDataReorder(
-            fwd.fwd_pd.dst_primitive_desc())));
+            fwd->fwd_pd.dst_primitive_desc())));
   } else {
     out_mem = CreateMKLDNNMem(out_data[conv::kOut],
-                              fwd.fwd_pd.dst_primitive_desc(), req[conv::kOut]);
+                              fwd->fwd_pd.dst_primitive_desc(), req[conv::kOut]);
   }
 
   const mkldnn::memory *bias_mem = nullptr;
   if (!no_bias) {
     bias_mem = in_data[conv::kBias].GetMKLDNNData();
   }
-  fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
-  MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
+  fwd->SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
+  MKLDNNStream::Get()->RegisterPrim(fwd->GetFwd());
 
   CommitOutput(out_data[conv::kOut], out_mem);
   MKLDNNStream::Get()->Submit();
@@ -351,7 +350,7 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs &attrs,
       param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.conv_param.no_bias ? nullptr : &in_data[conv::kBias],
       out_data[conv::kOut]);
-  MKLDNNConvolutionForwardFullFeature(param, ctx, fwd, in_data, req, out_data);
+  MKLDNNConvolutionForwardFullFeature(param, ctx, &fwd, in_data, req, out_data);
 }
 
 void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,

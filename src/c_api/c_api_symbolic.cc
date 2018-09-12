@@ -652,7 +652,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const char **offline_params,
                      const char *quantized_dtype,
                      const bool disable_requantize,
-                     bool calib_quantize) {
+                     const bool calib_quantize) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);

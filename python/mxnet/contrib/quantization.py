@@ -55,7 +55,6 @@ def _quantize_params(qsym, params, th_dict):
     params : dict of str->NDArray
     th_dict: dict of min/max pairs of layers' output
     """
-    print(th_dict)
     inputs_name = qsym.list_arguments()
     quantized_params = {}
     for name in inputs_name:
@@ -74,7 +73,6 @@ def _quantize_params(qsym, params, th_dict):
         elif name.endswith(('_min')):
             output = name[: - len('_min')] + "_output"
             if output in th_dict:
-                print(name)
                 quantized_params[name] = ndarray.array([th_dict[output][0]])
         elif name.endswith(('_max')):
             output = name[: - len('_min')] + "_output"
@@ -128,7 +126,8 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
                                      c_str(quantized_dtype),
-                                     ctypes.c_bool(disable_requantize)))
+                                     ctypes.c_bool(disable_requantize),
+                                     ctypes.c_bool(calib_quantize_op)))
     return Symbol(out)
 
 

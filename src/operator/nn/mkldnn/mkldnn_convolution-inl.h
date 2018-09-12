@@ -27,6 +27,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <vector>
 #include <utility>
 #include "../convolution-inl.h"
 #include "./mkldnn_ops-inl.h"
@@ -133,7 +134,7 @@ MKLDNNConvForward &GetConvFwd(const ConvolutionParam &param,
 
 void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
                                          const OpContext &ctx,
-                                         MKLDNNConvForward &fwd,
+                                         MKLDNNConvForward *fwd,
                                          const std::vector<NDArray> &in_data,
                                          const std::vector<OpReqType> &req,
                                          const std::vector<NDArray> &out_data);

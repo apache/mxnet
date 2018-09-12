@@ -1518,7 +1518,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                      const SymbolHandle *excluded_symbols,
                      const mx_uint num_offline, const char **offline_params,
                      const char *quantized_dtype, const bool disable_requantize,
-                     bool calib_quantize);
+                     const bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym

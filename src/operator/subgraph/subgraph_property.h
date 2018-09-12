@@ -96,17 +96,17 @@ class SubgraphProperty {
   // each output entry will connect to an unique internal output.
   virtual void ConnectSubgraphOutput(
       const nnvm::NodePtr n,
-      std::vector<nnvm::NodeEntry *> &output_entries) const {
-    for (size_t i = 0; i < output_entries.size(); ++i) {
-      *output_entries[i] = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
+      std::vector<nnvm::NodeEntry *> *output_entries) const {
+    for (size_t i = 0; i < output_entries->size(); ++i) {
+      *output_entries->at(i) = nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0};
     }
   }
   // Connect subgraph internal input with external input entries. By default,
   // each input entry will connect in top sorted order.
   virtual void ConnectSubgraphInput(
-      const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> &input_entries,
-      std::vector<nnvm::NodeEntry> &orig_input_entries) const {
-    n->inputs = orig_input_entries;
+      const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> *input_entries,
+      std::vector<nnvm::NodeEntry> *orig_input_entries) const {
+    n->inputs = *orig_input_entries;
   }
   // set an attr with name in the attr map
   template<typename T>
@@ -121,6 +121,7 @@ class SubgraphProperty {
     CHECK(it != attrs_.end()) << "Cannot find attribute " << name << " in SubgraphProperty";
     return nnvm::get<T>(*it->second);
   }
+
  protected:
   std::unordered_map<std::string, std::shared_ptr<nnvm::any>> attrs_;
 };

@@ -142,10 +142,9 @@ Graph QuantizeGraph(Graph &&src) {
         // reused next time when the same entry is visited again.
         if (ExcludeKey(node, e)) {
           new_node->inputs.emplace_back(mirror_entry);
-        }
-        else if (!NeedQuantize(e.node, excluded_nodes) &&
-            (mirror_node->op() == nullptr ||
-             mirror_node->op()->name != "_contrib_quantize")) {
+        } else if (!NeedQuantize(e.node, excluded_nodes) &&
+                   (mirror_node->op() == nullptr ||
+                    mirror_node->op()->name != "_contrib_quantize")) {
           NodePtr quantize_node = InsertNode("_contrib_quantize",
             e.node->attrs.name + "_quantize", new_node, mirror_entry);
           quantize_node->attrs.dict["out_type"] = quantized_dtype;

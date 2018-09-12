@@ -57,7 +57,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
         disable_conv_relu(dis_conv_relu),
         disable_conv_sum(dis_conv_sum) {}
 
-  virtual bool Select(const nnvm::Node &n) override {
+  bool Select(const nnvm::Node &n) override {
     bool match =
         (!disable_all) && (!n.is_variable()) && (n.op()->name == "Convolution");
     if (match) {
@@ -69,13 +69,11 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     return false;
   }
 
-  virtual bool SelectInput(const nnvm::Node &n,
-                           const nnvm::Node &new_node) override {
+  bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     return false;
   }
 
-  virtual bool SelectOutput(const nnvm::Node &n,
-                            const nnvm::Node &new_node) override {
+  bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if (status == sFail || status == sSuccess || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
@@ -122,7 +120,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     }
   }
 
-  virtual std::vector<nnvm::Node *> Filter(
+  std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
     if (status == sFail) {
       return std::vector<nnvm::Node *>(0);
@@ -190,26 +188,26 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     return n;
   }
 
-  virtual SubgraphSelectorPtr CreateSubgraphSelector() const override {
+  SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector = std::make_shared<SgMKLDNNConvSelector>(
         disable_all, disable_conv_bn, disable_conv_relu, disable_conv_sum);
     return selector;
   }
 
-  virtual void ConnectSubgraphOutput(
+  void ConnectSubgraphOutput(
       const nnvm::NodePtr n,
-      std::vector<nnvm::NodeEntry *> &output_entries) const override {
+      std::vector<nnvm::NodeEntry *> *output_entries) const override {
     // Connect all extern output entries to output[0]
-    for (size_t i = 0; i < output_entries.size(); ++i) {
-      *output_entries[i] = nnvm::NodeEntry{n, 0, 0};
+    for (size_t i = 0; i < output_entries->size(); ++i) {
+      *output_entries->at(i) = nnvm::NodeEntry{n, 0, 0};
     }
   }
 
-  virtual void ConnectSubgraphInput(
-      const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> &input_entries,
-      std::vector<nnvm::NodeEntry> &orig_input_entries) const override {
+  void ConnectSubgraphInput(
+      const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> *input_entries,
+      std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
-    std::unordered_set<const nnvm::Node*> node_sets;
+    std::unordered_set<const nnvm::Node *> node_sets;
     DFSVisit(sym->outputs, [&](const nnvm::NodePtr &node) {
       if (node->is_variable()) return;
       node_sets.insert(node.get());
@@ -221,14 +219,15 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
           auto tmp = node->inputs[1];
           node->inputs[1] = node->inputs[0];
           node->inputs[0] = tmp;
-          std::rotate(input_entries.begin(), input_entries.begin() + 1,
-                      input_entries.end());
-          std::rotate(orig_input_entries.begin(),
-                      orig_input_entries.begin() + 1, orig_input_entries.end());
+          std::rotate(input_entries->begin(), input_entries->begin() + 1,
+                      input_entries->end());
+          std::rotate(orig_input_entries->begin(),
+                      orig_input_entries->begin() + 1,
+                      orig_input_entries->end());
         }
       }
     });
-    n->inputs = orig_input_entries;
+    n->inputs = *orig_input_entries;
   }
 
  private:
@@ -240,7 +239,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 #endif  // if MXNET_USE_MKLDNN == 1
 #endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_CONV_H_
