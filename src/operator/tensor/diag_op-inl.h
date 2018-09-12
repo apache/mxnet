@@ -263,7 +263,7 @@ void DiagOpProcess(const TBlob& in_data,
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
                             in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]),
-                            k);
+                            param.k.value());
       });
     });
   }
