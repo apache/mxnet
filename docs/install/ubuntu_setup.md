@@ -70,7 +70,7 @@ pip install mxnet-cu92mkl
 
 Alternatively, you can use the table below to select the package that suits your purpose.
 
-| MXNet Version | Basic | CUDA | MKL | CUDA/MKL |
+| MXNet Version | Basic | CUDA | MKL-DNN | CUDA/MKL-DNN |
 |-|-|-|-|-|
 | Latest | mxnet | mxnet-cu92 | mxnet-mkl | mxnet-cu92mkl |
 
@@ -165,6 +165,14 @@ If building on CPU and using OpenBLAS:
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+```
+
+If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
+
+```bash
+    git clone --recursive https://github.com/apache/incubator-mxnet.git
+    cd mxnet
+    make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
 ```
 
 If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):

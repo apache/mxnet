@@ -40,7 +40,7 @@ MXNet supports multiple mathematical backends for computations on the CPU:
 * [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
 * [ATLAS](http://math-atlas.sourceforge.net/)
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
-* [MKLDNN](https://github.com/intel/mkl-dnn)
+* [MKL-DNN](https://github.com/intel/mkl-dnn)
 * [OpenBLAS](http://www.openblas.net/)
 
 Usage of these are covered in more detail in the [build configurations](#build-configurations) section.
@@ -92,13 +92,13 @@ The following lists show this order by library and `cmake` switch.
 
 For desktop platforms (x86_64):
 
-1. MKLDNN (submodule) | `USE_MKLDNN`
+1. MKL-DNN (submodule) | `USE_MKLDNN`
 2. MKL | `USE_MKL_IF_AVAILABLE`
 3. MKLML (downloaded) | `USE_MKLML`
 4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
 5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
 
-Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKLDNN will be disabled as well for configuration
+Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
 backwards compatibility.
 
 For embedded platforms (all other and if cross compiled):
@@ -129,7 +129,7 @@ It has following flavors:
   <!-- [Removed until #11148 is merged.] This is the most effective option since it can be downloaded and installed automatically
   by the cmake script (see cmake/DownloadMKLML.cmake).-->
 
-* MKLDNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
+* MKL-DNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
   shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [mkl-dnn project](https://github.com/intel/mkl-dnn))
 
 Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
