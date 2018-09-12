@@ -22,6 +22,7 @@ import tempfile
 import time
 import multiprocessing as mp
 import unittest
+import random
 import mxnet as mx
 import numpy as np
 import unittest
@@ -30,6 +31,7 @@ from mxnet.test_utils import check_consistency, set_default_context, assert_almo
 from mxnet.base import MXNetError
 from mxnet import autograd
 from numpy.testing import assert_allclose
+from mxnet.test_utils import rand_ndarray
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -76,16 +78,63 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
 
+def check_lstmp(hidden_size, projection_size, rtol=1e-3, atol=1e-6):
+    batch_size = 1
+    seq_len = 1
+    input_size = random.randint(100, 300)
+    in_data = {'rnn_t%d_data' % i: rand_ndarray((batch_size, input_size), stype='default') for i in range(seq_len)}
+    i2h_weight = rand_ndarray((hidden_size*4, input_size), stype='default').as_in_context(mx.gpu(0))
+    i2h_bias = rand_ndarray((hidden_size*4, ), stype='default').as_in_context(mx.gpu(0))
+    h2h_weight = rand_ndarray((hidden_size*4, projection_size), stype='default').as_in_context(mx.gpu(0))
+    h2h_bias = rand_ndarray((hidden_size*4, ), stype='default').as_in_context(mx.gpu(0))
+    h2p_weight = rand_ndarray((projection_size, hidden_size), stype='default').as_in_context(mx.gpu(0))
+    lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size, input_size=input_size, prefix='lstm0_')
+    lstm_layer.collect_params().initialize(ctx=mx.gpu(0))
+    cudnn_input = mx.nd.stack(*(in_data.values()))
+    _ = lstm_layer(cudnn_input)
+    for name, param in lstm_layer.collect_params().items():
+        if "i2h_weight" in name:
+            param.set_data(i2h_weight)
+        if "i2h_bias" in name:
+            param.set_data(i2h_bias)
+        if "h2h_weight" in name:
+            param.set_data(h2h_weight)
+        if "h2h_bias" in name:
+            param.set_data(h2h_bias)
+        if "h2p_weight" in name:
+            param.set_data(h2p_weight)
+    cudnn_output = lstm_layer(cudnn_input).asnumpy()
+    syms = [mx.sym.Variable("rnn_t%d_data" % i) for i  in range(seq_len)]
+    cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size, projection_size=projection_size, prefix='self_')
+    syms, _ = cell.unroll(seq_len, syms)
+    sym = mx.sym.Group(syms)
+    args = in_data.copy()
+    args['self_i2h_weight'] = i2h_weight
+    args['self_h2h_weight'] = h2h_weight
+    args['self_i2h_bias'] = i2h_bias
+    args['self_h2h_bias'] = h2h_bias
+    args['self_h2r_weight'] = h2p_weight
+    exe = sym.bind(mx.gpu(0), args)
+    exe.forward()
+    outputs = list(map(lambda x: x.asnumpy(), exe.outputs))
+    self_outputs = np.stack(outputs)
+    assert_almost_equal(self_outputs, cudnn_output, rtol=rtol, atol=atol)
+
+
 @with_seed()
 @assert_raises_cudnn_disabled()
 def test_rnn_layer():
-    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
+    # check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
+    # check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
+    # check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
+    # check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
+    #
+    # check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    # check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
 
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    check_lstmp(500, 100, rtol=1e-3, atol=1e-6)
+    # check_rnn_layer_forward(gluon.rnn.LSTM(7, projection_size=5), mx.nd.ones((2, 3, 7)), run_only=False)
+    # check_rnn_layer_forward(gluon.rnn.LSTM(7, 2, projection_size=5), mx.nd.ones((2, 3, 7)), run_only=False)
 
 
 @with_seed()

@@ -35,11 +35,13 @@ class _RNNLayer(HybridBlock):
                  dropout, bidirectional, input_size,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 mode, **kwargs):
+                 mode, projection_size=None, h2p_weight_initializer=None,
+                 **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
         self._hidden_size = hidden_size
+        self._projection_size = projection_size
         self._num_layers = num_layers
         self._mode = mode
         self._layout = layout
@@ -54,21 +56,42 @@ class _RNNLayer(HybridBlock):
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
         ng, ni, nh = self._gates, input_size, hidden_size
-        for i in range(num_layers):
-            for j in ['l', 'r'][:self._dir]:
-                self._register_param('{}{}_i2h_weight'.format(j, i),
-                                     shape=(ng*nh, ni),
-                                     init=i2h_weight_initializer)
-                self._register_param('{}{}_h2h_weight'.format(j, i),
-                                     shape=(ng*nh, nh),
-                                     init=h2h_weight_initializer)
-                self._register_param('{}{}_i2h_bias'.format(j, i),
-                                     shape=(ng*nh,),
-                                     init=i2h_bias_initializer)
-                self._register_param('{}{}_h2h_bias'.format(j, i),
-                                     shape=(ng*nh,),
-                                     init=h2h_bias_initializer)
-            ni = nh * self._dir
+        if projection_size is None:
+            for i in range(num_layers):
+                for j in ['l', 'r'][:self._dir]:
+                    self._register_param('{}{}_i2h_weight'.format(j, i),
+                                         shape=(ng*nh, ni),
+                                         init=i2h_weight_initializer)
+                    self._register_param('{}{}_h2h_weight'.format(j, i),
+                                         shape=(ng*nh, nh),
+                                         init=h2h_weight_initializer)
+                    self._register_param('{}{}_i2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=i2h_bias_initializer)
+                    self._register_param('{}{}_h2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=h2h_bias_initializer)
+                ni = nh * self._dir
+        else:
+            np = self._projection_size
+            for i in range(num_layers):
+                for j in ['l', 'r'][:self._dir]:
+                    self._register_param('{}{}_i2h_weight'.format(j, i),
+                                         shape=(ng*nh, ni),
+                                         init=i2h_weight_initializer)
+                    self._register_param('{}{}_h2h_weight'.format(j, i),
+                                         shape=(ng*nh, np),
+                                         init=h2h_weight_initializer)
+                    self._register_param('{}{}_i2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=i2h_bias_initializer)
+                    self._register_param('{}{}_h2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=h2h_bias_initializer)
+                    self._register_param('{}{}_h2p_weight'.format(j, i),
+                                         shape=(np, nh),
+                                         init=h2p_weight_initializer)
+                ni = np * self._dir
 
     def _register_param(self, name, shape, init):
         p = self.params.get(name, shape=shape, init=init,
@@ -125,6 +148,7 @@ class _RNNLayer(HybridBlock):
                     'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
                                                              **kwargs)}[self._mode]
 
+        assert self._projection_size is not None, "_unfuse does not support projection layer yet!"
         stack = rnn_cell.HybridSequentialRNNCell(prefix=self.prefix, params=self.params)
         with stack.name_scope():
             ni = self._input_size
@@ -209,14 +233,24 @@ class _RNNLayer(HybridBlock):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = F.swapaxes(inputs, dim1=0, dim2=1)
-        params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
-                  for t in ['weight', 'bias']
-                  for l in range(self._num_layers)
-                  for d in ['l', 'r'][:self._dir]
-                  for g in ['i2h', 'h2h'])
+        if self._projection_size is None:
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                      for t in ['weight', 'bias']
+                      for l in range(self._num_layers)
+                      for d in ['l', 'r'][:self._dir]
+                      for g in ['i2h', 'h2h'])
+        else:
+            params = [kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                      for t in ['weight', 'bias']
+                      for l in range(self._num_layers)
+                      for d in ['l', 'r'][:self._dir]
+                      for g in ['i2h', 'h2h', 'h2p']
+                      if g != 'h2p' or t != 'bias']
+
         params = F._internal._rnn_param_concat(*params, dim=0)
 
         rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
+                    projection_size=self._projection_size,
                     num_layers=self._num_layers, bidirectional=self._dir == 2,
                     p=self._dropout, state_outputs=True, mode=self._mode)
 
@@ -373,6 +407,8 @@ class LSTM(_RNNLayer):
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
+    projection_size: int, default None
+        The number of features after projection.
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
@@ -416,18 +452,24 @@ class LSTM(_RNNLayer):
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 **kwargs):
+                 projection_size=None, h2p_weight_initializer=None, **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
                                    i2h_weight_initializer, h2h_weight_initializer,
                                    i2h_bias_initializer, h2h_bias_initializer,
-                                   'lstm', **kwargs)
+                                   'lstm', projection_size, h2p_weight_initializer, **kwargs)
 
     def state_info(self, batch_size=0):
-        return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
-                 '__layout__': 'LNC'},
-                {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
-                 '__layout__': 'LNC'}]
+        if self._projection_size is None:
+            return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'},
+                    {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'}]
+        else:
+            return [{'shape': (self._num_layers * self._dir, batch_size, self._projection_size),
+                     '__layout__': 'LNC'},
+                    {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'}]
 
 
 class GRU(_RNNLayer):
