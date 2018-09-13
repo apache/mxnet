@@ -40,24 +40,24 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-  dmlc::optional<nnvm::dim_t> k;
-  dmlc::optional<nnvm::dim_t> axis1;
-  dmlc::optional<nnvm::dim_t> axis2;
+  nnvm::dim_t k;
+  nnvm::dim_t axis1;
+  nnvm::dim_t axis2;
   DMLC_DECLARE_PARAMETER(DiagParam) {
     DMLC_DECLARE_FIELD(k)
-    .set_default(dmlc::optional<nnvm::dim_t>(0))
-    .describe("Diagonal in question. The default is 0. "
-              "Use k>0 for diagonals above the main diagonal, "
-              "and k<0 for diagonals below the main diagonal. "
-              "If input has shape (S0 S1) k must be between -S0 and S1");
+      .set_default(0)
+      .describe("Diagonal in question. The default is 0. "
+                "Use k>0 for diagonals above the main diagonal, "
+                "and k<0 for diagonals below the main diagonal. "
+                "If input has shape (S0 S1) k must be between -S0 and S1");
     DMLC_DECLARE_FIELD(axis1)
-    .set_default(dmlc::optional<nnvm::dim_t>(0))
-    .describe("The first axis of the sub-arrays of interest. "
-              "Ignored when the input is a 1-D array.");
+      .set_default(0)
+      .describe("The first axis of the sub-arrays of interest. "
+                "Ignored when the input is a 1-D array.");
     DMLC_DECLARE_FIELD(axis2)
-    .set_default(dmlc::optional<nnvm::dim_t>(1))
-    .describe("The second axis of the sub-arrays of interest. "
-              "Ignored when the input is a 1-D array.");
+      .set_default(1)
+      .describe("The second axis of the sub-arrays of interest. "
+                "Ignored when the input is a 1-D array.");
   }
 };
 
@@ -121,9 +121,9 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
     TShape oshape = DiagShapeImpl(ishape,
-                                  param.k.value(),
-                                  param.axis1.value(),
-                                  param.axis2.value());
+                                  param.k,
+                                  param.axis1,
+                                  param.axis2);
     if (shape_is_none(oshape)) {
       LOG(FATAL) << "Diagonal does not exist.";
     }
@@ -196,8 +196,8 @@ void DiagOpProcess(const TBlob& in_data,
   using namespace mshadow;
   if (ishape.ndim() > 1) {
     // input : (leading + i, body + i, trailing)
-    nnvm::dim_t x1 = CheckAxis(param.axis1.value(), ishape.ndim());
-    nnvm::dim_t x2 = CheckAxis(param.axis2.value(), ishape.ndim());
+    nnvm::dim_t x1 = CheckAxis(param.axis1, ishape.ndim());
+    nnvm::dim_t x2 = CheckAxis(param.axis2, ishape.ndim());
 
     nnvm::dim_t idim = ishape.ndim(), odim = oshape.ndim();
 
@@ -231,7 +231,7 @@ void DiagOpProcess(const TBlob& in_data,
       std::swap(stride1, stride2);
     }
     index_t offset;
-    nnvm::dim_t k = param.k.value();
+    nnvm::dim_t k = param.k;
     if (k > 0) {
       offset = stride2 * k;
     } else if (k < 0) {
@@ -263,7 +263,7 @@ void DiagOpProcess(const TBlob& in_data,
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<diag_gen<req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
                             in_data.dptr<DType>(), Shape2(oshape[0], oshape[1]),
-                            param.k.value());
+                            param.k);
       });
     });
   }
