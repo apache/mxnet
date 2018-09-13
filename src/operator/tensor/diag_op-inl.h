@@ -40,22 +40,22 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-  dmlc::optional<int> k;
-  dmlc::optional<int> axis1;
-  dmlc::optional<int> axis2;
+  dmlc::optional<nnvm::dim_t> k;
+  dmlc::optional<nnvm::dim_t> axis1;
+  dmlc::optional<nnvm::dim_t> axis2;
   DMLC_DECLARE_PARAMETER(DiagParam) {
     DMLC_DECLARE_FIELD(k)
-    .set_default(dmlc::optional<int>(0))
+    .set_default(dmlc::optional<nnvm::dim_t>(0))
     .describe("Diagonal in question. The default is 0. "
               "Use k>0 for diagonals above the main diagonal, "
               "and k<0 for diagonals below the main diagonal. "
               "If input has shape (S0 S1) k must be between -S0 and S1");
     DMLC_DECLARE_FIELD(axis1)
-    .set_default(dmlc::optional<int>(0))
+    .set_default(dmlc::optional<nnvm::dim_t>(0))
     .describe("The first axis of the sub-arrays of interest. "
               "Ignored when the input is a 1-D array.");
     DMLC_DECLARE_FIELD(axis2)
-    .set_default(dmlc::optional<int>(1))
+    .set_default(dmlc::optional<nnvm::dim_t>(1))
     .describe("The second axis of the sub-arrays of interest. "
               "Ignored when the input is a 1-D array.");
   }
@@ -68,8 +68,8 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
     return TShape({s, s});
   }
 
-  int x1 = CheckAxis(axis1, ishape.ndim());
-  int x2 = CheckAxis(axis2, ishape.ndim());
+  nnvm::dim_t x1 = CheckAxis(axis1, ishape.ndim());
+  nnvm::dim_t x2 = CheckAxis(axis2, ishape.ndim());
 
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
 
@@ -91,12 +91,12 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
     std::swap(x1, x2);
   }
 
-  int n_dim = static_cast<int>(ishape.ndim()) - 1;
+  nnvm::dim_t n_dim = ishape.ndim() - 1;
   TShape oshape(n_dim);
 
   // remove axis1 and axis2 and append the new axis to the end
-  int idx = 0;
-  for (int i = 0; i <= n_dim; ++i) {
+  nnvm::dim_t idx = 0;
+  for (nnvm::dim_t i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
     }
@@ -166,7 +166,7 @@ template<int req, bool back>
 struct diag_gen {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
-                                  mshadow::Shape<2> oshape, int k) {
+                                  mshadow::Shape<2> oshape, nnvm::dim_t k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -196,12 +196,12 @@ void DiagOpProcess(const TBlob& in_data,
   using namespace mshadow;
   if (ishape.ndim() > 1) {
     // input : (leading + i, body + i, trailing)
-    int x1 = CheckAxis(param.axis1.value(), ishape.ndim());
-    int x2 = CheckAxis(param.axis2.value(), ishape.ndim());
+    nnvm::dim_t x1 = CheckAxis(param.axis1.value(), ishape.ndim());
+    nnvm::dim_t x2 = CheckAxis(param.axis2.value(), ishape.ndim());
 
-    int idim = ishape.ndim(), odim = oshape.ndim();
+    nnvm::dim_t idim = ishape.ndim(), odim = oshape.ndim();
 
-    int minx = x1, maxx = x2;
+    nnvm::dim_t minx = x1, maxx = x2;
     if (minx > maxx) {
       std::swap(minx, maxx);
     }
@@ -210,13 +210,13 @@ void DiagOpProcess(const TBlob& in_data,
            obody = 1,
            otrailing = 1;
 
-    for (int i = 0; i < minx; ++i) {
+    for (nnvm::dim_t i = 0; i < minx; ++i) {
       oleading *= ishape[i];
     }
-    for (int i = minx + 1; i < maxx; ++i) {
+    for (nnvm::dim_t i = minx + 1; i < maxx; ++i) {
       obody *= ishape[i];
     }
-    for (int i = maxx + 1; i < idim; ++i) {
+    for (nnvm::dim_t i = maxx + 1; i < idim; ++i) {
       otrailing *= ishape[i];
     }
 
@@ -231,7 +231,7 @@ void DiagOpProcess(const TBlob& in_data,
       std::swap(stride1, stride2);
     }
     index_t offset;
-    int k = param.k.value();
+    nnvm::dim_t k = param.k.value();
     if (k > 0) {
       offset = stride2 * k;
     } else if (k < 0) {
