@@ -69,6 +69,7 @@ else:
 
 ForkingPickler.register(nd.NDArray, reduce_ndarray)
 
+from .dataset import _LazyTransformDataset, SimpleDataset
 
 class ConnectionWrapper(object):
     """Connection wrapper for multiprocessing that supports sending
@@ -162,6 +163,9 @@ def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
     if hasattr(dataset, '_fork') and callable(dataset._fork):
         dataset._fork()
+    if isinstance(dataset, (_LazyTransformDataset, SimpleDataset)) \
+        and hasattr(dataset._data, '_fork') and callable(dataset._data._fork):
+        dataset._data._fork()
     while True:
         idx, samples = key_queue.get()
         if idx is None:
