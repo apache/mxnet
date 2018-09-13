@@ -67,7 +67,8 @@ Select API:&nbsp;
     * [Learning Rate Finder](/tutorials/gluon/learning_rate_finder.html)
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
-    * [Profiling MXNet Models](/tutorials/python/profiler.html)
+    * [Profiling MXNet Models](/tutorials/python/profiler.html)    
+    * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)<span></span></span>
 * API Guides
     * Core APIs
         * NDArray
@@ -81,7 +82,7 @@ Select API:&nbsp;
         * Symbol
             * [Symbol API](/tutorials/basic/symbol.html) (Caution: written before Gluon existed)
         * KVStore
-            * [Key-Value Store API](/tutorials/python/kvstore.html)
+            * [Key-Value Store API](/tutorials/python/kvstore.html)        
     * Gluon APIs
         * Blocks and Operators
             * [Blocks](/tutorials/gluon/gluon.html) ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
@@ -89,6 +90,7 @@ Select API:&nbsp;
             * [HybridBlocks](/tutorials/gluon/hybrid.html) ([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Block Naming](/tutorials/gluon/naming.html)
             * [Custom Operators](/tutorials/gluon/customop.html)
+            * [Control Flow operators](/tutorials/control_flow/ControlFlowTutorial.html)<span style="color:red"> (new!)<span></span></span>
         * Autograd
             * [AutoGrad API](/tutorials/gluon/autograd.html)
             * [AutoGrad API with chain rule](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
@@ -117,7 +119,6 @@ Select API:&nbsp;
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
-    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
 * API Guides
     * Core APIs
         * NDArray
