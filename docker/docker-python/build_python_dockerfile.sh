@@ -42,7 +42,7 @@ docker_build_image(){
 }
 
 docker_tag_image(){
-    docker tag mxnet/python:${1} ${2}
+    docker tag mxnet/python:${1} mxnet/python:${2}
 }
 
 docker_test_image_cpu(){
