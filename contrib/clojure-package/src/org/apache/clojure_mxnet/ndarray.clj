@@ -89,7 +89,7 @@
    (NDArray/arange (float start) ($/option (float stop)) step repeat ctx dtype))
   ([start stop]
    (arange start stop {})))
-  
+
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
   ([ndarray i]

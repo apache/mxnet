@@ -272,7 +272,7 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 If you skip this step, you need to use *sudo* each time you invoke Docker.
 
-**Step 3** Install *nvidia-docker-plugin* following the [installation instructions](https://github.com/NVIDIA/nvidia-docker/wiki/Installation). *nvidia-docker-plugin* is required to enable the usage of GPUs from the docker containers.
+**Step 3** Install *nvidia-docker-plugin* following the [installation instructions](https://github.com/NVIDIA/nvidia-docker/wiki). *nvidia-docker-plugin* is required to enable the usage of GPUs from the docker containers.
 
 **Step 4** Pull the MXNet docker image.
 
