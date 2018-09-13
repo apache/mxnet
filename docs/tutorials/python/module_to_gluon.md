@@ -1,9 +1,9 @@
 
 # Converting Module API code to the Gluon API
 
-Sometimes, you find yourself in the situation where the model you want to use has been written using the symbolic Module API rather than the imperative Gluon API. In this tutorial, we will give you a comprehensive guide you can use in order to convert a given model to use Gluon.
+Sometimes, you find yourself in the situation where the model you want to use has been written using the symbolic Module API rather than the simpler, easier-to-debug, more flexible, imperative Gluon API. In this tutorial, we will give you a comprehensive guide you can use in order to see how you can transform your Module code, to work with the Gluon API.
 
-The different element to take in consideration are:
+The different steps to take into consideration are:
 
 I) Data loading
 
@@ -15,7 +15,7 @@ IV) Training Loop
 
 V) Exporting Models
 
-In the following section we will look at 1:1 mapping between the Module and the Gluon ways.
+In the following section we will look at 1:1 mappings between the Module and the Gluon ways of training a neural networks.
 
 ## I - Data Loading
 
@@ -130,6 +130,8 @@ ctx = mx.gpu()
 
 #### Module
 
+For the Module API, you define the data flow by setting `data` keyword argument of one layer to the next.
+You then bind the symbolic model to a specific compute context and specify the symbol names for the data and the label.
 
 ```python
 data = mx.sym.var('data')
@@ -147,7 +149,7 @@ mlp_model = mx.mod.Module(symbol=mlp, context=ctx, data_names=['data'], label_na
 
 #### Gluon
 
-In Gluon, for a sequential model like that, you would create a `Sequential` block, in that case a `HybridSequential` block to allow for future hybridization since we are only using hybridizable blocks. Learn more [about hybridization](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html).
+In Gluon, for a sequential model like that, you would create a `Sequential` block, in that case a `HybridSequential` block to allow for future hybridization since we are only using hybridizable blocks. Learn more [about hybridization](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html). The flow of the data will be automatically set from one layer to the next, since they are held in a `Sequential` block.
 
 
 ```python
@@ -163,9 +165,9 @@ with net.name_scope():
 
 ## III - Loss
 
-The loss, that you are trying to minimize using an optimization algorithm like SGD, is defined differently in the Module API and in Gluon.
+The loss, that you are trying to minimize using an optimization algorithm like SGD, is defined differently in the Module API than in Gluon.
 
-In the module API, the loss is part of the network. It has usually a forward result, that is the inference value, and a backward pass that is the gradient of the output with respect to that particular loss.
+In the module API, the loss is part of the network. It has usually a forward pass result, that is the inference value, and a backward pass that is the gradient of the output with respect to that particular loss.
 
 For example the [sym.SoftmaxOutput](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html?highlight=softmaxout#mxnet.symbol.SoftmaxOutput) is a softmax output in the forward pass and the gradient with respect to the cross-entropy loss in the backward pass.
 
@@ -289,7 +291,7 @@ net.export('gluon-model-hybrid', epoch=5)
 
 ## Conclusion
 
-This tutorial lead you through the steps necessary to train a deep learning model and showed you the differene between the symbolic approach of the Module API and the imperative Gluon API. If you need help converting your Module API code to the Gluon API, reach out to the community on the [discuss forum](https://discuss.mxnet.io)!
+This tutorial lead you through the steps necessary to train a deep learning model and showed you the difference between the symbolic approach of the Module API and the imperative one of the Gluon API. If you need more help converting your Module API code to the Gluon API, reach out to the community on the [discuss forum](https://discuss.mxnet.io)!
 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
