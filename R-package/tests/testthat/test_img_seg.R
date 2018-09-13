@@ -79,7 +79,7 @@ get_unet <- function() {
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4, up_pool = TRUE)
   
-  net <- mx.symbol.Concat(c(pool2, net), num.args = 2)
+  net <- mx.symbol.concat(c(pool2, net), num.args = 2)
   net <- mx.symbol.Dropout(net)
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4)
@@ -87,7 +87,7 @@ get_unet <- function() {
     4, up_pool = TRUE)
   convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4)
-  net <- mx.symbol.Concat(c(pool1, net), num.args = 2)
+  net <- mx.symbol.concat(c(pool1, net), num.args = 2)
   net <- mx.symbol.Dropout(net)
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     2)
