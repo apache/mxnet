@@ -41,14 +41,6 @@ echo "Building Docker Images for Apache MXNet (Incubating) v$1"
 mxnet_version="${1}"
 test_dir="${2}"
 
-
-# Run in debug mode, if set
-if [ "${debug}" == "1" ]; then
-    echo "debug mode on"
-    set -x
-fi
-
-
 docker_build_image(){
     echo "Building docker image mxnet/python:${1}"
     docker build -t mxnet/python:${1} -f ${2} .
