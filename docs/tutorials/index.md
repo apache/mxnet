@@ -67,7 +67,7 @@ Select API:&nbsp;
     * [Learning Rate Finder](/tutorials/gluon/learning_rate_finder.html)
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
-    * [Profiling MXNet Models](/tutorials/python/profiler.html)    
+    * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)<span></span></span>
 * API Guides
     * Core APIs
