@@ -15,11 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# WIP
+# This checks that the version of mxnet imported matches the parameter passed to the build script.
 import mxnet as mx
 import sys
 
-print mx.__version__
-print sys.argv[1]
+pip_version = mx.__version__
+expected_version = sys.argv[1]
+
+if pip_version != expected_version:
+    raise ValueError("ERROR: Incorrect pip version. Please check the parameter passed or pip binary used.")
 
 

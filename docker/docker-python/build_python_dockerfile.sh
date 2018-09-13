@@ -19,10 +19,34 @@
 
 set -e
 
-# Script to take two parameters
+# Check Params
+programname=$0
+
+function usage {
+    echo "usage: $programname [version] [path]"
+    echo "  [version]  Mxnet Version to build"
+    echo "  [path]     Path to MXNet repository (to run tests)"
+    echo " "
+    exit 1
+}
+
+if [ $# -le 1 ]
+then
+    usage
+    exit 1
+fi
+
+# Two params provided
 echo "Building Docker Images for Apache MXNet (Incubating) v$1"
 mxnet_version="${1}"
 test_dir="${2}"
+
+
+# Run in debug mode, if set
+if [ "${debug}" == "1" ]; then
+    echo "debug mode on"
+    set -x
+fi
 
 
 docker_build_image(){
