@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 import mxnet as mx
+import mxnet.ndarray as nd
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
 import numpy as np
@@ -88,32 +89,41 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 
-def _init_NDArrayIter_data():
-    data = np.ones([1000, 2, 2])
-    labels = np.ones([1000, 1])
+def _init_NDArrayIter_data(data_type):
+    if data_type == 'NDArray':
+        data = nd.ones((1000, 2, 2))
+        labels = nd.ones((1000, 2, 2))
+    else:
+        data = np.ones([1000, 2, 2])
+        labels = np.ones([1000, 1])
     for i in range(1000):
         data[i] = i / 100
         labels[i] = i / 100
     return data, labels
 
 
-def _test_last_batch_handle(data, labels):
+def _test_last_batch_handle(data, labels=None):
     # Test the three parameters 'pad', 'discard', 'roll_over'
     last_batch_handle_list = ['pad', 'discard' , 'roll_over']
-    labelcount_list = [(124, 100), (100, 96), (100, 96)]
+    if labels is not None and len(labels) != 0:
+        labelcount_list = [(124, 100), (100, 96), (100, 96)]
     batch_count_list = [8, 7, 7]
     
     for idx in range(len(last_batch_handle_list)):
         dataiter = mx.io.NDArrayIter(
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
         batch_count = 0
-        labelcount = [0 for i in range(10)]
+        if labels is not None and len(labels) != 0:
+            labelcount = [0 for i in range(10)]
         for batch in dataiter:
-            label = batch.label[0].asnumpy().flatten()
-            # check data if it matches corresponding labels
-            assert((batch.data[0].asnumpy()[:, 0, 0] == label).all()), last_batch_handle_list[idx]
-            for i in range(label.shape[0]):
-                labelcount[int(label[i])] += 1
+            if labels is not None and len(labels) != 0:
+                label = batch.label[0].asnumpy().flatten()
+                # check data if it matches corresponding labels
+                assert ((batch.data[0].asnumpy()[:, 0, 0] == label).all()), last_batch_handle_list[idx]
+                for i in range(label.shape[0]):
+                    labelcount[int(label[i])] += 1
+            else:
+                assert not batch.label, 'label is not empty list'
             # keep the last batch of 'pad' to be used later 
             # to test first batch of roll_over in second iteration
             batch_count += 1
@@ -121,15 +131,16 @@ def _test_last_batch_handle(data, labels):
                 batch_count == 8:
                 cache = batch.data[0].asnumpy()
         # check if batchifying functionality work properly
-        assert labelcount[0] == labelcount_list[idx][0], last_batch_handle_list[idx]
-        assert labelcount[8] == labelcount_list[idx][1], last_batch_handle_list[idx]
+        if labels is not None and len(labels) != 0:
+            assert labelcount[0] == labelcount_list[idx][0], last_batch_handle_list[idx]
+            assert labelcount[8] == labelcount_list[idx][1], last_batch_handle_list[idx]
         assert batch_count == batch_count_list[idx]
     # roll_over option
     dataiter.reset()
     assert np.array_equal(dataiter.next().data[0].asnumpy(), cache)
 
 
-def _test_shuffle(data, labels):
+def _test_shuffle(data, labels=None):
     dataiter = mx.io.NDArrayIter(data, labels, 1, False)
     batch_list = []
     for batch in dataiter:
@@ -145,16 +156,22 @@ def _test_shuffle(data, labels):
 
 
 def test_NDArrayIter():
-    data, labels = _init_NDArrayIter_data()
-    _test_last_batch_handle(data, labels)
-    _test_shuffle(data, labels)
+    dtype_list = ['NDArray', 'ndarray']
+    for dtype in dtype_list:
+        data, labels = _init_NDArrayIter_data(dtype_list)
+        _test_last_batch_handle(data, labels)
+        _test_last_batch_handle(data, [])
+        _test_last_batch_handle(data)
+        _test_shuffle(data, labels)
+        _test_shuffle(data, [])
+        _test_shuffle(data)
 
 
 def test_NDArrayIter_h5py():
     if not h5py:
         return
 
-    data, labels = _init_NDArrayIter_data()
+    data, labels = _init_NDArrayIter_data('ndarray')
 
     try:
         os.remove('ndarraytest.h5')
@@ -163,8 +180,10 @@ def test_NDArrayIter_h5py():
     with h5py.File('ndarraytest.h5') as f:
         f.create_dataset('data', data=data)
         f.create_dataset('label', data=labels)
-
+        
         _test_last_batch_handle(f['data'], f['label'])
+        _test_last_batch_handle(f['data'], [])
+        _test_last_batch_handle(f['data'])
     try:
         os.remove("ndarraytest.h5")
     except OSError:
