@@ -25,6 +25,6 @@ if [ ${TRAVIS_OS_NAME} == "osx" ]; then
     brew install libpng
     brew install ImageMagick
     brew install swig
-	python -m pip install --user nose numpy cython scipy requests
-	python3 -m pip install --user nose numpy cython scipy requests
+    python -m pip install --user nose numpy cython scipy requests mock
+    python3 -m pip install --user nose numpy cython scipy requests mock
 fi
