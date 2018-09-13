@@ -716,10 +716,10 @@ class NDArrayIter(DataIter):
             ]
         elif (not first_data) and (not second_data):
             return []
-        elif not first_data:
-            return [second_data[0]]
         else:
-            return [first_data[0]]
+            return [
+                first_data[0] if first_data else second_data[0]
+            ]
 
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
