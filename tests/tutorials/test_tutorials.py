@@ -160,6 +160,9 @@ def test_python_data_augmentation_with_masks():
 def test_python_kvstore():
     assert _test_tutorial_nb('python/kvstore')
 
+def test_module_to_gluon():
+    assert _test_tutorial_nb('python/module_to_gluon')
+
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
 
@@ -189,3 +192,4 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
+
