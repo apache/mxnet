@@ -82,7 +82,7 @@ Select API:&nbsp;
         * Symbol
             * [Symbol API](/tutorials/basic/symbol.html) (Caution: written before Gluon existed)
         * KVStore
-            * [Key-Value Store API](/tutorials/python/kvstore.html)        
+            * [Key-Value Store API](/tutorials/python/kvstore.html)
     * Gluon APIs
         * Blocks and Operators
             * [Blocks](/tutorials/gluon/gluon.html) ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/plumbing.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
