@@ -17,28 +17,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -ex
+set -e
 
 # Script to take two parameters
 echo "Building Docker Images for Apache MXNet (Incubating) v$1"
+mxnet_version="${1}"
 test_dir="${2}"
 
-# function to exit script if command fails
-runme() {
-        cmd=$*
-        echo "$cmd"
-        $cmd
-        ret=$?
-        if [[ ${ret} != 0 ]]; then
-                echo " "
-                echo "ERROR: Return value non-zero for: $cmd"
-                echo " "
-                exit 1
-        fi
-}
 
 docker_build_image(){
-    runme docker build -t mxnet/python:${1} -f ${2} .
+    echo "Building docker image mxnet/python:${1}"
+    docker build -t mxnet/python:${1} -f ${2} .
 }
 
 docker_tag_image(){
@@ -46,13 +35,15 @@ docker_tag_image(){
 }
 
 docker_test_image_cpu(){
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py"
+    echo "Running tests on mxnet/python:${1}"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
     docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py"
     docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py"
 }
 
 docker_test_image_gpu(){
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py"
+    echo "Running tests on mxnet/python:${1}"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py --gpu"
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py --gpus 2"
 }
@@ -66,40 +57,41 @@ docker_account_logout(){
 }
 
 docker_push_image(){
-    runme docker push mxnet/python:${1}
+    docker push mxnet/python:${1}
 }
 
 
 # Build and Test dockerfiles - CPU
-docker_build_image "${1}_cpu" "Dockerfile.mxnet.python.cpu"
-docker_test_image_cpu "${1}_cpu"
+docker_build_image "${mxnet_version}_cpu" "Dockerfile.mxnet.python.cpu"
+docker_test_image_cpu "${mxnet_version}_cpu"
 
-docker_build_image "${1}_cpu_mkl" "Dockerfile.mxnet.python.cpu.mkl"
-docker_test_image_cpu "${1}_cpu_mkl"
+docker_build_image "${mxnet_version}_cpu_mkl" "Dockerfile.mxnet.python.cpu.mkl"
+docker_test_image_cpu "${mxnet_version}_cpu_mkl"
 
-docker_tag_image "${1}_cpu" "latest"
+docker_tag_image "${mxnet_version}_cpu" "latest"
 docker_test_image_cpu "latest"
 
 
 #Build and Test dockerfiles - GPU
-docker_build_image "${1}_gpu_cu90" "Dockerfile.mxnet.python.gpu"
-docker_test_image_gpu "${1}_gpu_cu90"
+docker_build_image "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu"
+docker_test_image_gpu "${mxnet_version}_gpu_cu90"
 
-docker_build_image "${1}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.mkl"
-docker_test_image_gpu "${1}_gpu_cu90_mkl"
+docker_build_image "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.mkl"
+docker_test_image_gpu "${mxnet_version}_gpu_cu90_mkl"
 
-docker_tag_image "${1}_gpu_cu90" "gpu"
+docker_tag_image "${mxnet_version}_gpu_cu90" "gpu"
 docker_test_image_gpu "gpu"
 
 
 # Push dockerfiles
+echo "All images were successfully built. Now login to dockerhub and push images"
 docker_account_login
 
-docker_push_image "${1}_cpu"
-docker_push_image "${1}_cpu_mkl"
+docker_push_image "${mxnet_version}_cpu"
+docker_push_image "${mxnet_version}_cpu_mkl"
 docker_push_image "latest"
-docker_push_image "${1}_gpu_cu90"
-docker_push_image "${1}_gpu_cu90_mkl"
+docker_push_image "${mxnet_version}_gpu_cu90"
+docker_push_image "${mxnet_version}_gpu_cu90_mkl"
 docker_push_image "gpu"
 
 docker_account_logout

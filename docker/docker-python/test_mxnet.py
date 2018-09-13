@@ -15,7 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# WIP
 import mxnet as mx
+import sys
 
 print mx.__version__
+print sys.argv[1]
+
 
