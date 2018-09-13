@@ -17,6 +17,8 @@
 
 (ns org.apache.clojure-mxnet.util-test
   (:require [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.context :as context]
+            [org.apache.clojure-mxnet.executor :as executor]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -191,3 +193,47 @@
         data3 [1 1 1 2]]
     (is (not (test-util/approx= 1e-9 data1 data2)))
     (is (test-util/approx= 2 data1 data3))))
+
+(deftest test-with-resources
+  (testing "with ndarrays"
+    (let [a (ndarray/array [-1 0 1 2 3 4] [2 3])
+          result-map (util/with-resources
+                       [b (ndarray/relu a)
+                        c (ndarray/+ a b)]
+                       {:result (ndarray/slice c 0 1)
+                        :b b
+                        :c c})]
+      (is (= [-1.0 0.0 2.0] (ndarray/->vec (:result result-map))))
+      (is (true? (.isDisposed (:b result-map))))
+      (is (true? (.isDisposed (:c result-map))))
+      (is (false? (.isDisposed a)))
+      (is (false? (.isDisposed (:result result-map))))))
+
+  (testing "with nested ndarrays"
+    (let [result-map2 (util/with-resources [a (ndarray/ones [3 3])]
+                        (let [result-map1 (util/with-resources
+                                            [b (ndarray/zeros [1 1])]
+                                            {:b b})]
+                          (is (true? (.isDisposed (:b result-map1)))))
+                        {:a a})]
+      (is (true? (.isDisposed (:a result-map2))))))
+
+  (testing "with symbols and executor"
+    (let [result-map
+          (util/with-resources [a (sym/ones [3])
+                                b (sym/ones [3])
+                                c (sym/+ a b)
+                                ex (sym/simple-bind c (context/default-context))]
+            {:a a
+             :b b
+             :c c
+             :ex ex
+             :result (-> (executor/forward ex)
+                         (executor/outputs)
+                         (first)
+                         (ndarray/->vec))})]
+      (is (= [2.0 2.0 2.0] (:result result-map)))
+      (is (.isDisposed (:a result-map)))
+      (is (.isDisposed (:b result-map)))
+      (is (.isDisposed (:c result-map)))
+      (is (.isDisposed (:ex result-map))))))
