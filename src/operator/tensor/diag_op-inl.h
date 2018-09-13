@@ -40,9 +40,9 @@ namespace mxnet {
 namespace op {
 
 struct DiagParam : public dmlc::Parameter<DiagParam> {
-  nnvm::dim_t k;
-  nnvm::dim_t axis1;
-  nnvm::dim_t axis2;
+  int k;
+  int32_t axis1;
+  int32_t axis2;
   DMLC_DECLARE_PARAMETER(DiagParam) {
     DMLC_DECLARE_FIELD(k)
       .set_default(0)
@@ -61,15 +61,15 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
   }
 };
 
-inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
-                            const nnvm::dim_t axis1, const nnvm::dim_t axis2) {
+inline TShape DiagShapeImpl(const TShape& ishape, const int k,
+                            const int32_t axis1, const int32_t axis2) {
   if (ishape.ndim() == 1) {
     auto s = ishape[0] + std::abs(k);
     return TShape({s, s});
   }
 
-  nnvm::dim_t x1 = CheckAxis(axis1, ishape.ndim());
-  nnvm::dim_t x2 = CheckAxis(axis2, ishape.ndim());
+  int32_t x1 = CheckAxis(axis1, ishape.ndim());
+  int32_t x2 = CheckAxis(axis2, ishape.ndim());
 
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
 
@@ -91,12 +91,12 @@ inline TShape DiagShapeImpl(const TShape& ishape, const nnvm::dim_t k,
     std::swap(x1, x2);
   }
 
-  nnvm::dim_t n_dim = ishape.ndim() - 1;
+  int32_t n_dim = static_cast<int32_t>(ishape.ndim()) - 1;
   TShape oshape(n_dim);
 
   // remove axis1 and axis2 and append the new axis to the end
-  nnvm::dim_t idx = 0;
-  for (nnvm::dim_t i = 0; i <= n_dim; ++i) {
+  uint32_t idx = 0;
+  for (int32_t i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
     }
@@ -166,7 +166,7 @@ template<int req, bool back>
 struct diag_gen {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
-                                  mshadow::Shape<2> oshape, nnvm::dim_t k) {
+                                  mshadow::Shape<2> oshape, int k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -196,12 +196,12 @@ void DiagOpProcess(const TBlob& in_data,
   using namespace mshadow;
   if (ishape.ndim() > 1) {
     // input : (leading + i, body + i, trailing)
-    nnvm::dim_t x1 = CheckAxis(param.axis1, ishape.ndim());
-    nnvm::dim_t x2 = CheckAxis(param.axis2, ishape.ndim());
+    uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
+    uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
 
-    nnvm::dim_t idim = ishape.ndim(), odim = oshape.ndim();
+    uint32_t idim = ishape.ndim(), odim = oshape.ndim();
 
-    nnvm::dim_t minx = x1, maxx = x2;
+    uint32_t minx = x1, maxx = x2;
     if (minx > maxx) {
       std::swap(minx, maxx);
     }
@@ -210,13 +210,13 @@ void DiagOpProcess(const TBlob& in_data,
            obody = 1,
            otrailing = 1;
 
-    for (nnvm::dim_t i = 0; i < minx; ++i) {
+    for (uint32_t i = 0; i < minx; ++i) {
       oleading *= ishape[i];
     }
-    for (nnvm::dim_t i = minx + 1; i < maxx; ++i) {
+    for (uint32_t i = minx + 1; i < maxx; ++i) {
       obody *= ishape[i];
     }
-    for (nnvm::dim_t i = maxx + 1; i < idim; ++i) {
+    for (uint32_t i = maxx + 1; i < idim; ++i) {
       otrailing *= ishape[i];
     }
 
@@ -231,7 +231,7 @@ void DiagOpProcess(const TBlob& in_data,
       std::swap(stride1, stride2);
     }
     index_t offset;
-    nnvm::dim_t k = param.k;
+    int k = param.k;
     if (k > 0) {
       offset = stride2 * k;
     } else if (k < 0) {
