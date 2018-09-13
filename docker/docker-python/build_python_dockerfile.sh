@@ -52,9 +52,9 @@ docker_test_image_cpu(){
 }
 
 docker_test_image_gpu(){
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py'"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py"
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py --gpu"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py --gpus 2"
 }
 
 docker_account_login(){
@@ -85,11 +85,11 @@ docker_test_image_cpu "latest"
 docker_build_image "${1}_gpu_cu90" "Dockerfile.mxnet.python.gpu"
 docker_test_image_gpu "${1}_gpu_cu90"
 
-docker_build_image "${1}_gpu_mkl_cu90" "Dockerfile.mxnet.python.gpu.mkl"
-docker_test_image_gpu "${1}_gpu_cu90"
+docker_build_image "${1}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.mkl"
+docker_test_image_gpu "${1}_gpu_cu90_mkl"
 
-docker_tag_image "${1}_gpu" "gpu"
-docker_test_image_gpu "${1}_gpu_cu90"
+docker_tag_image "${1}_gpu_cu90" "gpu"
+docker_test_image_gpu "gpu"
 
 
 # Push dockerfiles
@@ -99,7 +99,7 @@ docker_push_image "${1}_cpu"
 docker_push_image "${1}_cpu_mkl"
 docker_push_image "latest"
 docker_push_image "${1}_gpu_cu90"
-docker_push_image "${1}_gpu_cu90"
-docker_push_image "${1}_gpu_cu90"
+docker_push_image "${1}_gpu_cu90_mkl"
+docker_push_image "gpu"
 
 docker_account_logout
