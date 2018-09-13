@@ -281,7 +281,6 @@ def test_pooling():
         check_pooling_training(stype)
 
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/12377")
 @with_seed()
 def test_activation():
     def check_activation_training(stype):
