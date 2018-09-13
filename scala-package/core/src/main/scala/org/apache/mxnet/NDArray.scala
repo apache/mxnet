@@ -989,6 +989,44 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  /* Java Compatibility Functions
+     Function name with underscore means
+     it is going to do the operator as well as
+     update itself such as +=
+   */
+  def add(other : NDArray) : NDArray = this + other
+  def add(other : Float) : NDArray = this + other
+  def _add(other : NDArray) : NDArray = this += other
+  def _add(other : Float) : NDArray = this += other
+  def subtract(other : NDArray) : NDArray = this - other
+  def subtract(other : Float) : NDArray = this - other
+  def _subtract(other : NDArray) : NDArray = this -= other
+  def _subtract(other : Float) : NDArray = this -= other
+  def multiply(other : NDArray) : NDArray = this * other
+  def multiply(other : Float) : NDArray = this * other
+  def _multiply(other : NDArray) : NDArray = this *= other
+  def _multiply(other : Float) : NDArray = this *= other
+  def div(other : NDArray) : NDArray = this / other
+  def div(other : Float) : NDArray = this / other
+  def _div(other : NDArray) : NDArray = this /= other
+  def _div(other : Float) : NDArray = this /= other
+  def pow(other : NDArray) : NDArray = this ** other
+  def pow(other : Float) : NDArray = this ** other
+  def _pow(other : NDArray) : NDArray = this **= other
+  def _pow(other : Float) : NDArray = this **= other
+  def mod(other : NDArray) : NDArray = this % other
+  def mod(other : Float) : NDArray = this % other
+  def _mod(other : NDArray) : NDArray = this %= other
+  def _mod(other : Float) : NDArray = this %= other
+  def greater(other : NDArray) : NDArray = this > other
+  def greater(other : Float) : NDArray = this > other
+  def greaterEqual(other : NDArray) : NDArray = this >= other
+  def greaterEqual(other : Float) : NDArray = this >= other
+  def lesser(other : NDArray) : NDArray = this < other
+  def lesser(other : Float) : NDArray = this < other
+  def lesserEqual(other : NDArray) : NDArray = this <= other
+  def lesserEqual(other : Float) : NDArray = this <= other
+
   /**
    * Return a copied flat java array of current array (row-major).
    * @return  A copy of array content.
