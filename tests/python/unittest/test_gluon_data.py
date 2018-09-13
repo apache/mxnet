@@ -65,7 +65,8 @@ def prepare_record():
 @with_seed()
 def test_recordimage_dataset():
     recfile = prepare_record()
-    dataset = gluon.data.vision.ImageRecordDataset(recfile)
+    fn = lambda x, y : (x, y)
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
     loader = gluon.data.DataLoader(dataset, 1)
 
     for i, (x, y) in enumerate(loader):
@@ -78,6 +79,15 @@ def test_recordimage_dataset_with_data_loader_multiworker():
     if platform.system() != 'Windows':
         recfile = prepare_record()
         dataset = gluon.data.vision.ImageRecordDataset(recfile)
+        loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+
+        for i, (x, y) in enumerate(loader):
+            assert x.shape[0] == 1 and x.shape[3] == 3
+            assert y.asscalar() == i
+
+        # with transform
+        fn = lambda x, y : (x, y)
+        dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
         loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
         for i, (x, y) in enumerate(loader):
