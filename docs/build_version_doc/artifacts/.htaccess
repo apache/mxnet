@@ -13,3 +13,11 @@ RewriteRule ^versions/[^\/]+/gluon/.*$ /gluon/ [R=301,L]
 RewriteRule ^versions/[^\/]+/install/.*$ /install/ [R=301,L]
 RewriteRule ^versions/[^\/]+/tutorials/.*$ /tutorials/ [R=301,L]
 RewriteRule ^versions/[^\/]+/api/python/contrib/onnx.html /api/python/contrib/onnx.html [R=301,L]
+
+RewriteRule ^versions/0.11.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/0.12.1/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.0.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.1.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.2.1/api/clojure/.*$ /error/api.html [R=301,L]
+
+ErrorDocument 404 https://mxnet.incubator.apache.org/error/404.html

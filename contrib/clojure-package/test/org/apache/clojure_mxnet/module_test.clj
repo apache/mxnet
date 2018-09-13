@@ -20,6 +20,7 @@
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.io :as mx-io]
+            [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.module :as m]
             [org.apache.clojure-mxnet.monitor :as monitor]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -54,9 +55,9 @@
         c (sym/+ a (sym/+ (sym/* b 2) (sym/* c 3)))
         mod (m/module c ["b" "c" "a"] nil [(context/cpu 0) (context/cpu 1)])]
     (-> mod
-        (m/bind {:data-shapes [{:name "b" :shape [5 5] :layout "NT"}
-                               {:name "c" :shape [5 5] :layout "NT"}
-                               {:name "a" :shape [5 5] :layout "NT"}]
+        (m/bind {:data-shapes [{:name "b" :shape [5 5] :layout layout/NT}
+                               {:name "c" :shape [5 5] :layout layout/NT}
+                               {:name "a" :shape [5 5] :layout layout/NT}]
                  :inputs-need-grad true})
         (m/init-params)
         (m/forward {:data [(ndarray/ones [5 5])
@@ -172,7 +173,7 @@
             (sym/linear-regression-output "softmax" {:data v :grad-scale 2}))
 
         mod (m/module x)]
-    (m/bind mod {:data-shapes (mx-io/provide-data train-data) :label-shapes (mx-io/provide-label train-data)})
+    (m/bind mod {:data-shapes (mx-io/provide-data-desc train-data) :label-shapes (mx-io/provide-label train-data)})
 
     (let [arg-params-correct {"fc_0_weight" (ndarray/array [0.15 0.2 0.25 0.3] [2 2])
                               "fc_0_bias" (ndarray/array [0.35 0.35] [2])
