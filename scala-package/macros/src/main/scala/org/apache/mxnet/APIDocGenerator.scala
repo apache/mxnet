@@ -55,62 +55,44 @@ private[mxnet] object APIDocGenerator{
   }
 
   def absRndClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
-    // scalastyle:off
-    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    // TODO: Add Filter to the same location in case of refactor
+    typeSafeClassGen(
+      getSymbolNDArrayMethods(isSymbol)
+        .filter(f => f.name.startsWith("_random") || f.name.startsWith("_sample")),
+      FILE_PATH,
+      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
+      isSymbol
+    )
+  }
 
-    val absFuncs = absClassFunctions.filter(f => f.name.startsWith("sample_") || f.name.startsWith("random_"))
+  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
+    val notGenerated = Set("Custom")
+    typeSafeClassGen(
+      getSymbolNDArrayMethods(isSymbol)
+        .filterNot(_.name.startsWith("_"))
+        .filterNot(ele => notGenerated.contains(ele.name)),
+      FILE_PATH,
+      if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
+      isSymbol
+    )
+  }
+
+  def typeSafeClassGen(absClassFunctions: Seq[absClassFunction], FILE_PATH: String,
+                       packageName: String, isSymbol: Boolean): String = {
+    val absFuncs = absClassFunctions
       .map(absClassFunction => {
         val scalaDoc = generateAPIDocFromBackend(absClassFunction)
         val defBody = generateAPISignature(absClassFunction, isSymbol)
         s"$scalaDoc\n$defBody"
       })
-    val packageName = if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase"
-    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
-    val scalaStyle = "// scalastyle:off"
-    val packageDef = "package org.apache.mxnet"
-    val imports = "import org.apache.mxnet.annotation.Experimental"
-    val absClassDef = s"abstract class $packageName"
-    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
-    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
-    pw.write(finalStr)
-    pw.close()
-    MD5Generator(finalStr)
-  }
-
-  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
-    // scalastyle:off
-    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    // Defines Operators that should not generated
-    val notGenerated = Set("Custom")
-    // TODO: Add Filter to the same location in case of refactor
-    val absFuncs = absClassFunctions
-      .filterNot(_.name.startsWith("_"))
-      .filterNot(_.name.startsWith("random_"))
-      .filterNot(_.name.startsWith("sample_"))
-      .filterNot(ele => notGenerated.contains(ele.name))
-      .map(absClassFunction => {
-      val scalaDoc = generateAPIDocFromBackend(absClassFunction)
-      val defBody = generateAPISignature(absClassFunction, isSymbol)
-      s"$scalaDoc\n$defBody"
-    })
-    val packageName = if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase"
-    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
-    val scalaStyle = "// scalastyle:off"
-    val packageDef = "package org.apache.mxnet"
-    val imports = "import org.apache.mxnet.annotation.Experimental"
-    val absClassDef = s"abstract class $packageName"
-    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
-    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
-    pw.write(finalStr)
-    pw.close()
-    MD5Generator(finalStr)
+    writeFile(FILE_PATH, packageName, absFuncs)
   }
 
   def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
-    val absFuncs = absClassFunctions.map(absClassFunction => {
+    val absFuncs = absClassFunctions
+      .filterNot(_.name.startsWith("_"))
+      .map(absClassFunction => {
       val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
       if (isSymbol) {
         val defBody = s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): org.apache.mxnet.Symbol"
@@ -122,13 +104,40 @@ private[mxnet] object APIDocGenerator{
       }
     })
     val packageName = if (isSymbol) "SymbolBase" else "NDArrayBase"
-    val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
+    writeFile(FILE_PATH, packageName, absFuncs)
+  }
+
+  def writeFile(FILE_PATH: String, packageName: String, absFuncs: Seq[String]): String = {
+    val apacheLicence =
+      """/*
+        |* Licensed to the Apache Software Foundation (ASF) under one or more
+        |* contributor license agreements.  See the NOTICE file distributed with
+        |* this work for additional information regarding copyright ownership.
+        |* The ASF licenses this file to You under the Apache License, Version 2.0
+        |* (the "License"); you may not use this file except in compliance with
+        |* the License.  You may obtain a copy of the License at
+        |*
+        |*    http://www.apache.org/licenses/LICENSE-2.0
+        |*
+        |* Unless required by applicable law or agreed to in writing, software
+        |* distributed under the License is distributed on an "AS IS" BASIS,
+        |* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        |* See the License for the specific language governing permissions and
+        |* limitations under the License.
+        |*/
+        |""".stripMargin
     val scalaStyle = "// scalastyle:off"
     val packageDef = "package org.apache.mxnet"
     val imports = "import org.apache.mxnet.annotation.Experimental"
     val absClassDef = s"abstract class $packageName"
-    val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
-    import java.io._
+    val finalStr =
+      s"""$apacheLicence
+         |$scalaStyle
+         |$packageDef
+         |$imports
+         |$absClassDef {
+         |${absFuncs.mkString("\n")}
+         |}""".stripMargin
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
     pw.close()
@@ -186,7 +195,6 @@ private[mxnet] object APIDocGenerator{
     s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : $returnType"
   }
 
-
   // List and add all the atomic symbol functions to current module.
   private def getSymbolNDArrayMethods(isSymbol : Boolean): List[absClassFunction] = {
     val opNames = ListBuffer.empty[String]
@@ -198,7 +206,7 @@ private[mxnet] object APIDocGenerator{
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
       makeAtomicSymbolFunction(opHandle.value, opName, "org.apache.mxnet." + returnType)
-    }).toList.filterNot(_.name.startsWith("_"))
+    }).toList
   }
 
   // Create an atomic symbol function by handle and function name.

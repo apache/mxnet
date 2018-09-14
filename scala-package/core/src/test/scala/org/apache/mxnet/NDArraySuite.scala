@@ -580,8 +580,8 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   test("random module is present") {
     val loc = NDArray.ones(1, 2)
     val scale = NDArray.ones(1, 2) * 2
-    val rnd = NDArray.random.sample_normal(mu = loc, sigma = scale, shape = Some(Shape(3, 4)))
-    val rnd2 = NDArray.random.random_normal(loc = Some(1f), scale = Some(2f),
+    val rnd = NDArray.random._sample_normal(mu = loc, sigma = scale, shape = Some(Shape(3, 4)))
+    val rnd2 = NDArray.random._random_normal(loc = Some(1f), scale = Some(2f),
       shape = Some(Shape(3, 4)))
     assert(rnd.shape === Shape(1, 2, 3, 4))
     assert(rnd2.shape === Shape(3, 4))

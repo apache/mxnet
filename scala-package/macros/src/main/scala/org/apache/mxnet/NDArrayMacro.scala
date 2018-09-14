@@ -93,7 +93,7 @@ private[mxnet] object NDArrayMacro {
     import c.universe._
 
     val rndFunctions =
-      ndarrayFunctions.filter(f => f.name.startsWith("sample_") || f.name.startsWith("random_"))
+      ndarrayFunctions.filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
 
     val functionDefs = rndFunctions.map(f => buildTypeSafeFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
@@ -114,8 +114,7 @@ private[mxnet] object NDArrayMacro {
     val newNDArrayFunctions = {
       if (isContrib) ndarrayFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else ndarrayFunctions.filterNot(f => f.name.startsWith("_") &&
-        !f.name.startsWith("sample_") && !f.name.startsWith("random_"))
+      else ndarrayFunctions.filterNot(f => f.name.startsWith("_"))
     }.filterNot(ele => notGenerated.contains(ele.name))
 
     val functionDefs = newNDArrayFunctions.map(f => buildTypeSafeFunction(c)(f))

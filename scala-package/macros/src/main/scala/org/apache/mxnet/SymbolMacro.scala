@@ -93,7 +93,7 @@ private[mxnet] object SymbolImplMacros {
     import c.universe._
 
     val rndFunctions =
-      symbolFunctions.filter(f => f.name.startsWith("sample_") || f.name.startsWith("random_"))
+      symbolFunctions.filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
 
     val functionDefs = rndFunctions.map(f => buildTypedFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
@@ -117,8 +117,7 @@ private[mxnet] object SymbolImplMacros {
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else symbolFunctions.filter(f => !f.name.startsWith("_") &&
-        !f.name.startsWith("sample_") && !f.name.startsWith("random_"))
+      else symbolFunctions.filter(f => !f.name.startsWith("_"))
     }.filterNot(ele => notGenerated.contains(ele.name))
 
     val functionDefs = newSymbolFunctions.map(f => buildTypedFunction(c)(f))
