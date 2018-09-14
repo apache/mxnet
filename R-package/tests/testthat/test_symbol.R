@@ -106,7 +106,7 @@ test_that("symbol concat", {
   expect_equal(outputs(children(s3)), c("data1", "data2"))
   expect_equal(arguments(s3), c("data1", "data2"))
   
-  s4 <- mx.symbol.Concat(data = c(s1, s2), num.args = 2, name = "concat")
+  s4 <- mx.symbol.concat(data = c(s1, s2), num.args = 2, name = "concat")
   expect_equal(outputs(s3), outputs(s4))
   expect_equal(outputs(children(s3)), outputs(children(s4)))
   expect_equal(arguments(s3), arguments(s4))
