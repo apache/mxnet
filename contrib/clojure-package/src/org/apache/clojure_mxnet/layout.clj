@@ -15,15 +15,21 @@
 ;; limitations under the License.
 ;;
 
-(ns org.apache.clojure-mxnet.test-util
-  (:require [clojure.test :as t]))
+(ns org.apache.clojure-mxnet.layout
+  (:import (org.apache.mxnet Layout)))
 
-(defn approx= [tolerance x y]
-  (if (and (number? x) (number? y))
-    (let [diff (Math/abs (- x y))]
-      (< diff tolerance))
-    (and
-     (= (count x) (count y))
-     (reduce (fn [x y] (and x y))
-             (map #(approx= tolerance %1 %2) x y)))))
+;;
+;;    Layout definition of DataDesc
+;;    N Batch size
+;;    C channels
+;;    H Height
+;;    W Weight
+;;    T sequence length
+;;    __undefined__ default value of Layout
+;;   
 
+(def UNDEFINED (Layout/UNDEFINED)) ;"__UNDEFINED__"
+(def NCHW (Layout/NCHW)) ;=> "NCHW"
+(def NTC (Layout/NTC)) ;=> "NTC"
+(def NT (Layout/NT)) ;=> "NT"
+(def N (Layout/N)) ;=> "N

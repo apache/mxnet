@@ -78,21 +78,20 @@ Alternatively, you can use the table below to select the package that suits your
 #### pip Package Availability
 
 The following table presents the pip packages that are recommended for each version of MXNet.
-
-<!-- Must find sol'n for both github and website; image in the meantime
-| Package / MXNet Version | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
-|-|-|-|-|-|-|
-| mxnet-cu92mkl | :white_check_mark:<i class="fas fa-check"></i> | :x: | :x: | :x: | :x: |
-| mxnet-cu92 | :white_check_mark:<i class="fas fa-check"></i> | :x: | :x: | :x: | :x: |
-| mxnet-cu90mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| mxnet-cu90 | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x: |
-| mxnet-cu80mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| mxnet-cu80 | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| mxnet-mkl | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| mxnet | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+<!-- Table does not render - using a picture alternative
+| Package / MXNet Version | 1.3.0 | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
+|-|:-:|:-:|:-:|:-:|:-:|:-:|
+| mxnet-cu92mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
+| mxnet-cu92 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
+| mxnet-cu90mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
+| mxnet-cu90 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
+| mxnet-cu80mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
+| mxnet-cu80 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
+| mxnet-mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
+| mxnet | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
 -->
 
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
