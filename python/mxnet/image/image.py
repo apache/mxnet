@@ -136,8 +136,8 @@ def imdecode(buf, *args, **kwargs):
     """
     if not isinstance(buf, nd.NDArray):
         if sys.version_info[0] == 3 and not isinstance(buf, (bytes, np.ndarray)):
-            raise ValueError('buf must bytes or numpy.ndarray,'
-                             'if you input str,please convert it to bytes')
+            raise ValueError('buf must be of type bytes or numpy.ndarray,'
+                             'if you would like to input type str, please convert to bytes')
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
     return _internal._cvimdecode(buf, *args, **kwargs)
 
