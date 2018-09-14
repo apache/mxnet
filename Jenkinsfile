@@ -183,6 +183,16 @@ core_logic: {
         }
       }
     },
+    'CPU: Clang Tidy': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang60_tidy') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
+          }
+        }
+      }
+    },
     'CPU: Clang 3.9 MKLDNN': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-mkldnn-clang39') {
@@ -890,6 +900,10 @@ core_logic: {
         }
       }
     },
+    /*  Disabled due to master build failure:
+     *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
+     *  https://github.com/apache/incubator-mxnet/issues/11801
+
     'dist-kvstore tests CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-dist-kvstore') {
@@ -901,7 +915,7 @@ core_logic: {
           }
         }
       }
-    },
+    }, */
     'Scala: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-scala-gpu') {

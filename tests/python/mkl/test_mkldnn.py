@@ -22,6 +22,7 @@ import sys
 import os
 import numpy as np
 import mxnet as mx
+import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -93,7 +94,7 @@ def test_mkldnn_engine_threading():
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
-        # output should be 016711406 (non-mkldnn mode output) 
+        # output should be 016711406 (non-mkldnn mode output)
         assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
 
@@ -243,6 +244,126 @@ def test_batchnorm():
 
 
 @with_seed()
+def test_softmax():
+    def check_softmax_training(stype):
+        for shape in [(2, 3), (2, 3, 2, 2)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.softmax(data, axis=-1)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_softmax_training(stype)
+
+
+@with_seed()
+def test_pooling():
+    def check_pooling_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 20, 20)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Pooling(data=data, kernel=(3,), stride=(2), pool_type='avg')
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='avg')
+            else:
+                return 0
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_pooling_training(stype)
+
+
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/12377")
+@with_seed()
+def test_activation():
+    def check_activation_training(stype):
+        for shape in [(2, 3, 3), (2, 3, 2, 2)]:
+            data_tmp = np.random.normal(-0.1, 1, size=shape)
+
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.Activation(data, act_type="relu")
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_activation_training(stype)
+
+
+def test_convolution():
+    def check_convolution_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+            data_tmp = np.random.normal(-0.1, 1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Convolution(data=data, kernel=(3,), stride=(2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3))
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Convolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
+            else:
+                return 0
+            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                           mx.nd.array(bias_tmp).tostype(stype)]
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_convolution_training(stype)
+
+
+def test_Deconvolution():
+    def check_Deconvolution_training(stype):
+        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+            data_tmp = np.random.randint(256, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+
+            if np.array(shape).shape[0] == 3:
+                test = mx.symbol.Deconvolution(data=data, kernel=(3,), stride=(2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3))
+            elif np.array(shape).shape[0] == 4:
+                test = mx.symbol.Deconvolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(3, 4, 3, 3))
+            else:
+                return 0
+            bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
+            in_location = [mx.nd.array(data_tmp).tostype(stype), mx.nd.array(weight_tmp).tostype(stype),
+                           mx.nd.array(bias_tmp).tostype(stype)]
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_Deconvolution_training(stype)
+
+
+@with_seed()
+def test_LRN():
+    def check_LRN_training(stype):
+        for shape in [(3, 4, 5, 5)]:
+            data_tmp = np.random.normal(-0.1, 0.1, size=shape)
+            data = mx.symbol.Variable('data', stype=stype)
+            in_location = [mx.nd.array(data_tmp).tostype(stype)]
+
+            test = mx.symbol.LRN(data, nsize=3)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+
+    stypes = ['row_sparse', 'default']
+    for stype in stypes:
+        check_LRN_training(stype)
+
+
+@with_seed()
 def test_fullyconnected():
     def check_fullyconnected_training(stype):
         data_shape = rand_shape_nd(2)
@@ -259,6 +380,50 @@ def test_fullyconnected():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_fullyconnected_training(stype)
+
+@with_seed()
+def test_non_mkldnn_fcomputeex():
+    # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
+    # conv is example where MKLDNN NDArray is created from regular NDArrays
+    # CustomOps is example of non-mkldnn fcomputeex operator
+
+    @mx.operator.register("custom")
+    class CustomProp(mx.operator.CustomOpProp):
+        def __int__(self):
+            super(CustomProp, self).__init__(need_top_grad=False)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            data_shape = in_shape[0]
+            output_shape = in_shape[0]
+            return [data_shape], [output_shape], []
+
+        def infer_type(self, in_type):
+            dtype = in_type[0]
+            return [dtype], [dtype], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return Custom()
+
+
+    class Custom(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            print(in_data[0])
+            self.assign(out_data[0], req[0], in_data[0])
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], out_grad)
+
+    data = mx.symbol.Variable('data')
+    conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
+    custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
+    exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    exec1.forward()[0].wait_to_read()
 
 
 if __name__ == '__main__':

@@ -26,7 +26,8 @@ Suggests:
     mlbench,
     knitr,
     rmarkdown,
-    imager
+    imager,
+    covr
 Depends:
     R (>= 3.3.0)
 LinkingTo: Rcpp

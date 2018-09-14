@@ -27,4 +27,4 @@ def makedirs(d):
         from distutils.dir_util import mkpath
         mkpath(d)
     else:
-        os.makedirs(d, exist_ok=True)
+        os.makedirs(d, exist_ok=True)  # pylint: disable=unexpected-keyword-arg

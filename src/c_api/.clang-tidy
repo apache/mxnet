@@ -15,7 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-fnames <- list.files("R-package/vignettes/", pattern="*.Rmd")
-sapply(fnames, function(x){
-	knitr::purl(paste0("R-package/vignettes/", x))
-	})
+# Disable most clang-tidy checks in the c_api folder.
+Checks: -*,readability-non-const-parameter

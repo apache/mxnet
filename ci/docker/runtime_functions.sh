@@ -365,6 +365,32 @@ build_ubuntu_cpu_clang60() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_clang_tidy() {
+    set -ex
+
+    export CXX=clang++-6.0
+    export CC=clang-6.0
+    export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENCV=ON \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        /work/mxnet
+
+    ninja -v
+    cd /work/mxnet
+    $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
+    popd
+}
+
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
 
@@ -567,6 +593,9 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_blc() {
+    echo "pass"
+}
 
 # Testing
 
@@ -710,6 +739,9 @@ unittest_ubuntu_gpu_cpp() {
 unittest_ubuntu_cpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -719,6 +751,9 @@ unittest_ubuntu_cpu_R() {
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
