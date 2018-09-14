@@ -46,7 +46,7 @@ Install MXNet with CPU support with Python:
 pip install mxnet
 ```
 
-Now [validate your MXNet installation with Python](#validate-mxnet-with-python).
+Now [validate your MXNet installation with Python](validate_mxnet.md).
 
 ### Install with Intel CPUs
 
@@ -60,7 +60,7 @@ The following steps will setup MXNet with MKL. MKL-DNN can be enabled only when 
 pip install mxnet-mkl
 ```
 
-Now [validate your MXNet installation with Python](#validate-mxnet-with-python).
+Now [validate your MXNet installation with Python](validate_mxnet.md).
 
 ### Install with NVIDIA GPUs
 
@@ -78,7 +78,7 @@ The following steps will setup MXNet with CUDA. cuDNN can be enabled only when b
 pip install mxnet-cu92
 ```
 
-Once you have installed a version of MXNet, [validate your MXNet installation with Python](#validate-mxnet-with-python).
+Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet.md).
 
 #### Install with CUDA and MKL Support
 
@@ -93,7 +93,7 @@ The following steps will setup MXNet with CUDA and MKL.
 pip install mxnet-cu92mkl
 ```
 
-Once you have installed a version of MXNet, [validate your MXNet installation with Python](#validate-mxnet-with-python).
+Once you have installed a version of MXNet, [validate your MXNet installation with Python](validate_mxnet.md).
 
 ### Notes on the Python Packages
 To get further enhancements for deep neural networks, you may want to enable MKL-DNN and/or cuDNN. Each of these require you to [build from source](#build-from-source) and to enable the build flags for each.
@@ -117,19 +117,22 @@ You also have the option to install MXNet with MKL or MKLDNN. In this case it is
 
 To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/incubator-mxnet/issues/new) to update this guide if a newer version is validated.
 
-1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-1. When prompted about installing Git, go ahead and install it.
-1. Follow [this link](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify `Individual components`, and check `VC++ 2017 version 15.4 v14.11 toolset`, and click `Modify`.
+1. Install or update VS2017.
+    - If [VS2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
+    - When prompted about installing Git, go ahead and install it.
+    - If VS2017 is already installed you will want to update it. Proceed to the next step to modify your installation. You will be given the opportunity to update VS2017 as well
+1. Follow the [instructions for opening the Visual Studio Installer](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify `Individual components`.
+1. Once in the Visual Studio Installer application, update as needed, then look for and check `VC++ 2017 version 15.4 v14.11 toolset`, and click `Modify`.
 1. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
 ```
 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
 ```
 1. Download and install [CMake](https://cmake.org/download) if it is not already installed. [CMake v3.11](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) has been tested with MXNet.
-1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package.
+1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package. There are more recent versions of OpenCV, so please create an issue/PR to update this info if you validate one of these later versions.
 1. This will unzip several files. You can place them in another directory if you wish.
 1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped (e.g., `OpenCV_DIR = C:\utils\opencv\build`).
 1. If you don’t have the Intel Math Kernel Library (MKL) installed, you can install it and follow the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md) from here, or you can use OpenBLAS. These instructions will assume you're using OpenBLAS.
-1. Download the [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.19/OpenBLAS-v0.2.19-Win64-int32.zip/download) package.
+1. Download the [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.19/OpenBLAS-v0.2.19-Win64-int32.zip/download) package. Later versions of OpenBLAS are available, but you would need to build from source. v0.2.19 is the most recent version that ships with binaries. Contributions of more recent binaries would be appreciated.
 1. Unzip the file. You can place the unzipped files and folders in another directory if you wish.
 1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories (e.g., `OpenBLAS_HOME = C:\utils\OpenBLAS`).
 1. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). If you already had CUDA, then installed VS2017, you should reinstall CUDA now so that you get the CUDA toolkit components for VS2017 integration.
@@ -210,24 +213,6 @@ These steps are required after building from source. If you already installed MX
 ```
 
 Done! We have installed MXNet with Python interface.
-
-## Validate MXNet with Python
-
-Run below commands to verify your installation is successful.
-
-```bash
-    # Open Python terminal
-    python
-
-    # You should be able to import mxnet library without any issues.
-    >>> import mxnet as mx;
-    >>> a = mx.nd.ones((2, 3));
-    >>> print ((a*2).asnumpy());
-        [[ 2.  2.  2.]
-        [ 2.  2.  2.]]
-```
-
-We actually did a small tensor computation using MXNet! You are all set with MXNet on your Windows machine.
 
 You can continue with using MXNet-Python, or if you want to try a different language API for MXNet, keep reading. Otherwise, jump ahead to [next steps](#next-steps).
 
