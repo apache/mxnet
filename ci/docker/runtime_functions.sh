@@ -739,6 +739,9 @@ unittest_ubuntu_gpu_cpp() {
 unittest_ubuntu_cpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -748,6 +751,9 @@ unittest_ubuntu_cpu_R() {
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package

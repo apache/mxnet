@@ -144,7 +144,7 @@
    which must be known from the rest of the net."
   ([start {:keys [step repeat dtype]
            :or {step (float 1) repeat (int 1) dtype base/MX_REAL_TYPE}
-          :as opts}]
+           :as opts}]
    (Symbol/arange (float start) ($/option nil) step repeat true nil dtype))
   ([start]
    (arange-with-inference start {})))
