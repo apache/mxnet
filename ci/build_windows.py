@@ -20,37 +20,33 @@
 
 """User friendly / multi platform builder script"""
 
-import subprocess
+import argparse
+import datetime
+import glob
 import logging
 import os
-import tempfile
-import sys
-from distutils import spawn
-import logging
-from subprocess import check_call
 import platform
-import argparse
-from util import *
-import json
-from enum import Enum
-import time
-import datetime
 import shutil
-import glob
+import sys
+import time
 from distutils.dir_util import copy_tree
+from enum import Enum
+from subprocess import check_call
 
-KNOWN_VCVARS = [
-    # VS 2015
-      r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat'
-    # VS 2017
-    , r'c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
-]
+from util import *
+
+KNOWN_VCVARS = {
+    'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat',
+    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
+}
+
 
 class BuildFlavour(Enum):
     WIN_CPU = 'WIN_CPU'
     WIN_CPU_MKLDNN = 'WIN_CPU_MKLDNN'
     WIN_GPU = 'WIN_GPU'
     WIN_GPU_MKLDNN = 'WIN_GPU_MKLDNN'
+
 
 CMAKE_FLAGS = {
     'WIN_CPU': '-DUSE_CUDA=0 \
@@ -63,9 +59,10 @@ CMAKE_FLAGS = {
                 -DUSE_LAPACK=1 \
                 -DUSE_DIST_KVSTORE=0 \
                 -DBUILD_CPP_EXAMPLES=1 \
-                -DUSE_MKL_IF_AVAILABLE=0'
+                -DUSE_MKL_IF_AVAILABLE=0 \
+                -DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
-    ,'WIN_CPU_MKLDNN': '-DUSE_CUDA=0 \
+    , 'WIN_CPU_MKLDNN': '-DUSE_CUDA=0 \
                         -DUSE_CUDNN=0 \
                         -DUSE_NVRTC=0 \
                         -DUSE_OPENCV=1 \
@@ -74,9 +71,10 @@ CMAKE_FLAGS = {
                         -DUSE_BLAS=open \
                         -DUSE_LAPACK=1 \
                         -DUSE_DIST_KVSTORE=0 \
-                        -DUSE_MKL_IF_AVAILABLE=1'
+                        -DUSE_MKL_IF_AVAILABLE=1 \
+                        -DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
-    ,'WIN_GPU': '-DUSE_CUDA=1 \
+    , 'WIN_GPU': '-DUSE_CUDA=1 \
                  -DUSE_CUDNN=1 \
                  -DUSE_NVRTC=1 \
                  -DUSE_OPENCV=1  \
@@ -90,9 +88,9 @@ CMAKE_FLAGS = {
                  -DCUDA_ARCH_PTX=52 \
                  -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" \
                  -DUSE_MKL_IF_AVAILABLE=0 \
-                 -DCMAKE_BUILD_TYPE=Release'
+                 -DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
-    ,'WIN_GPU_MKLDNN': '-DUSE_CUDA=1 \
+    , 'WIN_GPU_MKLDNN': '-DUSE_CUDA=1 \
                         -DUSE_CUDNN=1 \
                         -DUSE_NVRTC=1 \
                         -DUSE_OPENCV=1 \
@@ -106,55 +104,38 @@ CMAKE_FLAGS = {
                         -DCUDA_ARCH_PTX=52 \
                         -DUSE_MKLDNN=1 \
                         -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 \
-                        /DNDEBUG" \
-                        -DCMAKE_BUILD_TYPE=Release'
+                        -DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
 }
 
 
-def get_vcvars_environment(architecture, vcvars):
-    """
-    Returns a dictionary containing the environment variables set up by vcvars
-    """
-    result = None
-    python = sys.executable
-
-    vcvars_list = [vcvars]
-    vcvars_list.extend(KNOWN_VCVARS)
-    for vcvars in vcvars_list:
-        if os.path.isfile(vcvars):
-            process = subprocess.Popen('("%s" %s>nul) && "%s" -c "import os; import json; print(json.dumps(dict(os.environ)))"' % (vcvars, architecture, python), stdout=subprocess.PIPE, shell=True)
-            stdout, stderr = process.communicate()
-            exitcode = process.wait()
-            if exitcode == 0:
-                logging.info("Using build environment from: %s", vcvars)
-                return(json.loads(stdout.strip()))
-            else:
-                raise RuntimeError('Failed cloning environment from vcvars file: %s stdout: %s stderr: %s', vcvars, stdout, stderr)
-    raise RuntimeError('Couldn\'t find vcvars batch file: %s', vcvars)
-
-
 def windows_build(args):
-    vcvars_env = get_vcvars_environment(args.arch, args.vcvars)
-    logging.debug("vcvars environment: %s", vcvars_env)
-    os.environ.update(vcvars_env)
+    logging.info("Using vcvars environment:\n{}".format(args.vcvars))
 
     path = args.output
     os.makedirs(path, exist_ok=True)
+
     mxnet_root = get_mxnet_root()
-    logging.info("Found mxnet root: {}".format(mxnet_root))
+    logging.info("Found MXNet root: {}".format(mxnet_root))
+
     with remember_cwd():
         os.chdir(path)
-        logging.info("Generating project with CMake")
-        check_call("cmake -G \"Visual Studio 14 2015 Win64\" {} {}".format(CMAKE_FLAGS[args.flavour], mxnet_root), shell=True)
-        logging.info("Building with visual studio")
+        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
+                                                                        CMAKE_FLAGS[args.flavour],
+                                                                        mxnet_root)
+        logging.info("Generating project with CMake:\n{}".format(cmd))
+        check_call(cmd, shell=True)
+
+        cmd = "\"{}\" && jom".format(args.vcvars)
+        logging.info("Building with jom:\n{}".format(cmd))
+
         t0 = int(time.time())
-        check_call(
-            ["msbuild", "mxnet.sln", "/p:configuration=release;platform=x64;BuildInParallel=true", "/maxcpucount",
-             "/v:minimal"])
-        logging.info("Build flavour: %s complete in directory: \"%s\"", args.flavour, os.path.abspath(path))
-        logging.info("Build took %s" , datetime.timedelta(seconds=int(time.time()-t0)))
+        check_call(cmd, shell=True)
+
+        logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+        logging.info("Build took ".format(datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
+
 
 def windows_package(args):
     pkgfile = 'windows_package.7z'
@@ -213,7 +194,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=r'c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat',
+        default=KNOWN_VCVARS['VS 2015'],
         type=str)
 
     parser.add_argument("--arch",
