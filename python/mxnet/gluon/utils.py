@@ -23,6 +23,7 @@ __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
 
 import os
 import hashlib
+import uuid
 import warnings
 import collections
 import weakref
@@ -231,7 +232,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
             fname = os.path.join(path, url.split('/')[-1])
         else:
             fname = path
-    assert retries >= 0, "Number of retries should be at least 0"
+    assert retries >= 0, 'Number of retries should be at least 0'
 
     if not verify_ssl:
         warnings.warn(
@@ -242,23 +243,34 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        while retries+1 > 0:
+        while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703
             try:
-                print('Downloading %s from %s...'%(fname, url))
+                print('Downloading {} from {}...'.format(fname, url))
                 r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
-                    raise RuntimeError("Failed downloading url %s"%url)
-                with open(fname, 'wb') as f:
+                    raise RuntimeError('Failed downloading url {}'.format(url))
+                # create uuid for temporary files
+                random_uuid = str(uuid.uuid4())
+                with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
+                    # create uuid for temporary files
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
+                 # if the target file exists(created by other processes),
+                # delete the temporary file
+                if os.path.exists(fname):
+                    os.remove('{}.{}'.format(fname, random_uuid))
+                else:
+                    # atmoic operation in the same file system
+                    os.replace('{}.{}'.format(fname, random_uuid), fname)
                 if sha1_hash and not check_sha1(fname, sha1_hash):
-                    raise UserWarning('File {} is downloaded but the content hash does not match.'\
-                                      ' The repo may be outdated or download may be incomplete. '\
-                                      'If the "repo_url" is overridden, consider switching to '\
-                                      'the default repo.'.format(fname))
+                    raise UserWarning(
+                        'File {} is downloaded but the content hash does not match.'
+                        ' The repo may be outdated or download may be incomplete. '
+                        'If the "repo_url" is overridden, consider switching to '
+                        'the default repo.'.format(fname))
                 break
             except Exception as e:
                 retries -= 1
