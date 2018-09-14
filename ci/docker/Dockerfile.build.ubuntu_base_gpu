@@ -25,6 +25,9 @@ WORKDIR /work/deps
 
 RUN apt-get update && apt-get -y install sudo
 
+COPY install/ubuntu_core.sh /work/
+RUN /work/ubuntu_core.sh
+
 COPY install/ubuntu_python.sh /work/
 RUN /work/ubuntu_python.sh
 
