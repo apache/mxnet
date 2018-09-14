@@ -691,7 +691,8 @@ class NDArrayIter(DataIter):
         """Load data from underlying arrays."""
         assert start is not None or end is not None, 'should at least specify start or end'
         start = start if start is not None else 0
-        end = end if end is not None else data_source[0][1].shape[0]
+        if end is None:
+            end = data_source[0][1].shape[0] if data_source else 0
         s = slice(start, end)
         return [
             x[1][s]
@@ -705,9 +706,20 @@ class NDArrayIter(DataIter):
 
     def _concat(self, first_data, second_data):
         """Helper function to concat two NDArrays."""
-        return [
-            concat(first_data[0], second_data[0], dim=0)
-        ]
+        if first_data and second_data:
+            return [
+                concat(
+                    first_data[0],
+                    second_data[0],
+                    dim=0
+                )
+            ]
+        elif (not first_data) and (not second_data):
+            return []
+        elif not first_data:
+            return [second_data[0]]
+        else:
+            return [first_data[0]]
 
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
