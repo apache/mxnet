@@ -67,8 +67,10 @@ private[mxnet] object CToScalaUtils {
     // Optional Field
     if (commaRemoved.length >= 3) {
       // arg: Type, optional, default = Null
-      require(commaRemoved(1).equals("optional"))
-      require(commaRemoved(2).startsWith("default="))
+      require(commaRemoved(1).equals("optional"),
+        s"""expected "optional" got ${commaRemoved(1)}""")
+      require(commaRemoved(2).startsWith("default="),
+        s"""expected "default=..." got ${commaRemoved(2)}""")
       (typeConversion(commaRemoved(0), argType, argName, returnType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
       val tempType = typeConversion(commaRemoved(0), argType, argName, returnType)
