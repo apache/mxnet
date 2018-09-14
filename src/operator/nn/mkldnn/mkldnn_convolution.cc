@@ -57,33 +57,21 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
   mkldnn::memory::dims padding{0, 0};
   padding[0] = param.pad[0];
   padding[1] = param.pad[1];
-  if (param.dilate.ndim() == 0 && bias == nullptr) {
+  mkldnn::memory::dims dilates{0, 0};
+  dilates[0] = param.dilate[0] - 1;
+  dilates[1] = param.dilate[1] - 1;
+  if (bias == nullptr) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-        data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, engine);
-  } else if (param.dilate.ndim() == 0) {
-    auto bias_md = GetMemDesc(*bias);
-    mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-        data_md, weight_md, bias_md, out_md, strides, padding, padding,
+        data_md, weight_md, out_md, strides, dilates, padding, padding,
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
   } else {
-    mkldnn::memory::dims dilates{0, 0};
-    dilates[0] = param.dilate[0] - 1;
-    dilates[1] = param.dilate[1] - 1;
-    if (bias == nullptr) {
-      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-          data_md, weight_md, out_md, strides, dilates, padding, padding,
-          mkldnn::padding_kind::zero);
-      return mkldnn::convolution_forward::primitive_desc(desc, engine);
-    } else {
-      auto bias_md = GetMemDesc(*bias);
-      mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
-                                             data_md, weight_md, bias_md, out_md, strides,
-                                             dilates, padding, padding,
-                                             mkldnn::padding_kind::zero);
-      return mkldnn::convolution_forward::primitive_desc(desc, engine);
-    }
+    auto bias_md = GetMemDesc(*bias);
+    mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
+                                            data_md, weight_md, bias_md, out_md, strides,
+                                            dilates, padding, padding,
+                                            mkldnn::padding_kind::zero);
+    return mkldnn::convolution_forward::primitive_desc(desc, engine);
   }
 }
 
