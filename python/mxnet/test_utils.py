@@ -828,7 +828,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
-    assert numeric_eps >= 1e-5
+    # cannot use finite differences with small eps without high precision
+    if dtype in (np.float32, np.float16): assert numeric_eps >= 1e-5
     if ctx is None:
         ctx = default_context()
 
