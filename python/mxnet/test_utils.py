@@ -778,7 +778,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             executor.forward(is_train=use_forward_train)
             f_neps = executor.outputs[0].asnumpy()
 
-            approx_grad = (f_peps - f_neps).mean() / eps
+            approx_grad = (f_peps - f_neps).sum() / eps
             approx_grads[k].ravel()[i] = approx_grad
             v.ravel()[i] = old_value.ravel()[i]
         # copy back the original value
