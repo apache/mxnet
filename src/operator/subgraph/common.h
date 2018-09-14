@@ -49,9 +49,9 @@ inline std::vector<std::string> DefaultSubgraphOpListOutputs(const nnvm::NodeAtt
   return sym.ListOutputNames();
 }
 
-inline bool DefaultSubgraphOpShape1(const nnvm::Symbol& subgraph_sym,
-                                    std::vector<TShape> *in_shapes,
-                                    std::vector<TShape> *out_shapes) {
+inline bool DefaultSubgraphOpShapeHelper(const nnvm::Symbol& subgraph_sym,
+                                         std::vector<TShape> *in_shapes,
+                                         std::vector<TShape> *out_shapes) {
   using namespace exec;
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
@@ -96,12 +96,12 @@ inline bool DefaultSubgraphOpShape1(const nnvm::Symbol& subgraph_sym,
 inline bool DefaultSubgraphOpShape(const nnvm::NodeAttrs& attrs,
                                    std::vector<TShape> *in_shapes,
                                    std::vector<TShape> *out_shapes) {
-  return DefaultSubgraphOpShape1(*attrs.subgraphs[0], in_shapes, out_shapes);
+  return DefaultSubgraphOpShapeHelper(*attrs.subgraphs[0], in_shapes, out_shapes);
 }
 
-inline bool DefaultSubgraphOpType1(const nnvm::Symbol& subgraph_sym,
-                                   std::vector<int> *in_types,
-                                   std::vector<int> *out_types) {
+inline bool DefaultSubgraphOpTypeHelper(const nnvm::Symbol& subgraph_sym,
+                                        std::vector<int> *in_types,
+                                        std::vector<int> *out_types) {
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
   const auto& idx_g = g.indexed_graph();
@@ -144,14 +144,14 @@ inline bool DefaultSubgraphOpType1(const nnvm::Symbol& subgraph_sym,
 inline bool DefaultSubgraphOpType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *in_types,
                                   std::vector<int> *out_types) {
-  return DefaultSubgraphOpType1(*attrs.subgraphs[0], in_types, out_types);
+  return DefaultSubgraphOpTypeHelper(*attrs.subgraphs[0], in_types, out_types);
 }
 
-inline bool DefaultSubgraphOpStorageType1(const nnvm::Symbol& subgraph_sym,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int>* in_stypes,
-                                          std::vector<int>* out_stypes) {
+inline bool DefaultSubgraphOpStorageTypeHelper(const nnvm::Symbol& subgraph_sym,
+                                               const int dev_mask,
+                                               DispatchMode* dispatch_mode,
+                                               std::vector<int>* in_stypes,
+                                               std::vector<int>* out_stypes) {
   nnvm::Graph g;
   g.outputs = subgraph_sym.outputs;
   const auto& idx_g = g.indexed_graph();
@@ -204,15 +204,16 @@ inline bool DefaultSubgraphOpStorageType(const nnvm::NodeAttrs& attrs,
                                          DispatchMode* dispatch_mode,
                                          std::vector<int>* in_stypes,
                                          std::vector<int>* out_stypes) {
-  return DefaultSubgraphOpStorageType1(*attrs.subgraphs[0], dev_mask, dispatch_mode,
-                                       in_stypes, out_stypes);
+  return DefaultSubgraphOpStorageTypeHelper(*attrs.subgraphs[0], dev_mask, dispatch_mode,
+                                            in_stypes, out_stypes);
 }
 
 inline ExecType DefaultSubgraphOpExecType(const nnvm::NodeAttrs& attrs) {
   return ExecType::kSubgraphExec;
 }
 
-inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs1(const nnvm::Symbol& subgraph_sym) {
+inline std::vector<uint32_t> DefaultSubgraphOpMutableInputsHelper(
+  const nnvm::Symbol& subgraph_sym) {
   const std::vector<std::string> input_names = subgraph_sym.ListInputNames(nnvm::Symbol::kAll);
   const std::vector<std::string> immutable_input_names =
     subgraph_sym.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
@@ -235,10 +236,10 @@ inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs1(const nnvm::Symbol&
 }
 
 inline std::vector<uint32_t> DefaultSubgraphOpMutableInputs(const nnvm::NodeAttrs& attrs) {
-  return DefaultSubgraphOpMutableInputs1(*attrs.subgraphs[0]);
+  return DefaultSubgraphOpMutableInputsHelper(*attrs.subgraphs[0]);
 }
 
-inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest1(
+inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequestHelper(
     const nnvm::Symbol& subgraph_sym) {
   static auto& fresource = Op::GetAttr<FResourceRequest>("FResourceRequest");
   std::set<ResourceRequest::Type> resource_types;
@@ -253,7 +254,7 @@ inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest1(
 }
 
 inline std::vector<ResourceRequest> DefaultSubgraphOpResourceRequest(const nnvm::NodeAttrs& attrs) {
-  return DefaultSubgraphOpResourceRequest1(*attrs.subgraphs[0]);
+  return DefaultSubgraphOpResourceRequestHelper(*attrs.subgraphs[0]);
 }
 
 }  // namespace op

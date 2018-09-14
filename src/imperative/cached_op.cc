@@ -1307,14 +1307,14 @@ NNVM_REGISTER_OP(_CachedOp)
      std::vector<TShape> *in_shapes,
      std::vector<TShape> *out_shapes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpShape1(op->GetForwardSym(), in_shapes, out_shapes);
+    return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
   })
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<int> *in_types,
      std::vector<int> *out_types) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpType1(op->GetForwardSym(), in_types, out_types);
+    return op::DefaultSubgraphOpTypeHelper(op->GetForwardSym(), in_types, out_types);
   })
 .set_attr<FInferStorageType>("FInferStorageType",
   [](const nnvm::NodeAttrs& attrs,
@@ -1323,21 +1323,21 @@ NNVM_REGISTER_OP(_CachedOp)
      std::vector<int>* in_stypes,
      std::vector<int>* out_stypes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpStorageType1(op->GetForwardSym(),
-                                             dev_mask, dispatch_mode,
-                                             in_stypes, out_stypes);
+    return op::DefaultSubgraphOpStorageTypeHelper(op->GetForwardSym(),
+                                                  dev_mask, dispatch_mode,
+                                                  in_stypes, out_stypes);
   })
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpForward)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpForward)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpMutableInputs1(op->GetForwardSym());
+    return op::DefaultSubgraphOpMutableInputsHelper(op->GetForwardSym());
   })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpResourceRequest1(op->GetForwardSym());
+    return op::DefaultSubgraphOpResourceRequestHelper(op->GetForwardSym());
   })
 .set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
 .add_argument("data", "NDArray-or-Symbol[]", "input data list");
