@@ -32,10 +32,8 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/brokenLinkChecker') {
           timeout(time: 60, unit: 'MINUTES') {
-            try {
               utils.init_git()
               utils.docker_run('ubuntu_blc', 'broken_link_checker', false)
-            }
           }
         }
       }
