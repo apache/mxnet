@@ -78,6 +78,7 @@ class CorrelationOp : public Operator {
     using namespace mshadow;
     CHECK_EQ(in_data.size(), 2U);
     CHECK_EQ(out_data.size(), 3U);
+    CHECK_NE(param_.kernel_size%2,0) << "kernel size should be odd number";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data1 = in_data[Correlation::kData1].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> data2 = in_data[Correlation::kData2].get<xpu, 4, DType>(s);

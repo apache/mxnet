@@ -6913,6 +6913,28 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+@with_seed()
+def test_correlation_kernel_size():
+    import numpy as np
+    import mxnet as mx
+
+    # Network
+    data1 = mx.symbol.Variable('data1')
+    cor = mx.sym.Correlation(data1=data1, data2=data1, kernel_size=28, stride1=1, stride2=1, pad_size=0, max_displacement=0)
+    loss = mx.sym.MakeLoss(cor, normalization='batch')
+    group = mx.symbol.Group([mx.sym.BlockGrad(cor), loss])
+
+    # Data
+    datashape = (1, 1, 28, 28)  # like mnist
+    data = np.random.rand(1, 1, 28, 28)
+
+    #Bind, execute, get computed correlation
+    executor = group.simple_bind(ctx=mx.cpu(), data1=datashape)
+    outs = executor.forward(is_train=True, data1=data)
+    cor = executor.outputs[0]
+    grad1 = executor.outputs[1]
+    print(cor)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
