@@ -22,6 +22,8 @@ __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
 import os
+import sys
+import io
 import hashlib
 import uuid
 import warnings
@@ -196,6 +198,35 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
+if sys.platform != 'win32':
+    # refer to https://github.com/untitaker/python-atomicwrites
+    def _replace_atomic(src, dst):
+        os.rename(src, dst)
+else:
+    from ctypes import windll, WinError
+
+    _MOVEFILE_REPLACE_EXISTING = 0x1
+    _MOVEFILE_WRITE_THROUGH = 0x8
+    _windows_default_flags = _MOVEFILE_WRITE_THROUGH
+
+    text_type = unicode if sys.version_info[0] == 2 else str
+
+    def _path_to_unicode(x):
+        if not isinstance(x, text_type):
+            return x.decode(sys.getfilesystemencoding())
+        return x
+
+    def _handle_errors(rv):
+        if not rv:
+            raise WinError()
+
+    def _replace_atomic(src, dst):
+        _handle_errors(windll.kernel32.MoveFileExW(
+            _path_to_unicode(src), _path_to_unicode(dst),
+            _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
+        ))
+
+
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download an given URL
 
@@ -258,13 +289,13 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
-                 # if the target file exists(created by other processes),
+                # if the target file exists(created by other processes),
                 # delete the temporary file
                 if os.path.exists(fname):
                     os.remove('{}.{}'.format(fname, random_uuid))
                 else:
                     # atmoic operation in the same file system
-                    os.replace('{}.{}'.format(fname, random_uuid), fname)
+                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
                 if sha1_hash and not check_sha1(fname, sha1_hash):
                     raise UserWarning(
                         'File {} is downloaded but the content hash does not match.'
