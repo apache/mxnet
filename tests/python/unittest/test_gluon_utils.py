@@ -76,11 +76,11 @@ def test_multiprocessing_download_successful():
     tmpfile = os.path.join(tmp, 'README.md')
     process_list = []
     # test it with 10 processes
-    for i in range(100):
+    for i in range(10):
         process_list.append(mp.Process(
             target=_download_successful, args=(tmpfile,)))
         process_list[i].start()
-    for i in range(100):
+    for i in range(10):
         process_list[i].join()
     assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
     # check only one file we want left
