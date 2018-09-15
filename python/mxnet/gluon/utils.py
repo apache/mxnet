@@ -23,7 +23,6 @@ __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
 
 import os
 import sys
-import io
 import hashlib
 import uuid
 import warnings
@@ -201,6 +200,7 @@ def check_sha1(filename, sha1_hash):
 if sys.platform != 'win32':
     # refer to https://github.com/untitaker/python-atomicwrites
     def _replace_atomic(src, dst):
+        """Implement atomic os.replace with linux and OSX. Internal Usa only"""
         os.rename(src, dst)
 else:
     from ctypes import windll, WinError
@@ -209,18 +209,21 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str
+    text_type = unicode if sys.version_info[0] == 2 else str  # noqa
 
     def _path_to_unicode(x):
+        """Handle text decoding. Internal use only"""
         if not isinstance(x, text_type):
             return x.decode(sys.getfilesystemencoding())
         return x
 
     def _handle_errors(rv):
+        """Handle WinError. Internal use only"""
         if not rv:
             raise WinError()
 
     def _replace_atomic(src, dst):
+        """Implement atomic os.replace with windows. Internal use only"""
         _handle_errors(windll.kernel32.MoveFileExW(
             _path_to_unicode(src), _path_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
