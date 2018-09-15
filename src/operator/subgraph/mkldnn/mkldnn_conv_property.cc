@@ -21,13 +21,9 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_CONV_H_
 
 #if MXNET_USE_MKLDNN == 1
-#include <vector>
-#include <string>
 #include "../common.h"
 #include "../subgraph_property.h"
-#include "../../nn/convolution-inl.h"
 #include "../../nn/activation-inl.h"
-#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 
 namespace mxnet {
 namespace op {

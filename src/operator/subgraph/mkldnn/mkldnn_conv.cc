@@ -18,11 +18,7 @@
 */
 
 #if MXNET_USE_MKLDNN == 1
-#include <nnvm/graph.h>
-#include <mshadow/base.h>
 #include "../common.h"
-#include "../../../imperative/imperative_utils.h"
-#include "../../../imperative/cached_op.h"
 #include "../../nn/convolution-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/activation-inl.h"
