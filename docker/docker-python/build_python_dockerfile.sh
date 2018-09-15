@@ -30,7 +30,7 @@ function usage {
     exit 1
 }
 
-if [ $# -le 1 ]
+if [ $# -le 1 ] || [ $# -ge 3 ]
 then
     usage
     exit 1

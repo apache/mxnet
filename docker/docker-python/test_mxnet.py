@@ -24,5 +24,3 @@ expected_version = sys.argv[1]
 
 if pip_version != expected_version:
     raise ValueError("ERROR: Incorrect pip version. Please check the parameter passed or pip binary used.")
-
-
