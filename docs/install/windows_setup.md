@@ -48,7 +48,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 ```
 4. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-
+5. if you use [Microsoft Visual Studio 2017](https://www.visualstudio.com/vs/older-downloads/),please use cmake greater than 3.12.2 and use ```version=14.11``` to ```-T``` option and use greater than v9.1 cuda.
 
 
 &nbsp;
