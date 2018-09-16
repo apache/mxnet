@@ -57,7 +57,8 @@ private[mxnet] object APIDocGenerator{
   def absRndClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
     typeSafeClassGen(
       getSymbolNDArrayMethods(isSymbol)
-        .filter(f => f.name.startsWith("_random") || f.name.startsWith("_sample")),
+        .filter(f => f.name.startsWith("_random") || f.name.startsWith("_sample"))
+        .map(f => f.copy(name = f.name.stripPrefix("_"))),
       FILE_PATH,
       if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
       isSymbol
@@ -224,8 +225,8 @@ private[mxnet] object APIDocGenerator{
       handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
       val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
-      new absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
+      absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
-    new absClassFunction(aliasName, desc.value, argList.toList, returnType)
+    absClassFunction(aliasName, desc.value, argList.toList, returnType)
   }
 }

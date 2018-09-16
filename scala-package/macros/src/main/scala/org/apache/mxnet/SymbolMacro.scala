@@ -68,7 +68,7 @@ private[mxnet] object SymbolImplMacros {
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else symbolFunctions.filter(!_.name.startsWith("_"))
+      else symbolFunctions.filterNot(_.name.startsWith("_"))
     }
 
     val functionDefs = newSymbolFunctions map { symbolfunction =>
@@ -92,8 +92,9 @@ private[mxnet] object SymbolImplMacros {
   private def typedRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
-    val rndFunctions =
-      symbolFunctions.filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+    val rndFunctions = symbolFunctions
+      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+      .map(f => f.copy(name = f.name.stripPrefix("_")))
 
     val functionDefs = rndFunctions.map(f => buildTypedFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
@@ -117,7 +118,7 @@ private[mxnet] object SymbolImplMacros {
     val newSymbolFunctions = {
       if (isContrib) symbolFunctions.filter(
         func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else symbolFunctions.filter(f => !f.name.startsWith("_"))
+      else symbolFunctions.filterNot(_.name.startsWith("_"))
     }.filterNot(ele => notGenerated.contains(ele.name))
 
     val functionDefs = newSymbolFunctions.map(f => buildTypedFunction(c)(f))
@@ -259,8 +260,8 @@ private[mxnet] object SymbolImplMacros {
     val argList = argNames zip argTypes map { case (argName, argType) =>
         val typeAndOption =
           CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.Symbol")
-        new SymbolArg(argName, typeAndOption._1, typeAndOption._2)
+      SymbolArg(argName, typeAndOption._1, typeAndOption._2)
     }
-    new SymbolFunction(aliasName, argList.toList)
+    SymbolFunction(aliasName, argList.toList)
   }
 }

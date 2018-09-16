@@ -92,8 +92,9 @@ private[mxnet] object NDArrayMacro {
   private def typeSafeRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
-    val rndFunctions =
-      ndarrayFunctions.filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+    val rndFunctions = ndarrayFunctions
+      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+      .map(f => f.copy(name = f.name.stripPrefix("_")))
 
     val functionDefs = rndFunctions.map(f => buildTypeSafeFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
@@ -256,8 +257,8 @@ private[mxnet] object NDArrayMacro {
     val argList = argNames zip argTypes map { case (argName, argType) =>
       val typeAndOption =
         CToScalaUtils.argumentCleaner(argName, argType, "org.apache.mxnet.NDArray")
-      new NDArrayArg(argName, typeAndOption._1, typeAndOption._2)
+      NDArrayArg(argName, typeAndOption._1, typeAndOption._2)
     }
-    new NDArrayFunction(aliasName, argList.toList)
+    NDArrayFunction(aliasName, argList.toList)
   }
 }
