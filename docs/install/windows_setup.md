@@ -20,6 +20,7 @@ The following describes how to install with pip for computers with CPUs, Intel C
 ### Minimum System Requirements
 
 * Windows 7<sup><a href="#fn1" id="ref1">1</a></sup>, 10, Server 2012 R2, or Server 2016
+* Visual Studio 2015 or 2017 (any type)
 * Python 2.7 or 3.6
 * pip
 
@@ -28,6 +29,7 @@ The following describes how to install with pip for computers with CPUs, Intel C
 ### Recommended System Requirements
 
 * Windows 10, Server 2012 R2, or Server 2016
+* Visual Studio 2017 (any type)
 * At least one [NVIDIA CUDA-enabled GPU](https://developer.nvidia.com/cuda-gpus)
 * MKL-enabled CPU: Intel® Xeon® processor, Intel® Core™ processor family, Intel Atom® processor, or Intel® Xeon Phi™ processor
 * Python 2.7 or 3.6
@@ -37,6 +39,8 @@ The following describes how to install with pip for computers with CPUs, Intel C
 ## Install MXNet with Python
 
 The easiest way to install MXNet on Windows is by using a [Python pip package](https://pip.pypa.io/en/stable/installing/).
+
+**Note**: Windows pip packages typically release a few days after a new version MXNet is released. Make sure you verify which version gets installed.
 
 ### Install with CPUs
 
@@ -71,6 +75,7 @@ When using supported NVIDIA GPU hardware, inference and training can be vastly f
 #### Install with CUDA Support
 
 The following steps will setup MXNet with CUDA. cuDNN can be enabled only when building from source.
+1. Install [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). CUDA versions 9.2 or 9.0 are recommended. Some [issues with CUDA 9.1](https://github.com/apache/incubator-mxnet/labels/CUDA) have been identified in the past.
 1. Install MXNet with CUDA support with pip:
 
@@ -85,6 +90,7 @@ Once you have installed a version of MXNet, [validate your MXNet installation wi
 You can also use a combination of CPU/GPU enhancements provided by Intel and NVIDIA.
 
 The following steps will setup MXNet with CUDA and MKL.
+1. Install [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 1. Download and install [Intel MKL](https://software.intel.com/en-us/mkl/choose-download/windows) (registration required).
 1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal).
 1. Install MXNet with MKL support with pip:
@@ -127,7 +133,7 @@ To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/
 ```
 "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
 ```
-1. Download and install [CMake](https://cmake.org/download) if it is not already installed. [CMake v3.11](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) has been tested with MXNet.
+1. Download and install [CMake](https://cmake.org/download) if it is not already installed. [CMake v3.12.2](https://cmake.org/files/v3.12/cmake-3.12.2-win64-x64.msi) has been tested with MXNet.
 1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package. There are more recent versions of OpenCV, so please create an issue/PR to update this info if you validate one of these later versions.
 1. This will unzip several files. You can place them in another directory if you wish.
 1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped (e.g., `OpenCV_DIR = C:\utils\opencv\build`).
@@ -157,6 +163,7 @@ cd C:\build
 ```
 cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
 ```
+**Note**: you may add to the cmake compilation options the compiler version to use with: `-T version=14.11`
 6. After the CMake successfully completed, compile the the MXNet source code by using following command:
 ```
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
