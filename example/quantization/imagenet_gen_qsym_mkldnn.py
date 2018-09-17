@@ -202,7 +202,7 @@ if __name__ == '__main__':
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
                                                         disable_requantize=args.disable_requantize,
-                                                        label_names=(label_name,),
+                                                        label_names=(label_name,), calib_quantize_op = True,
                                                         logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

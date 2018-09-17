@@ -1506,7 +1506,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
 * \param sym_handle symbol to be converted
 * \param ret_sym_handle quantized symbol result
 * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
-* \param excluded_symbols array of symbols to be excluded from being quantized
+* \param excluded_symbols op names to be excluded from being quantized
 * \param num_offline number of parameters that are quantized offline
 * \param offline_params array of c strings representing the names of params quantized offline
 * \param quantized_dtype the quantized destination type for input data.
@@ -1515,7 +1515,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
 */
 int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                      const mx_uint num_excluded_symbols,
-                     const SymbolHandle *excluded_symbols,
+                     const char **excluded_symbols,
                      const mx_uint num_offline, const char **offline_params,
                      const char *quantized_dtype, const bool disable_requantize,
                      const bool calib_quantize);

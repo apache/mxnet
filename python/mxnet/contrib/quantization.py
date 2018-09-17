@@ -82,7 +82,7 @@ def _quantize_params(qsym, params, th_dict):
 
 def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
                      quantized_dtype='int8', disable_requantize=False,
-                     calib_quantize_op=True):
+                     calib_quantize_op=False):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -90,8 +90,9 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
     ----------
     sym : Symbol
         FP32 neural network symbol.
-    excluded_symbols : list of symbols
-        Nodes in the network that users do not want to replace with a symbol of INT8 data type.
+    excluded_sym_names : list of strings
+        A list of strings representing the names of the symbols that users want to excluding
+        from being quantized.
     offline_params : list of strs
         Names of the parameters that users want to quantize offline. It's always recommended to
         quantize parameters offline so that quantizing parameters during the inference can be
@@ -104,12 +105,11 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
         Whether perform offline calibration for quantize op.
     """
     num_excluded_symbols = 0
-    excluded_handles = []
     if excluded_symbols is not None:
         assert isinstance(excluded_symbols, list)
         num_excluded_symbols = len(excluded_symbols)
-        for s in excluded_symbols:
-            excluded_handles.append(s.handle)
+    else:
+        excluded_symbols = []
 
     num_offline = 0
     offline = []
@@ -122,7 +122,7 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
     check_call(_LIB.MXQuantizeSymbol(sym.handle,
                                      ctypes.byref(out),
                                      mx_uint(num_excluded_symbols),
-                                     c_array(SymbolHandle, excluded_handles),
+                                     c_str_array(excluded_symbols),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
                                      c_str(quantized_dtype),
@@ -442,7 +442,7 @@ def quantize_model(sym, arg_params, aux_params,
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None, calib_layer=None,
                    quantized_dtype='int8', disable_requantize=False,
-                   calib_quantize_op=True, logger=logging):
+                   calib_quantize_op=False, logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -516,18 +516,12 @@ def quantize_model(sym, arg_params, aux_params,
         raise ValueError('excluded_sym_names must be a list of strings representing'
                          ' the names of the symbols that will not be quantized,'
                          ' while received type %s' % str(type(excluded_sym_names)))
-    excluded_syms = []
-    if excluded_sym_names is not None:
-        for sym_name in excluded_sym_names:
-            nodes = sym.get_internals()
-            idx = nodes.list_outputs().index(sym_name + '_output')
-            excluded_syms.append(nodes[idx])
-    logger.info('Quantizing symbol')
 
+    logger.info('Quantizing symbol')
     if quantized_dtype not in ('int8', 'uint8'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8` or `uint8`' % quantized_dtype)
-    qsym = _quantize_symbol(sym, excluded_symbols=excluded_syms,
+    qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype,
                             disable_requantize=disable_requantize,

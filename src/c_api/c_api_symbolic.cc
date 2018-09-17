@@ -646,8 +646,8 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
 
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
-                     const mx_uint num_excluded_symbols,
-                     const SymbolHandle *excluded_symbols,
+                     const mx_uint num_excluded_op_names,
+                     const char **excluded_op_names,
                      const mx_uint num_offline,
                      const char **offline_params,
                      const char *quantized_dtype,
@@ -657,19 +657,16 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
-  std::unordered_set<nnvm::NodePtr> excluded_nodes;
-  for (size_t i = 0; i < num_excluded_symbols; ++i) {
-    nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(excluded_symbols[i]);
-    for (const auto& e : sym->outputs) {
-      excluded_nodes.emplace(e.node);
-    }
+  std::unordered_set<std::string> excluded_node_names;
+  for (size_t i = 0; i < num_excluded_op_names; ++i) {
+    excluded_node_names.emplace(excluded_op_names[i]);
   }
-  g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_nodes));
   std::unordered_set<std::string> offline;
   for (size_t i = 0; i < num_offline; ++i) {
     offline.emplace(offline_params[i]);
   }
   std::string quantized_type(quantized_dtype);
+  g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
   g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);

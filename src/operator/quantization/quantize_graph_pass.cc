@@ -89,9 +89,32 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
   return outputs;
 }
 
-inline bool NeedQuantize(NodePtr node, const std::unordered_set<NodePtr> excluded_nodes) {
-  static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
-  return quantized_op_map.count(node->op()) && !excluded_nodes.count(node);
+inline bool NeedQuantize(NodePtr node,
+                         const std::unordered_set<std::string> excluded_nodes) {
+  static auto& quantized_op_map =
+      Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
+  if (quantized_op_map.count(node->op())) {
+    bool excluded = false;
+    if (node->attrs.subgraphs.size()) {
+      // This is a subgraph node, try to match subgraph name first,
+      // and then try to match inner node.
+      if (excluded_nodes.count(node->attrs.name)) {
+        excluded = true;
+      } else {
+        auto subgraph_sym = node->attrs.subgraphs[0];
+        DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& node) {
+          if (node->is_variable()) return;
+          if (excluded_nodes.count(node->attrs.name)) {
+            excluded = true;
+          }
+        });
+      }
+    } else {
+      excluded = excluded_nodes.count(node->attrs.name);
+    }
+    return !excluded;
+  }
+  return false;
 }
 
 inline bool ExcludeKey(NodePtr node, NodeEntry e) {
@@ -112,7 +135,7 @@ Graph QuantizeGraph(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
-  auto excluded_nodes = src.GetAttr<std::unordered_set<NodePtr>>("excluded_nodes");
+  auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
   auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
   auto calib_quantize = src.GetAttr<bool>("calib_quantize");
 
