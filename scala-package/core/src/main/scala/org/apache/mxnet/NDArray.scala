@@ -248,6 +248,11 @@ object NDArray extends NDArrayBase {
 
   def ones(ctx: Context, shape: Int *): NDArray = ones(Shape(shape: _*), ctx)
 
+  // Java compatible conversion methods
+  def empty(shape: Array[Int]): NDArray = empty(Shape(shape))
+  def zeros(shape: Array[Int]): NDArray = zeros(Shape(shape))
+  def ones(shape: Array[Int]) : NDArray = ones(Shape(shape))
+
   /**
    * Create a new NDArray filled with given value, with specified shape.
    * @param shape shape of the NDArray.
@@ -580,38 +585,44 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   override def toString: String = {
-    val arr = this.toArray
-    val shape = this.shape.toArray
-    buildStringHelper(0, arr.length - 1, arr, shape, 0) + "\n"
+    buildStringHelper(this, this.shape.length) + "\n"
   }
 
   /**
     * Helper function to create formatted NDArray output
-    * @param start starting position
-    * @param end ending position
-    * @param arr Float array of NDArray
-    * @param shape shape of NDArray
-    * @param dim current Dimension level of NDArray
+    * The NDArray will be represented in a reduced version if too large
+    * @param nd NDArray as the input
+    * @param totalSpace totalSpace of the lowest dimension
     * @return String format of NDArray
     */
-  private def buildStringHelper(start : Int, end : Int, arr : Array[Float],
-                                shape : Array[Int], dim : Int) : String = {
+  private def buildStringHelper(nd : NDArray, totalSpace : Int) : String = {
     var result = ""
-    if (dim != shape.length - 1) {
-      val length = shape(dim)
-      val fragment = (end - start + 1) / length
-      for (num <- 0 to length - 1) {
-        val output = buildStringHelper(start + fragment * num, start + fragment * (num + 1) - 1,
-          arr, shape, dim + 1)
+    val THRESHOLD = 100000      // longest NDArray to show in full
+    val ARRAYTHRESHOLD = 1000   // longest array to show in full
+    val shape = nd.shape
+    val space = totalSpace - shape.length
+    if (shape.length != 1) {
+      val (length, postfix) =
+        if (shape.product > THRESHOLD) {
+          // reduced NDArray
+          (1, s"\n${" " * (space + 1)}... with length ${shape(0)}\n")
+      } else {
+          (shape(0), "")
+        }
+      for (num <- 0 until length) {
+        val output = buildStringHelper(nd.at(num), totalSpace)
         result += s"$output\n"
       }
-      result = s"${" " * dim}[\n$result${" " * dim}]"
+      result = s"${" " * space}[\n$result${" " * space}$postfix]"
     } else {
-      var temp = ArrayBuffer[String]()
-      for (i <- start to end) {
-        temp += arr(i).toString
+      if (shape(0) > ARRAYTHRESHOLD) {
+        // reduced Array
+        val front = nd.slice(0, 10)
+        val back = nd.slice(shape(0) - 10, shape(0) - 1)
+        result = s"${" " * space}[${front.toArray.mkString(",")} ... ${back.toArray.mkString(",")}]"
+      } else {
+        result = s"${" " * space}[${nd.toArray.mkString(",")}]"
       }
-      result = s"${" " * dim}[${temp.mkString(",")}]"
     }
     result
   }
@@ -1032,6 +1043,8 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return  A copy of array content.
    */
   def toArray: Array[Float] = {
+    require(shape.toArray.product < 1000000,
+      "NDArray size is too large, consider reducing the dimension")
     internal.toFloatArray
   }
 
