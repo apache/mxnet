@@ -49,62 +49,62 @@ class BuildFlavour(Enum):
 
 
 CMAKE_FLAGS = {
-    'WIN_CPU': '-DUSE_CUDA=0 \
-                -DUSE_CUDNN=0 \
-                -DUSE_NVRTC=0 \
-                -DUSE_OPENCV=1 \
-                -DUSE_OPENMP=1 \
-                -DUSE_PROFILER=1 \
-                -DUSE_BLAS=open \
-                -DUSE_LAPACK=1 \
-                -DUSE_DIST_KVSTORE=0 \
-                -DBUILD_CPP_EXAMPLES=1 \
-                -DUSE_MKL_IF_AVAILABLE=0 \
-                -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+    'WIN_CPU': ('-DUSE_CUDA=0 '
+                '-DUSE_CUDNN=0 '
+                '-DUSE_NVRTC=0 '
+                '-DUSE_OPENCV=1 '
+                '-DUSE_OPENMP=1 '
+                '-DUSE_PROFILER=1 '
+                '-DUSE_BLAS=open '
+                '-DUSE_LAPACK=1 '
+                '-DUSE_DIST_KVSTORE=0 '
+                '-DBUILD_CPP_EXAMPLES=1 '
+                '-DUSE_MKL_IF_AVAILABLE=0 '
+                '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
 
-    , 'WIN_CPU_MKLDNN': '-DUSE_CUDA=0 \
-                        -DUSE_CUDNN=0 \
-                        -DUSE_NVRTC=0 \
-                        -DUSE_OPENCV=1 \
-                        -DUSE_OPENMP=1 \
-                        -DUSE_PROFILER=1 \
-                        -DUSE_BLAS=open \
-                        -DUSE_LAPACK=1 \
-                        -DUSE_DIST_KVSTORE=0 \
-                        -DUSE_MKL_IF_AVAILABLE=1 \
-                        -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+    , 'WIN_CPU_MKLDNN': ('-DUSE_CUDA=0 '
+                         '-DUSE_CUDNN=0 '
+                         '-DUSE_NVRTC=0 '
+                         '-DUSE_OPENCV=1 '
+                         '-DUSE_OPENMP=1 '
+                         '-DUSE_PROFILER=1 '
+                         '-DUSE_BLAS=open '
+                         '-DUSE_LAPACK=1 '
+                         '-DUSE_DIST_KVSTORE=0 '
+                         '-DUSE_MKL_IF_AVAILABLE=1 '
+                         '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
 
-    , 'WIN_GPU': '-DUSE_CUDA=1 \
-                 -DUSE_CUDNN=1 \
-                 -DUSE_NVRTC=1 \
-                 -DUSE_OPENCV=1  \
-                 -DUSE_OPENMP=1 \
-                 -DUSE_PROFILER=1 \
-                 -DUSE_BLAS=open  \
-                 -DUSE_LAPACK=1  \
-                 -DUSE_DIST_KVSTORE=0 \
-                 -DCUDA_ARCH_NAME=Manual \
-                 -DCUDA_ARCH_BIN=52 \
-                 -DCUDA_ARCH_PTX=52 \
-                 -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 /DNDEBUG" \
-                 -DUSE_MKL_IF_AVAILABLE=0 \
-                 -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+    , 'WIN_GPU': ('-DUSE_CUDA=1 '
+                  '-DUSE_CUDNN=1 '
+                  '-DUSE_NVRTC=1 '
+                  '-DUSE_OPENCV=1  '
+                  '-DUSE_OPENMP=1 '
+                  '-DUSE_PROFILER=1 '
+                  '-DUSE_BLAS=open '
+                  '-DUSE_LAPACK=1 '
+                  '-DUSE_DIST_KVSTORE=0 '
+                  '-DCUDA_ARCH_NAME=Manual '
+                  '-DCUDA_ARCH_BIN=52 '
+                  '-DCUDA_ARCH_PTX=52 '
+                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
+                  '-DUSE_MKL_IF_AVAILABLE=0 '
+                  '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
 
-    , 'WIN_GPU_MKLDNN': '-DUSE_CUDA=1 \
-                        -DUSE_CUDNN=1 \
-                        -DUSE_NVRTC=1 \
-                        -DUSE_OPENCV=1 \
-                        -DUSE_OPENMP=1 \
-                        -DUSE_PROFILER=1 \
-                        -DUSE_BLAS=open \
-                        -DUSE_LAPACK=1 \
-                        -DUSE_DIST_KVSTORE=0 \
-                        -DCUDA_ARCH_NAME=Manual \
-                        -DCUDA_ARCH_BIN=52 \
-                        -DCUDA_ARCH_PTX=52 \
-                        -DUSE_MKLDNN=1 \
-                        -DCMAKE_CXX_FLAGS_RELEASE="/FS /MD /O2 /Ob2 \
-                        -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+    , 'WIN_GPU_MKLDNN': ('-DUSE_CUDA=1 '
+                         '-DUSE_CUDNN=1 '
+                         '-DUSE_NVRTC=1 '
+                         '-DUSE_OPENCV=1 '
+                         '-DUSE_OPENMP=1 '
+                         '-DUSE_PROFILER=1 '
+                         '-DUSE_BLAS=open '
+                         '-DUSE_LAPACK=1 '
+                         '-DUSE_DIST_KVSTORE=0 '
+                         '-DCUDA_ARCH_NAME=Manual '
+                         '-DCUDA_ARCH_BIN=52 '
+                         '-DCUDA_ARCH_PTX=52 '
+                         '-DUSE_MKLDNN=1 '
+                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
+                         '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
 
 }
 
@@ -180,6 +180,7 @@ def nix_build(args):
             -DCMAKE_BUILD_TYPE=Debug \
             -GNinja ..", shell=True)
         check_call("ninja", shell=True)
+
 
 def main():
     logging.getLogger().setLevel(logging.INFO)
