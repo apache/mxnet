@@ -60,7 +60,7 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   size_t channel = gamma.shape()[0];
   size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
 #pragma omp parallel for
-  for (size_t c = 0; c < channel; ++c) {
+  for (int c = 0; c < static_cast<int>(channel); ++c) {
     DType *p1 = reinterpret_cast<DType *>(weight_ptr + c * offset);
     DType *p2 = reinterpret_cast<DType *>(update_weight_ptr + c * offset);
     DType alpha = (param->fix_gamma ? static_cast<DType>(1.0f) : gamma_ptr[c]) /
@@ -103,7 +103,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
   std::vector<DType> weight_c_min(channel, MaxValue<DType>());
   std::vector<DType> weight_c_max(channel, MinValue<DType>());
 #pragma omp parallel for
-  for (size_t c = 0; c < channel; ++c) {
+  for (int c = 0; c < static_cast<int>(channel); ++c) {
     DType *p1 = weight_ptr + c * offset;
     for (size_t k = 0; k < offset; ++k) {
       if (weight_c_min[c] > p1[k])
@@ -116,7 +116,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
   if (weight_channelwise_scale) {
     weight_scales->resize(channel);
 #pragma omp parallel for
-    for (size_t c = 0; c < channel; ++c) {
+    for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
       weight_scales->at(c) = int8_range / weight_range;
       DType *fp_ptr = weight_ptr + c * offset;
@@ -136,7 +136,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     DType weight_range = MaxAbs(total_min, total_max);
     weight_scales->at(0) = int8_range / weight_range;
 #pragma omp parallel for
-    for (size_t c = 0; c < channel; ++c) {
+    for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType *fp_ptr = weight_ptr + c * offset;
       int8_t *quan_ptr = quan_weight_ptr + c * offset;
       for (size_t k = 0; k < offset; ++k) {
