@@ -190,6 +190,19 @@ def test_NDArrayIter_h5py():
         pass
 
 
+def _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list, csr_iter_None, num_rows, batch_size):
+    num_batch = 0
+    for _, batch_empty_list, batch_empty_None in zip(csr_iter, csr_iter_empty_list, csr_iter_None):
+        assert not batch_empty_list.label, 'label is not empty list'
+        assert not batch_empty_None.label, 'label is not empty list'
+        num_batch += 1
+
+    assert(num_batch == num_rows // batch_size)
+    assertRaises(StopIteration, csr_iter.next)
+    assertRaises(StopIteration, csr_iter_empty_list.next)
+    assertRaises(StopIteration, csr_iter_None.next)
+
+
 def test_NDArrayIter_csr():
     # creating toy data
     num_rows = rnd.randint(5, 15)
@@ -209,23 +222,26 @@ def test_NDArrayIter_csr():
                      {'data': train_data}, dns, batch_size)
     except ImportError:
         pass
+    
     # scipy.sparse.csr_matrix with shuffle
-    num_batch = 0
     csr_iter = iter(mx.io.NDArrayIter({'data': train_data}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
-    for _ in csr_iter:
-        num_batch += 1
-
-    assert(num_batch == num_rows // batch_size)
+    csr_iter_empty_list = iter(mx.io.NDArrayIter({'data': train_data}, [], batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    csr_iter_None = iter(mx.io.NDArrayIter({'data': train_data}, None, batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
+                          csr_iter_None, num_rows, batch_size)
 
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
-    num_batch = 0
-    for _ in csr_iter:
-        num_batch += 1
-
-    assert(num_batch == num_rows // batch_size)
+    csr_iter_empty_list = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, [], batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    csr_iter_None = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, None, batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
+                          csr_iter_None, num_rows, batch_size)
 
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(
