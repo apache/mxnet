@@ -4339,7 +4339,7 @@ def test_where():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         where_sym = mx.sym.where(condition, x, y)
-	
+
         assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
                                                 y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                                 condition=mx.nd.array([1,0])), MXNetError)
@@ -4982,7 +4982,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
                     trans_x = input_offset[roi_idx, class_id * 2, part_h, part_w] * trans_std
                     trans_y = input_offset[roi_idx, class_id * 2 + 1, part_h, part_w] * trans_std
                     bin_h_start, bin_w_start = ph * bin_size_h + roi_start_h, pw * bin_size_w + roi_start_w
-                    
+
                     need_check = True
                     while need_check:
                         pass_check = True
@@ -6810,6 +6810,50 @@ def test_diag():
     # Test 2d backward, k=-1
     data = mx.sym.Variable('data')
     diag_sym = mx.sym.diag(data=data, k=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d input
+    x1 = np.random.randint(3,9)
+    x2 = np.random.randint(3,9)
+    x3 = np.random.randint(3,9)
+    x4 = np.random.randint(3,9)
+    a_np = np.random.random((x1, x2, x3, x4)).astype(np.float32)
+    a = mx.nd.array(a_np).astype('float32')
+
+    # k = 0, axis1=0, axis2=1
+    r = mx.nd.diag(data=a, k=0, axis1=0, axis2=1)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=0, axis1=0, axis2=1))
+
+    # k = 1, axis1=1, axis2=0
+    r = mx.nd.diag(data=a, k=1, axis1=1, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=1, axis1=1, axis2=0))
+
+    # k = -1 axis1=1, axis3=3
+    r = mx.nd.diag(data=a, k=-1, axis1=1, axis2=3)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
+
+    # k = 2, axis1=-2, axis2=0
+    r = mx.nd.diag(data=a, k=2, axis1=-2, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
+
+    # Test 4d backward, k=0, axis1=3, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=0, axis1=3, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=1, axis1=1, axis2=2
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1, axis1=1, axis2=2)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-1, axis1=2, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1, axis1=2, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-2, axis1=1, axis2=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-2, axis1=1, axis2=-1)
     check_numeric_gradient(diag_sym, [a_np])
 
 @with_seed()
