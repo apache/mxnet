@@ -6913,6 +6913,24 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+@with_seed()
+def test_invalid_kernel_size():
+    invalid_kernel_size = 28
+    assert_exception(
+        mx.nd.Correlation,
+        MXNetError,
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=invalid_kernel_size)
+
+@with_seed()
+def test_valid_kernel_size():
+    valid_kernel_size = 9
+    mx.nd.Correlation(
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=valid_kernel_size)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
