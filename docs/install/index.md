@@ -146,7 +146,8 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
-**Notes:**
+**NOTES:**
+
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
 MKL pip package is experimental in some old versions of MXNet.
@@ -263,6 +264,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
 MKL pip package is experimental in some old versions of MXNet.
@@ -492,6 +494,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
 MKL pip package is experimental in some old versions of MXNet.
@@ -704,6 +707,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
 MKL pip package is experimental in some old versions of MXNet.
@@ -784,6 +788,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
 MKL pip package is experimental in some old versions of MXNet.
