@@ -60,6 +60,9 @@ endif
 # use customized config file
 include $(config)
 
+ifneq ($(USE_MKLDNN), 0)
+    USE_MKLDNN = 1
+
 ifeq ($(USE_MKL2017), 1)
 $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 	USE_MKLDNN=1

@@ -251,6 +251,7 @@ build_centos7_cpu() {
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
+        USE_MKLDNN=0 \
         -j$(nproc)
 }
 
@@ -303,6 +304,7 @@ build_centos7_gpu() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
+        USE_MKLDNN=0                              \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
@@ -318,6 +320,7 @@ build_ubuntu_cpu_openblas() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
+        USE_MKLDNN=0                  \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -385,6 +388,7 @@ build_ubuntu_cpu_clang39() {
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_MKLDNN=0                  \
         -j$(nproc)
 }
 
@@ -402,6 +406,7 @@ build_ubuntu_cpu_clang60() {
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
+        USE_MKLDNN=0                  \
         -j$(nproc)
 }
 
@@ -534,6 +539,7 @@ build_ubuntu_gpu_tensorrt() {
         USE_TENSORRT=1                                       \
         USE_JEMALLOC=0                                       \
         USE_GPERFTOOLS=0                                     \
+        USE_MKLDNN=0                                         \
         ONNX_NAMESPACE=onnx                                  \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
         -j$(nproc)
@@ -588,6 +594,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_MKLDNN=0                              \
         -j$(nproc)
 }
 
