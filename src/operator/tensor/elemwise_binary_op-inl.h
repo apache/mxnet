@@ -68,13 +68,13 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
       if (rhs_is_dense) {
         // For right-side dense, in order to have sparse output, lhs input zero should
         // always output zero
-        CHECK(fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < 1e-4f);
+        CHECK(std::fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < 1e-4f);
         CHECK(!is_dense_result);  // Currently not handled
       }
       if (lhs_is_dense) {
         // For left-side dense, in order to have sparse output, lhs input zero should
         // always output zero
-        CHECK(fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < 1e-4f);
+        CHECK(std::fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < 1e-4f);
         CHECK(!is_dense_result);  // Currently not handled
       }
 
@@ -102,10 +102,10 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<cpu> *s,
             CHECK_EQ(is_dense_result, false);
             if (lhs_in_place) {
               // For in-place, zero L-value must always be zero output
-              DCHECK(fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < DType(1e-3));
+              DCHECK(std::fabs(static_cast<float>(OP::Map(DType(0), DType(99)))) < DType(1e-3));
             } else {
               // For in-place, zero R-value must always be zero output
-              DCHECK(fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < DType(1e-3));
+              DCHECK(std::fabs(static_cast<float>(OP::Map(DType(99), DType(0)))) < DType(1e-3));
             }
           }
         }
