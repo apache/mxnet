@@ -189,7 +189,7 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, out_label=None, verbose=False):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -202,6 +202,8 @@ class MXNetGraph(object):
             Input shape of the model e.g [(1,3,224,224)]
         in_type : data type
             Input data type e.g. np.float32
+        out_label : str
+            Optional output label
         verbose : Boolean
             If true will print logs of the model conversion
 
@@ -222,7 +224,10 @@ class MXNetGraph(object):
         # name is "Softmax", this node will have a name "Softmax_label". Also, the new node
         # will always be second last node in the json graph.
         # Deriving the output_label name.
-        output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
+        if not out_label:
+            output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
+        else:
+            output_label = out_label
 
         # Determine output shape
         output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape, output_label)

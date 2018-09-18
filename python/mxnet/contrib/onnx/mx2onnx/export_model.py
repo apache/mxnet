@@ -32,7 +32,7 @@ from .export_onnx import MXNetGraph
 from ._export_helper import load_module
 
 
-def export_model(sym, params, input_shape, input_type=np.float32,
+def export_model(sym, params, input_shape, input_type=np.float32, out_label=None,
                  onnx_file_path='model.onnx', verbose=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
@@ -49,6 +49,8 @@ def export_model(sym, params, input_shape, input_type=np.float32,
         Input shape of the model e.g [(1,3,224,224)]
     input_type : data type
         Input data type e.g. np.float32
+    out_label : str
+        custom output node label
     onnx_file_path : str
         Path where to save the generated onnx file
     verbose : Boolean
@@ -75,10 +77,12 @@ def export_model(sym, params, input_shape, input_type=np.float32,
         sym_obj, params_obj = load_module(sym, params)
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                       out_label,
                                                        verbose=verbose)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
+                                                       out_label,
                                                        verbose=verbose)
     else:
         raise ValueError("Input sym and params should either be files or objects")
