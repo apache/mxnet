@@ -243,6 +243,6 @@ def train(net, num_epochs, lr, batch_size):
 ctx = [ mx.cpu()]
 model.initialize(init=init.Xavier(), ctx=ctx)
 model.hybridize()
-train(model, 10000, 0.001, 2)
+train(model, 10, 0.001, 2)
 
 

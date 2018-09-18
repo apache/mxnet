@@ -227,5 +227,5 @@ def train(net, num_epochs, lr, batch_size):
 
 ctx = [mx.cpu()]
 model.initialize(init=init.Xavier(), ctx=ctx)
-train(model, 10000, 0.01, 2)
+train(model, 10, 0.01, 2)
 
