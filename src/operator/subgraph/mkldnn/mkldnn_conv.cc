@@ -630,7 +630,7 @@ static inline bool StringEndsWith(std::string const &str,
 
 bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
                                 const NodeAttrs &input_attrs) {
-  const static std::unordered_set<std::string> exclude_key{
+  const std::vector<std::string> exclude_key{
       "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
   for (auto i : exclude_key) {
     if (StringEndsWith(input_attrs.name, i)) {
