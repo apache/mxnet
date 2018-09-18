@@ -584,7 +584,11 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this.set(arr)
   }
 
-  override def toString: String = {
+  /**
+    * Visualize the internal structure of NDArray
+    * @return String that show the structure
+    */
+  def visualize: String = {
     buildStringHelper(this, this.shape.length) + "\n"
   }
 
@@ -1043,8 +1047,6 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return  A copy of array content.
    */
   def toArray: Array[Float] = {
-    require(shape.toArray.product < 1000000,
-      "NDArray size is too large, consider reducing the dimension")
     internal.toFloatArray
   }
 
