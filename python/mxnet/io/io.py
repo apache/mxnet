@@ -706,19 +706,22 @@ class NDArrayIter(DataIter):
 
     def _concat(self, first_data, second_data):
         """Helper function to concat two NDArrays."""
+        assert len(first_data) == len(
+            second_data), 'data source should contain the same size'
         if first_data and second_data:
             return [
                 concat(
-                    first_data[0],
-                    second_data[0],
+                    first_data[x],
+                    second_data[x],
                     dim=0
-                )
+                ) for x in range(len(first_data))
             ]
         elif (not first_data) and (not second_data):
             return []
         else:
             return [
                 first_data[0] if first_data else second_data[0]
+                for x in range(len(first_data))
             ]
 
     def _batchify(self, data_source):
