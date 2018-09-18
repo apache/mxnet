@@ -182,9 +182,9 @@ void ROIAlignForward(
     // We use roi_bin_grid to sample the grid and mimic integral
     int roi_bin_grid_h = (sampling_ratio > 0)
         ? sampling_ratio
-        : ceil(roi_height / pooled_height);  // e.g., = 2
+        : std::ceil(roi_height / pooled_height);  // e.g., = 2
     int roi_bin_grid_w =
-        (sampling_ratio > 0) ? sampling_ratio : ceil(roi_width / pooled_width);
+        (sampling_ratio > 0) ? sampling_ratio : std::ceil(roi_width / pooled_width);
 
     // We do average (integral) pooling inside a bin
     const T count = roi_bin_grid_h * roi_bin_grid_w;  // e.g. = 4
@@ -357,9 +357,9 @@ void ROIAlignBackward(
     // We use roi_bin_grid to sample the grid and mimic integral
     int roi_bin_grid_h = (sampling_ratio > 0)
         ? sampling_ratio
-        : ceil(roi_height / pooled_height);  // e.g., = 2
+        : std::ceil(roi_height / pooled_height);  // e.g., = 2
     int roi_bin_grid_w =
-        (sampling_ratio > 0) ? sampling_ratio : ceil(roi_width / pooled_width);
+        (sampling_ratio > 0) ? sampling_ratio : std::ceil(roi_width / pooled_width);
 
     // We do average (integral) pooling inside a bin
     const T count = roi_bin_grid_h * roi_bin_grid_w;  // e.g. = 4

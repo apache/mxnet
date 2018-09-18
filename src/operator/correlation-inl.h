@@ -98,9 +98,9 @@ class CorrelationOp : public Operator {
     border_size_ = param_.max_displacement + kernel_radius_;
     stride1 = param_.stride1;
     stride2 = param_.stride2;
-    top_width_ = ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
+    top_width_ = std::ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
      / static_cast<float>(stride1));
-    top_height_ = ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
+    top_height_ = std::ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
      / static_cast<float>(stride1));
     neighborhood_grid_radius_ = param_.max_displacement / stride2;
     neighborhood_grid_width_ = neighborhood_grid_radius_ * 2 + 1;
@@ -211,9 +211,9 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
     border_size_ = param_.max_displacement + kernel_radius_;
     stride1 = param_.stride1;
     stride2 = param_.stride2;
-    top_width_ = ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
+    top_width_ = std::ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
      / static_cast<float>(stride1));
-    top_height_ = ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
+    top_height_ = std::ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
      / static_cast<float>(stride1));
     neighborhood_grid_radius_ = param_.max_displacement / stride2;
     neighborhood_grid_width_ = neighborhood_grid_radius_ * 2 + 1;
