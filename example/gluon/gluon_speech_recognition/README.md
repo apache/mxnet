@@ -1,7 +1,10 @@
-mxnet 语音识别 gluon 
+Mxnet speech recognition gluon
 
-本项目是使用mxnet的gluon接口写的CNN——CTC模型。主要用于语音识别，本项目使用的数据集是thchs30。
 
-音频特征提取使用的是MFCC特征，我是在训练之前先将特征提取好转换成np.savetxt的形式以方便加载。特征提取的代码是audio.py和audio_utils.py,这两个文件是从其他项目里搬运过来的，侵删。
+This project is a CNN CTC model written on the gluon interface of mxnet. It is mainly used for speech recognition. The data set used in this project is thchs30.
 
-本项目中sequential_CNN_CTC.py文件里是使用原生gluon的Sequntial模型搭建的，hybridSequential_CNN_CTC.py是使用HybridSequntial改写的，主要是为了提高GPU运行效率。
+
+MFCC feature is used in audio feature extraction. I changed the feature extraction into np. savetxt before training to facilitate loading. The code for feature extraction is audio.py and audio_utils.py, which are moved from other projects and erased.
+
+
+In this project, the sequential_CNN_CTC.py file is built using the native gluon's Sequntial model, and hybridSequential_CNN_CTC.py is rewritten using HybridSequntial, mainly to improve the efficiency of the GPU.
