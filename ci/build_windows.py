@@ -133,7 +133,7 @@ def windows_build(args):
         check_call(cmd, shell=True)
 
         logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-        logging.info("Build took ".format(datetime.timedelta(seconds=int(time.time() - t0))))
+        logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
 
 
