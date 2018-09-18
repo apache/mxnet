@@ -298,7 +298,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # delete the temporary file
                 if os.path.exists(fname):
                     os.remove('{}.{}'.format(fname, random_uuid))
-                    warnings.UserWarning(
+                    warnings.warn(
                         'File {} exists in file system so the downloaded file is deleted'.format(fname))
                 else:
                     # atmoic operation in the same file system
