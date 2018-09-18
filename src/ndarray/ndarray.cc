@@ -1031,7 +1031,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
     op::FillZerosRspImpl(s, to);
     return;
   }
-  auto aux_shape = from.aux_shape(rowsparse::kIdx);
+  const auto& aux_shape = from.aux_shape(rowsparse::kIdx);
   to.CheckAndAlloc({aux_shape});
   TBlob val = to.data();
   TBlob idx = to.aux_data(rowsparse::kIdx);
@@ -1122,7 +1122,7 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to,
     if (from_stype == to_stype) {
       casted_nd = from;  // same stype, no need to cast from
     } else {  // different stypes on different ctx needs an temporary casted_nd
-      TShape shape = from.shape();
+      const TShape& shape = from.shape();
       if (to_stype == kDefaultStorage) {
         casted_nd = NDArray(shape, from_ctx);
       } else {
