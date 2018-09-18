@@ -197,11 +197,14 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-if sys.platform != 'win32':
+if not sys.platform.startswith('win32'):
     # refer to https://github.com/untitaker/python-atomicwrites
     def _replace_atomic(src, dst):
-        """Implement atomic os.replace with linux and OSX. Internal Usa only"""
-        os.rename(src, dst)
+        """Implement atomic os.replace with linux and OSX. Internal use only"""
+        try:
+            os.rename(src, dst)
+        except OSError:
+            raise OSError('os.rename failed. Might be wrong source path.')
 else:
     from ctypes import windll, WinError
 
@@ -288,7 +291,6 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # create uuid for temporary files
                 random_uuid = str(uuid.uuid4())
                 with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
-                    # create uuid for temporary files
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
@@ -296,6 +298,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # delete the temporary file
                 if os.path.exists(fname):
                     os.remove('{}.{}'.format(fname, random_uuid))
+                    warnings.UserWarning(
+                        'File {} exists in file system so the downloaded file is deleted'.format(fname))
                 else:
                     # atmoic operation in the same file system
                     _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
