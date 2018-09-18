@@ -2,7 +2,7 @@
 
 ```eval_rst
 .. toctree::
-   :hidden:	
+   :hidden:
    basic/index.md
    c++/index.md
    control_flow/index.md
@@ -58,8 +58,10 @@ Select API:&nbsp;
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
+    * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
+    * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
