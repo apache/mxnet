@@ -132,6 +132,11 @@ static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
+static inline bool SupportMKLDNNQuantize(int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kUint8;
+}
+
 static inline bool SupportMKLDNN(const NDArray &input) {
   return SupportMKLDNN(input.dtype(), input.shape())
       && SupportStorageMKLDNN(input.storage_type());

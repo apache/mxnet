@@ -622,6 +622,24 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
+static inline bool StringEndsWith(std::string const &str,
+                                  std::string const &suffix) {
+  if (suffix.size() > str.size()) return false;
+  return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
+}
+
+bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
+                                const NodeAttrs &input_attrs) {
+  const static std::unordered_set<std::string> exclude_key{
+      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
+  for (auto i : exclude_key) {
+    if (StringEndsWith(input_attrs.name, i)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 NNVM_REGISTER_OP(_sg_mkldnn_conv)
 .describe(R"code(_sg_mkldnn_conv)code" ADD_FILELINE)
 .set_num_inputs(SgMKLDNNConvNumInputs)
@@ -645,7 +663,8 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
                                 DefaultSubgraphOpMutableInputs)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SgMKLDNNConvInplaceOption)
-.set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp);
+.set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
+.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidQuantizeInput);
 }  // namespace op
 }  // namespace mxnet
 #endif  // if MXNET_USE_MKLDNN == 1

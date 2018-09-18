@@ -134,6 +134,8 @@ inline bool ExcludeKey(NodePtr node, NodeEntry e) {
 Graph QuantizeGraph(Graph &&src) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
+  static auto& avoid_quantize_input_map =
+      Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
   auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
@@ -163,7 +165,8 @@ Graph QuantizeGraph(Graph &&src) {
         // taking mirror_entry as input to generate a quantized NDArray. Save the mapping between
         // e's source node and the newly created quantize op so that the quantize op can be
         // reused next time when the same entry is visited again.
-        if (ExcludeKey(node, e)) {
+        if (avoid_quantize_input_map.count(node->op()) &&
+            avoid_quantize_input_map[node->op()](node->attrs, e.node->attrs)) {
           new_node->inputs.emplace_back(mirror_entry);
         } else if (!NeedQuantize(e.node, excluded_nodes) &&
                    (mirror_node->op() == nullptr ||
@@ -211,19 +214,26 @@ Graph QuantizeGraph(Graph &&src) {
         // for quantize node
         uint32_t min_index = 1;
         uint32_t max_index = 2;
-        if (e.node->op() != nullptr &&
-            (quantized_op_map.count(e.node->op()) ||
-             e.node->op()->name != "_contrib_quantize")) {
+        if (avoid_quantize_input_map.count(node->op()) &&
+            avoid_quantize_input_map[node->op()](node->attrs, e.node->attrs)) {
+          // skip non-quantized input
+          continue;
+        }
+        if (quantized_op_map.count(e.node->op())) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1min and 1max output from mirror node (which is
           // currently true)
-          size_t  num_outputs = mirror_node->num_outputs() - 2;
+          size_t num_outputs = mirror_node->num_outputs() - 2;
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+        } else {
+          CHECK(mirror_node->op() != nullptr &&
+                mirror_node->op()->name == "_contrib_quantize")
+              << "The input is not quantize or quantized_op";
         }
+        new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
+        new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
       }
 
       // If the new_node op registered attr FNeedRequantize, insert requantize node after it.

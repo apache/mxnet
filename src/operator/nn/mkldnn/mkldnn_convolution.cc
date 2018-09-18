@@ -39,7 +39,7 @@ DMLC_REGISTER_PARAMETER(MKLDNNConvParam);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
   if (params.kernel.ndim() != 2)
     return false;
-  return input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 4;
+  return SupportMKLDNNQuantize(input.dtype()) && input.shape().ndim() == 4;
 }
 
 inline static mkldnn::memory::desc GetInDataMemDesc(const NDArray &arr) {

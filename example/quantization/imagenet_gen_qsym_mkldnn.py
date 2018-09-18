@@ -54,7 +54,7 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with mkldnn support')
+    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with MKL-DNN support')
     parser.add_argument('--model', type=str, choices=['imagenet1k-resnet-152', 'imagenet1k-inception-bn'],
                         help='currently only supports imagenet1k-resnet-152 or imagenet1k-inception-bn')
     parser.add_argument('--batch-size', type=int, default=32)
@@ -68,8 +68,7 @@ if __name__ == '__main__':
                         help='number of batches for calibration')
     parser.add_argument('--exclude-first-conv', action='store_true', default=True,
                         help='excluding quantizing the first conv layer since the'
-                             ' number of channels is usually not a multiple of 4 in that layer'
-                             ' which does not satisfy the requirement of cuDNN')
+                             ' input data may have negative value which doesn\'t support at moment' )
     parser.add_argument('--shuffle-dataset', action='store_true', default=True,
                         help='shuffle the calibration dataset')
     parser.add_argument('--shuffle-chunk-seed', type=int, default=3982304,
@@ -98,7 +97,7 @@ if __name__ == '__main__':
                         help='quantization destination data type for input data')
     parser.add_argument('--disable-requantize', type=bool, default=True,
                         help='If disable requantize, the OP needed requantize'
-                             ' will output int8 directly and hence requantize '
+                             ' will output uint8 directly and hence requantize '
                              'OP is not needed during quantization. Note: '
                              'calibration mode need to be used if requantize '
                              'is disabled.')
@@ -136,7 +135,9 @@ if __name__ == '__main__':
 
     # get number of batches for calibration
     num_calib_batches = args.num_calib_batches
-    if calib_mode != 'none':
+    if calib_mode == 'none':
+        logger.info('skip calibration step as calib_mode is none')
+    else:
         logger.info('number of batches = %d for calibration' % num_calib_batches)
 
     # get number of threads for decoding the dataset
@@ -152,10 +153,10 @@ if __name__ == '__main__':
         calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
-            excluded_sym_names += ['sg_mkldnn_conv_bn_relu_0', 'pooling0']
+            excluded_sym_names += ['conv0', 'pooling0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
-        calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
+        calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']

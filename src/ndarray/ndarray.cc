@@ -1561,8 +1561,12 @@ void NDArray::Save(dmlc::Stream *strm) const {
     save_data = nd_cpu.data();
   } else {
     this->WaitToRead();
-    save_data = this->data();
     nd_cpu = *this;
+#if MXNET_USE_MKLDNN == 1
+    if (nd_cpu.IsMKLDNNData())
+      nd_cpu = nd_cpu.Reorder2Default();
+#endif
+    save_data = nd_cpu.data();
   }
 
   // save type flag
