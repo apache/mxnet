@@ -341,11 +341,11 @@ build_ubuntu_cpu_cmake_asan() {
 
     pushd .
     cd /work/build
-    export CC="gcc-8"
-    export CXX="g++-8"
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
+        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
