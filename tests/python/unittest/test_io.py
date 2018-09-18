@@ -116,6 +116,8 @@ def _test_last_batch_handle(data, labels=None):
         if labels is not None and len(labels) != 0:
             labelcount = [0 for i in range(10)]
         for batch in dataiter:
+            if len(data) == 2:
+                assert len(batch.data) == 2
             if labels is not None and len(labels) != 0:
                 label = batch.label[0].asnumpy().flatten()
                 # check data if it matches corresponding labels
@@ -160,9 +162,11 @@ def test_NDArrayIter():
     for dtype in dtype_list:
         data, labels = _init_NDArrayIter_data(dtype_list)
         _test_last_batch_handle(data, labels)
+        _test_last_batch_handle([data, data], labels)
         _test_last_batch_handle(data, [])
         _test_last_batch_handle(data)
         _test_shuffle(data, labels)
+        _test_shuffle([data, data], labels)
         _test_shuffle(data, [])
         _test_shuffle(data)
 
