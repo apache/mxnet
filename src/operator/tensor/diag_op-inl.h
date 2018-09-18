@@ -206,6 +206,14 @@ void DiagOpProcess(const TBlob& in_data,
       std::swap(minx, maxx);
     }
 
+    // merges contiguous axes that are not separated
+    // by axis1 or axis2 since they can be directly
+    // mapped to the output and there is no need
+    // to distinguish them
+    // (After this the input will have no more than
+    // three axes, hence improving the rave and
+    // unravel efficiency)
+
     index_t oleading = 1,
            obody = 1,
            otrailing = 1;
@@ -226,10 +234,14 @@ void DiagOpProcess(const TBlob& in_data,
 
     index_t stride1 = itrailing * obody,
         stride2 = otrailing;
+    // stride1 + stride2 is the stride for
+    // iterating over the diagonal in question
 
     if (x1 == maxx) {
       std::swap(stride1, stride2);
     }
+
+    // the extra index offset introduced by k
     index_t offset;
     int k = param.k;
     if (k > 0) {
