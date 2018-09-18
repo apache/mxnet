@@ -54,7 +54,7 @@ class SwapAxes(nn.HybridBlock):
         return F.swapaxes(x, self.dim1, self.dim2)
 
 
-with mx.Context(mx.gpu(0)):
+with mx.Context(mx.cpu(0)):
     model = nn.HybridSequential()
     model.add(SwapAxes(1,2),
               CBR(40, 1),
@@ -155,7 +155,7 @@ def get_str2idx(data_dir):
 
 
 def get_iter(batch_size):
-    data_dir = '/media/xmj/ubt_2t/中文语音识别/data_thchs30/data'
+    data_dir = './data'
     train_iter = get_data_gen(data_dir, get_str2idx(data_dir)[1], batch_size)
     for x, y in train_iter:
         yield nd.array(x), nd.array(y)
@@ -203,7 +203,7 @@ class ShowProcess():
 
 my_ctcloss = loss.CTCLoss()
 def train(net, num_epochs, lr, batch_size):
-    with mx.Context(mx.gpu(0)):
+    with mx.Context(mx.cpu(0)):
         train_ls = []
         trainer = gluon.Trainer(net.collect_params(), 'adam',{
             'learning_rate': lr,
@@ -227,20 +227,9 @@ def train(net, num_epochs, lr, batch_size):
         return train_ls
 
 
-def train_with_gb(net, num_epochs, lr, batch_size):
-    with mx.Context(mx.gpu(0)):
-        trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate':lr})
-        train_iter = get_iter(batch_size)
-        test_iter = get_iter(batch_size//2)
-        gb.train(train_iter, test_iter, net, my_ctcloss, trainer, mx.gpu(0), num_epochs )
-
-
-ctx = [mx.gpu(0)] # , mx.cpu()]
+ctx = [ mx.cpu()]
 model.initialize(init=init.Xavier(), ctx=ctx)
 model.hybridize()
-# model.load_parameters('mxnetCnn20.param', ctx = ctx[0])
-print(model(nd.random_uniform(shape=(2, 500, 39), ctx=ctx[0])))
-train(model, 10000, 0.001, 20)
-# train_with_gb(model, 10000, 0.01, 2)
+train(model, 10000, 0.001, 2)
 
 
