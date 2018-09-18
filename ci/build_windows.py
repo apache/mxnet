@@ -60,7 +60,7 @@ CMAKE_FLAGS = {
                 '-DUSE_DIST_KVSTORE=0 '
                 '-DBUILD_CPP_EXAMPLES=1 '
                 '-DUSE_MKL_IF_AVAILABLE=0 '
-                '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
+                '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': ('-DUSE_CUDA=0 '
                          '-DUSE_CUDNN=0 '
@@ -72,7 +72,7 @@ CMAKE_FLAGS = {
                          '-DUSE_LAPACK=1 '
                          '-DUSE_DIST_KVSTORE=0 '
                          '-DUSE_MKL_IF_AVAILABLE=1 '
-                         '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
+                         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': ('-DUSE_CUDA=1 '
                   '-DUSE_CUDNN=1 '
@@ -86,9 +86,9 @@ CMAKE_FLAGS = {
                   '-DCUDA_ARCH_NAME=Manual '
                   '-DCUDA_ARCH_BIN=52 '
                   '-DCUDA_ARCH_PTX=52 '
-                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2 /Z7" '
+                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
                   '-DUSE_MKL_IF_AVAILABLE=0 '
-                  '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
+                  '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': ('-DUSE_CUDA=1 '
                          '-DUSE_CUDNN=1 '
@@ -103,8 +103,8 @@ CMAKE_FLAGS = {
                          '-DCUDA_ARCH_BIN=52 '
                          '-DCUDA_ARCH_PTX=52 '
                          '-DUSE_MKLDNN=1 '
-                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2 /Z7" '
-                         '-DCMAKE_BUILD_TYPE=RelWithDebInfo')
+                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
+                         '-DCMAKE_BUILD_TYPE=Release')
 
 }
 
