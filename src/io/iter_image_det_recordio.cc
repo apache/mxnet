@@ -243,20 +243,22 @@ class ImageDetRecordIOParser {
 
 template <typename DType>
 inline void ImageDetRecordIOParser<DType>::Init(
-    const std::vector<std::pair<std::string, std::string>> &kwargs) {
+    const std::vector<std::pair<std::string, std::string> >& kwargs) {
 #if MXNET_USE_OPENCV
   // initialize parameter
   // init image rec param
   param_.InitAllowUnknown(kwargs);
   int maxthread, threadget;
-#pragma omp parallel
+  #pragma omp parallel
   {
     // be conservative, set number of real cores - 1
     maxthread = std::max(omp_get_num_procs() - 1, 1);
   }
   param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
   #pragma omp parallel num_threads(param_.preprocess_threads)
-  { threadget = omp_get_num_threads(); }
+  {
+    threadget = omp_get_num_threads();
+  }
   param_.preprocess_threads = threadget;
 
   std::vector<std::string> aug_names = dmlc::Split(param_.aug_seq, ',');
@@ -264,7 +266,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
   augmenters_.resize(threadget);
   // setup decoders
   for (int i = 0; i < threadget; ++i) {
-    for (const auto &aug_name : aug_names) {
+    for (const auto& aug_name : aug_names) {
       augmenters_[i].emplace_back(ImageAugmenter::Create(aug_name));
       augmenters_[i].back()->Init(kwargs);
     }
@@ -272,18 +274,19 @@ inline void ImageDetRecordIOParser<DType>::Init(
   }
   if (param_.path_imglist.length() != 0) {
     label_map_.reset(new ImageDetLabelMap(param_.path_imglist.c_str(),
-                                          param_.label_width, !param_.verbose));
+      param_.label_width, !param_.verbose));
   }
   CHECK(param_.path_imgrec.length() != 0)
       << "ImageDetRecordIOIterator: must specify image_rec";
 
   if (param_.verbose) {
-    LOG(INFO) << "ImageDetRecordIOParser: " << param_.path_imgrec << ", use "
-              << threadget << " threads for decoding..";
+    LOG(INFO) << "ImageDetRecordIOParser: " << param_.path_imgrec
+              << ", use " << threadget << " threads for decoding..";
   }
-  source_.reset(dmlc::InputSplit::Create(param_.path_imgrec.c_str(),
-                                         param_.part_index, param_.num_parts,
-                                         "recordio"));
+  source_.reset(dmlc::InputSplit::Create(
+      param_.path_imgrec.c_str(),
+      param_.part_index, param_.num_parts,
+      "recordio"));
 
   // estimate padding width for labels
   int max_label_width = 0;
@@ -320,7 +323,9 @@ inline void ImageDetRecordIOParser<DType>::Init(
             }
           }
           #pragma omp critical
-          { max_label_width = std::max(max_label_width, max_width); }
+          {
+            max_label_width = std::max(max_label_width, max_width);
+          }
         });
       }
       omp_exc_.Rethrow();
@@ -329,8 +334,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
   if (max_label_width > param_.label_pad_width) {
     if (param_.label_pad_width > 0) {
       LOG(FATAL) << "ImageDetRecordIOParser: label_pad_width: "
-                 << param_.label_pad_width
-                 << " smaller than estimated width: " << max_label_width;
+                 << param_.label_pad_width << " smaller than estimated width: " << max_label_width;
     }
     param_.label_pad_width = max_label_width;
   }
@@ -339,9 +343,10 @@ inline void ImageDetRecordIOParser<DType>::Init(
               << ", label padding width: " << param_.label_pad_width;
   }
 
-  source_.reset(dmlc::InputSplit::Create(param_.path_imgrec.c_str(),
-                                         param_.part_index, param_.num_parts,
-                                         "recordio"));
+  source_.reset(dmlc::InputSplit::Create(
+      param_.path_imgrec.c_str(),
+      param_.part_index, param_.num_parts,
+      "recordio"));
 
   if (param_.shuffle_chunk_size > 0) {
     if (param_.shuffle_chunk_size > 4096) {
@@ -361,8 +366,8 @@ inline void ImageDetRecordIOParser<DType>::Init(
 
     if (num_shuffle_parts > 1) {
       source_.reset(dmlc::InputSplitShuffle::Create(
-          param_.path_imgrec.c_str(), param_.part_index, param_.num_parts,
-          "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
+          param_.path_imgrec.c_str(), param_.part_index,
+          param_.num_parts, "recordio", num_shuffle_parts, param_.shuffle_chunk_seed));
     }
     source_->HintChunkSize(param_.shuffle_chunk_size << 17UL);
   } else {
