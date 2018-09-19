@@ -32,7 +32,7 @@ def get_symbol(network, batch_size, dtype):
     num_layers = 0
     if 'resnet' in network:
         num_layers = int(network.split('-')[1])
-        network = 'resnet'
+        network = network.split('-')[0]
     if 'vgg' in network:
         num_layers = int(network.split('-')[1])
         network = 'vgg'
@@ -69,7 +69,7 @@ def score(network, dev, batch_size, num_batches, dtype):
     return num_batches*batch_size/(time.time() - tic)
 
 if __name__ == '__main__':
-    networks = ['alexnet', 'vgg-16', 'inception-bn', 'inception-v3', 'resnet-50', 'resnet-152']
+    networks = ['alexnet', 'vgg-16', 'inception-bn', 'inception-v3', 'resnetv1-50', 'resnetv2-50', 'resnetv2-152']
     devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
     # Enable USE_MKLDNN for better CPU performance
     devs.append(mx.cpu())
