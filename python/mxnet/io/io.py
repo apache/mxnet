@@ -36,7 +36,7 @@ from ..ndarray import _ndarray_cls
 from ..ndarray import array
 from ..ndarray import concat
 
-from .utils import init_data, has_instance, getdata_by_idx
+from .utils import _init_data, _has_instance, _getdata_by_idx
 
 class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
     """DataDesc is used to store name, shape, type and layout
@@ -607,10 +607,11 @@ class NDArrayIter(DataIter):
                  label_name='softmax_label'):
         super(NDArrayIter, self).__init__(batch_size)
 
-        self.data = init_data(data, allow_empty=False, default_name=data_name)
-        self.label = init_data(label, allow_empty=True, default_name=label_name)
+        self.data = _init_data(data, allow_empty=False, default_name=data_name)
+        self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
-        if ((has_instance(self.data, CSRNDArray) or has_instance(self.label, CSRNDArray)) and
+        if ((_has_instance(self.data, CSRNDArray) or
+             _has_instance(self.label, CSRNDArray)) and
                 (last_batch_handle != 'discard')):
             raise NotImplementedError("`NDArrayIter` only supports ``CSRNDArray``" \
                                       " with `last_batch_handle` set to `discard`.")
@@ -781,8 +782,8 @@ class NDArrayIter(DataIter):
         # shuffle index
         np.random.shuffle(self.idx)
         # get the data by corresponding index
-        self.data = getdata_by_idx(self.data, self.idx)
-        self.label = getdata_by_idx(self.label, self.idx)
+        self.data = _getdata_by_idx(self.data, self.idx)
+        self.label = _getdata_by_idx(self.label, self.idx)
 
 class MXDataIter(DataIter):
     """A python wrapper a C++ data iterator.

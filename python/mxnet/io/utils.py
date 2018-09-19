@@ -29,7 +29,7 @@ from ..ndarray.sparse import array as sparse_array
 from ..ndarray import NDArray
 from ..ndarray import array
 
-def init_data(data, allow_empty, default_name):
+def _init_data(data, allow_empty, default_name):
     """Convert data into canonical form."""
     assert (data is not None) or allow_empty
     if data is None:
@@ -60,7 +60,7 @@ def init_data(data, allow_empty, default_name):
     return list(sorted(data.items()))
 
 
-def has_instance(data, dtype):
+def _has_instance(data, dtype):
     """Return True if ``data`` has instance of ``dtype``.
     This function is called after _init_data.
     ``data`` is a list of (str, NDArray)"""
@@ -71,7 +71,7 @@ def has_instance(data, dtype):
     return False
 
 
-def getdata_by_idx(data, idx):
+def _getdata_by_idx(data, idx):
     """Shuffle the data."""
     shuffle_data = []
 
