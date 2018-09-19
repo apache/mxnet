@@ -336,6 +336,35 @@ build_ubuntu_cpu_cmake_debug() {
     popd
 }
 
+build_ubuntu_cpu_cmake_asan() {
+    set -ex
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
+        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=OFF \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_GPERFTOOLS=OFF \
+        -DUSE_JEMALLOC=OFF \
+        -DUSE_ASAN=ON \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        /work/mxnet
+    make -j $(nproc) mxnet
+    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
+    ASAN_OPTIONS=detect_leaks=0 \
+    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
+    make -j $(nproc) mlp_cpu
+    popd
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
      export CXX=clang++-3.9
@@ -795,6 +824,17 @@ integrationtest_ubuntu_gpu_caffe() {
     set -ex
     export PYTHONPATH=/work/deps/caffe/python:./python
     python tools/caffe_converter/test_converter.py
+}
+
+integrationtest_ubuntu_cpu_asan() {
+    set -ex
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+
+    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
+    export ASAN_OPTIONS=exitcode=0
+    cd /work/mxnet/build/cpp-package/example/
+    /work/mxnet/cpp-package/example/get_data.sh
+    ./mlp_cpu
 }
 
 integrationtest_ubuntu_gpu_cpp_package() {
