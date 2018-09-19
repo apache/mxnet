@@ -21,7 +21,7 @@
 * Copyright (c) 2015 by Contributors
 * \file diag_op.cc
 * \brief
-* \author Istvan Fehervari
+* \author Istvan Fehervari, Zhijingcheng Yu
 */
 
 #include "./diag_op-inl.h"
@@ -36,9 +36,13 @@ NNVM_REGISTER_OP(diag)
 
 ``diag``'s behavior depends on the input array dimensions:
 
-- 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero
-- 2-D arrays: returns elements in the diagonal as a new 1-D array
-- N-D arrays: not supported yet
+- 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero.
+- N-D arrays: extracts the diagonals of the sub-arrays with axes specified by ``axis1`` and ``axis2``.
+  The output shape would be decided by removing the axes numbered ``axis1`` and ``axis2`` from the
+  input shape and appending to the result a new axis with the size of the diagonals in question.
+
+  For example, when the input shape is `(2, 3, 4, 5)`, ``axis1`` and ``axis2`` are 0 and 2
+  respectively and ``k`` is 0, the resulting shape would be `(3, 5, 2)`.
 
 Examples::
 
@@ -64,6 +68,21 @@ Examples::
   diag(x, k=-1) = [[0, 0, 0],
                    [1, 0, 0],
                    [0, 2, 0]]
+
+  x = [[[1, 2],
+        [3, 4]],
+
+       [[5, 6],
+        [7, 8]]]
+
+  diag(x) = [[1, 7],
+             [2, 8]]
+
+  diag(x, k=1) = [[3],
+                  [4]]
+
+  diag(x, axis1=-2, axis2=-1) = [[1, 4],
+                                 [5, 8]]
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DiagParam>)

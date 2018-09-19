@@ -646,7 +646,7 @@ class ElemwiseBinaryOp : public OpBase {
       if (in_stype == lhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> rsp, _. op requires 0-input returns 0-output
-        DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
+        DCHECK_LT(std::fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
         LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
@@ -657,7 +657,7 @@ class ElemwiseBinaryOp : public OpBase {
       if (in_stype == rhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> _, rsp. op requires 0-input returns 0-output
-        DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
+        DCHECK_LT(std::fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
         LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
