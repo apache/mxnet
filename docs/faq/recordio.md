@@ -14,7 +14,7 @@ Download the data. You don't need to resize the images manually. You can use ```
 
 ### Step 1. Make an Image List File
 
-* Note that the im2rec.py provide a param `--list` to generate the list for you but im2rec.cc don't support it.
+* Note that the im2rec.py provide a param `--list` to generate the list for you but im2rec.cc doesn't support it.
 
 After you download the data, you need to make an image list file.  The format is:
 
