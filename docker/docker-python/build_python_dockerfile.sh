@@ -89,14 +89,26 @@ docker_test_image_cpu "latest"
 
 
 #Build and Test dockerfiles - GPU
-docker_build_image "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu"
+docker_build_image "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu.cu90"
 docker_test_image_gpu "${mxnet_version}_gpu_cu90"
 
-docker_build_image "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.mkl"
+docker_build_image "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.cu90.mkl"
 docker_test_image_gpu "${mxnet_version}_gpu_cu90_mkl"
 
 docker_tag_image "${mxnet_version}_gpu_cu90" "gpu"
 docker_test_image_gpu "gpu"
+
+docker_build_image "${mxnet_version}_gpu_cu80" "Dockerfile.mxnet.python.gpu.cu80"
+docker_test_image_gpu "${mxnet_version}_gpu_cu80"
+
+docker_build_image "${mxnet_version}_gpu_cu80_mkl" "Dockerfile.mxnet.python.gpu.cu80.mkl"
+docker_test_image_gpu "${mxnet_version}_gpu_cu80_mkl"
+
+docker_build_image "${mxnet_version}_gpu_cu92" "Dockerfile.mxnet.python.gpu.cu92"
+docker_test_image_gpu "${mxnet_version}_gpu_cu92"
+
+docker_build_image "${mxnet_version}_gpu_cu92_mkl" "Dockerfile.mxnet.python.gpu.cu92.mkl"
+docker_test_image_gpu "${mxnet_version}_gpu_cu92_mkl"
 
 
 # Push dockerfiles
@@ -109,5 +121,11 @@ docker_push_image "latest"
 docker_push_image "${mxnet_version}_gpu_cu90"
 docker_push_image "${mxnet_version}_gpu_cu90_mkl"
 docker_push_image "gpu"
+docker_push_image "${mxnet_version}_gpu_cu80"
+docker_push_image "${mxnet_version}_gpu_cu80_mkl"
+docker_push_image "${mxnet_version}_gpu_cu92"
+docker_push_image "${mxnet_version}_gpu_cu92_mkl"
 
 docker_account_logout
+
+echo "Successfully Built, Tested and Pushed all Images to Dockerhub. Link: https://hub.docker.com/r/mxnet/python/tags/"
