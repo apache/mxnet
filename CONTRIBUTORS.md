@@ -180,3 +180,4 @@ List of Contributors
 * [Per Goncalves da Silva](https://github.com/perdasilva)
 * [Zhijingcheng Yu](https://github.com/jasonyu1996)
 * [Cheng-Che Lee](https://github.com/stu1130)
+* [Chaitanya Bapat](https://github.com/ChaiBapchya)
