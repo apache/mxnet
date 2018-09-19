@@ -157,11 +157,11 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                   (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
                       param.stride[1];
     } else {
-      oshape[2] = 1 + static_cast<int>(ceil(
+      oshape[2] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
                           param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(ceil(
+      oshape[3] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[3] + 2 * param.pad[1] -
                                              param.kernel[1]) /
                           param.stride[1]));
@@ -192,15 +192,15 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                   (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
                       param.stride[2];
     } else {
-      oshape[2] = 1 + static_cast<int>(ceil(
+      oshape[2] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
                           param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(ceil(
+      oshape[3] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[3] + 2 * param.pad[1] -
                                              param.kernel[1]) /
                           param.stride[1]));
-      oshape[4] = 1 + static_cast<int>(ceil(
+      oshape[4] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[4] + 2 * param.pad[2] -
                                              param.kernel[2]) /
                           param.stride[2]));

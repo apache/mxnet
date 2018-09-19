@@ -35,6 +35,8 @@ core_logic: {
             try {
               utils.init_git()
               utils.docker_run('ubuntu_blc', 'broken_link_checker', false)
+            } catch(Exception ex) {
+              sh "echo Broken Link Checker failed with exception - " + ex.toString()
             }
           }
         }

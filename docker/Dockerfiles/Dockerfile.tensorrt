@@ -1,3 +1,4 @@
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,14 +15,31 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet with TensorRT Integration.
 
-require(mxnet)
+FROM nvidia/cuda:9.0-cudnn7-devel
 
-mx.set.seed(10)
+WORKDIR /work/deps
 
-print(mx.runif(c(2,2), -10, 10))
+# Ubuntu-core
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    libopenblas-base \
+    python3 \
+    python3-pip \
+    wget
 
-# Test initialization module for neural nets.
-uinit <- mx.init.uniform(0.1)
-print(uinit("fc1_weight", c(2, 2), mx.cpu()))
-print(uinit("fc1_gamma", c(2, 2), mx.cpu()))
+RUN ln -s $(which python3) /usr/bin/python && \
+    ln -s $(which pip3) /usr/bin/pip
+
+RUN echo "Installing TensorRT." && \
+  wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/nvinfer-runtime-trt-repo-ubuntu1604-4.0.1-ga-cuda9.0_1-1_amd64.deb && \
+  dpkg -i tensorrt.deb && \
+  apt-get update && \
+  apt-get install -y --allow-downgrades libnvinfer-dev && \
+  rm tensorrt.deb
+
+RUN pip install mxnet-tensorrt-cu90
+
+CMD python
