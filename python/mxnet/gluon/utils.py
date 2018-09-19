@@ -297,13 +297,13 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # if the target file exists(created by other processes)
                 # and have the same hash with target file
                 # delete the temporary file
-                if os.path.exists(fname) and sha1_hash and check_sha1(fname, sha1_hash):
+                if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
+                    # atmoic operation in the same file system
+                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
+                else:
                     os.remove('{}.{}'.format(fname, random_uuid))
                     warnings.warn(
                         'File {} exists in file system so the downloaded file is deleted'.format(fname))
-                else:
-                    # atmoic operation in the same file system
-                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
                 if sha1_hash and not check_sha1(fname, sha1_hash):
                     raise UserWarning(
                         'File {} is downloaded but the content hash does not match.'
