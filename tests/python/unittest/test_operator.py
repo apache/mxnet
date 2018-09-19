@@ -6958,7 +6958,6 @@ def test_spacetodepth():
     test_invalid_depth_dim()
 
 @with_seed()
-<<<<<<< HEAD
 def test_max_pooling_pad_type_same():
     input_data=mx.nd.array(np.random.rand(1,1,10))
     output_data=mx.nd.Pooling(
@@ -6968,7 +6967,8 @@ def test_max_pooling_pad_type_same():
         name='pooling',
         pooling_convention="same")
     assert(input_data.shape == output_data.shape)
-=======
+
+@with_seed()
 def test_invalid_kernel_size():
     invalid_kernel_size = 28
     assert_exception(
@@ -6985,7 +6985,6 @@ def test_valid_kernel_size():
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         kernel_size=valid_kernel_size)
->>>>>>> upstream/master
 
 if __name__ == '__main__':
     import nose
