@@ -87,10 +87,5 @@ if __name__ == '__main__':
                 outstr = outstr.replace('http://mxnet.io', 'https://mxnet.incubator.apache.org/'
                                                                'versions/%s' % (args.current_version))
 
-            # Add tag for example link
-            outstr = outstr.replace('https://github.com/apache/incubator-mxnet/tree/master/example',
-                                    'https://github.com/apache/incubator-mxnet/tree/%s/example' %
-                                    (args.current_version))
-
             with open(os.path.join(path, name), "w") as outf:
                 outf.write(outstr)
