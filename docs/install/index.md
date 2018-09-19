@@ -150,7 +150,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
-MKL pip package is experimental in some old versions of MXNet.
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
@@ -267,7 +267,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
-MKL pip package is experimental in some old versions of MXNet.
+All MKL pip packages are experimental prior to version 1.3.0.
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
 
@@ -497,7 +497,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
-MKL pip package is experimental in some old versions of MXNet.
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- END of pip -->
 
@@ -710,7 +710,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
-MKL pip package is experimental in some old versions of MXNet.
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
@@ -791,7 +791,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 *mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
 
-MKL pip package is experimental in some old versions of MXNet.
+All MKL pip packages are experimental prior to version 1.3.0.
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
