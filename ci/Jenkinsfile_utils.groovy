@@ -66,7 +66,8 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 }
 
 // unpack libraries saved before
-def unpack_lib(name, libs) {
+def unpack_and_init(name, libs) {
+  init_git()
   unstash name
   sh """
 echo "Unpacked ${libs} from ${name}"
