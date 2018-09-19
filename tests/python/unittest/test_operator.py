@@ -4339,7 +4339,7 @@ def test_where():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         where_sym = mx.sym.where(condition, x, y)
-	
+
         assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
                                                 y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                                 condition=mx.nd.array([1,0])), MXNetError)
@@ -4478,7 +4478,7 @@ def test_pick():
 def check_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
-    ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
+    ctc = mx.sym.ctc_loss(in_var, labels_var)
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
@@ -4537,7 +4537,7 @@ def test_ctc_loss_with_large_classes():
         [1000, 2000, 3000, 4000, 0, 5000, 0, 0]], dtype=np.int32)
     nd_data = mx.nd.array(data)
     nd_label = mx.nd.array(label)
-    loss = mx.nd.contrib.ctc_loss(data=nd_data, label=nd_label)
+    loss = mx.nd.ctc_loss(data=nd_data, label=nd_label)
     expected_loss = np.array([688.02826, 145.34462])
     assert_almost_equal(loss.asnumpy(), expected_loss)
 
@@ -4982,7 +4982,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
                     trans_x = input_offset[roi_idx, class_id * 2, part_h, part_w] * trans_std
                     trans_y = input_offset[roi_idx, class_id * 2 + 1, part_h, part_w] * trans_std
                     bin_h_start, bin_w_start = ph * bin_size_h + roi_start_h, pw * bin_size_w + roi_start_w
-                    
+
                     need_check = True
                     while need_check:
                         pass_check = True

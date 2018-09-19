@@ -227,11 +227,8 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
 
     TShape oshape(1);
     oshape[0] = dshape[1];  // batch size
-    out_attrs->clear();
-    out_attrs->push_back(oshape);
-    out_attrs->push_back(dshape);
-    //SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape); // forward output
-    //SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape); // grad output
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape); // forward output
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape); // grad output
     return true;
 }
 
@@ -243,11 +240,8 @@ inline bool CTCLossOpType(const nnvm::NodeAttrs& attrs,
     int dtype = (*in_attrs)[ctc_loss::kData];
     CHECK_NE(dtype, -1) << "Input data must have specified type";
 
-    out_attrs->clear();
-    out_attrs->push_back(dtype);
-    out_attrs->push_back(dtype);
-    //TYPE_ASSIGN_CHECK(*out_attrs, 0, dtype); // forward output
-    //TYPE_ASSIGN_CHECK(*out_attrs, 1, dtype); // grad output
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0)); // forward output
+    TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(0)); // grad output
     return true;
 }
 
