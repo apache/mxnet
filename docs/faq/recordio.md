@@ -22,7 +22,6 @@ After you download the data, you need to make an image list file.  The format is
 integer_image_index \t label_index \t path_to_image
 ```
 Typically, the program takes the list of names of all of the images, shuffles them, then separates them into two lists: a training filename list and a testing filename list. Write the list in the right format.
-You can
 This is an example file:
 
 ```bash
