@@ -6913,11 +6913,12 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+@with_seed()
 def test_max_pooling_pad_type_same():
     input_data=mx.nd.array(np.random.rand(1,1,10))
     output_data=mx.nd.Pooling(
-        input_data, 
-        kernel=(2), 
+        input_data,
+        kernel=(2),
         pool_type='max',
         name='pooling',
         pooling_convention="same")
