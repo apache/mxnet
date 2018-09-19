@@ -794,7 +794,7 @@ class MXDataIter(DataIter):
     underlying C++ data iterators.
 
     Usually you don't need to interact with `MXDataIter` directly unless you are
-    implementing your own data iterators in C+ +. To do that, please refer to
+    implementing your own data iterators in C++. To do that, please refer to
     examples under the `src/io` folder.
 
     Parameters
