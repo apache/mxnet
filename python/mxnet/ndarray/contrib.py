@@ -98,6 +98,39 @@ def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
     return sampled_classes, expected_count_true, expected_count_sampled
 # pylint: enable=line-too-long
 
+
+def _flatten(args, inout_str):
+    if isinstance(args, ndarray.NDArray):
+        return [args], int(0)
+
+    assert isinstance(args, (list, tuple)), \
+        "%s must be (nested) list of NDArray, " \
+        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
+    flat = []
+    fmts = []
+    for i in args:
+        arg, fmt = _flatten(i, inout_str)
+        flat.extend(arg)
+        fmts.append(fmt)
+    return flat, fmts
+
+
+def _regroup(args, fmt):
+    if isinstance(fmt, int):
+        if fmt == 0:
+            return args[0], args[1:]
+        return args[:fmt], args[fmt:]
+
+    assert isinstance(args, (list, tuple)), \
+        "output must be (nested) list of NDArray, " \
+        "but got %s of type %s"%(str(args), str(type(args)))
+    ret = []
+    for i in fmt:
+        res, args = _regroup(args, i)
+        ret.append(res)
+    return ret, args
+
+
 def foreach(body, data, init_states):
     """Run a for loop with user-defined computation over NDArrays on dimension 0.
 
@@ -135,16 +168,16 @@ def foreach(body, data, init_states):
         Define computation in an iteration.
     data: an NDArray or a list of NDArrays.
         The input data.
-    init_states: an NDArray or a list of NDArrays.
+    init_states: an NDArray or nested lists of NDArrays.
         The initial values of the loop states.
     name: string.
         The name of the operator.
 
     Returns
     -------
-    outputs: an NDArray or a list of NDArrays.
+    outputs: an NDArray or nested lists of NDArrays.
         The output data concatenated from the output of all iterations.
-    states: a list of NDArrays.
+    states: an NDArray or nested lists of NDArrays.
         The loop states in the last iteration.
 
     Examples
@@ -166,9 +199,12 @@ def foreach(body, data, init_states):
             is_NDArray_or_list = isinstance(inputs, in_type)
         assert is_NDArray_or_list, msg
 
-    check_input(data, ndarray.NDArray, "data should be an NDArray or a list of NDArrays")
-    check_input(init_states, ndarray.NDArray,
-                "init_states should be an NDArray or a list of NDArrays")
+    flatten, _ = _flatten(data, "foreach input")
+    check_input(flatten, ndarray.NDArray,
+                "data should be an NDArray or a nested list of NDArrays")
+    flatten, _ = _flatten(init_states, "foreach states")
+    check_input(flatten, ndarray.NDArray,
+                "init_states should be an NDArray or a nested list of NDArrays")
 
     not_data_list = isinstance(data, ndarray.NDArray)
     num_iters = data.shape[0] if not_data_list else data[0].shape[0]
@@ -180,16 +216,15 @@ def foreach(body, data, init_states):
         else:
             eles = [d[i] for d in data]
         outs, states = body(eles, states)
-        outs = _as_list(outs)
+        outs, out_fmt = _flatten(outs, "foreach output")
         outputs.append(outs)
     outputs = zip(*outputs)
     tmp_outputs = []
     for out in outputs:
         tmp_outputs.append(ndarray.op.stack(*out))
     outputs = tmp_outputs
+    outputs, _ = _regroup(outputs, out_fmt)
 
-    if not_data_list and len(outputs) == 1:
-        outputs = outputs[0]
     return (outputs, states)
 
 def while_loop(cond, func, loop_vars, max_iterations=None):
@@ -214,7 +249,8 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     Also, `new_loop_vars` should contain the same number of elements as `loop_vars`,
     and the corresponding element should have the same shape and dtype.
     The `func` is variadic, and its signature should be
-    `func(*loop_vars) => (List[NDArray] step_output, List[NDArray] new_loop_vars)`.
+    `func(*loop_vars) =>
+    (NDArray or nested List[NDArray] step_output, NDArray or nested List[NDArray] new_loop_vars)`.
 
     `max_iterations` is a scalar that defines the maximum number of iterations allowed.
 
@@ -241,16 +277,16 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
         The loop condition.
     func: a Python function.
         The loop body.
-    loop_vars: list of NDArrays.
+    loop_vars: an NDArray or nested lists of NDArrays.
         The initial values of the loop variables.
     max_iterations: a python int.
         Maximum number of iterations.
 
     Returns
     ------
-    outputs: list of NDArrays
+    outputs: an NDArray or nested lists of NDArrays
         stacked output from each step
-    states: list of NDArrays
+    states: an NDArray or nested lists of NDArrays
         final state
 
     Examples
@@ -291,21 +327,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
-    def _to_ndarray_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet NDArray, a list of mxnet NDArray,
-        a tuple of mxnet NDArray, into a tuple of NDArray
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, ndarray.NDArray):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        for item in inputs:
-            if not isinstance(item, ndarray.NDArray):
-                raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        return inputs
-
     def _func_wrapper(loop_vars):
         """This wrapper unifies
              "func: loop_vars -> new_loop_vars"
@@ -317,8 +338,11 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
             step_output = []
         if new_loop_vars is None:
             new_loop_vars = []
-        step_output = _to_ndarray_tuple(step_output, "step_output")
-        new_loop_vars = _to_ndarray_tuple(new_loop_vars, "new_loop_vars")
+        if isinstance(step_output, tuple):
+            step_output = list(step_output)
+        if isinstance(new_loop_vars, tuple):
+            new_loop_vars = list(new_loop_vars)
+        new_loop_vars = _as_list(new_loop_vars)
         if len(loop_vars) != len(new_loop_vars):
             raise ValueError("The length of loop_vars should be consistent during the loop")
         return step_output, new_loop_vars
@@ -326,7 +350,6 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
     if max_iterations is None:
         raise ValueError("max_iterations should be specified")
     max_iterations = _to_python_scalar(max_iterations, int, "max_iteration")
-    loop_vars = _to_ndarray_tuple(loop_vars, "loop_vars")
     # It should be work as fine if loop_vars are empty I guess,
     # but it is semantically unnecessary to include this case.
     if len(loop_vars) == 0:
@@ -334,9 +357,14 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
 
     steps = 0
     outputs = []
+    # there might not be an iteration.
+    out_fmt = None
+    not_loop_var_list = isinstance(loop_vars, ndarray.NDArray)
+    loop_vars = _as_list(loop_vars)
     while steps < max_iterations and \
             _to_python_scalar(cond(*loop_vars), bool, "Return value of cond"): # loop condition
         step_output, loop_vars = _func_wrapper(loop_vars)
+        step_output, out_fmt = _flatten(step_output, "while output")
         outputs.append(step_output)
         steps += 1
         if len(outputs) != steps or len(step_output) != len(outputs[0]):
@@ -361,7 +389,11 @@ def while_loop(cond, func, loop_vars, max_iterations=None):
                 ["Shapes of %d-th elements in step_outputs are inconsistent, which are:" % i_th] +
                 ["  Step %d, shape is %s" % (i, str(x.shape)) for i, x in enumerate(items)]
             ))
-    return stacked_outputs, list(loop_vars)
+    if out_fmt is not None:
+        stacked_outputs, _ = _regroup(stacked_outputs, out_fmt)
+    if not_loop_var_list:
+        loop_vars = loop_vars[0]
+    return stacked_outputs, loop_vars
 
 def cond(pred, then_func, else_func):
     """Run an if-then-else using user-defined condition and computation
@@ -375,12 +407,12 @@ def cond(pred, then_func, else_func):
     `then_func` is a user-defined function, used as computation of the then branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `then_func` should be
-    `then_func() => List[NDArray]`.
+    `then_func() => NDArray or nested List[NDArray]`.
 
     `else_func` is a user-defined function, used as computation of the else branch.
     It produces `outputs`, which is a list of NDArrays.
     The signature of `else_func` should be
-    `else_func() => List[NDArray]`.
+    `else_func() => NDArray or nested List[NDArray]`.
 
     The `outputs` produces by `then_func` and `else_func` should have the same number
     of elements, all of which should be in the same shape, of the same dtype and stype.
@@ -398,7 +430,7 @@ def cond(pred, then_func, else_func):
 
     Returns
     -------
-    outputs: a list of NDArrays, representing the result of computation.
+    outputs: an NDArray or nested lists of NDArrays, representing the result of computation.
 
     Examples
     --------
@@ -423,26 +455,8 @@ def cond(pred, then_func, else_func):
             raise ValueError("Cannot convert %s to python %s" % (name, type_.__name__))
         return inputs
 
-    def _to_ndarray_tuple(inputs, name):
-        """Converts "inputs", possibly a single mxnet NDArray, a list of mxnet NDArray,
-        a tuple of mxnet NDArray, into a tuple of NDArray
-        """
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        if isinstance(inputs, ndarray.NDArray):
-            inputs = (inputs, )
-        if not isinstance(inputs, tuple):
-            raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        for item in inputs:
-            if not isinstance(item, ndarray.NDArray):
-                raise ValueError("%s must be an NDArray, or a tuple or list of NDArrays" % (name, ))
-        return inputs
-
     branch = _to_python_scalar(pred, bool, "pred")
     if branch:
-        outputs = then_func()
-        outputs = _to_ndarray_tuple(outputs, "outputs of then_func")
+        return then_func()
     else:
-        outputs = else_func()
-        outputs = _to_ndarray_tuple(outputs, "outputs of else_func")
-    return list(outputs)
+        return else_func()

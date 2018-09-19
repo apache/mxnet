@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 import threading
 import warnings
+from collections import defaultdict
 
 from .base import string_types, classproperty, with_metaclass, _MXClassPropertyMetaClass
 
@@ -34,6 +35,7 @@ class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
         The attributes to set for all symbol creations in the scope.
     """
     _current = threading.local()
+    _subgraph_names = defaultdict(int)
 
     def __init__(self, **kwargs):
         self._old_scope = None

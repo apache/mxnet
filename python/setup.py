@@ -20,6 +20,8 @@
 from __future__ import absolute_import
 import os
 import sys
+
+from setuptools import find_packages
 # need to use distutils.core for correct placement of cython dll
 kwargs = {}
 if "--inplace" in sys.argv:
@@ -29,7 +31,6 @@ else:
     from setuptools import setup
     from setuptools.extension import Extension
     kwargs = {'install_requires': ['numpy<=1.15.0,>=1.8.2', 'requests<2.19.0,>=2.18.4', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
-from setuptools import find_packages
 
 with_cython = False
 if '--with-cython' in sys.argv:

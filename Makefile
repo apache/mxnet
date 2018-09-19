@@ -565,7 +565,6 @@ rcpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
-	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
@@ -579,16 +578,15 @@ rpkg:
 	echo "import(methods)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
-	rm -rf R-package/NAMESPACE
 	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
 	R CMD INSTALL R-package
-	rm -rf R-package/src/image_recordio.h
 
 rpkgtest:
-	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
+	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
+	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json");writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \

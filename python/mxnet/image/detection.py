@@ -308,8 +308,7 @@ class DetRandomCropAug(DetAugmenter):
                 h -= 1
                 w = int(round(h * ratio))
                 area = w * h
-            if (area < min_area or area > max_area or w > width or h > height \
-                or w <= 0 or h <= 0):
+            if not (min_area <= area <= max_area and 0 <= w <= width and 0 <= h <= height):
                 continue
 
             y = random.randint(0, max(0, height - h))
@@ -804,7 +803,7 @@ class ImageDetIter(ImageIter):
             raise ValueError(msg)
 
     def draw_next(self, color=None, thickness=2, mean=None, std=None, clip=True,
-                  waitKey=None, window_name='draw_next'):
+                  waitKey=None, window_name='draw_next', id2labels=None):
         """Display next image with bounding boxes drawn.
 
         Parameters
@@ -823,6 +822,8 @@ class ImageDetIter(ImageIter):
             Hold the window for waitKey milliseconds if set, skip ploting if None
         window_name : str
             Plot window name if waitKey is set.
+        id2labels : dict
+            Mapping of labels id to labels name.
 
         Returns
         -------
@@ -890,6 +891,17 @@ class ImageDetIter(ImageIter):
                     y2 = int(label[i, 4] * height)
                     bc = np.random.rand(3) * 255 if not color else color
                     cv2.rectangle(image, (x1, y1), (x2, y2), bc, thickness)
+                    if id2labels is not None:
+                        cls_id = int(label[i, 0])
+                        if cls_id in id2labels:
+                            cls_name = id2labels[cls_id]
+                            text = "{:s}".format(cls_name)
+                            font = cv2.FONT_HERSHEY_SIMPLEX
+                            font_scale = 0.5
+                            text_height = cv2.getTextSize(text, font, font_scale, 2)[0][1]
+                            tc = (255, 255, 255)
+                            tpos = (x1 + 5, y1 + text_height + 5)
+                            cv2.putText(image, text, tpos, font, font_scale, tc, 2)
                 if waitKey is not None:
                     cv2.imshow(window_name, image)
                     cv2.waitKey(waitKey)

@@ -21,6 +21,7 @@
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.symbol :as sym]
+            [org.apache.clojure-mxnet.test-util :as test-util]
             [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet Shape NDArrayFuncReturn NDArray)
            (scala.collection Map Set)
@@ -183,3 +184,10 @@
 (deftest test-validate
   (is (nil? (util/validate! string? "foo" "Not a string!")))
   (is (thrown-with-msg? Exception #"Not a string!" (util/validate! ::x 1 "Not a string!"))))
+
+(deftest test-approx=
+  (let [data1 [1 1 1 1]
+        data2 [1 1 1 1 9 9 9 9]
+        data3 [1 1 1 2]]
+    (is (not (test-util/approx= 1e-9 data1 data2)))
+    (is (test-util/approx= 2 data1 data3))))

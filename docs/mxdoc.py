@@ -100,11 +100,15 @@ def build_r_docs(app):
     dest_path = app.builder.outdir + '/api/r/'
     _run_cmd('mkdir -p ' + dest_path + '; mv ' + pdf_path + ' ' + dest_path)
 
+def build_scala(app):
+    """build scala for scala docs and clojure docs to use"""
+    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
+    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
+
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ..; make scalapkg')
     _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
@@ -115,8 +119,6 @@ def build_scala_docs(app):
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
-    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
-    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
     clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
     _run_cmd('cd ' + clojure_path + '; lein codox')
     dest_path = app.builder.outdir + '/api/clojure/docs'
@@ -411,6 +413,9 @@ def setup(app):
     if _DOXYGEN_DOCS:
         print("Building Doxygen!")
         app.connect("builder-inited", generate_doxygen)
+    if _SCALA_DOCS or _CLOJURE_DOCS:
+        print("Building Scala!")
+        app.connect("builder-inited", build_scala)
     if _SCALA_DOCS:
         print("Building Scala Docs!")
         app.connect("builder-inited", build_scala_docs)

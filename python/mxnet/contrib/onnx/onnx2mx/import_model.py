@@ -16,14 +16,15 @@
 # under the License.
 
 # coding: utf-8
-"""import function"""
+"""Functions for importing ONNX models to MXNet and for checking metadata"""
 # pylint: disable=no-member
 
 from .import_onnx import GraphProto
 
 def import_model(model_file):
     """Imports the ONNX model file, passed as a parameter, into MXNet symbol and parameters.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage -
+    https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
 
     Parameters
     ----------
@@ -72,6 +73,7 @@ def get_model_metadata(model_file):
             'output_tensor_data' : <list of tuples representing the shape of the output
                                     of the model>
         }
+
     """
     graph = GraphProto()
     try:

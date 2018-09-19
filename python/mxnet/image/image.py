@@ -72,12 +72,12 @@ def imread(filename, *args, **kwargs):
 
     Set `flag` parameter to 0 to get grayscale output
 
-    >>> mx.img.imdecode("flower.jpg", flag=0)
+    >>> mx.img.imread("flower.jpg", flag=0)
     <NDArray 224x224x1 @cpu(0)>
 
     Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
 
-    >>> mx.img.imdecode(str_image, to_rgb=0)
+    >>> mx.img.imread("flower.jpg", to_rgb=0)
     <NDArray 224x224x3 @cpu(0)>
     """
     return _internal._cvimread(filename, *args, **kwargs)

@@ -27,12 +27,13 @@
 #include "batch_norm-inl.h"
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
+#include "../operator_common.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_batch_norm-inl.h"
 #endif
 
 /*! \brief inverse standard deviation <-> variance */
-#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
+#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/std::sqrt((__var$) + DType(__eps$)))
 #define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
 
 namespace mxnet {
@@ -544,7 +545,7 @@ Both *mean* and *var* returns a scalar by treating the input as a vector.
 
 Assume the input has size *k* on axis 1, then both ``gamma`` and ``beta``
 have shape *(k,)*. If ``output_mean_var`` is set to be true, then outputs both ``data_mean`` and
-the inverse of ``data_var``, which are needed for the backward pass. Note that gradient of these 
+the inverse of ``data_var``, which are needed for the backward pass. Note that gradient of these
 two outputs are blocked.
 
 Besides the inputs and the outputs, this operator accepts two auxiliary
@@ -600,6 +601,7 @@ the sparse tensors will fallback.
 #endif
 .set_attr<nnvm::FGradient>("FGradient", BatchNormGrad)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -632,6 +634,7 @@ NNVM_REGISTER_OP(_backward_BatchNorm)
 #endif
 .set_attr_parser(ParamParser<BatchNormParam>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", BatchNormGradCompute<cpu>);

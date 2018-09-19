@@ -4,3 +4,25 @@ RewriteRule ^get_started.*$ /install/ [R=301,L]
 RewriteRule ^how_to.*$ /faq/ [R=301,L]
 RewriteRule ^api/python/symbol.html$ /api/python/symbol/symbol.html [R=301,L]
 RewriteRule ^community/index.html$ /community/contribute.html [R=301,L]
+
+# Navigation bar redirects to latest info
+RewriteRule ^versions/[^\/]+/architecture/.*$ /architecture/ [R=301,L]
+RewriteRule ^versions/[^\/]+/community/.*$ /community/ [R=301,L]
+RewriteRule ^versions/[^\/]+/faq/.*$ /faq/ [R=301,L]
+RewriteRule ^versions/[^\/]+/gluon/.*$ /gluon/ [R=301,L]
+RewriteRule ^versions/[^\/]+/install/.*$ /install/ [R=301,L]
+RewriteRule ^versions/[^\/]+/tutorials/.*$ /tutorials/ [R=301,L]
+
+# Redirect navbar APIs that did not exist
+RewriteRule ^versions/0.11.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
+RewriteRule ^versions/0.12.1/api/python/contrib/onnx.html /error/api.html [R=301,L]
+RewriteRule ^versions/1.0.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
+RewriteRule ^versions/1.1.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
+
+RewriteRule ^versions/0.11.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/0.12.1/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.0.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.1.0/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/1.2.1/api/clojure/.*$ /error/api.html [R=301,L]
+
+ErrorDocument 404 https://mxnet.incubator.apache.org/error/404.html
