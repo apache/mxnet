@@ -6913,6 +6913,16 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+def test_max_pooling_pad_type_same():
+    input_data=mx.nd.array(np.random.rand(1,1,10))
+    output_data=mx.nd.Pooling(
+        input_data, 
+        kernel=(2), 
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
+    assert(input_data.shape == output_data.shape)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

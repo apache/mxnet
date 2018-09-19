@@ -126,7 +126,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       oshape[2] = 1 +
                   (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
                       param.stride[0];
-    } else {
+    } else if (param.pooling_convention == pool_enum::kFull) {
       oshape[2] = 1 + static_cast<int>(ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
