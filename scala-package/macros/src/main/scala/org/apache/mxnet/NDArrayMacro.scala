@@ -133,15 +133,13 @@ private[mxnet] object NDArrayMacro {
             "map(\"" + ndarrayarg.argName + "\") = " + currArgName
           }
         impl.append(
-          if (ndarrayarg.isOptional) {
-            s"if ($currArgName != null && !$currArgName.isEmpty) $base.get"
-          }
+          if (ndarrayarg.isOptional) s"if (!$currArgName.isEmpty) $base.get"
           else base
         )
       })
       // add default out parameter
       argDef += "out : Option[NDArray] = None"
-      impl += "if (out != null && !out.isEmpty) map(\"out\") = out.get"
+      impl += "if (!out.isEmpty) map(\"out\") = out.get"
       // scalastyle:off
       impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
       // scalastyle:on

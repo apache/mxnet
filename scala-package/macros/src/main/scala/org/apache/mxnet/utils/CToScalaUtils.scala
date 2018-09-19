@@ -28,12 +28,12 @@ private[mxnet] object CToScalaUtils {
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
       => s"Array[$returnType]"
-      case "float" | "real_t" | "floatorNone" => "java.lang.Float"
-      case "int" | "intorNone" | "int(non-negative)" => "java.lang.Integer"
-      case "long" | "long(non-negative)" => "java.lang.Long"
-      case "double" | "doubleorNone" => "java.lang.Double"
+      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
+      case "int" | "intorNone" | "int(non-negative)" => "Int"
+      case "long" | "long(non-negative)" => "Long"
+      case "double" | "doubleorNone" => "Double"
       case "string" => "String"
-      case "boolean" | "booleanorNone" => "java.lang.Boolean"
+      case "boolean" | "booleanorNone" => "Boolean"
       case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
