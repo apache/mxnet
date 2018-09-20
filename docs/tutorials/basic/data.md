@@ -315,6 +315,8 @@ print(mx.recordio.unpack_img(s))
 You can also convert raw images into *RecordIO* format using the ``im2rec.py`` utility script that is provided in the MXNet [src/tools](https://github.com/dmlc/mxnet/tree/master/tools) folder.
 An example of how to use the script for converting to *RecordIO* format is shown in the `Image IO` section below.
 
+* Note that there is a C++ version of [im2rec](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc), please refer to [here](https://mxnet.incubator.apache.org/faq/recordio.html) for more information.
+
 ## Image IO
 
 In this section, we will learn how to preprocess and load image data in MXNet.
