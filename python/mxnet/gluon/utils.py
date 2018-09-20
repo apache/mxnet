@@ -204,7 +204,8 @@ if not sys.platform.startswith('win32'):
         try:
             os.rename(src, dst)
         except OSError:
-            raise OSError('os.rename failed. Might be wrong source path.')
+            raise OSError(
+                'Moving downloaded temp file - {}, to {} failed. Please retry the download.'.format(src, dst))
 else:
     from ctypes import windll, WinError
 
