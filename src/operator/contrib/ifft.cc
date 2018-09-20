@@ -31,7 +31,7 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(IFFTParam param, int dtype) {
   LOG(FATAL) << "ifft is only available for GPU.";
-  return NULL;
+  return nullptr;
 }
 
 Operator *IFFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
