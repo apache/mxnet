@@ -155,7 +155,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
 
     // compute output
     AccReal *w = weights.dptr<AccReal>();
-    const AccReal *b = bias.dptr<AccReal>();
+    AccReal *b = bias.dptr<AccReal>();
 
     const AccReal thisMean = mean[channel];
     const AccReal thisInvstd = var[channel];
@@ -164,18 +164,42 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
 
     // note that var is still invstd
     if (!param_.fix_gamma) {
-      if (IsBNWriting(req[batchnorm::kData])) {
-        ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
-                      *out_data = static_cast<DType>(
-                        ((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
-                    });
+      if (!param_.fix_beta){
+        // Case 1
+        // fix_gamma = False
+        // fix_beta = False
+        if (IsBNWriting(req[batchnorm::kData])) {
+          ForEachFast(inputData, outputData, channel,
+                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                  DType *out_data) {
+                        *out_data = static_cast<DType>(
+                          ((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
+                      });
+        }
+      } else {
+        // Case 2
+        // fix_gamma = False
+        // fix_beta = True
+        if (IsBNWriting(req[batchnorm::kBeta])) {
+          b[channel] = AccReal(0);
+        }
+        if (IsBNWriting(req[batchnorm::kData])) {
+          ForEachFast(inputData, outputData, channel,
+                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                  DType *out_data) {
+                        *out_data = static_cast<DType>(
+                          ((*in_data - thisMean) * thisInvstd) * thisWeight);
+                      });
+          }
       }
     } else {
       if (IsBNWriting(req[batchnorm::kGamma])) {
         w[channel] = AccReal(1);
       }
+      if (!param_.fix_beta){
+        // Case 3
+        // fix_gamma = True
+        // fix_beta = False
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
                     [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
@@ -183,6 +207,22 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
                       *out_data = static_cast<DType>(
                         ((*in_data - thisMean) * thisInvstd) + thisBias);
                     });
+      }
+      } else {
+        // Case 4
+        // fix_gamma = True
+        // fix_beta = True
+          if (IsBNWriting(req[batchnorm::kBeta])) {
+            b[channel] = AccReal(0);
+          }
+          if (IsBNWriting(req[batchnorm::kData])) {
+            ForEachFast(inputData, outputData, channel,
+                        [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                     DType *out_data) {
+                          *out_data = static_cast<DType>(
+                            ((*in_data - thisMean) * thisInvstd));
+                        });
+          }
       }
     }
   }
@@ -309,7 +349,11 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
     }
 
     if (IsBNWriting(req[batchnorm::kBeta])) {
-      gradBiasData[channel] = scale * sumGradOut;
+      if (!param_.fix_beta) {
+        gradBiasData[channel] = scale * sumGradOut;
+      } else {
+        gradBiasData[channel] = AccReal(0);
+      }
     }
   }
 }
@@ -565,7 +609,8 @@ the 'channel' (separately normalized groups).  The default is 1.  Specifying -1 
 axis to be the last item in the input shape.
 
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
-then set ``gamma`` to 1 and its gradient to 0.
+then set ``gamma`` to 1 and its gradient to 0. If ``fix_beta`` is true, then set ``beta`` to 0
+and its gradient to 0.
 
 Note::
 
