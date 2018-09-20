@@ -170,3 +170,6 @@ tests/mxnet_unit_tests
 # generated wrappers for ccache
 cc
 cxx
+
+# pytest
+.pytest_cache
