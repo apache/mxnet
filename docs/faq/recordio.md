@@ -6,7 +6,13 @@ RecordIO implements a file format for a sequence of records. We recommend storin
 * Packing data together allows continuous reading on the disk.
 * RecordIO has a simple way to partition, simplifying distributed setting. We provide an example later.
 
-We provide the [im2rec tool](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) so you can create an Image RecordIO dataset by yourself. The following walkthrough shows you how. Note that there is python version of [im2rec tool](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) and [example](https://mxnet.incubator.apache.org/tutorials/basic/data.html) using real-world data.
+We provide two tools for creating a RecordIO dataset.
+
+* [im2rec.cc](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc) - implements the tool using the C++ API.
+* [im2rec.py](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) - implements the tool using the Python API.
+
+Both provide the same output: a RecordIO dataset.
+You may want to also review the [example using real-world data with im2rec.py.](https://mxnet.incubator.apache.org/tutorials/basic/data.html)
 
 ### Prerequisites
 
@@ -14,7 +20,7 @@ Download the data. You don't need to resize the images manually. You can use ```
 
 ### Step 1. Make an Image List File
 
-* Note that the im2rec.py provide a param `--list` to generate the list for you but im2rec.cc doesn't support it.
+* Note that the im2rec.py provides a param `--list` to generate the list for you, but im2rec.cc doesn't support it.
 
 After you download the data, you need to make an image list file.  The format is:
 
