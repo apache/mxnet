@@ -98,7 +98,8 @@ abstract class Initializer {
  */
 class Mixed(protected val patterns: List[String],
     protected val initializers: List[Initializer]) extends Initializer {
-  require(patterns.length == initializers.length)
+  require(patterns.length == initializers.length,
+    "Should provide a pattern for each initializer")
   private val map = patterns.map(_.r).zip(initializers)
 
   override def apply(name: String, arr: NDArray): Unit = {
