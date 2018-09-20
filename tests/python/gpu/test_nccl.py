@@ -18,35 +18,48 @@
 import mxnet as mx
 import numpy as np
 
-shapes = [10, 100, 1000, 10000, 100000, (2, 2), (2, 3, 4, 5, 6, 7, 8)]
-keys = [1, 2, 3, 4, 5, 6, 7]
-num_gpus = len(mx.test_utils.list_gpus())
-
-if num_gpus > 8:
-    print("The machine has {} gpus. We will run the test on not more than 8 gpus.".format(num_gpus))
-    print("There is a limit of 8 maximum P2P peers for all PCI-E hardware created.")
-    num_gpus = 8
-
-gpus = range(1, 1 + num_gpus)
+import unittest
 
 
-def test_nccl_pushpull():
-    for shape, key in zip(shapes, keys):
-        for n_gpus in gpus:
-            kv_nccl = mx.kv.create('nccl')
-            a = mx.nd.ones(shape, mx.gpu(0))
-            cur_key = str(key * max(gpus) + n_gpus)
-            kv_nccl.init(cur_key, a)
+class TestNCCL(unittest.TestCase):
+    num_gpus = min(8, mx.context.num_gpus())
+    shapes: [1, 10, 100, 1000, 10000, 100000, (2, 2), (2, 3, 4, 5, 6, 7, 8)]
+    tensors: {}
 
-            arr_list = [mx.nd.ones(shape, mx.gpu(x)) for x in range(n_gpus)]
-            res = [mx.nd.zeros(shape, mx.gpu(x)) for x in range(n_gpus)]
+    @classmethod
+    def setUpClass(cls):
+        num_gpus = mx.context.num_gpus()
+        if num_gpus == 0:
+            raise unittest.SkipTest("No GPUs available")
+        if num_gpus < 2:
+            raise unittest.SkipTest("It makes sense to test NCCL functionality on more than 1 GPU only")
+        if num_gpus > 8:
+            print("The machine has {} GPUs. We will run the test on not more than 8 GPUs.".format(cls.num_gpus))
+            print("There is a limit of 8 maximum P2P peers for all PCI-E hardware created.")
 
-            kv_nccl.push(cur_key, arr_list)
-            kv_nccl.pull(cur_key, res)
+    def setUp(self):
+        self.kv_nccl = mx.kv.create('nccl')
 
-            for x in range(n_gpus):
-                assert (np.sum(np.abs((res[x] - n_gpus).asnumpy())) == 0)
+        for gpu_index in range(self.num_gpus):
+            shapes = np.random.shuffle(self.shapes)
+            self.tensors[gpu_index] = [np.random.random_sample(shape) for shape in shapes]
+
+    def push_shapes(self):
+        for gpu_index in range(self.num_gpus):
+            tensors = [mx.nd.array(array, mx.gpu(gpu_index)) for array in self.tensors[gpu_index]]
+            self.kv_nccl.push(gpu_index, tensors)
+
+    def test_push_pull(self):
+        self.push_shapes()
+
+        for gpu_index in range(self.num_gpus):
+            for gpu_index2 in range(self.num_gpus):
+                if gpu_index == gpu_index2:
+                    continue
+                pulled_tensors = [mx.nd.zeros(array.shape, mx.gpu(gpu_index)) for array in self.tensors[gpu_index2]]
+                self.kv_nccl.pull(gpu_index2, pulled_tensors)
+                assert np.allclose(pulled_tensors, self.tensors[gpu_index2])
 
 
 if __name__ == '__main__':
-    test_nccl_pushpull()
+    unittest.main()
