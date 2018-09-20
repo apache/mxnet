@@ -16,7 +16,8 @@ To complete this tutorial, we need:
 $ pip install opencv-python requests matplotlib jupyter
 ```
 
-## MXNet Data Iterator  
+## MXNet Data Iterator
+
 Data Iterators in *MXNet* are similar to Python iterator objects.
 In Python, the function `iter` allows fetching items sequentially by calling  `next()` on
  iterable objects such as a Python `list`.
