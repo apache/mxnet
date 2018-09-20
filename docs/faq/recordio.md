@@ -12,7 +12,7 @@ We provide two tools for creating a RecordIO dataset.
 * [im2rec.py](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) - implements the tool using the Python API.
 
 Both provide the same output: a RecordIO dataset.
-You may want to also review the [example using real-world data with im2rec.py.](https://mxnet.incubator.apache.org/tutorials/basic/data.html)
+You may want to also review the [example using real-world data with im2rec.py.](https://mxnet.incubator.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators)
 
 ### Prerequisites
 
@@ -45,7 +45,7 @@ This is an example file:
 
 ### Step 2. Create the Binary File
 
-To generate a binary image, use `im2rec` in the tool folder. `im2rec` takes the path of the `_image list file_` you generated, the `_root path_` of the images, and the `_output file path_` as input. This process usually takes several hours, so be patient.
+To generate a binary image, use `im2rec` in the tool folder. `im2rec` takes the path of the `image list file` you generated, the `root path` of the images, and the `output file path` as input. This process usually takes several hours, so be patient.
 
 Sample command:
 
