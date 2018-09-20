@@ -1096,7 +1096,8 @@ object Symbol extends SymbolBase {
         }
       }
     require(symbols.isEmpty || symbolKwargs.isEmpty,
-      s"$operator can only accept input Symbols either as positional or keyword arguments, not both")
+      s"$operator can only accept input Symbols either as positional or keyword arguments, " +
+        s"not both")
     if (symbols.isEmpty) {
       createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
     } else {
