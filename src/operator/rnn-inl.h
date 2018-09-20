@@ -552,13 +552,6 @@ class RNNOp : public Operator{
     }
 
     DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
-
-    int req_statecell = 0;
-    if (param_.mode == rnn_enum::kLstm) {
-      // State cell should be present for LSTMs.
-      req_statecell = req[rnn_enum::kStateCell];
-    }
-
     RNNBackward<DType>(workspace.dptr_,
                        reserve_space_ptr,
                        param_.num_layers,
@@ -583,7 +576,8 @@ class RNNOp : public Operator{
                        req[rnn_enum::kData],
                        req[rnn_enum::kParams],
                        req[rnn_enum::kState],
-                       req_statecell,
+                       // State cell should be present for LSTMs, but is absent for other RNNs.
+                       param_.mode == rnn_enum::kLstm ? req[rnn_enum::kStateCell] : kNullOp,
                        param_.p,
                        param_.mode);
   }
