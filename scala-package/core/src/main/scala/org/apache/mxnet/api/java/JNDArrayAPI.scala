@@ -17,7 +17,7 @@
 package org.apache.mxnet.api.java
 @AddJNDArrayAPIs(false)
 /**
-  * typesafe NDArray API: NDArray.api._
+  * typesafe Java NDArray API: NDArray.japi._
   * Main code will be generated during compile time through Macros
   */
 object JNDArrayAPI extends JNDArrayAPIBase{

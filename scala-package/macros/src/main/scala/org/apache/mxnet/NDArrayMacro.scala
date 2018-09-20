@@ -108,7 +108,7 @@ private[mxnet] object NDArrayMacro {
         val currArgName = ndarrayarg.argName match {
           case "var" => "vari"
           case "type" => "typeOf"
-          case default => ndarrayarg.argName
+          case _ => ndarrayarg.argName
         }
         if (ndarrayarg.isOptional) {
           argDef += s"${currArgName} : Option[${ndarrayarg.argType}] = None"
