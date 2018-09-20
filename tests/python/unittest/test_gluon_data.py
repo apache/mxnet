@@ -95,7 +95,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
     # try limit recursion depth
     import sys
     old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(10)  # this should be smaller than any default value used in python
+    sys.setrecursionlimit(100)  # this should be smaller than any default value used in python
     fn = lambda x, y : (x, y)
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
