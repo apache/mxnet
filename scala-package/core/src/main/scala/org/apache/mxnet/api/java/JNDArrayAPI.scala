@@ -20,6 +20,6 @@ package org.apache.mxnet.api.java
   * typesafe NDArray API: NDArray.api._
   * Main code will be generated during compile time through Macros
   */
-object NDArrayAPI extends JNDArrayAPIBase{
+object JNDArrayAPI extends JNDArrayAPIBase{
   // TODO: Implement CustomOp for NDArray
 }

@@ -21,6 +21,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
+import org.apache.mxnet.api.java.JNDArrayAPI
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -39,6 +40,8 @@ object NDArray extends NDArrayBase {
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
   val api = NDArrayAPI
+
+  val japi = JNDArrayAPI
 
   private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
     froms.foreach { from =>
