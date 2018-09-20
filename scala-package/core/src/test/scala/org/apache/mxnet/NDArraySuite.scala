@@ -38,6 +38,11 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(ndones.toScalar === 1f)
   }
 
+  test("new NDArray") {
+    val ndarray = new NDArray(Array(1.0f, 2.0f), Shape(1, 2), Context.cpu())
+    assert(ndarray.shape == Shape(1, 2))
+  }
+
   test ("call toScalar on an ndarray which is not a scalar") {
     intercept[Exception] { NDArray.zeros(1, 1).toScalar }
   }
