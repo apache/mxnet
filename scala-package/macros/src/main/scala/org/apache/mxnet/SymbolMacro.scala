@@ -117,7 +117,7 @@ private[mxnet] object SymbolImplMacros {
           case default => symbolarg.argName
         }
         if (symbolarg.isOptional) {
-          argDef += s"${currArgName} : Option[${symbolarg.argType}] = None"
+          argDef += s"${currArgName} : ${symbolarg.argType} = null"
         }
         else {
           argDef += s"${currArgName} : ${symbolarg.argType}"
@@ -126,12 +126,12 @@ private[mxnet] object SymbolImplMacros {
         val returnType = "org.apache.mxnet.Symbol"
         val base =
         if (symbolarg.argType.equals(s"Array[$returnType]")) {
-          if (symbolarg.isOptional) s"if (!$currArgName.isEmpty) args = $currArgName.get.toSeq"
+          if (symbolarg.isOptional) s"if ($currArgName != null) args = $currArgName.toSeq"
           else s"args = $currArgName.toSeq"
         } else {
           if (symbolarg.isOptional) {
             // scalastyle:off
-            s"if (!$currArgName.isEmpty) map(" + "\"" + symbolarg.argName + "\"" + s") = $currArgName.get"
+            s"if ($currArgName != null) map(" + "\"" + symbolarg.argName + "\"" + s") = $currArgName"
             // scalastyle:on
           }
           else "map(\"" + symbolarg.argName + "\"" + s") = $currArgName"

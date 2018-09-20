@@ -109,10 +109,10 @@ object NeuralStyle {
     var gradScale = List[Int]()
     for (i <- 0 until style.listOutputs().length) {
       val shape = outputShape(i)
-      val x = Symbol.api.Reshape(data = Some(style.get(i)),
-        target_shape = Some(Shape(shape(1), shape(2) * shape(3))))
-      val gram = Symbol.api.FullyConnected(data = Some(x), weight = Some(x),
-        no_bias = Some(true), num_hidden = shape(1))
+      val x = Symbol.api.Reshape(data = style.get(i),
+        target_shape = Shape(shape(1), shape(2) * shape(3)))
+      val gram = Symbol.api.FullyConnected(data = x, weight = x,
+        no_bias = true, num_hidden = shape(1))
       x.dispose()
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
@@ -124,16 +124,16 @@ object NeuralStyle {
     var gramLoss = ListBuffer[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      Symbol.api.square(data = Some(gvar - gram.get(i)))
+      Symbol.api.square(data = gvar - gram.get(i))
       gramLoss += Symbol.api.sum(
-        Some(Symbol.api.square(data = Some(gvar - gram.get(i))))
+        Symbol.api.square(data = gvar - gram.get(i))
       )
       gvar.dispose()
     }
     gram.dispose()
     val cvar = Symbol.Variable("target_content")
     val contentLoss = Symbol.api.sum(
-      Some(Symbol.api.square(Some(cvar - content)))
+      Symbol.api.square(cvar - content)
     )
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
@@ -145,11 +145,11 @@ object NeuralStyle {
     val nChannel = img.shape(1)
     val sImg = Symbol.Variable("img")
     val sKernel = Symbol.Variable("kernel")
-    val channels = Symbol.api.SliceChannel(data = Some(sImg), num_outputs = nChannel)
+    val channels = Symbol.api.SliceChannel(data = sImg, num_outputs = nChannel)
     val result = (0 until nChannel).map { i =>
-      Symbol.api.Convolution(data = Some(channels.get(i)), weight = Some(sKernel),
-        num_filter = 1, kernel = Shape(3, 3), pad = Some(Shape(1, 1)), no_bias = Some(true),
-        stride = Some(Shape(1, 1)))
+      Symbol.api.Convolution(data = channels.get(i), weight = sKernel,
+        num_filter = 1, kernel = Shape(3, 3), pad = Shape(1, 1), no_bias = true,
+        stride = Shape(1, 1))
     }.toArray
     val out = Symbol.api.Concat(result, result.length) * tvWeight
     val kernel = {
@@ -247,7 +247,7 @@ object NeuralStyle {
             optimizer.update(0, img,
               modelExecutor.dataGrad + executor.outputs(0),
               optimState)
-          }
+        }
           case None =>
             optimizer.update(0, img, modelExecutor.dataGrad, optimState)
         }

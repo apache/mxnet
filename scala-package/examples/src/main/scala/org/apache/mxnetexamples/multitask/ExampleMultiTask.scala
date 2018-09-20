@@ -41,13 +41,13 @@ object ExampleMultiTask {
 
   def buildNetwork(): Symbol = {
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128)
-    val act1 = Symbol.api.Activation(data = Some(fc1), act_type = "relu")
-    val fc2 = Symbol.api.FullyConnected(data = Some(act1), num_hidden = 64)
-    val act2 = Symbol.api.Activation(data = Some(fc2), act_type = "relu")
-    val fc3 = Symbol.api.FullyConnected(data = Some(act2), num_hidden = 10)
-    val sm1 = Symbol.api.SoftmaxOutput(data = Some(fc3))
-    val sm2 = Symbol.api.SoftmaxOutput(data = Some(fc3))
+    val fc1 = Symbol.api.FullyConnected(data = data, num_hidden = 128)
+    val act1 = Symbol.api.Activation(data = fc1, act_type = "relu")
+    val fc2 = Symbol.api.FullyConnected(data = act1, num_hidden = 64)
+    val act2 = Symbol.api.Activation(data = fc2, act_type = "relu")
+    val fc3 = Symbol.api.FullyConnected(data = act2, num_hidden = 10)
+    val sm1 = Symbol.api.SoftmaxOutput(data = fc3)
+    val sm2 = Symbol.api.SoftmaxOutput(data = fc3)
 
     val softmax = Symbol.Group(sm1, sm2)
 

@@ -23,11 +23,11 @@ import org.apache.mxnet.{Context, Shape, Symbol, Xavier}
 object GenV3 {
   def Conv(data: Symbol, numFilter: Int, kernel: (Int, Int) = (5, 5),
            pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
-    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
-      kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
-      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
-    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
-    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    val sym1 = Symbol.api.Convolution(data = data, num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), stride = Shape(stride._1, stride._2),
+      pad = Shape(pad._1, pad._2), no_bias = false)
+    val sym2 = Symbol.api.BatchNorm(data = sym1, fix_gamma = false)
+    val sym3 = Symbol.api.LeakyReLU(data = sym2, act_type = "leaky")
     sym2.dispose()
     sym1.dispose()
     sym3
@@ -36,14 +36,14 @@ object GenV3 {
   def Deconv(data: Symbol, numFilter: Int, imHw: (Int, Int),
              kernel: (Int, Int) = (7, 7), pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2),
              crop: Boolean = true, out: Boolean = false): Symbol = {
-    var sym = Symbol.api.Deconvolution(data = Some(data), num_filter = numFilter,
-      kernel = Shape(kernel._1, kernel._2), stride = Some(Shape(stride._1, stride._2)),
-      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(true))
-    if (crop) sym = Symbol.api.Crop(data = Array(sym), offset = Some(Shape(1, 1)),
-      h_w = Some(Shape(imHw._1, imHw._2)), num_args = 1)
-    sym = Symbol.api.BatchNorm(data = Some(sym), fix_gamma = Some(false))
-    if (out == false) Symbol.api.LeakyReLU(data = Some(sym), act_type = Some("leaky"))
-    else Symbol.api.Activation(data = Some(sym), act_type = "tanh")
+    var sym = Symbol.api.Deconvolution(data = data, num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), stride = Shape(stride._1, stride._2),
+      pad = Shape(pad._1, pad._2), no_bias = true)
+    if (crop) sym = Symbol.api.Crop(data = Array(sym), offset = Shape(1, 1),
+      h_w = Shape(imHw._1, imHw._2), num_args = 1)
+    sym = Symbol.api.BatchNorm(data = sym, fix_gamma = false)
+    if (out == false) Symbol.api.LeakyReLU(data = sym, act_type = "leaky")
+    else Symbol.api.Activation(data = sym, act_type = "tanh")
   }
 
   def getGenerator(prefix: String, imHw: (Int, Int)): Symbol = {
@@ -60,7 +60,7 @@ object GenV3 {
     val conv5_1 = Conv(deconv2, 96, kernel = (3, 3), pad = (1, 1), stride = (1, 1))
     val deconv3 = Deconv(conv5_1, 3, imHw, kernel = (8, 8), pad = (3, 3), out = true, crop = false)
     val rawOut = (deconv3 * 128) + 128
-    val norm = Symbol.api.SliceChannel(data = Some(rawOut), num_outputs = 3)
+    val norm = Symbol.api.SliceChannel(data = rawOut, num_outputs = 3)
     val rCh = norm.get(0) - 123.68f
     val gCh = norm.get(1) - 116.779f
     val bCh = norm.get(2) - 103.939f

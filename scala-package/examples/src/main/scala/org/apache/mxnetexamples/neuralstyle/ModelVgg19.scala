@@ -29,11 +29,11 @@ object ModelVgg19 {
   def ConvRelu(data : Symbol, convName : String, reluName : String,
                numFilter : Int, kernel : (Int, Int) = (3, 3),
                stride : (Int, Int) = (1, 1)) : Symbol = {
-    val conv = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
-      pad = Some(Shape(1, 1)), kernel = Shape(kernel._1, kernel._2),
-      stride = Some(Shape(stride._1, stride._2)), no_bias = Some(false),
-      workspace = Some(1024), name = convName)
-    val relu = Symbol.api.relu(data = Some(conv), name = reluName)
+    val conv = Symbol.api.Convolution(data = data, num_filter = numFilter,
+      pad = Shape(1, 1), kernel = Shape(kernel._1, kernel._2),
+      stride = Shape(stride._1, stride._2), no_bias = false,
+      workspace = 1024.toLong, name = convName)
+    val relu = Symbol.api.relu(data = conv, name = reluName)
     conv.dispose()
     relu
   }
@@ -48,30 +48,30 @@ object ModelVgg19 {
 
     val relu1_1 = ConvRelu(data, s"${prefix}conv1_1", s"${prefix}relu1_1", 64)
     val relu1_2 = ConvRelu(relu1_1, s"${prefix}conv1_2", s"${prefix}relu1_2", 64)
-    val pool1 = Symbol.api.Pooling(data = Some(relu1_2), pad = Some(Shape(0, 0)),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+    val pool1 = Symbol.api.Pooling(data = relu1_2, pad = Shape(0, 0),
+      kernel = Shape(2, 2), stride = Shape(2, 2), pool_type = "avg",
       name = s"${prefix}pool1")
 
     val relu2_1 = ConvRelu(pool1, s"${prefix}conv2_1", s"${prefix}relu2_1", 128)
     val relu2_2 = ConvRelu(relu2_1, s"${prefix}conv2_2", s"${prefix}relu2_2", 128)
-    val pool2 = Symbol.api.Pooling(data = Some(relu2_2), pad = Some(Shape(0, 0)),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+    val pool2 = Symbol.api.Pooling(data = relu2_2, pad = Shape(0, 0),
+      kernel = Shape(2, 2), stride = Shape(2, 2), pool_type = "avg",
       name = s"${prefix}pool2")
 
     val relu3_1 = ConvRelu(pool2, s"${prefix}conv3_1", s"${prefix}relu3_1", 256)
     val relu3_2 = ConvRelu(relu3_1, s"${prefix}conv3_2", s"${prefix}relu3_2", 256)
     val relu3_3 = ConvRelu(relu3_2, s"${prefix}conv3_3", s"${prefix}relu3_3", 256)
     val relu3_4 = ConvRelu(relu3_3, s"${prefix}conv3_4", s"${prefix}relu3_4", 256)
-    val pool3 = Symbol.api.Pooling(data = Some(relu3_4), pad = Some(Shape(0, 0)),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+    val pool3 = Symbol.api.Pooling(data = relu3_4, pad = Shape(0, 0),
+      kernel = Shape(2, 2), stride = Shape(2, 2), pool_type = "avg",
       name = s"${prefix}pool3")
 
     val relu4_1 = ConvRelu(pool3, s"${prefix}conv4_1", s"${prefix}relu4_1", 512)
     val relu4_2 = ConvRelu(relu4_1, s"${prefix}conv4_2", s"${prefix}relu4_2", 512)
     val relu4_3 = ConvRelu(relu4_2, s"${prefix}conv4_3", s"${prefix}relu4_3", 512)
     val relu4_4 = ConvRelu(relu4_3, s"${prefix}conv4_4", s"${prefix}relu4_4", 512)
-    val pool4 = Symbol.api.Pooling(data = Some(relu4_4), pad = Some(Shape(0, 0)),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+    val pool4 = Symbol.api.Pooling(data = relu4_4, pad = Shape(0, 0),
+      kernel = Shape(2, 2), stride = Shape(2, 2), pool_type = "avg",
       name = s"${prefix}pool4")
 
     val relu5_1 = ConvRelu(pool4, s"${prefix}conv5_1", s"${prefix}relu5_1", 512)
