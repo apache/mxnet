@@ -1230,7 +1230,7 @@ inline size_t Profiler::DeviceIndex(mxnet::Context::DeviceType dev_type, int32_t
 
 /*!
  * \brief Explicit 'Profiler::AddProfileStat' override for 'OprExecStat'
- * \param opr_stat Unique pointert to the operator statistic
+ * \param opr_stat Unique pointer to the operator statistic
  */
 template<>
 inline void Profiler::AddProfileStat<ProfileOperator::OprExecStat>(
