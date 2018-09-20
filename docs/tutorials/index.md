@@ -3,9 +3,9 @@
 ```eval_rst
 .. toctree::
    :hidden:
-
    basic/index.md
    c++/index.md
+   control_flow/index.md
    embedded/index.md
    gluon/index.md
    nlp/index.md
@@ -15,6 +15,7 @@
    scala/index.md
    sparse/index.md
    speech_recognition/index.md
+   tensorrt/index.md
    unsupervised_learning/index.md
    vision/index.md
 ```
@@ -118,6 +119,7 @@ Select API:&nbsp;
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
     * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
+    * [Optimizing Deep Learning Computation Graphs with TensorRT](/tutorials/tensorrt/inference_with_trt.html)
 * API Guides
     * Core APIs
         * NDArray

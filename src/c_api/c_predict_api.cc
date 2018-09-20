@@ -94,7 +94,7 @@ int _CreatePartialOut(const char* symbol_json_str,
                       const mx_uint* input_shape_data,
                       mx_uint num_output_nodes,
                       const char** output_keys,
-                      // This is used for paralle inference.
+                      // This is used for parallel inference.
                       int num_threads,
                       bool lazy,
                       PredictorHandle* out) {
