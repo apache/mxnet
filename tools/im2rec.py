@@ -37,7 +37,7 @@ except ImportError:
 
 def list_image(root, recursive, exts):
     """Traverses the root of directory that contains images and
-       generate image list iteraotr"""
+       generates image list iterator"""
     i = 0
     if recursive:
         cat = {}
@@ -122,7 +122,7 @@ def read_list(path_in):
             yield item
 
 def image_encode(args, i, item, q_out):
-    """Reads, preprocesses, packs the image and put it back in queue"""
+    """Reads, preprocesses, packs the image and put it back in output queue"""
     fullpath = os.path.join(args.root, item[1])
 
     if len(item) > 3 and args.pack_label:
@@ -178,7 +178,7 @@ def image_encode(args, i, item, q_out):
 
 def read_worker(args, q_in, q_out):
     """Function that will be spawned to fetch the image 
-    from the input queue and put into output queue"""
+    from the input queue and put it back to output queue"""
     while True:
         deq = q_in.get()
         if deq is None:
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     # if the '--list' is used, it generates .lst file
     if args.list:
         make_list(args)
-    # otherwise use .lst to generates .rec file
+    # otherwise read .lst file to generates .rec file
     else:
         if os.path.isdir(args.prefix):
             working_dir = args.prefix
@@ -299,7 +299,7 @@ if __name__ == '__main__':
                     # define the process
                     read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
                                     for i in range(args.num_thread)]
-                    # use num_thread to process images
+                    # process images with num_thread process
                     for p in read_process:
                         p.start()
                     # only use one process to write .rec to avoid race-condtion
