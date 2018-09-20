@@ -175,7 +175,9 @@ def _recursive_fork_recordio(obj, depth, max_depth=1000):
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
     # re-fork a new recordio handler in new process if applicable
-    _recursive_fork_recordio(dataset, 0, 1000)
+    if sys.getrecursionlimit() < 1000:
+        sys.setrecursionlimit(1000)
+    _recursive_fork_recordio(dataset, 0, 1000 - 5)  # reserve 5 stack in ops
 
     while True:
         idx, samples = key_queue.get()
