@@ -8,6 +8,10 @@ It uses the appropriate pip binaries to build different docker images as -
 * gpu_cu90 
 * gpu_cu90_mkl
 * gpu (same as gpu_cu90)
+* gpu_cu80 
+* gpu_cu80_mkl
+* gpu_cu92 
+* gpu_cu92_mkl
 
 
 ** Note: If you want to use a different pip binary (specific mxnet or cuda version, etc), you can edit the last line of the cpu or gpu dockerfile as required. 
