@@ -93,15 +93,16 @@ information on the definition and the algorithm.
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CTCLossOpParam>)
-.set_num_inputs(2)
+.set_num_inputs(CTCLossOpNumInputs)
 .set_num_outputs(2)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "label"};
-  })
+.set_attr<nnvm::FListInputNames>("FListInputNames", CTCLossOpListInputNames)
 .set_attr<nnvm::FListOutputNames>("FListOutputNAmes",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"out", "grad"};
+  })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs) {
+    return 1;
   })
 .set_attr<nnvm::FInferShape>("FInferShape", CTCLossOpShape)
 .set_attr<nnvm::FInferType>("FInferType", CTCLossOpType)
@@ -110,17 +111,23 @@ information on the definition and the algorithm.
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 //.set_attr<FResourceRequest>("FResourceRequest", CTCLossOpResource)
 .set_attr<FCompute>("FCompute<cpu>", CTCLossOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_ctc_loss"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_ctc_loss"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("label", "NDArray-or-Symbol", "Ground-truth labels for the loss.")
+.add_argument("data_lengths", "NDArray-or-Symbol",
+              "Lengths of data for each of the samples. Only required "
+              "when use_data_lengths is true.")
+.add_argument("label_lengths", "NDArray-or-Symbol",
+              "Lengths of labels for each of the samples. Only required "
+              "when use_label_lengths is true.")
 .add_arguments(CTCLossOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_ctc_loss)
 .set_attr_parser(ParamParser<CTCLossOpParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
+.set_num_inputs(1)
+.set_num_outputs(CTCLossOpNumInputs)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute", CTCLossOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", CTCLossOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

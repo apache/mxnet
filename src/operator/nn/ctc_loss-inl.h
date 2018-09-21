@@ -211,7 +211,9 @@ struct CTCLossOpParam : public dmlc::Parameter<CTCLossOpParam> {
 inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
                            std::vector<TShape>* in_attrs,
                            std::vector<TShape>* out_attrs) {
-    CHECK_EQ(in_attrs->size(), 2U);
+    
+    const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
+    CHECK_EQ(in_attrs->size(), 2U + param.use_data_lengths + param.use_label_lengths);
     CHECK_EQ(out_attrs->size(), 2U);
 
     const TShape &dshape = (*in_attrs)[ctc_loss::kData];
@@ -221,6 +223,20 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
     CHECK_EQ(dshape[1], lshape[0])
         << "The batch size for the labels and data arrays must be the same.";
 
+    if (param.use_data_lengths) {
+      int kInputLength = 2;
+      const TShape &dlshape = (*in_attrs)[kInputLength];
+      CHECK_EQ(dlshape.ndim(), 1U) << "Data length array must be a vector.";
+      CHECK_EQ(dlshape[0], dshape[1])
+          << "The batch size for the data and data lengths must be the same.";
+    }
+    if (param.use_label_lengths) {
+      int kLabelLength = 2 + param.use_data_lengths;
+      const TShape &llshape = (*in_attrs)[kLabelLength];
+      CHECK_EQ(llshape.ndim(), 1U) << "Label length array must be a vector.";
+      CHECK_EQ(llshape[0], lshape[0])
+          << "The batch size for the labels and label lengths must be the same.";
+    }
     CHECK_GE(dshape[0], lshape[1]) << "The max number of labels cannot exceed "
                                       "the maximum sequence length of the "
                                       "data.";
@@ -235,7 +251,7 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
 inline bool CTCLossOpType(const nnvm::NodeAttrs& attrs,
                           std::vector<int>* in_attrs,
                           std::vector<int>* out_attrs) {
-    CHECK_EQ(in_attrs->size(), 2U);
+    CHECK_GE(in_attrs->size(), 2U);
     CHECK_EQ(out_attrs->size(), 2U);
     int dtype = (*in_attrs)[ctc_loss::kData];
     CHECK_NE(dtype, -1) << "Input data must have specified type";
@@ -250,7 +266,7 @@ inline bool CTCLossOpStorageType(const nnvm::NodeAttrs& attrs,
                                  DispatchMode* dispatch_mode,
                                  std::vector<int>* in_attrs,
                                  std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_GE(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 2U);
   const int in_stype = in_attrs->at(0);
   bool dispatched = false;
@@ -269,20 +285,39 @@ inline std::vector<ResourceRequest> CTCLossOpResource(const std::vector<TShape> 
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 }
 
+inline int CTCLossOpNumInputs(const NodeAttrs& attrs) {
+  const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
+  return 2 + param.use_data_lengths + param.use_label_lengths;
+}
+
+inline std::vector<std::string> CTCLossOpListInputNames(const NodeAttrs& attrs) {
+  const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
+  if (param.use_data_lengths && param.use_label_lengths) {
+    return {"data", "label", "data_lengths", "label_lengths"};
+  } else if (param.use_data_lengths) {
+    return {"data", "label", "data_lengths"};
+  } else if (param.use_label_lengths) {
+    return {"data", "label", "label_lengths"};
+  } else {
+    return {"data", "label"};
+  }
+}
+
 template<typename xpu>
 void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 2U);
-  CHECK_EQ(req.size(), 2U);
   using namespace mshadow;
   using namespace mshadow::expr;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+  
   const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
-
+  CHECK_EQ(inputs.size(), 2U + param.use_data_lengths + param.use_label_lengths);
+  CHECK_EQ(outputs.size(), 2U);
+  CHECK_EQ(req.size(), 2U);
+  
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[ctc_loss::kLabel].type_flag_, DType, {
     Tensor<xpu, 3, real_t> data =
       inputs[ctc_loss::kData].get<xpu, 3, real_t>(s);
@@ -332,11 +367,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
                      label_lengths.data(), data_lengths.data(),
                      workspace.dptr_, req[ctc_loss::kGrad] != mxnet::kNullOp,
                      param.blank_label == 0 ? 0 : (alphabet_size-1)); 
-/*
-    baidu_forward(ctx, s, data, costs, grad,
-                  &data_lengths, &label_lengths, &packed_labels,
-                  batch_size, alphabet_size, req[ctc_loss::kGrad] != mxnet::kNullOp);
-*/
+
     if (param.use_data_lengths) {
       // baidu warp CTC implementation sometimes includes undefined gradients
       // for data outside of length mask. Setting to 0 to make it consistent
@@ -354,23 +385,21 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
   using namespace mshadow;
   using namespace mxnet_op;
   
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   Tensor<xpu, 3, real_t> data_grad =
-      inputs[ctc_loss::kData].get<xpu, 3, real_t>(s);
+      outputs[0].get<xpu, 3, real_t>(s);
+
   Tensor<xpu, 1, real_t> output_grad =
-      outputs[ctc_loss::kOut].get<xpu, 1, real_t>(s);
+      inputs[0].get<xpu, 1, real_t>(s);
 
   Tensor<xpu, 3, real_t> data_grad_computed =
-      outputs[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
-
-  Assign(data_grad, req[ctc_loss::kData],
+      inputs[3].get<xpu, 3, real_t>(s);
+  
+  Assign(data_grad, req[0],
          mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);  
 }
 

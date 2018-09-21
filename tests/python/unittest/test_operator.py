@@ -4482,7 +4482,7 @@ def check_ctc_loss(acts, labels, loss_truth):
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
-    # test forward without grad calc
+    # test forward with grad calc
     exe.forward(is_train=True)
     outTest = exe.outputs[0]
     # test forward without grad calc
@@ -4611,12 +4611,12 @@ def test_ctc_loss_grad():
             label = mx.nd.array(labels)
             data.attach_grad()
             with mx.autograd.record():
-                l = mx.contrib.ndarray.CTCLoss(data, label,
-                                               use_data_lengths=True,
-                                               use_label_lengths=True,
-                                               data_lengths=mx.nd.array(seq_lens),
-                                               label_lengths=mx.nd.array(label_lens),
-                                               blank_label=blank_label)
+                l = mx.ndarray.ctc_loss(data, label,
+                                        use_data_lengths=True,
+                                        use_label_lengths=True,
+                                        data_lengths=mx.nd.array(seq_lens),
+                                        label_lengths=mx.nd.array(label_lens),
+                                        blank_label=blank_label)
                 l.backward()
             assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
