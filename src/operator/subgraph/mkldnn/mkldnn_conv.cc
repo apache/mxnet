@@ -18,26 +18,18 @@
 */
 
 #if MXNET_USE_MKLDNN == 1
+
+#include <utility>
+#include <vector>
+#include <string>
 #include "../common.h"
-#include "../../nn/convolution-inl.h"
-#include "../../nn/batch_norm-inl.h"
-#include "../../nn/activation-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 #include "../../quantization/quantization_utils.h"
+#include "mkldnn_conv-inl.h"
+
 namespace mxnet {
 namespace op {
-
-struct MKLDNNConvFusionParam {
-  MKLDNNConvFullParam full_conv_param;
-  std::shared_ptr<BatchNormParam> bn_param;
-};
-
-static const size_t uint8_range = 255;
-static const size_t int8_range = 127;
-
-enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
 
 template <typename DType>
 static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
@@ -59,7 +51,7 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
   size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     DType *p1 = reinterpret_cast<DType *>(weight_ptr + c * offset);
     DType *p2 = reinterpret_cast<DType *>(update_weight_ptr + c * offset);
@@ -102,7 +94,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
   size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
   std::vector<DType> weight_c_min(channel, MaxValue<DType>());
   std::vector<DType> weight_c_max(channel, MinValue<DType>());
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     DType *p1 = weight_ptr + c * offset;
     for (size_t k = 0; k < offset; ++k) {
@@ -115,7 +107,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
 
   if (weight_channelwise_scale) {
     weight_scales->resize(channel);
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
       weight_scales->at(c) = int8_range / weight_range;
@@ -135,7 +127,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     weight_scales->resize(1);
     DType weight_range = MaxAbs(total_min, total_max);
     weight_scales->at(0) = int8_range / weight_range;
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType *fp_ptr = weight_ptr + c * offset;
       int8_t *quan_ptr = quan_weight_ptr + c * offset;
@@ -284,14 +276,15 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       }
     }
   }
-
+  bool post_requantize = false;
   if (mkldnn_param.quantized) {
-    *out_min_ptr = mkldnn_param.min_calib_range.has_value()
-                        ? mkldnn_param.min_calib_range.value()
-                        : 0.0;
-    *out_max_ptr = mkldnn_param.max_calib_range.has_value()
-                        ? mkldnn_param.max_calib_range.value()
-                        : 1.0;
+    if (mkldnn_param.min_calib_range.has_value() &&
+        mkldnn_param.max_calib_range.has_value()) {
+      post_requantize = true;
+      mkldnn_param.weight_channelwise_scale = false;
+      *out_min_ptr = mkldnn_param.min_calib_range.value();
+      *out_max_ptr = mkldnn_param.max_calib_range.value();
+    }
   }
 
   if (!initalized) {
@@ -335,6 +328,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       float sum_in_scale = 1.0;
       float out_range;
       float quantized_out_range;
+      float output_scale;
       if (data_min < 0.0) {
         // TODO(zhennan): we need to use offset to convert int8 to uint8.
         LOG(FATAL) << "Can't handle negetive value for QuantizeData";
@@ -343,17 +337,22 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         auto quantized_sum_range = sum_min < 0 ? int8_range : uint8_range;
         sum_in_scale = quantized_sum_range / MaxAbs(sum_min, sum_max);
       }
-      quantized_out_range =
-          IsOutputUInt8(mkldnn_param) ? uint8_range : int8_range;
-      out_range = MaxAbs(*out_min_ptr, *out_max_ptr);
-      float output_scale = quantized_out_range / out_range;
-      full_conv_param.requantize_scales.resize(channel);
-      for (size_t c = 0; c < channel; c++) {
-        auto weight_scale = mkldnn_param.weight_channelwise_scale
-                                ? weight_scales[c]
-                                : weight_scales[0];
-        full_conv_param.requantize_scales[c] =
-            output_scale / data_scale / weight_scale;
+      if (post_requantize) {
+        quantized_out_range =
+            IsOutputUInt8(mkldnn_param) ? uint8_range : int8_range;
+        out_range = MaxAbs(*out_min_ptr, *out_max_ptr);
+        output_scale = quantized_out_range / out_range;
+        full_conv_param.requantize_scales.resize(channel);
+        for (size_t c = 0; c < channel; c++) {
+          auto weight_scale = mkldnn_param.weight_channelwise_scale
+                                  ? weight_scales[c]
+                                  : weight_scales[0];
+          full_conv_param.requantize_scales[c] =
+              output_scale / data_scale / weight_scale;
+        }
+      } else {
+        output_scale = data_scale * weight_scales[0];
+        full_conv_param.requantize_scales.resize(0);
       }
       if (mkldnn_param.with_sum)
         full_conv_param.sum_scale = output_scale / sum_in_scale;
@@ -552,11 +551,17 @@ static bool SgMKLDNNConvInferType(const nnvm::NodeAttrs &attrs,
         in_types->at(i) = base_in_types[base_idx++];
       }
     }
-    if (IsOutputUInt8(param.full_conv_param.mkldnn_param)) {
-      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
+    if (param.full_conv_param.mkldnn_param.min_calib_range.has_value() &&
+        param.full_conv_param.mkldnn_param.max_calib_range.has_value()) {
+      if (IsOutputUInt8(param.full_conv_param.mkldnn_param)) {
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
+      } else {
+        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
+      }
     } else {
-      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
+      TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt32);
     }
+
     TYPE_ASSIGN_CHECK(*out_types, 1, mshadow::kFloat32);
     TYPE_ASSIGN_CHECK(*out_types, 2, mshadow::kFloat32);
     return result;
@@ -664,7 +669,10 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SgMKLDNNConvInplaceOption)
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
+.set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidQuantizeInput);
+
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // if MXNET_USE_MKLDNN == 1

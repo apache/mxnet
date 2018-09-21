@@ -95,12 +95,6 @@ if __name__ == '__main__':
     parser.add_argument('--quantized-dtype', type=str, default='uint8',
                         choices=['int8', 'uint8'],
                         help='quantization destination data type for input data')
-    parser.add_argument('--disable-requantize', type=bool, default=True,
-                        help='If disable requantize, the OP needed requantize'
-                             ' will output uint8 directly and hence requantize '
-                             'OP is not needed during quantization. Note: '
-                             'calibration mode need to be used if requantize '
-                             'is disabled.')
     parser.add_argument('--enable-calib-quantize', type=bool, default=True,
                         help='If enabled, the quantize op will '
                              'be calibrated offline if calibration mode is '
@@ -126,7 +120,7 @@ if __name__ == '__main__':
 
     out = SymbolHandle()
     backend = "MKLDNN"
-    check_call(_LIB.MXGenBackendSubgraph(c_str(backend), sym.handle, ctypes.byref(out)))
+    check_call(_LIB.MXGenBackendSubgraph(sym.handle, c_str(backend), ctypes.byref(out)))
     sym = Symbol(out)
 
     # get batch size
@@ -178,10 +172,8 @@ if __name__ == '__main__':
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                        calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
-                                                       disable_requantize=args.disable_requantize,
                                                        logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
-        save_symbol(sym_name, qsym, logger)
     else:
         logger.info('Creating ImageRecordIter for reading calibration dataset')
         data = mx.io.ImageRecordIter(path_imgrec=args.calib_dataset,
@@ -197,12 +189,11 @@ if __name__ == '__main__':
                                      seed=args.shuffle_seed,
                                      **mean_args)
 
-        cqsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        disable_requantize=args.disable_requantize,
                                                         label_names=(label_name,), calib_quantize_op = True,
                                                         logger=logger)
         if calib_mode == 'entropy':
@@ -213,7 +204,10 @@ if __name__ == '__main__':
             raise ValueError('unknow calibration mode %s received, only supports `none`, `naive`, and `entropy`'
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
-        save_symbol(sym_name, cqsym, logger)
-
+    # out = SymbolHandle()
+    # backend = "MKLDNN_POST_QUANTIZE"
+    # check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
+    # qsym = Symbol(out)
+    save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)

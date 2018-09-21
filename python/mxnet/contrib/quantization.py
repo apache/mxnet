@@ -81,8 +81,7 @@ def _quantize_params(qsym, params, th_dict):
     return quantized_params
 
 def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
-                     quantized_dtype='int8', disable_requantize=False,
-                     calib_quantize_op=False):
+                     quantized_dtype='int8', calib_quantize_op=False):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -99,8 +98,6 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
         avoided.
     quantized_dtype: str
         The quantized destination type for input data.
-    disable_requantize : bool
-        Whether disable requantize OP functionality.
     calib_quantize_op : bool
         Whether perform offline calibration for quantize op.
     """
@@ -126,7 +123,6 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
                                      c_str(quantized_dtype),
-                                     ctypes.c_bool(disable_requantize),
                                      ctypes.c_bool(calib_quantize_op)))
     return Symbol(out)
 
@@ -185,7 +181,7 @@ class _LayerOutputMinMaxCollector(object):
                              % (name, min_range, max_range))
 
 
-def _calibrate_quantized_sym(qsym, th_dict, disable_requantize=False):
+def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
     set the thresholds into the quantized symbol as the params of requantize operators.
     """
@@ -206,8 +202,7 @@ def _calibrate_quantized_sym(qsym, th_dict, disable_requantize=False):
                                                      c_str_array(layer_output_names),
                                                      c_array(ctypes.c_float, min_vals),
                                                      c_array(ctypes.c_float, max_vals),
-                                                     ctypes.byref(calibrated_sym),
-                                                     ctypes.c_bool(disable_requantize)))
+                                                     ctypes.byref(calibrated_sym)))
     return Symbol(calibrated_sym)
 
 
@@ -441,8 +436,7 @@ def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None, calib_layer=None,
-                   quantized_dtype='int8', disable_requantize=False,
-                   calib_quantize_op=False, logger=logging):
+                   quantized_dtype='int8', calib_quantize_op=False, logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -495,10 +489,6 @@ def quantize_model(sym, arg_params, aux_params,
     quantized_dtype : str
         The quantized destination type for input data. Currently support 'int8'
         and 'uint8', default value is 'int8'.
-    disable_requantize : bool
-        Whether disable requantize OP during quantization. If disabled, the related
-        quantized OP needed requantize will output int8 directly and hence requantize
-        OP is not needed during symbol quantization
     calib_quantize_op: bool
         Whether calibrate quantize op with its input calibration data. The quantize op's input should be in calib_layer
     logger : Object
@@ -524,7 +514,6 @@ def quantize_model(sym, arg_params, aux_params,
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype,
-                            disable_requantize=disable_requantize,
                             calib_quantize_op=calib_quantize_op)
 
     th_dict = {}
@@ -564,7 +553,7 @@ def quantize_model(sym, arg_params, aux_params,
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
         logger.info('Calibrating quantized symbol')
-        qsym = _calibrate_quantized_sym(qsym, th_dict, disable_requantize)
+        qsym = _calibrate_quantized_sym(qsym, th_dict)
 
     logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params, th_dict)

@@ -17,10 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_CONV_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_CONV_H_
-
 #if MXNET_USE_MKLDNN == 1
+
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../nn/activation-inl.h"
@@ -54,10 +52,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
         disable_conv_sum(dis_conv_sum) {}
 
   bool Select(const nnvm::Node &n) override {
-    bool match =
-        (!disable_all) && (!n.is_variable()) && (n.op()->name == "Convolution");
-    if (match) {
-      status = sStart;
+    if (n.op() && n.op()->name == "Convolution") {
+      status = disable_all ? sSuccess : sStart;
       matched_list.clear();
       matched_list.push_back(&n);
       return true;
@@ -129,15 +125,17 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSION", 0);
-    disable_conv_bn = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSION_CONV_BN", 0);
-    disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSION_CONV_RELU", 0);
-    disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSION_CONV_SUM", 0);
+    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
+    disable_conv_bn = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
+    disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
+    disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
+    disable_all =
+        disable_all && disable_conv_bn && disable_conv_relu && disable_conv_sum;
     if (disable_all) {
-      LOG(INFO) << "MKLDNN Convolution fusion pass is disabled.";
+      LOG(INFO) << "MKLDNN Convolution optimization pass is disabled.";
     } else {
-      LOG(INFO) << "Start to execute MKLDNN Convolution fusion pass.";
+      LOG(INFO) << "Start to execute MKLDNN Convolution optimization pass.";
     }
   }
   static SubgraphPropertyPtr Create() {
@@ -237,5 +235,5 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
 
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_CONV_H_
