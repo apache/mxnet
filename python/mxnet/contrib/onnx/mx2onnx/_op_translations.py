@@ -1846,15 +1846,19 @@ def convert_cast(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
     dtype = node["attrs"]["dtype"]
+    if dtype == 'float32':
+        dtype = 'float'
+    elif dtype == 'float64':
+        dtype = 'double'
 
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_id].name
-
+    from onnx import TensorProto
     node = helper.make_node(
         "Cast",
         [input_node],
         [name],
-        to=dtype,
+        to=getattr(TensorProto, dtype.upper()),
         name=name,
     )
     return [node]

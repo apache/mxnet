@@ -118,11 +118,23 @@ def add_n(attrs, inputs, proto_obj):
 # Sorting and Searching
 def argmax(attrs, inputs, proto_obj):
     """Returns indices of the maximum values along an axis"""
-    return 'argmax', attrs, inputs
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'axis',
+                                                               'keepdims': 'keepdims'})
+    axis = new_attrs.get('axis', 0)
+    keepdims = new_attrs.get('keepdims', 0)
+    argmax_op = symbol.argmax(inputs[0], axis=axis, keepdims=keepdims)
+    cast_attrs = {'dtype': 'int64'}
+    return 'cast', cast_attrs, argmax_op
 
 def argmin(attrs, inputs, proto_obj):
     """Returns indices of the minimum values along an axis."""
-    return 'argmin', attrs, inputs
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'axis',
+                                                               'keepdims': 'keepdims'})
+    axis = new_attrs.get('axis', 0)
+    keepdims = new_attrs.get('keepdims', 0)
+    argmin_op = symbol.argmin(inputs[0], axis=axis, keepdims=keepdims)
+    cast_attrs = {'dtype': 'int64'}
+    return 'cast', cast_attrs, argmin_op
 
 def maximum(attrs, inputs, proto_obj):
     """
@@ -231,6 +243,7 @@ def batch_norm(attrs, inputs, proto_obj):
 def instance_norm(attrs, inputs, proto_obj):
     """Instance Normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    new_attrs['eps'] = attrs.get('epsilon', 1e-5)
     return 'InstanceNorm', new_attrs, inputs
 
 def leaky_relu(attrs, inputs, proto_obj):
@@ -422,8 +435,9 @@ def reshape(attrs, inputs, proto_obj):
 
 def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""
+    from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
-    new_attrs['dtype'] = new_attrs['dtype'].lower()
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs['dtype'])]
     return 'cast', new_attrs, inputs
 
 def split(attrs, inputs, proto_obj):
