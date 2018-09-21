@@ -68,15 +68,13 @@ def check_quantize(sym, data_shape, label_shape, data_val, sym_output):
     qsym_output = check_qsym_forward(qsym, qarg_params, qaux_params, data_val, data_shape, label_shape)
     assert_allclose(qsym_output[0].asnumpy(), sym_output[0].asnumpy(), rtol=rtol)
 
-def check_fusion(sym, name, nofusion=False):
-  shape = (4, 4, 10, 10)
-  label_shape = (4, 10)
-  exe = sym.simple_bind(mx.cpu(), data=shape, grad_req='null')
+def check_fusion(sym, date_shape, label_shape, name, nofusion=False):
+  exe = sym.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
   out = SymbolHandle()
   backend = "MKLDNN"
   check_call(_LIB.MXGenBackendSubgraph(c_str(backend), sym.handle, ctypes.byref(out)))
   sym_sg = Symbol(out)
-  exe_sg = sym_sg.simple_bind(mx.cpu(), data=shape, grad_req='null')
+  exe_sg = sym_sg.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
 
   for k, v in exe.arg_dict.items():
     v = mx.random.uniform(-1.0, 1.0, shape=v.shape)
@@ -98,10 +96,10 @@ def check_fusion(sym, name, nofusion=False):
       for attr_op in name:
         assert v[attr_op] == 'true'
 
-  # fp32 to int8
+  # fp32 to uint8
   if nofusion:
-    check_quantize(sym, shape, label_shape, data_val, fwd[0])
-  else: check_quantize(sym_sg, shape, label_shape, data_val, fwd[0])
+    check_quantize(sym, date_shape, label_shape, data_val, fwd[0])
+  else: check_quantize(sym_sg, date_shape, label_shape, data_val, fwd[0])
 
 def single_conv():
   data = mx.symbol.Variable('data')
@@ -177,24 +175,28 @@ def int8_pooling():
 
 @with_seed()
 def test_sugbraph():
-  conv_op = ['']
-  conv_relu_op = ['with_relu']
-  conv_bn_op = ['with_bn']
-  conv_sum_op = ['with_sum']
-  conv_bn_relu_op = ['with_bn', 'with_relu']
-  conv_bn_sum_relu_op = ['with_sum', 'with_postsum_relu', 'with_bn']
+  conv_attr = ['']
+  conv_relu_attr = ['with_relu']
+  conv_bn_attr = ['with_bn']
+  conv_sum_attr = ['with_sum']
+  conv_bn_relu_attr = ['with_bn', 'with_relu']
+  conv_bn_sum_relu_attr = ['with_sum', 'with_postsum_relu', 'with_bn']
 
-  net = conv_bn_sum_relu()
-  check_fusion(net, conv_bn_sum_relu_op)
-  net = single_conv()
-  check_fusion(net, conv_op)
-  net = conv_relu()
-  check_fusion(net, conv_relu_op)
-  net = conv_bn()
-  check_fusion(net, conv_bn_op)
-  net = conv_sum()
-  check_fusion(net, conv_sum_op)
-  net = conv_bn_relu()
-  check_fusion(net, conv_bn_relu_op)
-  net = int8_pooling()
-  check_fusion(net, conv_op, True)
+  shape = [(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
+  label = [(4, 10), (32, 10), (64, 10)]
+
+  for date_shape, label_shape in zip(shape, label):
+    net = conv_bn_sum_relu()
+    check_fusion(net, date_shape, label_shape, conv_bn_sum_relu_attr)
+    net = single_conv()
+    check_fusion(net, date_shape, label_shape, conv_attr)
+    net = conv_relu()
+    check_fusion(net, date_shape, label_shape, conv_relu_attr)
+    net = conv_bn()
+    check_fusion(net, date_shape, label_shape, conv_bn_attr)
+    net = conv_sum()
+    check_fusion(net, date_shape, label_shape, conv_sum_attr)
+    net = conv_bn_relu()
+    check_fusion(net, date_shape, label_shape, conv_bn_relu_attr)
+    net = int8_pooling()
+    check_fusion(net, date_shape, label_shape, '', True)
