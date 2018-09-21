@@ -164,7 +164,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
 
     // note that var is still invstd
     if (!param_.fix_gamma) {
-      if (!param_.fix_beta){
+      if (!param_.fix_beta) {
         // Case 1
         // fix_gamma = False
         // fix_beta = False
@@ -196,7 +196,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
       if (IsBNWriting(req[batchnorm::kGamma])) {
         w[channel] = AccReal(1);
       }
-      if (!param_.fix_beta){
+      if (!param_.fix_beta) {
         // Case 3
         // fix_gamma = True
         // fix_beta = False

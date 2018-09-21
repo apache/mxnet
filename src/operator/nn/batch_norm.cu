@@ -404,6 +404,7 @@ static __global__ void BatchNormalizationBackwardKernel(
     } else {
       tensors.gradBias[plane] = DType(0);
     }
+  }
 }
 
 template<typename DType, int Dim>
