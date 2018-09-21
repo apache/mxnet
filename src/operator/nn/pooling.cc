@@ -100,7 +100,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     CHECK_EQ(dshape.ndim(), 3U)
       << "Pooling: Input data should be 3D in (batch, channel, x)"
       << ". Currently 'same' supports Max Pooling 1-D";
-    CHECK(param.pad[0] == 0 and param.pad[1] == 0 and param.pad[2] == 0)
+    CHECK(param.pad[0] == 0 && param.pad[1] == 0 && param.pad[2] == 0)
       << "Same pooling convention disables the use of pad parameter.";
   }
   CHECK_GE(dshape.ndim(), 3U)
