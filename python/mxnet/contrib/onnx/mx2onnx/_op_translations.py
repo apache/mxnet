@@ -2077,3 +2077,79 @@ def convert_sqrt(node, **kwargs):
         name=name,
     )
     return [node]
+
+@mx_op.register("square")
+def convert_square(node, **kwargs):
+    """Map MXNet's square operator attributes to onnx's Pow operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_a = proc_nodes[input_node_a_id].name
+
+    initializer = kwargs["initializer"]
+    np_arr = np.array([2])
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
+    dims = np.shape(np_arr)
+
+    power2_name = "square_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(power2_name, data_type, dims)
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=power2_name,
+            data_type=data_type,
+            dims=dims,
+            vals=[2],
+            raw=False,
+        )
+    )
+
+    node = onnx.helper.make_node(
+        "Pow",
+        [input_node_a, power2_name],
+        [name],
+        name=name
+    )
+    return [tensor_node, node]
+
+@mx_op.register("sum")
+def convert_sum(node, **kwargs):
+    """Map MXNet's sum operator attributes to onnx's ReduceSum operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    attrs = node["attrs"]
+
+    mx_axis = attrs.get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = convert_bool_to_int(attrs, "keepdims")
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    if axes is not None:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+    else:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+    return [node]
