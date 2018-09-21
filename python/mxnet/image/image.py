@@ -21,12 +21,14 @@
 
 from __future__ import absolute_import, print_function
 
+import sys
 import os
 import random
 import logging
 import json
 import warnings
 import numpy as np
+
 
 try:
     import cv2
@@ -133,6 +135,9 @@ def imdecode(buf, *args, **kwargs):
     <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
+        if sys.version_info[0] == 3 and not isinstance(buf, (bytes, np.ndarray)):
+            raise ValueError('buf must be of type bytes or numpy.ndarray,'
+                             'if you would like to input type str, please convert to bytes')
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
     return _internal._cvimdecode(buf, *args, **kwargs)
 
