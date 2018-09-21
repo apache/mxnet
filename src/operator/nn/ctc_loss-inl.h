@@ -44,9 +44,9 @@ enum CTCLossOpOutputs { kOut, kGrad };
 }
 
 template <typename T>
-inline void get_workspace_size(std::vector<int> *label_lengths,
-                               std::vector<int> *data_lengths,
-                               int alphabet_size, int minibatch, bool gpu,
+inline void get_workspace_size(const std::vector<int> *label_lengths,
+                               const std::vector<int> *data_lengths,
+                               int alphabet_size, int minibatch, bool isGPU,
                                size_t *size_bytes) {
   // This is the max of all S and T for all examples in the minibatch.
   int maxL = *std::max_element(label_lengths->data(),
@@ -58,7 +58,7 @@ inline void get_workspace_size(std::vector<int> *label_lengths,
 
   *size_bytes = 0;
 
-  if (gpu) {
+  if (isGPU) {
     // GPU storage
     // nll_forward, nll_backward
     *size_bytes += 2 * sizeof(T) * minibatch;
@@ -128,13 +128,13 @@ inline void LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
   int batch = labels.size(0);
   int max_num_labels = labels.size(1);
 
-  std::vector<int> cpu_labels(max_num_labels*batch);
+  std::vector<int> cpu_labels(max_num_labels * batch);
   mshadow::Tensor<xpu, 1, DType> flat_labels = labels.FlatTo1D();
   IndexTensorToVector(flat_labels, &cpu_labels);
 
   for (int b = 0; b < batch; ++b) {
-    auto start = cpu_labels.data()+b*max_num_labels;
-    auto res = std::find(start, start+max_num_labels, padding_mask);
+    auto start = cpu_labels.data() + b * max_num_labels;
+    auto res = std::find(start, start + max_num_labels, padding_mask);
     int len = std::distance(start, res);
     std::copy(start, start + len,
               std::back_inserter(*packed_labels));
@@ -155,12 +155,12 @@ inline void PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
 
   IndexTensorToVector(in_label_lengths, label_lengths);
 
-  std::vector<int> cpu_labels(max_num_labels*batch);
+  std::vector<int> cpu_labels(max_num_labels * batch);
   mshadow::Tensor<xpu, 1, DType> flat_labels = labels.FlatTo1D();
   IndexTensorToVector(flat_labels, &cpu_labels);
 
   for (int b = 0; b < batch; ++b) {
-    auto start = cpu_labels.data()+b*max_num_labels;
+    auto start = cpu_labels.data() + b * max_num_labels;
     int len = label_lengths->at(b);
     std::copy(start, start + len,
               std::back_inserter(*packed_labels));
@@ -301,17 +301,17 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
 
+  const TBlob& in_data = inputs[ctc_loss::kData];
+  const TBlob& in_label = inputs[ctc_loss::kLabel];
+  const TBlob& out_data = outputs[ctc_loss::kOut];
+  const TBlob& out_grad = outputs[ctc_loss::kGrad];
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[ctc_loss::kLabel].type_flag_, DType, {
-    Tensor<xpu, 3, real_t> data =
-      inputs[ctc_loss::kData].get<xpu, 3, real_t>(s);
-    Tensor<xpu, 2, DType> labels =
-      inputs[ctc_loss::kLabel].get<xpu, 2, DType>(s);
-
-    Tensor<xpu, 1, real_t> costs =
-      outputs[ctc_loss::kOut].get<xpu, 1, real_t>(s);
-    Tensor<xpu, 3, real_t> grad =
-      outputs[ctc_loss::kGrad].get<xpu, 3, real_t>(s);
+    Tensor<xpu, 3, real_t> data = in_data.get<xpu, 3, real_t>(s);
+    Tensor<xpu, 2, DType> labels = in_label.get<xpu, 2, DType>(s);
+    Tensor<xpu, 1, real_t> costs = out_data.get<xpu, 1, real_t>(s);
+    Tensor<xpu, 3, real_t> grad = out_grad.get<xpu, 3, real_t>(s);
 
     int max_seq_len = data.size(0);
     int batch_size = data.size(1);
@@ -338,9 +338,8 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
     }
 
     size_t size_bytes;
-    bool gpu = data.kDevCPU ? false : true;
     get_workspace_size<real_t>(&label_lengths, &data_lengths, alphabet_size,
-                               batch_size, gpu, &size_bytes);
+                               batch_size, data.kDevCPU ? true : false, &size_bytes);
 
     // round-up so there are enough elems in memory
     int num_tmp_elems = (size_bytes + sizeof(real_t) - 1) / sizeof(real_t);
@@ -350,7 +349,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
     compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels.data(),
                      label_lengths.data(), data_lengths.data(),
                      workspace.dptr_, req[ctc_loss::kGrad] != mxnet::kNullOp,
-                     param.blank_label == 0 ? 0 : (alphabet_size-1));
+                     param.blank_label == 0 ? 0 : (alphabet_size - 1));
 
     if (param.use_data_lengths) {
       // baidu warp CTC implementation sometimes includes undefined gradients
@@ -373,18 +372,16 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_grad = outputs[0];
+  const TBlob& out_grad = inputs[0];
+  const TBlob& grad_computed = inputs[3];  // grad computed in the forward step
 
-  Tensor<xpu, 3, real_t> data_grad =
-      outputs[0].get<xpu, 3, real_t>(s);
+  Tensor<xpu, 3, real_t> igrad_data = in_grad.get<xpu, 3, real_t>(s);
+  Tensor<xpu, 1, real_t> ograd_data = out_grad.get<xpu, 1, real_t>(s);
+  Tensor<xpu, 3, real_t> computed_grad_data = grad_computed.get<xpu, 3, real_t>(s);
 
-  Tensor<xpu, 1, real_t> output_grad =
-      inputs[0].get<xpu, 1, real_t>(s);
-
-  Tensor<xpu, 3, real_t> data_grad_computed =
-      inputs[3].get<xpu, 3, real_t>(s);
-
-  Assign(data_grad, req[0],
-         mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
+  Assign(igrad_data, req[0],
+         mshadow::expr::broadcast<1>(ograd_data, computed_grad_data.shape_) * computed_grad_data);
 }
 
 }  // namespace op
