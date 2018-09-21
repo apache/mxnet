@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnetexamples.imclassification
+package org.apache.mxnetexamples.imclassification.util
 
 import org.apache.mxnet.Callback.Speedometer
 import org.apache.mxnet._
@@ -26,8 +26,8 @@ object ModelTrain {
   private val logger = LoggerFactory.getLogger(classOf[ModelTrain])
 
   // scalastyle:off parameterNum
-  def fit(dataDir: String, batchSize: Int, numExamples: Int, devs: Array[Context],
-          network: Symbol, dataLoader: (String, Int, KVStore) => (DataIter, DataIter),
+  def fit(batchSize: Int, numExamples: Int, devs: Array[Context],
+          network: Symbol, dataLoader: (Int, KVStore) => (DataIter, DataIter),
           kvStore: String, numEpochs: Int, modelPrefix: String = null, loadEpoch: Int = -1,
           lr: Float = 0.1f, lrFactor: Float = 1f, lrFactorEpoch: Float = 1f,
           clipGradient: Float = 0f, monitorSize: Int = -1): Accuracy = {
@@ -60,7 +60,7 @@ object ModelTrain {
       }
 
     // data
-    val (train, validation) = dataLoader(dataDir, batchSize, kv)
+    val (train, validation) = dataLoader(batchSize, kv)
 
     // train
     val epochSize =
@@ -70,13 +70,13 @@ object ModelTrain {
     val lrScheduler =
       if (lrFactor < 1f) {
         new FactorScheduler(step = Math.max((epochSize * lrFactorEpoch).toInt, 1),
-                            factor = lrFactor)
+          factor = lrFactor)
       } else {
         null
       }
     val optimizer: Optimizer = new SGD(learningRate = lr,
-        lrScheduler = lrScheduler, clipGradient = clipGradient,
-        momentum = 0.9f, wd = 0.00001f)
+      lrScheduler = lrScheduler, clipGradient = clipGradient,
+      momentum = 0.9f, wd = 0.00001f)
 
     // disable kvstore for single device
     if (kv.`type`.contains("local") && (devs.length == 1 || devs(0).deviceType != "gpu")) {
@@ -85,30 +85,32 @@ object ModelTrain {
     }
 
     val model = new FeedForward(ctx = devs,
-                                symbol = network,
-                                numEpoch = numEpochs,
-                                optimizer = optimizer,
-                                initializer = new Xavier(factorType = "in", magnitude = 2.34f),
-                                argParams = argParams,
-                                auxParams = auxParams,
-                                beginEpoch = beginEpoch,
-                                epochSize = epochSize)
+      symbol = network,
+      numEpoch = numEpochs,
+      optimizer = optimizer,
+      initializer = new Xavier(factorType = "in", magnitude = 2.34f),
+      argParams = argParams,
+      auxParams = auxParams,
+      beginEpoch = beginEpoch,
+      epochSize = epochSize)
     if (monitorSize > 0) {
       model.setMonitor(new Monitor(monitorSize))
     }
     val acc = new Accuracy()
     model.fit(trainData = train,
-              evalData = validation,
-              evalMetric = acc,
-              kvStore = kv,
-              batchEndCallback = new Speedometer(batchSize, 50),
-              epochEndCallback = checkpoint)
+      evalData = validation,
+      evalMetric = acc,
+      kvStore = kv,
+      batchEndCallback = new Speedometer(batchSize, 50),
+      epochEndCallback = checkpoint)
     if (kv != null) {
       kv.dispose()
     }
     acc
   }
+
   // scalastyle:on parameterNum
 }
 
 class ModelTrain
+

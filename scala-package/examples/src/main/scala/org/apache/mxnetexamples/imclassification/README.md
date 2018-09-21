@@ -1,17 +1,30 @@
-# MNIST Example for Scala
-This is the MNIST Training Example implemented for Scala type-safe api
+# Image Classification Models
+
+This examples contains a number of image classification models that can be run on various datasets.
+
+## Models
+
+Currently, the following models are supported:
+- MultiLayerPerceptron
+- Lenet
+- Resnet
+
+## Datasets
+
+Currently, the following datasets are supported:
+- MNIST
+- imagenet (only supported with synthetic for benchmark)
+
+Additionally, the datasets can be replaced by synthetic random data generated at the appropriate size for the image for benchmarking
+
+
 ## Setup
-### Download the source File
+
+### MNIST
+
+For this dataset, the data must be downloaded and extracted from the source or 
 ```$xslt
 https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/mnist/mnist.zip
 ```
-### Unzip the file
-```$xslt
-unzip mnist.zip
-```
-### Arguement Configuration
-Then you need to define the arguments that you would like to pass in the model:
-```$xslt
---data-dir <location of your downloaded file>
-```
-You can find more information [here](https://github.com/apache/incubator-mxnet/blob/scala-package/examples/src/main/scala/org/apache/mxnet/examples/imclassification/TrainMnist.scala#L169-L207)
+
+Afterwards, the location of the data folder must be passed in through the `--data-dir` argument.

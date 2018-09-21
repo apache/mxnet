@@ -18,9 +18,7 @@
 package org.apache.mxnetexamples.imclassification
 
 import java.io.File
-import java.net.URL
 
-import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -36,22 +34,22 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
 
   test("Example CI: Test MNIST Training") {
 
-      logger.info("Downloading mnist model")
-      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-      val tempDirPath = System.getProperty("java.io.tmpdir")
-      val modelDirPath = tempDirPath + File.separator + "mnist/"
-      logger.info("tempDirPath: %s".format(tempDirPath))
-      Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
-        tempDirPath + "/mnist/mnist.zip")
-      // TODO: Need to confirm with Windows
-      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-        + tempDirPath + "/mnist/") !
+    logger.info("Downloading mnist model")
+    val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    val modelDirPath = tempDirPath + File.separator + "mnist/"
+    logger.info("tempDirPath: %s".format(tempDirPath))
+    Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
+      tempDirPath + "/mnist/mnist.zip")
+    // TODO: Need to confirm with Windows
+    Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+      + tempDirPath + "/mnist/") !
 
-      var context = Context.cpu()
+    var context = Context.cpu()
 
-      val output = TrainMnist.test(modelDirPath)
-      Process("rm -rf " + modelDirPath) !
+    val output = TrainModel.test(modelDirPath)
+    Process("rm -rf " + modelDirPath) !
 
-      assert(output >= 0.95f)
+    assert(output >= 0.95f)
   }
 }

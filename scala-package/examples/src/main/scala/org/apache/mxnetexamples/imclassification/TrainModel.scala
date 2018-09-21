@@ -17,6 +17,11 @@
 
 package org.apache.mxnetexamples.imclassification
 
+import java.util.concurrent._
+
+import org.apache.mxnetexamples.imclassification.data.{MnistIter, SyntheticDataIter}
+import org.apache.mxnetexamples.imclassification.models._
+import org.apache.mxnetexamples.imclassification.util.{ModelTrain, PerformanceMonitor}
 import org.apache.mxnet._
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -24,82 +29,18 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object TrainMnist {
-  private val logger = LoggerFactory.getLogger(classOf[TrainMnist])
-
-  // multi-layer perceptron
-  def getMlp: Symbol = {
-    val data = Symbol.Variable("data")
-
-    // val fc1 = Symbol.FullyConnected(name = "relu")()(Map("data" -> data, "act_type" -> "relu"))
-    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
-    val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
-    val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
-    val act2 = Symbol.api.Activation(data = Some(fc2), "relu", name = "relu2")
-    val fc3 = Symbol.api.FullyConnected(Some(act2), None, None, 10, name = "fc3")
-    val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
-    mlp
-  }
-
-  def getLenet: Symbol = {
-    val data = Symbol.Variable("data")
-    // first conv
-    val conv1 = Symbol.api.Convolution(data = Some(data), kernel = Shape(5, 5), num_filter = 20)
-    val tanh1 = Symbol.api.tanh(data = Some(conv1))
-    val pool1 = Symbol.api.Pooling(data = Some(tanh1), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
-    // second conv
-    val conv2 = Symbol.api.Convolution(data = Some(pool1), kernel = Shape(5, 5), num_filter = 50)
-    val tanh2 = Symbol.api.tanh(data = Some(conv2))
-    val pool2 = Symbol.api.Pooling(data = Some(tanh2), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
-    // first fullc
-    val flatten = Symbol.api.Flatten(data = Some(pool2))
-    val fc1 = Symbol.api.FullyConnected(data = Some(flatten), num_hidden = 500)
-    val tanh3 = Symbol.api.tanh(data = Some(fc1))
-    // second fullc
-    val fc2 = Symbol.api.FullyConnected(data = Some(tanh3), num_hidden = 10)
-    // loss
-    val lenet = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc2))
-    lenet
-  }
-
-  def getIterator(dataShape: Shape)
-    (dataDir: String, batchSize: Int, kv: KVStore): (DataIter, DataIter) = {
-    val flat = if (dataShape.size == 3) "False" else "True"
-
-    val train = IO.MNISTIter(Map(
-      "image" -> (dataDir + "train-images-idx3-ubyte"),
-      "label" -> (dataDir + "train-labels-idx1-ubyte"),
-      "label_name" -> "softmax_label",
-      "input_shape" -> dataShape.toString,
-      "batch_size" -> batchSize.toString,
-      "shuffle" -> "True",
-      "flat" -> flat,
-      "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
-
-    val eval = IO.MNISTIter(Map(
-      "image" -> (dataDir + "t10k-images-idx3-ubyte"),
-      "label" -> (dataDir + "t10k-labels-idx1-ubyte"),
-      "label_name" -> "softmax_label",
-      "input_shape" -> dataShape.toString,
-      "batch_size" -> batchSize.toString,
-      "flat" -> flat,
-      "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
-
-    (train, eval)
-  }
+object TrainModel {
+  private val logger = LoggerFactory.getLogger(classOf[TrainModel])
 
   def test(dataPath : String) : Float = {
     NDArrayCollector.auto().withScope {
-      val (dataShape, net) = (Shape(784), getMlp)
+      val (dataShape, net) = (Shape(784), MultiLayerPerceptron.getSymbol(10))
       val devs = Array(Context.cpu(0))
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      val Acc = ModelTrain.fit(dataDir = dataPath,
-        batchSize = 128, numExamples = 60000, devs = devs,
-        network = net, dataLoader = getIterator(dataShape),
+      val dataLoader: (Int, KVStore) => (DataIter, DataIter) =
+        MnistIter.getIterator(dataShape, dataPath)
+      val Acc = ModelTrain.fit( batchSize = 128, numExamples = 60000, devs = devs,
+        network = net, dataLoader = dataLoader,
         kvStore = "local", numEpochs = 10)
       logger.info("Finish test fit ...")
       val (_, num) = Acc.get
@@ -107,19 +48,46 @@ object TrainMnist {
     }
   }
 
-
   def main(args: Array[String]): Unit = {
-    val inst = new TrainMnist
+    val inst = new TrainModel
     val parser: CmdLineParser = new CmdLineParser(inst)
+    val ex = new ScheduledThreadPoolExecutor(1)
+    var performanceMonitorThread: PerformanceMonitor = null
+    var performanceMonitorTask: ScheduledFuture[_ <: Any] = null
     try {
       parser.parseArgument(args.toList.asJava)
 
       val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
-        else inst.dataDir
+      else inst.dataDir
 
-      val (dataShape, net) =
-        if (inst.network == "mlp") (Shape(784), getMlp)
-        else (Shape(1, 28, 28), getLenet)
+      val (imageShape, numClasses) = inst.dataset match {
+        case "mnist" => (List(1, 28, 28), 10)
+        case "imagenet" => (List(3, 224, 224), 1000)
+        case _ => throw new Exception("Invalid image data collection")
+      }
+
+      val List(channels, height, width) = imageShape
+      val dataSize: Int = channels * height * width
+      val (datumShape, net) = inst.network match {
+        case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses))
+        case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses))
+        case "resnet" => (List(channels, height, width), Resnet.getSymbol(numClasses,
+          inst.numLayers, imageShape))
+        case _ => throw new Exception("Invalid model name")
+      }
+
+      val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (inst.benchmark) {
+        (batchSize: Int, kv: KVStore) => {
+          val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, inst.numExamples)
+          (iter, iter)
+        }
+      } else {
+        inst.dataset match {
+          case "mnist" => MnistIter.getIterator(Shape(datumShape), inst.dataDir)
+          case _ => throw new Exception("This image data collection only supports the"
+            + "synthetic benchmark iterator.  Use --benchmark to enable")
+        }
+      }
 
       val devs =
         if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
@@ -140,13 +108,18 @@ object TrainMnist {
         KVStoreServer.init(envs.toMap)
       }
 
+      if (inst.performanceLog != null) {
+        performanceMonitorThread = new PerformanceMonitor(inst.performanceLog)
+        performanceMonitorTask = ex.scheduleAtFixedRate(performanceMonitorThread, 1,
+          1, TimeUnit.SECONDS)
+      }
+
       if (inst.role != "worker") {
         logger.info("Start KVStoreServer for scheduler & servers")
         KVStoreServer.start()
       } else {
-        ModelTrain.fit(dataDir = inst.dataDir,
-          batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
-          network = net, dataLoader = getIterator(dataShape),
+        ModelTrain.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+          network = net, dataLoader = dataLoader,
           kvStore = inst.kvStore, numEpochs = inst.numEpochs,
           modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
           lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
@@ -157,17 +130,35 @@ object TrainMnist {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
         parser.printUsage(System.err)
+        if (performanceMonitorTask != null) {
+          performanceMonitorTask.cancel(false)
+          performanceMonitorThread.finish()
+        }
         sys.exit(1)
       }
+    }
+    if (performanceMonitorTask != null) {
+      performanceMonitorTask.cancel(false)
+      performanceMonitorThread.finish()
     }
   }
 }
 
-class TrainMnist {
-  @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet']")
+class TrainModel {
+  @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet', 'resnet']")
   private val network: String = "mlp"
+  @Option(name = "--num-layers", usage = "the number of resnet layers to use")
+  private val numLayers: Int = 50
   @Option(name = "--data-dir", usage = "the input data directory")
   private val dataDir: String = "mnist/"
+
+  @Option(name = "--dataset", usage = "the images to classify: ['mnist', 'imagenet']")
+  private val dataset: String = "mnist"
+  @Option(name = "--benchmark", usage = "Benchmark to use synthetic data to measure performance")
+  private val benchmark: Boolean = false
+
+  @Option(name = "--performance-log", usage = "CSV filename for the performance log")
+  private val performanceLog: String = null
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
   private val gpus: String = null
   @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
@@ -187,7 +178,7 @@ class TrainMnist {
   @Option(name = "--kv-store", usage = "the kvstore type")
   private val kvStore = "local"
   @Option(name = "--lr-factor",
-          usage = "times the lr with a factor for every lr-factor-epoch epoch")
+    usage = "times the lr with a factor for every lr-factor-epoch epoch")
   private val lrFactor: Float = 1f
   @Option(name = "--lr-factor-epoch", usage = "the number of epoch to factor the lr, could be .5")
   private val lrFactorEpoch: Float = 1f
@@ -205,3 +196,4 @@ class TrainMnist {
   @Option(name = "--num-server", usage = "# of servers")
   private val numServer: Int = 1
 }
+
