@@ -522,6 +522,9 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_gamma) {
     LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
   }
+  if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_beta) {
+    LOG(FATAL) << "fix_beta=True is not supported for sparse ndarrays. Tracked at #11647";
+  }
   return dispatched;
 }
 
@@ -614,7 +617,7 @@ and its gradient to 0.
 
 Note::
 
-When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
+When fix_gamma/fix_beta is set to True, no sparse support is provided. If fix_gamma/fix_beta is set to False,
 the sparse tensors will fallback.
 
 )code" ADD_FILELINE)

@@ -383,8 +383,14 @@ def test_batchnorm_versions():
 
   def test_2d_batchnorm(fix_gamma, fix_beta, use_global_stats):
     data = (2, 3, 10, 10)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
-                                                      'batchnorm_cpu',
+    # batchmorm_v1 is deprecated.
+    # `fix_beta` parameter is available only in new batchnorm operator.
+    # Checking consistency separately for batchnormv1 and batchnorm.
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu'],
+                                   data=data,
+                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
+
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
