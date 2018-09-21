@@ -6958,21 +6958,6 @@ def test_spacetodepth():
     test_invalid_depth_dim()
 
 @with_seed()
-def test_max_pooling_pad_type_same():
-    import math
-    input_data = mx.nd.array(np.random.rand(1,1,10))
-    stride = 2
-    kernel = 2
-    output_data=mx.nd.Pooling(
-        input_data,
-        kernel=kernel,
-        stride=stride,
-        pool_type='max',
-        name='pooling',
-        pooling_convention="same")
-    assert(math.ceil(input_data.shape[2]/stride) == output_data.shape[2])
-
-@with_seed()
 def test_invalid_kernel_size():
     invalid_kernel_size = 28
     assert_exception(
@@ -6989,6 +6974,39 @@ def test_valid_kernel_size():
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         kernel_size=valid_kernel_size)
+
+@with_seed()
+def test_valid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    output_data=mx.nd.Pooling(
+        input_data,
+        kernel=kernel,
+        stride=stride,
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
+    assert(math.ceil(input_data.shape[2]/stride) == output_data.shape[2])
+
+@with_seed()
+def test_invalid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    pad = 2
+    assert_exception(
+        mx.nd.Pooling,
+        MXNetError,
+        input_data,
+        stride=stride,
+        kernel=kernel,
+        pad=pad,
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
 
 if __name__ == '__main__':
     import nose

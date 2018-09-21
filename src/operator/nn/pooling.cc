@@ -99,7 +99,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   if (param.pooling_convention == pool_enum::kSame) {
     CHECK_EQ(dshape.ndim(), 3U)
       << "Pooling: Input data should be 3D in (batch, channel, x)"
-      << ", Currently 'same' supports Max Pooling 1-D";
+      << ". Currently 'same' supports Max Pooling 1-D";
   }
   CHECK_GE(dshape.ndim(), 3U)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
