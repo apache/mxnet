@@ -79,9 +79,6 @@ def publish_test_coverage() {
     // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
     lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
     lastCommitMessage = lastCommitMessage.trim()
-    echo lastCommitMessage
-    echo lastCommitMessage.startsWith("Merge commit '").toString()
-    echo lastCommitMessage.endsWith("' into HEAD").toString()
     if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
         // Merge commit applied by Jenkins, skip that commit
         GIT_COMMIT_HASH = sh (script: "git rev-parse @~", returnStdout: true)
