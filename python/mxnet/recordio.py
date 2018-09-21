@@ -83,6 +83,17 @@ class MXRecordIO(object):
     def __del__(self):
         self.close()
 
+    def __getstate__(self):
+        # pickling pointer is not allowed
+        d = dict(self.__dict__)
+        d['is_open'] = False
+        del d['handle']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.handle = RecordIOHandle()
+
     def close(self):
         """Closes the record file."""
         if not self.is_open:
