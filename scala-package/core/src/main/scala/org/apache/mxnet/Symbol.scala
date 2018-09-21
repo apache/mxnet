@@ -33,9 +33,9 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
 
   // unable to get the byteAllocated for Symbol
-  override def bytesAllocated: Long = 0L
+  override val bytesAllocated: Long = 0L
 
-  override def nativeAddress: CPtrAddress = handle
+  override def nativeResource: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxSymbolFree
   override val phantomRef: NativeResourceRef = super.register()
 

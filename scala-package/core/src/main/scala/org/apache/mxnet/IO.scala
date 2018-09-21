@@ -144,7 +144,8 @@ class DataBatch(val data: IndexedSeq[NDArray],
                 // use DataDesc to indicate the order of data/label loading
                 // (must match the order of input data/label)
                 private val providedDataDesc: IndexedSeq[DataDesc],
-                private val providedLabelDesc: IndexedSeq[DataDesc]) {
+                private val providedLabelDesc: IndexedSeq[DataDesc]) extends
+  NativeResource {
   // TODO: change the data/label type into IndexedSeq[(NDArray, DataDesc)]
   // However, since the data and label can be accessed publicly (no getter and setter)
   // the change on this will break BC
@@ -162,17 +163,26 @@ class DataBatch(val data: IndexedSeq[NDArray],
     this(data, label, index, pad, bucketKey,
       DataDesc.ListMap2Descs(providedData), DataDesc.ListMap2Descs(providedLabel))
   }
+
+  // overriding here so DataBatch gets added to Scope and can be disposed
+  override def nativeResource: CPtrAddress = 0
+  override def nativeDeAllocator: CPtrAddress => MXUint = doNothingDeAllocator
+  def doNothingDeAllocator(x: CPtrAddress): MXUint = {0}
+  override val phantomRef: NativeResourceRef = super.register()
+  override val bytesAllocated: DataIterCreator = 0
+
   /**
    * Dispose its data and labels
    * The object shall never be used after it is disposed.
    */
-  def dispose(): Unit = {
+  override def dispose(): Unit = {
     if (data != null) {
       data.foreach(arr => if (arr != null) arr.dispose())
     }
     if (label != null) {
       label.foreach(arr => if (arr != null) arr.dispose())
     }
+    super.dispose()
   }
 
   // The name and shape of data
@@ -198,7 +208,6 @@ class DataBatch(val data: IndexedSeq[NDArray],
   def provideDataDesc: IndexedSeq[DataDesc] = providedDataDesc
 
   def provideLabelDesc: IndexedSeq[DataDesc] = providedLabelDesc
-
 }
 
 object DataBatch {

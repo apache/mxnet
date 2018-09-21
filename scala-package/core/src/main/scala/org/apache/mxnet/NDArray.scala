@@ -567,9 +567,9 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArrayCollector.collect(this)
   }
 
-  override def nativeAddress: CPtrAddress = handle
+  override def nativeResource: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxNDArrayFree
-  override def bytesAllocated: Long = DType.numOfBytes(this.dtype) * this.shape.product
+  override val bytesAllocated: Long = DType.numOfBytes(this.dtype) * this.shape.product
 
   override val phantomRef: NativeResourceRef = super.register()
 
