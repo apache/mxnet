@@ -263,7 +263,11 @@ def write_worker(q_out, fname, working_dir):
             count += 1
 
 def parse_args():
-    """Defines all arguments."""
+    """Defines all arguments.
+    Returns
+    -------
+    args object that contains all the params
+    """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description='Create an image list or \
