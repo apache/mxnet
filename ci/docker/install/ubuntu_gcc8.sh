@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,14 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    brew update
-    brew install opencv
-    brew install python3
-    brew install fftw
-    brew install libpng
-    brew install ImageMagick
-    brew install swig
-    python -m pip install --user nose numpy cython scipy requests mock
-    python3 -m pip install --user nose numpy cython scipy requests mock
-fi
+sudo add-apt-repository ppa:jonathonf/gcc-8.0
+sudo add-apt-repository ppa:jonathonf/gcc-7.3
+sudo apt-get update
+sudo apt-get install -y gcc-8 g++-8

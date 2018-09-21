@@ -27,6 +27,7 @@ import re
 whitelist = ['basic/index.md',
              'c++/basics.md',
              'c++/index.md',
+             'control_flow/index.md',
              'embedded/index.md',
              'embedded/wine_detector.md',
              'gluon/index.md',

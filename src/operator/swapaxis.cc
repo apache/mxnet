@@ -31,7 +31,7 @@ namespace op {
 
 template<>
 Operator* CreateOp<cpu>(SwapAxisParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new SwapAxisOp<cpu, DType>(param);
   });

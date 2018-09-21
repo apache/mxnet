@@ -133,17 +133,20 @@ class TopKAccuracy(topK: Int) extends EvalMetric("top_k_accuracy") {
 
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.length == preds.length,
-      "labels and predictions should have the same length.")
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((pred, label) <- preds zip labels) {
       val predShape = pred.shape
       val dims = predShape.length
-      require(dims <= 2, "Predictions should be no more than 2 dims.")
+      require(dims <= 2, s"Predictions should be no more than 2 dims (got $predShape).")
       val labelArray = label.toArray
       val numSamples = predShape(0)
       if (dims == 1) {
         val predArray = pred.toArray.zipWithIndex.sortBy(_._1).reverse.map(_._2)
-        require(predArray.length == labelArray.length)
+        require(predArray.length == labelArray.length,
+          s"Each label and prediction array should have the same length " +
+            s"(got ${labelArray.length} and ${predArray.length}).")
         this.sumMetric +=
           labelArray.zip(predArray).map { case (l, p) => if (l == p) 1 else 0 }.sum
       } else if (dims == 2) {
@@ -151,7 +154,9 @@ class TopKAccuracy(topK: Int) extends EvalMetric("top_k_accuracy") {
         val predArray = pred.toArray.grouped(numclasses).map { a =>
           a.zipWithIndex.sortBy(_._1).reverse.map(_._2)
         }.toArray
-        require(predArray.length == labelArray.length)
+        require(predArray.length == labelArray.length,
+          s"Each label and prediction array should have the same length " +
+            s"(got ${labelArray.length} and ${predArray.length}).")
         val topK = Math.max(this.topK, numclasses)
         for (j <- 0 until topK) {
           this.sumMetric +=
@@ -169,7 +174,8 @@ class TopKAccuracy(topK: Int) extends EvalMetric("top_k_accuracy") {
 class F1 extends EvalMetric("f1") {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.length == preds.length,
-      "labels and predictions should have the same length.")
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((pred, label) <- preds zip labels) {
       val predLabel = NDArray.argmax_channel(pred)
@@ -223,7 +229,8 @@ class F1 extends EvalMetric("f1") {
 class Perplexity(ignoreLabel: Option[Int] = None, axis: Int = -1) extends EvalMetric("Perplexity") {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
     require(labels.length == preds.length,
-      "labels and predictions should have the same length.")
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
     var loss = 0d
     var num = 0
     val probs = ArrayBuffer[NDArray]()
@@ -261,12 +268,16 @@ class Perplexity(ignoreLabel: Option[Int] = None, axis: Int = -1) extends EvalMe
  */
 class MAE extends EvalMetric("mae") {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-    require(labels.size == preds.size, "labels and predictions should have the same length.")
+    require(labels.size == preds.size,
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((label, pred) <- labels zip preds) {
       val labelArr = label.toArray
       val predArr = pred.toArray
-      require(labelArr.length == predArr.length)
+      require(labelArr.length == predArr.length,
+        s"Each label and prediction array should have the same length " +
+          s"(got ${labelArr.length} and ${predArr.length}).")
       this.sumMetric +=
         (labelArr zip predArr).map { case (l, p) => Math.abs(l - p) }.sum / labelArr.length
       this.numInst += 1
@@ -277,12 +288,16 @@ class MAE extends EvalMetric("mae") {
 // Calculate Mean Squared Error loss
 class MSE extends EvalMetric("mse") {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-    require(labels.size == preds.size, "labels and predictions should have the same length.")
+    require(labels.size == preds.size,
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((label, pred) <- labels zip preds) {
       val labelArr = label.toArray
       val predArr = pred.toArray
-      require(labelArr.length == predArr.length)
+      require(labelArr.length == predArr.length,
+        s"Each label and prediction array should have the same length " +
+          s"(got ${labelArr.length} and ${predArr.length}).")
       this.sumMetric +=
         (labelArr zip predArr).map { case (l, p) => (l - p) * (l - p) }.sum / labelArr.length
       this.numInst += 1
@@ -295,12 +310,16 @@ class MSE extends EvalMetric("mse") {
  */
 class RMSE extends EvalMetric("rmse") {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-    require(labels.size == preds.size, "labels and predictions should have the same length.")
+    require(labels.size == preds.size,
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((label, pred) <- labels zip preds) {
       val labelArr = label.toArray
       val predArr = pred.toArray
-      require(labelArr.length == predArr.length)
+      require(labelArr.length == predArr.length,
+        s"Each label and prediction array should have the same length " +
+          s"(got ${labelArr.length} and ${predArr.length}).")
       val metric: Double = Math.sqrt(
         (labelArr zip predArr).map { case (l, p) => (l - p) * (l - p) }.sum / labelArr.length)
       this.sumMetric += metric.toFloat
@@ -318,7 +337,9 @@ class RMSE extends EvalMetric("rmse") {
 class CustomMetric(fEval: (NDArray, NDArray) => Float,
                    name: String) extends EvalMetric(name) {
   override def update(labels: IndexedSeq[NDArray], preds: IndexedSeq[NDArray]): Unit = {
-    require(labels.size == preds.size, "labels and predictions should have the same length.")
+    require(labels.size == preds.size,
+      s"labels and predictions should have the same length " +
+        s"(got ${labels.length} and ${preds.length}).")
 
     for ((label, pred) <- labels zip preds) {
       this.sumMetric += fEval(label, pred)

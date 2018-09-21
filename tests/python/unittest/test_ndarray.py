@@ -558,7 +558,7 @@ def test_broadcast():
             [(1, 7, 9, 1, 1), (9, 1), (-2, -1), (-2, -1), (1, 7, 9, 9, 1)],
             [(2, 1), (1, 7, 9, 1, 1), (1,), (-3,), (2, 9)]
         ]
-        
+
         for test_data in testcases:
             lhs = mx.nd.random.uniform(shape=test_data[0])
             rhs = mx.nd.random.uniform(shape=test_data[1])
@@ -1039,7 +1039,7 @@ def test_ndarray_fluent():
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt', 'square',
                     'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax',
-                    'reciprocal'])
+                    'softmin', 'reciprocal'])
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
             data = mx.nd.random_uniform(shape=shape, ctx=default_context())
@@ -1058,7 +1058,7 @@ def test_ndarray_fluent():
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
                  'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
-                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax']:
+                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax', 'softmin']:
         check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:
