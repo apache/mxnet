@@ -379,7 +379,7 @@ def test_batchnorm_versions():
     test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
 
   def test_2d_batchnorm(fix_gamma, fix_beta, use_global_stats):
     data = (2, 3, 10, 10)
@@ -387,14 +387,14 @@ def test_batchnorm_versions():
                                                       'batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
 
   def test_3d_batchnorm(fix_gamma, fix_beta, use_global_stats):
     data = (2, 3, 3, 5, 5)
     test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu'],
                                    data=data,
-                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
 
   test_1d_batchnorm(True,  False, False)
   test_1d_batchnorm(False, True, False)
