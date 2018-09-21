@@ -228,7 +228,7 @@ else:
         return ctypes.FormatError(_path_to_unicode(err))
 
     def _handle_errors(rv):
-        """Handle WinError.   
+        """Handle WinError.
         Internal use only"""
         if not rv:
             msg = _format_error(ctypes.GetLastError())
