@@ -64,11 +64,11 @@ from .export_onnx import MXNetGraph as mx_op
 def import_onnx_modules():
     """ To make sure ONNX is runtime dependency, it is imported used only when needed"""
     try:
-        from onnx import helper, numpy_helper, mapping
+        from onnx import helper, numpy_helper, mapping, TensorProto
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
-    return helper, numpy_helper, mapping
+    return helper, numpy_helper, mapping, TensorProto
 
 
 def parse_helper(attrs, attrs_name, alt_value=None):
@@ -132,7 +132,7 @@ def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
     """
 
-    helper, _, mapping = import_onnx_modules()
+    helper, _, mapping, _ = import_onnx_modules()
     name = node["name"]
 
     if kwargs["is_input"] is False:
@@ -165,7 +165,7 @@ def convert_convolution(node, **kwargs):
     """Map MXNet's convolution operator attributes to onnx's Conv operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
 
@@ -212,7 +212,7 @@ def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
@@ -246,7 +246,7 @@ def convert_batchnorm(node, **kwargs):
     """Map MXNet's BatchNorm operator attributes to onnx's BatchNormalization operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -293,7 +293,7 @@ def convert_tanh(node, **kwargs):
     """Map MXNet's tanh operator attributes to onnx's Tanh operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -313,7 +313,7 @@ def convert_cos(node, **kwargs):
     """Map MXNet's cos operator attributes to onnx's Cos operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -333,7 +333,7 @@ def convert_sin(node, **kwargs):
     """Map MXNet's sin operator attributes to onnx's Sin operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -353,7 +353,7 @@ def convert_tan(node, **kwargs):
     """Map MXNet's tan operator attributes to onnx's tan operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -373,7 +373,7 @@ def convert_acos(node, **kwargs):
     """Map MXNet's acos operator attributes to onnx's acos operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -393,7 +393,7 @@ def convert_asin(node, **kwargs):
     """Map MXNet's asin operator attributes to onnx's asin operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -413,7 +413,7 @@ def convert_atan(node, **kwargs):
     """Map MXNet's atan operator attributes to onnx's atan operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -434,7 +434,7 @@ def convert_sigmoid(node, **kwargs):
     """Map MXNet's sigmoid operator attributes to onnx's Sigmoid operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -454,7 +454,7 @@ def convert_relu(node, **kwargs):
     """Map MXNet's relu operator attributes to onnx's Relu operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][inputs[0][0]]
@@ -475,7 +475,7 @@ def convert_activation(node, **kwargs):
     """Map MXNet's Activation operator attributes to onnx's Tanh/Relu operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
 
     proc_nodes = kwargs["proc_nodes"]
@@ -517,7 +517,7 @@ def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     attrs = node["attrs"]
     proc_nodes = kwargs["proc_nodes"]
@@ -557,7 +557,7 @@ def convert_pad(node, **kwargs):
 
 def create_helper_trans_node(op_name, input_node, node_name):
     """create extra transpose node for dot operator"""
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
 
     node_name = op_name + "_" + node_name
     trans_node = helper.make_node(
@@ -574,7 +574,7 @@ def convert_dot(node, **kwargs):
     """Map MXNet's dot operator attributes to onnx's
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
     name = node["name"]
@@ -628,7 +628,7 @@ def convert_linalg_gemm2(node, **kwargs):
     transpose_a, transpose_b attributes.
     Return multiple nodes created.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
     name = node["name"]
@@ -727,7 +727,7 @@ def convert_pooling(node, **kwargs):
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
     based on the input node's attributes and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     attrs = node["attrs"]
     kernel = eval(attrs["kernel"])
@@ -780,7 +780,7 @@ def convert_exp(node, **kwargs):
     """Map MXNet's exp operator attributes to onnx's Exp operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -802,7 +802,7 @@ def convert_identity(node, **kwargs):
     """Map MXNet's _copy operator attributes to onnx's Identity operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -824,7 +824,7 @@ def convert_leakyrelu(node, **kwargs):
     """Map MXNet's LeakyReLU operator attributes to onnx's Elu/LeakyRelu/PRelu operators
     based on the input node's attributes and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -862,7 +862,7 @@ def convert_softmax(node, **kwargs):
     """Map MXNet's softmax operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     inputs = node["inputs"]
     input_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -889,7 +889,7 @@ def convert_softmax_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     inputs = node["inputs"]
     input1_idx = kwargs["index_lookup"][inputs[0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -912,7 +912,7 @@ def convert_concat(node, **kwargs):
     """Map MXNet's Concat operator attributes to onnx's Concat operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
     proc_nodes = kwargs["proc_nodes"]
@@ -933,7 +933,7 @@ def convert_transpose(node, **kwargs):
     """Map MXNet's transpose operator attributes to onnx's Transpose operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -965,7 +965,7 @@ def convert_lrn(node, **kwargs):
     """Map MXNet's LRN operator attributes to onnx's LRN operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -996,7 +996,7 @@ def convert_l2normalization(node, **kwargs):
     """Map MXNet's L2Normalization operator attributes to onnx's LpNormalization operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_id = kwargs["index_lookup"][node["inputs"][0][0]]
     input_name = kwargs["proc_nodes"][input_id].name
@@ -1021,7 +1021,7 @@ def convert_dropout(node, **kwargs):
     """Map MXNet's Dropout operator attributes to onnx's Dropout operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_id = kwargs["index_lookup"][node["inputs"][0][0]]
     input_name = kwargs["proc_nodes"][input_id].name
@@ -1043,7 +1043,7 @@ def convert_flatten(node, **kwargs):
     """Map MXNet's Flatten operator attributes to onnx's Flatten operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -1062,7 +1062,7 @@ def convert_clip(node, **kwargs):
     """Map MXNet's Clip operator attributes to onnx's Clip operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     input_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     proc_nodes = kwargs["proc_nodes"]
@@ -1084,7 +1084,7 @@ def convert_clip(node, **kwargs):
 
 def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""
-    helper, numpy_helper, mapping = import_onnx_modules()
+    helper, numpy_helper, mapping, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1200,7 +1200,7 @@ def convert_argmax(node, **kwargs):
     """Map MXNet's argmax operator attributes to onnx's ArgMax operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -1227,7 +1227,7 @@ def convert_argmin(node, **kwargs):
     """Map MXNet's argmin operator attributes to onnx's ArgMin operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -1254,7 +1254,7 @@ def convert_maximum(node, **kwargs):
     """Map MXNet's _maximum operator attributes to onnx's Max operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -1280,7 +1280,7 @@ def convert_minimum(node, **kwargs):
     """Map MXNet's _minimum operator attributes to onnx's Min operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     proc_nodes = kwargs["proc_nodes"]
     node_inputs = node["inputs"]
 
@@ -1306,7 +1306,7 @@ def convert_min(node, **kwargs):
     """Map MXNet's min operator attributes to onnx's ReduceMin operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1347,7 +1347,7 @@ def convert_max(node, **kwargs):
     """Map MXNet's max operator attributes to onnx's ReduceMax operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1388,7 +1388,7 @@ def convert_mean(node, **kwargs):
     """Map MXNet's mean operator attributes to onnx's ReduceMean operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1429,7 +1429,7 @@ def convert_prod(node, **kwargs):
     """Map MXNet's prod operator attributes to onnx's ReduceProd operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1471,7 +1471,7 @@ def convert_elementwise_add(node, **kwargs):
     """Map MXNet's elemwise_add operator attributes to onnx's Add operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1497,7 +1497,7 @@ def covert_broadcast_add(node, **kwargs):
     """Map MXNet's broadcast_add operator attributes to onnx's Add operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1523,7 +1523,7 @@ def convert_elementwise_sub(node, **kwargs):
     """Map MXNet's elemwise_sub operator attributes to onnx's Sub operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1548,7 +1548,7 @@ def covert_broadcast_sub(node, **kwargs):
     """Map MXNet's broadcast_sub operator attributes to onnx's Sub operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1574,7 +1574,7 @@ def convert_elemwise_mul(node, **kwargs):
     """Map MXNet's elemwise_mul operator attributes to onnx's Mul operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1599,7 +1599,7 @@ def convert_broadcast_mul(node, **kwargs):
     """Map MXNet's broadcast_mul operator attributes to onnx's Mul operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1625,7 +1625,7 @@ def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1651,7 +1651,7 @@ def convert_broadcast_div(node, **kwargs):
     """Map MXNet's broadcast_div operator attributes to onnx's Div operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1677,7 +1677,7 @@ def convert_negative(node, **kwargs):
     """Map MXNet's negative operator attributes to onnx's Neg operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1701,7 +1701,7 @@ def convert_abs(node, **kwargs):
     """Map MXNet's abs operator attributes to onnx's Abs operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1725,7 +1725,7 @@ def convert_addn(node, **kwargs):
     """Map MXNet's add_n operator attributes to onnx's Sum operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1748,7 +1748,7 @@ def convert_ceil(node, **kwargs):
     """Map MXNet's ceil operator attributes to onnx's Ceil operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1769,7 +1769,7 @@ def convert_floor(node, **kwargs):
     """Map MXNet's floor operator attributes to onnx's Floor operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1792,7 +1792,7 @@ def convert_reshape(node, **kwargs):
     Converts output shape attribute to output shape tensor
     and return multiple created nodes.
     """
-    helper, _, mapping = import_onnx_modules()
+    helper, _, mapping, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1841,7 +1841,7 @@ def convert_cast(node, **kwargs):
     """Map MXNet's Cast operator attributes to onnx's Cast operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, TensorProto = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1853,7 +1853,7 @@ def convert_cast(node, **kwargs):
 
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_id].name
-    from onnx import TensorProto
+
     node = helper.make_node(
         "Cast",
         [input_node],
@@ -1869,7 +1869,7 @@ def convert_slice_axis(node, **kwargs):
     """Map MXNet's slice_axis operator attributes to onnx's Slice operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1901,7 +1901,7 @@ def convert_slice_channel(node, **kwargs):
     operator based on squeeze_axis attribute
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1941,7 +1941,7 @@ def convert_expand_dims(node, **kwargs):
     """Map MXNet's expand_dims operator attributes to onnx's Unsqueeze operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1964,7 +1964,7 @@ def convert_squeeze(node, **kwargs):
     """Map MXNet's squeeze operator attributes to onnx's squeeze operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -1992,7 +1992,7 @@ def convert_log(node, **kwargs):
     """Map MXNet's log operator attributes to onnx's Log operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -2014,7 +2014,7 @@ def convert_reciprocal(node, **kwargs):
     """Map MXNet's reciprocal operator attributes to onnx's Reciprocal operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -2036,7 +2036,7 @@ def convert_power(node, **kwargs):
     """Map MXNet's _power operator attributes to onnx's Pow operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
@@ -2060,7 +2060,7 @@ def convert_sqrt(node, **kwargs):
     """Map MXNet's sqrt operator attributes to onnx's Sqrt operator
     and return the created node.
     """
-    helper, _, _ = import_onnx_modules()
+    helper, _, _, _ = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]

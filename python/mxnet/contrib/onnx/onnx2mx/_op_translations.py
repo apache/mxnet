@@ -435,7 +435,11 @@ def reshape(attrs, inputs, proto_obj):
 
 def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""
-    from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
     new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs['dtype'])]
     return 'cast', new_attrs, inputs
