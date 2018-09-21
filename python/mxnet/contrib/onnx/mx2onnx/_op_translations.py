@@ -2160,3 +2160,41 @@ def convert_spacetodepth(node, **kwargs):
         name=name,
     )
     return [node]
+
+@mx_op.register("sum")
+def convert_sum(node, **kwargs):
+    """Map MXNet's sum operator attributes to onnx's ReduceSum operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    attrs = node["attrs"]
+
+    mx_axis = attrs.get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    if axes:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+    else:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
+    return [node]
