@@ -6959,14 +6959,18 @@ def test_spacetodepth():
 
 @with_seed()
 def test_max_pooling_pad_type_same():
-    input_data=mx.nd.array(np.random.rand(1,1,10))
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
     output_data=mx.nd.Pooling(
         input_data,
-        kernel=(2),
+        kernel=kernel,
+        stride=stride,
         pool_type='max',
         name='pooling',
         pooling_convention="same")
-    assert(input_data.shape == output_data.shape)
+    assert(math.ceil(input_data.shape[2]/stride) == output_data.shape[2])
 
 @with_seed()
 def test_invalid_kernel_size():
