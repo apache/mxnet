@@ -103,6 +103,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/sanity-lint') {
           utils.init_git()
+          utils.publish_test_coverage()
           utils.docker_run('ubuntu_cpu', 'sanity_check', false)
         }
       }
