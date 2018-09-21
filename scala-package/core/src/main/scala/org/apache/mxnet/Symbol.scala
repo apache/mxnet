@@ -423,7 +423,13 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
       }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
-    require(argShapes != null && argTypes != null, "Input node is not complete")
+    require(argShapes != null, "Shape inference failed." +
+      s"Known shapes are $shapeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+    require(argTypes != null, "Type inference failed." +
+      s"Known types as $typeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
       NDArray.zeros(shape, ctx, dtype = t)
@@ -715,10 +721,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
                          args: Iterable[_], argsGrad: Iterable[_],
                          gradsReq: Iterable[_], auxStates: Iterable[_],
                          group2ctx: Map[String, Context], sharedExec: Executor): Executor = {
-    require(args != null && !args.isInstanceOf[Set[_]])
-    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]])
-    require(auxStates == null || !auxStates.isInstanceOf[Set[_]])
-    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]])
+    require(args != null && !args.isInstanceOf[Set[_]],
+      s"args must be provided (Set is not supported)")
+    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]],
+      s"argsGrad must be provided (Set is not supported)")
+    require(auxStates == null || !auxStates.isInstanceOf[Set[_]],
+      s"auxStates must be provided (Set is not supported)")
+    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]],
+      s"gradsReq must be provided (Set is not supported)")
 
     val (argsHandle, argsNDArray) =
       if (args.isInstanceOf[Seq[_]]) {
@@ -756,14 +766,16 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     val reqsArray =
       if (gradsReq.isInstanceOf[Seq[_]]) {
         gradsReq.asInstanceOf[Seq[String]].map { req =>
-          require(Symbol.bindReqMap.contains(req), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(req),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(req)
         }.toArray
       } else {
         val gradsReqMap = gradsReq.asInstanceOf[Map[String, String]]
         symbolArguments.map { req =>
           val value = gradsReqMap.getOrElse(req, "null")
-          require(Symbol.bindReqMap.contains(value), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(value),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(value)
         }.toArray
       }
@@ -955,9 +967,28 @@ object Symbol extends SymbolBase {
    * @return Symbol The created Symbol.
    */
   def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
-    repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
-    val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "dtype" -> dType.toString())
+             repeat: Int = 1, name: String = null, dType: DType = Base.MX_REAL_TYPE): Symbol = {
+    arange(start, stop, step, repeat, infer_range = false, name, dType)
+  }
+
+  /**
+   * Returns evenly spaced values within a given interval.
+   * stop value can be infered from the output shape,
+   * which must be known from the rest of the net.
+   * @param start Start of interval. The default start value is 0.
+   * @param stop End of interval.
+   * @param step Spacing between values. The default step size is 1.
+   * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param infer_range Infer the stop value from output shape
+   * @param ctx Device context. Default context is the current default context.
+   * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
+   * @return NDArray of evenly spaced values in the specified range.
+   */
+  def arange(start: Float, stop: Option[Float], step: Float,
+             repeat: Int, infer_range: Boolean, name: String,
+             dType: DType): Symbol = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
+      "infer_range" -> infer_range, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     createSymbolGeneral("_arange", name, null, Array.empty[Symbol], fParams)
   }
@@ -1064,9 +1095,9 @@ object Symbol extends SymbolBase {
           (key, value.toString)
         }
       }
-    require(symbols.isEmpty || symbolKwargs.isEmpty, String.format(
-      "%s can only accept input Symbols either as positional or keyword arguments, not both",
-      operator))
+    require(symbols.isEmpty || symbolKwargs.isEmpty,
+      s"$operator can only accept input Symbols either as positional or keyword arguments, " +
+        s"not both")
     if (symbols.isEmpty) {
       createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
     } else {
@@ -1198,7 +1229,8 @@ object Symbol extends SymbolBase {
    */
   private def getNDArrayInputs(argKey: String, args: Seq[NDArray], argNames: Seq[String],
                                allowMissing: Boolean): (Array[NDArrayHandle], Array[NDArray]) = {
-    require(args.length == argNames.length, s"Length of $argKey do not match number of arguments")
+    require(args.length == argNames.length,
+      s"Length of $argKey do not match number of arguments")
     val argHandles = args.map(_.handle)
     (argHandles.toArray, args.toArray)
   }
@@ -1213,7 +1245,8 @@ object Symbol extends SymbolBase {
           argArrays += narr.get
           argHandles += narr.get.handle
         case None =>
-          require(allowMissing, s"Must specify all the arguments in $argKey")
+          require(allowMissing,
+            s"Must specify all the arguments in $argKey. $name is unknown")
           argArrays += null
           argHandles += 0L
       }

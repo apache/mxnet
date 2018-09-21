@@ -26,6 +26,7 @@ import warnings
 import re
 from collections import OrderedDict
 
+from ..base import mx_real_t
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
@@ -208,26 +209,27 @@ class Block(object):
         super(Block, self).__setattr__(name, value)
 
     def _check_container_with_block(self):
-        def _find_block_in_container(data):
+        children = set(self._children.values())
+        def _find_unregistered_block_in_container(data):
             # Find whether a nested container structure contains Blocks
             if isinstance(data, (list, tuple)):
                 for ele in data:
-                    if _find_block_in_container(ele):
+                    if _find_unregistered_block_in_container(ele):
                         return True
                 return False
             elif isinstance(data, dict):
                 for _, v in data.items():
-                    if _find_block_in_container(v):
+                    if _find_unregistered_block_in_container(v):
                         return True
                 return False
             elif isinstance(data, Block):
-                return True
+                return not data in children
             else:
                 return False
         for k, v in self.__dict__.items():
             if isinstance(v, (list, tuple, dict)) and not (k.startswith('__') or k == '_children'):
-                if _find_block_in_container(v):
-                    warnings.warn('"{name}" is a container with Blocks. '
+                if _find_unregistered_block_in_container(v):
+                    warnings.warn('"{name}" is an unregistered container with Blocks. '
                                   'Note that Blocks inside the list, tuple or dict will not be '
                                   'registered automatically. Make sure to register them using '
                                   'register_child() or switching to '
@@ -656,10 +658,12 @@ class Block(object):
                 trainable_params += summary[layer]['trainable']
                 shared_params += summary[layer]['shared']
             print('='*80)
-            print('Total params: ' + str(total_params))
-            print('Trainable params: ' + str(trainable_params))
-            print('Non-trainable params: ' + str(total_params - trainable_params))
-            print('Shared params: ' + str(shared_params))
+            print('Parameters in forward computation graph, duplicate included')
+            print('   Total params: ' + str(total_params))
+            print('   Trainable params: ' + str(trainable_params))
+            print('   Non-trainable params: ' + str(total_params - trainable_params))
+            print('Shared params in forward computation graph: ' + str(shared_params))
+            print('Unique parameters in model: ' + str(total_params - shared_params))
             print('-'*80)
         finally:
             for h in hooks:
@@ -1050,13 +1054,20 @@ class SymbolBlock(HybridBlock):
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
 
-        for i in out.list_arguments():
-            if i not in input_names:
-                self.params.get(i, allow_deferred_init=True)
+        # Infer type of parameters. Without this, every parameter will be created with
+        # default type i.e., fp32
+        arg_params = out.list_arguments()
+        aux_params = out.list_auxiliary_states()
 
-        for i in out.list_auxiliary_states():
-            if i not in input_names:
-                self.params.get(i, grad_req='null', allow_deferred_init=True)
+        arg_types, aux_types = _infer_param_types(syms, out, arg_params, aux_params)
+
+        for i, arg in enumerate(arg_params):
+            if arg not in input_names:
+                self.params.get(arg, allow_deferred_init=True, dtype=arg_types[i])
+
+        for i, aux in enumerate(aux_params):
+            if aux not in input_names:
+                self.params.get(aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
 
         self._cached_graph = syms, out
         len_prefix = len(_common_prefix(list(self._params.keys())))
@@ -1081,5 +1092,71 @@ class SymbolBlock(HybridBlock):
         super(SymbolBlock, self)._clear_cached_op()
         self._cached_graph = tmp
 
+    def cast(self, dtype):
+        self._clear_cached_op()
+        super(SymbolBlock, self).cast(dtype)
+
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
+
+def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dtype=mx_real_t):
+    """Utility function that helps in inferring DType of args and auxs params
+    from given input param.
+
+    Parameters
+    ----------
+    in_params: List of Symbol
+        List of input symbol variables.
+    out_params: Symbol
+        Output symbol variable.
+    arg_params: List of Str
+        List of names of argument parametrs.
+    aux_params: List of Str
+        List of names of auxiliary parameters.
+    default_dtype: numpy.dtype or str, default 'float32'
+        Default data type for arg_params and aux_params, if unable to infer the type.
+
+    Returns
+    -------
+    arg_types: List of numpy.dtype
+        List of arg_params type. Order is same as arg_params.
+        Defaults to 'float32', if unable to infer type.
+    aux_types: List of numpy.dtype
+        List of aux_params type. Order is same as aux_params.
+        Defaults to 'float32', if unable to infer type.
+    """
+    arg_types = None
+    aux_types = None
+
+    # Get Input symbol details. This will be used to infer types of
+    # other parameters.
+    input_sym_names = [in_param.name for in_param in in_params]
+
+    # Try to infer input types. If not successful, we will set default dtype.
+    # If successful, we will try to infer other params in the graph.
+    input_sym_arg_types = []
+    can_infer_input_type = True
+    for in_param in in_params:
+        input_sym_arg_type = in_param.infer_type()[0]
+        if not input_sym_arg_type or len(input_sym_arg_type) < 1:
+            can_infer_input_type = False
+            break
+        else:
+            input_sym_arg_types.append(in_param.infer_type()[0][0])
+
+    # Try to infer types of other parameters.
+    if can_infer_input_type:
+        params = {k:v for k, v in zip(input_sym_names, input_sym_arg_types)}
+        arg_types, _, aux_types = out_params.infer_type(**params)
+
+    if arg_types is None or len(arg_types) != len(arg_params):
+        arg_types = []
+        for _ in arg_params:
+            arg_types.append(default_dtype)
+
+    if aux_types is None or len(aux_types) != len(aux_params):
+        aux_types = []
+        for _ in aux_params:
+            aux_types.append(default_dtype)
+
+    return (arg_types, aux_types)

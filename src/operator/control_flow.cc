@@ -314,7 +314,6 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
   // For the shape of output data.
   size_t len = in_shape->at(0)[0];
-  CHECK_GT(len, 0);
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];
@@ -1225,6 +1224,9 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
     CHECK(sync_in_in(input_locs, out_attrs, &subg_out_attrs, is_udf));
     return ret;
   };
+  for (const dim_t &cond_in : params.cond_input_locs) {
+    (*out_attrs)[cond_in] = kDefaultStorage;
+  }
   bool succ_0 = sub_pass(attrs.subgraphs[1], params.then_input_locs);
   bool succ_1 = sub_pass(attrs.subgraphs[2], params.else_input_locs);
   return succ_0 && succ_1;

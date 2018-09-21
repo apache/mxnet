@@ -17,26 +17,11 @@
 
 package org.apache.mxnetexamples.multitask
 
-import org.apache.commons.io.FileUtils
-import org.apache.mxnet.Context
-import org.scalatest.FunSuite
+import org.apache.mxnet._
 import org.slf4j.LoggerFactory
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.DataIter
-import org.apache.mxnet.DataBatch
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Shape
-import org.apache.mxnet.EvalMetric
 import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
-import org.apache.mxnet.optimizer.RMSProp
-import java.io.File
-import java.net.URL
 
-import scala.sys.process.Process
-import scala.collection.immutable.ListMap
-import scala.collection.immutable.IndexedSeq
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import org.scalatest.FunSuite
 
 
 /**
@@ -44,21 +29,24 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   * This will run as a part of "make scalatest"
   */
 class MultiTaskSuite extends FunSuite {
-
   test("Multitask Test") {
     val logger = LoggerFactory.getLogger(classOf[MultiTaskSuite])
-    logger.info("Multitask Test...")
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      logger.info("Multitask Test...")
 
-    val batchSize = 100
-    val numEpoch = 10
-    val ctx = Context.cpu()
+      val batchSize = 100
+      val numEpoch = 3
+      val ctx = Context.gpu()
 
-    val modelPath = ExampleMultiTask.getTrainingData
-    val (executor, evalMetric) = ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
-    evalMetric.get.foreach { case (name, value) =>
-      assert(value >= 0.95f)
+      val modelPath = ExampleMultiTask.getTrainingData
+      val (executor, evalMetric) = ExampleMultiTask.train(batchSize, numEpoch, ctx, modelPath)
+      evalMetric.get.foreach { case (name, value) =>
+        assert(value >= 0.95f)
+      }
+      executor.dispose()
+    } else {
+      logger.info("GPU test only, skipped...")
     }
-    executor.dispose()
   }
-
 }

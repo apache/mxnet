@@ -37,6 +37,8 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
+mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
@@ -130,7 +132,8 @@ else(MSVC)
   else()
     set(SUPPORT_F16C FALSE)
   endif()
-  set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -fPIC -Wno-sign-compare")
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -Wno-sign-compare")
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
     set(CMAKE_C_FLAGS "-Wno-braced-scalar-init")
   endif()
@@ -183,6 +186,36 @@ if(USE_VTUNE)
   include_directories(${VTUNE_ROOT}/include)
   list(APPEND mxnet_LINKER_LIBS ${VTUNE_ROOT}/lib64/libittnotify.a)
   list(APPEND mxnet_LINKER_LIBS dl)
+endif()
+
+if(USE_TENSORRT)
+  message(STATUS "Using TensorRT")
+  set(ONNX_PATH 3rdparty/onnx-tensorrt/third_party/onnx/build/)
+  set(ONNX_TRT_PATH 3rdparty/onnx-tensorrt/build/)
+
+  include_directories(${ONNX_PATH})
+  include_directories(3rdparty/onnx-tensorrt/)
+  include_directories(3rdparty/)
+  add_definitions(-DMXNET_USE_TENSORRT=1)
+  add_definitions(-DONNX_NAMESPACE=onnx)
+
+  find_package(Protobuf REQUIRED)
+
+  find_library(ONNX_LIBRARY NAMES libonnx.so REQUIRED
+          PATHS ${ONNX_PATH}
+          DOC "Path to onnx library.")
+  find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
+          PATHS ${ONNX_PATH}
+          DOC "Path to onnx_proto library.")
+  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
+          PATHS ${ONNX_TRT_PATH}
+          DOC "Path to onnx_proto library.")
+  find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
+          PATHS ${ONNX_TRT_PATH}
+          DOC "Path to onnx_proto library.")
+
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+          ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
 if(USE_MKLDNN)
@@ -251,6 +284,14 @@ else()
     include(Cuda)
     include(mshadow)
   endif()
+endif()
+
+if(USE_ASAN)
+  set(CMAKE_CFLAGS "${CMAKE_CFLAGS} -fno-omit-frame-pointer -fsanitize=address")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
+  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
+  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} -fsanitize=address")
+  list(APPEND mxnet_LINKER_LIBS asan)
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
@@ -372,13 +413,13 @@ endif()
 
 # ---[ LAPack
 if(USE_LAPACK)
+  message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
   if (NOT MSVC)
     list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
 
-message("USE LAPACK ${USE_LAPACK}")
 
 # ---[ jemalloc
 if(USE_JEMALLOC)

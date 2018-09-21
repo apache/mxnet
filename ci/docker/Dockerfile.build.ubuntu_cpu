@@ -48,6 +48,9 @@ RUN /work/ubuntu_perl.sh
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 
+COPY install/ubuntu_gcc8.sh /work/
+RUN /work/ubuntu_gcc8.sh
+
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 
@@ -58,6 +61,7 @@ COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
 COPY install/ubuntu_docs.sh /work/
+COPY install/docs_requirements /work/
 RUN /work/ubuntu_docs.sh
 
 ARG USER_ID=0

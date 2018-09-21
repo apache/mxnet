@@ -72,6 +72,8 @@ livehtml:
 	sphinx-autobuild --ignore "web-data/*" -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 html:
+	export BUILD_VER=$(BUILD_VER)
+	@echo "Env var set for BUILD_VER: $(BUILD_VER)"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

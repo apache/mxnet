@@ -20,6 +20,7 @@
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.io :as mx-io]
+            [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.module :as m]
             [org.apache.clojure-mxnet.monitor :as monitor]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -54,9 +55,9 @@
         c (sym/+ a (sym/+ (sym/* b 2) (sym/* c 3)))
         mod (m/module c ["b" "c" "a"] nil [(context/cpu 0) (context/cpu 1)])]
     (-> mod
-        (m/bind {:data-shapes [{:name "b" :shape [5 5] :layout "NT"}
-                               {:name "c" :shape [5 5] :layout "NT"}
-                               {:name "a" :shape [5 5] :layout "NT"}]
+        (m/bind {:data-shapes [{:name "b" :shape [5 5] :layout layout/NT}
+                               {:name "c" :shape [5 5] :layout layout/NT}
+                               {:name "a" :shape [5 5] :layout layout/NT}]
                  :inputs-need-grad true})
         (m/init-params)
         (m/forward {:data [(ndarray/ones [5 5])
@@ -101,13 +102,20 @@
         (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})})
         (m/update)
         (m/save-checkpoint {:prefix "test" :epoch 0 :save-opt-states true}))
-
     (let [mod2 (m/load-checkpoint {:prefix "test" :epoch 0 :load-optimizer-states true})]
       (-> mod2
           (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
           (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
-      (is (= (-> mod m/symbol sym/to-json)  (-> mod2 m/symbol sym/to-json)))
-      (is (= (-> mod m/params first) (-> mod2 m/params first))))))
+      (is (= (-> mod m/symbol sym/to-json) (-> mod2 m/symbol sym/to-json)))
+      (is (= (-> mod m/params first) (-> mod2 m/params first))))
+    ;; arity 2 version of above. `load-optimizer-states` is `false` here by default,
+    ;; but optimizers states aren't checked here so it's not relevant to the test outcome.
+    (let [mod3 (m/load-checkpoint "test" 0)]
+      (-> mod3
+          (m/bind {:data-shapes [{:name "data" :shape [10 10] :layout "NT"}]})
+          (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1 :momentum 0.9})}))
+      (is (= (-> mod m/symbol sym/to-json) (-> mod3 m/symbol sym/to-json)))
+      (is (= (-> mod m/params first) (-> mod3 m/params first))))))
 
 (deftest test-module-save-load-multi-device
   (let [s (sym/variable "data")
@@ -165,7 +173,7 @@
             (sym/linear-regression-output "softmax" {:data v :grad-scale 2}))
 
         mod (m/module x)]
-    (m/bind mod {:data-shapes (mx-io/provide-data train-data) :label-shapes (mx-io/provide-label train-data)})
+    (m/bind mod {:data-shapes (mx-io/provide-data-desc train-data) :label-shapes (mx-io/provide-label train-data)})
 
     (let [arg-params-correct {"fc_0_weight" (ndarray/array [0.15 0.2 0.25 0.3] [2 2])
                               "fc_0_bias" (ndarray/array [0.35 0.35] [2])
@@ -321,4 +329,3 @@
 (comment
 
   (m/data-shapes x))
-

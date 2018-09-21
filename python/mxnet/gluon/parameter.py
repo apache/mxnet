@@ -165,7 +165,7 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(j == 0 or i == j for i, j in zip(new_shape, self._shape)), \
+            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
                 str(new_shape), str(self._shape))
 
@@ -231,7 +231,7 @@ class Parameter(object):
         """(Re)initializes by loading from data."""
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim == 0 or self_dim == data_dim, \
+                assert self_dim in (0, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
@@ -319,7 +319,7 @@ class Parameter(object):
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
             data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
-            self._trainer._row_sparse_pull(self, data, all_row_ids)
+            self._trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -727,6 +727,8 @@ class ParameterDict(object):
                         if matched:
                             param._shape = tuple(inferred_shape)
                             continue
+                    elif k == 'dtype' and np.dtype(v) == np.dtype(existing):
+                        continue
 
                     assert v is None or v == existing, \
                         "Cannot retrieve Parameter '%s' because desired attribute " \

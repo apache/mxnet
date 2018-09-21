@@ -36,14 +36,12 @@ from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabl
 from test_operator import *
 from test_optimizer import *
 from test_random import *
-from test_gluon import *
-from test_loss import *
 from test_exc_handling import *
 #from test_rnn import *
-from test_gluon_rnn import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
+from test_subgraph_op import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -130,7 +128,7 @@ def check_ifft(shape):
             init_complex.real[:,i] = init[0][:,2*i]
             init_complex.imag[:,i] = init[0][:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         init_complex = np.zeros(shape_old,dtype = np.complex64)
@@ -138,7 +136,7 @@ def check_ifft(shape):
             init_complex.real[:,:,:,i] = init[0][:,:,:,2*i]
             init_complex.imag[:,:,:,i] = init[0][:,:,:,2*i+1]
         a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[3],rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, out1[0]/shape_old[3],rtol=1e-3, atol=1e-5)
     # backward
     if len(shape) == 2:
         out_grad = mx.nd.empty(shape_old)
@@ -151,7 +149,7 @@ def check_ifft(shape):
                 temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
 
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
     if len(shape) == 4:
         out_grad = mx.nd.empty(shape_old)
         out_grad[:] = np.random.normal(-3, 3, shape_old)
@@ -163,9 +161,9 @@ def check_ifft(shape):
                 temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
 
         a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-12)
+        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
 
-@with_seed(0)
+@with_seed()
 def test_ifft():
     nrepeat = 2
     maxdim = 10
@@ -197,7 +195,7 @@ def check_fft(shape):
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
             arr[:] = iarr.astype(arr.dtype)
-    #forward
+    # forward
     for exe in exe_list:
         exe.forward(is_train=True)
     out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
@@ -224,7 +222,7 @@ def check_fft(shape):
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
 
-    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-6)
+    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-5)
 
     # backward
     if len(shape) == 2:
@@ -238,7 +236,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-8)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
@@ -251,9 +249,9 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-6)
+        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-5)
 
-@with_seed(0)
+@with_seed()
 def test_fft():
     nrepeat = 2
     maxdim = 10
@@ -264,7 +262,6 @@ def test_fft():
 
 
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10087")
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
@@ -290,12 +287,12 @@ def test_batchnorm_with_type():
   ]
 
   ctx_list_v2_3D = [
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}}
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
   # V1, 2D
@@ -522,6 +519,65 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_convolution_large_c():
+    problematic_c = 64 * 1024
+    # The convolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
+        sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
+
+# This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
+# Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
+@with_seed()
+def test_deconvolution_large_c():
+    problematic_c = 64 * 1024
+    # The deconvolution accumulates many values, so set large tolerances.
+    tol = {np.dtype(np.float32): 1,
+           np.dtype(np.float64): 1}
+    def test_1D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCW', num_filter=problematic_c, kernel=(2,), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    def test_2D_with_width(width, grad_req):
+        ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
+                    {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
+        sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
+        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+
+    # Run with different data tensor shapes to run cudnnFind() multiple times.
+    # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
+    # Then run models that must avoid cached cudnnFind() results in some cases (req == 'add').
+    widths = [4, 16, 64]
+    for req in ['write', 'add']:
+        for width in widths:
+            test_1D_with_width(width, req)
+            test_2D_with_width(width, req)
+
 
 @with_seed()
 def test_convolution_versions():
@@ -558,13 +614,13 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.cpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full', name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True, name='pool')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
 
 @with_seed()
@@ -701,18 +757,19 @@ def test_spatial_transformer_with_type():
     loc = mx.sym.Activation(data=loc, act_type='relu')
     loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
     sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
-                                    transform_type="affine", sampler_type="bilinear")
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=True)
     ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}},
                 {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}}]
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
+    sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=False)
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
 
 
-# Checking max pooling consistency over the data sets of different float types is problematic
-# as one max value in a float32 data set may not be the max value in a float16 data set.
-# This function will not be called.
-@with_seed(1234)
-def test_pooling_with_type():
+@with_seed()
+def test_pooling_with_type2():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
                 {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
@@ -720,18 +777,16 @@ def test_pooling_with_type():
                 {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
     check_consistency(sym, ctx_list)
 
-    # this is unstable
-    # sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    # check_consistency(sym, ctx_list)
+    sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+    check_consistency(sym, ctx_list, rand_type=np.float16)
 
     sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
     check_consistency(sym, ctx_list)
-
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
 @with_seed()
@@ -1388,7 +1443,7 @@ def test_unfuse():
         check_rnn_consistency(stack, fused)
 
 
-@with_seed(1234)
+@with_seed()
 def test_psroipooling_with_type():
     arg_params = {
         'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
@@ -1413,8 +1468,12 @@ def test_psroipooling_with_type():
                                                'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_psroipooling_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3,
+           np.dtype(np.float16): 1e-2}
+
     arg_params = {
         'deformable_psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
 
@@ -1442,13 +1501,17 @@ def test_deformable_psroipooling_with_type():
                                'deformable_psroipool_trans': np.float16}},
                 ]
 
-    check_consistency(sym, ctx_list, grad_req={'deformable_psroipool_data': 'write',
-                                               'deformable_psroipool_rois': 'null',
-                                               'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_psroipool_data': 'write',
+                                'deformable_psroipool_rois': 'null',
+                                'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
 
 
-@with_seed(1234)
+@with_seed()
 def test_deformable_convolution_with_type():
+    tol = {np.dtype(np.float32): 1e-1,
+           np.dtype(np.float64): 1e-3}
+
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1464,18 +1527,14 @@ def test_deformable_convolution_with_type():
                 #  'deformable_conv_offset': (2, 18, 8, 8),
                 #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
                 ]
-    # wider tolerance needed for true-fp16 NCHW test above
-    tol = {np.dtype(np.float16): 0.5,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
+
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'deformable_conv_data': 'write',
-                                               'deformable_conv_offset': 'write',
-                                               'deformable_conv_weight': 'write',
-                                               'deformable_conv_bias': 'null'}, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+                      grad_req={'deformable_conv_data': 'write',
+                                'deformable_conv_offset': 'write',
+                                'deformable_conv_weight': 'write',
+                                'deformable_conv_bias': 'null'})
 
 
 @with_seed()
@@ -1601,17 +1660,6 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
 @with_seed()
-@assert_raises_cudnn_disabled()
-def test_rnn_layer():
-    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
-
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-
-@with_seed()
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
@@ -1626,28 +1674,6 @@ def test_autograd_save_memory():
             x = x + 1
             x.wait_to_read()
     x.backward()
-
-
-@with_seed()
-def test_gluon_ctc_consistency():
-    loss = mx.gluon.loss.CTCLoss()
-    data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)).reshape((2,20,4)).flip(axis=0)
-    cpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.cpu(0))
-    gpu_label = mx.nd.array([[2,1,-1,-1],[3,2,2,-1]], ctx=mx.gpu(0))
-
-    cpu_data = data.copy().as_in_context(mx.cpu(0))
-    cpu_data.attach_grad()
-    with mx.autograd.record():
-        l_cpu = loss(cpu_data, cpu_label)
-        l_cpu.backward()
-
-    gpu_data = data.copyto(mx.gpu(0))
-    gpu_data.attach_grad()
-    with mx.autograd.record():
-        l_gpu = loss(gpu_data, gpu_label)
-        l_gpu.backward()
-
-    assert_almost_equal(cpu_data.grad.asnumpy(), gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
 
 @with_seed()
@@ -1678,16 +1704,6 @@ def test_cuda_rtc():
 
     saxpy.launch([x, y, 5.0], mx.gpu(0), (2, 1, 1), (5, 1, 1), 5)
     assert (y.asnumpy() == 12).all()
-
-
-@with_seed()
-def test_global_norm_clip_multi_device():
-    x1 = mx.nd.ones((3,3), ctx=mx.gpu(0))
-    x2 = mx.nd.ones((4,4), ctx=mx.cpu(0))
-    norm = gluon.utils.clip_global_norm([x1, x2], 1.0)
-    assert norm == 5.0
-    assert_almost_equal(x1.asnumpy(), np.ones((3,3))/5)
-    assert_almost_equal(x2.asnumpy(), np.ones((4,4))/5)
 
 
 @with_seed()
@@ -1904,87 +1920,84 @@ def test_softmax_activation():
         assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
                 atol = 1e-3, rtol = 1e-3)
 
+
+@with_seed()
+def test_bilinear_sampler_versions():
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    sym1 = mx.sym.BilinearSampler(data=data, grid=grid)
+    sym2 = mx.sym.BilinearSampler(data=data, grid=grid, cudnn_off=True)
+    sym3 = mx.sym.BilinearSampler(data=data, grid=grid)
+
+    test_cases = [[(1,3,15,16),(1,2,10,10)],
+                 [(1,6,7,16),(1,2,10,4)],
+                 [(1,7,3,16),(1,2,8,11)],
+                 [(1,9,50,50),(1,2,50,50)]]
+
+    for item in test_cases:
+        data_shape, grid_shape = item
+        # kWriteTo
+        exe_cpu = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
+        exe_gpu = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cudnn = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_list = [exe_cpu, exe_gpu, exe_cudnn]
+        ref_idx = 0
+        test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
+        test_grid = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.forward(is_train=True)
+            assert_almost_equal(exe_list[ref_idx].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
+        for exe in exe_list:
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        data_grad = exe_list[ref_idx].grad_dict['data'].asnumpy()
+        grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
+
+        # kAddTo
+        exe_cpu_addto = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
+        exe_gpu_addto = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cudnn_addto = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
+        data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
+        grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.grad_dict['data'][:] = data_initial_grad
+            exe.grad_dict['grid'][:] = grid_initial_grad
+            exe.forward(is_train=True)
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['data'].asnumpy(), data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
+
+        for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
+            # Mixture of kWriteTo and kNullOp
+            exe_cpu_mix = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
+            exe_gpu_mix = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cudnn_mix = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
+            for exe in exe_list:
+                exe.arg_dict['data'][:] = test_data
+                exe.arg_dict['grid'][:] = test_grid
+                exe.forward(is_train=True)
+                exe.backward(mx.nd.array(out_grad))
+                if req_dict['data'] is 'write':
+                    assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+                if req_dict['grid'] is 'write':
+                    assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
-
-def _check_batchnorm_result(input, num_devices=1, cuda=False):
-    from mxnet.gluon.utils import split_and_load
-    def _find_bn(module):
-        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
-            return module
-        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
-            return module.module
-
-        raise RuntimeError('BN not found')
-
-    def _syncParameters(bn1, bn2, ctx):
-        ctx = input.context
-        bn2.gamma.set_data(bn1.gamma.data(ctx))
-        bn2.beta.set_data(bn1.beta.data(ctx))
-        bn2.running_mean.set_data(bn1.running_mean.data(ctx))
-        bn2.running_var.set_data(bn1.running_var.data(ctx))
-
-    input1 = input.copy()
-    input2 = input.copy()
-
-    if cuda:
-        input1 = input.as_in_context(mx.gpu(0))
-        ctx_list = [mx.gpu(i) for i in range(num_devices)]
-    else:
-        ctx_list = [mx.cpu(0) for _ in range(num_devices)]
-
-    nch = input.shape[1]
-    bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
-    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
-
-    bn1.initialize(ctx=ctx_list[0])
-    bn2.initialize(ctx=ctx_list)
-
-    # using the same values for gamma and beta
-    #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
-
-    input1.attach_grad()
-    inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
-    for xi in inputs2:
-        xi.attach_grad()
-
-    with mx.autograd.record():
-        output1 = bn1(input1)
-        output2  = [bn2(xi) for xi in inputs2]
-        loss1 = (output1 ** 2).sum()
-        loss2 = [(output ** 2).sum() for output in output2]
-        mx.autograd.backward(loss1)
-        mx.autograd.backward(loss2)
-
-    output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
-    # assert forwarding
-    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
-                        _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
-                        _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
-    input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
-
-def test_sync_batchnorm():
-    def get_num_devices():
-        for i in range(100):
-            try:
-                mx.nd.zeros((1,), ctx=mx.gpu(i))
-            except:
-                return i
-    # no need to use SyncBN with 1 gpu
-    if get_num_devices() < 2:
-        return
-    ndev = 2
-    # check with unsync version
-    for i in range(10):
-        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
-                                num_devices=ndev, cuda=True)
 
 if __name__ == '__main__':
     import nose

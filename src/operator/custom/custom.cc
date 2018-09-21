@@ -75,12 +75,12 @@ inline void AllocateNDArrayCopy(NDArray** nd,
 template<CustomOpPropCallbacks Type>
 std::vector<std::string> List(const NodeAttrs& attrs) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
-  char ** args = NULL;
+  char ** args = nullptr;
   CHECK(reinterpret_cast<CustomOpListFunc>(
     params.info->callbacks[Type])(
       &args, params.info->contexts[Type]));
   std::vector<std::string> ret;
-  for (int i = 0; args[i] != NULL; ++i) {
+  for (int i = 0; args[i] != nullptr; ++i) {
     ret.push_back(args[i]);
   }
   return ret;

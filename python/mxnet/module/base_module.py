@@ -22,6 +22,8 @@
 import time
 import logging
 import warnings
+import copy
+import numpy as np
 
 from .. import metric
 from .. import ndarray
@@ -29,7 +31,7 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
-from ..io import DataDesc
+from ..io import DataDesc, DataIter, DataBatch
 from ..base import _as_list
 
 
@@ -333,7 +335,7 @@ class BaseModule(object):
 
         Parameters
         ----------
-        eval_data : DataIter
+        eval_data : DataIter or NDArray or numpy array
             Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
@@ -362,6 +364,15 @@ class BaseModule(object):
         >>> mod.predict(eval_data=val_dataiter, num_batch=10)
         """
         assert self.binded and self.params_initialized
+
+        if isinstance(eval_data, (ndarray.NDArray, np.ndarray)):
+            if isinstance(eval_data, np.ndarray):
+                eval_data = ndarray.array(eval_data)
+            self.forward(DataBatch([eval_data]))
+            return self.get_outputs()[0]
+
+        if not isinstance(eval_data, DataIter):
+            raise ValueError('eval_data must be of type NDArray or DataIter')
 
         if reset:
             eval_data.reset()
@@ -497,6 +508,7 @@ class BaseModule(object):
             validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
+        epoch_eval_metric = copy.deepcopy(eval_metric)
 
         ################################################################################
         # training loop
@@ -504,6 +516,7 @@ class BaseModule(object):
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
             eval_metric.reset()
+            epoch_eval_metric.reset()
             nbatch = 0
             data_iter = iter(train_data)
             end_of_batch = False
@@ -519,8 +532,12 @@ class BaseModule(object):
                     self.update_metric(eval_metric,
                                        [db.label for db in data_batch],
                                        pre_sliced=True)
+                    self.update_metric(epoch_eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
                 else:
                     self.update_metric(eval_metric, data_batch.label)
+                    self.update_metric(epoch_eval_metric, data_batch.label)
 
                 try:
                     # pre fetch next batch
@@ -533,7 +550,7 @@ class BaseModule(object):
                     monitor.toc_print()
 
                 if end_of_batch:
-                    eval_name_vals = eval_metric.get_name_value()
+                    eval_name_vals = epoch_eval_metric.get_name_value()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,

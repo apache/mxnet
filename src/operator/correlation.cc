@@ -73,8 +73,8 @@ inline void CorrelationForward(const Tensor<cpu, 4, Dtype> &out,
                         out[nbatch][top_channel][i][j] += \
                         tmp1[nbatch][y1+h][x1+w][channel]*tmp2[nbatch][y2+h][x2+w][channel];
                     else
-                        out[nbatch][top_channel][i][j] += \
-                        fabsf(tmp1[nbatch][y1+h][x1+w][channel]-tmp2[nbatch][y2+h][x2+w][channel]);
+                        out[nbatch][top_channel][i][j] += std::abs(\
+                        tmp1[nbatch][y1+h][x1+w][channel]-tmp2[nbatch][y2+h][x2+w][channel]);
                   }
               out[nbatch][top_channel][i][j] /= sumelems;
             }
@@ -149,7 +149,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(CorrelationParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new CorrelationOp<cpu, DType>(param);
   });

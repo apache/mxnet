@@ -39,8 +39,7 @@ private[infer] object MXNetHandlerType extends Enumeration {
 private[infer] class MXNetThreadPoolHandler(numThreads: Int = 1)
   extends MXNetHandler {
 
-  require(numThreads > 0, "numThreads should be a positive number, you passed:%d".
-    format(numThreads))
+  require(numThreads > 0, s"Invalid numThreads $numThreads")
 
   private val logger = LoggerFactory.getLogger(classOf[MXNetThreadPoolHandler])
   private var threadCount: Int = 0

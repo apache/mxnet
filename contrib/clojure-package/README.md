@@ -42,11 +42,11 @@ and _Install MXNet dependencies_
 
 To use the prebuilt jars (easiest), you will need to replace the native version of the line in the project dependencies with your configuration.
 
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.3.0"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.0"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0"]`
 
 If you are using the prebuilt jars they may have a slightly different dependencies then building from source:
 
@@ -107,14 +107,16 @@ The jars from maven with the needed MXNet native binaries in it. On startup, the
 
 ### Build from MXNET Source
 
-Checkout the latest sha from the main package
+First, ensure you have JDK 8 on your system. Later versions may produce cryptic build errors mentioning `scala.reflect.internal.MissingRequirementError`. 
+
+Checkout the latest SHA from the main package:
 
 `git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
 `cd ~/mxnet`
 
 If you need to checkout a particular release you can do it with:
 
-`git checkout tags/1.2.1 -b release-1.2.1`
+`git checkout tags/1.3.0 -b release-1.3.0`
 
 `git submodule update --init --recursive`
 

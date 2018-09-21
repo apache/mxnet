@@ -1031,7 +1031,7 @@ inline void CopyFromToRspImpl(const NDArray& from, const NDArray& to, RunContext
     op::FillZerosRspImpl(s, to);
     return;
   }
-  auto aux_shape = from.aux_shape(rowsparse::kIdx);
+  const auto& aux_shape = from.aux_shape(rowsparse::kIdx);
   to.CheckAndAlloc({aux_shape});
   TBlob val = to.data();
   TBlob idx = to.aux_data(rowsparse::kIdx);
@@ -1122,7 +1122,7 @@ void CopyFromToImpl(const NDArray& from, const NDArray& to,
     if (from_stype == to_stype) {
       casted_nd = from;  // same stype, no need to cast from
     } else {  // different stypes on different ctx needs an temporary casted_nd
-      TShape shape = from.shape();
+      const TShape& shape = from.shape();
       if (to_stype == kDefaultStorage) {
         casted_nd = NDArray(shape, from_ctx);
       } else {
@@ -2046,7 +2046,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
 #if MXNET_USE_OPENCV
   cv::Mat buf(1, size, CV_8U, str_img);
   cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
-  CHECK(res.data != NULL) << "OpenCV Failed to decode image";
+  CHECK(res.data != nullptr) << "OpenCV Failed to decode image";
   CHECK_LE(n_channels, static_cast<size_t>(res.channels()));
   if (y1 - y0 == 0) {
     x0 = 0;

@@ -71,7 +71,8 @@ class DCASGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
       mon *= this.momentum
       mon += monUpdated
     } else {
-      require(this.momentum == 0)
+      require(this.momentum == 0f,
+        s"momentum should be zero when state is provided.")
       mon = monUpdated
     }
     previousWeight.set(weight)

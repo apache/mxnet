@@ -1285,6 +1285,7 @@ class Symbol(SymbolBase):
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
+    # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,
                     shared_buffer=None, **kwargs):
@@ -2046,6 +2047,22 @@ class Symbol(SymbolBase):
         """
         return op.flip(self, *args, **kwargs)
 
+    def depth_to_space(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`depth_to_space`.
+
+        The arguments are the same as for :py:func:`depth_to_space`, with
+        this array as data.
+        """
+        return op.depth_to_space(self, *args, **kwargs)
+
+    def space_to_depth(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`space_to_depth`.
+
+        The arguments are the same as for :py:func:`space_to_depth`, with
+        this array as data.
+        """
+        return op.space_to_depth(self, *args, **kwargs)
+
     def diag(self, k=0, **kwargs):
         """Convenience fluent method for :py:func:`diag`.
 
@@ -2405,6 +2422,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.log_softmax(self, *args, **kwargs)
+
+    def softmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmin`.
+
+        The arguments are the same as for :py:func:`softmin`, with
+        this array as data.
+        """
+        return op.softmin(self, *args, **kwargs)
 
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
@@ -2870,7 +2895,7 @@ def full(shape, val, dtype=None, **kwargs):
     return _internal._full(shape=shape, dtype=dtype, value=float(val), **kwargs)
 
 # pylint: disable=redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
     Parameters
@@ -2895,7 +2920,7 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     if dtype is None:
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             name=name, dtype=dtype)
+                             infer_range=infer_range, name=name, dtype=dtype)
 
 def histogram(a, bins=10, range=None, **kwargs):
     """Compute the histogram of the input data.
