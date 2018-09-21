@@ -138,7 +138,7 @@ def read_list(path_in):
             line_len = len(line)
             # check the data format of .lst file
             if line_len < 3:
-                print('lst should at least has three parts, but only has %s parts for %s' % (line_len, line))
+                print('lst should have at least has three parts, but only has %s parts for %s' % (line_len, line))
                 continue
             try:
                 item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
