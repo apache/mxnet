@@ -6985,6 +6985,7 @@ def test_valid_max_pooling_pad_type_same():
         input_data,
         kernel=kernel,
         stride=stride,
+        pad=(0,0,0),
         pool_type='max',
         name='pooling',
         pooling_convention="same")
