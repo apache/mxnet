@@ -20,14 +20,16 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file ctc_loss-inl.h
- * \brief
+ * \brief CTC Loss operator
 */
 
-#ifndef MXNET_OPERATOR_CTC_LOSS_INL_H_
-#define MXNET_OPERATOR_CTC_LOSS_INL_H_
+#ifndef MXNET_OPERATOR_NN_CTC_LOSS_INL_H_
+#define MXNET_OPERATOR_NN_CTC_LOSS_INL_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <algorithm>
+#include <string>
 #include "./sequence_mask-inl.h"
 #include "../sequence_op_common.h"
 #include "../operator_common.h"
@@ -39,7 +41,6 @@ namespace op {
 namespace ctc_loss {
 enum CTCLossOpInputs { kData, kLabel };
 enum CTCLossOpOutputs { kOut, kGrad };
-enum CTCLossOpForwardResource { kTempSpace };
 }
 
 template <typename T>
@@ -119,15 +120,13 @@ inline void get_workspace_size(std::vector<int> *label_lengths,
 // Takes a tensor of labels, and interprets 0-elements at the end of the vector
 // as padding. The tensor is packed into an std::vector without padding
 // characters. The label sequence lengths are also inferred from the padding chars.
-// When cudnn is enabled, the return value signifies whether the cudnn length limit is exceeded.
 template <typename DType, typename xpu>
-inline bool LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
+inline void LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
                                       int padding_mask,
                                       std::vector<int> *packed_labels,
                                       std::vector<int> *label_lengths) {
   int batch = labels.size(0);
   int max_num_labels = labels.size(1);
-  bool exceed_limit = false;
 
   std::vector<int> cpu_labels(max_num_labels*batch);
   mshadow::Tensor<xpu, 1, DType> flat_labels = labels.FlatTo1D();
@@ -137,28 +136,22 @@ inline bool LabelTensorToPackedVector(mshadow::Tensor<xpu, 2, DType> labels,
     auto start = cpu_labels.data()+b*max_num_labels;
     auto res = std::find(start, start+max_num_labels, padding_mask);
     int len = std::distance(start, res);
-#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
-    exceed_limit = exceed_limit || len > CUDNN_LABEL_LENGTH_LIMIT;
-#endif
     std::copy(start, start + len,
               std::back_inserter(*packed_labels));
     label_lengths->at(b) = len;
   }
-  return exceed_limit;
 }
 
 // Takes a tensor of labels, and a vector which specifies the actual length of each label
 // The tensor is packed into an std::vector without padding characters.
 // The label length vector is copied into an std::vector.
-// When cudnn is enabled, the return value signifies whether the cudnn length limit is exceeded.
 template <typename DType, typename xpu>
-inline bool PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
+inline void PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
                               mshadow::Tensor<xpu, 1, DType> in_label_lengths,
                               std::vector<int> *packed_labels,
                               std::vector<int> *label_lengths) {
   int batch = labels.size(0);
   int max_num_labels = labels.size(1);
-  bool exceed_limit = false;
 
   IndexTensorToVector(in_label_lengths, label_lengths);
 
@@ -169,13 +162,9 @@ inline bool PackLabelByLength(mshadow::Tensor<xpu, 2, DType> labels,
   for (int b = 0; b < batch; ++b) {
     auto start = cpu_labels.data()+b*max_num_labels;
     int len = label_lengths->at(b);
-#if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
-    exceed_limit = exceed_limit || len > CUDNN_LABEL_LENGTH_LIMIT;
-#endif
     std::copy(start, start + len,
               std::back_inserter(*packed_labels));
   }
-  return exceed_limit;
 }
 
 struct CTCLossOpParam : public dmlc::Parameter<CTCLossOpParam> {
@@ -205,13 +194,12 @@ struct CTCLossOpParam : public dmlc::Parameter<CTCLossOpParam> {
                 "is reserved for blank label instead, "
                 "and label values for tokens in the vocabulary are "
                 "between ``0`` and ``alphabet_size-2``, and the padding mask is ``0``.");
-  }    
+  }
 };
 
 inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
                            std::vector<TShape>* in_attrs,
                            std::vector<TShape>* out_attrs) {
-    
     const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
     CHECK_EQ(in_attrs->size(), 2U + param.use_data_lengths + param.use_label_lengths);
     CHECK_EQ(out_attrs->size(), 2U);
@@ -243,8 +231,8 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
 
     TShape oshape(1);
     oshape[0] = dshape[1];  // batch size
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape); // forward output
-    SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape); // grad output
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);  // forward output
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape);  // grad output
     return true;
 }
 
@@ -256,8 +244,8 @@ inline bool CTCLossOpType(const nnvm::NodeAttrs& attrs,
     int dtype = (*in_attrs)[ctc_loss::kData];
     CHECK_NE(dtype, -1) << "Input data must have specified type";
 
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0)); // forward output
-    TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(0)); // grad output
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));  // forward output
+    TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(0));  // grad output
     return true;
 }
 
@@ -279,10 +267,6 @@ inline bool CTCLossOpStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }
   return dispatched;
-}
-
-inline std::vector<ResourceRequest> CTCLossOpResource(const std::vector<TShape> &in_shape) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 }
 
 inline int CTCLossOpNumInputs(const NodeAttrs& attrs) {
@@ -311,12 +295,12 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-  
+
   const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U + param.use_data_lengths + param.use_label_lengths);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
-  
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[ctc_loss::kLabel].type_flag_, DType, {
     Tensor<xpu, 3, real_t> data =
@@ -366,7 +350,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
     compute_ctc_cost(data, costs.dptr_, grad.dptr_, packed_labels.data(),
                      label_lengths.data(), data_lengths.data(),
                      workspace.dptr_, req[ctc_loss::kGrad] != mxnet::kNullOp,
-                     param.blank_label == 0 ? 0 : (alphabet_size-1)); 
+                     param.blank_label == 0 ? 0 : (alphabet_size-1));
 
     if (param.use_data_lengths) {
       // baidu warp CTC implementation sometimes includes undefined gradients
@@ -387,7 +371,7 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  
+
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   Tensor<xpu, 3, real_t> data_grad =
@@ -398,12 +382,13 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
 
   Tensor<xpu, 3, real_t> data_grad_computed =
       inputs[3].get<xpu, 3, real_t>(s);
-  
+
   Assign(data_grad, req[0],
-         mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);  
+         mshadow::expr::broadcast<1>(output_grad, data_grad.shape_) * data_grad_computed);
 }
 
 }  // namespace op
 }  // namespace mxnet
 
-#endif // MXNET_OPERATOR_CTC_LOSS_INL_H_ 
+#endif  // MXNET_OPERATOR_NN_CTC_LOSS_INL_H_
+

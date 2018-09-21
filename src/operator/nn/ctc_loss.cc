@@ -41,7 +41,7 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              data_lengths);
   }
 }
-} // namespace mshadow
+}  // namespace mshadow
 
 namespace mxnet {
 namespace op {
@@ -109,7 +109,6 @@ information on the definition and the algorithm.
 .set_attr<FInferStorageType>("FInferStorageType", CTCLossOpStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-//.set_attr<FResourceRequest>("FResourceRequest", CTCLossOpResource)
 .set_attr<FCompute>("FCompute<cpu>", CTCLossOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_ctc_loss"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")

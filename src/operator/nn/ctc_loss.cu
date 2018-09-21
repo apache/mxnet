@@ -21,16 +21,17 @@
  * \file ctc_loss.cu
  * \brief GPU Implementation of ctc_loss op
  */
- #include "./ctc_loss-inl.h"
 
- namespace mxnet {
- namespace op {
- 
- NNVM_REGISTER_OP(ctc_loss)
- .set_attr<FCompute>("FCompute<gpu>", CTCLossOpForward<gpu>);
- 
- NNVM_REGISTER_OP(_backward_ctc_loss)
- .set_attr<FCompute>("FCompute<gpu>", CTCLossOpBackward<gpu>);
- 
- }  // namespace op
- }  // namespace mxnet
+#include "./ctc_loss-inl.h"
+
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(ctc_loss)
+.set_attr<FCompute>("FCompute<gpu>", CTCLossOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_ctc_loss)
+.set_attr<FCompute>("FCompute<gpu>", CTCLossOpBackward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet
