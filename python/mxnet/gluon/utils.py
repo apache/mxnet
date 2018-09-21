@@ -207,9 +207,12 @@ if not sys.platform.startswith('win32'):
             raise OSError(
                 'Moving downloaded temp file - {}, to {} failed. Please retry the download.'.format(src, dst))
 else:
-    from ctypes import windll, WinError
+    import ctypes
 
     _MOVEFILE_REPLACE_EXISTING = 0x1
+    # Setting this value guarantees that a move performed as a copy
+    # and delete operation is flushed to disk before the function returns.
+    # The flush occurs at the end of the copy operation.
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
@@ -221,14 +224,22 @@ else:
             return x.decode(sys.getfilesystemencoding())
         return x
 
+    def _format_error(err):
+        return ctypes.FormatError(_path_to_unicode(err))
+
     def _handle_errors(rv):
-        """Handle WinError. Internal use only"""
+        """Handle WinError.   
+        Internal use only"""
         if not rv:
-            raise WinError()
+            msg = _format_error(ctypes.GetLastError())
+            raise ctypes.WinError(msg)
 
     def _replace_atomic(src, dst):
-        """Implement atomic os.replace with windows. Internal use only"""
-        _handle_errors(windll.kernel32.MoveFileExW(
+        """Implement atomic os.replace with windows.
+        refer to https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-movefileexw
+        The function fails when one of the process(copy, flush, delete) fails.
+        Internal use only"""
+        _handle_errors(ctypes.windll.kernel32.MoveFileExW(
             _path_to_unicode(src), _path_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
         ))
