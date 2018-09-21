@@ -77,17 +77,23 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 
 def publish_test_coverage() {
     // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
+    lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
+    lastCommitMessage = lastCommitMessage.trim()
+    if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
+        // Merge commit applied by Jenkins, skip that commit
+        GIT_COMMIT_HASH = sh (script: "git rev-parse @~", returnStdout: true)
+    } else {
+        GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
+    }
+   
     def codecovArgs = ""
-    if (env.CHANGE_ID != '') {
+    if (env.CHANGE_ID) {
       // PR execution
-      // Take the previous commit because of our PR merge strategy that adds a temporary commit for CI
-      GIT_COMMIT_HASH = sh (script: "git rev-parse @~", returnStdout: true)
       codecovArgs += "-B ${env.CHANGE_TARGET} " +
         "-C ${GIT_COMMIT_HASH} " +
         "-P ${env.CHANGE_ID} "
     } else {
       // Branch execution
-      GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
       codecovArgs += "-B ${env.BRANCH_NAME} " +
         "-C ${GIT_COMMIT_HASH} "
     }
