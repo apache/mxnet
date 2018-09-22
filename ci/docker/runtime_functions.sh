@@ -245,6 +245,7 @@ build_centos7_cpu() {
     make \
         DEV=1 \
         USE_LAPACK=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
@@ -277,6 +278,7 @@ build_centos7_mkldnn() {
 
     make \
         DEV=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_MKLDNN=1 \
@@ -291,6 +293,7 @@ build_centos7_gpu() {
     # build_ccache_wrappers
     make \
         DEV=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
@@ -311,6 +314,7 @@ build_ubuntu_cpu_openblas() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
@@ -371,6 +375,7 @@ build_ubuntu_cpu_clang39() {
     export CC=clang-3.9
      build_ccache_wrappers
      make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -387,6 +392,7 @@ build_ubuntu_cpu_clang60() {
     build_ccache_wrappers
 
     make  \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
@@ -429,6 +435,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -445,6 +452,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -459,6 +467,7 @@ build_ubuntu_cpu_mkldnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -510,6 +519,7 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     make \
         DEV=1                                               \
+        ENABLE_TESTCOVERAGE=1                               \
         USE_BLAS=openblas                                   \
         USE_CUDA=1                                          \
         USE_CUDA_PATH=/usr/local/cuda                       \
@@ -531,6 +541,7 @@ build_ubuntu_gpu_mkldnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -547,6 +558,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_CUDA=1                    \
@@ -561,6 +573,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     # build_ccache_wrappers
     make \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_BLAS=openblas             \
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
@@ -574,14 +587,19 @@ build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas MIN=1
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        MIN=1                 \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
@@ -772,7 +790,10 @@ unittest_ubuntu_cpu_R() {
     mkdir -p ~/.R/
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
@@ -784,7 +805,9 @@ unittest_ubuntu_gpu_R() {
     mkdir -p ~/.R/
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
