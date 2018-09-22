@@ -218,14 +218,14 @@ else:
 
     text_type = unicode if sys.version_info[0] == 2 else str  # noqa
 
-    def _path_to_unicode(x):
+    def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
         if not isinstance(x, text_type):
             return x.decode(sys.getfilesystemencoding())
         return x
 
     def _format_error(err):
-        return ctypes.FormatError(_path_to_unicode(err))
+        return ctypes.FormatError(_str_to_unicode(err))
 
     def _handle_errors(rv):
         """Handle WinError.
@@ -240,7 +240,7 @@ else:
         The function fails when one of the process(copy, flush, delete) fails.
         Internal use only"""
         _handle_errors(ctypes.windll.kernel32.MoveFileExW(
-            _path_to_unicode(src), _path_to_unicode(dst),
+            _str_to_unicode(src), _str_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
         ))
 
