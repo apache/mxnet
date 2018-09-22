@@ -257,6 +257,7 @@ build_amzn_linux_cpu() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -328,6 +329,7 @@ build_ubuntu_cpu_cmake_debug() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -608,6 +610,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON   \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
@@ -628,6 +631,7 @@ build_ubuntu_gpu_cmake() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON   \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
