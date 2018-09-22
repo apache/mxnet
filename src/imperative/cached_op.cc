@@ -1186,7 +1186,12 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
     orig_is_train = Imperative::Get()->set_is_training(true);
   else
     orig_is_train = Imperative::Get()->is_training();
-  // TODO(zhengda) is it right to use false here?
+  // TODO(zhengda) CachedOp supports recording computation when running
+  // the backward path. This is necessary if we want to support the second-order
+  // differentiation. However, MXNet operator doesn't have an interface to
+  // pass a flag to determine whether to record computation inside an operator.
+  // Let's use false here for now and design a solution when the second-order
+  // differentiation is supported.
   s.op->Backward(false, s.forward_state, in_ptrs, req, out_ptrs);
   Imperative::Get()->set_is_training(orig_is_train);
 
@@ -1195,6 +1200,9 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
 
   // The arrays in out_ptrs may be changed by CachedOp.
   // If it is, we need to copy data back.
+  // For example, when the inputs and outputs share the same NDArrays,
+  // the outputs will be replaced by inputs.
+  // https://github.com/apache/incubator-mxnet/blob/v1.2.0/src/imperative/cached_op.cc#L385
   for (size_t i = 0; i < out_bufs.size(); i++)
     if (!out_bufs[i].IsSame(outputs[i]))
       CopyFromTo(out_bufs[i], outputs[i]);
