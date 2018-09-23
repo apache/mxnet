@@ -96,16 +96,12 @@ def publish_test_coverage() {
         GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
     }
    
-    def codecovArgs = ""
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs += "-B ${env.CHANGE_TARGET} " +
-        "-C ${GIT_COMMIT_HASH} " +
-        "-P ${env.CHANGE_ID} "
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH} -P ${env.CHANGE_ID}"
     } else {
       // Branch execution
-      codecovArgs += "-B ${env.BRANCH_NAME} " +
-        "-C ${GIT_COMMIT_HASH} "
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${GIT_COMMIT_HASH}"
     }
 
     // To make sure we never fail because test coverage reporting is not available
