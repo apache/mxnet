@@ -218,8 +218,6 @@ def container_run(platform: str,
     # Environment setup
     #
     environment = {
- #       'GCOV_PREFIX': '/work/mxnet/gcov_coverage', # GCOV report directory
- #       'GCOV_PREFIX_STRIP': '2',
         'CCACHE_MAXSIZE': '500G',
         'CCACHE_TEMPDIR': '/tmp/ccache',  # temp dir should be local and not shared
         'CCACHE_DIR': '/work/ccache',  # this path is inside the container as /work/ccache is
