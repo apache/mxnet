@@ -94,6 +94,7 @@ LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
+        LDFLAGS += --coverage
 endif
 
 ifeq ($(USE_TENSORRT), 1)
