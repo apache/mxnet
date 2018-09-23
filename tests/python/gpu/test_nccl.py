@@ -23,8 +23,8 @@ import unittest
 
 class TestNCCL(unittest.TestCase):
     num_gpus = min(8, mx.context.num_gpus())
-    shapes: [1, 10, 100, 1000, 10000, 100000, (2, 2), (2, 3, 4, 5, 6, 7, 8)]
-    tensors: {}
+    shapes = [1, 10, 100, 1000, 10000, 100000, (2, 2), (2, 3, 4, 5, 6, 7, 8)]
+    tensors = {}
 
     @classmethod
     def setUpClass(cls):
