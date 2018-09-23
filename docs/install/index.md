@@ -179,6 +179,16 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
 ```
 
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          678 MB
+```
+
 **Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
 
 </div> <!-- END of docker -->
@@ -509,6 +519,16 @@ $ docker images
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
+```
+
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          678 MB
 ```
 
 **Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
