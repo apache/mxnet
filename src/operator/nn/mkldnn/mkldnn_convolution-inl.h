@@ -73,15 +73,6 @@ struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
               "through calibration. If present, it will be used to by "
               "quantized convolution op to calculate primitive scale");
   }
-  const int GetBoolHash() const {
-    int hash = 0;
-    hash = hash * 2 + this->with_bn ? 1 : 0;
-    hash = hash * 2 + this->with_relu ? 1 : 0;
-    hash = hash * 2 + this->with_sum ? 1 : 0;
-    hash = hash * 2 + this->with_postsum_relu ? 1 : 0;
-    hash = hash * 2 + this->quantized ? 1 : 0;
-    return hash;
-    }
 };
 
 struct MKLDNNConvFullParam {
