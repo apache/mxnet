@@ -30,6 +30,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include "../mshadow_op.h"
 #include "./sequence_mask-inl.h"
 #include "../sequence_op_common.h"
 #include "../operator_common.h"
