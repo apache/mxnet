@@ -895,8 +895,8 @@ inline void UpdateWeight(std::vector<T>* W, const std::vector<size_t>& topo_row,
   for (unsigned i = 1; i < topo_row.size() - 1; i += 2) {
     unsigned parent = topo_row[i];
     unsigned child = topo_row[i+1];
-    if (!(parent >= num_elements*num_elements ||
-        child >= num_elements*num_elements) && (parent != child)) {
+    if (!(parent >= unsigned(num_elements*num_elements) ||
+        child >= unsigned(num_elements*num_elements)) && (parent != child)) {
       (*W)[parent*num_elements+child] *= alpha;
       (*W)[child*num_elements+parent] *= alpha;
     }

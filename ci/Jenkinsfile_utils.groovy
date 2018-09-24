@@ -98,7 +98,7 @@ def publish_test_coverage() {
    
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH} -P ${env.CHANGE_ID}"
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH}"
     } else {
       // Branch execution
       codecovArgs = "-B ${env.BRANCH_NAME} -C ${GIT_COMMIT_HASH}"
