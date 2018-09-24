@@ -92,11 +92,6 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
-ifeq ($(ENABLE_TESTCOVERAGE), 1)
-        CFLAGS += --coverage
-        LDFLAGS += --coverage
-endif
-
 ifeq ($(USE_TENSORRT), 1)
 	CFLAGS +=  -I$(ROOTDIR) -I$(TPARTYDIR) -DONNX_NAMESPACE=$(ONNX_NAMESPACE) -DMXNET_USE_TENSORRT=1
 	LDFLAGS += -lprotobuf -pthread -lonnx -lonnx_proto -lnvonnxparser -lnvonnxparser_runtime -lnvinfer -lnvinfer_plugin
@@ -479,6 +474,14 @@ ifeq ($(USE_LIBJPEG_TURBO), 1)
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=1
 else
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
+endif
+
+ifeq ($(ENABLE_TESTCOVERAGE), 1)
+        # According to https://stackoverflow.com/questions/15909788/how-does-gcc-behave-if-passed-conflicting-compiler-flags,
+        # compilers will ignore earlier set flags (like -O) if they are re-set at a later point.
+        # Thus, this code should be at the very end of the Makefile init logic
+        CFLAGS += --coverage -O0
+        LDFLAGS += --coverage
 endif
 
 # For quick compile test, used smaller subset

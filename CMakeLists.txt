@@ -219,20 +219,6 @@ if(USE_TENSORRT)
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
-if(ENABLE_TESTCOVERAGE)
-  message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
-  find_program( GCOV_PATH gcov )
-  if(NOT GCOV_PATH)
-    message(FATAL_ERROR "gcov not found! Aborting...")
-  endif() # NOT GCOV_PATH
-  
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
-  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
-  link_libraries(gcov)
-endif()
-
 if(USE_MKLDNN)
   include(cmake/MklDnn.cmake)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
@@ -307,6 +293,23 @@ if(USE_ASAN)
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} -fsanitize=address")
   list(APPEND mxnet_LINKER_LIBS asan)
+endif()
+
+if(ENABLE_TESTCOVERAGE)
+  message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
+  find_program( GCOV_PATH gcov )
+  if(NOT GCOV_PATH)
+    message(FATAL_ERROR "gcov not found! Aborting...")
+  endif() # NOT GCOV_PATH
+
+  # According to https://stackoverflow.com/questions/15909788/how-does-gcc-behave-if-passed-conflicting-compiler-flags,
+  # compilers will ignore earlier set flags (like -O) if they are re-set at a later point.
+  # Thus, this code should be at the very end of the logic
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -O0")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -O0")
+  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
+  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
+  link_libraries(gcov)
 endif()
 
 list(APPEND mxnet_LINKER_LIBS ${mshadow_LINKER_LIBS})
