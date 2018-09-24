@@ -30,8 +30,6 @@ and full working examples, visit the [tutorials section](../tutorials/index.md).
 
 * [How can I train using multiple machines with data parallelism?](http://mxnet.io/faq/distributed_training.html)
 
-* [How can I train using multiple GPUs with model parallelism?](http://mxnet.io/faq/model_parallel_lstm.html)
-
 
 ## Speed
 * [How do I use gradient compression with distributed training?](http://mxnet.io/faq/gradient_compression.html)

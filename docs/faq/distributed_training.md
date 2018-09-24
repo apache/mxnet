@@ -12,7 +12,6 @@ In this document, we describe how to train a model with devices distributed acro
 
 When models are so large that they don't fit into device memory, then a second way called *model parallelism* is useful.
 Here, different devices are assigned the task of learning different parts of the model.
-Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html) for more on this.
 
 ## How Does Distributed Training Work?
 The following concepts are key to understanding distributed training in MXNet:
