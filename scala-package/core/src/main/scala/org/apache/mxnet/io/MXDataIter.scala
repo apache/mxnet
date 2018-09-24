@@ -67,11 +67,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     }
   }
 
-  override def nativeResource: CPtrAddress = handle
+  override def nativeAddress: CPtrAddress = handle
 
   override def nativeDeAllocator: CPtrAddress => MXUint = _LIB.mxDataIterFree
 
-  override val phantomRef: NativeResourceRef = super.register()
+  override val ref: NativeResourceRef = super.register()
 
   override val bytesAllocated: Long = 0L
 

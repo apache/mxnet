@@ -21,17 +21,17 @@ import java.lang.ref.ReferenceQueue
 import java.util.concurrent.ConcurrentHashMap
 
 import org.apache.mxnet.Base.CPtrAddress
+import org.mockito.Matchers.any
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers, TagAnnotation}
 import org.mockito.Mockito._
-import scala.ref.PhantomReference
 
 @TagAnnotation("resource")
 class NativeResourceSuite extends FunSuite with BeforeAndAfterAll with Matchers {
 
   object TestRef  {
-    def getRefQueue: ReferenceQueue[NativeResource] = { NativeResourceRef.referenceQueue}
+    def getRefQueue: ReferenceQueue[NativeResource] = { NativeResourceRef.refQ}
     def getRefMap: ConcurrentHashMap[NativeResourceRef, CPtrAddress]
-    = {NativeResourceRef.phantomRefMap}
+    = {NativeResourceRef.refMap}
     def getCleaner: Thread = { NativeResourceRef.cleaner }
   }
 
@@ -42,7 +42,7 @@ class NativeResourceSuite extends FunSuite with BeforeAndAfterAll with Matchers 
 
   test(testName = "test native resource setup/teardown") {
     val a = spy(NDArray.ones(Shape(2, 3)))
-    val aRef = a.phantomRef
+    val aRef = a.ref
     val spyRef = spy(aRef)
 
     assert(TestRef.getRefMap.containsKey(aRef) == true)
@@ -57,13 +57,22 @@ class NativeResourceSuite extends FunSuite with BeforeAndAfterAll with Matchers 
   }
 
   test(testName = "test dispose") {
-    val a: NDArray = NDArray.ones(Shape(3, 4))
-    val aRef = a.phantomRef
+    val a: NDArray = spy(NDArray.ones(Shape(3, 4)))
+    val aRef = a.ref
     val spyRef = spy(aRef)
     a.dispose()
-    verify(spyRef).resourceDeAllocator
+    verify(a).nativeDeAllocator
     assert(TestRef.getRefMap.containsKey(aRef) == false)
     assert(a.isDisposed == true, "isDisposed should be set to true after calling close")
   }
+
+  test(testName = "test dispose not removing from resourceScope") {
+    val a: NDArray = spy(NDArray.ones(Shape(3, 4)))
+    val r: ResourceScope = mock(classOf[ResourceScope])
+    when(a.scope).thenReturn(r)
+    a.dispose(false)
+    verify(r, times(0)).deRegister(any[NativeResource])
+  }
+
 }
 

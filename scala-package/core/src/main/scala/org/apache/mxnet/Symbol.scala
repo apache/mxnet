@@ -34,10 +34,9 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
 
   // unable to get the byteAllocated for Symbol
   override val bytesAllocated: Long = 0L
-
-  override def nativeResource: CPtrAddress = handle
+  override def nativeAddress: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxSymbolFree
-  override val phantomRef: NativeResourceRef = super.register()
+  override val ref: NativeResourceRef = super.register()
 
 
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))

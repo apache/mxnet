@@ -28,7 +28,7 @@ class ResourceScope extends AutoCloseable {
 
   override def close(): Unit = {
     resourceQ.foreach(resource => if (resource != null) {
-      logger.info("releasing resource:%x\n".format(resource.nativeResource))
+      logger.info("releasing resource:%x\n".format(resource.nativeAddress))
       resource.dispose(false)
     } else {logger.info("found resource which is null")}
     )
@@ -36,12 +36,12 @@ class ResourceScope extends AutoCloseable {
   }
 
   private[mxnet] def register(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: Registering Resource %x".format(resource.nativeResource))
+    logger.info("ResourceScope: Registering Resource %x".format(resource.nativeAddress))
     resourceQ.+=(resource)
   }
 
   private[mxnet] def deRegister(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeResource))
+    logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeAddress))
     resourceQ.-=(resource)
   }
 }

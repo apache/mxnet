@@ -24,34 +24,31 @@ import java.util.concurrent._
 import org.apache.mxnet.Base.checkCall
 import java.util.concurrent.atomic.AtomicLong
 
-import org.apache.mxnet.NativeResourceRef.phantomRefMap
-import org.slf4j.{Logger, LoggerFactory}
 
 /**
   * NativeResource trait is used to manage MXNet Objects
   * such as NDArray, Symbol, Executor, etc.,
-  * The MXNet Object calls {@link NativeResource.register}
-  * and assign the returned NativeResourceRef to {@link PhantomReference}
+  * The MXNet Object calls NativeResource.register
+  * and assign the returned NativeResourceRef to PhantomReference
   * NativeResource also implements AutoCloseable so MXNetObjects
   * can be used like Resources in try-with-resources paradigm
   */
-// scalastyle:off finalize
 private[mxnet] trait NativeResource
   extends AutoCloseable with WarnIfNotDisposed {
 
   /**
     * native Address associated with this object
     */
-  def nativeResource: CPtrAddress
+  def nativeAddress: CPtrAddress
 
   /**
-    * Function Pointer to the NativeDeAllocator of {@link nativeAddress}
+    * Function Pointer to the NativeDeAllocator of nativeAddress
     */
   def nativeDeAllocator: (CPtrAddress => Int)
 
-  /** Call {@link NativeResource.register} to get {@link NativeResourceRef}
+  /** Call NativeResource.register to get the reference
     */
-  val phantomRef: NativeResourceRef
+  val ref: NativeResourceRef
 
   /**
     * Off-Heap Bytes Allocated for this object
@@ -59,11 +56,12 @@ private[mxnet] trait NativeResource
   // intentionally making it a val, so it gets evaluated when defined
   val bytesAllocated: Long
 
-  private var scope: ResourceScope = null
+  private[mxnet] var scope: ResourceScope = null
 
   @volatile var disposed = false
 
-  override def isDisposed: Boolean = disposed
+  override def isDisposed: Boolean = disposed || isDeAllocated
+
   /**
     * Register this object for PhantomReference tracking and within
     * ResourceScope if used inside ResourceScope.
@@ -80,12 +78,9 @@ private[mxnet] trait NativeResource
     NativeResourceRef.register(this, nativeDeAllocator)
  }
 
-  /**
-    * Removes this object from PhantomRef tracking and from ResourceScope
-    * @param removeFromScope
-    */
+  // Removes this object from PhantomRef tracking and from ResourceScope
   private def deRegister(removeFromScope: Boolean = true): Unit = {
-    NativeResourceRef.deRegister(phantomRef)
+    NativeResourceRef.deRegister(ref)
     if (scope != null && removeFromScope) scope.deRegister(this)
   }
 
@@ -101,30 +96,40 @@ private[mxnet] trait NativeResource
 
   def dispose(removeFromScope: Boolean): Unit = {
     if (!disposed) {
-      print("NativeResource: Disposing NativeResource:%x\n".format(nativeResource))
-      checkCall(nativeDeAllocator(this.nativeResource))
+      print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
+      checkCall(nativeDeAllocator(this.nativeAddress))
       deRegister(removeFromScope)
       NativeResource.totalBytesAllocated.getAndAdd(-1*bytesAllocated)
       disposed = true
     }
   }
+
+  /*
+  this is used by the WarnIfNotDisposed finalizer,
+  the object could be disposed by the GC without the need for explicit disposal
+  but the finalizer might not have run, then the WarnIfNotDisposed throws a warning
+   */
+  private def isDeAllocated(): Boolean = NativeResourceRef.isDeAllocated(ref)
+
 }
-// scalastyle:on finalize
 
 private[mxnet] object NativeResource {
   var totalBytesAllocated : AtomicLong = new AtomicLong(0)
 }
-// do not make resource a member, this will hold reference and GC will not clear the object.
+
+/* Do not make resource a member of the class,
+this will hold reference and GC will not clear the object.
+ */
 private[mxnet] class NativeResourceRef(resource: NativeResource,
                                        val resourceDeAllocator: CPtrAddress => Int)
-        extends PhantomReference[NativeResource](resource, NativeResourceRef.referenceQueue) {}
+        extends PhantomReference[NativeResource](resource, NativeResourceRef.refQ) {}
 
 private[mxnet] object NativeResourceRef {
 
-  private[mxnet] val referenceQueue: ReferenceQueue[NativeResource]
+  private[mxnet] val refQ: ReferenceQueue[NativeResource]
                 = new ReferenceQueue[NativeResource]
 
-  private[mxnet] val phantomRefMap = new ConcurrentHashMap[NativeResourceRef, CPtrAddress]()
+  private[mxnet] val refMap = new ConcurrentHashMap[NativeResourceRef, CPtrAddress]()
 
   private[mxnet] val cleaner = new ResourceCleanupThread()
 
@@ -132,14 +137,40 @@ private[mxnet] object NativeResourceRef {
 
   def register(resource: NativeResource, nativeDeAllocator: (CPtrAddress => Int)):
   NativeResourceRef = {
-    val resourceRef = new NativeResourceRef(resource, nativeDeAllocator)
-    phantomRefMap.put(resourceRef, resource.nativeResource)
-    resourceRef
+    val ref = new NativeResourceRef(resource, nativeDeAllocator)
+    refMap.put(ref, resource.nativeAddress)
+    ref
   }
 
-  def deRegister(resourceRef: NativeResourceRef): Unit = {
-    if (phantomRefMap.containsKey(resourceRef)) {
-      phantomRefMap.remove(resourceRef)
+  def deRegister(ref: NativeResourceRef): Unit = {
+    if (refMap.containsKey(ref)) {
+      refMap.remove(ref)
+    }
+  }
+
+  /**
+    * This method will check if the cleaner ran and deAllocated the object
+    * As a part of GC, when the object is unreachable GC inserts a phantomRef
+    * to the ReferenceQueue which the cleaner thread will deallocate, however
+    * the finalizer runs much later depending on the GC.
+    * @param resource resource to verify if it has been deAllocated
+    * @return true if already deAllocated
+    */
+  def isDeAllocated(ref: NativeResourceRef): Boolean = {
+    !refMap.containsKey(ref)
+  }
+
+  def cleanup: Unit = {
+    print("NativeResourceRef: cleanup\n")
+    // remove is a blocking call
+    val ref: NativeResourceRef = refQ.remove().asInstanceOf[NativeResourceRef]
+    print("NativeResourceRef: got a reference with deAlloc\n")
+    // phantomRef will be removed from the map when NativeResource.close is called.
+    val resource = refMap.get(ref)
+    if (resource != 0L)  { // since CPtrAddress is Scala a Long, it cannot be null
+      print("NativeResourceRef: got a reference for resource\n")
+      ref.resourceDeAllocator(resource)
+      refMap.remove(ref)
     }
   }
 
@@ -148,24 +179,10 @@ private[mxnet] object NativeResourceRef {
     setName("NativeResourceDeAllocatorThread")
     setDaemon(true)
 
-    def deAllocate(): Unit = {
-      print("NativeResourceRef: cleanup\n")
-      // remove is a blocking call
-      val ref: NativeResourceRef = referenceQueue.remove().asInstanceOf[NativeResourceRef]
-      print("NativeResourceRef: got a reference with deAlloc\n")
-      // phantomRef will be removed from the map when NativeResource.close is called.
-      val resource = phantomRefMap.get(ref)
-      if (resource != 0L)  { // since CPtrAddress is Scala Long, it cannot be null
-        print("NativeResourceRef: got a reference for resource\n")
-        ref.resourceDeAllocator(resource)
-        phantomRefMap.remove(ref)
-      }
-    }
-
     override def run(): Unit = {
       while (true) {
         try {
-          deAllocate()
+          NativeResourceRef.cleanup
         }
         catch {
           case _: InterruptedException => Thread.currentThread().interrupt()

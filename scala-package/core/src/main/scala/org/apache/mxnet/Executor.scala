@@ -59,11 +59,11 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  override def nativeResource: CPtrAddress = handle
+  override def nativeAddress: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
   // cannot determine the off-heap size of this object
   override val bytesAllocated: Long = 0
-  override val phantomRef: NativeResourceRef = super.register()
+  override val ref: NativeResourceRef = super.register()
 
   /**
    * Return a new executor with the same symbol and shared memory,
