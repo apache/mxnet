@@ -73,6 +73,10 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+def _dataset_transform_fn(x, y):
+    """Named transform function since lambda function cannot be pickled."""
+    return x, y
+
 @with_seed()
 def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
@@ -84,8 +88,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
         assert y.asscalar() == i
 
     # with transform
-    fn = lambda x, y : (x, y)
-    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
     for i, (x, y) in enumerate(loader):
@@ -95,9 +98,8 @@ def test_recordimage_dataset_with_data_loader_multiworker():
     # try limit recursion depth
     import sys
     old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(100)  # this should be smaller than any default value used in python
-    fn = lambda x, y : (x, y)
-    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
+    sys.setrecursionlimit(500)  # this should be smaller than any default value used in python
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
     for i, (x, y) in enumerate(loader):

@@ -84,15 +84,30 @@ class MXRecordIO(object):
         self.close()
 
     def __getstate__(self):
+        """Override pickling behavior."""
         # pickling pointer is not allowed
+        is_open = self.is_open
+        self.close()
         d = dict(self.__dict__)
-        d['is_open'] = False
+        d['is_open'] = is_open
+        uri = self.uri.value
+        try:
+            uri = uri.decode('utf-8')
+        except AttributeError:
+            pass
         del d['handle']
+        d['uri'] = uri
         return d
 
     def __setstate__(self, d):
+        """Restore from pickled."""
         self.__dict__ = d
+        is_open = d['is_open']
+        self.is_open = False
         self.handle = RecordIOHandle()
+        self.uri = c_str(self.uri)
+        if is_open:
+            self.open()
 
     def close(self):
         """Closes the record file."""
@@ -227,6 +242,12 @@ class MXIndexedRecordIO(MXRecordIO):
             return
         super(MXIndexedRecordIO, self).close()
         self.fidx.close()
+
+    def __getstate__(self):
+        """Override pickling behavior."""
+        d = super(MXIndexedRecordIO, self).__getstate__()
+        d['fidx'] = None
+        return d
 
     def seek(self, idx):
         """Sets the current read pointer position.
