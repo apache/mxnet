@@ -313,6 +313,11 @@ inline void ImageDetRecordIOParser<DType>::Init(
                 CHECK_EQ(param_.label_width, rec.num_label)
                   << "rec file provide " << rec.num_label << "-dimensional label "
                      "but label_width is set to " << param_.label_width;
+              }
+              // update max value
+              max_width = std::max(max_width, rec.num_label);
+            } else {
+              LOG(FATAL) << "Not enough label packed in img_list or rec file.";
             }
           }
           #pragma omp critical
