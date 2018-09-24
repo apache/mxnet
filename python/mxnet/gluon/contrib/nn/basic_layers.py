@@ -19,7 +19,7 @@
 # pylint: disable= arguments-differ
 """Custom neural network layers in model_zoo."""
 __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
-           'SyncBatchNorm']
+           'SyncBatchNorm', 'InplaceABN']
 
 import warnings
 from .... import nd, test_utils
@@ -235,3 +235,81 @@ class SyncBatchNorm(BatchNorm):
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
                                        name='fwd', **self._kwargs)
+
+
+class InplaceABN(BatchNorm):
+    """Inplace Activated Batch normalization (InplaceABN)
+
+    Inplace ABN acts the same as standard BatchNorm with LeakyReLU activation.
+    It saves the memory by recalculating featuremaps.
+    Parameters
+    ----------
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+    sync : bool, default False
+        Synchronizing across GPUs, see :class:`mxnet.gluon.contrib.nn.SyncBatchNorm`
+        for detail.
+    num_devices : int, default number of visible GPUs
+    slope : float, default 0.01
+        slope for LeakyReLU.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    moving_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the moving mean.
+    moving_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the moving variance.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    Reference:
+        .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating \
+          deep network training by reducing internal covariate shift." *ICML 2015*
+        .. [2] Bulò, Samuel Rota, Lorenzo Porzi, and Peter Kontschieder. \
+          In-Place Activated BatchNorm for Memory-Optimized Training of DNNs CVPR 2018
+
+    """
+    def __init__(self, in_channels=0, sync=False, num_devices=None, slope=0.01,
+                 momentum=0.9, epsilon=1e-5, center=True, use_global_stats=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros',
+                 running_variance_initializer='ones', **kwargs):
+        super(InplaceABN, self).__init__(1, momentum, epsilon, center, True, use_global_stats,
+                                         beta_initializer, gamma_initializer,
+                                         running_mean_initializer, running_variance_initializer,
+                                         in_channels, **kwargs)
+        num_devices = 1 if not sync else self._get_num_devices() \
+            if num_devices is None else num_devices
+        self._kwargs = {'eps': epsilon, 'momentum': momentum,
+                        'use_global_stats': use_global_stats, 'sync' : sync,
+                        'ndev': num_devices, 'slope' : slope, 'key': self.prefix}
+
+    def _get_num_devices(self):
+        warnings.warn("Caution using InplaceABN: "
+                      "if not using all the GPUs, please mannually set num_devices",
+                      UserWarning)
+        num_devices = len(test_utils.list_gpus())
+        num_devices = num_devices if num_devices > 0 else 1
+        return num_devices
+
+    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        return F.contrib.InplaceABN(x, gamma, beta, running_mean, running_var,
+                                    name='fwd', **self._kwargs)
