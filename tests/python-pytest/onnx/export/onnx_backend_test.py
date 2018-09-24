@@ -80,7 +80,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_reciprocal',
     'test_sqrt',
     'test_pow',
-    'test_exp_example',
+    'test_exp_',
     'test_argmax',
     'test_argmin',
     'test_min',

@@ -118,20 +118,16 @@ def add_n(attrs, inputs, proto_obj):
 # Sorting and Searching
 def argmax(attrs, inputs, proto_obj):
     """Returns indices of the maximum values along an axis"""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'axis',
-                                                               'keepdims': 'keepdims'})
-    axis = new_attrs.get('axis', 0)
-    keepdims = new_attrs.get('keepdims', 0)
+    axis = attrs.get('axis', 0)
+    keepdims = attrs.get('keepdims', 1)
     argmax_op = symbol.argmax(inputs[0], axis=axis, keepdims=keepdims)
     cast_attrs = {'dtype': 'int64'}
     return 'cast', cast_attrs, argmax_op
 
 def argmin(attrs, inputs, proto_obj):
     """Returns indices of the minimum values along an axis."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'axis': 'axis',
-                                                               'keepdims': 'keepdims'})
-    axis = new_attrs.get('axis', 0)
-    keepdims = new_attrs.get('keepdims', 0)
+    axis = attrs.get('axis', 0)
+    keepdims = attrs.get('keepdims', 1)
     argmin_op = symbol.argmin(inputs[0], axis=axis, keepdims=keepdims)
     cast_attrs = {'dtype': 'int64'}
     return 'cast', cast_attrs, argmin_op
