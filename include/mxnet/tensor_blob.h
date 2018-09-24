@@ -105,6 +105,39 @@ class TBlob {
     SetDLTensor(dev_mask, dev_id);
   }
   /*!
+   * \brief constructor that construct TBlob from DLTensor
+   * \param DLTensor Object
+   */
+  explicit TBlob(const DLTensor &dltensor)
+      : dptr_(dltensor.data),
+        shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
+        type_flag_(DLDataTypeTransform(dltensor.dtype)),
+        dltensor_(dltensor) {
+    // compactness check for DLTensor
+    if (dltensor.strides != nullptr) {
+      // check strides
+      const int &ndim = dltensor.ndim;
+      const int64_t *shape = dltensor.shape;
+      const int64_t *strides = dltensor.strides;
+      if (ndim >= 1) {
+        bool err = false;
+        if (strides[ndim - 1] != 1) {
+          err = true;
+        } else {
+          for (int i = ndim - 2; i >= 0; --i) {
+            if (strides[i] != shape[i + 1] * strides[i + 1]) {
+              err = true;
+              break;
+            }
+          }
+        }
+        if (err) {
+          LOG(FATAL) << "Unsupported DLPack because MXNet only support compact tensor now";
+        }
+      }
+    }
+  }
+  /*!
    * \brief constructor from tensor
    * \param src source tensor
    * \tparam Device which device the tensor is on
@@ -336,6 +369,36 @@ class TBlob {
       }
     }
   }
+  static int DLDataTypeTransform(DLDataType dldata_type) {
+    if (dldata_type.lanes != 1) {
+      LOG(FATAL) << "Unsupported DLDataType whose lanes != 1";
+    }
+    switch (dldata_type.code) {
+      case kDLFloat:
+        switch (dldata_type.bits) {
+          case 16: return mshadow::kFloat16;
+          case 32: return mshadow::kFloat32;
+          case 64: return mshadow::kFloat64;
+        }
+        break;
+      case kDLUInt:
+        switch (dldata_type.bits) {
+          case 8: return mshadow::kUint8;
+        }
+        break;
+      case kDLInt:
+        switch (dldata_type.bits) {
+          case 8: return mshadow::kInt8;
+          case 32: return mshadow::kInt32;
+          case 64: return mshadow::kInt64;
+        }
+        break;
+    }
+    LOG(FATAL) << "Unknown DLDataType{" << dldata_type.code
+               << ", " << dldata_type.bits
+               << ", " << dldata_type.lanes << "}";
+    return mshadow::kFloat32;
+  }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {
     dltensor_.data = dptr_;
@@ -343,7 +406,7 @@ class TBlob {
     dltensor_.ndim = shape_.ndim();
     dltensor_.dtype = DTypeTransform(type_flag_);
     dltensor_.shape = shape_.data();
-    dltensor_.strides = NULL;
+    dltensor_.strides = nullptr;
     dltensor_.byte_offset = 0;
   }
 

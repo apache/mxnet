@@ -305,7 +305,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
         if (!legacy_shuffle_) {
           n_to_out = ParseChunk(data_dptr, label_dptr, current_size, &chunk);
         } else {
-          n_to_out = ParseChunk(NULL, NULL, batch_param_.batch_size, &chunk);
+          n_to_out = ParseChunk(nullptr, nullptr, batch_param_.batch_size, &chunk);
         }
         // Count number of parsed images that do not fit into current out
         n_parsed_ = inst_order_.size();
@@ -548,7 +548,7 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
       std::vector<float> label_buf;
       if (label_map_ != nullptr) {
         label_buf = label_map_->FindCopy(rec.image_index());
-      } else if (rec.label != NULL) {
+      } else if (rec.label != nullptr) {
         CHECK_EQ(param_.label_width, rec.num_label)
           << "rec file provide " << rec.num_label << "-dimensional label "
              "but label_width is set to " << param_.label_width;
@@ -632,7 +632,7 @@ inline void ImageRecordIOParser2<DType>::CreateMeanImg(void) {
     while (source_->NextChunk(&chunk)) {
       inst_order_.clear();
       // Parse chunk w/o putting anything in out
-      ParseChunk(NULL, NULL, batch_param_.batch_size, &chunk);
+      ParseChunk(nullptr, nullptr, batch_param_.batch_size, &chunk);
       for (unsigned i = 0; i < inst_order_.size(); ++i) {
         std::pair<unsigned, unsigned> place = inst_order_[i];
         mshadow::Tensor<cpu, 3> outimg =

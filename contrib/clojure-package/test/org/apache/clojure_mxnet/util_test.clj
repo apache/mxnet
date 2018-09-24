@@ -191,3 +191,18 @@
         data3 [1 1 1 2]]
     (is (not (test-util/approx= 1e-9 data1 data2)))
     (is (test-util/approx= 2 data1 data3))))
+
+(deftest test-map->scala-tuple-seq
+  ;; convert as much, and pass-through the rest
+  (is (nil? (util/map->scala-tuple-seq nil)))
+  (is (= "List()"
+         (str (util/map->scala-tuple-seq {}))
+         (str (util/map->scala-tuple-seq []))
+         (str (util/map->scala-tuple-seq '()))))
+  (is (= "List(a, b)" (str (util/map->scala-tuple-seq ["a" "b"]))))
+  (is (= "List((a,b), (c,d), (e,f), (a_b,g), (c_d,h), (e_f,i))"
+         (str (util/map->scala-tuple-seq {:a "b", 'c "d", "e" "f"
+                                          :a-b "g", 'c-d "h", "e-f" "i"}))))
+  (let [nda (util/map->scala-tuple-seq {:a-b (ndarray/ones [1 2])})]
+    (is (= "a_b" (._1 (.head nda))))
+    (is (= [1.0 1.0] (ndarray/->vec (._2 (.head nda)))))))

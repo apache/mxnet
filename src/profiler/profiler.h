@@ -455,7 +455,7 @@ class Profiler {
   /*! \brief filename to output profile file */
   std::string filename_ = "profile.json";
   /*! \brief profile statistics consist of multiple device statistics */
-  DeviceStats* profile_stat;
+  std::unique_ptr<DeviceStats[]> profile_stat;
   /*! \brief Stats not associated directly with a device */
   DeviceStats  general_stats_;
   /*! \brief Map category -> pid */

@@ -308,18 +308,11 @@ inline void ImageDetRecordIOParser<DType>::Init(
           dmlc::InputSplit::Blob blob;
           while (reader.NextRecord(&blob)) {
             rec.Load(blob.dptr, blob.size);
-            if (rec.label != NULL) {
+            if (rec.label != nullptr) {
               if (param_.label_width > 0) {
                 CHECK_EQ(param_.label_width, rec.num_label)
-                    << "rec file provide " << rec.num_label
-                    << "-dimensional label "
-                       "but label_width is set to "
-                    << param_.label_width;
-              }
-              // update max value
-              max_width = std::max(max_width, rec.num_label);
-            } else {
-              LOG(FATAL) << "Not enough label packed in img_list or rec file.";
+                  << "rec file provide " << rec.num_label << "-dimensional label "
+                     "but label_width is set to " << param_.label_width;
             }
           }
           #pragma omp critical
@@ -427,7 +420,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
         std::vector<float> label_buf;
         if (this->label_map_ != nullptr) {
           label_buf = label_map_->FindCopy(rec.image_index());
-        } else if (rec.label != NULL) {
+        } else if (rec.label != nullptr) {
           if (param_.label_width > 0) {
             CHECK_EQ(param_.label_width, rec.num_label)
                 << "rec file provide " << rec.num_label
@@ -483,6 +476,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
 #else
       LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
 #endif
+  omp_exc_.Rethrow();
   return true;
 }
 
