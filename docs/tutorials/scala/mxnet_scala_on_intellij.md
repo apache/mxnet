@@ -38,7 +38,7 @@ brew install maven
 
 **Step 4.** Install OpenCV:
 ```
-brew install opencv@2
+brew install opencv
 ```
 
 
@@ -340,25 +340,12 @@ If you get an error, check the dependencies at the beginning of this tutorial. F
 
 ```
 ...
-Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
+Library not loaded: /usr/local/opt/opencv/lib/libopencv_calib3d.2.4.dylib
 ...
 ```
 
-This can be resolved be installing OpenCV2.
+This can be resolved be installing OpenCV.
 
-
-
-### Troubleshooting
-
-If you get an error, check if it is like this one regarding OpenCV. For example, you might see the following in the middle of the error messages.
-
-```
-...
-Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
-...
-```
-
-This can be resolved be installing OpenCV2.
 
 ### Command Line Build Option
 
