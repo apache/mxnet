@@ -76,7 +76,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
-    DMLC_DECLARE_FIELD(fix_beta).set_default(true)
+    DMLC_DECLARE_FIELD(fix_beta).set_default(false)
     .describe("Fix beta while training");
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
