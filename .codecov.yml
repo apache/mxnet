@@ -9,9 +9,37 @@ coverage:
   range: "70...100"
 
   status:
-    project: yes
-    patch: yes
-    changes: no
+    changes: yes
+
+    patch:
+      default:
+        # basic
+        target: auto
+        threshold: null
+        base: auto 
+        # advanced
+        branches: null
+        if_no_uploads: error
+        if_not_found: success
+        if_ci_failed: error
+        only_pulls: false
+        flags: null
+        paths: null
+
+    project:
+      default:
+        # basic
+        target: auto
+        threshold: null
+        base: auto 
+        # advanced
+        branches: null
+        if_no_uploads: error
+        if_not_found: success
+        if_ci_failed: error
+        only_pulls: false
+        flags: null
+        paths: null
 
 parsers:
   gcov:
@@ -25,8 +53,25 @@ ignore:
  - "cpp-package/example/**/*"
  - "tests/**/*"
 
-# Disable comments for now to gather data in the background
-comment: false
-#  layout: "header, diff"
-#  behavior: default
-#  require_changes: no
+flags:
+  # filter the folder(s) you wish to measure by that flag
+  python:
+    paths:
+      -  python/mxnet/
+  r-package:
+    paths:
+      - R-package/
+  clojure:
+    paths:
+      - scala-package/
+  backend:
+    paths:
+      - include/mxnet/
+      - src/
+
+comment:
+  layout: "header, diff, flags, files"
+  behavior: default
+  require_changes: false  # if true: only post the comment if coverage changes
+  require_base: no        # [yes :: must have a base report to post]
+  require_head: yes       # [yes :: must have a head report to post]
