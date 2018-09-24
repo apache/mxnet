@@ -1624,6 +1624,7 @@ def convert_elemwise_div(node, **kwargs):
     """Map MXNet's elemwise_div operator attributes to onnx's Div operator
     and return the created node.
     """
+    onnx = import_onnx_modules()
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
