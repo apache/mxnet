@@ -64,8 +64,14 @@ docker_test_image_gpu(){
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py --gpus 2"
 }
 
+# if both $MXNET_DOCKERHUB_PASSWORD and $MXNET_DOCKERHUB_USERNAME environment variables are set, docker will automatically login
+# if env variables are not set, login will be interactive.
 docker_account_login(){
-    docker login
+    if [[ -z $MXNET_DOCKERHUB_PASSWORD ]] || [[ -z $MXNET_DOCKERHUB_USERNAME ]]; then
+        docker login
+    else
+        echo $MXNET_DOCKERHUB_PASSWORD | docker login -u $MXNET_DOCKERHUB_USERNAME --password-stdin
+    fi
 }
 
 docker_account_logout(){
